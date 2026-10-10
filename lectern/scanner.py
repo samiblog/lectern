@@ -1,0 +1,141 @@
+"""프로젝트 폴더 스캔과 경로 안전 검사.
+
+트리에서 빠지는 것
+- 이름이 '.'으로 시작하는 파일·폴더 (.git, .claude, .venv …)
+- Windows 숨김(HIDDEN)·시스템(SYSTEM) 속성 파일·폴더
+- 심볼릭 링크와 정션 (순환·프로젝트 밖 참조 방지)
+- 제외 폴더 (node_modules, __pycache__ … + 설정의 exclude_dirs)
+- .md 파일이 하나도 없는 폴더
+"""
+from __future__ import annotations
+
+import os
+import re
+import stat
+from collections.abc import Iterable, Iterator
+from pathlib import Path
+from typing import Any
+
+from .docinfo import doc_info
+
+MD_EXT = frozenset({'.md', '.markdown'})
+DEFAULT_EXCLUDE_DIRS = frozenset({
+    'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build', 'target',
+    'site-packages', 'htmlcov',
+})
+_HIDDEN_ATTRS = getattr(stat, 'FILE_ATTRIBUTE_HIDDEN', 0x2) | getattr(stat, 'FILE_ATTRIBUTE_SYSTEM', 0x4)
+
+Node = dict[str, Any]
+
+
+def natural_key(name: str) -> list:
+    """'2장' < '10장' 순서가 되도록 숫자 부분을 정수로 비교한다."""
+    return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', name)]
+
+
+def is_md(name: str) -> bool:
+    return os.path.splitext(name)[1].lower() in MD_EXT
+
+
+def has_hidden_attr(st: os.stat_result) -> bool:
+    # st_file_attributes 는 Windows에만 있다. 다른 OS에서는 점(.) 규칙만 적용된다.
+    return bool(getattr(st, 'st_file_attributes', 0) & _HIDDEN_ATTRS)
+
+
+def _is_link(entry: os.DirEntry) -> bool:
+    try:
+        if entry.is_symlink():
+            return True
+        is_junction = getattr(entry, 'is_junction', None)  # Python 3.12+
+        return bool(is_junction and is_junction())
+    except OSError:
+        return True
+
+
+def scan(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, rel: str = '',
+         with_info: bool = True) -> list[Node]:
+    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로."""
+    excl = frozenset(x.lower() for x in exclude)
+    return _scan_dir(root, rel, excl, with_info)
+
+
+def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool) -> list[Node]:
+    base = root / rel if rel else root
+    try:
+        with os.scandir(base) as it:
+            entries = list(it)
+    except OSError:
+        return []
+    dirs: list[Node] = []
+    files: list[Node] = []
+    for entry in entries:
+        name = entry.name
+        if name.startswith('.') or _is_link(entry):
+            continue
+        try:
+            st = entry.stat(follow_symlinks=False)
+            is_dir = entry.is_dir(follow_symlinks=False)
+        except OSError:
+            continue
+        if has_hidden_attr(st):
+            continue
+        path = f'{rel}/{name}' if rel else name
+        if is_dir:
+            if name.lower() in exclude:
+                continue
+            children = _scan_dir(root, path, exclude, with_info)
+            if children:
+                dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
+        elif is_md(name):
+            node: Node = {'type': 'file', 'name': name, 'path': path,
+                          'mtime': st.st_mtime, 'size': st.st_size}
+            if with_info:
+                node['title'] = doc_info(Path(entry.path), st)['title']
+            files.append(node)
+    dirs.sort(key=lambda n: natural_key(n['name']))
+    files.sort(key=lambda n: natural_key(n['name']))
+    return dirs + files
+
+
+def iter_files(nodes: list[Node]) -> Iterator[Node]:
+    for node in nodes:
+        if node['type'] == 'file':
+            yield node
+        else:
+            yield from iter_files(node['children'])
+
+
+def is_hidden_path(root: Path, target: Path) -> bool:
+    """root 에서 target 까지 경로 중 숨김 요소가 하나라도 있으면 True."""
+    cur = root
+    for part in target.relative_to(root).parts:
+        if part.startswith('.'):
+            return True
+        cur = cur / part
+        try:
+            st = os.stat(cur, follow_symlinks=False)
+        except OSError:
+            return True
+        if has_hidden_attr(st):
+            return True
+    return False
+
+
+def resolve_inside(root: Path, rel: str) -> Path | None:
+    """root 기준 상대경로 rel 을 실제 경로로. root 밖이거나 숨김 경로면 None.
+
+    root 는 resolve() 된 절대경로여야 한다. 링크를 따라가 root 밖으로 나가는 경우도 막는다.
+    """
+    if '\x00' in rel:
+        return None
+    try:
+        target = (root / rel).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if target == root:
+        return target
+    if not target.is_relative_to(root):
+        return None
+    if is_hidden_path(root, target):
+        return None
+    return target

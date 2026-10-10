@@ -1,0 +1,38 @@
+/* 보고서: 명조 본문 + 고딕 제목, 남색 제목 장식, 칸이 나뉜 표. 긴 리서치 문서를 정독할 때 */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #22262b;
+  --md-heading: #17304f;
+  --md-muted: #5d6670;
+  --md-border: #d6dde5;
+  --md-link: #1d4f86;
+  --md-code-bg: #f3f5f8;
+  --md-quote-bar: #9fb1c6;
+  --md-th-bg: #e6edf5;
+  --md-th-rule: #17304f;
+  --md-stripe: #f7f9fb;
+  --md-strong: #101820;
+  --md-alert-note: #2c5f99;
+  --md-alert-tip: #2d6e48;
+  --md-alert-important: #5d3f9e;
+  --md-alert-warning: #95600a;
+  --md-alert-caution: #a8322a;
+  --md-font: "Noto Serif KR", "KoPubWorld바탕체", "KoPubWorldBatang", Georgia, "Batang", "바탕", serif;
+  --md-heading-font: "Pretendard", "Segoe UI Variable Display", "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 16px;
+  --md-line: 1.86;
+  --md-width: 820px;
+  --md-h1-rule: 2px solid var(--md-heading);
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { text-align: left; padding-bottom: .4em; }
+.md-body h2 { padding: .05em 0 .05em .6em; border-left: 4px solid var(--md-heading); }
+.md-body h3 { color: #24476f; }
+.md-body p { text-align: justify; text-justify: inter-character; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); }
+.md-body thead th { border-bottom: 2px solid var(--md-th-rule); }
+.md-body .table-wrap { border-radius: 0; border-width: 0; }
+.md-body table { font-family: var(--md-heading-font); font-size: .88em; }
+.md-body tbody tr:last-child > * { border-bottom: 1px solid var(--md-border); }

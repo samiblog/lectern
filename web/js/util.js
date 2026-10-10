@@ -1,0 +1,87 @@
+// 공용 도우미 함수
+
+export const $ = (sel, root = document) => root.querySelector(sel);
+export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
+
+const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
+
+/** 'docs/한글 문서.md' → URL 경로 조각마다 인코딩 */
+export const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
+
+export const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
+export const dirname = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
+export const isMd = (p) => /\.(md|markdown)$/i.test(p);
+
+const pad = (n) => String(n).padStart(2, '0');
+const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+
+/** 유닉스 초 → 'YYYY-MM-DD HH:MM' */
+export function formatDateTime(sec) {
+  const d = new Date(sec * 1000);
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+export const formatClock = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+
+/** 유닉스 초 → '방금', '5분 전', '어제', '10월 3일' */
+export function timeAgo(sec) {
+  if (!sec) return '';
+  const diff = Date.now() / 1000 - sec;
+  if (diff < 45) return '방금';
+  if (diff < 3600) return `${Math.max(1, Math.round(diff / 60))}분 전`;
+  const d = new Date(sec * 1000);
+  const now = new Date();
+  const days = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
+  if (days === 0) return `${Math.round(diff / 3600)}시간 전`;
+  if (days === 1) return '어제';
+  if (days < 7) return `${days}일 전`;
+  if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
+}
+
+export async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    ta.style.cssText = 'position:fixed;left:-9999px;top:0';
+    document.body.append(ta);
+    ta.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    ta.remove();
+    return ok;
+  }
+}
+
+let toastTimer = 0;
+export function toast(message, kind = '') {
+  const el = $('#lec-toast');
+  el.textContent = message;
+  el.className = kind;
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.hidden = true; }, kind === 'error' ? 4000 : 2200);
+}
+
+export function debounce(fn, ms) {
+  let t = 0;
+  return (...args) => {
+    clearTimeout(t);
+    t = setTimeout(() => fn(...args), ms);
+  };
+}
+
+/** 문서 안의 앵커(#id)로 스크롤. root 범위 안에서만 찾는다 (앱 UI의 id와 겹치지 않도록). */
+export function scrollToAnchor(root, hash) {
+  if (!hash || hash === '#') return false;
+  let id = hash.replace(/^#/, '');
+  try { id = decodeURIComponent(id); } catch { /* 그대로 사용 */ }
+  const el = root.querySelector(`#${CSS.escape(id)}`) || root.querySelector(`[name="${CSS.escape(id)}"]`);
+  if (!el) return false;
+  el.scrollIntoView({ block: 'start' });
+  return true;
+}

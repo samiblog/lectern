@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ko" data-ui="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="lec-mode" content="{{MODE}}">
+<meta name="lec-version" content="{{VERSION}}">
+<title>Lectern</title>
+<link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
+<link id="lec-hljs-css" rel="stylesheet" href="/static/vendor/highlight/github.min.css">
+<link rel="stylesheet" href="/static/themes/base.css">
+<link id="lec-theme-css" rel="stylesheet" href="/static/themes/default.css">
+<link rel="stylesheet" href="/static/css/app.css">
+<script src="/static/vendor/markdown-it/markdown-it.min.js"></script>
+<script src="/static/vendor/markdown-it/markdown-it-anchor.min.js"></script>
+<script src="/static/vendor/markdown-it/markdown-it-footnote.min.js"></script>
+<script src="/static/vendor/markdown-it/markdown-it-task-lists.min.js"></script>
+<script src="/static/vendor/highlight/highlight.min.js"></script>
+<script src="/static/vendor/highlight/languages/powershell.min.js"></script>
+<script src="/static/vendor/highlight/languages/dos.min.js"></script>
+<script src="/static/vendor/highlight/languages/dockerfile.min.js"></script>
+<script src="/static/vendor/katex/katex.min.js"></script>
+<script src="/static/vendor/dompurify/purify.min.js"></script>
+<!-- mermaid(약 5MB)는 다이어그램이 있는 문서를 처음 열 때 js/mermaid.js 가 불러온다 -->
+<script type="module" src="/static/js/main.js"></script>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-sidebar" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/></symbol>
+    <symbol id="i-back" viewBox="0 0 20 20"><path d="M12.5 4.5 7 10l5.5 5.5"/></symbol>
+    <symbol id="i-forward" viewBox="0 0 20 20"><path d="M7.5 4.5 13 10l-5.5 5.5"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
+    <symbol id="i-folder" viewBox="0 0 20 20"><path d="M2.5 6.2v8.3A1.5 1.5 0 0 0 4 16h12a1.5 1.5 0 0 0 1.5-1.5V7.7A1.5 1.5 0 0 0 16 6.2h-5.8L8.6 4.5H4a1.5 1.5 0 0 0-1.5 1.7z"/></symbol>
+    <symbol id="i-search" viewBox="0 0 20 20"><circle cx="8.8" cy="8.8" r="5.3"/><path d="m12.8 12.8 4 4"/></symbol>
+    <symbol id="i-toc" viewBox="0 0 20 20"><path d="M3 5h14M6.5 10H17M6.5 15H17"/></symbol>
+    <symbol id="i-up" viewBox="0 0 20 20"><path d="m5.5 12 4.5-4.5 4.5 4.5"/></symbol>
+    <symbol id="i-down" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
+    <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
+  </defs>
+</svg>
+
+<div id="lec-app">
+  <header id="lec-toolbar">
+    <div class="tb-group">
+      <button id="lec-btn-sidebar" class="icon-btn" title="사이드바 보이기/숨기기 (Ctrl+B)"><svg><use href="#i-sidebar"/></svg></button>
+      <button id="lec-btn-back" class="icon-btn" title="뒤로 (Alt+←)" disabled><svg><use href="#i-back"/></svg></button>
+      <button id="lec-btn-forward" class="icon-btn" title="앞으로 (Alt+→)" disabled><svg><use href="#i-forward"/></svg></button>
+    </div>
+    <div class="tb-project">
+      <button id="lec-btn-project" class="project-name" title="프로젝트 개요">폴더를 열어 주세요</button>
+      <button id="lec-btn-recent" class="icon-btn small" title="최근 연 폴더"><svg><use href="#i-chevron"/></svg></button>
+      <button id="lec-btn-open" class="text-btn" title="폴더 열기 (Ctrl+O)"><svg><use href="#i-folder"/></svg><span>폴더 열기</span></button>
+    </div>
+    <div class="tb-spacer"></div>
+    <button id="lec-btn-palette" class="search-btn" title="문서 빠르게 열기 (Ctrl+P)"><svg><use href="#i-search"/></svg><span>문서 찾기</span><kbd>Ctrl P</kbd></button>
+    <label class="theme-pick" title="문서 스타일">
+      <select id="lec-theme">
+        <option value="auto">자동 (시스템)</option>
+        <option value="default">기본</option>
+        <option value="report">보고서</option>
+        <option value="dark">다크</option>
+      </select>
+    </label>
+    <button id="lec-btn-toc" class="icon-btn" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg></button>
+  </header>
+
+  <div id="lec-main">
+    <aside id="lec-sidebar">
+      <div class="side-tabs" role="tablist">
+        <button role="tab" data-tab="files" class="active">파일</button>
+        <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
+      </div>
+      <div class="side-filter">
+        <input id="lec-filter" type="search" placeholder="이름이나 제목으로 거르기" spellcheck="false" autocomplete="off">
+        <button id="lec-btn-titles" class="icon-btn small toggle" title="트리에 문서 제목 표시 (끄면 파일명)">제목</button>
+      </div>
+      <nav id="lec-tree" class="side-list" aria-label="파일"></nav>
+      <nav id="lec-recent" class="side-list" aria-label="최근 변경" hidden></nav>
+    </aside>
+
+    <main id="lec-content">
+      <div id="lec-findbar" hidden>
+        <div class="fb">
+          <input id="lec-find-input" type="text" placeholder="문서에서 찾기" spellcheck="false" autocomplete="off">
+          <span id="lec-find-count"></span>
+          <button id="lec-find-prev" class="icon-btn small" title="이전 (Shift+Enter)"><svg><use href="#i-up"/></svg></button>
+          <button id="lec-find-next" class="icon-btn small" title="다음 (Enter)"><svg><use href="#i-down"/></svg></button>
+          <button id="lec-find-close" class="icon-btn small" title="닫기 (Esc)"><svg><use href="#i-close"/></svg></button>
+        </div>
+      </div>
+      <article id="lec-view"></article>
+    </main>
+
+    <aside id="lec-toc" aria-label="목차"></aside>
+  </div>
+
+  <footer id="lec-status">
+    <span id="lec-st-path"></span>
+    <span id="lec-st-info"></span>
+    <span class="tb-spacer"></span>
+    <span id="lec-st-watch"></span>
+  </footer>
+</div>
+
+<div id="lec-palette" class="overlay" hidden>
+  <div class="palette-box" role="dialog" aria-label="문서 빠르게 열기">
+    <input id="lec-palette-input" type="text" placeholder="문서 이름, 제목, 경로" spellcheck="false" autocomplete="off">
+    <ul id="lec-palette-list" role="listbox"></ul>
+  </div>
+</div>
+<div id="lec-menu" class="menu" role="menu" hidden></div>
+<div id="lec-lightbox" class="overlay" hidden></div>
+<div id="lec-toast" role="status" hidden></div>
+</body>
+</html>

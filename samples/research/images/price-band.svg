@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 240" width="640" height="240" font-family="Segoe UI, Malgun Gothic, sans-serif">
+  <rect width="640" height="240" fill="#ffffff"/>
+  <text x="20" y="28" font-size="14" font-weight="600" fill="#1f2933">가격 범위 (예시)</text>
+  <line x1="60" y1="200" x2="620" y2="200" stroke="#c9d2dc"/>
+  <line x1="60" y1="50" x2="60" y2="200" stroke="#c9d2dc"/>
+  <path d="M60 120 C 180 100, 300 140, 420 110 S 560 90, 620 100 L 620 150 C 560 150, 480 170, 420 160 S 180 170, 60 160 Z" fill="#2b5c8a" fill-opacity="0.15"/>
+  <path d="M60 140 C 180 125, 300 160, 420 135 S 560 120, 620 125" fill="none" stroke="#2b5c8a" stroke-width="2.5"/>
+  <text x="70" y="220" font-size="11" fill="#66717d">1Q</text>
+  <text x="250" y="220" font-size="11" fill="#66717d">2Q</text>
+  <text x="430" y="220" font-size="11" fill="#66717d">3Q</text>
+  <text x="590" y="220" font-size="11" fill="#66717d">4Q</text>
+</svg>

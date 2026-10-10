@@ -1,0 +1,92 @@
+// 서버 API 호출과 네이티브(pywebview) 기능 연결
+
+import { S } from './store.js';
+import { toast } from './util.js';
+
+function headers(extra = {}) {
+  const h = { ...extra };
+  const token = window.pywebview?.token;
+  if (token) h['X-Token'] = token;
+  return h;
+}
+
+async function check(res) {
+  if (res.ok) return res;
+  let message = `HTTP ${res.status}`;
+  try {
+    const body = await res.json();
+    if (body?.error) message = body.error;
+  } catch { /* 본문이 JSON이 아님 */ }
+  const err = new Error(message);
+  err.status = res.status;
+  throw err;
+}
+
+export async function getJSON(path) {
+  const res = await fetch(path, { headers: headers(), cache: 'no-store' });
+  return (await check(res)).json();
+}
+
+export async function postJSON(path, body) {
+  const res = await fetch(path, {
+    method: 'POST',
+    headers: headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body ?? {}),
+  });
+  return (await check(res)).json();
+}
+
+export async function getText(path) {
+  const res = await fetch(path, { cache: 'no-store' });
+  return (await check(res)).text();
+}
+
+/** 설정 일부를 저장한다. 실패해도 화면 동작에는 영향이 없다. */
+export async function saveConfig(patch) {
+  Object.assign(S.config, patch);
+  try {
+    await postJSON('/api/config', patch);
+  } catch (e) {
+    console.warn('설정 저장 실패', e);
+  }
+}
+
+const OPEN_RESULT = {
+  editor: '편집기로 열었습니다',
+  default: '기본 앱으로 열었습니다',
+  reveal: '탐색기에서 파일을 표시했습니다',
+  folder: '폴더를 열었습니다',
+};
+
+/** 프로젝트 안의 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기'). */
+export async function openExternal(path, line) {
+  try {
+    const r = await postJSON('/api/open-external', { path, line });
+    toast(OPEN_RESULT[r.action] || '열었습니다');
+  } catch (e) {
+    toast(e.status === 404 ? `파일을 찾을 수 없습니다: ${path}` : `열지 못했습니다: ${e.message}`, 'error');
+  }
+}
+
+export async function revealInExplorer(path) {
+  try {
+    await postJSON('/api/reveal', { path });
+  } catch (e) {
+    toast(`탐색기에서 열지 못했습니다: ${e.message}`, 'error');
+  }
+}
+
+export const native = {
+  has: (name) => typeof window.pywebview?.api?.[name] === 'function',
+
+  async chooseFolder() {
+    if (native.has('choose_folder')) return window.pywebview.api.choose_folder();
+    const p = window.prompt('열 폴더의 전체 경로를 입력하세요 (브라우저 개발 모드)');
+    return p ? p.trim() : null;
+  },
+
+  setTitle(title) {
+    document.title = title;
+    if (native.has('set_title')) window.pywebview.api.set_title(title)?.catch?.(() => {});
+  },
+};

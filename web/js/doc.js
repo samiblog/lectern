@@ -1,0 +1,359 @@
+// 문서 화면: md 원문을 받아 렌더링하고, 링크·이미지·표·코드 블록·콜아웃을 다듬는다.
+
+import { S, emit } from './store.js';
+import { getText, openExternal } from './api.js';
+import { renderMarkdown } from './markdown.js';
+import { renderMermaid } from './mermaid.js';
+import { buildToc, clearToc } from './toc.js';
+import { setStatus } from './status.js';
+import { openLightbox } from './ui.js';
+import {
+  $, $$, esc, encodePath, isMd, toast, copyText, formatDateTime, scrollToAnchor, dirname,
+} from './util.js';
+
+const PURIFY = {
+  SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. 로컬 문서 전용이라 허용
+  FORBID_TAGS: ['style', 'form'],
+};
+
+const ALERTS = { NOTE: '참고', TIP: '팁', IMPORTANT: '중요', WARNING: '경고', CAUTION: '주의' };
+
+const MEDIA_TAGS = /^(IMG|SOURCE|VIDEO|AUDIO|TRACK|EMBED|INPUT)$/;
+let purifyHookInstalled = false;
+
+/**
+ * HTML을 DOM에 넣는 순간 브라우저는 이미지를 내려받기 시작한다 (외부 주소 포함).
+ * 그래서 정화 단계에서 src 를 data-src 로 옮겨 두고, fixImage 가 허용된 이미지에만 주소를 다시 준다.
+ * (로컬 이미지는 항상, 외부 이미지는 설정 external_images 가 켜져 있을 때만)
+ * srcset·poster·url()이 든 style 은 지운다 — 이 경로로 외부 요청이 새지 않게.
+ */
+function installPurifyHook() {
+  if (purifyHookInstalled) return;
+  purifyHookInstalled = true;
+  window.DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (node.nodeType !== Node.ELEMENT_NODE) return;
+    if (MEDIA_TAGS.test(node.nodeName) && node.hasAttribute('src')) {
+      node.setAttribute('data-src', node.getAttribute('src'));
+      node.removeAttribute('src');
+    }
+    node.removeAttribute('srcset');
+    node.removeAttribute('poster');
+    const style = node.getAttribute('style');
+    if (style && /url\s*\(/i.test(style)) node.removeAttribute('style');
+  });
+}
+
+// 숫자 열 판정: 1,234 / -3.5% / $105 / 105.2달러 / 12억 / 1.2x / 30bp / '-'
+const NUM_CELL = /^(?:[-+−]?(?:[$₩€¥£]\s?)?[-+−]?\d[\d,]*(?:\.\d+)?\s?(?:%p?|bp|원|달러|억|만|조|배|x|[kKmMbB])?|[-–—])$/;
+
+// ---------------------------------------------------------------------------
+// 경로 해석
+
+/** 문서 속 href/src 를 해석한다. */
+export function resolveRef(href, baseUrl) {
+  if (!href) return { kind: 'none' };
+  if (href.startsWith('#')) return { kind: 'anchor', hash: href };
+  if (/^data:/i.test(href)) return { kind: 'data' };
+  if (/^[a-z]:[\\/]/i.test(href) || href.startsWith('\\\\')) return { kind: 'outside' };  // C:\..., \\server
+  if (/^(https?:|mailto:)/i.test(href) || href.startsWith('//')) return { kind: 'external', url: href };
+  if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return { kind: 'blocked' };
+  let url;
+  try {
+    url = new URL(href.startsWith('/') ? `/doc${href}` : href, baseUrl);   // '/docs/a.md' = 프로젝트 루트 기준
+  } catch {
+    return { kind: 'blocked' };
+  }
+  if (url.origin !== location.origin || !url.pathname.startsWith('/doc/')) return { kind: 'outside' };
+  let path;
+  try {
+    path = url.pathname.slice(5).split('/').map(decodeURIComponent).join('/');
+  } catch {
+    return { kind: 'blocked' };
+  }
+  const isDir = path.endsWith('/') || path === '';
+  return { kind: 'local', path: path.replace(/\/+$/, ''), hash: url.hash, isDir };
+}
+
+const lineFromHash = (hash) => {
+  const m = /^#L(\d+)/i.exec(hash || '');
+  return m ? +m[1] : undefined;
+};
+
+// ---------------------------------------------------------------------------
+// 렌더링 후 다듬기
+
+function bindLink(a, baseUrl, docPath) {
+  const r = resolveRef(a.getAttribute('href'), baseUrl);
+  switch (r.kind) {
+    case 'anchor':
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        if (!scrollToAnchor($('#lec-view'), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+      });
+      break;
+    case 'external':
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+      a.classList.add('ext');
+      a.title = r.url;
+      break;
+    case 'local':
+      a.title = r.path || '프로젝트 루트';
+      if (r.isDir || S.dirs.has(r.path)) {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          emit('open', { type: 'overview', path: r.path });
+        });
+      } else if (isMd(r.path)) {
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          if (r.path === docPath && r.hash) {
+            if (!scrollToAnchor($('#lec-view'), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+          } else {
+            emit('open', { type: 'doc', path: r.path, hash: r.hash });
+          }
+        });
+      } else {
+        a.classList.add('file-link');
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          openExternal(r.path, lineFromHash(r.hash));
+        });
+      }
+      break;
+    default:
+      a.classList.add('link-off');
+      a.title = '프로젝트 폴더 밖이거나 열 수 없는 경로';
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        toast('프로젝트 폴더 밖의 경로는 열지 않습니다');
+      });
+  }
+}
+
+const EXTERNAL_IMAGE_TIMEOUT_MS = 15000;   // 사내망에서 막힌 주소는 응답 없이 오래 걸릴 수 있다
+
+/** 이미지 자리에 넣을 대체 표시. url 이 있으면 브라우저로 여는 링크가 된다. */
+function imageStandIn(label, alt, url) {
+  const el = document.createElement(url ? 'a' : 'span');
+  el.className = 'image-off';
+  el.textContent = `${label}${alt ? `: ${alt}` : ''}`;
+  if (url) {
+    el.href = url;
+    el.target = '_blank';
+    el.rel = 'noopener noreferrer';
+    el.title = url;
+  }
+  return el;
+}
+
+function makeZoomable(img) {
+  img.classList.add('zoomable');
+  img.addEventListener('click', () => openLightbox(img.cloneNode()));
+}
+
+function fixImage(img, baseUrl, stamp) {
+  const src = img.getAttribute('data-src');
+  img.removeAttribute('data-src');
+  const r = resolveRef(src, baseUrl);
+  if (r.kind === 'data') {
+    img.src = src;
+    return;
+  }
+  if (r.kind === 'local') {
+    img.src = `/doc/${encodePath(r.path)}?v=${stamp}`;   // 다시 그릴 때 바뀐 이미지가 보이도록
+    img.loading = 'lazy';
+    makeZoomable(img);
+    return;
+  }
+  const isWebImage = r.kind === 'external' && /^(https?:)?\/\//i.test(r.url);
+  if (!isWebImage) {
+    img.replaceWith(imageStandIn('표시할 수 없는 이미지', img.alt));
+    return;
+  }
+  if (S.config.external_images === false) {
+    img.replaceWith(imageStandIn('외부 이미지 (설정에서 꺼 둠)', img.alt, r.url));
+    return;
+  }
+  // 외부 이미지: 문서 주소가 전달되지 않게 referrer 를 숨기고, 실패·시간 초과면 링크로 바꾼다
+  img.referrerPolicy = 'no-referrer';
+  img.classList.add('external');
+  img.title = img.title || r.url;
+  let settled = false;
+  const fail = () => {
+    if (settled) return;
+    settled = true;
+    img.replaceWith(imageStandIn('외부 이미지를 불러오지 못했습니다', img.alt, r.url));
+  };
+  img.addEventListener('load', () => { settled = true; }, { once: true });
+  img.addEventListener('error', fail, { once: true });
+  setTimeout(() => { if (!settled && !(img.complete && img.naturalWidth)) fail(); }, EXTERNAL_IMAGE_TIMEOUT_MS);
+  makeZoomable(img);
+  img.src = r.url;
+}
+
+function decorateAlerts(root) {
+  for (const bq of $$('blockquote', root)) {
+    const p = bq.firstElementChild;
+    if (!p || p.tagName !== 'P') continue;
+    const first = p.firstChild;
+    if (!first || first.nodeType !== Node.TEXT_NODE) continue;
+    const m = /^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i.exec(first.nodeValue);
+    if (!m) continue;
+    const kind = m[1].toUpperCase();
+    first.nodeValue = first.nodeValue.slice(m[0].length);
+    if (p.firstChild?.nodeName === 'BR') p.firstChild.remove();
+    if (!p.textContent.trim() && !p.querySelector('img')) p.remove();
+    bq.classList.add('alert', `alert-${kind.toLowerCase()}`);
+    const title = document.createElement('p');
+    title.className = 'alert-title';
+    title.textContent = ALERTS[kind];
+    bq.prepend(title);
+  }
+}
+
+function markNumericColumns(table) {
+  const rows = $$(':scope > tbody > tr', table);
+  if (!rows.length) return;
+  const cols = Math.max(...rows.map((r) => r.cells.length));
+  for (let c = 0; c < cols; c++) {
+    let filled = 0;
+    let numeric = 0;
+    for (const r of rows) {
+      const text = r.cells[c]?.textContent.trim();
+      if (!text) continue;
+      filled += 1;
+      if (NUM_CELL.test(text)) numeric += 1;
+    }
+    if (!filled || numeric / filled < 0.7) continue;
+    for (const r of $$(':scope > thead > tr, :scope > tbody > tr', table)) {
+      const cell = r.cells[c];
+      if (cell && !cell.style.textAlign) cell.classList.add('num');
+    }
+  }
+}
+
+function decorateTables(root) {
+  for (const table of $$('table', root)) {
+    if (table.closest('.front-matter')) continue;
+    const wrap = document.createElement('div');
+    wrap.className = 'table-wrap';
+    table.replaceWith(wrap);
+    wrap.append(table);
+    markNumericColumns(table);
+  }
+}
+
+function decorateCode(root) {
+  for (const pre of $$('pre', root)) {
+    if (pre.classList.contains('mermaid') || pre.closest('.front-matter')) continue;
+    const code = pre.querySelector(':scope > code');
+    if (!code) continue;
+    code.classList.add('hljs');
+    const lang = (/language-([\w+#.-]+)/.exec(code.className) || [])[1] || '';
+    const box = document.createElement('div');
+    box.className = 'code-block';
+    pre.replaceWith(box);
+    const tools = document.createElement('div');
+    tools.className = 'code-tools';
+    tools.innerHTML = `${lang ? `<span class="code-lang">${esc(lang)}</span>` : ''}<button type="button" class="code-copy">복사</button>`;
+    box.append(tools, pre);
+    tools.querySelector('button').addEventListener('click', async (e) => {
+      const btn = e.currentTarget;
+      const ok = await copyText(code.textContent);
+      btn.textContent = ok ? '복사됨' : '복사 실패';
+      setTimeout(() => { btn.textContent = '복사'; }, 1400);
+    });
+  }
+}
+
+function frontMatterHtml(raw) {
+  const entries = [];
+  let simple = true;
+  for (const line of raw.split(/\r?\n/)) {
+    if (!line.trim()) continue;
+    const m = /^([A-Za-z0-9_.-]+)\s*:\s*(.*)$/.exec(line);
+    if (m) entries.push([m[1], m[2]]);
+    else if (entries.length && /^\s/.test(line)) entries[entries.length - 1][1] += `\n${line.trim()}`;
+    else simple = false;
+  }
+  if (!simple || !entries.length) {
+    return `<details class="front-matter" open><summary>메타데이터</summary><pre>${esc(raw)}</pre></details>`;
+  }
+  const rows = entries.map(([k, v]) => {
+    const value = v.replace(/^[|>]-?\s*\n?/, '').replace(/^(["'])(.*)\1$/s, '$2');
+    return `<tr><th>${esc(k)}</th><td>${esc(value)}</td></tr>`;
+  }).join('');
+  return `<details class="front-matter" open><summary>메타데이터</summary><table>${rows}</table></details>`;
+}
+
+function enhance(root, docPath, stamp) {
+  const baseUrl = new URL(`/doc/${encodePath(docPath)}`, location.origin);
+  for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp);
+  for (const a of $$('a[href]', root)) bindLink(a, baseUrl, docPath);
+  decorateAlerts(root);
+  decorateTables(root);
+  decorateCode(root);
+}
+
+// ---------------------------------------------------------------------------
+
+function showMissing(view, path, err) {
+  view.className = 'md-body';
+  const parent = dirname(path);
+  const reason = err?.status === 404 ? '문서가 없거나(삭제·이동) 숨김 경로에 있습니다.' : `문서를 읽지 못했습니다: ${err?.message || ''}`;
+  view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(reason)}</p>
+    <p><button type="button" class="primary" data-parent="${esc(parent)}">${parent ? `${esc(parent)} 폴더 개요 보기` : '프로젝트 개요 보기'}</button></p></div>`;
+  view.querySelector('button').addEventListener('click', () => emit('open', { type: 'overview', path: parent }));
+}
+
+/**
+ * 문서를 그린다.
+ * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
+ * - 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
+ */
+export async function showDoc(path, { hash = '', scrollTop } = {}) {
+  const id = ++S.renderId;
+  const view = $('#lec-view');
+  const content = $('#lec-content');
+
+  let text;
+  try {
+    text = await getText(`/doc/${encodePath(path)}`);
+  } catch (err) {
+    if (id !== S.renderId) return false;
+    showMissing(view, path, err);
+    clearToc();
+    setStatus({ path, info: '' });
+    emit('rendered');
+    return true;
+  }
+  if (id !== S.renderId) return false;
+
+  installPurifyHook();
+  const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
+  const stage = document.createElement('article');
+  stage.className = 'md-body lec-stage';
+  stage.style.width = `${content.clientWidth}px`;
+  stage.innerHTML = (frontMatter ? frontMatterHtml(frontMatter) : '') + window.DOMPurify.sanitize(html, PURIFY);
+  document.body.append(stage);
+  try {
+    enhance(stage, path, Date.now());
+    await renderMermaid(stage);
+  } finally {
+    stage.remove();
+  }
+  if (id !== S.renderId) return false;
+
+  view.className = 'md-body';
+  view.replaceChildren(...stage.childNodes);
+  buildToc(view);
+  if (scrollTop != null) content.scrollTop = scrollTop;
+  else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
+
+  if (S.changed.delete(path)) emit('changed');
+  const file = S.fileMap.get(path);
+  setStatus({ path, info: file ? `수정 ${formatDateTime(file.mtime)}` : '' });
+  emit('rendered');
+  return true;
+}

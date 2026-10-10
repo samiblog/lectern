@@ -1,0 +1,26 @@
+/* 기본: 화면 읽기용 산세리프. 넉넉한 줄간격, 밝은 배경 */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #1f2933;
+  --md-heading: #141c25;
+  --md-muted: #5f6b78;
+  --md-border: #e1e5ea;
+  --md-link: #1f5f9f;
+  --md-code-bg: #f4f6f8;
+  --md-quote-bar: #c9d2dc;
+  --md-th-bg: #eef2f6;
+  --md-stripe: #f9fafb;
+  --md-alert-note: #2f6fb3;
+  --md-alert-tip: #2e7d4f;
+  --md-alert-important: #7149b8;
+  --md-alert-warning: #a86b06;
+  --md-alert-caution: #c0392b;
+  --md-font: "Pretendard", "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "Cascadia Code", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.74;
+  --md-width: 880px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}

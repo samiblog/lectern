@@ -1,0 +1,5 @@
+-r requirements.txt
+pytest>=8
+pyinstaller>=6.0
+# 화면 회귀 점검(tools/ui_smoke.py)용. 설치 후 'python -m playwright install chromium' 필요 (인터넷)
+playwright>=1.40

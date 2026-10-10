@@ -1,0 +1,239 @@
+// 시작점: 초기화, 툴바, 단축키, 프로젝트 열기
+
+import { S, emit, on } from './store.js';
+import { getJSON, postJSON, saveConfig, native } from './api.js';
+import { initTheme } from './theme.js';
+import { initUi, showMenu, hideMenu, closeLightbox } from './ui.js';
+import { initToc, clearToc, updateTocVisibility } from './toc.js';
+import { initFind, openFind, closeFind } from './find.js';
+import { initStatus, setStatus } from './status.js';
+import { initOverview } from './overview.js';
+import { initTree, focusFilter } from './tree.js';
+import { initPalette, openPalette, closePalette } from './palette.js';
+import { initNav, navigate, back, forward, resetHistory, refreshView } from './nav.js';
+import { initWatch, startWatch } from './watch.js';
+import { loadTree } from './project.js';
+import { $, esc, basename, toast } from './util.js';
+
+// ---- 프로젝트 ---------------------------------------------------------------
+
+function folderName(p) {
+  return basename(p.replace(/[\\/]+$/, '').replace(/\\/g, '/')) || p;
+}
+
+function showWelcome() {
+  const recent = (S.config.recent || []).slice(0, 8);
+  const view = $('#lec-view');
+  view.className = 'welcome';
+  view.innerHTML = `<h1>프로젝트 폴더를 여세요</h1>
+    <p>폴더 안의 Markdown 문서를 트리와 개요로 정리해 보여 줍니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
+    <p><button type="button" class="primary" data-act="open">폴더 열기</button></p>
+    ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
+      <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
+  clearToc();
+  setStatus({ path: '', info: '' });
+}
+
+async function reloadProject() {
+  if (S.reloading) return;
+  S.reloading = true;
+  try {
+    const st = await getJSON('/api/state');
+    S.root = st.root;
+    S.name = st.name;
+    S.sep = st.sep;
+    S.seq = st.seq;
+    S.watch = st.watch;
+    S.lastSync = null;
+    S.changed.clear();
+    S.open.clear();
+    resetHistory();
+    updateProjectHeader();
+    if (!S.root) {
+      S.tree = [];
+      S.files = [];
+      emit('tree');
+      showWelcome();
+      return;
+    }
+    await loadTree();
+    for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);   // 첫 단계 폴더는 펼쳐 둔다
+    await navigate({ type: 'overview', path: '' });
+  } catch (e) {
+    toast(`프로젝트를 불러오지 못했습니다: ${e.message}`, 'error');
+  } finally {
+    S.reloading = false;
+  }
+}
+
+async function openFolder(path) {
+  try {
+    await postJSON('/api/open', { path });
+    S.config = await getJSON('/api/config');
+    await reloadProject();
+  } catch (e) {
+    toast(`폴더를 열 수 없습니다: ${e.message}`, 'error');
+  }
+}
+
+async function chooseAndOpen() {
+  const path = await native.chooseFolder();
+  if (path) await openFolder(path);
+}
+
+function updateProjectHeader() {
+  const btn = $('#lec-btn-project');
+  btn.textContent = S.root ? S.name : '폴더를 열어 주세요';
+  btn.title = S.root || '';
+  btn.disabled = !S.root;
+}
+
+function updateWindowTitle() {
+  if (!S.root) {
+    native.setTitle('Lectern');
+    return;
+  }
+  let title = S.name;
+  if (S.view?.type === 'doc') {
+    const f = S.fileMap.get(S.view.path);
+    title = `${f?.title || basename(S.view.path)} - ${S.name}`;
+  }
+  native.setTitle(`${title} - Lectern`);
+}
+
+function updateNavButtons() {
+  $('#lec-btn-back').disabled = S.hIndex <= 0;
+  $('#lec-btn-forward').disabled = S.hIndex >= S.history.length - 1;
+}
+
+// ---- 레이아웃 -----------------------------------------------------------------
+
+function applyLayout() {
+  document.documentElement.classList.toggle('sidebar-off', S.config.sidebar_visible === false);
+  $('#lec-btn-sidebar').classList.toggle('on', S.config.sidebar_visible !== false);
+  updateTocVisibility();
+}
+
+async function toggleSidebar() {
+  await saveConfig({ sidebar_visible: S.config.sidebar_visible === false });
+  applyLayout();
+}
+
+async function toggleToc() {
+  await saveConfig({ toc_visible: S.config.toc_visible === false });
+  applyLayout();
+}
+
+async function manualRefresh() {
+  if (!S.root) return;
+  try {
+    await loadTree();
+    await refreshView();
+    toast('다시 불러왔습니다');
+  } catch (e) {
+    toast(`다시 불러오지 못했습니다: ${e.message}`, 'error');
+  }
+}
+
+// ---- 연결 ---------------------------------------------------------------------
+
+function bindToolbar() {
+  $('#lec-btn-sidebar').addEventListener('click', toggleSidebar);
+  $('#lec-btn-toc').addEventListener('click', toggleToc);
+  $('#lec-btn-back').addEventListener('click', back);
+  $('#lec-btn-forward').addEventListener('click', forward);
+  $('#lec-btn-open').addEventListener('click', chooseAndOpen);
+  $('#lec-btn-palette').addEventListener('click', openPalette);
+  $('#lec-btn-project').addEventListener('click', () => S.root && navigate({ type: 'overview', path: '' }));
+  $('#lec-btn-recent').addEventListener('click', (e) => {
+    const recent = S.config.recent || [];
+    const r = e.currentTarget.getBoundingClientRect();
+    const items = recent.length
+      ? recent.map((p) => ({ label: folderName(p), hint: p, action: () => openFolder(p) }))
+      : [{ label: '최근 연 폴더가 없습니다', action: () => {} }];
+    items.push('-', { label: '다른 폴더 열기...', action: chooseAndOpen });
+    showMenu(r.left, r.bottom + 4, items);
+  });
+  $('#lec-view').addEventListener('click', (e) => {
+    if (!$('#lec-view').classList.contains('welcome')) return;
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.act === 'open') chooseAndOpen();
+    else if (btn.dataset.path) openFolder(btn.dataset.path);
+  });
+}
+
+function bindKeys() {
+  document.addEventListener('keydown', (e) => {
+    const mod = e.ctrlKey || e.metaKey;
+    const key = e.key.toLowerCase();
+    if (mod && !e.shiftKey && key === 'p') {
+      e.preventDefault();
+      openPalette();
+    } else if (mod && key === 'f') {
+      e.preventDefault();
+      if (S.view?.type === 'doc') openFind();
+      else focusFilter();
+    } else if (mod && key === 'o') {
+      e.preventDefault();
+      chooseAndOpen();
+    } else if (mod && key === 'b') {
+      e.preventDefault();
+      toggleSidebar();
+    } else if (e.altKey && e.key === 'ArrowLeft') {
+      e.preventDefault();
+      back();
+    } else if (e.altKey && e.key === 'ArrowRight') {
+      e.preventDefault();
+      forward();
+    } else if (e.key === 'F5') {
+      e.preventDefault();
+      manualRefresh();
+    } else if (e.key === 'Escape') {
+      if (closePalette() || hideMenu() || closeLightbox() || closeFind()) e.preventDefault();
+    }
+  });
+  // 마우스 뒤로/앞으로 버튼
+  window.addEventListener('mouseup', (e) => {
+    if (e.button === 3) { e.preventDefault(); back(); }
+    if (e.button === 4) { e.preventDefault(); forward(); }
+  });
+}
+
+async function waitForBridge() {
+  if (S.mode !== 'app' || window.pywebview?.api) return;
+  await new Promise((resolve) => {
+    window.addEventListener('pywebviewready', resolve, { once: true });
+    setTimeout(resolve, 4000);
+  });
+}
+
+async function boot() {
+  await waitForBridge();
+  try {
+    S.config = await getJSON('/api/config');
+  } catch {
+    S.config = {};
+  }
+  initTheme();
+  initUi();
+  initToc();
+  initFind();
+  initStatus();
+  initOverview();
+  initTree();
+  initPalette();
+  initNav();
+  initWatch();
+  bindToolbar();
+  bindKeys();
+  applyLayout();
+
+  on('view', () => { updateNavButtons(); updateWindowTitle(); });
+  on('project-switched', reloadProject);
+
+  await reloadProject();
+  startWatch();
+}
+
+boot();

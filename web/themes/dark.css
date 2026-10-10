@@ -1,0 +1,28 @@
+/* 다크: 눈부심을 줄인 회청색 배경. '자동'일 때 Windows 다크 모드에서 선택된다 */
+:root {
+  --md-bg: #1f242b;
+  --md-fg: #d5dbe1;
+  --md-heading: #eef2f5;
+  --md-muted: #9aa5b1;
+  --md-border: #333b45;
+  --md-link: #8ab9e8;
+  --md-code-bg: #262c34;
+  --md-quote-bar: #46515e;
+  --md-th-bg: #2a313a;
+  --md-stripe: #232930;
+  --md-alert-note: #6ea8e6;
+  --md-alert-tip: #63b987;
+  --md-alert-important: #a98be0;
+  --md-alert-warning: #d9a640;
+  --md-alert-caution: #ec7a6f;
+  --md-font: "Pretendard", "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Noto Sans KR", "Noto Sans CJK KR", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "Cascadia Code", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.74;
+  --md-width: 880px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body img:not([src*=".svg"]) { filter: brightness(.92); }
