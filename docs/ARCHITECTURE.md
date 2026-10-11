@@ -237,7 +237,7 @@ sequenceDiagram
 - 스타일 12종: 밝은 스타일 `default`(기본)·`report`(보고서)·`github`·`notion`(노션풍)·`paper`(종이·세피아)·`academic`(논문)·`newsprint`(신문)·`contrast`(고대비), 어두운 스타일 `dark`·`nord`·`solarized-dark`·`night`(밤 종이) (D26).
 - `base.css` 가 본문 규칙을 CSS 변수로 정의하고, 스타일마다 `<id>.css` 가 변수 값과 몇몇 규칙(표 테두리, 제목 장식, 코드 색)을 바꾼다. `<link id="lec-theme-css">` 의 href를 바꿔 전환한다.
 - 제목(`--md-heading`)은 본문(`--md-fg`)과 색을 조금 달리한다 (기본: 남색, 다크: 옅은 하늘색, 보고서: 남색). 표 머리행은 배경 `--md-th-bg`, 아래 2px 선 `--md-th-rule`, 글자는 제목 색으로 본문 행과 구분한다.
-- `theme.js` 의 `THEMES` 가 스타일마다 이름, 밝음/어두움(앱 UI와 highlight.js github / github-dark), Mermaid 테마를 정한다. 선택 목록(밝은·어두운 묶음)도 이 표로 만든다. 코드 색을 바꾸는 스타일(Nord·Solarized)은 자기 css 에서 `.md-body .hljs-*` 를 덮는다. Mermaid는 기본 테마(default / neutral / dark)를 쓰거나, `base` + `mermaidVars`(themeVariables)로 스타일 색에 맞춘다(종이·Nord·Solarized·밤 종이). 전환하면 Mermaid 때문에 현재 문서를 다시 그린다.
+- `theme.js` 의 `THEMES` 가 스타일마다 이름, 밝음/어두움(앱 UI와 highlight.js github / github-dark), Mermaid 테마를 정한다. 선택 목록(밝은·어두운 묶음)도 이 표로 만든다. 코드 색을 바꾸는 스타일(Nord·Solarized)은 자기 css 에서 `.md-body .hljs-*` 를 덮는다. Mermaid는 모든 스타일이 `base` 테마에 스타일 색(themeVariables — 바탕, 상자 채움·테두리·글자, 보조 상자, 선, 글자)을 준다 (`mermaidColors`). 전환하면 Mermaid 때문에 현재 문서를 다시 그린다.
 - 글꼴은 PC에 있는 것만 쓴다. 영문 글꼴 → 한글 글꼴(KoPub·나눔·Noto 등, 있으면) → Windows 기본(맑은 고딕·바탕) 순이다. Georgia 를 쓰는 스타일은 숫자 높낮이가 다른 글꼴이라 표만 Cambria 로 바꾼다.
 - 고른 스타일은 설정 `theme` 에 저장되어 다음 실행에도 쓰인다.
 - `auto` 는 `prefers-color-scheme` (WebView2는 Windows 앱 모드 설정을 따름)으로 기본/다크를 고른다.

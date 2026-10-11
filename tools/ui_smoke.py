@@ -317,10 +317,15 @@ def run(headed: bool) -> None:
             themes = [t for t in page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)') if t != 'auto']
             groups = page.eval_on_selector_all('#lec-theme optgroup', 'gs => gs.map(g => g.label)')
             check(len(themes) == 12 and groups == ['밝은 스타일', '어두운 스타일'], f'스타일 {len(themes)}종, 밝은·어두운 묶음 ({groups})')
-            ok = use_theme('nord') and wait_until(page, "document.querySelectorAll('pre.mermaid.mermaid-ok svg').length === 2", 20000)
-            styled = ok and page.evaluate("[...document.querySelectorAll('pre.mermaid svg style')].some(s => s.textContent.includes('#3b4252'))")
-            check(styled, 'Mermaid 다이어그램을 스타일 색으로 다시 그림 (Nord)')
-            shot('04-theme-nord-mermaid')
+            unstyled = []
+            # 스타일마다 다이어그램 상자 색(theme.js 의 mermaid primaryColor)이 그 스타일 것이어야 한다
+            for theme, fill in (('default', '#e8eff7'), ('dark', '#2a313a'), ('academic', '#fffff8'), ('nord', '#3b4252')):
+                ok = use_theme(theme) and wait_until(page, f"""[...document.querySelectorAll('pre.mermaid.mermaid-ok svg style')]
+                    .filter(s => s.textContent.includes('{fill}')).length === 2""", 20000)
+                if not ok:
+                    unstyled.append(theme)
+                shot(f'04-theme-{theme}-mermaid')
+            check(not unstyled, 'Mermaid 다이어그램을 스타일 색으로 다시 그림 (기본·다크·논문·Nord)' + (f': {unstyled}' if unstyled else ''))
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             measure = '''() => {
