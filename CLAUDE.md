@@ -72,6 +72,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | watch.js | 1초 폴링으로 변경 반영 |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
+| diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |
 | theme.js | 문서 스타일 목록(THEMES)과 전환. 스타일 선택 목록도 이 표로 만든다 |
 | mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |

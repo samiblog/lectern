@@ -8,6 +8,7 @@ import { initToc, clearToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initDocMenu } from './docmenu.js';
+import { initChangeMarks } from './diffmark.js';
 import { initStatus, setStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
@@ -236,6 +237,7 @@ async function boot() {
   initFind();
   initFold();
   initDocMenu();
+  initChangeMarks();
   initStatus();
   initOverview();
   initTree();

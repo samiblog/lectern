@@ -7,6 +7,7 @@ import { renderMermaid } from './mermaid.js';
 import { buildToc, clearToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { setDocSource } from './docmenu.js';
+import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { setStatus } from './status.js';
 import { openLightbox } from './ui.js';
 import {
@@ -359,6 +360,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
     if (id !== S.renderId) return false;
     showMissing(view, path, err);
     setDocSource(null);
+    clearChanges();
     clearToc();
     setStatus({ path, info: '' });
     emit('rendered');
@@ -381,6 +383,9 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   }
   if (id !== S.renderId) return false;
 
+  // 같은 문서를 다시 그리면(자동 새로고침) 바뀐 블록을 강조하려고 이전 화면을 기록해 둔다
+  const sameDoc = S.view?.type === 'doc' && S.view.path === path && !$('.doc-missing', view);
+  const before = sameDoc ? snapshot(view) : null;
   view.className = 'md-body';
   view.replaceChildren(...stage.childNodes);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
@@ -388,6 +393,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   buildToc(view);
   if (scrollTop != null) content.scrollTop = scrollTop;
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
+  markChanges(view, path, before);
 
   if (S.changed.delete(path)) emit('changed');
   const file = S.fileMap.get(path);

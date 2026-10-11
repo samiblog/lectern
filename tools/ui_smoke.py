@@ -359,8 +359,14 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-tree .row.file:has-text("새 메모")', timeout=8000)
             check(page.locator('#lec-content').evaluate('el => el.scrollTop') == 600 and folded('코드'),
                   '보던 문서는 스크롤 위치와 접은 절을 유지하며 다시 그림')
-            check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
+            changed = page.evaluate("[...document.querySelectorAll('#lec-view .lec-changed')].map(e => e.tagName)")
+            changes_btn = page.locator('#lec-st-changes')
+            check(changed == ['H1'] and changes_btn.is_visible() and '1곳' in changes_btn.inner_text(),
+                  f'바뀐 블록만 강조하고, 화면 밖이면 상태줄에 바뀐 곳 버튼 ({changed}, {changes_btn.inner_text()!r})')
             shot('05-live-reload')
+            changes_btn.click()
+            check(wait_until(page, "document.querySelector('#lec-content').scrollTop < 200"), '바뀐 곳 버튼을 누르면 그곳으로 이동')
+            check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
 
             print('[문서 속 원시 HTML]')
             page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click()

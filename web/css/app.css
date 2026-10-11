@@ -177,6 +177,11 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   border-top: 1px solid var(--ui-border); color: var(--ui-muted); font-size: 12px; white-space: nowrap;
 }
 #lec-st-path { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.st-changes {
+  border: 0; border-radius: 9px; padding: 0 9px; height: 18px; line-height: 18px;
+  background: var(--ui-fresh); color: #1c1400; font-size: 11.5px; font-weight: 700;
+}
+.st-changes:hover { filter: brightness(1.08); }
 
 /* ---- 찾기 ------------------------------------------------------------------ */
 #lec-findbar { position: sticky; top: 0; height: 0; z-index: 20; }
