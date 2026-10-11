@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.4.0 (v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.5.0 (v0.5.0 = 글자 크기 −·+ 와 장 강조. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -74,6 +74,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | watch.js | 1초 폴링으로 변경 반영 |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
+| spotlight.js | 장 강조 — 한 장만 그대로, 나머지는 흐리게. ↑·↓·PageUp·PageDown 으로 앞뒤 장 |
+| textsize.js | 툴바의 글자 크기 − 100% + (설정 font_scale, CSS 변수 --md-scale) |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
 | settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 마지막 문서·스크롤 위치 기록 |
@@ -102,7 +104,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 블록의 원문 줄 범위는 `data-lines="시작-끝"` 이다 (`markdown.js` 의 `sourceLines`). `data-src` 는 정화 훅이 그림 주소를 떼어 두는 데 쓰므로 다른 뜻으로 쓰지 않는다. 블록을 그리는 렌더러 규칙을 새로 만들면 `self.renderAttrs(token)` 으로 `data-lines` 를 내보낸다 (수식 블록·Mermaid 참고). 안 그러면 그 블록은 원문 복사가 안 된다.
 - 문서 속 절대경로(`C:\...`, `file:///...`)는 프로젝트 안일 때만 열린다 (`doc.js` 의 `absoluteRef`). DOMPurify 설정의 `ALLOWED_URI_REGEXP` 를 좁히면 이 기능이 조용히 깨진다 (`ui_smoke` 의 [절대경로]가 잡는다).
 - 문서 속 링크는 `a[href], area[href]` 를 모두 `bindLink` 가 다룬다. 다루지 않은 링크를 누르면 앱 창이 그 주소로 떠난다. SVG `<a>` 는 `target` 등이 읽기 전용 속성이라 `setAttribute` 로 준다.
-- 접힌 절의 블록은 `display:none`(`lec-fold-hidden`)이라 위치가 0이다. 문서 속 요소로 스크롤하는 코드는 먼저 `fold.js` 의 `unfoldTo(el)` 을 부른다 (목차·앵커 링크·찾기가 그렇게 한다).
+- 접힌 절의 블록은 `display:none`(`lec-fold-hidden`)이라 위치가 0이다. 문서 속 요소로 스크롤하는 코드는 먼저 `fold.js` 의 `unfoldTo(el)` 을 부른다 (목차·앵커 링크·찾기가 그렇게 한다). `unfoldTo` 는 `reveal` 을 보내 장 강조도 그 장으로 옮기므로, 새로 문서 속으로 가는 기능도 이 함수를 거친다.
+- 문서 본문의 글자 크기는 `--md-scale`(툴바의 글자 크기)을 곱한다. `base.css`·스타일 css 에 px 로 글자 크기를 새로 적으면 `calc(13px * var(--md-scale, 1))` 처럼 쓴다 (em 은 그대로 따라간다).
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
