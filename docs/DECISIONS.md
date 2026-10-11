@@ -79,6 +79,8 @@
 - **이유**: pywebview는 디버그가 아닐 때 `AreBrowserAcceleratorKeysEnabled=False` 로 WebView2의 기본 찾기를 끈다 (pywebview 6.2 `edgechromium.py` 확인). Highlight API는 DOM을 바꾸지 않아 다시 그리기와 충돌하지 않는다.
 - **한계**: 여러 텍스트 노드에 걸친 검색어(예: 굵은 글씨 경계)는 찾지 못한다.
 
+- **변경 (v0.3.0)**: 텍스트 노드마다 따로 찾던 것을, 같은 블록(문단·칸·제목 등) 안의 글자를 이어 붙여 찾도록 바꿨다. `**굵게**텍스트`·`` `코드` `` 처럼 서식이 섞인 글자도 찾는다. 블록 사이에는 줄바꿈을 넣어 문단을 넘어 찾지 않는다. html 문서(iframe)도 같은 방법이다.
+
 ## D14. CSP를 걸지 않는다
 
 - **결정**: `index.html` 에 Content-Security-Policy를 두지 않는다.

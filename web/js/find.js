@@ -27,6 +27,42 @@ function clearMarks() {
   $('#lec-find-count').textContent = '';
 }
 
+// 같은 블록 안의 글자는 이어 붙여 찾는다 ('**굵게**, `코드`' → '굵게, 코드'). 블록 사이에는 줄바꿈을 넣어 넘어가지 않게 한다
+const BLOCKS = 'p, li, td, th, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, figcaption, caption, summary, '
+  + 'div, section, article, header, footer, main, nav, aside, table, tr, ul, ol, dl, details, body';
+
+/** root 의 보이는 글자를 한 줄로: text 는 소문자·공백 정리(글자 수는 그대로), parts 는 [시작 위치, 텍스트 노드] */
+function flatten(root) {
+  const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode: (n) => (n.parentElement?.closest('.code-tools, svg, .katex-mathml, script, style')
+      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+  });
+  let text = '';
+  const parts = [];
+  let block = null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const here = node.parentElement.closest(BLOCKS);
+    if (block && here !== block) text += '\n';
+    block = here;
+    parts.push([text.length, node]);
+    const low = node.nodeValue.toLowerCase();   // 소문자로 바꾸며 글자 수가 달라지는 드문 글자(İ 등)가 있으면 그 노드는 그대로
+    text += (low.length === node.nodeValue.length ? low : node.nodeValue).replace(/\s/g, ' ');   // 줄바꿈도 한 글자 공백으로
+  }
+  return { text, parts };
+}
+
+/** 이어 붙인 글자의 위치 → [텍스트 노드, 그 안의 위치] (이분 탐색) */
+function locate(parts, at) {
+  let lo = 0;
+  let hi = parts.length - 1;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (parts[mid][0] <= at) lo = mid;
+    else hi = mid - 1;
+  }
+  return [parts[lo][1], at - parts[lo][0]];
+}
+
 function search(keepIndex = false) {
   const prev = current;
   clearMarks();
@@ -34,20 +70,16 @@ function search(keepIndex = false) {
   const root = docRoot();
   const doc = root.ownerDocument;
   win = doc.defaultView;
-  if (!query || !supported(win)) return;
-  const needle = query.toLowerCase();
-  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => (n.parentElement?.closest('.code-tools, svg, .katex-mathml, script, style')
-      ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
-  });
-  for (let node = walker.nextNode(); node && ranges.length < MAX_HITS; node = walker.nextNode()) {
-    const text = node.nodeValue.toLowerCase();
-    for (let i = text.indexOf(needle); i !== -1 && ranges.length < MAX_HITS; i = text.indexOf(needle, i + needle.length)) {
-      const r = doc.createRange();
-      r.setStart(node, i);
-      r.setEnd(node, i + needle.length);
-      ranges.push(r);
-    }
+  if (!query.trim() || !supported(win)) return;
+  const needle = query.toLowerCase().replace(/\s+/g, ' ');
+  const { text, parts } = flatten(root);
+  for (let i = text.indexOf(needle); i !== -1 && ranges.length < MAX_HITS; i = text.indexOf(needle, i + needle.length)) {
+    const [a, aOff] = locate(parts, i);
+    const [b, bOff] = locate(parts, i + needle.length - 1);
+    const r = doc.createRange();
+    r.setStart(a, aOff);
+    r.setEnd(b, bOff + 1);
+    ranges.push(r);
   }
   if (!ranges.length) {
     $('#lec-find-count').textContent = '없음';

@@ -360,6 +360,16 @@ def run(headed: bool) -> None:
             page.keyboard.press('Enter')   # 둘째 결과 '아래 값은 모두 예시입니다' 는 접어 둔 '표' 절 안에 있다
             check(was_folded and not folded('표') and text('아래 값은 모두').is_visible(),
                   '접은 절은 다른 문서에 다녀와도 접혀 있고, 찾기 결과로 가면 펴짐' + ('' if was_folded else ' (돌아왔을 때 펴져 있음)'))
+            page.fill('#lec-find-input', '굵게, 코드')   # 원문은 **굵게**, `코드` — 글자 조각(텍스트 노드) 셋에 걸친다
+            wait_until(page, "document.querySelector('#lec-find-count').textContent === '1/1'")
+            crossed = page.locator('#lec-find-count').inner_text()
+            page.fill('#lec-find-input', '표시가 없는 인용문은 콜아웃이 아니라 평범한')
+            wait_until(page, "document.querySelector('#lec-find-count').textContent === '1/1'")
+            crossed2 = page.locator('#lec-find-count').inner_text()
+            page.fill('#lec-find-input', '체크리스트와 각주 숨김')   # 제목과 다음 목록 항목 사이는 넘어가지 않는다
+            wait_until(page, "document.querySelector('#lec-find-count').textContent === '없음'")
+            check(crossed == '1/1' and crossed2 == '1/1' and page.locator('#lec-find-count').inner_text() == '없음',
+                  f'찾기가 굵게·코드 같은 서식 경계를 넘어 찾고, 블록(문단·제목) 경계는 넘지 않음 ({crossed!r}, {crossed2!r})')
             page.keyboard.press('Escape')
 
             print('[자동 새로고침]')
