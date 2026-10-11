@@ -160,6 +160,9 @@ function sourceLines(md) {
 
 function create(math) {
   const md = window.markdownit({ html: true, linkify: true, typographer: false, highlight });
+  // 기본값은 file: 링크를 글자로 남긴다. 프로젝트 안의 file:///C:/... 는 doc.js 가 상대경로로 바꾸고 밖은 막으므로 허용한다 (2-2)
+  const validate = md.validateLink;
+  md.validateLink = (url) => /^\s*file:/i.test(url) || validate(url);
   md.use(window.markdownitFootnote)
     .use(window.markdownitTaskLists, { enabled: false })
     .use(window.markdownItAnchor, { slugify, tabIndex: false });

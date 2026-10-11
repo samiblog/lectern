@@ -419,6 +419,28 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
             check(page.url == url, 'SVG xlink:href 링크도 앱 안에서 문서를 엶')
 
+            print('[절대경로]')
+            w = str(work)
+            absdoc = work / 'docs' / '96-절대경로.md'
+            absdoc.write_text(
+                '# 절대경로 확인\n\n'
+                f'![절대경로 그림](<{w}\\research\\images\\price-band.svg>)\n\n'
+                f'- [역슬래시 절대경로 링크](<{w}\\docs\\02-수식과-달러.md>)\n'
+                f'- [file 링크](file:///{w.replace(chr(92), "/")}/docs/01-기능-점검.md)\n'
+                '- [프로젝트 밖](<C:\\Windows\\win.ini>)\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file:has-text("절대경로 확인")', timeout=8000)
+            page.locator('#lec-tree .row.file', has_text='절대경로 확인').click()
+            page.wait_for_selector('#lec-view h1:has-text("절대경로 확인")')
+            wait_until(page, "document.querySelector('#lec-view img')?.complete")
+            got = page.evaluate("""() => ({
+              img: document.querySelector('#lec-view img')?.naturalWidth || 0,
+              links: [...document.querySelectorAll('#lec-view li a')].map(a => [a.title, a.classList.contains('link-off')]) })""")
+            want = [['docs/02-수식과-달러.md', False], ['docs/01-기능-점검.md', False]]
+            check(got['img'] > 0 and got['links'][:2] == want and got['links'][2][1],
+                  f'프로젝트 안의 절대경로·file: 그림과 링크는 열리고, 밖은 막힘 ({got})')
+            page.locator('#lec-view a', has_text='역슬래시 절대경로 링크').click()
+            page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
+
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
             labels = page.locator('#lec-tree .row.file').all_inner_texts()

@@ -93,6 +93,8 @@
 - **재검토 필요 (v0.1.3 검토)**: 위 이유의 일부가 사실과 다르다. 앱은 `document.querySelector`·`createElement`·`body`·`title` 을 쓰고, 문서 속 `<img name="querySelector">` 가 이것을 가린다 (화면이 멈춤). 제목 id(`<h2 id="title">`)는 `document` 속성을 가리지 않으므로, `SANITIZE_DOM` 을 끈 채 `img` 의 `name` 만 지우는 방안을 검토한다. ROADMAP '알려진 문제' 참고.
 - **변경 (v0.1.3)**: 위 방안대로 한다. `SANITIZE_DOM: false` 는 그대로 두고, 정화 훅이 `img` 의 `name` 을 지운다. `document` 의 이름을 가릴 수 있는 요소 가운데 DOMPurify가 허용하는 것은 `img` 뿐이다 (`form` 은 금지, `embed`·`object`·`iframe` 은 DOMPurify가 막음). `window.<id>` 는 진짜 전역을 가리지 못하므로, 늦게 불러오는 전역(mermaid)만 조심한다 (CLAUDE.md 함정).
 
+- **변경 (v0.3.0)**: `ALLOWED_URI_REGEXP` 에 `file:` 과 드라이브 경로(`c:/`, `c:%5C`)를 더했다. 기본값은 이런 주소의 `href`·`src` 를 지워 프로젝트 안 절대경로 그림·링크(ROADMAP 2-2)를 쓸 수 없었다. 이런 주소는 모두 `resolveRef` 가 프로젝트 안이면 상대경로로 바꾸고 밖이면 막는다.
+
 ## D16. 제목 앵커는 GitHub 규칙
 
 - **결정**: slug = 소문자, 글자·숫자·`_`·공백·`-` 외 제거, 공백 → `-`. 한글은 유지.

@@ -17,6 +17,9 @@ import {
 const PURIFY = {
   SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
   FORBID_TAGS: ['style', 'form'],
+  // DOMPurify 기본 허용 URL 에 file: 과 드라이브 경로(c:/, c:%5C — markdown-it 이 \ 를 %5C 로 바꾼다)를 더한다.
+  // 이런 링크·그림은 resolveRef 가 프로젝트 안이면 상대경로로 바꾸고 밖이면 막는다 (ROADMAP 2-2)
+  ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|file):|[a-z]:(?:[\\/]|%5c)|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
 
 const ALERTS = { NOTE: '참고', TIP: '팁', IMPORTANT: '중요', WARNING: '경고', CAUTION: '주의' };
@@ -75,12 +78,39 @@ const NUM_CELL = /^(?:[-+−]?(?:[$₩€¥£]\s?)?[-+−]?\d[\d,]*(?:\.\d+)?\s?
 // ---------------------------------------------------------------------------
 // 경로 해석
 
+/**
+ * 절대경로(C:\proj\a.md, C:/proj/a.md, \\server\share\a.md, file:///C:/proj/a.md)가 열린 프로젝트 안이면 상대경로로 (ROADMAP 2-2).
+ * 절대경로가 아니면 null, 프로젝트 밖이면 outside. markdown-it 이 \ 를 %5C 로 바꿔 주므로 풀어서 본다.
+ * 경로 비교는 Windows처럼 대소문자를 가리지 않는다. 실제로 열 수 있는지는 서버의 resolve_inside 가 다시 본다.
+ */
+function absoluteRef(href) {
+  let raw = href;
+  try { raw = decodeURIComponent(href); } catch { /* 그대로 */ }
+  const unc = raw.startsWith('\\\\');
+  let s = raw.replace(/\\/g, '/');
+  if (/^file:/i.test(s)) {
+    s = s.replace(/^file:\/*/i, '');
+    if (!/^[a-z]:\//i.test(s)) s = `//${s}`;   // file://server/share → //server/share
+  } else if (!/^[a-z]:\//i.test(s) && !unc) {
+    return null;
+  }
+  const at = s.indexOf('#');
+  const hash = at >= 0 ? s.slice(at) : '';
+  const full = (at >= 0 ? s.slice(0, at) : s).replace(/\?.*$/, '');
+  const root = (S.root || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const low = full.toLowerCase();
+  if (!root || (low !== root.toLowerCase() && !low.startsWith(`${root.toLowerCase()}/`))) return { kind: 'outside' };
+  const path = full.slice(root.length + 1).replace(/\/+$/, '');
+  return { kind: 'local', path, hash, isDir: full.endsWith('/') || path === '' || S.dirs.has(path) };
+}
+
 /** 문서 속 href/src 를 해석한다. */
 export function resolveRef(href, baseUrl) {
   if (!href) return { kind: 'none' };
   if (href.startsWith('#')) return { kind: 'anchor', hash: href };
   if (/^data:/i.test(href)) return { kind: 'data' };
-  if (/^[a-z]:[\\/]/i.test(href) || href.startsWith('\\\\')) return { kind: 'outside' };  // C:\..., \\server
+  const abs = absoluteRef(href);
+  if (abs) return abs;
   if (/^(https?:|mailto:)/i.test(href) || href.startsWith('//')) return { kind: 'external', url: href };
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return { kind: 'blocked' };
   let url;
