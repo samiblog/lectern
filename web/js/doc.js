@@ -8,6 +8,7 @@ import { buildToc, clearToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { setDocSource } from './docmenu.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
+import { linkPaths } from './pathlink.js';
 import { setStatus } from './status.js';
 import { openLightbox } from './ui.js';
 import {
@@ -423,6 +424,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   try {
     enhance(stage, path, Date.now());
     await renderMermaid(stage);
+    await linkPaths(stage, path);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
   } finally {
     stage.remove();
   }

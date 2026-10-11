@@ -57,6 +57,8 @@
 .md-body a:hover { text-decoration-color: currentColor; }
 .md-body a.ext::after { content: "↗"; font-size: .72em; margin-left: 2px; vertical-align: super; opacity: .7; }
 .md-body a.file-link { text-decoration-style: dashed; }
+.md-body a.path-link { text-decoration-style: dotted; }   /* 본문 속 경로 자동 링크 (pathlink.js) */
+.md-body a.path-link code { color: inherit; }
 .md-body a.link-off { color: var(--md-muted); text-decoration: line-through; cursor: not-allowed; }
 .md-body .image-off { display: inline-block; padding: 3px 9px; border: 1px dashed var(--md-border); border-radius: 5px; font-size: .88em; color: var(--md-muted); }
 

@@ -473,6 +473,23 @@ def run(headed: bool) -> None:
             fm = choose('원문 복사')
             check(fm.startswith('---\nname: 구현 계획') and fm.endswith('---'), f'메타데이터 우클릭: 원문 복사 ({fm[:20]!r} … {fm[-6:]!r})')
 
+            print('[경로 자동 링크]')
+            (work / 'docs' / '95-경로.md').write_text(
+                '# 경로 표기 확인\n\n'
+                '설정은 `code/example.py:13` 에 있고, 글 속의 code/example.py 도 링크가 됩니다. docs/01-기능-점검.md에서 이어집니다.\n\n'
+                '없는 파일 src/none.py 와 e.g. 같은 글자는 링크가 아닙니다.\n\n'
+                '```\ncode/example.py\n```\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file:has-text("경로 표기 확인")', timeout=8000)
+            page.locator('#lec-tree .row.file', has_text='경로 표기 확인').click()
+            wait_until(page, "document.querySelectorAll('#lec-view a.path-link').length >= 3")
+            links = page.evaluate("[...document.querySelectorAll('#lec-view a.path-link')].map(a => [a.textContent, a.dataset.path, a.dataset.line || ''])")
+            in_pre = page.locator('#lec-view pre a').count()
+            want = [['code/example.py:13', 'code/example.py', '13'], ['code/example.py', 'code/example.py', ''],
+                    ['docs/01-기능-점검.md', 'docs/01-기능-점검.md', '']]
+            check(links == want and in_pre == 0, f'본문 속 경로 표기는 있는 파일만 링크로 (코드 블록 제외) ({links})')
+            page.locator('#lec-view a.path-link', has_text='docs/01-기능-점검.md').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
             labels = page.locator('#lec-tree .row.file').all_inner_texts()

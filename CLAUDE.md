@@ -76,6 +76,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
 | settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 마지막 문서·스크롤 위치 기록 |
+| pathlink.js | 본문 속 경로 표기(`src/app.py:42`) 자동 링크 |
 | resize.js | 사이드바 폭 조절 (경계 끌기, 두 번 누르면 기본) |
 | htmldoc.js | html 문서 보기 — 스크립트 없는 같은 출처 iframe (css/frame.css 를 넣는다) |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |

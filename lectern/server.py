@@ -10,6 +10,7 @@ API 명세는 docs/ARCHITECTURE.md 에 있다. 바꾸면 문서도 함께 고친
 from __future__ import annotations
 
 import mimetypes
+import posixpath
 import re
 from pathlib import Path
 from typing import Any
@@ -234,6 +235,30 @@ def create_app(state: AppState) -> Flask:
         except OSError as exc:
             return jsonify(error=str(exc)), 500
         return jsonify(action=how)
+
+    @app.post('/api/exists')
+    def api_exists() -> Any:
+        """문서 속 경로 표기(src/app.py:42) 중 프로젝트 안에 실제로 있는 파일 (본문 경로 자동 링크, pathlink.js).
+
+        {paths:[...], base:'문서가 있는 폴더'} → {found:{입력: 프로젝트 기준 경로}}. 프로젝트 기준으로 먼저,
+        없으면 문서 폴더 기준으로 본다. 숨김·밖·폴더는 없는 것으로 한다 (resolve_inside).
+        """
+        root = require_root()
+        data = request.get_json(silent=True) or {}
+        paths, base = data.get('paths'), data.get('base') or ''
+        if not isinstance(paths, list) or len(paths) > 500 or not isinstance(base, str):
+            abort(400)
+        found: dict[str, str] = {}
+        for raw in paths:
+            if not isinstance(raw, str) or not raw or len(raw) > 300:
+                continue
+            rel = raw.replace('\\', '/')
+            for cand in (rel.lstrip('/'), posixpath.join(base, rel) if base and not rel.startswith('/') else None):
+                target = resolve_inside(root, cand) if cand else None
+                if target is not None and target.is_file():
+                    found[raw] = target.relative_to(root).as_posix()
+                    break
+        return jsonify(found=found)
 
     @app.post('/api/reveal')
     def api_reveal() -> Any:

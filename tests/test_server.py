@@ -244,3 +244,11 @@ def test_html_doc_policy(client, project):
     docs = next(n for n in tree if n['name'] == 'docs')
     assert {'path': 'docs/r.html', 'kind': 'html', 'title': '보고서'}.items() <= next(
         c for c in docs['children'] if c['name'] == 'r.html').items()
+
+
+def test_exists_for_path_links(client):
+    r = client.post('/api/exists', json={'paths': ['src/app.py', '../src/app.py', 'docs/10-a.md', 'nope.py',
+                                                   '.hidden.md', '../../x.py', 'docs'], 'base': 'docs'}).get_json()
+    # 프로젝트 기준, 그다음 문서 폴더 기준. 숨김·밖·폴더는 없는 것으로
+    assert r['found'] == {'src/app.py': 'src/app.py', '../src/app.py': 'src/app.py', 'docs/10-a.md': 'docs/10-a.md'}
+    assert client.post('/api/exists', json={'paths': 'x'}).status_code == 400

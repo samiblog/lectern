@@ -18,6 +18,7 @@ import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
+import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { loadTree } from './project.js';
 import { $, esc, basename, toast } from './util.js';
@@ -258,6 +259,7 @@ async function boot() {
   initSettings();
   initPosition();
   initResize();
+  initPathLinks();
   initStatus();
   initOverview();
   initTree();
