@@ -86,10 +86,19 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .search-btn span { flex: 1; text-align: left; }
 .search-btn:hover { border-color: var(--ui-faint); color: var(--ui-fg); }
+/* 스타일 목록과 위·아래 버튼을 한 덩어리로: [ 기본 ▾ ][∧][∨] */
+.theme-pick { display: flex; align-items: stretch; height: 30px; }
 .theme-pick select {
-  height: 30px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 6px;
+  height: 30px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 6px 0 0 6px;
   background: var(--ui-panel); color: var(--ui-fg);
 }
+.theme-pick .step {
+  width: 26px; height: 30px; border: 1px solid var(--ui-border); border-left: 0; border-radius: 0;
+  background: var(--ui-panel);
+}
+.theme-pick .step:last-child { border-radius: 0 6px 6px 0; }
+.theme-pick .step svg { width: 15px; height: 15px; }
+.theme-pick .step:disabled { color: var(--ui-faint); }
 
 /* ---- 본문 영역 ------------------------------------------------------------- */
 #lec-main { display: flex; min-height: 0; }

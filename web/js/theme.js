@@ -74,6 +74,7 @@ export function applyTheme() {
   document.documentElement.dataset.ui = th.dark ? 'dark' : 'light';
   document.documentElement.dataset.theme = id;
   $('#lec-theme').value = S.config.theme || 'auto';
+  updateSteps();
 }
 
 /** 스타일 선택 목록을 지금 묶는 방식(설정 theme_groups)으로 채운다. 설정 창에서 방식을 바꾸면 다시 부른다 */
@@ -85,15 +86,34 @@ export function fillPicker() {
   });
   $('#lec-theme').innerHTML = `<option value="auto">자동 (시스템)</option>${groups.join('')}`;
   $('#lec-theme').value = S.config.theme || 'auto';
+  updateSteps();
+}
+
+/** 위·아래 버튼: 목록의 맨 처음·맨 끝이면 누를 수 없다 */
+function updateSteps() {
+  const sel = $('#lec-theme');
+  $('#lec-theme-prev').disabled = sel.selectedIndex <= 0;
+  $('#lec-theme-next').disabled = sel.selectedIndex >= sel.options.length - 1;
+}
+
+function choose(value) {
+  saveConfig({ theme: value });   // S.config 는 바로 바뀌고 저장은 뒤에서 — 위·아래를 빠르게 눌러도 화면이 바로 따라온다
+  applyTheme();
+  emit('refresh-view');   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
+}
+
+/** 목록에서 바로 위(-1)·아래(+1) 스타일로. 지금 묶는 방식의 목록 순서를 따른다 ('자동'이 맨 위) */
+function step(dir) {
+  const sel = $('#lec-theme');
+  const next = sel.options[sel.selectedIndex + dir];
+  if (next) choose(next.value);
 }
 
 export function initTheme() {
   fillPicker();
-  $('#lec-theme').addEventListener('change', async (e) => {
-    await saveConfig({ theme: e.target.value });
-    applyTheme();
-    emit('refresh-view');   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
-  });
+  $('#lec-theme').addEventListener('change', (e) => choose(e.target.value));
+  $('#lec-theme-prev').addEventListener('click', () => step(-1));
+  $('#lec-theme-next').addEventListener('click', () => step(1));
   media.addEventListener('change', () => {
     if ((S.config.theme || 'auto') !== 'auto') return;
     applyTheme();

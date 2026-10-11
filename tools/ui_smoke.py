@@ -354,6 +354,21 @@ def run(headed: bool) -> None:
             check(ok_sets and labels['mood'] == ['깔끔한', '따뜻한·종이', '색이 있는', '어두운'] and labels['tone'] == ['밝은', '종이·책', '어두운']
                   and page.input_value('#lec-theme') == picked,
                   f'설정 창에서 스타일 목록 묶는 방식(용도별·분위기별·밝기별)을 바꾸면 같은 스타일이 다시 묶임 ({labels})')
+            # 목록 옆 위·아래 버튼: 목록에서 바로 위·아래 스타일로, 맨 처음·맨 끝이면 누를 수 없음
+            order = page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)')
+            use_theme('default')
+            below = order[order.index('default') + 1]
+            page.click('#lec-theme-next')
+            down = wait_until(page, f"document.documentElement.dataset.theme === '{below}'")
+            saved_below = wait_until(page, f"fetch('/api/config').then(r => r.json()).then(c => c.theme === '{below}')")
+            page.click('#lec-theme-prev')
+            up = wait_until(page, "document.documentElement.dataset.theme === 'default'")
+            page.select_option('#lec-theme', order[-1])
+            last_off = page.is_disabled('#lec-theme-next') and not page.is_disabled('#lec-theme-prev')
+            page.select_option('#lec-theme', 'auto')
+            first_off = page.is_disabled('#lec-theme-prev')
+            check(down and saved_below and up and last_off and first_off,
+                  f'스타일 목록 옆 위·아래 버튼으로 바로 위·아래 스타일 (default → {below} → default), 처음·끝에서는 꺼짐')
             unstyled = []
             # 스타일마다 다이어그램 상자 색(theme.js 의 mermaid primaryColor)이 그 스타일 것이어야 한다
             for theme, fill in (('default', '#e8eff7'), ('dark', '#2a313a'), ('academic', '#fffff8'), ('nord', '#3b4252')):
