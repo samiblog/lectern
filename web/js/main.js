@@ -147,7 +147,7 @@ async function toggleToc() {
 async function manualRefresh() {
   if (!S.root) return;
   try {
-    await loadTree();
+    await loadTree({ fresh: true });
     await refreshView();
     toast('다시 불러왔습니다');
   } catch (e) {

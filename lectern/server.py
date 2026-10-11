@@ -146,7 +146,7 @@ def create_app(state: AppState) -> Flask:
     @app.get('/api/tree')
     def api_tree() -> Any:
         root = require_root()
-        return jsonify(root=str(root), tree=state.scan())
+        return jsonify(root=str(root), tree=state.scan(fresh=request.args.get('fresh') == '1'))
 
     @app.get('/api/overview')
     def api_overview() -> Any:

@@ -8,6 +8,7 @@ from conftest import write
 
 from lectern import osutil
 from lectern.config import Config
+from lectern.scanner import iter_files
 from lectern.server import create_app
 from lectern.state import AppState
 
@@ -252,3 +253,17 @@ def test_exists_for_path_links(client):
     # 프로젝트 기준, 그다음 문서 폴더 기준. 숨김·밖·폴더는 없는 것으로
     assert r['found'] == {'src/app.py': 'src/app.py', '../src/app.py': 'src/app.py', 'docs/10-a.md': 'docs/10-a.md'}
     assert client.post('/api/exists', json={'paths': 'x'}).status_code == 400
+
+
+def test_tree_scan_is_reused_until_something_changes(client, state, project):
+    state.close()   # 감시를 멈춰 변경 기록(seq)을 이 테스트가 정한다 (프로젝트를 만들며 쓴 파일의 늦은 알림이 끼어들지 않게)
+    first = state.scan()
+    assert state.scan() is first                       # 변경 기록이 그대로면 다시 훑지 않는다
+    write(project / 'docs' / 'new.md', '# 새 문서\n')
+    assert state.scan() is first                       # 감시가 알리기 전에는 그대로
+    state.log.push('docs/new.md', True)
+    second = state.scan()
+    assert second is not first and 'docs/new.md' in {n['path'] for n in iter_files(second)}
+    assert state.scan(fresh=True) is not second        # F5 는 늘 새로
+    paths = {n['path'] for n in iter_files(client.get('/api/tree?fresh=1').get_json()['tree'])}
+    assert 'docs/new.md' in paths

@@ -3,8 +3,9 @@
 import { S, emit } from './store.js';
 import { getJSON } from './api.js';
 
-export async function loadTree() {
-  const data = await getJSON('/api/tree');
+/** fresh: 서버의 스캔 결과를 다시 쓰지 않고 새로 훑는다 (F5 — 감시가 놓친 변경까지) */
+export async function loadTree({ fresh = false } = {}) {
+  const data = await getJSON(fresh ? '/api/tree?fresh=1' : '/api/tree');
   const files = [];
   const dirs = new Set(['']);
   const walk = (nodes) => {
