@@ -27,6 +27,7 @@ DEFAULTS: dict[str, Any] = {
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'show_titles': True,     # 트리에 파일명 대신 문서 제목 표시
     'sidebar_visible': True,
+    'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'toc_visible': True,
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
@@ -41,8 +42,8 @@ DEFAULTS: dict[str, Any] = {
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·projects 는 서버가 기록한다 (add_recent, remember_position).
-CLIENT_KEYS = frozenset({'theme', 'show_titles', 'sidebar_visible', 'toc_visible', 'math', 'external_images',
-                         'restore_last', 'expand_first_level'})
+CLIENT_KEYS = frozenset({'theme', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
+                         'external_images', 'restore_last', 'expand_first_level'})
 
 
 class Config:

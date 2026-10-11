@@ -17,6 +17,7 @@ import { initPalette, openPalette, closePalette } from './palette.js';
 import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll } from './nav.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import { initPosition } from './position.js';
+import { initResize } from './resize.js';
 import { initWatch, startWatch } from './watch.js';
 import { loadTree } from './project.js';
 import { $, esc, basename, toast } from './util.js';
@@ -256,6 +257,7 @@ async function boot() {
   initSearch();
   initSettings();
   initPosition();
+  initResize();
   initStatus();
   initOverview();
   initTree();

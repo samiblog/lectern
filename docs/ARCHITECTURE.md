@@ -87,6 +87,7 @@ flowchart LR
 | `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`) |
 | `show_titles` | `true` | 가능 | 트리에 제목(끄면 파일명) |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
+| `sidebar_width` | `null` | 가능 | 사이드바 폭(px, 200~480). 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 288) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
 | `restore_last` | `true` | 가능 | 폴더를 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다 |

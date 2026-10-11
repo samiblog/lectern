@@ -533,6 +533,18 @@ def run(headed: bool) -> None:
             page.locator('#lec-settings input[data-key="expand_first_level"]').click()
             page.keyboard.press('Escape')
             check(cfg['expand_first_level'] is False and not dialog.is_visible(), '설정 창에서 바꾼 값을 저장하고 Esc 로 닫힘')
+            box = page.locator('#lec-resizer').bounding_box()
+            page.mouse.move(box['x'] + 3, box['y'] + 200)
+            page.mouse.down()
+            page.mouse.move(400, box['y'] + 220, steps=6)
+            page.mouse.up()
+            dragged = page.locator('#lec-sidebar').bounding_box()['width']
+            saved_w = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.sidebar_width)")
+            page.mouse.dblclick(400, box['y'] + 200)
+            page.wait_for_timeout(100)
+            reset = page.locator('#lec-sidebar').bounding_box()['width']
+            check(abs(dragged - 400) <= 2 and saved_w and abs(saved_w - 400) <= 2 and abs(reset - 288) <= 1,
+                  f'사이드바 경계를 끌어 폭 조절·저장, 두 번 누르면 기본 폭 ({dragged:.0f} → 저장 {saved_w}, 기본 {reset:.0f})')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 500')

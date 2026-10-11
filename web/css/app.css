@@ -105,7 +105,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
 }
-.sidebar-off #lec-sidebar, .toc-off #lec-toc { display: none; }
+.sidebar-off #lec-sidebar, .sidebar-off #lec-resizer, .toc-off #lec-toc { display: none; }
+/* 사이드바 폭 조절 (resize.js): 경계 위에 겹친 얇은 손잡이 */
+#lec-resizer { flex: none; width: 7px; margin: 0 -4px 0 -3px; position: relative; z-index: 5; cursor: col-resize; }
+#lec-resizer:hover, .resizing #lec-resizer { background: color-mix(in srgb, var(--ui-accent) 35%, transparent); }
+.resizing, .resizing * { cursor: col-resize !important; user-select: none; }
+.resizing iframe { pointer-events: none; }
 @media (max-width: 1080px) { #lec-toc { display: none; } }
 @media (max-width: 760px) { #lec-sidebar { width: 240px; } .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; } }
 
