@@ -9,6 +9,7 @@ API 명세는 docs/ARCHITECTURE.md 에 있다. 바꾸면 문서도 함께 고친
 """
 from __future__ import annotations
 
+import mimetypes
 import re
 from pathlib import Path
 from typing import Any
@@ -23,6 +24,16 @@ from .state import AppState
 
 RECENT_IN_OVERVIEW = 6
 ALLOWED_HOSTS = frozenset({'127.0.0.1', 'localhost'})
+
+# 형식이 틀리면 브라우저가 거부하는 파일들. Windows에서 mimetypes 는 레지스트리 값을 기본값보다 우선하는데,
+# 레지스트리에 .js·.css 가 text/plain 으로 잡힌 PC가 있다. 그러면 모듈 스크립트·스타일이 거부되어 화면이 빈다.
+FIXED_TYPES = {
+    '.js': 'text/javascript',
+    '.mjs': 'text/javascript',
+    '.css': 'text/css',
+    '.svg': 'image/svg+xml',   # <img> 의 SVG 는 이 형식이어야 그려진다 (/doc/* 의 그림)
+    '.woff2': 'font/woff2',
+}
 
 
 def content_security_policy(external_images: bool) -> str:
@@ -44,6 +55,8 @@ def content_security_policy(external_images: bool) -> str:
 
 
 def create_app(state: AppState) -> Flask:
+    for ext, mime in FIXED_TYPES.items():
+        mimetypes.add_type(mime, ext)   # 레지스트리를 읽은 뒤에 덮어쓴다 (add_type 이 먼저 init 한다)
     web = web_dir()
     app = Flask(__name__, static_folder=str(web), static_url_path='/static')
     app.json.ensure_ascii = False

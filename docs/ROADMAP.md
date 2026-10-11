@@ -37,7 +37,8 @@
   - 창 모드에서 pywebview 연결이 4초보다 늦으면 토큰 없이 진행해 빈 화면이 되던 문제: 끝까지 기다리고 안내
   - 최소화·최대화한 채 닫으면 그 크기가 저장되던 문제, 설정의 창 크기 형식이 틀리면 시작하지 못하던 문제
   - 프런트가 `recent` 를 바꿀 수 있던 것 (`CLIENT_KEYS` 에서 뺌), `/api/overview` 의 경로 정규화, `/doc/*` 의 `sandbox`·`nosniff` 헤더 (D20)
-- [x] 테스트: pytest 64개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
+- [x] Windows 레지스트리에 `.js`·`.css` 가 `text/plain` 으로 잡힌 PC에서 화면이 비던 문제: 서버가 형식을 정함 (`FIXED_TYPES`)
+- [x] 테스트: pytest 65개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
 
 ## 2단계 — 다음 단계 (우선순위 순)
 

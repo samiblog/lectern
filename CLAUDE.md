@@ -93,4 +93,5 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 렌더링은 `S.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 같은 방식을 쓴다.
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
 - `config.json` 을 읽지 못하면(`Config.load_error`) 그 실행 동안은 저장하지 않는다 (D21). 설정을 쓰는 코드는 반드시 `Config.save()` 를 거친다.
+- Windows에서 Python `mimetypes` 는 레지스트리 값을 기본값보다 우선한다. 레지스트리에 `.js` 가 `text/plain` 으로 잡힌 PC에서는 모듈 스크립트가 거부되어 화면이 빈다. 그래서 `server.py` 의 `FIXED_TYPES` 가 `.js`·`.css`·`.svg`·`.woff2` 의 형식을 정한다. 앱이 새 확장자의 파일을 내보내면 여기에 넣을지 본다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

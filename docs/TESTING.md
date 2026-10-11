@@ -12,7 +12,7 @@ python tools/ui_smoke.py     :: 화면 회귀 점검 (playwright + chromium 필�
 | `tests/test_scanner.py` | 숨김·제외·빈 폴더, 자연 정렬, 심볼릭 링크·정션 제외(정션은 Windows에서만), `resolve_inside` 경로 차단 |
 | `tests/test_docinfo.py` | 제목·요약 추출 규칙, 캐시 |
 | `tests/test_changes.py` | ChangeLog 순번, 이벤트 필터, 폴링·watchdog 감지 |
-| `tests/test_server.py` | 모든 API, 토큰, Host 검사, 설정 키 제한, 숨김·밖 경로 404, `/` 의 CSP |
+| `tests/test_server.py` | 모든 API, 토큰, Host 검사, 설정 키 제한, 숨김·밖 경로 404, `/` 의 CSP, 레지스트리와 상관없는 정적 파일 형식 |
 | `tests/test_config.py` | 설정 파일을 읽지 못하면 덮어쓰지 않음, BOM 허용 |
 | `tests/test_osutil.py` | 링크 대상 열기 방식 (코드 파일은 실행하지 않음) |
 | `tests/test_app.py` | 설정의 창 크기 읽기 (형식이 틀리거나 너무 작을 때) |

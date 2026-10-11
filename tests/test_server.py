@@ -88,6 +88,20 @@ def test_doc_blocks_hidden_outside_missing(client, bad):
     assert client.get(f'/doc/{bad}').status_code == 404
 
 
+def test_fixed_types_win_over_windows_registry(state, monkeypatch):
+    import mimetypes
+
+    # 레지스트리에 .js·.css·.svg 가 text/plain 으로 잡힌 Windows PC 흉내 (read_windows_registry 가 하는 일과 같음)
+    db = mimetypes.MimeTypes()
+    for ext in ('.js', '.css', '.svg'):
+        db.add_type('text/plain', ext)
+    monkeypatch.setattr(mimetypes, '_db', db)   # 테스트가 끝나면 원래 db 로 돌아간다
+    c = create_app(state).test_client()
+    assert c.get('/static/js/main.js').mimetype == 'text/javascript'
+    assert c.get('/static/css/app.css').mimetype == 'text/css'
+    assert c.get('/doc/docs/img.svg').mimetype == 'image/svg+xml'
+
+
 def test_token_required_when_set(state):
     state.token = 'secret'
     c = create_app(state).test_client()

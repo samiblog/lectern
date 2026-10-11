@@ -98,7 +98,8 @@ flowchart LR
 
 창 모드에서는 `/api/*` 요청에 `X-Token: <window.pywebview.token>` 헤더가 필요하다. 응답은 JSON, 오류는 `{error: "..."}`.
 `/api/*`, `/doc/*`, `/` 응답에는 `Cache-Control: no-cache` 가 붙는다.
-`/` 응답에는 이미지·연결·글꼴 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20). `img-src` 는 설정 `external_images` 에 따라 바뀌므로, 설정을 바꾸면 페이지를 다시 불러와야 반영된다.
+`/` 응답에는 이미지·연결·글꼴 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20).
+`.js`·`.mjs`·`.css`·`.svg`·`.woff2` 의 응답 형식은 서버가 정한다 (`FIXED_TYPES`). Windows의 `mimetypes` 는 레지스트리 값을 따르는데, `.js` 가 `text/plain` 으로 잡힌 PC에서는 브라우저가 모듈 스크립트를 거부해 화면이 비기 때문이다. `img-src` 는 설정 `external_images` 에 따라 바뀌므로, 설정을 바꾸면 페이지를 다시 불러와야 반영된다.
 
 | 메서드·경로 | 요청 | 응답 / 설명 |
 |---|---|---|
