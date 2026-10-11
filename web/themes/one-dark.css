@@ -1,0 +1,42 @@
+/* One Dark: Atom·VS Code 의 One Dark 편집기 색. 회청색 바탕에 노란 제목, 파란 링크, 보라·초록 코드 */
+:root {
+  --md-bg: #282c34;
+  --md-fg: #abb2bf;
+  --md-heading: #e5c07b;
+  --md-muted: #9da5b4;
+  --md-border: #3e4451;
+  --md-link: #61afef;
+  --md-code-bg: #21252b;
+  --md-quote-bar: #5c6370;
+  --md-th-bg: #2c313c;
+  --md-th-rule: #61afef;
+  --md-stripe: #2b2f37;
+  --md-strong: #e6e6e6;
+  --md-alert-note: #61afef;
+  --md-alert-tip: #98c379;
+  --md-alert-important: #c678dd;
+  --md-alert-warning: #e5c07b;
+  --md-alert-caution: #e06c75;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Code", "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.75;
+  --md-width: 860px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body :not(pre) > code { color: #e06c75; }
+.md-body img:not([src*=".svg"]) { filter: brightness(.92); }
+
+/* 코드 색: One Dark */
+.md-body .hljs-keyword, .md-body .hljs-selector-tag { color: #c678dd; }
+.md-body .hljs-string, .md-body .hljs-regexp, .md-body .hljs-addition { color: #98c379; }
+.md-body .hljs-number, .md-body .hljs-attr, .md-body .hljs-attribute { color: #d19a66; }
+.md-body .hljs-literal, .md-body .hljs-symbol { color: #56b6c2; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #7f848e; font-style: italic; }
+.md-body .hljs-title, .md-body .hljs-section, .md-body .hljs-meta { color: #61afef; }
+.md-body .hljs-built_in, .md-body .hljs-type { color: #e5c07b; }
+.md-body .hljs-variable, .md-body .hljs-property, .md-body .hljs-deletion { color: #e06c75; }
+.md-body .hljs-params { color: #abb2bf; }

@@ -123,7 +123,7 @@
 .md-body table { border-collapse: collapse; font-size: .93em; font-variant-numeric: tabular-nums; word-break: keep-all; }
 .md-body th, .md-body td { padding: 6px 13px; border-bottom: 1px solid var(--md-border); text-align: left; vertical-align: top; }
 .md-body thead th {
-  position: sticky; top: 0; z-index: 1; background: var(--md-th-bg); color: var(--md-heading);
+  position: sticky; top: 0; z-index: 1; background: var(--md-th-bg); color: var(--md-th-fg, var(--md-heading));   /* 짙은 머리행 스타일은 --md-th-fg 로 흰 글자 */
   font-weight: 700; border-bottom: 2px solid var(--md-th-rule, var(--md-border));
 }
 .md-body tbody tr:nth-child(even) { background: var(--md-stripe); }
@@ -179,7 +179,7 @@
   :root {
     --md-bg: #ffffff !important; --md-fg: #111111 !important; --md-heading: #000000 !important; --md-muted: #444444 !important;
     --md-link: #0b3d91 !important; --md-border: #bbbbbb !important; --md-code-bg: #f4f4f4 !important; --md-quote-bar: #999999 !important;
-    --md-th-bg: #eeeeee !important; --md-th-rule: #555555 !important; --md-stripe: #fafafa !important; --md-strong: #000000 !important;
+    --md-th-bg: #eeeeee !important; --md-th-fg: #000000 !important; --md-th-rule: #555555 !important; --md-stripe: #fafafa !important; --md-strong: #000000 !important;
   }
   :root[data-ui="dark"] .md-body pre code.hljs, :root[data-ui="dark"] .md-body pre code.hljs * { color: #222222 !important; }
   .md-body { max-width: none; padding: 0; font-size: 11pt; }

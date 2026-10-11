@@ -1,0 +1,39 @@
+/* Solarized 라이트: 연한 크림 바탕에 회청색 글자, 주황 제목 (Ethan Schoonover의 Solarized 팔레트). 읽기 대비를 지키려고 글자·링크는 팔레트보다 조금 짙게 */
+:root {
+  --md-bg: #fdf6e3;
+  --md-fg: #3d5258;
+  --md-heading: #a63a0a;
+  --md-muted: #586e75;
+  --md-border: #e6dcc0;
+  --md-link: #1b6aa8;
+  --md-code-bg: #eee8d5;
+  --md-quote-bar: #93a1a1;
+  --md-th-bg: #eee8d5;
+  --md-th-rule: #b58900;
+  --md-stripe: #f8f1dc;
+  --md-strong: #073642;
+  --md-alert-note: #1b6aa8;
+  --md-alert-tip: #5f7000;
+  --md-alert-important: #5b5fb0;
+  --md-alert-warning: #8a6100;
+  --md-alert-caution: #c0281f;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.75;
+  --md-width: 860px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+/* 코드 색: Solarized (밝은 바탕에서 읽히게 조금 짙게) */
+.md-body .hljs-keyword, .md-body .hljs-selector-tag, .md-body .hljs-addition { color: #667500; }
+.md-body .hljs-string, .md-body .hljs-regexp, .md-body .hljs-literal { color: #1d7f78; }
+.md-body .hljs-number, .md-body .hljs-symbol { color: #b5296e; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #6f8186; font-style: italic; }
+.md-body .hljs-title, .md-body .hljs-section, .md-body .hljs-variable { color: #1b6aa8; }
+.md-body .hljs-built_in, .md-body .hljs-type, .md-body .hljs-attr, .md-body .hljs-attribute { color: #8a6100; }
+.md-body .hljs-meta, .md-body .hljs-property { color: #b8430f; }
+.md-body .hljs-params { color: #3d5258; }
+.md-body .hljs-deletion { color: #c0281f; }

@@ -262,6 +262,14 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .opt input { margin: 3px 0 0; accent-color: var(--ui-accent); }
 .opt span { display: flex; flex-direction: column; gap: 1px; }
 .opt small, .dialog-file small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+/* 설정 창의 고르기(라디오) 묶음: 스타일 목록 묶기 */
+.opt-choice { display: flex; flex-direction: column; gap: 1px; margin: 0 0 6px; padding: 4px 0 8px; border-bottom: 1px solid var(--ui-border); }
+.opt-choice .opt-head { display: flex; flex-direction: column; gap: 1px; padding: 4px 4px 4px; }
+.opt-choice label { display: flex; gap: 10px; align-items: flex-start; padding: 5px 4px 5px 14px; border-radius: 6px; cursor: pointer; }
+.opt-choice label:hover { background: var(--ui-hover); }
+.opt-choice input { margin: 3px 0 0; accent-color: var(--ui-accent); }
+.opt-choice label span { display: flex; flex-direction: column; gap: 1px; }
+.opt-choice small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
 .dialog-file { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--ui-border); }
 .dialog-file .text-btn { flex: none; }
 .dialog-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; color: var(--ui-faint); font-size: 12px; }

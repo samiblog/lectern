@@ -1,0 +1,44 @@
+/* 문서 사이트: Read the Docs·MkDocs 같은 기술 문서 사이트 모양. 색 띠가 있는 알림 상자, 테두리 있는 코드, 파란 제목 */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #404040;
+  --md-heading: #1d4f7c;
+  --md-muted: #5c6670;
+  --md-border: #e1e4e5;
+  --md-link: #1f6fae;
+  --md-code-bg: #f8f8f8;
+  --md-quote-bar: #c9d3db;
+  --md-th-bg: #edf2f7;
+  --md-th-rule: #c9d3db;
+  --md-stripe: #f8fafb;
+  --md-alert-note: #2f6db5;
+  --md-alert-tip: #1f7a4d;
+  --md-alert-important: #6b46c1;
+  --md-alert-warning: #a15c00;
+  --md-alert-caution: #c62828;
+  --md-font: "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: Consolas, "Cascadia Mono", "D2Coding", "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.7;
+  --md-width: 900px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body h1 { font-size: 2em; }
+.md-body h1, .md-body h2, .md-body h3 { font-weight: 700; }
+.md-body :not(pre) > code { color: #b3264a; background: #f7f1f3; border: 1px solid #ece2e5; }
+.md-body pre { border-left: 3px solid var(--md-link); border-radius: 2px; }
+.md-body .table-wrap { border-radius: 2px; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); }
+/* 알림 상자: 제목 띠를 칠한 상자 (사이트의 admonition 처럼) */
+.md-body blockquote.alert {
+  padding: 0 1em .75em; border-left: 0; border-radius: 3px;
+  background: color-mix(in srgb, var(--alert) 7%, var(--md-bg));
+  box-shadow: 0 1px 2px rgb(0 0 0 / .1);
+}
+.md-body blockquote.alert .alert-title {
+  margin: 0 -1em .6em !important; padding: .4em 1em; color: #ffffff;
+  background: var(--alert); border-radius: 3px 3px 0 0;
+}

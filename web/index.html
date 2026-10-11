@@ -119,6 +119,12 @@
 <div id="lec-settings" class="overlay" hidden>
   <div class="dialog-box" role="dialog" aria-labelledby="lec-settings-title">
     <h2 id="lec-settings-title">설정</h2>
+    <div class="opt-choice" role="radiogroup" aria-labelledby="lec-groups-title">
+      <span class="opt-head"><b id="lec-groups-title">스타일 목록 묶기</b><small>툴바의 스타일 목록을 나누는 방식입니다</small></span>
+      <label><input type="radio" name="theme_groups" value="use"><span>용도별<small>업무·보고 / 읽기·출판 / 개발·기술 / 어두운</small></span></label>
+      <label><input type="radio" name="theme_groups" value="mood"><span>분위기별<small>깔끔한 / 따뜻한·종이 / 색이 있는 / 어두운</small></span></label>
+      <label><input type="radio" name="theme_groups" value="tone"><span>밝기별<small>밝은 / 종이·책 / 어두운</small></span></label>
+    </div>
     <label class="opt"><input type="checkbox" data-key="restore_last"><span><b>마지막 위치에서 시작</b><small>폴더를 열면 마지막에 보던 문서와 스크롤 위치로 엽니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 를 수식으로 그립니다</small></span></label>

@@ -1,0 +1,38 @@
+/* 사내 문서: 맑은 고딕, 촘촘한 줄간격과 넓은 폭, 파란 머리행의 칸이 나뉜 표. 오피스 문서처럼 업무 자료를 훑어볼 때 (Word 기본 제목 색 #1f3864·#2f5597) */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #262626;
+  --md-heading: #1f3864;
+  --md-muted: #595959;
+  --md-border: #d0d7e2;
+  --md-link: #0563c1;
+  --md-code-bg: #f2f4f7;
+  --md-quote-bar: #8faadc;
+  --md-th-bg: #2f5597;
+  --md-th-fg: #ffffff;
+  --md-th-rule: #1f3864;
+  --md-stripe: #f2f6fc;
+  --md-alert-note: #2f5597;
+  --md-alert-tip: #38761d;
+  --md-alert-important: #6a3d9a;
+  --md-alert-warning: #9c5700;
+  --md-alert-caution: #c00000;
+  --md-font: "Malgun Gothic", "맑은 고딕", "Segoe UI", "Noto Sans KR", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: Consolas, "D2Coding", "Cascadia Mono", "Malgun Gothic", monospace;
+  --md-size: 15px;
+  --md-line: 1.6;
+  --md-width: 980px;
+  --md-h1-rule: 2px solid #2f5597;
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body h1 { font-size: 1.7em; }
+.md-body h2 { font-size: 1.3em; color: #2f5597; }
+.md-body h3 { font-size: 1.1em; }
+.md-body h1, .md-body h2, .md-body h3, .md-body h4 { margin-top: 1.5em; }
+.md-body p, .md-body ul, .md-body ol, .md-body blockquote, .md-body .code-block, .md-body .table-wrap { margin-bottom: .85em; }
+.md-body .table-wrap { border-radius: 0; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); padding: 5px 11px; }
+.md-body thead th { border-color: #2f5597; border-bottom-color: var(--md-th-rule); }
+.md-body blockquote.alert { border-radius: 0; }

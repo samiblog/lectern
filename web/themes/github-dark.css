@@ -1,0 +1,42 @@
+/* GitHub 다크: GitHub 의 어두운 화면과 같은 색 (github-markdown-css dark). 저장소 README 모양 그대로 밤에 볼 때 */
+:root {
+  --md-bg: #0d1117;
+  --md-fg: #c9d1d9;
+  --md-heading: #f0f6fc;
+  --md-muted: #9198a1;
+  --md-border: #30363d;
+  --md-link: #4493f8;
+  --md-code-bg: #151b23;
+  --md-quote-bar: #3d444d;
+  --md-th-bg: #161b22;
+  --md-th-rule: #3d444d;
+  --md-stripe: #11161d;
+  --md-strong: #f0f6fc;
+  --md-alert-note: #4493f8;
+  --md-alert-tip: #3fb950;
+  --md-alert-important: #ab7df8;
+  --md-alert-warning: #d29922;
+  --md-alert-caution: #f85149;
+  --md-font: "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", Helvetica, Arial, sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", Consolas, "D2Coding", "Malgun Gothic", monospace;
+  --md-size: 16px;
+  --md-line: 1.65;
+  --md-width: 900px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body h1, .md-body h2 { padding-bottom: .3em; font-weight: 600; }
+.md-body h1 { font-size: 2em; }
+.md-body h2 { font-size: 1.5em; }
+.md-body h3 { font-size: 1.25em; font-weight: 600; }
+.md-body h4 { font-size: 1em; font-weight: 600; }
+.md-body :not(pre) > code { font-size: 85%; padding: .2em .4em; border-radius: 6px; background: #262c36; }
+.md-body pre { border: 0; border-radius: 6px; font-size: 85%; }
+.md-body blockquote { border-left: .25em solid var(--md-quote-bar); padding: 0 1em; }
+.md-body blockquote.alert { background: none; border-left-width: .25em; border-radius: 0; padding: .5em 1em; }
+.md-body .table-wrap { border: 0; border-radius: 0; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); }
+.md-body tbody tr:last-child > * { border-bottom: 1px solid var(--md-border); }
+.md-body img:not([src*=".svg"]) { filter: brightness(.92); }

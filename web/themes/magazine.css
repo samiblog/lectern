@@ -1,0 +1,40 @@
+/* 잡지: 굵고 큰 고딕 제목과 붉은 포인트, 명조 본문, 인용은 크게 뽑아 보인다. 칼럼·리뷰처럼 읽을 때 */
+:root {
+  --md-bg: #fbfaf7;
+  --md-fg: #262422;
+  --md-heading: #111111;
+  --md-muted: #5f5a54;
+  --md-border: #e2ded6;
+  --md-link: #b0251b;
+  --md-code-bg: #f1eee8;
+  --md-quote-bar: #b0251b;
+  --md-th-bg: #efebe3;
+  --md-th-rule: #111111;
+  --md-stripe: #f7f5f0;
+  --md-strong: #111111;
+  --md-alert-note: #23548c;
+  --md-alert-tip: #2e6b3c;
+  --md-alert-important: #6b3f99;
+  --md-alert-warning: #8a5a0c;
+  --md-alert-caution: #b0251b;
+  --md-font: Georgia, "KoPubBatang", "NanumMyeongjo", "Noto Serif KR", "HCR Batang", "Batang", "바탕", serif;
+  --md-heading-font: "Segoe UI Variable Display", "Segoe UI", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-mono: Consolas, "D2Coding", "Cascadia Mono", monospace;
+  --md-size: 16.5px;
+  --md-line: 1.8;
+  --md-width: 740px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { font-size: 2.6em; font-weight: 800; line-height: 1.15; letter-spacing: -.025em; margin-bottom: .8em; }
+.md-body h2 { font-size: 1.5em; font-weight: 800; letter-spacing: -.01em; border-top: 4px solid var(--md-link); padding-top: .4em; }
+.md-body h3 { font-weight: 700; color: #8f1d14; }
+.md-body p { text-align: justify; text-justify: inter-character; }
+/* 인용은 칼럼의 뽑은 글처럼 크게 */
+.md-body blockquote:not(.alert) {
+  margin: 1.6em 0; padding: .7em 0; border-left: 0; border-top: 2px solid var(--md-heading); border-bottom: 2px solid var(--md-heading);
+  color: var(--md-heading); font-size: 1.22em; line-height: 1.55; font-style: italic;
+}
+.md-body .table-wrap { border: 0; border-top: 3px solid var(--md-heading); border-radius: 0; }
+.md-body table { font-family: var(--md-heading-font); font-size: .9em; }

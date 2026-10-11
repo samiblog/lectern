@@ -1,0 +1,37 @@
+/* 컨설팅: 남색 제목과 청록 포인트, 남색 머리행과 굵은 아래선의 표, 핵심 문장을 띠로 강조한 인용. 결론부터 읽는 업무 보고서 */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #1d2733;
+  --md-heading: #0b2545;
+  --md-muted: #556270;
+  --md-border: #d5dde6;
+  --md-link: #00727f;
+  --md-code-bg: #f1f5f8;
+  --md-quote-bar: #13a3b2;
+  --md-th-bg: #0b2545;
+  --md-th-fg: #ffffff;
+  --md-th-rule: #13a3b2;
+  --md-stripe: #f3f7fa;
+  --md-strong: #0b2545;
+  --md-alert-note: #1d5fa0;
+  --md-alert-tip: #00727f;
+  --md-alert-important: #5b3f9e;
+  --md-alert-warning: #95600a;
+  --md-alert-caution: #b3261e;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-heading-font: "Segoe UI Variable Display", "Segoe UI", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-mono: "Cascadia Mono", Consolas, "D2Coding", "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.7;
+  --md-width: 860px;
+  --md-h1-rule: 4px solid #13a3b2;
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { font-size: 2em; letter-spacing: -.015em; padding-bottom: .4em; }
+.md-body h2 { padding: .05em 0 .05em .6em; border-left: 5px solid #13a3b2; }
+.md-body h3 { color: #145c7a; }
+.md-body .table-wrap { border: 0; border-radius: 0; }
+.md-body table { font-family: var(--md-heading-font); }
+.md-body tbody tr:last-child > * { border-bottom: 2px solid var(--md-heading); }
+.md-body blockquote:not(.alert) { color: var(--md-heading); background: #eef7f8; border-left-width: 4px; padding: .6em 1em; font-weight: 600; }

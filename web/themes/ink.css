@@ -1,0 +1,30 @@
+/* 먹: 먹물처럼 완전한 검정 바탕에 밝은 회색 글자. 어두운 방이나 OLED 화면에서 빛을 가장 적게 낸다 */
+:root {
+  --md-bg: #000000;
+  --md-fg: #d4d4d4;
+  --md-heading: #ffffff;
+  --md-muted: #a3a3a3;
+  --md-border: #2a2a2a;
+  --md-link: #8cc4ff;
+  --md-code-bg: #181818;
+  --md-quote-bar: #474747;
+  --md-th-bg: #1a1a1a;
+  --md-th-rule: #5c5c5c;
+  --md-stripe: #0a0a0a;
+  --md-strong: #ffffff;
+  --md-alert-note: #7ab8ff;
+  --md-alert-tip: #6fcf8f;
+  --md-alert-important: #c3a6ff;
+  --md-alert-warning: #f0c060;
+  --md-alert-caution: #ff8a80;
+  --md-font: "Pretendard", "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.78;
+  --md-width: 860px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body img:not([src*=".svg"]) { filter: brightness(.85); }

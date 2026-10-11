@@ -3,12 +3,14 @@
 
 import { S, emit } from './store.js';
 import { saveConfig, postJSON } from './api.js';
+import { fillPicker, grouping } from './theme.js';
 import { $, $$, toast } from './util.js';
 
 const box = () => $('#lec-settings');
 
 export function openSettings() {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
+  for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
   box().hidden = false;
   $('#lec-settings input')?.focus();
 }
@@ -20,6 +22,11 @@ export function closeSettings() {
 }
 
 async function onChange(e) {
+  if (e.target.name === 'theme_groups') {   // 스타일 목록을 묶는 방식만 바뀐다 (고른 스타일은 그대로)
+    await saveConfig({ theme_groups: e.target.value });
+    fillPicker();
+    return;
+  }
   const key = e.target.dataset.key;
   if (!key) return;
   await saveConfig({ [key]: e.target.checked });

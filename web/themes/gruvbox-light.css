@@ -1,0 +1,40 @@
+/* Gruvbox 라이트: 따뜻한 미색 바탕에 짙은 갈회색 글자, 주황 제목과 청록 링크 (Pavel Pertsev의 gruvbox 팔레트). 레트로한 개발 문서 */
+:root {
+  --md-bg: #fbf1c7;
+  --md-fg: #3c3836;
+  --md-heading: #a03a04;
+  --md-muted: #665c54;
+  --md-border: #e3d3a5;
+  --md-link: #076678;
+  --md-code-bg: #f2e5bc;
+  --md-quote-bar: #bdae93;
+  --md-th-bg: #ebdbb2;
+  --md-th-rule: #af3a03;
+  --md-stripe: #f6ebc0;
+  --md-strong: #282828;
+  --md-alert-note: #076678;
+  --md-alert-tip: #6a6510;
+  --md-alert-important: #8f3f71;
+  --md-alert-warning: #9a5f0c;
+  --md-alert-caution: #9d0006;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.75;
+  --md-width: 860px;
+  --md-h1-rule: 2px solid #d5c4a1;
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body pre { border-color: #e3d3a5; }
+
+/* 코드 색: gruvbox light */
+.md-body .hljs-keyword, .md-body .hljs-selector-tag, .md-body .hljs-deletion { color: #9d0006; }
+.md-body .hljs-string, .md-body .hljs-regexp, .md-body .hljs-addition { color: #6a6510; }
+.md-body .hljs-number, .md-body .hljs-literal, .md-body .hljs-symbol { color: #8f3f71; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #7c6f64; font-style: italic; }
+.md-body .hljs-title, .md-body .hljs-section { color: #076678; }
+.md-body .hljs-built_in, .md-body .hljs-type { color: #9a5f0c; }
+.md-body .hljs-attr, .md-body .hljs-attribute, .md-body .hljs-meta, .md-body .hljs-property { color: #427b58; }
+.md-body .hljs-variable, .md-body .hljs-params { color: #3c3836; }

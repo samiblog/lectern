@@ -1,0 +1,38 @@
+/* 원고 (타자기): 모든 글자를 고정폭 글꼴로. 글자 폭이 같아 표·목록이 가지런하고, 군더더기 없이 내용만 본다 (iA Writer 풍) */
+:root {
+  --md-bg: #f7f7f5;
+  --md-fg: #222222;
+  --md-heading: #0f4c75;
+  --md-muted: #5a5a5a;
+  --md-border: #d9d9d4;
+  --md-link: #0f5f99;
+  --md-code-bg: #ececea;
+  --md-quote-bar: #b5b5af;
+  --md-th-bg: #ebebe6;
+  --md-th-rule: #222222;
+  --md-stripe: #f2f2ef;
+  --md-alert-note: #1f5f94;
+  --md-alert-tip: #2f6b3d;
+  --md-alert-important: #5f4196;
+  --md-alert-warning: #85590c;
+  --md-alert-caution: #a3302a;
+  --md-font: "D2Coding", "Cascadia Mono", Consolas, "Malgun Gothic", "맑은 고딕", monospace;
+  --md-heading-font: var(--md-font);
+  --md-mono: var(--md-font);
+  --md-size: 15px;
+  --md-line: 1.85;
+  --md-width: 760px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { font-size: 1.45em; letter-spacing: 0; }
+.md-body h2 { font-size: 1.22em; }
+.md-body h3 { font-size: 1.06em; }
+.md-body h4 { font-size: 1em; }
+.md-body h1, .md-body h2, .md-body h3 { font-weight: 700; }
+.md-body :not(pre) > code { background: none; padding: 0; font-size: 1em; color: #8a3b12; }
+.md-body pre { background: transparent; border-style: dashed; border-radius: 0; }
+.md-body .table-wrap { border-style: dashed; border-radius: 0; }
+.md-body table { font-size: .95em; }
+.md-body blockquote:not(.alert) { border-left-style: dashed; }

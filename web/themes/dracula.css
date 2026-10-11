@@ -1,0 +1,42 @@
+/* Dracula: 짙은 보라 회색 바탕에 보라 제목, 하늘색 링크, 분홍·초록 코드 (draculatheme.com 팔레트). 흐린 주석색은 읽히게 밝혔다 */
+:root {
+  --md-bg: #282a36;
+  --md-fg: #f8f8f2;
+  --md-heading: #bd93f9;
+  --md-muted: #b6bcd9;
+  --md-border: #44475a;
+  --md-link: #8be9fd;
+  --md-code-bg: #21222c;
+  --md-quote-bar: #6272a4;
+  --md-th-bg: #343746;
+  --md-th-rule: #bd93f9;
+  --md-stripe: #2c2e3b;
+  --md-strong: #ffb86c;
+  --md-alert-note: #8be9fd;
+  --md-alert-tip: #50fa7b;
+  --md-alert-important: #bd93f9;
+  --md-alert-warning: #f1fa8c;
+  --md-alert-caution: #ff6e6e;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Code", "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.75;
+  --md-width: 860px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body :not(pre) > code { color: #50fa7b; }
+.md-body img:not([src*=".svg"]) { filter: brightness(.9); }
+
+/* 코드 색: Dracula */
+.md-body .hljs-keyword, .md-body .hljs-selector-tag, .md-body .hljs-meta { color: #ff79c6; }
+.md-body .hljs-string, .md-body .hljs-regexp { color: #f1fa8c; }
+.md-body .hljs-number, .md-body .hljs-literal, .md-body .hljs-symbol { color: #bd93f9; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #8f9bcb; font-style: italic; }
+.md-body .hljs-title, .md-body .hljs-section, .md-body .hljs-attr, .md-body .hljs-attribute, .md-body .hljs-addition { color: #50fa7b; }
+.md-body .hljs-built_in, .md-body .hljs-type { color: #8be9fd; font-style: italic; }
+.md-body .hljs-params { color: #ffb86c; }
+.md-body .hljs-variable, .md-body .hljs-property { color: #f8f8f2; }
+.md-body .hljs-deletion { color: #ff5555; }

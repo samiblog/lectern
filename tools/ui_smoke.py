@@ -337,7 +337,23 @@ def run(headed: bool) -> None:
 
             themes = [t for t in page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)') if t != 'auto']
             groups = page.eval_on_selector_all('#lec-theme optgroup', 'gs => gs.map(g => g.label)')
-            check(len(themes) == 12 and groups == ['밝은 스타일', '어두운 스타일'], f'스타일 {len(themes)}종, 밝은·어두운 묶음 ({groups})')
+            check(len(themes) == 24 and len(set(themes)) == 24 and groups == ['업무·보고', '읽기·출판', '개발·기술', '어두운'],
+                  f'스타일 {len(themes)}종, 처음에는 용도별 묶음 ({groups})')
+            # 설정 창에서 묶는 방식을 바꾸면 목록이 다시 묶인다 (같은 24종, 고른 스타일은 그대로)
+            picked = page.input_value('#lec-theme')
+            grouped = {}
+            for kind in ('mood', 'tone', 'use'):
+                page.keyboard.press('Control+Comma')
+                page.locator(f'#lec-settings input[name="theme_groups"][value="{kind}"]').check()
+                page.keyboard.press('Escape')
+                wait_until(page, f"fetch('/api/config').then(r => r.json()).then(c => c.theme_groups === '{kind}')")
+                grouped[kind] = page.evaluate("""[...document.querySelectorAll('#lec-theme optgroup')]
+                    .map(g => [g.label, [...g.querySelectorAll('option')].map(o => o.value)])""")
+            ok_sets = all(sorted(v for _, opts in g for v in opts) == sorted(themes) for g in grouped.values())
+            labels = {k: [label for label, _ in g] for k, g in grouped.items()}
+            check(ok_sets and labels['mood'] == ['깔끔한', '따뜻한·종이', '색이 있는', '어두운'] and labels['tone'] == ['밝은', '종이·책', '어두운']
+                  and page.input_value('#lec-theme') == picked,
+                  f'설정 창에서 스타일 목록 묶는 방식(용도별·분위기별·밝기별)을 바꾸면 같은 스타일이 다시 묶임 ({labels})')
             unstyled = []
             # 스타일마다 다이어그램 상자 색(theme.js 의 mermaid primaryColor)이 그 스타일 것이어야 한다
             for theme, fill in (('default', '#e8eff7'), ('dark', '#2a313a'), ('academic', '#fffff8'), ('nord', '#3b4252')):
