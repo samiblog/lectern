@@ -243,7 +243,10 @@ def run(headed: bool) -> None:
             check(abs(bigger - base_size * 1.2) < 0.2 and size_label == '120%' and saved_scale and smaller < base_size and size() == base_size,
                   f'글자 크기 +·− (본문 {base_size}px → 두 번 + {bigger}px {size_label}, − {smaller}px), 가운데를 누르면 100%, 설정에 저장')
             lit = lambda: page.evaluate("[...document.querySelectorAll('#lec-view > .lec-lit')].filter(e => /^H[1-6]$/.test(e.tagName)).map(e => e.id)")
+            # 접어 둔 절을 모두 편다 (앞 점검이 고른 글자가 남아 있으면 제목을 눌러도 접기·펴기를 하지 않으므로 선택부터 푼다)
+            page.evaluate("getSelection().removeAllRanges(); document.querySelectorAll('#lec-view > .lec-folded').forEach(h => h.click())")
             page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
+            arrows_off = page.is_disabled('#lec-spot-prev') and page.is_disabled('#lec-spot-next')   # 하이라이트 전에는 꺼져 있다
             page.click('#lec-btn-spot')
             first = lit()
             faded_js = """(() => { const b = [...document.querySelectorAll('#lec-view > :not(.lec-lit)')].find(e => e.querySelector('img'));
@@ -260,12 +263,43 @@ def run(headed: bool) -> None:
             shot('03-spotlight')
             check(first == ['렌더링-기능-점검'] and down1 == ['표'] and down2 == ['체크리스트와-각주'] and up1 == ['표'] and faded_img == '0.16',
                   f'장 하이라이트: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장의 그림도 흐림 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
+            page.click('#lec-spot-next')
+            btn_next = lit()
+            page.click('#lec-spot-prev')
+            btn_prev = lit()
+            page.keyboard.press('PageUp')
+            at_first = page.is_disabled('#lec-spot-prev') and not page.is_disabled('#lec-spot-next')
+            # 장마다: 하이라이트 범위 = 그 장 제목을 눌러 접을 때 숨는 범위 + 제목 (첫 장의 문서 제목은 접지 않는다)
+            spans = page.evaluate("""() => {
+              const kids = [...document.querySelector('#lec-view').children];
+              const idx = (pred) => kids.map((e, i) => (pred(e) ? i : -1)).filter((i) => i >= 0);
+              const out = [];
+              for (let n = 0; n < 40; n++) {
+                const lit = idx((e) => e.classList.contains('lec-lit'));
+                const head = kids[lit[0]];
+                if (head.classList.contains('lec-fold')) {
+                  const before = new Set(idx((e) => e.classList.contains('lec-fold-hidden')));
+                  head.click();
+                  const fold = [lit[0], ...idx((e) => e.classList.contains('lec-fold-hidden')).filter((i) => !before.has(i))];
+                  head.click();
+                  out.push(JSON.stringify(fold) === JSON.stringify(lit) ? 'same' : `${head.id}: ${lit} / ${fold}`);
+                } else out.push('title');
+                if (document.querySelector('#lec-spot-next').disabled) break;
+                document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }));
+              }
+              return out;
+            }""")
+            at_last = page.is_disabled('#lec-spot-next') and not page.is_disabled('#lec-spot-prev')
+            check(arrows_off and btn_next == ['체크리스트와-각주'] and btn_prev == ['표'] and at_first and at_last,
+                  f'하이라이트 버튼 옆 ∧·∨ 로 앞뒤 장, 하이라이트 전·첫 장·마지막 장에서는 그쪽 버튼이 꺼짐 ({btn_next} → {btn_prev})')
+            check(spans == ['title'] + ['same'] * 6, f'하이라이트하는 장의 범위는 그 장 제목을 눌러 접히는 범위와 같음 ({spans})')
             page.locator('#lec-view p', has_text='표시가 없는 인용문').click()
             by_click = lit()
             page.locator('#lec-toc a', has_text='링크').first.click()
             by_toc = lit()
             page.keyboard.press('Escape')
-            off = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && !document.querySelector('#lec-view .lec-lit')")
+            off = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && !document.querySelector('#lec-view .lec-lit')"
+                                " && document.querySelector('#lec-spot-prev').disabled && document.querySelector('#lec-spot-next').disabled")
             check(by_click == ['콜아웃'] and by_toc[:1] == ['링크'] and off,
                   f'흐린 장을 누르거나 목차로 가면 그 장, Esc 로 끔 ({by_click}, {by_toc})')
 

@@ -100,6 +100,17 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .size-label:hover { color: var(--ui-fg); }
 
+/* 장 하이라이트 버튼과 앞뒤 장 버튼: [▭][∧][∨] */
+.spot-pick { display: flex; align-items: stretch; height: 30px; }
+.spot-pick .icon-btn { height: 30px; border: 1px solid var(--ui-border); border-radius: 0; background: var(--ui-panel); }
+.spot-pick .icon-btn + .icon-btn { border-left: 0; }
+.spot-pick .icon-btn:first-child { width: 32px; border-radius: 6px 0 0 6px; }
+.spot-pick .icon-btn:last-child { border-radius: 0 6px 6px 0; }
+.spot-pick .step { width: 26px; }
+.spot-pick .step svg { width: 15px; height: 15px; }
+.spot-pick .icon-btn:disabled { color: var(--ui-faint); }
+.spot-pick #lec-btn-spot.on { color: var(--ui-accent); background: var(--ui-active-bg); }
+
 /* 스타일 목록과 위·아래 버튼을 한 덩어리로: [ 기본 ▾ ][∧][∨] */
 .theme-pick { display: flex; align-items: stretch; height: 30px; }
 .theme-pick select {
