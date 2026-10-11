@@ -125,6 +125,12 @@ def run(headed: bool) -> None:
         + '\n\n'.join(x.format(r=remote) for x in LEAKS) + '\n', encoding='utf-8')
     (work / 'docs' / '98-원시-HTML.md').write_text(RAW_HTML.format(r=remote), encoding='utf-8')
     # html 문서의 인터넷 CSS 는 막혀야 한다 (그림만 허용). 요청이 나가면 아래 '새지 않음' 점검이 잡는다
+    # 바탕을 칠하지 않고 밝은 글자만 정한 html (어두운 바탕을 가정하고 만든 보고서) — 흰 바탕에 묻히면 안 된다
+    (work / 'docs' / '94-밝은-글자.html').write_text(
+        '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>밝은 글자 문서</title>'
+        '<style>body{color:#f1f5f9;font-family:sans-serif} .card{background:#1e293b;padding:12px}</style></head>'
+        '<body><h1>밝은 글자 문서</h1><p>바탕을 칠하지 않은 밝은 글자</p><div class="card"><p>카드 안 글자</p></div></body></html>',
+        encoding='utf-8')
     report = work / 'docs' / '04-HTML-보고서.html'
     report.write_text(report.read_text(encoding='utf-8').replace(
         '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
@@ -331,28 +337,39 @@ def run(headed: bool) -> None:
             measure = '''() => {
               const v = document.querySelector('#lec-view');
               const css = (sel) => getComputedStyle(v.querySelector(sel));
-              const rgb = (s) => s.match(/[\\d.]+/g).slice(0, 3).map(Number);
+              // color-mix() 로 만든 색은 'color(srgb 0.9 0.9 0.9)' 처럼 0~1 로 나온다
+              const rgb = (s) => s.match(/[\\d.]+/g).slice(0, 3).map(Number).map((x) => (s.startsWith('color(') ? x * 255 : x));
               const lum = (c) => c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; })
                 .reduce((a, x, i) => a + x * [0.2126, 0.7152, 0.0722][i], 0);
               const ratio = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
               const bg = getComputedStyle(document.querySelector('#lec-content')).backgroundColor;
               const p = css('p').color, h = css('h2').color, th = css('thead th'), td = css('tbody td');
+              const ui = (sel) => getComputedStyle(document.querySelector(sel));
+              const side = ui('#lec-sidebar').backgroundColor, active = ui('#lec-tree .row.active');
               return { text: ratio(p, bg), heading: ratio(h, bg), muted: ratio(css('.footnotes').color, bg), link: ratio(css('p a').color, bg),
-                       headingDiffers: h !== p, headerDiffers: th.backgroundColor !== td.backgroundColor || th.color !== td.color };
+                       headingDiffers: h !== p, headerDiffers: th.backgroundColor !== td.backgroundColor || th.color !== td.color,
+                       // 앱 UI 도 스타일 색을 따른다 (D28): 사이드바 글자, 상태줄의 흐린 글자, 고른 행
+                       uiText: ratio(ui('#lec-tree .row .label').color, side), uiMuted: ratio(ui('#lec-status').color, ui('body').backgroundColor),
+                       uiActive: ratio(active.color, active.backgroundColor), side };
             }'''
             if folded('표'):
                 sec('표').click()   # 캡처에 표가 보이도록
             problems = []
+            sides: set[str] = set()
             for theme in themes:
                 if not use_theme(theme):
                     problems.append(f'{theme}: 스타일 파일이 적용되지 않음')
                     continue
                 m = page.evaluate(measure)
-                low = [k for k, need in (('text', 4.5), ('muted', 4.5), ('link', 4.5), ('heading', 3)) if m[k] < need]
+                low = [k for k, need in (('text', 4.5), ('muted', 4.5), ('link', 4.5), ('heading', 3),
+                                         ('uiText', 4.5), ('uiMuted', 4.5), ('uiActive', 4.5)) if m[k] < need]
+                sides.add(m['side'])
                 if low or not m['headingDiffers'] or not m['headerDiffers']:
                     problems.append(f"{theme}: 대비 부족 {low}, 제목 색 구분 {m['headingDiffers']}, 표 머리행 구분 {m['headerDiffers']}")
                 shot(f'04-theme-{theme}')
-            check(not problems, '모든 스타일: 글자 대비(WCAG 4.5:1), 제목 색·표 머리행 구분' + (f': {problems}' if problems else ''))
+            check(not problems and len(sides) == len(themes),
+                  '모든 스타일: 글자 대비(WCAG 4.5:1), 제목 색·표 머리행 구분, 앱 UI(사이드바·상태줄)도 스타일 색으로'
+                  + (f': {problems}' if problems else '') + ('' if len(sides) == len(themes) else f' (사이드바 색 {len(sides)}가지)'))
             use_theme('paper')
             saved = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.theme)")
             page.reload()
@@ -538,6 +555,26 @@ def run(headed: bool) -> None:
             themed = page.evaluate(f"""(() => {{ const d = {frame_js}.contentDocument;
               return d.body.classList.contains('md-body') && !!d.querySelector('link[href*="/static/themes/base.css"]'); }})()""")
             check(themed, '스타일이 없는 html 은 Lectern 스타일로')
+            readable_js = f'''(() => {{ const d = {frame_js}.contentDocument, w = d.defaultView;
+              const rgb = (s) => s.match(/[\d.]+/g).slice(0, 3).map(Number).map((x) => (s.startsWith('color(') ? x * 255 : x));
+              const lum = (c) => c.map((x) => {{ x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }})
+                .reduce((a, x, i) => a + x * [0.2126, 0.7152, 0.0722][i], 0);
+              // 바탕을 칠하지 않으면(투명) Chromium 이 흰색을 칠하므로 흰색으로 본다
+              const bg = w.getComputedStyle(d.documentElement).backgroundColor;
+              const back = /,\s*0\)$/.test(bg) ? [255, 255, 255] : rgb(bg);
+              const [a, b] = [lum(rgb(w.getComputedStyle(d.querySelector('p')).color)), lum(back)].sort((m, n) => n - m);
+              return Math.round((a + 0.05) / (b + 0.05) * 10) / 10; }})()'''
+            use_theme('dark')
+            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click()
+            wait_until(page, f"{frame_js}?.contentDocument?.documentElement.dataset.lecBackdrop === 'dark'")
+            plain_dark = page.evaluate(readable_js)
+            use_theme('default')
+            page.locator('#lec-tree .row.file', has_text='밝은 글자 문서').click()
+            wait_until(page, f"{frame_js}?.contentDocument?.title === '밝은 글자 문서'")
+            light_text = page.evaluate(readable_js)
+            shot('08-html-light-text')
+            check(plain_dark >= 4.5 and light_text >= 4.5,
+                  f'html 글자가 바탕에 묻히지 않음: 다크 스타일의 스타일 없는 문서 {plain_dark}:1, 바탕 없이 밝은 글자만 정한 문서 {light_text}:1')
             shot('08-html-plain')
             page.keyboard.press('Control+Shift+F')
             page.fill('#lec-search-input', '배터리 수요')
@@ -610,9 +647,12 @@ def run(headed: bool) -> None:
                     break
                 page.wait_for_timeout(200)
             page.reload()
-            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            # 한 번 시간 초과가 난 적이 있어(원인 못 찾음), 기다리지 못해도 무엇이 열렸는지 남긴다
+            reopened = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('렌더링 기능 점검')", 15000)
             top = page.locator('#lec-content').evaluate('el => el.scrollTop')
-            check(remembered and top == 500, f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top})')
+            opened = page.evaluate("document.querySelector('#lec-view h1')?.textContent || document.querySelector('#lec-view')?.className")
+            check(remembered and reopened and top == 500,
+                  f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top}, 열린 것 {opened!r}, 기억 {pos})')
 
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()

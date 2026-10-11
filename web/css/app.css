@@ -1,17 +1,19 @@
 /* 앱 UI(툴바·사이드바·목차·상태줄·팝업). 문서 본문 스타일은 themes/ 에 있다. */
 
+/* 앱 UI 색은 지금 문서 스타일(themes/<id>.css 의 --md-*)에서 만든다 — 툴바·사이드바·목차·메뉴가 문서와 같은 색 계열이 된다 (D28).
+   새 스타일은 --md-* 만 정하면 UI 도 따라온다. 찾기·변경 표시(호박색)는 스타일과 상관없이 밝음/어두움만 나눈다. */
 :root {
   --ui-font: "Segoe UI Variable Text", "Segoe UI", "Malgun Gothic", "Apple SD Gothic Neo", "Noto Sans KR", "Noto Sans CJK KR", sans-serif;
-  --ui-bg: #f2f4f6;          /* 툴바·사이드바 */
-  --ui-panel: #ffffff;       /* 팝업 */
-  --ui-fg: #1e2731;
-  --ui-muted: #66717d;
-  --ui-faint: #97a0aa;
-  --ui-border: #dde2e7;
-  --ui-hover: #e5e9ed;
-  --ui-active-bg: #dbe5ef;
-  --ui-active-fg: #1d4b75;
-  --ui-accent: #2b5c8a;      /* 강철 청색 */
+  --ui-bg: color-mix(in srgb, var(--md-fg, #1f2933) 5%, var(--md-bg, #ffffff));        /* 툴바·사이드바: 본문 바탕보다 조금 짙게 */
+  --ui-panel: var(--md-bg, #ffffff);                                                    /* 팝업·입력칸 */
+  --ui-fg: var(--md-fg, #1f2933);
+  --ui-muted: var(--md-muted, #5f6b78);
+  --ui-faint: color-mix(in srgb, var(--md-muted, #5f6b78) 72%, var(--md-bg, #ffffff));
+  --ui-border: var(--md-border, #e1e5ea);
+  --ui-hover: color-mix(in srgb, var(--md-fg, #1f2933) 9%, var(--md-bg, #ffffff));
+  --ui-active-bg: color-mix(in srgb, var(--md-link, #1f5f9f) 16%, var(--md-bg, #ffffff));
+  --ui-active-fg: var(--md-heading, #1b3a5c);
+  --ui-accent: var(--md-link, #1f5f9f);
   --ui-fresh: #d99a06;       /* 새 변경 표시 (호박색) */
   --ui-danger: #b42318;
   --ui-find: #ffe28a;
@@ -21,16 +23,11 @@
 }
 
 :root[data-ui="dark"] {
-  --ui-bg: #1b2027;
-  --ui-panel: #232a32;
-  --ui-fg: #d9dee4;
-  --ui-muted: #9aa4af;
-  --ui-faint: #6c7581;
-  --ui-border: #2d343d;
-  --ui-hover: #262d36;
-  --ui-active-bg: #233548;
-  --ui-active-fg: #a9cbee;
-  --ui-accent: #7fafdc;
+  --ui-bg: color-mix(in srgb, #000000 16%, var(--md-bg, #1f242b));                     /* 어두운 스타일은 본문보다 조금 더 어둡게 */
+  --ui-hover: color-mix(in srgb, var(--md-fg, #d5dbe1) 11%, var(--md-bg, #1f242b));
+  --ui-active-bg: color-mix(in srgb, var(--md-link, #8ab9e8) 20%, var(--md-bg, #1f242b));
+  /* 어두운 스타일의 제목 색(Nord 청록 등)은 고른 행 바탕 위에서 대비가 모자라서, 본문 글자를 더 밝게 해서 쓴다 */
+  --ui-active-fg: color-mix(in srgb, var(--md-fg, #d5dbe1) 65%, #ffffff);
   --ui-fresh: #e9b440;
   --ui-danger: #f1776b;
   --ui-find: #6b5a1c;
@@ -366,7 +363,6 @@ button.primary:hover { filter: brightness(1.08); }
 
 /* html 문서 (htmldoc.js): iframe 높이를 문서에 맞추고 #lec-content 가 스크롤한다 */
 iframe.lec-html { display: block; width: 100%; height: 480px; border: 0; background: transparent; }
-iframe.lec-html.own-style { background: #fff; }   /* 바탕색을 정하지 않은 문서가 다크 스타일에서 안 보이지 않게 */
 iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: hidden; }
 
 /* 렌더링용 무대 (화면 밖에서 먼저 그리기) */
