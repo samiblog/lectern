@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import logging
+import os
 import sys
 import threading
 from pathlib import Path
@@ -17,12 +18,13 @@ from typing import Any
 
 from lectern import __version__
 from lectern.config import DEFAULTS, Config
+from lectern.paths import resource_dir
 from lectern.server import create_app
 from lectern.state import AppState
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog='Lectern', description='Lectern — 프로젝트 문서를 한눈에 보는 로컬 뷰어 (현재 Markdown)')
+    parser = argparse.ArgumentParser(prog='Lectern', description='Lectern: 프로젝트 문서(Markdown·HTML)를 한눈에 보는 로컬 뷰어')
     parser.add_argument('folder', nargs='?', help='열 프로젝트 폴더')
     parser.add_argument('--browser', action='store_true', help='창 없이 서버만 실행 (개발용)')
     parser.add_argument('--port', type=int, default=0, help='서버 포트 (기본: 자동, --browser 기본 8765)')
@@ -134,6 +136,9 @@ def main(argv: list[str] | None = None) -> None:
         print(config.load_error, file=sys.stderr)
     state = AppState(config, mode='browser' if args.browser else 'app')
     open_initial_folder(state, args.folder)
+    # 폴더 인자(run.bat . 등 현재 폴더 기준)를 푼 뒤에는 앱 폴더로 옮긴다. 현재 폴더가 열린 프로젝트면
+    # Windows 가 프로그램을 찾을 때 그 안의 파일(code.cmd 등)을 먼저 잡을 수 있다 (osutil.find_editor 참고)
+    os.chdir(resource_dir())
     try:
         if args.browser:
             run_browser(state, args.port)

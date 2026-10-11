@@ -86,7 +86,7 @@ def test_doc_serves_markdown_and_assets(client):
     assert client.get('/doc/' + quote('docs/10-a.md')).status_code == 200
 
 
-@pytest.mark.parametrize('bad', ['.hidden.md', '.claude/notes.md', '../x.md', 'docs/../../x.md', 'nope.md', 'docs'])
+@pytest.mark.parametrize('bad', ['.hidden.md', '.claude/notes.md', '../x.md', 'docs/../../x.md', 'nope.md', 'docs', '%5C%5Cevil.example%5Cshare%5Cx.png'])
 def test_doc_blocks_hidden_outside_missing(client, bad):
     assert client.get(f'/doc/{bad}').status_code == 404
 
@@ -225,8 +225,21 @@ def test_position_is_remembered(client, project):
 def test_open_config(client, state, monkeypatch):
     calls = []
     monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor: calls.append(p) or 'editor')
-    r = client.post('/api/open-config').get_json()
+    r = client.post('/api/open-config', json={}).get_json()
     assert r['action'] == 'editor' and calls == [state.config.path] and state.config.path.exists()
+
+
+@pytest.mark.parametrize('route', ['/api/open-config', '/api/open', '/api/config', '/api/position',
+                                   '/api/open-external', '/api/reveal', '/api/exists'])
+def test_post_requires_json(client, monkeypatch, route):
+    # 브라우저 모드(토큰 없음)에서 다른 사이트의 폼이 사전 확인(preflight) 없이 POST 하지 못하게 — JSON 본문만 받는다
+    calls = []
+    monkeypatch.setattr(osutil, 'open_path', lambda *a: calls.append(a) or 'editor')
+    monkeypatch.setattr(osutil, 'reveal', lambda *a: calls.append(a))
+    r = client.post(route, data={'path': 'README.md'})
+    assert r.status_code == 415 and 'error' in r.get_json()
+    assert client.post(route, data='{"path": "README.md"}', content_type='text/plain').status_code == 415
+    assert calls == []
 
 
 def test_html_doc_policy(client, project):
@@ -237,6 +250,7 @@ def test_html_doc_policy(client, project):
     # 같은 출처(앱이 목차·찾기·링크를 다룸)지만 스크립트·연결·폼은 막고, 인터넷 그림은 설정을 따른다
     assert csp.startswith('sandbox allow-same-origin allow-modals;') and "default-src 'none'" in csp and 'https:' in csp
     assert 'allow-scripts' not in csp and 'script-src' not in csp
+    assert r.headers['Referrer-Policy'] == 'no-referrer'   # 문서 속 인터넷 그림이 앱 주소를 보내지 않게
     client.post('/api/config', json={'external_images': False})
     assert 'https:' not in fetch(client, '/doc/docs/r.html').headers['Content-Security-Policy']
     assert fetch(client, '/doc/docs/img.svg').headers['Content-Security-Policy'] == 'sandbox'

@@ -27,9 +27,16 @@ _NO_WINDOW = getattr(subprocess, 'CREATE_NO_WINDOW', 0)
 
 
 def find_editor(configured: str | None) -> str | None:
-    if configured and Path(configured).exists():
+    """설정한 편집기(절대경로) 또는 PATH 의 code. 현재 폴더에서는 찾지 않는다.
+
+    Windows 는 실행 파일을 PATH 보다 현재 폴더에서 먼저 찾는다. `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가
+    열린 프로젝트라서, 내려받은 프로젝트에 든 code.cmd 가 링크 한 번에 실행될 수 있다 (점검에서 발견).
+    """
+    if configured and Path(configured).is_absolute() and Path(configured).is_file():
         return configured
-    return shutil.which('code')
+    os.environ['NoDefaultCurrentDirectoryInExePath'] = '1'   # shutil.which 가 현재 폴더를 보지 않게 (Windows)
+    found = shutil.which('code')
+    return found if found and os.path.isabs(found) else None
 
 
 def _launch(args: list[str]) -> None:
@@ -48,7 +55,9 @@ def open_default(path: Path) -> None:
 def reveal(path: Path) -> None:
     """탐색기에서 파일을 선택한 상태로 보여 준다."""
     if sys.platform == 'win32':
-        subprocess.Popen(f'explorer /select,"{path}"', creationflags=_NO_WINDOW)
+        # 'explorer' 만 쓰면 현재 폴더(열린 프로젝트)의 explorer.exe 가 먼저 잡힐 수 있어 Windows 폴더의 것을 쓴다
+        explorer = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'explorer.exe')
+        subprocess.Popen(f'"{explorer}" /select,"{path}"', creationflags=_NO_WINDOW)
     else:
         open_default(path.parent if path.is_file() else path)
 

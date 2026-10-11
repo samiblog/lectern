@@ -18,7 +18,9 @@ SUMMARY_LEN = 160
 
 _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
 
-_RE_HEADING = re.compile(r'^\s{0,3}(#{1,6})\s+(.*?)\s*#*\s*$')
+# 제목 줄. 끝의 닫는 # 는 _heading_text 가 뗀다 — 정규식으로 떼면(\s*#*\s*$) 공백이 많은 줄에서 시간이 제곱 이상으로 늘어
+# 스캔 전체가 멈춘다 (점검에서 발견: 공백 1600개에 4초)
+_RE_HEADING = re.compile(r'^\s{0,3}(#{1,6})(?:[ \t]+(.*))?$')
 _RE_FENCE = re.compile(r'^\s{0,3}(```|~~~)')
 _RE_FM_KEY = re.compile(r'^(title|name|description|summary)\s*:\s*(.+?)\s*$', re.IGNORECASE)
 _RE_QUOTE = re.compile(r'^(?:>\s?)+')
@@ -79,6 +81,15 @@ def _truncate(text: str, limit: int = SUMMARY_LEN) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + '…'
 
 
+def _heading_text(rest: str) -> str:
+    """제목 줄의 글자. 끝의 닫는 #(앞에 공백이 있을 때만 — 'C#' 은 그대로)과 공백을 뗀다."""
+    text = rest.strip()
+    bare = text.rstrip('#')
+    if bare != text and (not bare or bare[-1] in ' \t'):
+        text = bare.rstrip()
+    return text
+
+
 def extract_info(text: str) -> dict[str, Any]:
     meta, body = split_front_matter(text)
     title = meta.get('title') or meta.get('name') or None
@@ -110,7 +121,7 @@ def extract_info(text: str) -> dict[str, Any]:
             continue
         heading = _RE_HEADING.match(line)
         if heading:
-            text_ = strip_inline(heading.group(2))
+            text_ = strip_inline(_heading_text(heading.group(2) or ''))
             if title is None and heading.group(1) == '#' and text_:
                 title = text_
             if first_heading is None and text_:
@@ -172,7 +183,10 @@ class _HtmlInfo(HTMLParser):
 
 def extract_html_info(text: str) -> dict[str, Any]:
     parser = _HtmlInfo()
-    parser.feed(text)
+    try:
+        parser.feed(text)
+    except Exception:   # 망가진 표기(<![x> 등)에서 html.parser 가 AssertionError 를 낸다 — 그때까지 찾은 것으로 (점검에서 발견)
+        pass
     found = parser.found
     summary = parser.description or found.get('p') or ''
     return {

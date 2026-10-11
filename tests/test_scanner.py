@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -93,6 +94,18 @@ def test_resolve_inside(project):
     assert resolve_inside(project, 'a\x00b') is None
     # 제외 폴더는 트리에는 안 나오지만 링크로는 열 수 있다 (숨김이 아니므로)
     assert resolve_inside(project, 'node_modules/lib/README.md') is not None
+
+
+def test_resolve_inside_does_not_touch_paths_outside(project, monkeypatch):
+    # \\host\share 를 resolve() 하면 Windows 가 그 서버에 접속한다 (NTLM 인증이 새 나감). 글자만 보고 먼저 거른다
+    touched = []
+    real = Path.resolve
+    monkeypatch.setattr(Path, 'resolve', lambda self, *a, **k: touched.append(str(self)) or real(self, *a, **k))
+    for rel in ('\\\\evil.example\\share\\x.png', '//evil.example/share/x.png', '\\\\?\\UNC\\evil.example\\s\\x',
+                'C:\\Windows\\win.ini', '/etc/passwd', '../../x.md', 'docs/../../x.md'):
+        assert resolve_inside(project, rel) is None, rel
+    assert touched == []
+    assert resolve_inside(project, 'docs/./2-b.md') == project / 'docs' / '2-b.md'
 
 
 def test_html_docs_and_source_folders(project):

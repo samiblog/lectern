@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from lectern.docinfo import doc_info, extract_info, split_front_matter, strip_inline
+import time
+
+from lectern.docinfo import doc_info, extract_html_info, extract_info, split_front_matter, strip_inline
 
 
 def test_title_from_h1_and_summary_from_first_paragraph():
@@ -66,3 +68,16 @@ def test_html_info():
     assert extract_html_info(head + '<body><h1>제목</h1><p>첫 문단</p></body></html>') == {'title': '구리 보고서', 'summary': '요약 문장'}
     body = '<body><script>var x = "<h1>아님</h1>"</script><h2>둘째</h2><p>첫 <b>문단</b>입니다</p></body>'
     assert extract_html_info(body) == {'title': '둘째', 'summary': '첫 문단입니다'}
+
+
+def test_heading_closing_hashes_and_long_lines():
+    assert extract_info('# 제목 ##\n')['title'] == '제목'
+    assert extract_info('# C#\n')['title'] == 'C#'   # 앞에 공백이 없는 # 는 닫는 표시가 아니다
+    started = time.perf_counter()
+    info = extract_info('# a' + ' ' * 20000 + 'x\n\n본문\n')   # 예전 정규식은 공백 1600개에 4초 걸렸다
+    assert time.perf_counter() - started < 0.5 and info['title'].startswith('a') and info['title'].endswith('x')
+
+
+def test_broken_html_does_not_break_scan():
+    # html.parser 는 망가진 표기에서 AssertionError 를 낸다. 한 파일 때문에 트리·개요·검색이 실패하면 안 된다
+    assert extract_html_info('<title>망가진 문서</title><p>see <![x> here</p>')['title'] == '망가진 문서'

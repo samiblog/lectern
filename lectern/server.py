@@ -106,6 +106,9 @@ def create_app(state: AppState) -> Flask:
         if state.token and request.path.startswith('/api/'):
             if request.headers.get('X-Token') != state.token:
                 abort(403)
+        # POST 는 JSON 본문만: 다른 사이트의 폼·단순 요청은 사전 확인(preflight) 없이 올 수 있다 (토큰이 없는 브라우저 모드)
+        if request.method == 'POST' and request.path.startswith('/api/') and not request.is_json:
+            abort(415, description='JSON 본문만 받습니다')
 
     @app.after_request
     def common_headers(resp: Response) -> Response:
@@ -116,6 +119,8 @@ def create_app(state: AppState) -> Flask:
             # 문서로 보는 html 은 doc() 가 따로 정한다 (html_doc_policy)
             resp.headers.setdefault('Content-Security-Policy', 'sandbox')
             resp.headers['X-Content-Type-Options'] = 'nosniff'
+            # html 문서 속 인터넷 그림이 앱 주소(Referer)를 보내지 않게 (md 그림은 img 마다 no-referrer, D19)
+            resp.headers['Referrer-Policy'] = 'no-referrer'
         return resp
 
     @app.get('/')
@@ -291,6 +296,7 @@ def create_app(state: AppState) -> Flask:
     @app.errorhandler(409)
     @app.errorhandler(400)
     @app.errorhandler(405)
+    @app.errorhandler(415)
     @app.errorhandler(500)
     def json_error(err: Any) -> Any:
         if request.path.startswith('/api/'):

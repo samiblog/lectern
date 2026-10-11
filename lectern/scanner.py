@@ -20,7 +20,6 @@ from typing import Any
 
 from .docinfo import doc_info
 
-MD_EXT = frozenset({'.md', '.markdown'})
 DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html'}
 DEFAULT_HTML_EXCLUDE_DIRS = frozenset({'src', 'public', 'static', 'templates', 'web', 'www', 'frontend', 'out'})
 DEFAULT_EXCLUDE_DIRS = frozenset({
@@ -36,10 +35,6 @@ Node = dict[str, Any]
 def natural_key(name: str) -> list:
     """'2장' < '10장' 순서가 되도록 숫자 부분을 정수로 비교한다."""
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r'(\d+)', name)]
-
-
-def is_md(name: str) -> bool:
-    return os.path.splitext(name)[1].lower() in MD_EXT
 
 
 def doc_kind(name: str) -> str | None:
@@ -144,6 +139,12 @@ def resolve_inside(root: Path, rel: str) -> Path | None:
     root 는 resolve() 된 절대경로여야 한다. 링크를 따라가 root 밖으로 나가는 경우도 막는다.
     """
     if '\x00' in rel:
+        return None
+    # resolve() 하기 전에 글자만으로 root 안인지 본다. \\서버\공유 같은 값을 resolve() 하면 Windows 가 그 서버에 접속해
+    # 로그인 정보(NTLM)를 건넬 수 있다 — /doc/%5C%5C서버… 주소 하나로 (점검에서 발견). 드라이브·루트로 시작하는 값도 여기서 걸린다
+    base = os.path.normcase(os.path.join(root, ''))
+    joined = os.path.normcase(os.path.normpath(os.path.join(root, rel)))
+    if joined != os.path.normcase(str(root)) and not joined.startswith(base):
         return None
     try:
         target = (root / rel).resolve()

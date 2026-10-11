@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import os
+from pathlib import Path
+
 import pytest
 
 from lectern import osutil
@@ -47,3 +50,17 @@ def test_unsafe_characters_fall_back_to_reveal(tmp_path, calls, monkeypatch):
 
 def test_folder_opens(tmp_path, calls):
     assert osutil.open_path(tmp_path) == 'folder'
+
+
+def test_editor_is_not_taken_from_current_folder(tmp_path, monkeypatch):
+    # run.bat . 처럼 열린 프로젝트가 현재 폴더일 때, 그 안의 code.cmd 가 편집기로 잡혀 실행되면 안 된다 (Windows 는 현재 폴더를 먼저 찾는다)
+    (tmp_path / 'code.cmd').write_text('@echo planted\r\n', encoding='utf-8')
+    (tmp_path / 'code').write_text('#!/bin/sh\necho planted\n', encoding='utf-8')
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.delenv('NoDefaultCurrentDirectoryInExePath', raising=False)
+    found = osutil.find_editor(None)
+    assert found is None or (os.path.isabs(found) and Path(found).parent != tmp_path)
+    assert osutil.find_editor('code.cmd') != 'code.cmd'   # 상대경로 설정도 쓰지 않는다
+    configured = tmp_path / 'my-editor.exe'
+    configured.write_bytes(b'')
+    assert osutil.find_editor(str(configured)) == str(configured)

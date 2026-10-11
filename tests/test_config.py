@@ -76,3 +76,20 @@ def test_positions_are_bounded(tmp_path):
     pos = cfg.position('C:\P0')                               # 대소문자 무시 (Windows 경로)
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
     assert cfg.position('C:\nowhere') == {'doc': None, 'scroll': {}}
+
+
+def test_wrong_value_types_fall_back_and_are_reported(tmp_path):
+    # 손으로 고치는 파일이라 JSON 은 맞아도 값의 형식이 틀릴 수 있다 (점검에서 발견: 트리·폴더 열기·편집기 열기가 500)
+    path = tmp_path / 'config.json'
+    text = json.dumps({'theme': 'paper', 'exclude_dirs': 'node_modules', 'html_exclude_dirs': 1, 'editor': 5,
+                       'math': 'no', 'recent': ['C:\a', 3], 'window': [800, 600]})
+    path.write_text(text, encoding='utf-8')
+    c = Config(path)
+    assert c.get('theme') == 'paper'                       # 맞는 값은 그대로
+    assert c.get('exclude_dirs') == [] and c.get('html_exclude_dirs') == [] and c.get('editor') is None
+    assert c.get('math') is True and c.get('recent') == [] and c.get('window') == {'width': 1280, 'height': 860}
+    assert 'exclude_dirs' in c.load_error and 'editor' in c.load_error
+    c.update_client({'theme': 'nord'})
+    assert path.read_text(encoding='utf-8') == text        # 고칠 때까지 저장하지 않는다 (손으로 쓴 값을 지우지 않게)
+    c.update_client({'theme': 5, 'math': 'yes'})          # 화면에서 오는 값도 형식이 틀리면 버린다
+    assert c.get('theme') == 'nord' and c.get('math') is True
