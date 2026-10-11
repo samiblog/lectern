@@ -425,6 +425,8 @@ def run(headed: bool) -> None:
             groups = page.eval_on_selector_all('#lec-theme optgroup', 'gs => gs.map(g => g.label)')
             check(len(themes) == 24 and len(set(themes)) == 24 and groups == ['업무·보고', '읽기·출판', '개발·기술', '어두운'],
                   f'스타일 {len(themes)}종, 처음에는 용도별 묶음 ({groups})')
+            names = (page.inner_text('.theme-pick .pick-label'), page.inner_text('#lec-btn-spot'))
+            check(names == ('스타일', '하이라이트'), f'툴바에 무엇을 고르는지 이름이 보임 ({names})')
             # 설정 창에서 묶는 방식을 바꾸면 목록이 다시 묶인다 (같은 24종, 고른 스타일은 그대로)
             picked = page.input_value('#lec-theme')
             grouped = {}

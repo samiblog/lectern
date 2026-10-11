@@ -71,7 +71,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .icon-btn.on { color: var(--ui-accent); }
 .text-btn {
   display: inline-flex; align-items: center; gap: 6px; height: 30px; padding: 0 10px 0 8px;
-  border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-fg);
+  border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-fg); white-space: nowrap;
 }
 .text-btn:hover { border-color: var(--ui-faint); }
 .project-name {
@@ -104,7 +104,11 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .spot-pick { display: flex; align-items: stretch; height: 30px; }
 .spot-pick .icon-btn { height: 30px; border: 1px solid var(--ui-border); border-radius: 0; background: var(--ui-panel); }
 .spot-pick .icon-btn + .icon-btn { border-left: 0; }
-.spot-pick .icon-btn:first-child { width: 32px; border-radius: 6px 0 0 6px; }
+/* 첫 버튼은 이름이 보이는 켜고 끄기: [▭ 하이라이트] */
+.spot-pick .icon-btn:first-child {
+  display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 9px 0 7px; border-radius: 6px 0 0 6px;
+  font-size: 12.5px; white-space: nowrap;
+}
 .spot-pick .icon-btn:last-child { border-radius: 0 6px 6px 0; }
 .spot-pick .step { width: 26px; }
 .spot-pick .step svg { width: 15px; height: 15px; }
@@ -114,8 +118,13 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* 스타일 목록과 위·아래 버튼을 한 덩어리로: [ 기본 ▾ ][∧][∨] */
 .theme-pick { display: flex; align-items: stretch; height: 30px; }
 .theme-pick select {
-  height: 30px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 6px 0 0 6px;
+  height: 30px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 0;
   background: var(--ui-panel); color: var(--ui-fg);
+}
+/* 무엇을 고르는 목록인지 앞에 이름: [스타일│ 기본 ▾ ] */
+.pick-label {
+  display: inline-flex; align-items: center; padding: 0 8px; border: 1px solid var(--ui-border); border-right: 0;
+  border-radius: 6px 0 0 6px; background: var(--ui-bg); color: var(--ui-muted); font-size: 12.5px; white-space: nowrap; cursor: pointer;
 }
 .theme-pick .step {
   width: 26px; height: 30px; border: 1px solid var(--ui-border); border-left: 0; border-radius: 0;
@@ -145,7 +154,16 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 @media (max-width: 1080px) { #lec-toc { display: none; } }
 /* 좁은 창: 폴더 이름이 먼저 줄지 않게 문서 찾기 칸과 '폴더 열기' 글자를 먼저 줄인다 */
 @media (max-width: 1240px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
-@media (max-width: 1040px) { #lec-btn-open span { display: none; } #lec-btn-open { padding: 0 7px; } }
+@media (max-width: 1140px) { #lec-btn-open span { display: none; } #lec-btn-open { padding: 0 7px; } }
+@media (max-width: 1060px) { .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; padding: 0 8px; } .theme-pick select { max-width: 130px; } }
+/* 아주 좁은 창: '스타일'·'하이라이트' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명) */
+@media (max-width: 860px) {
+  .pick-label, #lec-btn-spot span, .size-label { display: none; }
+  .spot-pick .icon-btn:first-child { width: 32px; padding: 0; justify-content: center; }
+  .text-size .step:first-child { border-radius: 6px 0 0 6px; }
+  .text-size .step:last-child { border-left: 0; }
+  .theme-pick select { border-radius: 6px 0 0 6px; max-width: 120px; }
+}
 @media (max-width: 760px) { #lec-sidebar { width: 240px; } .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; } }
 
 /* ---- 사이드바 ---------------------------------------------------------------- */
