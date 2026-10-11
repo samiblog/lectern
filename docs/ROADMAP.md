@@ -40,6 +40,13 @@
 - [x] Windows 레지스트리에 `.js`·`.css` 가 `text/plain` 으로 잡힌 PC에서 화면이 비던 문제: 서버가 형식을 정함 (`FIXED_TYPES`)
 - [x] 테스트: pytest 65개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
 
+### v0.1.4 — 읽기 편의 (완료)
+- [x] 제목 색을 본문과 조금 다르게 (기본: 남색, 다크: 옅은 하늘색. 보고서는 원래 남색)
+- [x] 표 머리행을 본문 행과 구분: 더 진한 배경, 제목 색 글자, 아래 2px 선
+- [x] 제목을 누르면 그 절을 접고 다시 누르면 편다. 자동 새로고침·다른 문서에 다녀와도 유지, 목차·앵커·찾기로 가면 펴짐 (D23)
+- [x] `app.py --browser` 의 출력을 파일·NUL로 돌리면 한국어 Windows에서 시작하지 못하던 문제 (안내 문구의 '—' 가 cp949로 안 바뀜). `ui_smoke.py` 가 `PYTHONIOENCODING` 없이는 서버를 띄우지 못했다
+- [x] 테스트: pytest 65개, `ui_smoke.py` 44항목 (Windows 11 headless Chromium에서 통과)
+
 ## 2단계 — 다음 단계 (우선순위 순)
 
 ### 2-1. Windows 실기 점검과 패키징 확인  ← 가장 먼저

@@ -4,6 +4,7 @@
 // 그래서 CSS Custom Highlight API로 직접 구현한다 (DOM을 바꾸지 않아 다시 그리기와 충돌이 없다).
 
 import { on } from './store.js';
+import { unfoldTo } from './fold.js';
 import { $, debounce } from './util.js';
 
 const MAX_HITS = 2000;
@@ -58,6 +59,7 @@ function go(index, scroll = true) {
   CSS.highlights.set('lec-find-current', new Highlight(ranges[current]));
   $('#lec-find-count').textContent = `${current + 1}/${ranges.length}`;
   if (!scroll) return;
+  unfoldTo(ranges[current].startContainer.parentElement);   // 접힌 절 안의 결과는 펴서 보여 준다
   const content = $('#lec-content');
   const box = content.getBoundingClientRect();
   const rect = ranges[current].getBoundingClientRect();

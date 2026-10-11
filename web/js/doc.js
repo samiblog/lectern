@@ -5,10 +5,11 @@ import { getText, openExternal } from './api.js';
 import { renderMarkdown } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { buildToc, clearToc } from './toc.js';
+import { setupFolds, unfoldTo } from './fold.js';
 import { setStatus } from './status.js';
 import { openLightbox } from './ui.js';
 import {
-  $, $$, esc, encodePath, isMd, toast, copyText, formatDateTime, scrollToAnchor, dirname,
+  $, $$, esc, encodePath, isMd, toast, copyText, formatDateTime, findAnchor, dirname,
 } from './util.js';
 
 const PURIFY = {
@@ -95,6 +96,15 @@ export function resolveRef(href, baseUrl) {
   }
   const isDir = path.endsWith('/') || path === '';
   return { kind: 'local', path: path.replace(/\/+$/, ''), hash: url.hash, isDir };
+}
+
+/** 문서 안의 앵커로 스크롤. 접힌 절 안이면 펴서 보여 준다. */
+function scrollToAnchor(root, hash) {
+  const el = findAnchor(root, hash);
+  if (!el) return false;
+  unfoldTo(el);
+  el.scrollIntoView({ block: 'start' });
+  return true;
 }
 
 const lineFromHash = (hash) => {
@@ -371,6 +381,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
 
   view.className = 'md-body';
   view.replaceChildren(...stage.childNodes);
+  setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   buildToc(view);
   if (scrollTop != null) content.scrollTop = scrollTop;
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;

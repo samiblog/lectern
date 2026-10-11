@@ -32,7 +32,6 @@
 .md-body h3 { color: #24476f; }
 .md-body p { text-align: justify; text-justify: inter-character; }
 .md-body th, .md-body td { border: 1px solid var(--md-border); }
-.md-body thead th { border-bottom: 2px solid var(--md-th-rule); }
 .md-body .table-wrap { border-radius: 0; border-width: 0; }
 .md-body table { font-family: var(--md-heading-font); font-size: .88em; }
 .md-body tbody tr:last-child > * { border-bottom: 1px solid var(--md-border); }

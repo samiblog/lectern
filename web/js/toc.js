@@ -1,6 +1,7 @@
 // 오른쪽 목차와 '지금 읽는 위치' 표시
 
 import { S } from './store.js';
+import { unfoldTo } from './fold.js';
 import { $, $$, esc } from './util.js';
 
 let heads = [];
@@ -47,7 +48,9 @@ function spy() {
   const content = $('#lec-content');
   const limit = content.getBoundingClientRect().top + 96;
   let idx = 0;
+  const shown = (h) => !h.classList.contains('lec-fold-hidden');   // 접힌 절 안의 제목은 위치가 0이다
   for (let i = 0; i < heads.length; i++) {
+    if (!shown(heads[i])) continue;
     if (heads[i].getBoundingClientRect().top <= limit) idx = i;
     else break;
   }
@@ -55,7 +58,7 @@ function spy() {
   if (content.scrollTop + content.clientHeight >= content.scrollHeight - 4) {
     const bottom = content.getBoundingClientRect().bottom;
     for (let i = heads.length - 1; i > idx; i--) {
-      if (heads[i].getBoundingClientRect().top < bottom) { idx = i; break; }
+      if (shown(heads[i]) && heads[i].getBoundingClientRect().top < bottom) { idx = i; break; }
     }
   }
   if (idx === active) return;
@@ -73,6 +76,9 @@ export function initToc() {
     const a = e.target.closest('a[data-i]');
     if (!a) return;
     e.preventDefault();
-    heads[+a.dataset.i]?.scrollIntoView({ block: 'start' });
+    const h = heads[+a.dataset.i];
+    if (!h) return;
+    unfoldTo(h);
+    h.scrollIntoView({ block: 'start' });
   });
 }

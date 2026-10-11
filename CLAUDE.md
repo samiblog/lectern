@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 지금은 Markdown(`.md`)만 본다. 나중에 HTML 문서도 볼 예정이므로 이름·구조에 'md 전용'을 새로 박아 넣지 않는다 (`docs/DECISIONS.md` D18, `docs/ROADMAP.md` 4단계).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.1.3 (MVP 완료, 이름 Lectern, 외부 이미지 표시, 검토 후 수정). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.1.4 (MVP 완료, 이름 Lectern, 외부 이미지 표시, 검토 후 수정, 제목 접기). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -69,6 +69,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | tree.js | 사이드바 트리·필터·최근 변경·우클릭 메뉴 |
 | watch.js | 1초 폴링으로 변경 반영 |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
+| fold.js | 제목을 눌러 절 접기·펴기 |
 | theme.js / mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
 
 ## 코딩 규칙
@@ -87,6 +88,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - `/api/*` 는 창 모드에서 `X-Token` 헤더(= `window.pywebview.token`)를 검사한다. `<img>` 가 써야 하는 `/doc/*` 는 토큰 없이 열려 있다 (127.0.0.1 전용).
 - DOMPurify는 `SANITIZE_DOM: false` 로 쓴다. 기본값이면 'title', 'images' 같은 제목 앵커 id가 지워진다. 대신 `document.querySelector` 같은 이름을 가릴 수 있는 `img` 의 `name` 은 정화 훅이 지운다 (D15).
 - 문서 속 링크는 `a[href], area[href]` 를 모두 `bindLink` 가 다룬다. 다루지 않은 링크를 누르면 앱 창이 그 주소로 떠난다. SVG `<a>` 는 `target` 등이 읽기 전용 속성이라 `setAttribute` 로 준다.
+- 접힌 절의 블록은 `display:none`(`lec-fold-hidden`)이라 위치가 0이다. 문서 속 요소로 스크롤하는 코드는 먼저 `fold.js` 의 `unfoldTo(el)` 을 부른다 (목차·앵커 링크·찾기가 그렇게 한다).
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.

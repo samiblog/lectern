@@ -2,13 +2,14 @@
 :root {
   --md-bg: #ffffff;
   --md-fg: #1f2933;
-  --md-heading: #141c25;
+  --md-heading: #1b3a5c;
   --md-muted: #5f6b78;
   --md-border: #e1e5ea;
   --md-link: #1f5f9f;
   --md-code-bg: #f4f6f8;
   --md-quote-bar: #c9d2dc;
-  --md-th-bg: #eef2f6;
+  --md-th-bg: #e3eaf2;
+  --md-th-rule: #b9c6d4;
   --md-stripe: #f9fafb;
   --md-alert-note: #2f6fb3;
   --md-alert-tip: #2e7d4f;

@@ -63,7 +63,8 @@ def make_http_server(state: AppState, port: int):
 
 def run_browser(state: AppState, port: int) -> None:
     server = make_http_server(state, port or 8765)
-    print(f'Lectern (브라우저 모드): http://127.0.0.1:{server.server_port}/  — 종료: Ctrl+C')
+    # 출력을 파일·NUL로 돌리면 stdout 은 cp949 라 '—' 같은 글자에서 죽는다 (tools/ui_smoke.py 가 그렇게 띄운다)
+    print(f'Lectern (브라우저 모드): http://127.0.0.1:{server.server_port}/  (종료: Ctrl+C)')
     try:
         server.serve_forever()
     except KeyboardInterrupt:

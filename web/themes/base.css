@@ -27,6 +27,18 @@
 .md-body h4 { font-size: 1.02em; }
 .md-body h5, .md-body h6 { font-size: .93em; color: var(--md-muted); }
 
+/* 제목 접기 (fold.js): 누르면 다음 같은 수준 이상의 제목 전까지 접는다. 왼쪽 여백의 화살표가 상태를 보여 준다 */
+.md-body .lec-fold { position: relative; cursor: pointer; }
+.md-body .lec-fold::before {
+  content: ""; position: absolute; left: -20px; top: calc(.66em - 5px);
+  width: 6px; height: 6px; border: solid var(--md-muted); border-width: 0 2px 2px 0;
+  transform: rotate(45deg); opacity: 0; transition: opacity .12s, transform .12s;
+}
+.md-body .lec-fold:hover::before { opacity: .6; }
+.md-body .lec-folded::before { opacity: .75; transform: rotate(-45deg); }
+.md-body .lec-folded::after { content: " …"; font-weight: 400; color: var(--md-muted); }
+.md-body .lec-fold-hidden { display: none !important; }
+
 .md-body p, .md-body ul, .md-body ol, .md-body dl, .md-body blockquote,
 .md-body details, .md-body .code-block, .md-body .table-wrap, .md-body .math-block { margin: 0 0 1.05em; }
 
@@ -97,7 +109,10 @@
 }
 .md-body table { border-collapse: collapse; font-size: .93em; font-variant-numeric: tabular-nums; word-break: keep-all; }
 .md-body th, .md-body td { padding: 6px 13px; border-bottom: 1px solid var(--md-border); text-align: left; vertical-align: top; }
-.md-body thead th { position: sticky; top: 0; z-index: 1; background: var(--md-th-bg); font-weight: 700; border-bottom-color: var(--md-th-rule, var(--md-border)); }
+.md-body thead th {
+  position: sticky; top: 0; z-index: 1; background: var(--md-th-bg); color: var(--md-heading);
+  font-weight: 700; border-bottom: 2px solid var(--md-th-rule, var(--md-border));
+}
 .md-body tbody tr:nth-child(even) { background: var(--md-stripe); }
 .md-body tbody tr:last-child > * { border-bottom: 0; }
 .md-body th.num, .md-body td.num { text-align: right; white-space: nowrap; }
@@ -138,7 +153,10 @@
 .md-body .doc-missing { padding: 12vh 0; text-align: center; color: var(--md-muted); }
 .md-body .doc-missing h1 { border: 0; font-size: 1.3em; color: var(--md-fg); overflow-wrap: anywhere; }
 
-@media (max-width: 760px) { .md-body { padding: 24px 20px 80px; } }
+@media (max-width: 760px) {
+  .md-body { padding: 24px 20px 80px; }
+  .md-body .lec-fold::before { left: -15px; }
+}
 @media print {
   #lec-toolbar, #lec-sidebar, #lec-toc, #lec-status, #lec-findbar { display: none !important; }
   #lec-app, #lec-main, #lec-content { display: block; height: auto; overflow: visible; }

@@ -75,13 +75,10 @@ export function debounce(fn, ms) {
   };
 }
 
-/** 문서 안의 앵커(#id)로 스크롤. root 범위 안에서만 찾는다 (앱 UI의 id와 겹치지 않도록). */
-export function scrollToAnchor(root, hash) {
-  if (!hash || hash === '#') return false;
+/** 문서 안의 앵커(#id) 요소. root 범위 안에서만 찾는다 (앱 UI의 id와 겹치지 않도록). */
+export function findAnchor(root, hash) {
+  if (!hash || hash === '#') return null;
   let id = hash.replace(/^#/, '');
   try { id = decodeURIComponent(id); } catch { /* 그대로 사용 */ }
-  const el = root.querySelector(`#${CSS.escape(id)}`) || root.querySelector(`[name="${CSS.escape(id)}"]`);
-  if (!el) return false;
-  el.scrollIntoView({ block: 'start' });
-  return true;
+  return root.querySelector(`#${CSS.escape(id)}`) || root.querySelector(`[name="${CSS.escape(id)}"]`);
 }

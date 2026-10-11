@@ -3,6 +3,7 @@
 import { S, emit, on } from './store.js';
 import { showDoc } from './doc.js';
 import { showOverview } from './overview.js';
+import { forgetFolds } from './fold.js';
 import { $ } from './util.js';
 
 const scrollPos = new Map();
@@ -59,6 +60,7 @@ export function resetHistory() {
   S.hIndex = -1;
   S.view = null;
   scrollPos.clear();
+  forgetFolds();
 }
 
 /** 지금 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경). */

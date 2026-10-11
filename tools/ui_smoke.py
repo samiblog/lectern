@@ -157,6 +157,43 @@ def run(headed: bool) -> None:
             check(page.locator('.footnotes li').count() == 2, '각주 2개')
             shot('02-doc')
 
+            print('[제목 색·표 머리행·제목 접기]')
+            colors = page.evaluate('''() => {
+              const css = (sel, prop) => getComputedStyle(document.querySelector('#lec-view ' + sel))[prop];
+              return [css('h2', 'color'), css('p', 'color'), css('thead th', 'backgroundColor'), css('tbody td', 'backgroundColor'),
+                      css('thead th', 'color'), css('tbody td', 'color')];
+            }''')
+            check(colors[0] != colors[1], f'제목 색은 본문 색과 다름: {colors[:2]}')
+            check(colors[2] != colors[3] and colors[4] != colors[5], f'표 머리행은 본문 행과 배경·글자색이 다름: {colors[2:]}')
+            sec = lambda name: page.locator(f'#lec-view [id="{name}"]')
+            text = lambda t: page.locator('#lec-view li, #lec-view p', has_text=t).first
+            folded = lambda name: 'lec-folded' in (sec(name).get_attribute('class') or '')
+            check(page.locator('#lec-view h1.lec-fold').count() == 0 and page.locator('#lec-view .lec-fold').count() == 7,
+                  '절 제목 7개는 접을 수 있고, 문서 제목(H1 하나)은 접지 않음')
+            sec('표').click()
+            check(not page.locator('#lec-view .table-wrap').is_visible() and sec('체크리스트와-각주').is_visible(),
+                  '제목을 누르면 다음 같은 수준 제목 전까지 접힘')
+            sec('표').click()
+            check(page.locator('#lec-view .table-wrap').is_visible(), '다시 누르면 펼쳐짐')
+            sec('파일과-바깥-주소').click()
+            sec('링크').click()
+            hidden = [not sec('파일과-바깥-주소').is_visible(), not text('구현 계획').is_visible(), page.locator('#lec-view .footnotes').is_visible()]
+            sec('링크').click()
+            hidden += [sec('파일과-바깥-주소').is_visible(), not text('CommonMark 명세').is_visible()]
+            check(all(hidden), f'하위 절도 함께 접히고, 펴면 따로 접어 둔 하위 절은 접힌 채 (각주는 접히지 않음): {hidden}')
+            sec('링크').click()
+            page.locator('#lec-toc a', has_text='파일과 바깥 주소').click()
+            check(sec('파일과-바깥-주소').is_visible() and not folded('링크'), '목차로 접힌 절 안의 제목에 가면 펴짐')
+            sec('파일과-바깥-주소').click()
+            sec('코드').dblclick(position={'x': 12, 'y': 16})   # 제목 글자 위
+            selected = page.evaluate('getSelection().toString().trim()')
+            check(not folded('코드') and selected == '코드', f'두 번 눌러 낱말을 고를 때는 접지 않음: {selected!r}')
+            page.locator('#lec-view p', has_text='상대경로 그림은').click(position={'x': 5, 'y': 10})
+            sec('그림').click(position={'x': 30, 'y': 16}, modifiers=['Shift'])   # 끌어서 고르면 click 이 오지 않는다 (Chromium)
+            check(not folded('그림'), 'Shift+클릭으로 글자를 고를 때는 접지 않음')
+            sec('표').click()   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
+            shot('02-doc-folded')
+
             print('[수식과 달러]')
             page.locator('#lec-view a', has_text='수식과 달러 표기').click()
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
@@ -196,16 +233,22 @@ def run(headed: bool) -> None:
             wait_until(page, "document.querySelector('#lec-find-count').textContent !== ''")
             found = page.locator('#lec-find-count').inner_text()
             check(found.endswith('/6'), '문서 안 찾기 (6건)' + ('' if found.endswith('/6') else f': {found!r}'))
+            was_folded = folded('표')
+            page.keyboard.press('Enter')   # 둘째 결과 '아래 값은 모두 예시입니다' 는 접어 둔 '표' 절 안에 있다
+            check(was_folded and not folded('표') and text('아래 값은 모두').is_visible(),
+                  '접은 절은 다른 문서에 다녀와도 접혀 있고, 찾기 결과로 가면 펴짐' + ('' if was_folded else ' (돌아왔을 때 펴져 있음)'))
             page.keyboard.press('Escape')
 
             print('[자동 새로고침]')
+            sec('코드').click()
             page.locator('#lec-content').evaluate('el => el.scrollTop = 600')
             doc = work / 'docs' / '01-기능-점검.md'
             doc.write_text(doc.read_text(encoding='utf-8').replace('# 렌더링 기능 점검', '# 렌더링 기능 점검 (수정됨)'), encoding='utf-8')
             (work / 'research' / '새-메모.md').write_text('# 새 메모\n\n방금 만든 문서\n', encoding='utf-8')
             page.wait_for_selector('#lec-view h1:has-text("(수정됨)")', timeout=8000)
             page.wait_for_selector('#lec-tree .row.file:has-text("새 메모")', timeout=8000)
-            check(page.locator('#lec-content').evaluate('el => el.scrollTop') == 600, '보던 문서는 스크롤 위치를 유지하며 다시 그림')
+            check(page.locator('#lec-content').evaluate('el => el.scrollTop') == 600 and folded('코드'),
+                  '보던 문서는 스크롤 위치와 접은 절을 유지하며 다시 그림')
             check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
             shot('05-live-reload')
 

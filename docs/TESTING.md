@@ -16,7 +16,7 @@ python tools/ui_smoke.py     :: 화면 회귀 점검 (playwright + chromium 필�
 | `tests/test_config.py` | 설정 파일을 읽지 못하면 덮어쓰지 않음, BOM 허용 |
 | `tests/test_osutil.py` | 링크 대상 열기 방식 (코드 파일은 실행하지 않음) |
 | `tests/test_app.py` | 설정의 창 크기 읽기 (형식이 틀리거나 너무 작을 때) |
-| `tools/ui_smoke.py` | 트리, 렌더링(표·콜아웃·코드·각주·수식·달러·Mermaid, `## Mermaid` 제목 충돌), 테마, Ctrl+P, Ctrl+F, 자동 새로고침, 문서 속 원시 HTML(SVG 링크·이미지 맵·`img name` 이 앱을 망가뜨리지 않음), 외부 이미지(표시·실패 대체·끄기, 표 배경·SVG·`image-set` 으로 새지 않음), 보안, 외부 요청은 이미지뿐 |
+| `tools/ui_smoke.py` | 트리, 렌더링(표·콜아웃·코드·각주·수식·달러·Mermaid, `## Mermaid` 제목 충돌), 제목·표 머리행 색, 제목 접기(하위 절, 각주 제외, 목차·찾기로 펴기, 두 번 누름·Shift+클릭은 접지 않음, 새로고침 뒤 유지), 테마, Ctrl+P, Ctrl+F, 자동 새로고침, 문서 속 원시 HTML(SVG 링크·이미지 맵·`img name` 이 앱을 망가뜨리지 않음), 외부 이미지(표시·실패 대체·끄기, 표 배경·SVG·`image-set` 으로 새지 않음), 보안, 외부 요청은 이미지뿐 |
 
 `ui_smoke.py` 는 `samples/` 를 임시 폴더에 복사해 브라우저 모드 서버를 띄우고 headless Chromium으로 확인한다. 화면 캡처는 `ui-shots/` 에 저장되니, UI를 고친 뒤 캡처를 직접 열어 보는 것도 점검의 일부다.
 
