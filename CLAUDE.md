@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 `scanner.DOC_TYPES` 가 정한다.
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.2.0 (MVP, 외부 이미지, 검토 후 수정, 제목 접기, 본문 우클릭 메뉴, 스타일 12종, 설치 파일). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.3.0 (ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 

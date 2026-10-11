@@ -3,4 +3,4 @@
 이름은 독서대(lectern)에서 왔다. 지금은 Markdown만 보고, 나중에 HTML 문서도 볼 예정이다.
 """
 
-__version__ = '0.2.0'
+__version__ = '0.3.0'
