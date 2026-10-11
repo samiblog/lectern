@@ -443,6 +443,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   const before = sameDoc ? snapshot(view) : null;
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'md-body';
+  view.dataset.docPath = path;   // 장 강조(spotlight.js)가 어느 문서를 그렸는지 본다
   view.replaceChildren(...stage.childNodes);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   setDocSource(path, text);

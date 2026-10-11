@@ -7,6 +7,8 @@ import { initUi, showMenu, hideMenu, closeLightbox } from './ui.js';
 import { initToc, clearToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
+import { initSpotlight, spotlightOn, moveSpotlight, stopSpotlight } from './spotlight.js';
+import { initTextSize } from './textsize.js';
 import { initDocMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
@@ -200,6 +202,11 @@ function bindToolbar() {
   });
 }
 
+// 장 강조 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
+const SPOT_KEYS = { ArrowUp: -1, ArrowDown: 1, PageUp: -1, PageDown: 1 };
+const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
+  || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden;
+
 function bindKeys() {
   document.addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
@@ -232,8 +239,11 @@ function bindKeys() {
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
+    } else if (SPOT_KEYS[e.key] && !mod && !e.altKey && !e.shiftKey && spotlightOn() && !typing(e)) {
+      e.preventDefault();
+      moveSpotlight(SPOT_KEYS[e.key]);
     } else if (e.key === 'Escape') {
-      if (closePalette() || closeSettings() || hideMenu() || closeLightbox() || closeFind()) e.preventDefault();
+      if (closePalette() || closeSettings() || hideMenu() || closeLightbox() || closeFind() || stopSpotlight()) e.preventDefault();
     }
   });
   // 마우스 뒤로/앞으로 버튼
@@ -270,6 +280,8 @@ async function boot() {
   initToc();
   initFind();
   initFold();
+  initSpotlight();
+  initTextSize();
   initDocMenu();
   initChangeMarks();
   initSearch();

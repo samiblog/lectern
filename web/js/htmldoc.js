@@ -6,13 +6,14 @@
 // - 문서에 스타일(CSS)이 있으면 그대로, 없으면 지금 고른 Lectern 스타일을 입힌다 (사용자가 고름).
 // - 자동 새로고침 때는 새 iframe 을 보이지 않게 겹쳐 불러온 뒤 바꿔 끼운다 (깜박임과 스크롤 튐 방지).
 
-import { S, emit } from './store.js';
+import { S, emit, on } from './store.js';
 import { bindLink, showMissing, scrollToAnchor } from './doc.js';
 import { buildToc, clearToc } from './toc.js';
 import { setStatus } from './status.js';
 import { setDocSource, frameContextMenu } from './docmenu.js';
 import { hideMenu } from './ui.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
+import { textScale } from './textsize.js';
 import { $, encodePath, formatDateTime } from './util.js';
 
 const LOAD_TIMEOUT_MS = 20000;
@@ -142,6 +143,19 @@ function paintBackdrop(doc, scheme) {
   root.dataset.lecBackdrop = scheme;
 }
 
+/** 툴바의 글자 크기: 스타일 없는 문서는 Lectern 스타일의 --md-scale, 스타일 있는 문서는 문서 전체 zoom (높이는 fitHeight 가 다시 맞춘다) */
+function applyScale(frame) {
+  const doc = frame.contentDocument;
+  if (!doc) return;
+  const s = textScale();
+  if (frame.classList.contains('own-style')) doc.documentElement.style.zoom = s === 1 ? '' : String(s);
+  else doc.documentElement.style.setProperty('--md-scale', String(s));
+}
+on('text-size', () => {
+  const frame = currentFrame();
+  if (frame) applyScale(frame);
+});
+
 function prepare(frame, path) {
   const doc = frame.contentDocument;
   const own = hasOwnStyle(doc);
@@ -156,6 +170,7 @@ function prepare(frame, path) {
     doc.body.classList.add('md-body');
     paintBackdrop(doc, appIsDark() ? 'dark' : 'light');
   }
+  applyScale(frame);
   let n = 0;
   for (const h of doc.querySelectorAll('h1, h2, h3, h4')) if (!h.id) h.id = `lec-h${++n}`;   // 목차용
   const baseUrl = new URL(`/doc/${encodePath(path)}`, location.origin);

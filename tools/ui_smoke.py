@@ -229,6 +229,46 @@ def run(headed: bool) -> None:
             sec('그림').click(position={'x': 30, 'y': 16}, modifiers=['Shift'])   # 끌어서 고르면 click 이 오지 않는다 (Chromium)
             check(not folded('그림'), 'Shift+클릭으로 글자를 고를 때는 접지 않음')
 
+            print('[글자 크기와 장 강조]')
+            size = lambda: page.evaluate("parseFloat(getComputedStyle(document.querySelector('#lec-view p')).fontSize)")
+            base_size = size()
+            page.click('#lec-text-bigger')
+            page.click('#lec-text-bigger')
+            bigger, size_label = size(), page.inner_text('#lec-text-reset')
+            saved_scale = wait_until(page, "fetch('/api/config').then(r => r.json()).then(c => c.font_scale === 1.2)")
+            page.click('#lec-text-reset')
+            page.click('#lec-text-smaller')
+            smaller = size()
+            page.click('#lec-text-reset')
+            check(abs(bigger - base_size * 1.2) < 0.2 and size_label == '120%' and saved_scale and smaller < base_size and size() == base_size,
+                  f'글자 크기 +·− (본문 {base_size}px → 두 번 + {bigger}px {size_label}, − {smaller}px), 가운데를 누르면 100%, 설정에 저장')
+            lit = lambda: page.evaluate("[...document.querySelectorAll('#lec-view > .lec-lit')].filter(e => /^H[1-6]$/.test(e.tagName)).map(e => e.id)")
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
+            page.click('#lec-btn-spot')
+            first = lit()
+            faded_js = """(() => { const b = [...document.querySelectorAll('#lec-view > :not(.lec-lit)')].find(e => e.querySelector('img'));
+              return b ? getComputedStyle(b).opacity : null; })()"""
+            wait_until(page, f"{faded_js} === '0.16'")   # 흐려지는 데 0.2초 (transition)
+            faded_img = page.evaluate(faded_js)
+            page.keyboard.press('ArrowDown')
+            down1 = lit()
+            page.keyboard.press('PageDown')
+            down2 = lit()
+            page.keyboard.press('PageUp')
+            up1 = lit()
+            page.wait_for_timeout(300)   # 흐려지고 밝아지는 데 0.2초 — 캡처용
+            shot('03-spotlight')
+            check(first == ['렌더링-기능-점검'] and down1 == ['표'] and down2 == ['체크리스트와-각주'] and up1 == ['표'] and faded_img == '0.16',
+                  f'장 강조: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장의 그림도 흐림 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
+            page.locator('#lec-view p', has_text='표시가 없는 인용문').click()
+            by_click = lit()
+            page.locator('#lec-toc a', has_text='링크').first.click()
+            by_toc = lit()
+            page.keyboard.press('Escape')
+            off = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && !document.querySelector('#lec-view .lec-lit')")
+            check(by_click == ['콜아웃'] and by_toc[:1] == ['링크'] and off,
+                  f'흐린 장을 누르거나 목차로 가면 그 장, Esc 로 끔 ({by_click}, {by_toc})')
+
             print('[본문 우클릭 메뉴]')
             src = (work / 'docs' / '01-기능-점검.md').read_text(encoding='utf-8').split('\n')
             first_line = lambda sel: int(page.locator(f'#lec-view {sel}').first.get_attribute('data-lines').split('-')[0])
@@ -591,6 +631,15 @@ def run(headed: bool) -> None:
                        toc: document.querySelectorAll('#lec-toc a').length }}; }}""")
             check(info['title'] == 'HTML 보고서 예시' and not info['red'] and info['own'] and info['fit'] and info['toc'] == 4,
                   f'html 문서: 자기 스타일 그대로, 스크립트·인라인 이벤트는 돌지 않음, 문서 높이에 맞춘 틀, 목차 ({info})')
+            spot_off = page.is_disabled('#lec-btn-spot')
+            h_before = page.evaluate(f"{frame_js}.getBoundingClientRect().height")
+            page.click('#lec-text-bigger')
+            grown = wait_until(page, f"{frame_js}.getBoundingClientRect().height > {h_before} * 1.05")
+            zoom = page.evaluate(f"{frame_js}.contentDocument.documentElement.style.zoom")
+            page.click('#lec-text-reset')
+            shrunk = wait_until(page, f"Math.abs({frame_js}.getBoundingClientRect().height - {h_before}) < 4")
+            check(spot_off and grown and zoom == '1.1' and shrunk,
+                  f'html 문서: 글자 크기는 문서 전체 확대로(틀 높이도 따라감), 장 강조는 쓸 수 없음 (zoom {zoom!r}, 장 강조 꺼짐 {spot_off})')
             frame.locator('td', has_text='코발트').click()
             page.keyboard.press('Control+f')   # iframe 안에 초점이 있어도 단축키가 앱으로 간다
             page.fill('#lec-find-input', '코발트')   # 찾기 막대는 앞의 검색어로 먼저 한 번 찾으므로 이 검색어의 결과를 기다린다

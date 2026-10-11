@@ -4,6 +4,7 @@
 // 접을 수 있는 제목에 lec-fold, 접힌 제목에 lec-folded, 그 아래 숨는 최상위 블록에 lec-fold-hidden 을 준다.
 // 접은 상태는 문서 경로별로 이번 실행 동안만 기억한다 (자동 새로고침·뒤로 가기에도 유지, 디스크에 쓰지 않음).
 
+import { emit } from './store.js';
 import { $ } from './util.js';
 
 const folds = new Map();   // 문서 경로 → 접힌 제목 키 집합
@@ -97,6 +98,7 @@ export function foldAll(folded) {
  * (숨은 요소는 display:none 이라 위치가 0이어서 스크롤할 수 없다)
  */
 export function unfoldTo(el) {
+  emit('reveal', el);   // 장 강조(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
   const root = view();
   let top = el;
   while (top && top.parentElement !== root) top = top.parentElement;

@@ -86,6 +86,20 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .search-btn span { flex: 1; text-align: left; }
 .search-btn:hover { border-color: var(--ui-faint); color: var(--ui-fg); }
+/* 글자 크기: [−][100%][+] */
+.text-size { display: flex; align-items: stretch; height: 30px; }
+.text-size .step {
+  width: 26px; height: 30px; border: 1px solid var(--ui-border); border-radius: 6px 0 0 6px; background: var(--ui-panel);
+}
+.text-size .step:last-child { border-radius: 0 6px 6px 0; }
+.text-size .step svg { width: 14px; height: 14px; }
+.text-size .step:disabled { color: var(--ui-faint); }
+.size-label {
+  min-width: 46px; padding: 0 4px; border: 1px solid var(--ui-border); border-left: 0; border-right: 0;
+  background: var(--ui-panel); color: var(--ui-muted); font-size: 12px; font-variant-numeric: tabular-nums;
+}
+.size-label:hover { color: var(--ui-fg); }
+
 /* 스타일 목록과 위·아래 버튼을 한 덩어리로: [ 기본 ▾ ][∧][∨] */
 .theme-pick { display: flex; align-items: stretch; height: 30px; }
 .theme-pick select {
@@ -118,6 +132,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .resizing, .resizing * { cursor: col-resize !important; user-select: none; }
 .resizing iframe { pointer-events: none; }
 @media (max-width: 1080px) { #lec-toc { display: none; } }
+/* 좁은 창: 폴더 이름이 먼저 줄지 않게 문서 찾기 칸과 '폴더 열기' 글자를 먼저 줄인다 */
+@media (max-width: 1240px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
+@media (max-width: 1040px) { #lec-btn-open span { display: none; } #lec-btn-open { padding: 0 7px; } }
 @media (max-width: 760px) { #lec-sidebar { width: 240px; } .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; } }
 
 /* ---- 사이드바 ---------------------------------------------------------------- */

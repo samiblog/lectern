@@ -1,11 +1,11 @@
 /* 문서 본문 공통 규칙. 색·글꼴·폭은 변수로 두고 각 테마 파일(default/report/dark)이 값을 정한다. */
 
 .md-body {
-  max-width: var(--md-width);
+  max-width: calc(var(--md-width) * var(--md-scale, 1));   /* --md-scale: 툴바의 글자 크기 (textsize.js). 단 폭도 같이 — 줄 길이가 그대로이게 */
   margin: 0 auto;
   padding: 38px 52px 120px;
   font-family: var(--md-font);
-  font-size: var(--md-size);
+  font-size: calc(var(--md-size) * var(--md-scale, 1));
   line-height: var(--md-line);
   color: var(--md-fg);
   word-break: keep-all;          /* 한글 단어 중간에서 줄바꿈하지 않음 */
@@ -46,6 +46,11 @@
 }
 .md-body .lec-changed { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-changed 4s ease-in; }
 @media (prefers-reduced-motion: reduce) { .md-body .lec-changed { animation: none; outline-color: var(--ui-fresh, #d99a06); } }
+
+/* 장 강조 (spotlight.js): 고른 장(lec-lit)만 그대로, 나머지 글자·선·그림은 바탕색 쪽으로 흐리게 */
+.md-body.lec-spotlight > * { transition: opacity .2s; }
+.md-body.lec-spotlight > :not(.lec-lit) { opacity: .16; }
+@media (prefers-reduced-motion: reduce) { .md-body.lec-spotlight > * { transition: none; } }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }
@@ -97,7 +102,7 @@
 }
 .md-body .code-block { position: relative; }
 .md-body pre {
-  margin: 0; padding: 14px 16px; overflow: auto; font-size: 13px; line-height: 1.58;
+  margin: 0; padding: 14px 16px; overflow: auto; font-size: calc(13px * var(--md-scale, 1)); line-height: 1.58;
   background: var(--md-code-bg); border: 1px solid var(--md-border); border-radius: 7px;
   word-break: normal; overflow-wrap: normal;
 }
@@ -132,7 +137,7 @@
 
 /* frontmatter */
 .md-body .front-matter {
-  margin-bottom: 1.8em; padding: 8px 14px 10px; font-size: 13px; line-height: 1.55;
+  margin-bottom: 1.8em; padding: 8px 14px 10px; font-size: calc(13px * var(--md-scale, 1)); line-height: 1.55;
   border: 1px solid var(--md-border); border-radius: 7px; background: var(--md-code-bg);
 }
 .md-body .front-matter summary { cursor: pointer; color: var(--md-muted); font-weight: 600; font-family: var(--ui-font, sans-serif); }
@@ -191,5 +196,6 @@
   .md-body thead th { position: static; }
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
   .md-body .lec-changed, .md-body .lec-picked { outline: none !important; animation: none !important; }
+  .md-body.lec-spotlight > * { opacity: 1 !important; }   /* 장 강조 중이어도 모두 인쇄 */
 }
 .md-body .front-matter tr { background: none !important; }

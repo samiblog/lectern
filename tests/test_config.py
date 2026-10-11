@@ -93,3 +93,13 @@ def test_wrong_value_types_fall_back_and_are_reported(tmp_path):
     assert path.read_text(encoding='utf-8') == text        # 고칠 때까지 저장하지 않는다 (손으로 쓴 값을 지우지 않게)
     c.update_client({'theme': 5, 'math': 'yes'})          # 화면에서 오는 값도 형식이 틀리면 버린다
     assert c.get('theme') == 'nord' and c.get('math') is True
+
+
+def test_font_scale_accepts_whole_numbers(tmp_path):
+    path = tmp_path / 'config.json'
+    path.write_text(json.dumps({'font_scale': 2}), encoding='utf-8')
+    c = Config(path)
+    assert c.get('font_scale') == 2 and c.load_error is None    # 정수로 적어도 된다
+    c.update_client({'font_scale': 1.35})
+    c.update_client({'font_scale': 'big'})                        # 형식이 틀리면 버린다
+    assert c.get('font_scale') == 1.35

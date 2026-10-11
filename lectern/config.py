@@ -25,6 +25,7 @@ DEFAULTS: dict[str, Any] = {
     'recent': [],            # 최근 연 프로젝트 폴더 (최신순)
     'last_folder': None,     # 실행 인자가 없을 때 열 폴더
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
+    'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
     'show_titles': True,     # 트리에 파일명 대신 문서 제목 표시
     'sidebar_visible': True,
@@ -43,7 +44,7 @@ DEFAULTS: dict[str, Any] = {
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·projects 는 서버가 기록한다 (add_recent, remember_position).
-CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
@@ -62,6 +63,8 @@ def value_ok(key: str, value: Any) -> bool:
         return isinstance(value, str)
     if isinstance(default, bool):
         return isinstance(value, bool)
+    if isinstance(default, float):   # 1 처럼 정수로 적어도 된다
+        return isinstance(value, (int, float)) and not isinstance(value, bool)
     if isinstance(default, int):
         return isinstance(value, int) and not isinstance(value, bool)
     if isinstance(default, list):
