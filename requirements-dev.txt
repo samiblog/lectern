@@ -1,5 +1,6 @@
+# -*- coding: utf-8 -*-  (pip 24 이하는 이 줄이 없으면 한국어 Windows에서 cp949로 읽다가 실패한다)
 -r requirements.txt
-pytest>=8
-pyinstaller>=6.0
+pytest==9.1.1
+pyinstaller==6.22.3
 # 화면 회귀 점검(tools/ui_smoke.py)용. 설치 후 'python -m playwright install chromium' 필요 (인터넷)
-playwright>=1.40
+playwright==1.63.0

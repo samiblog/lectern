@@ -206,12 +206,19 @@ function bindKeys() {
   });
 }
 
+/**
+ * 창 모드에서는 pywebview 가 페이지를 다 불러온 뒤 window.pywebview(토큰·js_api)를 넣고 pywebviewready 를 보낸다.
+ * 토큰 없이는 /api/* 가 모두 403 이므로 늦어져도 끝까지 기다린다. 오래 걸리면 화면에 알린다.
+ */
 async function waitForBridge() {
-  if (S.mode !== 'app' || window.pywebview?.api) return;
-  await new Promise((resolve) => {
-    window.addEventListener('pywebviewready', resolve, { once: true });
-    setTimeout(resolve, 4000);
-  });
+  if (S.mode !== 'app' || native.has('choose_folder')) return;
+  const slow = setTimeout(() => {
+    const view = $('#lec-view');
+    view.className = 'welcome';
+    view.innerHTML = '<h1>창과 연결하는 중입니다</h1><p>이 화면이 계속되면 Lectern을 닫았다가 다시 실행해 주세요.</p>';
+  }, 4000);
+  await new Promise((resolve) => window.addEventListener('pywebviewready', resolve, { once: true }));
+  clearTimeout(slow);
 }
 
 async function boot() {

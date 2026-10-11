@@ -31,7 +31,7 @@ flowchart LR
 
 | 모드 | 명령 | 차이 |
 |---|---|---|
-| 창 (기본) | `python app.py [폴더]` | pywebview 창, `/api/*` 토큰 검사, 요청 로그 숨김 |
+| 창 (기본) | `python app.py [폴더]` | pywebview 창, `/api/*` 토큰 검사, 요청 로그 숨김. 프런트는 pywebview가 토큰을 넣고 `pywebviewready` 를 보낼 때까지 기다린다 (4초가 넘으면 '창과 연결하는 중' 안내) |
 | 디버그 | `python app.py --debug [폴더]` | 창 + 개발자 도구. WebView2 기본 단축키·우클릭 메뉴도 켜짐 |
 | 브라우저 | `python app.py --browser [폴더]` | 창 없이 서버만 (기본 포트 8765). 토큰 검사 없음. 폴더 선택은 경로 입력창 |
 
@@ -81,14 +81,14 @@ flowchart LR
 | 키 | 기본값 | 프런트에서 변경 | 설명 |
 |---|---|---|---|
 | `version` | `1` | 불가 | 설정 파일 형식 버전 (형식이 바뀌면 올리고 변환 코드를 둔다) |
-| `recent` | `[]` | 가능 | 최근 연 폴더 (최대 10) |
+| `recent` | `[]` | 불가 | 최근 연 폴더 (최대 10). 폴더를 열 때 서버가 기록 |
 | `last_folder` | `null` | 불가 | 인자 없이 실행할 때 열 폴더 |
 | `theme` | `"auto"` | 가능 | `auto`·`default`·`report`·`dark` |
 | `show_titles` | `true` | 가능 | 트리에 제목(끄면 파일명) |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (UI 토글은 아직 없음) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (UI 토글은 아직 없음) |
-| `window` | `{width:1280,height:860}` | 불가 | 창 크기 (닫을 때 저장) |
+| `window` | `{width:1280,height:860}` | 불가 | 창 크기 (닫을 때 저장. 최소화·최대화한 채 닫으면 저장하지 않음. 형식이 틀리면 기본값, 720×480보다 작으면 그 크기로) |
 | `exclude_dirs` | `[]` | 불가 | 추가 제외 폴더 이름 |
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
 
@@ -107,13 +107,13 @@ flowchart LR
 | `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error}`. `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
 | `POST /api/open` | `{path}` | 폴더 열기. 성공 시 `/api/state` 와 같은 형식, 폴더가 아니면 400 |
 | `GET /api/tree` | | `{root, tree}` (스캔 결과). 폴더가 없으면 409 |
-| `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}` |
+| `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/changes?since=<seq>` | | `{seq, paths, structure, reset, root}` |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
 | `POST /api/open-external` | `{path, line?}` | `{action}` — `folder`·`default`·`editor`·`reveal` |
 | `POST /api/reveal` | `{path}` | 탐색기에서 선택. `{action:'reveal'}` |
-| `GET /doc/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, 그 밖은 파일 그대로. 숨김·밖·없음·폴더는 404 |
+| `GET /doc/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, 그 밖은 파일 그대로. 숨김·밖·없음·폴더는 404. 응답에 `Content-Security-Policy: sandbox`·`X-Content-Type-Options: nosniff` (D20) |
 
 상태 코드: 400 잘못된 요청(필수 값 없음, JSON 객체가 아님, 폴더가 아님) · 403 토큰 불일치 또는 허용되지 않은 Host · 404 없음·숨김·프로젝트 밖 · 405 잘못된 메서드 · 409 열린 폴더 없음(`/api/tree`, `/api/overview`, `/doc/*` 등) · 500 OS가 파일 열기에 실패. `/api/*` 의 오류는 모두 `{error}` JSON이다.
 

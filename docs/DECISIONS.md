@@ -125,6 +125,7 @@
 - **이유**: 문서 HTML은 앱과 같은 출처에서 그려진다. DOMPurify 허용 목록은 넓어서 정화 훅만으로는 그림을 부르는 길을 다 막았다고 장담하기 어렵다 (v0.1.2에서 10가지가 새었다). 브라우저가 출처를 막으면 훅이 놓친 길도 막힌다.
 - **두지 않는 것**: `default-src`·`script-src`·`style-src`. pywebview가 eval 계열을 쓸 수 있고 (D14), KaTeX·Mermaid는 인라인 스타일을 쓴다.
 - **영향**: 설정 `external_images` 를 바꾸면 페이지를 다시 불러와야 CSP가 바뀐다 (설정 창을 만들 때 저장 후 다시 불러오기). ROADMAP 4단계에서 HTML 문서를 `<iframe>` 으로 보일 때는 `frame-src 'self'` 로 바꾼다.
+- **`/doc/*`**: 응답에 `Content-Security-Policy: sandbox` 와 `X-Content-Type-Options: nosniff` 를 붙인다. 프로젝트 안의 html·svg 는 앱과 같은 출처로 내려가므로, 창이 그 주소로 바로 이동하는 일이 생겨도 스크립트가 앱 출처(토큰·`/api/*`)에 닿지 못하게 한다. `<img>`·`fetch` 로 쓰는 데는 영향이 없다. 4단계의 HTML 문서 iframe은 이 헤더를 그대로 두고 필요한 것만 `sandbox` 값에 더한다.
 
 ## D21. 설정 파일을 읽지 못하면 그 실행 동안 저장하지 않는다
 
@@ -132,3 +133,11 @@
 - **이유**: README는 `editor`·`exclude_dirs` 를 손으로 고치라고 안내한다. Windows 경로의 역슬래시를 하나만 쓰거나(`"C:\Tools"`), 마지막 쉼표를 남기거나, 메모장·PowerShell 5.1이 BOM을 붙이면 파싱에 실패한다. v0.1.2는 이때 기본값으로 시작한 뒤 폴더를 여는 순간 파일을 덮어써서 사용자가 고친 내용이 조용히 사라졌다.
 - **고르지 않은 방안**: 깨진 파일을 `config.json.broken` 으로 옮기고 새로 쓰기. 디스크에 `config.json` 외의 파일을 만들어 보기 전용 원칙(디스크에 쓰는 것은 설정 파일 하나)과 어긋난다.
 - **대가**: 파일을 고칠 때까지 최근 폴더·테마·창 크기가 저장되지 않는다.
+
+## D22. Python 의존성은 정확한 버전으로 고정한다
+
+- **결정**: `requirements.txt`·`requirements-dev.txt` 의 직접 의존성을 `==` 로 고정한다 (v0.1.3: pywebview 6.2.1, flask 3.1.3, watchdog 6.0.0, pytest 9.1.1, pyinstaller 6.22.3, playwright 1.63.0). 두 파일 첫 줄에 `# -*- coding: utf-8 -*-` 를 둔다.
+- **이유**: 사내망 PC에는 인터넷 PC에서 받은 wheel을 옮겨 설치한다. `>=` 이면 받는 날마다 다른 버전이 들어와, 확인하지 않은 판(예: pywebview 7)이 섞일 수 있다. pywebview는 판마다 API가 바뀌어 왔다 (`FileDialog`·창 크기의 DPI 처리 등).
+- **coding 선언**: pip 24 이하는 요구사항 파일을 시스템 로캘로 읽는다. 한국어 Windows(cp949)에서 한글 주석이 있으면 `UnicodeDecodeError` 로 설치가 실패한다 (v0.1.2의 `requirements-dev.txt` 가 그랬다). 이 줄이 있으면 pip 24·26 모두 UTF-8로 읽는다.
+- **고정하지 않는 것**: 간접 의존성(werkzeug, pythonnet 등). 직접 의존성이 허용하는 범위에서 wheel을 받는 날 정해지고, 사내 설치는 그 wheel 폴더를 그대로 쓰므로 재현된다.
+- **올릴 때**: pytest, `tools/ui_smoke.py`, `build.bat`, `docs/TESTING.md` 수동 점검을 다시 하고 이 항목에 판을 적는다.

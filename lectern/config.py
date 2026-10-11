@@ -31,7 +31,8 @@ DEFAULTS: dict[str, Any] = {
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
-CLIENT_KEYS = frozenset({'theme', 'show_titles', 'sidebar_visible', 'toc_visible', 'math', 'external_images', 'recent'})
+# recent·last_folder 는 폴더를 열 때 서버가 기록한다 (add_recent).
+CLIENT_KEYS = frozenset({'theme', 'show_titles', 'sidebar_visible', 'toc_visible', 'math', 'external_images'})
 
 
 class Config:

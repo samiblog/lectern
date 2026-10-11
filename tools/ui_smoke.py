@@ -40,6 +40,18 @@ def check(cond: bool, message: str) -> None:
         failures.append(message)
 
 
+def wait_until(page, js: str, timeout: int = 5000) -> bool:
+    """페이지 안의 조건(js)이 참이 될 때까지 기다린다. 시간 안에 안 되면 False.
+    고정 시간 대기 대신 써서, 느린 PC나 부하가 있을 때도 점검이 흔들리지 않게 한다."""
+    from playwright.sync_api import TimeoutError as PlaywrightTimeout
+
+    try:
+        page.wait_for_function(js, timeout=timeout)
+        return True
+    except PlaywrightTimeout:
+        return False
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
@@ -167,8 +179,8 @@ def run(headed: bool) -> None:
             print('[테마]')
             for theme in ('report', 'dark', 'default'):
                 page.select_option('#lec-theme', theme)
-                page.wait_for_timeout(500)
-                check(page.evaluate('document.documentElement.dataset.theme') == theme, f'테마 전환: {theme}')
+                check(wait_until(page, f"document.documentElement.dataset.theme === '{theme}'"), f'테마 전환: {theme}')
+                page.wait_for_timeout(500)   # 캡처용: 다시 그린 다이어그램이 자리 잡을 시간
                 shot(f'04-theme-{theme}')
 
             print('[빠른 열기와 찾기]')
@@ -180,9 +192,10 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.keyboard.press('Control+f')
-            page.keyboard.type('예시')
-            page.wait_for_timeout(400)
-            check(page.locator('#lec-find-count').inner_text().endswith('/6'), '문서 안 찾기 (6건)')
+            page.fill('#lec-find-input', '예시')   # 한 번에 넣어 검색이 한 번만 돌게 (글자마다 치면 '예'로 먼저 찾을 수 있음)
+            wait_until(page, "document.querySelector('#lec-find-count').textContent !== ''")
+            found = page.locator('#lec-find-count').inner_text()
+            check(found.endswith('/6'), '문서 안 찾기 (6건)' + ('' if found.endswith('/6') else f': {found!r}'))
             page.keyboard.press('Escape')
 
             print('[자동 새로고침]')
@@ -214,8 +227,10 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()
             page.wait_for_selector('#lec-view h1:has-text("외부 이미지 확인")')
             page.wait_for_selector('#lec-view .image-off', timeout=8000)
+            # 없는 그림의 대체 표시가 먼저 나타날 수 있으므로, 있는 그림을 다 받을 때까지 기다린 뒤 크기를 읽는다
+            wait_until(page, "[...document.querySelectorAll('#lec-view img.external')].every(i => i.complete)")
             loaded = page.evaluate("[...document.querySelectorAll('#lec-view img.external')].map(i => i.naturalWidth)")
-            check(loaded == [120], '외부 이미지 표시')
+            check(loaded == [120], '외부 이미지 표시' + ('' if loaded == [120] else f': naturalWidth={loaded}'))
             check(page.locator('#lec-view .image-off').inner_text().startswith('외부 이미지를 불러오지 못했습니다'),
                   '불러오지 못한 외부 이미지는 링크로 대체')
             leaked = [u for u, _ in outside if 'leak-' in u]

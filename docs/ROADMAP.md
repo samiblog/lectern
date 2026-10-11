@@ -31,7 +31,13 @@
 - [x] `config.json` 을 읽지 못하면 기본값으로 덮어쓰던 문제: 저장하지 않고 알림, BOM 허용 (D21)
 - [x] Python 3.10/3.11에서 정션을 따라 들어가던 문제: `st_reparse_tag` 로 판정 (프로젝트 밖 문서 제목이 트리에 나오고 순환 정션이 중복되던 것)
 - [x] 문서 속 원시 HTML이 앱 화면을 망가뜨리던 문제: SVG 외부 링크가 있으면 문서가 안 그려짐, `<img name="querySelector">` 로 화면이 멈춤, SVG `xlink:href` 링크·이미지 맵 `<area>` 를 누르면 앱 창이 그 주소로 떠남 (D15 변경)
-- [x] 테스트: pytest 57개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
+- [x] 낮은 우선순위 정리:
+  - `pip install -r requirements-dev.txt` 가 한국어 Windows의 pip 24에서 `UnicodeDecodeError` 로 실패하던 문제 (coding 선언), 의존성 `==` 고정 (D22)
+  - `run.bat .`·`dev.bat .` 이 실행한 곳이 아니라 Lectern 폴더를 열던 문제
+  - 창 모드에서 pywebview 연결이 4초보다 늦으면 토큰 없이 진행해 빈 화면이 되던 문제: 끝까지 기다리고 안내
+  - 최소화·최대화한 채 닫으면 그 크기가 저장되던 문제, 설정의 창 크기 형식이 틀리면 시작하지 못하던 문제
+  - 프런트가 `recent` 를 바꿀 수 있던 것 (`CLIENT_KEYS` 에서 뺌), `/api/overview` 의 경로 정규화, `/doc/*` 의 `sandbox`·`nosniff` 헤더 (D20)
+- [x] 테스트: pytest 64개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
 
 ## 2단계 — 다음 단계 (우선순위 순)
 
@@ -41,6 +47,7 @@
 - [ ] `tools/context_menu.py` 로 탐색기 우클릭 메뉴 등록 확인
 - 완료 기준: 점검표 전 항목 통과, 발견한 문제는 이 문서 '알려진 문제'에 기록 후 수정
 - 메모 (v0.1.3): `/` 에 CSP(D20)를 건 뒤로는 창 모드에서 확인하지 못했다. 점검표 3(폴더 대화상자)·창 제목 바뀜으로 js_api가 그대로 동작하는지, 14a로 외부 이미지가 보이는지 함께 본다.
+- 메모 (v0.1.3): 고정한 판(D22)으로 `lectern.spec` 빌드가 되고, 만든 `Lectern.exe --browser` 가 문서·Mermaid·KaTeX를 그리는 것까지 확인했다 (Windows 11, Python 3.12). 창으로 띄우는 것과 다른 PC 실행은 아직이다.
 
 ### 2-2. 절대경로 링크·이미지
 - [ ] 문서 속 `C:\work\proj\output\chart.png`, `file:///C:/work/proj/a.md` 처럼 절대경로가 **열린 프로젝트 안**을 가리키면 상대경로로 바꿔 이미지 표시·링크 이동을 한다. 프로젝트 밖이면 지금처럼 막는다.

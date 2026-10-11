@@ -38,11 +38,12 @@ pip install --no-index --find-links wheels -r requirements-dev.txt
 ```
 
 `requirements-dev.txt` 에는 테스트·빌드 도구도 들어 있습니다. 실행만 할 거라면 `requirements.txt` 로 충분합니다.
+버전은 확인한 판으로 고정되어 있어서(`==`), 언제 받아도 같은 판이 설치됩니다. 두 파일 첫 줄의 `coding: utf-8` 은 지우지 마세요. 오래된 pip가 한국어 Windows에서 파일을 읽지 못합니다.
 
 ## 실행
 
 ```bat
-run.bat C:\work\my-project          :: 창으로 열기 (폴더 생략 시 마지막 폴더)
+run.bat C:\work\my-project          :: 창으로 열기 (폴더 생략 시 마지막 폴더, run.bat . 은 지금 폴더)
 python app.py C:\work\my-project    :: 같은 동작 (콘솔 창이 남음)
 dev.bat                             :: 개발용: samples 를 브라우저 모드로 (http://127.0.0.1:8765)
 ```

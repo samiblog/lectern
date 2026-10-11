@@ -13,9 +13,10 @@ import logging
 import sys
 import threading
 from pathlib import Path
+from typing import Any
 
 from lectern import __version__
-from lectern.config import Config
+from lectern.config import DEFAULTS, Config
 from lectern.server import create_app
 from lectern.state import AppState
 
@@ -69,6 +70,19 @@ def run_browser(state: AppState, port: int) -> None:
         pass
 
 
+DEFAULT_WINDOW = (DEFAULTS['window']['width'], DEFAULTS['window']['height'])
+MIN_WINDOW = (720, 480)
+
+
+def window_size(saved: Any) -> tuple[int, int]:
+    """설정의 창 크기. 손으로 고쳐 형식이 틀렸으면 기본값, 최소 크기보다 작으면 최소 크기."""
+    try:
+        width, height = int(saved['width']), int(saved['height'])
+    except (TypeError, KeyError, ValueError):
+        return DEFAULT_WINDOW
+    return max(width, MIN_WINDOW[0]), max(height, MIN_WINDOW[1])
+
+
 def run_window(state: AppState, port: int, debug: bool) -> None:
     import webview
 
@@ -79,18 +93,26 @@ def run_window(state: AppState, port: int, debug: bool) -> None:
     threading.Thread(target=server.serve_forever, name='lectern-http', daemon=True).start()
     url = f'http://127.0.0.1:{server.server_port}/'
 
-    size = state.config.get('window') or {}
+    width, height = window_size(state.config.get('window'))
     api = NativeApi(state)
     window = webview.create_window(
         'Lectern', url, js_api=api,
-        width=int(size.get('width', 1280)), height=int(size.get('height', 860)),
-        min_size=(720, 480),
+        width=width, height=height,
+        min_size=MIN_WINDOW,
         text_select=True,   # 본문 선택·복사
         zoomable=True,      # Ctrl+휠 확대
     )
     api._window = window
 
+    # 최소화·최대화한 채로 닫으면 그때 크기를 저장하지 않는다 (다음 실행 때 아주 작거나 화면만 한 일반 창이 되지 않도록)
+    shown = {'state': 'normal'}
+    window.events.minimized += lambda: shown.update(state='minimized')
+    window.events.maximized += lambda: shown.update(state='maximized')
+    window.events.restored += lambda: shown.update(state='normal')
+
     def on_closing() -> None:
+        if shown['state'] != 'normal':
+            return
         try:
             state.config.set_window(window.width, window.height)
         except Exception:  # 창 크기 저장 실패는 무시

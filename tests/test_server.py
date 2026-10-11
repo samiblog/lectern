@@ -65,12 +65,21 @@ def test_overview(client):
     assert client.get('/api/overview?path=../').status_code == 404
 
 
+def test_overview_path_is_normalized(client):
+    d = client.get('/api/overview?path=docs/../docs').get_json()
+    assert d['path'] == 'docs' and d['files'][0]['path'].startswith('docs/') and d['dirs'][0]['path'] == 'docs/sub'
+    assert client.get('/api/overview?path=docs/sub/../..').get_json()['path'] == ''
+
+
 def test_doc_serves_markdown_and_assets(client):
     r = client.get('/doc/README.md')
     assert r.status_code == 200 and r.mimetype == 'text/markdown'
     assert r.get_data(as_text=True).startswith('# 프로젝트')
     assert r.headers['Cache-Control'] == 'no-cache'
-    assert client.get('/doc/docs/img.svg').status_code == 200
+    svg = client.get('/doc/docs/img.svg')
+    assert svg.status_code == 200
+    # 주소로 직접 열어도 앱 출처에서 스크립트가 돌지 않게
+    assert svg.headers['Content-Security-Policy'] == 'sandbox' and svg.headers['X-Content-Type-Options'] == 'nosniff'
     assert client.get('/doc/' + quote('docs/10-a.md')).status_code == 200
 
 
@@ -121,11 +130,13 @@ def test_external_images_default_on_and_client_can_toggle(client):
     assert client.post('/api/config', json={'external_images': False}).get_json()['external_images'] is False
 
 
-def test_config_only_client_keys(client):
-    r = client.post('/api/config', json={'theme': 'report', 'editor': 'evil.exe', 'exclude_dirs': ['x']})
+def test_config_only_client_keys(client, project):
+    r = client.post('/api/config', json={'theme': 'report', 'editor': 'evil.exe', 'exclude_dirs': ['x'],
+                                         'recent': ['C:\\elsewhere']})
     data = r.get_json()
     assert data['theme'] == 'report'
     assert data['editor'] is None and data['exclude_dirs'] == []
+    assert data['recent'] == [str(project)]          # 최근 폴더는 폴더를 열 때 서버만 기록한다
     assert client.post('/api/config', json=['x']).status_code == 400
 
 

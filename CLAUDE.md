@@ -74,7 +74,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 ## 코딩 규칙
 
 - Python 3.10+ (3.12+ 권장), 타입 힌트, 표준 라이브러리 우선. 정션은 `DirEntry.is_junction`(3.12+) 대신 `st_reparse_tag` 로 판정하므로 3.10·3.11에서도 걸러진다.
-- 새 Python 의존성은 꼭 필요할 때만. 넣으면 `requirements.txt` 와 `docs/DECISIONS.md` 에 이유를 남긴다. 사내망 설치는 wheel 반입이 필요하다는 점을 잊지 않는다.
+- 새 Python 의존성은 꼭 필요할 때만. 넣으면 `requirements.txt` 와 `docs/DECISIONS.md` 에 이유를 남긴다. 사내망 설치는 wheel 반입이 필요하다는 점을 잊지 않는다. 버전은 `==` 로 고정하고, 요구사항 파일 첫 줄의 `coding: utf-8` 선언은 지우지 않는다 (D22: 없으면 한국어 Windows의 pip 24 이하가 한글 주석을 못 읽는다).
 - JS는 전역을 쓰지 않는다. 예외는 vendor 전역(`markdownit`, `markdownItAnchor`, `markdownitFootnote`, `markdownitTaskLists`, `hljs`, `katex`, `DOMPurify`, `mermaid`)과 `window.pywebview`.
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
 - UI 문구는 한국어, 짧은 평서문. 오류 메시지는 무엇이 안 됐고 어떻게 하면 되는지 말한다.
@@ -93,4 +93,4 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 렌더링은 `S.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 같은 방식을 쓴다.
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
 - `config.json` 을 읽지 못하면(`Config.load_error`) 그 실행 동안은 저장하지 않는다 (D21). 설정을 쓰는 코드는 반드시 `Config.save()` 를 거친다.
-- `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨).
+- `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

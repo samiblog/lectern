@@ -74,9 +74,13 @@ def create_app(state: AppState) -> Flask:
                 abort(403)
 
     @app.after_request
-    def no_cache(resp: Response) -> Response:
+    def common_headers(resp: Response) -> Response:
         if request.path.startswith(('/api/', '/doc/')) or request.path == '/':
             resp.headers['Cache-Control'] = 'no-cache'
+        if request.path.startswith('/doc/'):
+            # 프로젝트 안의 html·svg 를 주소로 직접 열어도 앱과 같은 출처에서 스크립트가 돌지 않게 한다 (D20)
+            resp.headers['Content-Security-Policy'] = 'sandbox'
+            resp.headers['X-Content-Type-Options'] = 'nosniff'
         return resp
 
     @app.get('/')
@@ -117,6 +121,8 @@ def create_app(state: AppState) -> Flask:
             target = resolve_inside(root, rel)
             if target is None or not target.is_dir():
                 abort(404)
+            # 'docs/../docs' 나 대소문자가 다른 'DOCS' 도 트리와 같은 경로로 맞춘다
+            rel = '' if target == root else target.relative_to(root).as_posix()
         nodes = scan(root, state.exclude, rel=rel)
         dirs, files = [], []
         for node in nodes:
