@@ -7,7 +7,8 @@
 import { S } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
-import { foldAll, hasFolds } from './fold.js';
+import { foldAll, foldLevel, hasFolds } from './fold.js';
+import { openExternal } from './api.js';
 import { $, esc, toast, copyText } from './util.js';
 
 let doc = null;   // 지금 보이는 문서 {path, lines}. 문서를 그리지 못했으면 null
@@ -155,9 +156,63 @@ function kindOf(el) {
   return '단락';
 }
 
-function blockItems(el) {
+/** Mermaid 다이어그램(SVG)을 PNG로. 화면 바탕색을 깔아 다크 스타일의 밝은 글자도 붙여 넣은 곳에서 보이게 한다 */
+async function copyDiagram(pre) {
+  try {
+    const svg = pre.querySelector('svg');
+    const box = svg.viewBox?.baseVal;
+    const w = Math.round(box?.width || svg.getBoundingClientRect().width);
+    const h = Math.round(box?.height || svg.getBoundingClientRect().height);
+    const clone = svg.cloneNode(true);   // Mermaid 는 width="100%" 라서 크기를 정해 준다
+    clone.setAttribute('width', w);
+    clone.setAttribute('height', h);
+    clone.style.maxWidth = 'none';
+    const img = new Image();
+    img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(new XMLSerializer().serializeToString(clone))}`;
+    await img.decode();
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = getComputedStyle($('#lec-content')).backgroundColor;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => { canvas.toBlob(resolve, 'image/png'); });
+    if (!blob) throw new Error('PNG');
+    await copyParts({ 'image/png': blob }, `다이어그램 ${w}×${h}`);
+  } catch {
+    toast('다이어그램을 복사하지 못했습니다', 'error');
+  }
+}
+
+/** 문서 맨 앞 frontmatter(--- … ---)의 원문 줄 범위 */
+function frontMatterRange() {
+  if (doc.lines[0]?.trim() !== '---') return null;
+  const end = doc.lines.findIndex((line, i) => i > 0 && /^(---|\.\.\.)\s*$/.test(line));
+  return end > 0 ? [1, end + 1] : null;
+}
+
+const texItem = (node) => ({ label: 'LaTeX 복사', hint: describe(node.dataset.tex), action: () => copyPlain(node.dataset.tex) });
+const editorItem = (line) => ({ label: '편집기에서 이 줄 열기', hint: `${doc.path}:${line}`, action: () => openExternal(doc.path, line) });
+
+/** 원문 줄 범위가 있는 블록의 공통 항목: 원문 복사, Claude용 위치 복사, 편집기에서 이 줄 열기 */
+function sourceItems(range, label = '원문 복사', note = '') {
+  const ref = claudeRef(range, note);
+  return [
+    { label, hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)) },
+    { label: 'Claude용 위치 복사', hint: ref, action: () => copyPlain(ref) },
+    editorItem(range[0]),
+  ];
+}
+
+function blockItems(el, target) {
   const items = [{ header: kindOf(el) }];
   const tag = el.tagName;
+  // 블록 안에서 누른 작은 것: 문장 속 수식, 링크
+  const math = target.closest('[data-tex]');
+  if (math && math !== el && el.contains(math)) items.push(texItem(math));
+  const link = target.closest('a[data-lec-href]');
+  if (link) items.push({ label: '링크 주소 복사', hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref) });
   if (tag === 'IMG') {
     if (el.classList.contains('external')) items.push({ label: '그림 주소 복사', hint: el.src, action: () => copyPlain(el.src) });
     else items.push({ label: '그림 복사', hint: 'PNG — 워드·PPT·메일에 붙여 넣기', action: () => copyImage(el) });
@@ -168,28 +223,29 @@ function blockItems(el) {
     });
   } else if (el.matches('.code-block')) {
     items.push({ label: '코드 복사', action: () => copyPlain(el.querySelector('pre').textContent.replace(/\n$/, '')) });
-  } else if (!el.matches('pre.mermaid, .mermaid-error, .math-block')) {   // 그림·수식의 글자는 쓸모가 없어 원문 복사만 둔다
+  } else if (el.matches('pre.mermaid')) {
+    if (el.querySelector('svg')) items.push({ label: '그림 복사', hint: 'PNG — 워드·PPT·메일에 붙여 넣기', action: () => copyDiagram(el) });
+  } else if (el.matches('.math-block')) {
+    items.push(texItem(el));
+  } else if (!el.matches('.mermaid-error')) {
     items.push({ label: HEADING.test(tag) ? '제목 글자 복사' : '텍스트 복사', action: () => copyPlain(el.innerText.trim()) });
   }
 
   if (HEADING.test(tag)) {
     const section = sectionRange(el);
-    if (section) items.push({ label: '이 절 원문 복사', hint: `Markdown ${rangeText(section)}`, action: () => copyPlain(sourceOf(section)) });
     if (el.id) {
-      const link = `${doc.path}#${el.id}`;
-      items.push({ label: '절 링크 복사', hint: link, action: () => copyPlain(link) });
+      const anchor = `${doc.path}#${el.id}`;
+      items.push({ label: '절 링크 복사', hint: anchor, action: () => copyPlain(anchor) });
     }
-    if (section) {
-      const ref = claudeRef(section, ` ('${el.textContent.trim()}' 절)`);
-      items.push({ label: 'Claude용 위치 복사', hint: ref, action: () => copyPlain(ref) });
+    if (section) items.push(...sourceItems(section, '이 절 원문 복사', ` ('${el.textContent.trim()}' 절)`));
+    if (el.classList.contains('lec-fold') || el.parentElement === $('#lec-view')) {
+      const level = +tag[1];
+      items.push('-', { label: `같은 수준(${tag}) 모두 접기`, action: () => foldLevel(level, true) },
+        { label: `같은 수준(${tag}) 모두 펴기`, action: () => foldLevel(level, false) });
     }
   } else {
-    const range = lineRange(el);
-    if (range) {
-      items.push({ label: '원문 복사', hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)) });
-      const ref = claudeRef(range);
-      items.push({ label: 'Claude용 위치 복사', hint: ref, action: () => copyPlain(ref) });
-    }
+    const range = el.matches('.front-matter') ? frontMatterRange() : lineRange(el);
+    if (range) items.push(...sourceItems(range));
   }
   return items;
 }
@@ -208,7 +264,7 @@ function openMenu(e, view, x, y) {
   if (e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
   const el = pickBlock(e.target, view);
-  const items = el ? blockItems(el) : docItems();
+  const items = el ? blockItems(el, e.target) : docItems();
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   if (selected) items.unshift({ label: '선택한 글 복사', hint: describe(selected), action: () => copyPlain(selected) }, '-');

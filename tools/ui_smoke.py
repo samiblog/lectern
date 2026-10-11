@@ -242,6 +242,16 @@ def run(headed: bool) -> None:
             ref = choose('Claude용 위치 복사')
             want = f"@docs/01-기능-점검.md {a}~{b}행 ('코드' 절)"
             check(section == '\n'.join(src[a - 1:b]) and ref == want, f'제목 우클릭: 절 원문 복사, Claude용 위치 복사 ({ref!r})')
+            items = menu(sec('코드'))
+            page.locator('#lec-menu button', has_text='같은 수준(H2) 모두 접기').click()
+            h2_folded = page.evaluate("[...document.querySelectorAll('#lec-view > h2.lec-fold')].every(h => h.classList.contains('lec-folded'))")
+            menu(sec('코드'))
+            page.locator('#lec-menu button', has_text='같은 수준(H2) 모두 펴기').click()
+            check(f'편집기에서 이 줄 열기\ndocs/01-기능-점검.md:{a}' in items and h2_folded and not folded('코드'),
+                  '제목 우클릭: 편집기에서 이 줄 열기(줄 번호), 같은 수준 제목 모두 접기·펴기')
+            menu(page.locator('#lec-view a', has_text='수식과 달러 표기'))
+            link_addr = choose('링크 주소 복사')
+            check(link_addr == 'docs/02-수식과-달러.md', f'링크 우클릭: 링크 주소 복사 ({link_addr!r})')
             menu(page.locator('#lec-view td').nth(3))
             shot('02-doc-menu')
             tsv = choose('표 복사')
@@ -273,6 +283,9 @@ def run(headed: bool) -> None:
             check(page.locator('#lec-view .katex').count() >= 5, 'KaTeX 수식 렌더링')
             dollars = ' '.join(page.locator('#lec-view h2:has-text("달러 표기") + ul li').all_inner_texts())
             check('$105에서 $110' in dollars and 'US$1.2bn' in dollars, '달러 표기는 수식으로 바뀌지 않음')
+            menu(page.locator('#lec-view .math-inline').first)
+            tex = choose('LaTeX 복사')
+            check(tex == r'x_t = \beta x_{t-1} + \varepsilon_t', f'문장 속 수식 우클릭: LaTeX 복사 ({tex!r})')
             page.keyboard.press('Alt+ArrowLeft')
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             check(True, '뒤로 가기')
@@ -288,6 +301,9 @@ def run(headed: bool) -> None:
             fence = choose('원문 복사')
             check(head == '다이어그램' and fence.startswith('```mermaid') and fence.endswith('```'),
                   f'다이어그램 우클릭: 원문 복사 ({head!r}, {fence[:12]!r})')
+            menu(page.locator('pre.mermaid svg').first)
+            choose('그림 복사')
+            check(clip_types() == ['image/png'], f'다이어그램 우클릭: 그림 복사(PNG) ({clip_types()})')
             shot('03-mermaid')
 
             print('[스타일]')
@@ -450,6 +466,12 @@ def run(headed: bool) -> None:
                   f'프로젝트 안의 절대경로·file: 그림과 링크는 열리고, 밖은 막힘 ({got})')
             page.locator('#lec-view a', has_text='역슬래시 절대경로 링크').click()
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
+
+            page.locator('#lec-tree .row.file', has_text='구현 계획').click()
+            page.wait_for_selector('#lec-view .front-matter')
+            menu(page.locator('#lec-view .front-matter summary'))
+            fm = choose('원문 복사')
+            check(fm.startswith('---\nname: 구현 계획') and fm.endswith('---'), f'메타데이터 우클릭: 원문 복사 ({fm[:20]!r} … {fm[-6:]!r})')
 
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"

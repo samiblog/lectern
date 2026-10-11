@@ -105,9 +105,9 @@
 - [ ] 대소문자 구분 토글은 넣지 않는다 (단순함 유지)
 
 ### 2-8. 본문 우클릭 메뉴 2차
-- [ ] 편집기에서 이 줄 열기 (`data-lines` 시작 줄 + 기존 `/api/open-external` 의 `line`)
-- [ ] Mermaid 그림 복사(PNG), 수식 LaTeX 복사 (KaTeX를 `output: 'html'` 로 그려 원문이 DOM에 없으므로 렌더링 때 `data-tex` 를 단다)
-- [ ] 링크 주소 복사, 같은 수준 제목만 모두 접기, 메타데이터 원문 복사
+- [x] 편집기에서 이 줄 열기 (`data-lines` 시작 줄 + 기존 `/api/open-external` 의 `line`) (v0.3.0)
+- [x] Mermaid 그림 복사(PNG), 수식 LaTeX 복사 (KaTeX를 `output: 'html'` 로 그려 원문이 DOM에 없으므로 렌더링 때 `data-tex` 를 단다) (v0.3.0)
+- [x] 링크 주소 복사, 같은 수준 제목만 모두 접기, 메타데이터 원문 복사 (v0.3.0)
 - 이유와 범위: D24.
 
 ## 3단계 — 있으면 좋은 것

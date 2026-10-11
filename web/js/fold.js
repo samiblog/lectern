@@ -76,6 +76,14 @@ function toggle(h) {
 /** 접을 수 있는 제목이 있는지 (본문 우클릭 메뉴가 '모두 접기'를 보일지) */
 export const hasFolds = () => !!view().querySelector(':scope > .lec-fold');
 
+/** 같은 수준(level, 1~6)의 접을 수 있는 제목을 모두 접거나 편다 (제목 우클릭 메뉴) */
+export function foldLevel(level, folded) {
+  const root = view();
+  for (const h of root.querySelectorAll(`:scope > h${level}.lec-fold`)) h.classList.toggle('lec-folded', folded);
+  remember(root);
+  apply(root);
+}
+
 /** 접을 수 있는 제목을 모두 접거나 편다. */
 export function foldAll(folded) {
   const root = view();

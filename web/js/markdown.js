@@ -137,10 +137,14 @@ function mathPlugin(md) {
   md.inline.ruler.before('escape', 'math_paren', mathInlineParen);
   md.inline.ruler.after('escape', 'math_dollar', mathInlineDollar);
   md.block.ruler.before('fence', 'math_block', mathBlock, { alt: ['paragraph', 'reference', 'blockquote', 'list'] });
-  md.renderer.rules.math_inline = (tokens, i) => renderTex(tokens[i].content, false);
-  md.renderer.rules.math_display_inline = (tokens, i) => renderTex(tokens[i].content, true);
+  // KaTeX 는 output:'html' 이라 원래 TeX 이 화면에 남지 않는다. 우클릭 메뉴의 'LaTeX 복사'용으로 data-tex 에 둔다
+  const tex = (t) => ` data-tex="${md.utils.escapeHtml(t.trim())}"`;
+  md.renderer.rules.math_inline = (tokens, i) => (
+    `<span class="math-inline"${tex(tokens[i].content)}>${renderTex(tokens[i].content, false)}</span>`);
+  md.renderer.rules.math_display_inline = (tokens, i) => (
+    `<span class="math-display"${tex(tokens[i].content)}>${renderTex(tokens[i].content, true)}</span>`);
   md.renderer.rules.math_block = (tokens, i, options, env, self) => (
-    `<div class="math-block"${self.renderAttrs(tokens[i])}>${renderTex(tokens[i].content, true)}</div>\n`);
+    `<div class="math-block"${tex(tokens[i].content)}${self.renderAttrs(tokens[i])}>${renderTex(tokens[i].content, true)}</div>\n`);
 }
 
 /**

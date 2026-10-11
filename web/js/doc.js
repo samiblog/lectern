@@ -153,6 +153,9 @@ const lineFromHash = (hash) => {
 export function bindLink(a, baseUrl, docPath, root = null) {
   const r = resolveRef(a.getAttribute('href'), baseUrl);
   const where = () => root || $('#lec-view');
+  // 우클릭 메뉴의 '링크 주소 복사'가 쓸 값: 인터넷 주소, 또는 프로젝트 기준 경로(#앵커 포함)
+  const target = { external: r.url, local: `${r.path || ''}${r.hash || ''}`, anchor: `${docPath}${r.hash}` }[r.kind];
+  a.dataset.lecHref = target || a.getAttribute('href');
   switch (r.kind) {
     case 'anchor':
       a.addEventListener('click', (e) => {
