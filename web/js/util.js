@@ -86,10 +86,25 @@ export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
 
 export function debounce(fn, ms) {
   let t = 0;
-  return (...args) => {
+  const call = (...args) => {
     clearTimeout(t);
     t = setTimeout(() => fn(...args), ms);
   };
+  call.cancel = () => clearTimeout(t);
+  return call;
+}
+
+/**
+ * 목록을 다시 그려도 키보드 초점을 지킨다 (파일이 바뀌면 트리·검색 결과를 새로 그린다).
+ * 초점이 area 안 목록의 행에 있었으면, 다시 그린 뒤 같은 목록에서 같은 data-* 를 가진 행으로 돌려준다.
+ */
+export function keepFocus(area, draw) {
+  const el = document.activeElement;
+  const list = el && el !== area && area.contains(el) ? el.parentElement?.closest('[id]') : null;
+  const sel = list ? Object.entries(el.dataset)
+    .map(([k, v]) => `[data-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}="${CSS.escape(v)}"]`).join('') : '';
+  draw();
+  if (sel && document.activeElement !== el) document.getElementById(list.id)?.querySelector(`${el.localName}${sel}`)?.focus({ preventScroll: true });
 }
 
 /** 문서 안의 앵커(#id) 요소. root 범위 안에서만 찾는다 (앱 UI의 id와 겹치지 않도록). */

@@ -60,7 +60,7 @@ function render(d) {
   }
 
   if (!d.total) {
-    parts.push('<p class="ov-empty">이 폴더에는 Markdown 문서가 없습니다. 숨김 폴더와 node_modules 같은 제외 폴더는 보이지 않습니다.</p>');
+    parts.push('<p class="ov-empty">이 폴더에는 문서(Markdown·HTML)가 없습니다. 숨김 폴더와 node_modules 같은 제외 폴더는 보이지 않습니다.</p>');
   }
   return parts.join('');
 }
@@ -81,10 +81,11 @@ export async function showOverview(path, { scrollTop } = {}) {
   }
   if (id !== S.renderId) return false;
 
+  const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'overview';
   view.innerHTML = render(data);
   clearToc();
-  $('#lec-content').scrollTop = scrollTop ?? 0;
+  $('#lec-content').scrollTop = top ?? 0;
   setStatus({ path: path ? `${path}/` : `${S.name} (프로젝트 루트)`, info: `문서 ${data.total}개` });
   emit('rendered');
   return true;

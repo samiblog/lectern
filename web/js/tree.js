@@ -3,7 +3,7 @@
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
-import { $, $$, esc, dirname, timeAgo, copyText, toast } from './util.js';
+import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
 
 const MAX_FILTER_RESULTS = 300;
 let tab = 'files';
@@ -76,7 +76,7 @@ function renderTree() {
     const rootCls = ['row', 'dir', 'root'];
     if (activeDir() === '') rootCls.push('active');
     box.innerHTML = `<div class="${rootCls.join(' ')}" data-dir="" title="프로젝트 개요" tabindex="0"><span class="label">${esc(S.name)}</span></div>`
-      + (S.tree.length ? nodesHtml(S.tree, 0) : '<p class="side-empty">Markdown 문서가 없습니다</p>');
+      + (S.tree.length ? nodesHtml(S.tree, 0) : '<p class="side-empty">문서(Markdown·HTML)가 없습니다</p>');
   }
   box.scrollTop = scroll;
 }
@@ -101,8 +101,10 @@ function renderCount() {
 }
 
 function render() {
-  renderTree();
-  renderRecent();
+  keepFocus($('#lec-sidebar'), () => {
+    renderTree();
+    renderRecent();
+  });
   renderCount();
   $('#lec-btn-titles').classList.toggle('on', showTitles());
 }

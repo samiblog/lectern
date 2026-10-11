@@ -21,6 +21,7 @@ import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { loadTree } from './project.js';
+import { forgetFailedImages } from './doc.js';
 import { $, esc, basename, toast } from './util.js';
 
 // ---- 프로젝트 ---------------------------------------------------------------
@@ -34,10 +35,20 @@ function showWelcome() {
   const view = $('#lec-view');
   view.className = 'welcome';
   view.innerHTML = `<h1>프로젝트 폴더를 여세요</h1>
-    <p>폴더 안의 Markdown 문서를 트리와 개요로 정리해 보여 줍니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
+    <p>폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
     <p><button type="button" class="primary" data-act="open">폴더 열기</button></p>
     ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
       <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
+  clearToc();
+  setStatus({ path: '', info: '' });
+}
+
+/** 문서가 수천 개인 폴더는 처음 훑는 데 몇 초 걸린다 (막 만든 파일이 많으면 더). 그동안 빈 화면·옛 폴더 대신 알린다 */
+function showLoading() {
+  const view = $('#lec-view');
+  view.className = 'welcome';
+  view.innerHTML = `<p>${esc(S.name)} 폴더를 읽고 있습니다…</p>`;
+  $('#lec-tree').innerHTML = '';
   clearToc();
   setStatus({ path: '', info: '' });
 }
@@ -70,7 +81,12 @@ async function reloadProject() {
       showWelcome();
       return;
     }
-    await loadTree();
+    const wait = setTimeout(showLoading, 400);
+    try {
+      await loadTree();
+    } finally {
+      clearTimeout(wait);
+    }
     if (S.config.expand_first_level !== false) for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);
     // 마지막에 보던 문서와 위치로 (설정 restore_last). 그 문서가 없어졌으면 폴더 개요로
     const pos = st.position;
@@ -146,6 +162,7 @@ async function toggleToc() {
 
 async function manualRefresh() {
   if (!S.root) return;
+  forgetFailedImages();   // 불러오지 못했던 외부 이미지도 다시 시도
   try {
     await loadTree({ fresh: true });
     await refreshView();

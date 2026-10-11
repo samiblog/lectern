@@ -36,12 +36,13 @@ export function snapshot(root) {
   return seen;
 }
 
-/** 블록을 잠깐 강조한다 (전체 검색 결과로 갈 때도 쓴다) */
-export function flashBlock(el) {
-  el.classList.remove('lec-changed');
-  void el.offsetWidth;   // 애니메이션을 처음부터 다시
-  el.classList.add('lec-changed');
-  setTimeout(() => el.classList.remove('lec-changed'), FLASH_MS + 200);
+/** 블록(여럿이면 한꺼번에)을 잠깐 강조한다 (전체 검색 결과로 갈 때도 쓴다) */
+export function flashBlock(...els) {
+  if (!els.length) return;
+  for (const el of els) el.classList.remove('lec-changed');
+  void els[0].offsetWidth;   // 애니메이션을 처음부터 다시 — 블록마다 하면 큰 문서에서 화면 배치를 수천 번 다시 한다
+  for (const el of els) el.classList.add('lec-changed');
+  setTimeout(() => { for (const el of els) el.classList.remove('lec-changed'); }, FLASH_MS + 200);
 }
 
 function outOfView(el) {
@@ -72,8 +73,16 @@ export function markChanges(root, docPath, before) {
       if (left.get(s)) left.set(s, left.get(s) - 1);
       else marked.push(el);
     }
-    marked = marked.filter((el) => !marked.some((o) => o !== el && o.contains(el)));   // 바뀐 목록 항목 안의 문단은 한 번만
-    marked.forEach(flashBlock);
+    if (root.ownerDocument !== document) {
+      // html: 바뀐 목록 항목 안의 문단은 한 번만. 조상을 따라 올라가며 본다 (블록끼리 모두 비교하면 큰 표에서 멈춘다).
+      // md 는 최상위 블록끼리라 겹치지 않는다
+      const set = new Set(marked);
+      marked = marked.filter((el) => {
+        for (let a = el.parentElement; a && a !== root; a = a.parentElement) if (set.has(a)) return false;
+        return true;
+      });
+    }
+    flashBlock(...marked);
   }
   if (!marked.some(outOfView)) marked = [];
   renderButton();

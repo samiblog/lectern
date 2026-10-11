@@ -214,6 +214,9 @@ export function bindLink(a, baseUrl, docPath, root = null) {
 }
 
 const EXTERNAL_IMAGE_TIMEOUT_MS = 15000;   // 사내망에서 막힌 주소는 응답 없이 오래 걸릴 수 있다
+// 불러오지 못한 외부 이미지. 자동 새로고침마다 다시 15초를 기다리거나 '바뀐 곳'으로 잡히지 않게 바로 링크로 둔다 (F5 로 다시 시도)
+const failedImages = new Set();
+export const forgetFailedImages = () => failedImages.clear();
 
 /** 이미지 자리에 넣을 대체 표시. url 이 있으면 브라우저로 여는 링크가 된다. */
 function imageStandIn(label, alt, url) {
@@ -257,6 +260,10 @@ function fixImage(img, baseUrl, stamp) {
     img.replaceWith(imageStandIn('외부 이미지 (설정에서 꺼 둠)', img.alt, r.url));
     return;
   }
+  if (failedImages.has(r.url)) {
+    img.replaceWith(imageStandIn('외부 이미지를 불러오지 못했습니다', img.alt, r.url));
+    return;
+  }
   // 외부 이미지: 문서 주소가 전달되지 않게 referrer 를 숨기고, 실패·시간 초과면 링크로 바꾼다
   img.referrerPolicy = 'no-referrer';
   img.classList.add('external');
@@ -265,6 +272,7 @@ function fixImage(img, baseUrl, stamp) {
   const fail = () => {
     if (settled) return;
     settled = true;
+    failedImages.add(r.url);
     img.replaceWith(imageStandIn('외부 이미지를 불러오지 못했습니다', img.alt, r.url));
   };
   img.addEventListener('load', () => { settled = true; }, { once: true });
@@ -433,12 +441,13 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   // 같은 문서를 다시 그리면(자동 새로고침) 바뀐 블록을 강조하려고 이전 화면을 기록해 둔다
   const sameDoc = S.view?.type === 'doc' && S.view.path === path && !$('.doc-missing', view);
   const before = sameDoc ? snapshot(view) : null;
+  const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'md-body';
   view.replaceChildren(...stage.childNodes);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   setDocSource(path, text);
   buildToc(view);
-  if (scrollTop != null) content.scrollTop = scrollTop;
+  if (top != null) content.scrollTop = top;
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
   markChanges(view, path, before);
 

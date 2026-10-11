@@ -1,7 +1,8 @@
 /* html 문서(iframe) 안에 넣는 Lectern 표시용 스타일 (htmldoc.js 가 넣는다).
    iframe 은 앱의 CSS 변수를 물려받지 않으므로 색을 직접 적는다 — app.css 의 --ui-find·--ui-find-current·--ui-fresh 와 맞춘다. */
 
-::highlight(lec-find) { background-color: #ffe28a; color: inherit; }
+/* 글자색을 정해 둔다 — 어두운 html 문서의 밝은 글자가 밝은 노랑 위에 남으면 읽을 수 없다 */
+::highlight(lec-find) { background-color: #ffe28a; color: #1f2328; }
 ::highlight(lec-find-current) { background-color: #f6a623; color: #111; }
 
 /* 바뀐 부분 강조 (diffmark.js) */

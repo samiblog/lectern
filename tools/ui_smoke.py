@@ -25,6 +25,7 @@ import sys
 import tempfile
 import threading
 import time
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -131,6 +132,13 @@ def run(headed: bool) -> None:
         '<style>body{color:#f1f5f9;font-family:sans-serif} .card{background:#1e293b;padding:12px}</style></head>'
         '<body><h1>밝은 글자 문서</h1><p>바탕을 칠하지 않은 밝은 글자</p><div class="card"><p>카드 안 글자</p></div></body></html>',
         encoding='utf-8')
+    # 접었다 펴는 내용(틀 높이가 줄어드는지)과 SVG 의 옛 링크(xlink:href — 누르면 iframe 이 떠나면 안 됨)
+    (work / 'docs' / '93-접는-html.html').write_text(
+        '<!doctype html><html lang="ko"><head><meta charset="utf-8"><title>접는 html</title>'
+        '<style>body{font-family:sans-serif}</style></head><body><h1>접는 html</h1>'
+        '<details><summary>자세히</summary><div style="height:2000px">긴 내용</div></details>'
+        '<svg width="240" height="40"><a xlink:href="01-기능-점검.md"><text x="5" y="25">SVG 링크</text></a></svg>'
+        '</body></html>', encoding='utf-8')
     report = work / 'docs' / '04-HTML-보고서.html'
     report.write_text(report.read_text(encoding='utf-8').replace(
         '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
@@ -160,8 +168,15 @@ def run(headed: bool) -> None:
             shot = lambda name: page.screenshot(path=str(SHOTS / f'{name}.png'))
 
             print('[트리와 개요]')
+            held = []   # 문서가 수천 개면 트리를 처음 훑는 데 몇 초 걸린다 — 응답을 붙잡아 그동안의 화면을 본다
+            page.route('**/api/tree', lambda route: held.append(route))
             page.goto(url)
+            loading = wait_until(page, "document.querySelector('#lec-view').textContent.includes('폴더를 읽고 있습니다')")
+            for r in held:
+                r.continue_()
+            page.unroute('**/api/tree')
             page.wait_for_selector('.overview .ov-head h1')
+            check(loading, '폴더를 훑는 동안 빈 화면 대신 읽는 중이라고 알림')
             labels = page.locator('#lec-tree .row .label').all_inner_texts()
             check('렌더링 기능 점검' in labels, '트리에 문서 제목 표시')
             check(not any('숨김' in t or 'some-lib' in t for t in labels), '숨김·제외 문서는 트리에 없음')
@@ -427,6 +442,23 @@ def run(headed: bool) -> None:
             shot('05-live-reload')
             changes_btn.click()
             check(wait_until(page, "document.querySelector('#lec-content').scrollTop < 200"), '바뀐 곳 버튼을 누르면 그곳으로 이동')
+            # 다시 그리는 동안(문서를 받는 중) 사용자가 스크롤하면, 다 그린 뒤 옛 위치로 되돌리지 않는다
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 300')
+            held = []
+            is_md_doc = lambda u: '/doc/' in u and urllib.parse.urlparse(u).path.endswith('.md')
+            page.route(is_md_doc, lambda route: held.append(route))
+            doc.write_text(doc.read_text(encoding='utf-8') + '\n다시 그리는 중에 더한 문단\n', encoding='utf-8')
+            for _ in range(80):
+                if held:
+                    break
+                page.wait_for_timeout(100)
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 900')
+            for r in held:
+                r.continue_()
+            page.unroute(is_md_doc)
+            page.wait_for_selector('#lec-view p:has-text("다시 그리는 중에 더한 문단")', timeout=8000)
+            top = page.locator('#lec-content').evaluate('el => el.scrollTop')
+            check(bool(held) and top == 900, f'다시 그리는 동안 스크롤하면 그 위치를 지킴 (scrollTop {top}, 붙잡은 요청 {len(held)})')
             check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
 
             print('[전체 검색]')
@@ -550,12 +582,34 @@ def run(headed: bool) -> None:
             changed = page.evaluate(f"[...{frame_js}.contentDocument.querySelectorAll('.lec-changed')].map(e => e.tagName)")
             frames = page.locator('#lec-view iframe').count()
             check(changed_ok and changed == ['TR'] and frames == 1, f'html 문서도 자동 새로고침, 바뀐 행만 강조 ({changed}, 틀 {frames}개)')
+            page.locator('#lec-tree .row.file', has_text='접는 html').click()
+            wait_until(page, f"{frame_js}?.contentDocument?.title === '접는 html'")
+            height = lambda: page.evaluate(f"{frame_js}.getBoundingClientRect().height")
+            h0 = height()
+            fold_frame = page.frame_locator('#lec-view iframe.lec-html:not(.lec-loading)')
+            fold_frame.locator('summary').click()
+            opened = wait_until(page, f"{frame_js}.getBoundingClientRect().height > {h0 + 1500}")
+            fold_frame.locator('summary').click()
+            closed = wait_until(page, f"{frame_js}.getBoundingClientRect().height < {h0 + 40}")
+            check(opened and closed and h0 < 300, f'html 틀 높이가 내용을 따라 늘고 다시 줄어듦 (처음 {h0:.0f}px, 접은 뒤 {height():.0f}px)')
+            fold_frame.locator('text=SVG 링크').click()
+            svg_ok = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('렌더링 기능 점검')")
+            check(svg_ok, 'html 문서 속 SVG 링크(xlink:href)도 뷰어 안에서 열림 (iframe 이 떠나지 않음)')
+            # HEAD 뒤에 문서가 사라지면(404) 안내 화면, 앞 문서의 목차가 남지 않음
+            fold_url = lambda u: '/doc/docs/93-' in urllib.parse.unquote(u)
+            page.route(fold_url, lambda route: route.fulfill(status=404, body='없음', headers={'Content-Security-Policy': 'sandbox'})
+                       if route.request.method == 'GET' else route.continue_())
+            page.locator('#lec-tree .row.file', has_text='접는 html').click()
+            gone = wait_until(page, "document.querySelector('#lec-view .doc-missing')?.textContent.includes('문서가 없거나')")
+            toc_left = page.locator('#lec-toc a').count()
+            page.unroute(fold_url)
+            check(gone and toc_left == 0, f'html 을 불러오다 없어지면 \'문서 없음\' 안내, 앞 문서의 목차는 지움 (목차 {toc_left}개)')
             page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click()
             wait_until(page, f"{frame_js}?.contentDocument?.title === '스타일 없는 HTML'")
             themed = page.evaluate(f"""(() => {{ const d = {frame_js}.contentDocument;
               return d.body.classList.contains('md-body') && !!d.querySelector('link[href*="/static/themes/base.css"]'); }})()""")
             check(themed, '스타일이 없는 html 은 Lectern 스타일로')
-            readable_js = f'''(() => {{ const d = {frame_js}.contentDocument, w = d.defaultView;
+            readable_js = rf'''(() => {{ const d = {frame_js}.contentDocument, w = d.defaultView;
               const rgb = (s) => s.match(/[\d.]+/g).slice(0, 3).map(Number).map((x) => (s.startsWith('color(') ? x * 255 : x));
               const lum = (c) => c.map((x) => {{ x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; }})
                 .reduce((a, x, i) => a + x * [0.2126, 0.7152, 0.0722][i], 0);
@@ -596,6 +650,11 @@ def run(headed: bool) -> None:
             check(loaded == [120], '외부 이미지 표시' + ('' if loaded == [120] else f': naturalWidth={loaded}'))
             check(page.locator('#lec-view .image-off').inner_text().startswith('외부 이미지를 불러오지 못했습니다'),
                   '불러오지 못한 외부 이미지는 링크로 대체')
+            ext_doc = work / 'docs' / '99-외부-이미지.md'
+            ext_doc.write_text(ext_doc.read_text(encoding='utf-8') + '\n새로 더한 문단\n', encoding='utf-8')
+            page.wait_for_selector('#lec-view p:has-text("새로 더한 문단")', timeout=8000)
+            flashed = page.evaluate("[...document.querySelectorAll('#lec-view .lec-changed')].map(e => e.textContent.trim())")
+            check(flashed == ['새로 더한 문단'], f'자동 새로고침 때 불러오지 못한 외부 이미지는 다시 기다리지 않고 바뀐 곳으로 잡지 않음 ({flashed})')
             leaked = [u for u, _ in outside if 'leak-' in u and u not in blocked] + [p for p in _QuietHandler.received if 'leak-' in p]
             check(not leaked, '표 배경·SVG·image-set 으로는 외부 요청이 나가지 않음' + (f': {leaked}' if leaked else ''))
             items = menu(page.locator('#lec-view img.external'))
@@ -611,6 +670,22 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(500)
             check(page.locator('#lec-view .image-off').count() == 2 and len(outside) == before,
                   '설정을 끄면 외부 이미지를 불러오지 않음')
+
+            print('[뒤로 빠르게, 키보드 초점]')
+            for title in ('우선순위', '후속 과제', '렌더링 기능 점검'):
+                page.locator('#lec-tree .row.file', has_text=title).click()
+                page.wait_for_selector(f'#lec-view h1:has-text("{title}")')
+            page.keyboard.press('Alt+ArrowLeft')
+            page.keyboard.press('Alt+ArrowLeft')   # 앞의 '뒤로'가 그리기를 마치기 전에
+            two_back = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('우선순위')")
+            check(two_back, '뒤로를 빠르게 두 번 누르면 두 칸 뒤로')
+            row = page.locator('#lec-tree .row.file', has_text='우선순위')
+            row.focus()
+            memo = work / 'research' / '새-메모.md'
+            memo.write_text('# 새 메모 (고침)\n\n방금 고친 문서\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file:has-text("새 메모 (고침)")', timeout=8000)
+            focused = page.evaluate("document.activeElement?.dataset?.doc")
+            check(focused == row.get_attribute('data-doc'), f'파일이 바뀌어 트리를 다시 그려도 키보드 초점이 그 행에 남음 ({focused})')
 
             print('[설정과 마지막 위치]')
             page.keyboard.press('Control+Comma')

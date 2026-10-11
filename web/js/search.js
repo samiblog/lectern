@@ -5,12 +5,13 @@ import { S, on } from './store.js';
 import { getJSON } from './api.js';
 import { navigate } from './nav.js';
 import { switchTab } from './tree.js';
-import { findText } from './find.js';
+import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
 import { flashBlock } from './diffmark.js';
-import { $, esc, debounce, dirname, isHtml } from './util.js';
+import { $, esc, debounce, dirname, isHtml, keepFocus } from './util.js';
 
 let query = '';    // 결과가 화면에 있는 검색어
+let root = null;   // 그 결과를 찾은 프로젝트
 
 const input = () => $('#lec-search-input');
 
@@ -33,19 +34,23 @@ function render(d) {
   $('#lec-search-info').textContent = docs
     ? `${docs}개 문서, ${d.total}곳${d.truncated ? ' (많아서 일부만 보입니다)' : ''}`
     : '찾은 곳이 없습니다';
-  $('#lec-search-results').innerHTML = d.results.map((r) => {
+  const box = $('#lec-search-results');
+  keepFocus(box, () => { box.innerHTML = d.results.map((r) => {
     const name = r.title || r.path.split('/').pop();
     const head = `<div class="sr-doc" data-doc="${esc(r.path)}" title="${esc(r.path)}"><span class="label">${highlight(name, d.query)}</span>`
       + `${dirname(r.path) ? `<span class="sub">${esc(dirname(r.path))}</span>` : ''}</div>`;
     const hits = r.hits.map((h) => `<div class="sr-hit" data-doc="${esc(r.path)}" data-line="${h.line}" tabindex="0">`
       + `<span class="ln">${h.line}</span><span class="tx">${highlight(h.text, d.query)}</span></div>`).join('');
     return head + hits + (r.more ? '<div class="sr-more">이 문서에 더 있습니다</div>' : '');
-  }).join('');
+  }).join(''); });
 }
 
-async function run() {
+/** again: 같은 검색어라도 다시 찾는다 (파일이 바뀌었을 때). 아니면 이미 결과가 있는 검색어는 건너뛴다 (Enter 뒤의 늦은 입력 처리) */
+async function run(again = false) {
   const q = input().value.trim();
+  if (!again && q && q === query && root === S.root) return;
   query = q;
+  root = S.root;
   if (!q || !S.root) {
     $('#lec-search-info').textContent = '';
     $('#lec-search-results').innerHTML = '';
@@ -62,7 +67,7 @@ async function run() {
   if (q === query) render(d);   // 늦게 온 결과는 버린다
 }
 
-/** 지금 문서에서 line 번째 원문 줄이 든 가장 작은 블록으로 간다 */
+/** 지금 문서에서 line 번째 원문 줄이 든 가장 작은 블록으로 간다. 그 블록(없으면 null) */
 function goToLine(line) {
   let best = null;
   let size = Infinity;
@@ -73,11 +78,11 @@ function goToLine(line) {
       size = b - a;
     }
   }
-  if (!best) return false;
+  if (!best) return null;
   unfoldTo(best);
   best.scrollIntoView({ block: 'center' });
   flashBlock(best);
-  return true;
+  return best;
 }
 
 async function openHit(path, line) {
@@ -87,7 +92,8 @@ async function openHit(path, line) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
     findText(query);
-    if (line) goToLine(line);
+    const block = line ? goToLine(line) : null;
+    if (block) pickMatchAt(block);   // 찾기 막대의 '지금 결과'도 그 줄의 것으로 (↓ 가 거기서 이어지게)
   }
 }
 
@@ -109,6 +115,7 @@ export function initSearch() {
   input().addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      later.cancel();
       if (query !== input().value.trim()) await run();   // 기다리는 중이면 바로 찾고 첫 결과로
       $('#lec-search-results .sr-hit')?.click();
     } else if (e.key === 'Escape' && input().value) {
@@ -124,6 +131,14 @@ export function initSearch() {
   $('#lec-search-results').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.sr-hit')) e.target.click();
   });
-  // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다
-  on('tree', () => { if (query && !$('#lec-search').hidden) later(); });
+  // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다. 다른 프로젝트를 열면 옛 결과는 바로 지운다 (누르면 없는 문서가 열린다)
+  const again = debounce(() => run(true), 250);
+  on('tree', () => {
+    if (query && root !== S.root) {
+      query = '';
+      $('#lec-search-results').innerHTML = '';
+      $('#lec-search-info').textContent = '';
+    }
+    if (input().value.trim() && !$('#lec-search').hidden) again();
+  });
 }

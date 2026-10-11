@@ -17,6 +17,7 @@ import { $, encodePath, formatDateTime } from './util.js';
 
 const LOAD_TIMEOUT_MS = 20000;
 const MAX_HEIGHT = 200000;
+const XLINK = 'http://www.w3.org/1999/xlink';
 
 /** 지금 화면의 html 문서 iframe (없으면 null) */
 export const currentFrame = () => $('#lec-view > iframe.lec-html:not(.lec-loading)');
@@ -46,6 +47,24 @@ function hasOwnStyle(doc) {
   });
 }
 
+/**
+ * 문서 내용의 높이. scrollHeight 는 iframe 자신의 높이보다 작아지지 않아(접은 <details>, 창을 넓힘) 줄어들 때를 놓친다.
+ * 그래서 html 상자의 높이와 body 자식들의 아래 끝을 잰다. 호환 모드(doctype 없음)는 html·body 가 창 높이를 채우므로 자식만.
+ */
+function contentHeight(doc) {
+  const win = doc.defaultView;
+  const root = doc.documentElement;
+  let h = doc.compatMode === 'CSS1Compat' ? root.getBoundingClientRect().height : 0;
+  const body = doc.body;
+  if (body) {
+    let bottom = 0;
+    for (const el of body.children) bottom = Math.max(bottom, el.getBoundingClientRect().bottom);
+    const s = win.getComputedStyle(body);
+    h = Math.max(h, bottom + win.scrollY + parseFloat(s.paddingBottom) + parseFloat(s.borderBottomWidth) + parseFloat(s.marginBottom));
+  }
+  return Math.ceil(h);
+}
+
 /** iframe 높이를 문서 높이에 맞춘다. 100vh 를 쓰는 문서가 끝없이 커지지 않게, 같은 만큼 계속 커지면 멈춘다 */
 function fitHeight(frame) {
   const doc = frame.contentDocument;
@@ -53,7 +72,7 @@ function fitHeight(frame) {
   let lastGrow = 0;
   let repeats = 0;
   const fit = () => {
-    const h = Math.ceil(Math.max(doc.documentElement.scrollHeight, doc.body?.scrollHeight || 0));
+    const h = contentHeight(doc);
     const grow = h - last;
     if (Math.abs(grow) < 2) return;
     repeats = grow > 0 && grow === lastGrow ? repeats + 1 : 0;
@@ -63,7 +82,10 @@ function fitHeight(frame) {
     frame.style.height = `${Math.min(h, MAX_HEIGHT)}px`;
   };
   fit();
-  new ResizeObserver(fit).observe(doc.documentElement);
+  const watch = new ResizeObserver(fit);
+  watch.observe(doc.documentElement);
+  if (doc.body) watch.observe(doc.body);
+  doc.addEventListener('toggle', fit, true);   // <details> 열고 닫기 (호환 모드에서는 상자 크기가 그대로라 관찰자가 모른다)
 }
 
 // ---- 읽을 수 있는 바탕 ------------------------------------------------------
@@ -137,6 +159,10 @@ function prepare(frame, path) {
   let n = 0;
   for (const h of doc.querySelectorAll('h1, h2, h3, h4')) if (!h.id) h.id = `lec-h${++n}`;   // 목차용
   const baseUrl = new URL(`/doc/${encodePath(path)}`, location.origin);
+  // SVG 의 옛 링크(xlink:href)도 bindLink 가 다루게 한다 — 아니면 누를 때 iframe 이 그 주소로 떠나 문서를 잃는다
+  for (const a of doc.querySelectorAll('a')) {
+    if (!a.hasAttribute('href') && a.hasAttributeNS(XLINK, 'href')) a.setAttribute('href', a.getAttributeNS(XLINK, 'href'));
+  }
   for (const a of doc.querySelectorAll('a[href], area[href]')) bindLink(a, baseUrl, path, doc);
   doc.addEventListener('contextmenu', (e) => frameContextMenu(e, frame));
   // iframe 안의 키·마우스는 앱 문서로 올라오지 않는다. 단축키(Ctrl+F, Esc, Alt+← …)와 마우스 뒤로 버튼, 메뉴 닫기를 위해 넘겨 준다
@@ -150,6 +176,17 @@ function prepare(frame, path) {
   fitHeight(frame);
 }
 
+/** 문서를 보여 줄 수 없을 때: 안내 화면으로 바꾸고 옛 문서의 목차·원문·바뀐 곳도 지운다 */
+function missing(view, path, err) {
+  showMissing(view, path, err);
+  setDocSource(null);
+  clearChanges();
+  clearToc();
+  setStatus({ path, info: '' });
+  emit('rendered');
+  return true;
+}
+
 /**
  * html 문서를 그린다 (nav.js 가 확장자로 고른다). 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
  */
@@ -160,18 +197,12 @@ export async function showHtml(path, { hash = '', scrollTop } = {}) {
   const src = `/doc/${encodePath(path)}`;
   const head = await fetch(src, { method: 'HEAD', cache: 'no-store' }).catch((e) => ({ ok: false, status: 0, statusText: e.message }));
   if (id !== S.renderId) return false;
-  if (!head.ok) {
-    showMissing(view, path, { status: head.status, message: head.statusText });
-    setDocSource(null);
-    clearChanges();
-    clearToc();
-    setStatus({ path, info: '' });
-    emit('rendered');
-    return true;
-  }
+  if (!head.ok) return missing(view, path, { status: head.status, message: head.statusText });
 
+  // 같은 문서를 다시 그리는지는 화면의 iframe 이 이 문서를 다 불러온 것인지로 본다. 다른 문서를 불러오는 중인
+  // 빈 iframe 과 비교하면(A → B → 빠르게 A) A 의 모든 블록이 '바뀐 곳'이 된다
   const old = currentFrame();
-  const sameDoc = old && S.view?.type === 'doc' && S.view.path === path;
+  const sameDoc = old?.dataset.ready === path && S.view?.type === 'doc' && S.view.path === path;
   const before = sameDoc && old.contentDocument?.body ? snapshot(old.contentDocument.body) : null;
   const frame = document.createElement('iframe');
   frame.className = 'lec-html';
@@ -191,19 +222,19 @@ export async function showHtml(path, { hash = '', scrollTop } = {}) {
     if (sameDoc) frame.remove();
     return false;
   }
-  if (!ok || !frame.contentDocument?.body) {
-    showMissing(view, path, { status: 0, message: '문서를 불러오는 데 시간이 너무 오래 걸립니다' });
-    emit('rendered');
-    return true;
-  }
+  if (!ok) return missing(view, path, { status: 0, message: '문서를 불러오는 데 시간이 너무 오래 걸립니다' });
+  // HEAD 뒤에 지워지면 404 응답(CSP sandbox)이 들어와 문서를 읽을 수 없다
+  if (!frame.contentDocument?.body) return missing(view, path, { status: 404 });
+  const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   prepare(frame, path);
+  frame.dataset.ready = path;
   if (sameDoc) {
     old.remove();
     frame.classList.remove('lec-loading');
   }
   const doc = frame.contentDocument;
   buildToc(doc.body);
-  if (scrollTop != null) content.scrollTop = scrollTop;
+  if (top != null) content.scrollTop = top;
   else if (!hash || !scrollToAnchor(doc, hash)) content.scrollTop = 0;
   setDocSource(path, '');
   markChanges(doc.body, path, before);

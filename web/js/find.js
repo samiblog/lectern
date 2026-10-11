@@ -118,6 +118,13 @@ export function findText(query, { scroll = false } = {}) {
   search(!scroll);
 }
 
+/** el 안(없으면 그 뒤)의 첫 결과를 지금 결과로 한다. 스크롤은 하지 않는다 (전체 검색 결과의 줄로 갔을 때) */
+export function pickMatchAt(el) {
+  const i = ranges.findIndex((r) => el.contains(r.startContainer)
+    || el.compareDocumentPosition(r.startContainer) & Node.DOCUMENT_POSITION_FOLLOWING);
+  if (i >= 0) go(i, false);
+}
+
 export function closeFind() {
   if (bar().hidden) return false;
   bar().hidden = true;
