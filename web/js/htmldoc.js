@@ -66,15 +66,73 @@ function fitHeight(frame) {
   new ResizeObserver(fit).observe(doc.documentElement);
 }
 
+// ---- 읽을 수 있는 바탕 ------------------------------------------------------
+// iframe 의 '다크 선호(prefers-color-scheme)'는 Lectern 스타일이 아니라 Windows 설정을 따르고, 색 모드(color-scheme)가
+// 앱과 다르면 Chromium 이 iframe 바탕을 흰색으로 칠한다. 그래서 밝은 글자가 흰 바탕에 묻히는 일이 생긴다.
+// 문서가 쪽 바탕을 직접 칠하지 않으면, 그 위에 바로 놓인 글자의 밝기를 보고 바탕을 정해 준다.
+
+const appIsDark = () => document.documentElement.dataset.ui === 'dark';
+const appBg = () => getComputedStyle(document.documentElement).getPropertyValue('--md-bg').trim() || '#ffffff';
+
+/** 계산된 색 → {rgb: 0~255, a}. color-mix() 등은 'color(srgb 0.9 0.9 0.9 / a)' 처럼 0~1 로 나온다 */
+function rgba(color) {
+  const n = (color.match(/[\d.]+/g) || []).map(Number);
+  const unit = color.startsWith('color(') ? 255 : 1;
+  return { rgb: n.slice(0, 3).map((x) => x * unit), a: n.length > 3 ? n[3] : 1 };
+}
+
+const luminance = ([r, g, b]) => [r, g, b].map((x) => {
+  const c = x / 255;
+  return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+}).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0);
+
+/**
+ * 문서가 쪽 바탕을 직접 칠하지 않을 때 깔아 줄 바탕 'dark' | 'light'. 칠하면 null.
+ * 바탕을 칠한 상자(카드 등) 안의 글자는 빼고, 쪽 바탕 위에 바로 놓인 글자의 밝기를 글자 수로 따진다.
+ */
+function backdropFor(doc) {
+  const win = doc.defaultView;
+  const painted = (el) => {
+    const s = win.getComputedStyle(el);
+    return s.backgroundImage !== 'none' || rgba(s.backgroundColor).a > 0.5;
+  };
+  if (painted(doc.documentElement) || painted(doc.body)) return null;
+  let light = 0;
+  let dark = 0;
+  const els = [...doc.body.querySelectorAll('p, li, td, th, dt, dd, h1, h2, h3, h4, h5, h6, blockquote, figcaption, a, span, div')];
+  for (const el of els.slice(0, 600)) {
+    const text = [...el.childNodes].filter((n) => n.nodeType === Node.TEXT_NODE).map((n) => n.nodeValue.trim()).join('');
+    if (!text) continue;
+    let onBox = false;
+    for (let a = el; a && a !== doc.body; a = a.parentElement) if (painted(a)) { onBox = true; break; }
+    if (onBox) continue;
+    if (luminance(rgba(win.getComputedStyle(el).color).rgb) > 0.4) light += text.length;
+    else dark += text.length;
+  }
+  return light > dark ? 'dark' : 'light';
+}
+
+/** 쪽 바탕을 칠한다. 앱 스타일과 밝기가 같으면 그 스타일의 바탕색, 다르면 무난한 흰색·짙은 회색 */
+function paintBackdrop(doc, scheme) {
+  const root = doc.documentElement;
+  root.style.colorScheme = scheme;
+  root.style.backgroundColor = (scheme === 'dark') === appIsDark() ? appBg() : (scheme === 'dark' ? '#1e2227' : '#ffffff');
+  root.dataset.lecBackdrop = scheme;
+}
+
 function prepare(frame, path) {
   const doc = frame.contentDocument;
   const own = hasOwnStyle(doc);
   doc.head.append(link(doc, '/static/css/frame.css'));   // 찾기 표시·바뀐 곳·우클릭 테두리
   if (own) {
-    frame.classList.add('own-style');   // 바탕색을 정하지 않은 문서가 다크 스타일 위에서 안 보이지 않게 흰 바탕
+    frame.classList.add('own-style');
+    const scheme = backdropFor(doc);
+    if (scheme) paintBackdrop(doc, scheme);
   } else {
+    // 스타일이 없는 문서: 지금 고른 Lectern 스타일을 입히고, 바탕과 색 모드도 앱과 맞춘다
     doc.head.append(link(doc, '/static/themes/base.css'), link(doc, $('#lec-theme-css').href));
     doc.body.classList.add('md-body');
+    paintBackdrop(doc, appIsDark() ? 'dark' : 'light');
   }
   let n = 0;
   for (const h of doc.querySelectorAll('h1, h2, h3, h4')) if (!h.id) h.id = `lec-h${++n}`;   // 목차용
