@@ -38,3 +38,41 @@ def test_non_object_is_an_error(tmp_path):
     path.write_text('["theme"]', encoding='utf-8')
     cfg = Config(path)
     assert cfg.load_error and cfg.get('theme') == 'auto'
+
+
+def test_outside_edits_are_kept(tmp_path):
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    cfg.update_client({'theme': 'dark'})
+    edited = json.loads(path.read_text(encoding='utf-8'))
+    edited['editor'] = 'C:\Tools\Code\code.cmd'          # 실행 중에 사용자가 편집기로 고침
+    path.write_text(json.dumps(edited, ensure_ascii=False, indent=4), encoding='utf-8')
+    assert cfg.get('editor') == 'C:\Tools\Code\code.cmd'  # 바로 반영
+    cfg.update_client({'math': False})
+    saved = json.loads(path.read_text(encoding='utf-8'))
+    assert saved['editor'] == 'C:\Tools\Code\code.cmd' and saved['theme'] == 'dark' and saved['math'] is False
+
+
+def test_saving_resumes_after_file_is_fixed(tmp_path):
+    path = tmp_path / 'config.json'
+    path.write_text('{ "theme": "dark", }', encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.load_error
+    path.write_text('{ "theme": "dark" }', encoding='utf-8')   # 사용자가 고침
+    cfg.update_client({'math': False})
+    assert cfg.load_error is None and json.loads(path.read_text(encoding='utf-8')) | {} == cfg.public()
+    assert cfg.get('theme') == 'dark'
+
+
+def test_positions_are_bounded(tmp_path):
+    from lectern.config import MAX_POSITIONS, MAX_PROJECTS
+
+    cfg = Config(tmp_path / 'config.json')
+    for i in range(MAX_PROJECTS + 3):
+        cfg.remember_position(f'C:\p{i}', 'a.md', 10)
+    for i in range(MAX_POSITIONS + 5):
+        cfg.remember_position('C:\p0', f'd{i}.md', i)
+    assert len(cfg.get('projects')) == MAX_PROJECTS
+    pos = cfg.position('C:\P0')                               # 대소문자 무시 (Windows 경로)
+    assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
+    assert cfg.position('C:\nowhere') == {'doc': None, 'scroll': {}}

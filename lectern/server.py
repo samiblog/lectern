@@ -181,6 +181,29 @@ def create_app(state: AppState) -> Flask:
         state.config.update_client(patch)
         return jsonify(state.config.public())
 
+    @app.post('/api/position')
+    def api_position() -> Any:
+        """지금 보는 문서와 스크롤 위치 (다음에 열 때 복원). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
+        target = path_from_body()
+        scroll = (request.get_json(silent=True) or {}).get('scroll', 0)
+        if not target.is_file() or not isinstance(scroll, (int, float)) or not 0 <= scroll < 10**8:
+            abort(400)
+        if state.config.get('restore_last') is not False:
+            root = require_root()
+            state.config.remember_position(str(root), target.relative_to(root).as_posix(), int(scroll))
+        return jsonify(ok=True)
+
+    @app.post('/api/open-config')
+    def api_open_config() -> Any:
+        """설정 파일을 편집기로 연다 (API로 못 바꾸는 editor·exclude_dirs 를 고치도록). 파일이 없으면 기본값으로 만든다."""
+        if not state.config.path.exists():
+            state.config.save()
+        try:
+            how = osutil.open_path(state.config.path, None, state.config.get('editor'))
+        except OSError as exc:
+            return jsonify(error=str(exc)), 500
+        return jsonify(action=how, path=str(state.config.path))
+
     @app.post('/api/open-external')
     def api_open_external() -> Any:
         target = path_from_body()

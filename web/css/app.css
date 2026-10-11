@@ -248,6 +248,21 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 
+/* 설정 창 (settings.js) */
+.dialog-box {
+  width: min(520px, 92vw); margin: 12vh auto 0; padding: 18px 20px 14px; background: var(--ui-panel);
+  border: 1px solid var(--ui-border); border-radius: 10px; box-shadow: 0 18px 50px rgb(15 25 40 / .25);
+}
+.dialog-box h2 { margin: 0 0 10px; font-size: 16px; }
+.opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 4px; border-radius: 6px; cursor: pointer; }
+.opt:hover { background: var(--ui-hover); }
+.opt input { margin: 3px 0 0; accent-color: var(--ui-accent); }
+.opt span { display: flex; flex-direction: column; gap: 1px; }
+.opt small, .dialog-file small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+.dialog-file { display: flex; gap: 10px; align-items: center; margin-top: 10px; padding-top: 12px; border-top: 1px solid var(--ui-border); }
+.dialog-file .text-btn { flex: none; }
+.dialog-foot { display: flex; align-items: center; justify-content: space-between; margin-top: 14px; color: var(--ui-faint); font-size: 12px; }
+
 #lec-lightbox { display: grid; place-items: center; cursor: zoom-out; padding: 3vh 3vw; background: rgb(10 14 20 / .72); }
 #lec-lightbox .lb-content { max-width: 94vw; max-height: 90vh; background: var(--md-bg, #fff); border-radius: 8px; padding: 12px; }
 

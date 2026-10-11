@@ -62,4 +62,5 @@ class AppState:
             'watch': self.watch_backend,
             'version': __version__,
             'config_error': self.config.load_error,
+            'position': self.config.position(str(root)) if root else None,   # 마지막 문서와 스크롤 위치
         }

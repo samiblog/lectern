@@ -14,7 +14,9 @@ import { initStatus, setStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
-import { initNav, navigate, back, forward, resetHistory, refreshView } from './nav.js';
+import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll } from './nav.js';
+import { initSettings, openSettings, closeSettings } from './settings.js';
+import { initPosition } from './position.js';
 import { initWatch, startWatch } from './watch.js';
 import { loadTree } from './project.js';
 import { $, esc, basename, toast } from './util.js';
@@ -67,7 +69,13 @@ async function reloadProject() {
       return;
     }
     await loadTree();
-    for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);   // 첫 단계 폴더는 펼쳐 둔다
+    if (S.config.expand_first_level !== false) for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);
+    // 마지막에 보던 문서와 위치로 (설정 restore_last). 그 문서가 없어졌으면 폴더 개요로
+    const pos = st.position;
+    if (S.config.restore_last !== false && pos?.doc && S.fileMap.has(pos.doc)) {
+      seedScroll(pos.scroll);
+      if (await navigate({ type: 'doc', path: pos.doc }, { restoreScroll: true })) return;
+    }
     await navigate({ type: 'overview', path: '' });
   } catch (e) {
     toast(`프로젝트를 불러오지 못했습니다: ${e.message}`, 'error');
@@ -187,6 +195,9 @@ function bindKeys() {
       e.preventDefault();
       if (S.view?.type === 'doc') openFind();
       else focusFilter();
+    } else if (mod && e.key === ',') {
+      e.preventDefault();
+      openSettings();
     } else if (mod && key === 'o') {
       e.preventDefault();
       chooseAndOpen();
@@ -203,7 +214,7 @@ function bindKeys() {
       e.preventDefault();
       manualRefresh();
     } else if (e.key === 'Escape') {
-      if (closePalette() || hideMenu() || closeLightbox() || closeFind()) e.preventDefault();
+      if (closePalette() || closeSettings() || hideMenu() || closeLightbox() || closeFind()) e.preventDefault();
     }
   });
   // 마우스 뒤로/앞으로 버튼
@@ -243,6 +254,8 @@ async function boot() {
   initDocMenu();
   initChangeMarks();
   initSearch();
+  initSettings();
+  initPosition();
   initStatus();
   initOverview();
   initTree();

@@ -76,21 +76,25 @@ flowchart LR
 
 ### 설정 (config.py)
 `%APPDATA%\Lectern\config.json` (테스트에서는 `LECTERN_CONFIG_DIR` 로 바꿈). 원자적 저장(임시 파일 → `os.replace`).
-파일이 있는데 읽지 못하면(JSON 오류, 맨 바깥이 객체가 아님) `load_error` 에 이유를 남기고 기본 설정으로 돌며, 그 실행 동안은 저장하지 않는다. 이유는 `/api/state` 의 `config_error` 로 화면에 알린다 (D21). UTF-8 BOM은 허용한다.
+파일이 있는데 읽지 못하면(JSON 오류, 맨 바깥이 객체가 아님) `load_error` 에 이유를 남기고 기본 설정으로 돌며, 파일이 고쳐질 때까지 저장하지 않는다. 이유는 `/api/state` 의 `config_error` 로 화면에 알린다 (D21). UTF-8 BOM은 허용한다.
+읽거나 바꿀 때마다 파일의 (수정 시각, 크기)를 보고, 밖에서 바뀌었으면 다시 읽는다(`_refresh`). 그래서 설정 창의 '설정 파일 열기'로 고친 값은 앱을 다시 실행하지 않아도 반영되고, 앱이 들고 있던 옛 값으로 덮어쓰지 않는다. 설정을 바꾸는 코드는 `_update(change)` 를 거친다 (다시 읽기 → 바꾸기 → 저장).
 
 | 키 | 기본값 | 프런트에서 변경 | 설명 |
 |---|---|---|---|
 | `version` | `1` | 불가 | 설정 파일 형식 버전 (형식이 바뀌면 올리고 변환 코드를 둔다) |
 | `recent` | `[]` | 불가 | 최근 연 폴더 (최대 10). 폴더를 열 때 서버가 기록 |
 | `last_folder` | `null` | 불가 | 인자 없이 실행할 때 열 폴더 |
-| `theme` | `"auto"` | 가능 | `auto`·`default`·`report`·`dark` |
+| `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`) |
 | `show_titles` | `true` | 가능 | 트리에 제목(끄면 파일명) |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
-| `math` | `true` | 가능 | `$` 수식 렌더링 (UI 토글은 아직 없음) |
-| `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (UI 토글은 아직 없음) |
+| `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
+| `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
+| `restore_last` | `true` | 가능 | 폴더를 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다 |
+| `expand_first_level` | `true` | 가능 | 폴더를 열면 트리의 첫 단계 폴더를 펼쳐 둠 (설정 창) |
 | `window` | `{width:1280,height:860}` | 불가 | 창 크기 (닫을 때 저장. 최소화·최대화한 채 닫으면 저장하지 않음. 형식이 틀리면 기본값, 720×480보다 작으면 그 크기로) |
 | `exclude_dirs` | `[]` | 불가 | 추가 제외 폴더 이름 |
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
+| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}}`. 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서 |
 
 '불가' 키는 `config.json` 을 직접 고쳐야 한다. 웹 페이지가 실행 파일 경로 같은 값을 바꾸지 못하게 하려는 제한이다 (`CLIENT_KEYS`).
 
@@ -105,13 +109,15 @@ flowchart LR
 |---|---|---|
 | `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}` 치환) + CSP 헤더 |
 | `GET /static/<경로>` | | `web/` 정적 파일 |
-| `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error}`. `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
+| `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error, position}`. `position` 은 이 폴더의 `{doc, scroll}` (마지막 위치 복원). `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
 | `POST /api/open` | `{path}` | 폴더 열기. 성공 시 `/api/state` 와 같은 형식, 폴더가 아니면 400 |
 | `GET /api/tree` | | `{root, tree}` (스캔 결과). 폴더가 없으면 409 |
 | `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, hits:[{line, text}], more}], total, truncated}`. 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<seq>` | | `{seq, paths, structure, reset, root}` |
 | `GET /api/config` | | 설정 전체 |
+| `POST /api/position` | `{path, scroll}` | 지금 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). 밖·숨김·없음 404, 폴더·잘못된 값 400 |
+| `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
 | `POST /api/open-external` | `{path, line?}` | `{action}` — `folder`·`default`·`editor`·`reveal` |
 | `POST /api/reveal` | `{path}` | 탐색기에서 선택. `{action:'reveal'}` |
@@ -190,6 +196,10 @@ sequenceDiagram
 - 블록 밖(여백, 문서 아래 빈 곳)은 문서 메뉴: 트리와 같은 경로 항목(`tree.js` 의 `pathMenuItems`) + 모두 접기·펴기.
 - 글을 고른 채 우클릭하면 맨 위에 '선택한 글 복사'. 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다.
 - 원문은 `doc.js` 가 그릴 때마다 `setDocSource(path, text)` 로 넘긴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
+
+### 설정 창과 마지막 위치 (settings.js, position.js)
+- 툴바 톱니 버튼·Ctrl+, 로 설정 창: 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, '설정 파일 열기'(편집기 경로·제외 폴더 등).
+- `position.js` 는 화면 이동과 스크롤이 멈추고 1.5초 뒤 `POST /api/position` 으로 지금 문서와 위치를 보낸다 (같은 값이면 보내지 않음). 폴더를 열 때 `main.js` 가 `/api/state` 의 `position` 으로 그 문서를 열고 위치를 복원한다. 문서가 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
 - 파일 탭: 루트 행(프로젝트 개요) + 트리. 폴더 이름을 누르면 개요 화면 + 펼침, 화살표는 펼치기/접기만. 처음 열 때 첫 단계 폴더는 펼쳐 둔다.

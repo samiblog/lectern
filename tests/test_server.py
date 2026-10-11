@@ -76,7 +76,7 @@ def test_doc_serves_markdown_and_assets(client):
     assert r.status_code == 200 and r.mimetype == 'text/markdown'
     assert r.get_data(as_text=True).startswith('# 프로젝트')
     assert r.headers['Cache-Control'] == 'no-cache'
-    svg = client.get('/doc/docs/img.svg')
+    svg = fetch(client, '/doc/docs/img.svg')
     assert svg.status_code == 200
     # 주소로 직접 열어도 앱 출처에서 스크립트가 돌지 않게
     assert svg.headers['Content-Security-Policy'] == 'sandbox' and svg.headers['X-Content-Type-Options'] == 'nosniff'
@@ -97,9 +97,9 @@ def test_fixed_types_win_over_windows_registry(state, monkeypatch):
         db.add_type('text/plain', ext)
     monkeypatch.setattr(mimetypes, '_db', db)   # 테스트가 끝나면 원래 db 로 돌아간다
     c = create_app(state).test_client()
-    assert c.get('/static/js/main.js').mimetype == 'text/javascript'
-    assert c.get('/static/css/app.css').mimetype == 'text/css'
-    assert c.get('/doc/docs/img.svg').mimetype == 'image/svg+xml'
+    assert fetch(c, '/static/js/main.js').mimetype == 'text/javascript'
+    assert fetch(c, '/static/css/app.css').mimetype == 'text/css'
+    assert fetch(c, '/doc/docs/img.svg').mimetype == 'image/svg+xml'
 
 
 def test_token_required_when_set(state):
@@ -123,6 +123,13 @@ def test_state_reports_config_error(tmp_path):
     path.write_text('{ "theme": "dark", }', encoding='utf-8')
     c = create_app(AppState(Config(path), mode='browser')).test_client()
     assert '설정 파일을 읽지 못해' in c.get('/api/state').get_json()['config_error']
+
+
+def fetch(client, url: str, **kw):
+    """파일을 그대로 보내는 응답(send_file)은 닫아 둔다 (닫지 않으면 ResourceWarning)"""
+    r = client.get(url, **kw)
+    r.close()
+    return r
 
 
 def csp_of(client) -> dict[str, str]:
@@ -199,3 +206,21 @@ def test_search_endpoint(client):
     assert [x['path'] for x in r['results']] == ['README.md'] and r['results'][0]['hits'][0]['line'] == 3
     assert client.get('/api/search?q=' + quote('숨김')).get_json()['results'] == []   # 숨김 문서는 찾지 않는다
     assert client.get('/api/search?q=' + 'x' * 201).status_code == 400
+
+
+def test_position_is_remembered(client, project):
+    assert client.post('/api/position', json={'path': 'docs/10-a.md', 'scroll': 420}).get_json() == {'ok': True}
+    pos = client.get('/api/state').get_json()['position']
+    assert pos['doc'] == 'docs/10-a.md' and pos['scroll']['docs/10-a.md'] == 420
+    assert client.post('/api/position', json={'path': '../x.md', 'scroll': 1}).status_code == 404
+    assert client.post('/api/position', json={'path': 'docs', 'scroll': 1}).status_code == 400
+    client.post('/api/config', json={'restore_last': False})
+    client.post('/api/position', json={'path': 'README.md', 'scroll': 5})
+    assert client.get('/api/state').get_json()['position']['doc'] == 'docs/10-a.md'   # 꺼 두면 기록하지 않음
+
+
+def test_open_config(client, state, monkeypatch):
+    calls = []
+    monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor: calls.append(p) or 'editor')
+    r = client.post('/api/open-config').get_json()
+    assert r['action'] == 'editor' and calls == [state.config.path] and state.config.path.exists()

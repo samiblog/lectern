@@ -75,6 +75,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | fold.js | 제목을 눌러 절 접기·펴기 |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
+| settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 마지막 문서·스크롤 위치 기록 |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |
 | theme.js | 문서 스타일 목록(THEMES)과 전환. 스타일 선택 목록도 이 표로 만든다 |
 | mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
@@ -102,7 +103,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
 - 렌더링은 `S.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 같은 방식을 쓴다.
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
-- `config.json` 을 읽지 못하면(`Config.load_error`) 그 실행 동안은 저장하지 않는다 (D21). 설정을 쓰는 코드는 반드시 `Config.save()` 를 거친다.
+- `config.json` 을 읽지 못하면(`Config.load_error`) 파일이 고쳐질 때까지 저장하지 않는다 (D21). 사용자가 실행 중에 파일을 고칠 수 있으므로, 설정을 바꾸는 코드는 반드시 `Config._update(change)` 를 거친다 (밖에서 고친 값을 다시 읽은 뒤 바꾸고 저장).
 - Windows에서 Python `mimetypes` 는 레지스트리 값을 기본값보다 우선한다. 레지스트리에 `.js` 가 `text/plain` 으로 잡힌 PC에서는 모듈 스크립트가 거부되어 화면이 빈다. 그래서 `server.py` 의 `FIXED_TYPES` 가 `.js`·`.css`·`.svg`·`.woff2` 의 형식을 정한다. 앱이 새 확장자의 파일을 내보내면 여기에 넣을지 본다.
 - 문서 스타일은 PC에 있는 글꼴만 쓴다 (웹 글꼴 금지, 내장도 안 함 — D26). 글꼴 목록은 영문 글꼴 → 한글 글꼴 → `Malgun Gothic`·`Batang` 같은 Windows 기본 글꼴 순으로 끝내서, 그 글꼴이 없는 PC에서도 한글이 보이게 한다. 새 스타일은 `ui_smoke.py` 가 글자 대비(WCAG 4.5:1)와 제목 색·표 머리행 구분을 확인한다.
 - `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.

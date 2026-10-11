@@ -55,6 +55,11 @@ export function forward() {
   navigate(S.history[index], { push: false, restoreScroll: true, index });
 }
 
+/** 서버가 기억한 문서별 스크롤 위치를 넣어 둔다 (폴더를 열 때 마지막 위치 복원, position.js) */
+export function seedScroll(positions) {
+  for (const [path, top] of Object.entries(positions || {})) scrollPos.set(keyOf({ type: 'doc', path }), top);
+}
+
 export function resetHistory() {
   S.history = [];
   S.hIndex = -1;

@@ -322,7 +322,7 @@ def run(headed: bool) -> None:
             use_theme('paper')
             saved = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.theme)")
             page.reload()
-            page.wait_for_selector('.overview .ov-head h1')
+            page.wait_for_selector('#lec-view h1')   # 마지막에 보던 문서나 폴더 개요 (마지막 위치 복원)
             check(saved == 'paper' and page.evaluate("document.documentElement.dataset.theme") == 'paper'
                   and page.input_value('#lec-theme') == 'paper', f'고른 스타일은 다음 실행에도 그대로 ({saved})')
             use_theme('default')
@@ -424,13 +424,40 @@ def run(headed: bool) -> None:
             shot('06-external-images')
             page.evaluate("fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_images:false})})")
             page.reload()
-            page.wait_for_selector('.overview .ov-head h1')
+            page.wait_for_selector('#lec-view h1')   # 마지막에 보던 문서나 폴더 개요 (마지막 위치 복원)
             before = len(outside)
             page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()
             page.wait_for_selector('#lec-view h1:has-text("외부 이미지 확인")')
             page.wait_for_timeout(500)
             check(page.locator('#lec-view .image-off').count() == 2 and len(outside) == before,
                   '설정을 끄면 외부 이미지를 불러오지 않음')
+
+            print('[설정과 마지막 위치]')
+            page.keyboard.press('Control+Comma')
+            dialog = page.locator('#lec-settings')
+            boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
+            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'external_images=false'],
+                  f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
+            shot('07-settings')
+            page.locator('#lec-settings input[data-key="expand_first_level"]').click()
+            cfg = page.evaluate("fetch('/api/config').then(r => r.json())")
+            page.locator('#lec-settings input[data-key="expand_first_level"]').click()
+            page.keyboard.press('Escape')
+            check(cfg['expand_first_level'] is False and not dialog.is_visible(), '설정 창에서 바꾼 값을 저장하고 Esc 로 닫힘')
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 500')
+            remembered = False   # wait_until 은 Promise 를 참으로 보므로 서버 상태는 여기서 되묻는다 (스크롤이 멈추고 1.5초 뒤 저장)
+            for _ in range(40):
+                pos = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
+                if pos['doc'] == 'docs/01-기능-점검.md' and pos['scroll'].get('docs/01-기능-점검.md') == 500:
+                    remembered = True
+                    break
+                page.wait_for_timeout(200)
+            page.reload()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            top = page.locator('#lec-content').evaluate('el => el.scrollTop')
+            check(remembered and top == 500, f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top})')
 
             print('[보안]')
             check(page.evaluate("fetch('/doc/.hidden-note.md').then(r => r.status)") == 404, '숨김 문서 직접 요청 차단')

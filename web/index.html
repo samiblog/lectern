@@ -37,6 +37,7 @@
     <symbol id="i-up" viewBox="0 0 20 20"><path d="m5.5 12 4.5-4.5 4.5 4.5"/></symbol>
     <symbol id="i-down" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
     <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 20 20"><circle cx="10" cy="10" r="2.6"/><path d="M10 2.5v2.2M10 15.3v2.2M2.5 10h2.2M15.3 10h2.2M4.7 4.7l1.6 1.6M13.7 13.7l1.6 1.6M4.7 15.3l1.6-1.6M13.7 6.3l1.6-1.6"/></symbol>
   </defs>
 </svg>
 
@@ -57,6 +58,7 @@
     <label class="theme-pick" title="문서 스타일">
       <select id="lec-theme"><!-- 목록은 theme.js 의 THEMES 로 채운다 --></select>
     </label>
+    <button id="lec-btn-settings" class="icon-btn" title="설정 (Ctrl+,)"><svg><use href="#i-gear"/></svg></button>
     <button id="lec-btn-toc" class="icon-btn" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg></button>
   </header>
 
@@ -111,6 +113,23 @@
   <div class="palette-box" role="dialog" aria-label="문서 빠르게 열기">
     <input id="lec-palette-input" type="text" placeholder="문서 이름, 제목, 경로" spellcheck="false" autocomplete="off">
     <ul id="lec-palette-list" role="listbox"></ul>
+  </div>
+</div>
+<div id="lec-settings" class="overlay" hidden>
+  <div class="dialog-box" role="dialog" aria-labelledby="lec-settings-title">
+    <h2 id="lec-settings-title">설정</h2>
+    <label class="opt"><input type="checkbox" data-key="restore_last"><span><b>마지막 위치에서 시작</b><small>폴더를 열면 마지막에 보던 문서와 스크롤 위치로 엽니다</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 를 수식으로 그립니다</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>
+    <div class="dialog-file">
+      <button type="button" id="lec-settings-file" class="text-btn">설정 파일 열기</button>
+      <small>편집기 경로(editor)·제외 폴더(exclude_dirs)처럼 여기 없는 설정은 파일에서 고칩니다. 저장하면 반영되고, 트리는 F5로 다시 불러옵니다.</small>
+    </div>
+    <div class="dialog-foot">
+      <span id="lec-settings-ver"></span>
+      <button type="button" id="lec-settings-close" class="primary">닫기</button>
+    </div>
   </div>
 </div>
 <div id="lec-menu" class="menu" role="menu" hidden></div>
