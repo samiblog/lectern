@@ -98,7 +98,7 @@ export function foldAll(folded) {
  * (숨은 요소는 display:none 이라 위치가 0이어서 스크롤할 수 없다)
  */
 export function unfoldTo(el) {
-  emit('reveal', el);   // 장 강조(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
+  emit('reveal', el);   // 장 하이라이트(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
   const root = view();
   let top = el;
   while (top && top.parentElement !== root) top = top.parentElement;

@@ -229,7 +229,7 @@ def run(headed: bool) -> None:
             sec('그림').click(position={'x': 30, 'y': 16}, modifiers=['Shift'])   # 끌어서 고르면 click 이 오지 않는다 (Chromium)
             check(not folded('그림'), 'Shift+클릭으로 글자를 고를 때는 접지 않음')
 
-            print('[글자 크기와 장 강조]')
+            print('[글자 크기와 장 하이라이트]')
             size = lambda: page.evaluate("parseFloat(getComputedStyle(document.querySelector('#lec-view p')).fontSize)")
             base_size = size()
             page.click('#lec-text-bigger')
@@ -259,7 +259,7 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)   # 흐려지고 밝아지는 데 0.2초 — 캡처용
             shot('03-spotlight')
             check(first == ['렌더링-기능-점검'] and down1 == ['표'] and down2 == ['체크리스트와-각주'] and up1 == ['표'] and faded_img == '0.16',
-                  f'장 강조: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장의 그림도 흐림 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
+                  f'장 하이라이트: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장의 그림도 흐림 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
             page.locator('#lec-view p', has_text='표시가 없는 인용문').click()
             by_click = lit()
             page.locator('#lec-toc a', has_text='링크').first.click()
@@ -288,6 +288,18 @@ def run(headed: bool) -> None:
                 return page.evaluate('navigator.clipboard.readText()').replace('\r\n', '\n')
 
             clip_types = lambda: page.evaluate('navigator.clipboard.read().then(items => items.flatMap(i => i.types))')
+
+            # 우클릭으로 장 하이라이트 / 하이라이트 해제
+            quote = page.locator('#lec-view p', has_text='표시가 없는 인용문')
+            items_off = menu(quote)
+            page.locator('#lec-menu button', has_text='이 장 하이라이트').click()
+            by_menu = lit()
+            items_on = menu(quote)
+            page.locator('#lec-menu button', has_text='하이라이트 해제').click()
+            off_by_menu = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight')")
+            check('이 장 하이라이트' in items_off and by_menu == ['콜아웃'] and '하이라이트 해제' in items_on
+                  and '이 장 하이라이트' not in items_on and off_by_menu,
+                  f'본문 우클릭 메뉴로 그 장 하이라이트 / 하이라이트 해제 ({by_menu})')
             para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
             head = menu(para).split('\n')[0]
             picked = page.locator('#lec-view .lec-picked').count()
@@ -639,7 +651,7 @@ def run(headed: bool) -> None:
             page.click('#lec-text-reset')
             shrunk = wait_until(page, f"Math.abs({frame_js}.getBoundingClientRect().height - {h_before}) < 4")
             check(spot_off and grown and zoom == '1.1' and shrunk,
-                  f'html 문서: 글자 크기는 문서 전체 확대로(틀 높이도 따라감), 장 강조는 쓸 수 없음 (zoom {zoom!r}, 장 강조 꺼짐 {spot_off})')
+                  f'html 문서: 글자 크기는 문서 전체 확대로(틀 높이도 따라감), 장 하이라이트는 쓸 수 없음 (zoom {zoom!r}, 장 하이라이트 꺼짐 {spot_off})')
             frame.locator('td', has_text='코발트').click()
             page.keyboard.press('Control+f')   # iframe 안에 초점이 있어도 단축키가 앱으로 간다
             page.fill('#lec-find-input', '코발트')   # 찾기 막대는 앞의 검색어로 먼저 한 번 찾으므로 이 검색어의 결과를 기다린다

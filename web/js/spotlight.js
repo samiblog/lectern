@@ -1,4 +1,4 @@
-// 장 강조 (툴바 버튼): 문서에서 한 장만 지금 모양 그대로 보이고, 나머지 글자·선·그림은 바탕색 쪽으로 흐려진다.
+// 장 하이라이트 (툴바 버튼): 문서에서 한 장만 지금 모양 그대로 보이고, 나머지 글자·선·그림은 바탕색 쪽으로 흐려진다.
 //
 // - 장은 문서의 맨 위 수준 절이다. H1 이 맨 앞에 하나뿐이면(문서 제목) H2 절, 아니면 H1 절. 첫 장 앞의 제목·머리말도 한 장이다.
 //   각주(.footnotes)는 어느 장에도 들지 않는다.
@@ -64,8 +64,8 @@ function updateButton() {
   btn.classList.toggle('on', active);
   btn.disabled = !usable && !active;
   btn.title = usable || active
-    ? `장 강조 ${active ? '끄기' : '켜기'} — 켜면 ↑·↓·PageUp·PageDown 으로 앞뒤 장 (Esc 로 끄기)`
-    : '장 강조: 제목으로 나뉜 Markdown 문서에서 쓸 수 있습니다';
+    ? `장 하이라이트 ${active ? '끄기' : '켜기'} — 켜면 ↑·↓·PageUp·PageDown 으로 앞뒤 장 (Esc 로 끄기)`
+    : '장 하이라이트: 제목으로 나뉜 Markdown 문서에서 쓸 수 있습니다';
 }
 
 /** 지금 화면 위쪽에 보이는 장 */
@@ -116,6 +116,26 @@ export function stopSpotlight() {
   if (!active) return false;
   toggleSpotlight(false);
   return true;
+}
+
+/** 본문 우클릭 메뉴(docmenu.js)의 항목: 우클릭한 곳의 장 하이라이트 / 하이라이트 해제. 쓸 수 없는 문서면 빈 목록 */
+export function spotlightItems(target) {
+  if (!isMdDoc() || !chapters.length) return [];
+  const i = chapterOf(target);
+  const items = [];
+  if (!active || (i >= 0 && i !== current)) {
+    items.push({
+      label: i >= 0 ? '이 장 하이라이트' : '장 하이라이트',
+      hint: '나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장',
+      action: () => {
+        active = true;
+        current = i >= 0 ? i : chapterAtTop();
+        paint();
+      },
+    });
+  }
+  if (active) items.push({ label: '하이라이트 해제', hint: 'Esc', action: () => toggleSpotlight(false) });
+  return items;
 }
 
 export function initSpotlight() {

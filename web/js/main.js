@@ -202,7 +202,7 @@ function bindToolbar() {
   });
 }
 
-// 장 강조 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
+// 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
 const SPOT_KEYS = { ArrowUp: -1, ArrowDown: 1, PageUp: -1, PageDown: 1 };
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden;

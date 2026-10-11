@@ -208,9 +208,9 @@ sequenceDiagram
 - `:root` 의 CSS 변수 `--md-scale` 을 바꾸고, `base.css` 가 본문 글자 크기와 단 폭(`--md-width`)에 함께 곱한다 (줄 길이가 그대로). 코드·메타데이터처럼 px 로 정한 글자도 곱한다. 앱 UI·그림·다이어그램은 그대로.
 - 바꿀 때 화면 위쪽 블록의 위치를 맞춰 읽던 곳이 움직이지 않게 한다. html 문서는 `text-size` 이벤트로 스타일 없는 문서는 iframe 안의 `--md-scale`, 스타일 있는 문서는 iframe 문서의 `zoom` (틀 높이는 fitHeight 가 따라간다).
 
-### 장 강조 (spotlight.js)
+### 장 하이라이트 (spotlight.js)
 - 툴바 버튼으로 켜면 한 장(맨 위 수준 절 — H1 이 맨 앞에 하나뿐이면 H2 절)만 그대로 두고 나머지 최상위 블록을 `opacity .16` 으로 흐린다 (`base.css` 의 `.lec-spotlight`/`.lec-lit`, 0.2초 전환). 첫 장 앞의 제목·머리말도 한 장, 각주는 어느 장에도 들지 않는다. 인쇄할 때는 모두 보인다.
-- 켤 때는 화면 위쪽의 장부터. ↑·↓·PageUp·PageDown(`main.js` 가 `moveSpotlight`) 으로 앞뒤 장으로 가며 그 장의 처음을 화면 위에 둔다. 흐린 장을 누르면(그 누름은 링크·접기로 쓰지 않음) 그 장, 목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 `fold.unfoldTo` 의 `reveal` 로 그 장. Esc 는 다른 것(팝업·찾기 등)을 먼저 닫고 마지막에 장 강조를 끈다.
+- 켤 때는 화면 위쪽의 장부터. ↑·↓·PageUp·PageDown(`main.js` 가 `moveSpotlight`) 으로 앞뒤 장으로 가며 그 장의 처음을 화면 위에 둔다. 흐린 장을 누르면(그 누름은 링크·접기로 쓰지 않음) 그 장, 목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 `fold.unfoldTo` 의 `reveal` 로 그 장. Esc 는 다른 것(팝업·찾기 등)을 먼저 닫고 마지막에 장 하이라이트를 끈다. 본문 우클릭 메뉴 끝에 '이 장 하이라이트'(꺼져 있거나 다른 장을 눌렀을 때)와 '하이라이트 해제'(켜져 있을 때)가 붙는다 (`spotlightItems`, 여백을 누르면 화면 위쪽의 장).
 - 자동 새로고침·스타일 변경으로 다시 그려도 같은 장(제목 id)을 강조하고, 다른 문서로 가면 켠 채로 화면 위쪽의 장부터. 'rendered' 때는 `S.view` 가 아직 앞 화면이라 `doc.js` 가 `#lec-view` 에 단 `data-doc-path` 로 문서를 안다.
 - md 문서만 (html 문서는 구조가 문서마다 달라 장을 나눌 수 없어 버튼이 꺼진다). 장이 둘 이상 나오지 않는 문서도 꺼진다.
 
@@ -228,6 +228,7 @@ sequenceDiagram
 - 2차 항목(v0.3.0): 원문 줄이 있는 블록은 '편집기에서 이 줄 열기'(`/api/open-external` 의 `line`), 다이어그램은 그림 복사(SVG를 viewBox 크기 2배 PNG로, 화면 바탕색을 깔아서), 수식은 LaTeX 복사(`markdown.js` 가 단 `data-tex`), 링크는 주소 복사(`bindLink` 가 단 `data-lec-href` — 인터넷 주소 또는 프로젝트 기준 경로), 제목은 같은 수준 모두 접기·펴기, 메타데이터는 원문 복사.
 - 문서 메뉴의 '인쇄 / PDF로 저장…'은 `window.print()` (html 문서는 iframe 의 `print()` — iframe sandbox 에 `allow-modals` 가 필요). 인쇄 모양은 `base.css` 의 `@media print`: 화면 UI 빼기, 스타일 색을 흰 바탕·검은 글자로 덮기(바탕색은 기본으로 인쇄되지 않음), 접은 절 펴기, 쪼개지 않기, 인터넷 링크 주소 붙이기.
 - 블록 밖(여백, 문서 아래 빈 곳)은 문서 메뉴: 트리와 같은 경로 항목(`tree.js` 의 `pathMenuItems`) + 모두 접기·펴기.
+- md 문서면 블록·문서 메뉴 끝에 장 하이라이트 항목(`spotlight.js` 의 `spotlightItems`).
 - 글을 고른 채 우클릭하면 맨 위에 '선택한 글 복사'. 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다.
 - 원문은 `doc.js` 가 그릴 때마다 `setDocSource(path, text)` 로 넘긴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
 
@@ -256,8 +257,8 @@ sequenceDiagram
 | Ctrl+B | 사이드바 보이기/숨기기 |
 | Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 뒤로 / 앞으로 |
 | F5 | 트리와 현재 화면 다시 불러오기 |
-| ↑ / ↓, PageUp / PageDown | 장 강조 중: 앞 장 / 뒤 장 (입력칸·열린 팝업에서는 원래대로) |
-| Esc | 팝업·메뉴·확대·찾기 닫기, 그다음 장 강조 끄기 |
+| ↑ / ↓, PageUp / PageDown | 장 하이라이트 중: 앞 장 / 뒤 장 (입력칸·열린 팝업에서는 원래대로) |
+| Esc | 팝업·메뉴·확대·찾기 닫기, 그다음 장 하이라이트 끄기 |
 | Ctrl+휠 | 확대/축소 (pywebview `zoomable`) |
 
 ### 테마 (theme.js, themes/)

@@ -8,6 +8,7 @@ import { S } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
+import { spotlightItems } from './spotlight.js';
 import { openExternal } from './api.js';
 import { $, esc, toast, copyText } from './util.js';
 
@@ -272,6 +273,8 @@ function openMenu(e, view, x, y) {
   e.preventDefault();
   const el = pickBlock(e.target, view);
   const items = el ? blockItems(el, e.target) : docItems();
+  const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
+  if (spot.length) items.push('-', ...spot);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   if (selected) items.unshift({ label: '선택한 글 복사', hint: describe(selected), action: () => copyPlain(selected) }, '-');
