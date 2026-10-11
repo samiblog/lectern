@@ -43,6 +43,7 @@ lectern/
   docinfo.py            제목·요약 추출 (트리 제목, 폴더 개요)
   changes.py            ChangeLog(변경 순번 기록) + Watcher(watchdog / 폴링 대체)
   config.py             config.json 읽기·쓰기, 프런트에서 바꿀 수 있는 키 제한
+  search.py             전체 본문 검색 (/api/search)
   osutil.py             링크 대상 열기 (기본 앱 / 편집기 / 탐색기)
   native.py             pywebview js_api — 폴더 대화상자, 창 제목만
   paths.py              리소스·설정 경로 (PyInstaller 대응)
@@ -73,6 +74,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
+| search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |
 | theme.js | 문서 스타일 목록(THEMES)과 전환. 스타일 선택 목록도 이 표로 만든다 |
 | mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |

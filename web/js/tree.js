@@ -115,12 +115,14 @@ function revealCurrent() {
   $(`#lec-${tab === 'files' ? 'tree' : 'recent'} ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
-function switchTab(next) {
+export function switchTab(next) {
   tab = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
   $('#lec-tree').hidden = next !== 'files';
   $('#lec-recent').hidden = next !== 'recent';
-  $('.side-filter').hidden = next !== 'files';
+  $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
+  $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
+  if (next === 'search') $('#lec-search-input').focus();
 }
 
 function onRowClick(e) {

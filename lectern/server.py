@@ -20,6 +20,7 @@ from . import __version__, osutil
 from .docinfo import doc_info, read_text
 from .paths import web_dir
 from .scanner import is_md, iter_files, resolve_inside, scan
+from .search import MAX_QUERY, search_docs
 from .state import AppState
 
 RECENT_IN_OVERVIEW = 6
@@ -152,6 +153,14 @@ def create_app(state: AppState) -> Flask:
         return jsonify(path=rel, name=(rel.rsplit('/', 1)[-1] if rel else (root.name or str(root))),
                        dirs=dirs, files=files, recent=recent,
                        total=sum(1 for _ in iter_files(nodes)))
+
+    @app.get('/api/search')
+    def api_search() -> Any:
+        root = require_root()
+        query = request.args.get('q', '')
+        if len(query) > MAX_QUERY:
+            abort(400, description=f'검색어는 {MAX_QUERY}자까지입니다')
+        return jsonify(search_docs(root, list(iter_files(scan(root, state.exclude))), query))
 
     @app.get('/api/changes')
     def api_changes() -> Any:

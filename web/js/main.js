@@ -9,6 +9,7 @@ import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initDocMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
+import { initSearch, openSearch } from './search.js';
 import { initStatus, setStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
@@ -179,6 +180,9 @@ function bindKeys() {
     if (mod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       openPalette();
+    } else if (mod && e.shiftKey && key === 'f') {
+      e.preventDefault();
+      openSearch();
     } else if (mod && key === 'f') {
       e.preventDefault();
       if (S.view?.type === 'doc') openFind();
@@ -238,6 +242,7 @@ async function boot() {
   initFold();
   initDocMenu();
   initChangeMarks();
+  initSearch();
   initStatus();
   initOverview();
   initTree();

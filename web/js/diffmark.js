@@ -30,7 +30,8 @@ export function snapshot(view) {
   return seen;
 }
 
-function flash(el) {
+/** 블록을 잠깐 강조한다 (전체 검색 결과로 갈 때도 쓴다) */
+export function flashBlock(el) {
   el.classList.remove('lec-changed');
   void el.offsetWidth;   // 애니메이션을 처음부터 다시
   el.classList.add('lec-changed');
@@ -65,7 +66,7 @@ export function markChanges(view, docPath, before) {
       if (left.get(s)) left.set(s, left.get(s) - 1);
       else marked.push(el);
     }
-    marked.forEach(flash);
+    marked.forEach(flashBlock);
   }
   if (!marked.some(outOfView)) marked = [];
   renderButton();
@@ -83,7 +84,7 @@ function goNext() {
   next += 1;
   unfoldTo(el);
   el.scrollIntoView({ block: 'center' });
-  flash(el);
+  flashBlock(el);
 }
 
 export function initChangeMarks() {

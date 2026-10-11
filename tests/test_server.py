@@ -192,3 +192,10 @@ def test_open_external(client, monkeypatch):
     assert r.get_json() == {'action': 'editor'} and calls == [('app.py', 3)]
     assert client.post('/api/open-external', json={'path': '../x'}).status_code == 404
     assert client.post('/api/open-external', json={'path': '.claude/notes.md'}).status_code == 404
+
+
+def test_search_endpoint(client):
+    r = client.get('/api/search?q=' + quote('설명 문단')).get_json()
+    assert [x['path'] for x in r['results']] == ['README.md'] and r['results'][0]['hits'][0]['line'] == 3
+    assert client.get('/api/search?q=' + quote('숨김')).get_json()['results'] == []   # 숨김 문서는 찾지 않는다
+    assert client.get('/api/search?q=' + 'x' * 201).status_code == 400

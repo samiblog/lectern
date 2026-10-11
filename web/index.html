@@ -65,6 +65,7 @@
       <div class="side-tabs" role="tablist">
         <button role="tab" data-tab="files" class="active">파일</button>
         <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
+        <button role="tab" data-tab="search" title="모든 문서의 본문에서 찾기 (Ctrl+Shift+F)">검색</button>
       </div>
       <div class="side-filter">
         <input id="lec-filter" type="search" placeholder="이름이나 제목으로 거르기" spellcheck="false" autocomplete="off">
@@ -72,6 +73,13 @@
       </div>
       <nav id="lec-tree" class="side-list" aria-label="파일"></nav>
       <nav id="lec-recent" class="side-list" aria-label="최근 변경" hidden></nav>
+      <div id="lec-search" hidden>
+        <div class="side-filter">
+          <input id="lec-search-input" type="search" placeholder="모든 문서의 본문에서 찾기" spellcheck="false" autocomplete="off">
+        </div>
+        <p id="lec-search-info" class="side-info"></p>
+        <nav id="lec-search-results" class="side-list" aria-label="검색 결과"></nav>
+      </div>
     </aside>
 
     <main id="lec-content">

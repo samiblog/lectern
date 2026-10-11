@@ -368,6 +368,30 @@ def run(headed: bool) -> None:
             check(wait_until(page, "document.querySelector('#lec-content').scrollTop < 200"), '바뀐 곳 버튼을 누르면 그곳으로 이동')
             check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
 
+            print('[전체 검색]')
+            page.locator('#lec-tree .row.file', has_text='우선순위').click()
+            page.wait_for_selector('#lec-view h1:has-text("우선순위")')
+            page.keyboard.press('Control+Shift+F')
+            focused = page.evaluate("document.activeElement?.id")
+            page.fill('#lec-search-input', '인도네시아')
+            wait_until(page, "document.querySelector('#lec-search-results .sr-hit')")
+            hit = page.locator('#lec-search-results .sr-hit[data-doc="docs/01-기능-점검.md"]').first
+            line = int(hit.get_attribute('data-line') or 0)
+            want = next(i for i, l in enumerate(doc.read_text(encoding='utf-8').split('\n'), 1) if '인도네시아' in l)
+            check(focused == 'lec-search-input' and line == want and '<mark>' in hit.inner_html(),
+                  f'Ctrl+Shift+F 전체 검색: 문서·줄 번호·검색어 표시 (줄 {line}, 원문 {want})')
+            hit.click()
+            wait_until(page, "document.querySelector('#lec-view .lec-changed')")
+            state = page.evaluate("""() => ({
+              title: document.querySelector('#lec-view h1')?.textContent,
+              flashed: document.querySelector('#lec-view .lec-changed')?.tagName,
+              find: document.querySelector('#lec-findbar').hidden ? null : document.querySelector('#lec-find-count').textContent })""")
+            check(state['title'].startswith('렌더링 기능 점검') and state['flashed'] == 'TR' and state['find'] == '1/1',
+                  f'검색 결과를 누르면 그 문서의 그 줄(표의 행)로 가고 검색어를 표시 ({state})')
+            shot('05-search')
+            page.keyboard.press('Escape')
+            page.locator('.side-tabs button[data-tab="files"]').click()
+
             print('[문서 속 원시 HTML]')
             page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click()
             page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')

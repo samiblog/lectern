@@ -112,7 +112,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* ---- 사이드바 ---------------------------------------------------------------- */
 .side-tabs { display: flex; gap: 4px; padding: 10px 10px 6px; }
 .side-tabs button {
-  flex: 1; height: 28px; border: 0; border-radius: 6px; background: none; color: var(--ui-muted); font-weight: 600;
+  flex: auto; height: 28px; padding: 0 6px; white-space: nowrap; border: 0; border-radius: 6px; background: none; color: var(--ui-muted); font-weight: 600;
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
 }
 .side-tabs button:hover { background: var(--ui-hover); }
@@ -152,6 +152,23 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .caret.open::before { transform: rotate(45deg); margin: -3px 0 0; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
+
+/* 전체 검색 (search.js) */
+#lec-search { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.side-info { margin: 0; padding: 0 14px 6px; color: var(--ui-muted); font-size: 12px; }
+.sr-doc { display: flex; align-items: baseline; gap: 8px; padding: 9px 8px 3px; cursor: pointer; border-radius: 6px; }
+.sr-doc .label { font-weight: 650; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-doc .sub { color: var(--ui-faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-doc:hover .label { color: var(--ui-accent); }
+.sr-hit {
+  display: grid; grid-template-columns: 30px minmax(0, 1fr); column-gap: 6px; padding: 3px 8px;
+  border-radius: 6px; cursor: pointer; font-size: 12.5px; line-height: 1.45;
+}
+.sr-hit:hover, .sr-hit:focus { background: var(--ui-hover); outline: none; }
+.sr-hit .ln { color: var(--ui-faint); text-align: right; font-variant-numeric: tabular-nums; }
+.sr-hit .tx { color: var(--ui-muted); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: anywhere; }
+.side-list mark { background: var(--ui-find); color: var(--ui-fg); border-radius: 2px; }
+.sr-more { padding: 1px 8px 4px 44px; color: var(--ui-faint); font-size: 12px; }
 
 .row.recent { display: grid; grid-template-columns: 58px minmax(0, 1fr) auto; column-gap: 8px; padding-left: 8px; }
 .row.recent .when { color: var(--ui-faint); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }

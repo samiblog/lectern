@@ -75,6 +75,13 @@ export function openFind() {
   if (input().value) search();
 }
 
+/** 검색어를 넣고 찾기 막대를 연다. 스크롤은 하지 않는다 (부른 쪽이 위치를 정한다 — 전체 검색 결과로 갈 때) */
+export function findText(query) {
+  bar().hidden = false;
+  input().value = query;
+  search(true);
+}
+
 export function closeFind() {
   if (bar().hidden) return false;
   bar().hidden = true;

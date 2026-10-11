@@ -109,6 +109,7 @@ flowchart LR
 | `POST /api/open` | `{path}` | 폴더 열기. 성공 시 `/api/state` 와 같은 형식, 폴더가 아니면 400 |
 | `GET /api/tree` | | `{root, tree}` (스캔 결과). 폴더가 없으면 409 |
 | `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
+| `GET /api/search?q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, hits:[{line, text}], more}], total, truncated}`. 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<seq>` | | `{seq, paths, structure, reset, root}` |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
@@ -164,6 +165,11 @@ sequenceDiagram
    - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다.
 5. 무대의 내용을 `#lec-view` 로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. `S.changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).
+
+### 전체 검색 (search.js, lectern/search.py)
+- 사이드바 '검색' 탭(Ctrl+Shift+F). 입력을 250ms 기다렸다가 `GET /api/search?q=` 를 부르고, 늦게 온 결과는 버린다. 문서 목록이 바뀌면(자동 새로고침) 다시 찾는다.
+- 서버는 트리와 같은 `scan()` 결과의 문서만 읽는다 (숨김·제외는 찾지 않음). 대소문자 무시, 글자 그대로. 줄 번호는 markdown-it 과 같게 센다 (`\r\n`·`\r`·`\n` 만 줄바꿈). 제목·경로에 검색어가 든 문서를 먼저, 그다음 최근에 고친 순. 문서당 20줄, 모두 1000줄·200문서까지.
+- 결과 줄을 누르면 문서를 열고, 그 줄이 든 가장 작은 `data-lines` 블록(표의 행까지)으로 가서 깜박이고, 문서 안 찾기(`findText`)로 검색어를 표시한다.
 
 ### 바뀐 부분 강조 (diffmark.js)
 - 같은 문서를 다시 그릴 때(자동 새로고침) 바꿔 끼우기 직전의 최상위 블록마다 서명(태그 + 공백을 줄인 글자 + 그림 주소, Mermaid는 원문)을 세어 두고, 새 화면에서 서명이 이전에 없던 블록에 `lec-changed`(약 4초 배경색·테두리)를 준다. 같은 서명이 여럿이면 개수로 맞춘다.
