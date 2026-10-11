@@ -14,7 +14,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
-from .scanner import is_md, iter_files, scan
+from .scanner import doc_kind, iter_files, scan
 
 try:  # watchdog 는 선택 의존성
     from watchdog.events import FileSystemEventHandler
@@ -135,7 +135,7 @@ class Watcher:
             if is_dir:
                 if event_type != 'modified':
                     self.log.push(None, True)
-            elif is_md(rel):
+            elif doc_kind(rel):
                 self.log.push(rel, event_type != 'modified')
 
     # --- 폴링 대체 --------------------------------------------------------

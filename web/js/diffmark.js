@@ -4,10 +4,11 @@
 // 처음 열 때와 내용이 같은 다시 그리기(스타일 변경 등)는 강조하지 않는다.
 // 판정은 블록의 '서명'(태그 + 글자 + 그림 주소, 다이어그램은 원문)이 이전 화면에 있었는지로 한다.
 // 지워진 블록은 표시할 곳이 없어 알리지 않는다.
+// html 문서(iframe)는 구조가 문서마다 달라, 최상위 자식 대신 문단·목록 항목·표의 행 같은 작은 블록을 비교한다.
 
 import { on } from './store.js';
 import { unfoldTo } from './fold.js';
-import { $ } from './util.js';
+import { $, screenRect } from './util.js';
 
 const FLASH_MS = 4000;
 let marked = [];   // 이번 화면에서 바뀐 블록
@@ -20,10 +21,15 @@ function signature(el) {
   return `${el.tagName}|${text}|${imgs.join(',')}`;
 }
 
+const HTML_BLOCKS = 'p, li, h1, h2, h3, h4, h5, h6, tr, pre, blockquote, figure, dt, dd, img';
+
+/** 비교할 블록: md 는 #lec-view 의 최상위 자식, html 문서는 iframe body 안의 작은 블록 */
+const blocksOf = (root) => (root.ownerDocument === document ? [...root.children] : [...root.querySelectorAll(HTML_BLOCKS)]);
+
 /** 다시 그리기 직전의 화면을 기록한다. 같은 문서를 다시 그릴 때만 쓴다. */
-export function snapshot(view) {
+export function snapshot(root) {
   const seen = new Map();
-  for (const el of view.children) {
+  for (const el of blocksOf(root)) {
     const s = signature(el);
     seen.set(s, (seen.get(s) || 0) + 1);
   }
@@ -40,7 +46,7 @@ export function flashBlock(el) {
 
 function outOfView(el) {
   const box = $('#lec-content').getBoundingClientRect();
-  const r = el.getBoundingClientRect();
+  const r = screenRect(el);
   return r.height === 0 || r.bottom < box.top || r.top > box.bottom;
 }
 
@@ -55,17 +61,18 @@ function renderButton() {
  * 문서를 그린 직후 부른다. before 는 snapshot() 결과(처음 열 때는 null).
  * 바뀐 블록을 강조하고, 하나라도 화면 밖이면 '바뀐 곳' 버튼을 보인다.
  */
-export function markChanges(view, docPath, before) {
+export function markChanges(root, docPath, before) {
   marked = [];
   next = 0;
   path = docPath;
   if (before) {
     const left = new Map(before);
-    for (const el of view.children) {
+    for (const el of blocksOf(root)) {
       const s = signature(el);
       if (left.get(s)) left.set(s, left.get(s) - 1);
       else marked.push(el);
     }
+    marked = marked.filter((el) => !marked.some((o) => o !== el && o.contains(el)));   // 바뀐 목록 항목 안의 문단은 한 번만
     marked.forEach(flashBlock);
   }
   if (!marked.some(outOfView)) marked = [];

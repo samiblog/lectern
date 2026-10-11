@@ -12,6 +12,23 @@ export const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
 export const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
 export const dirname = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
 export const isMd = (p) => /\.(md|markdown)$/i.test(p);
+export const isHtml = (p) => /\.html?$/i.test(p);
+
+/** 지금 화면의 문서 내용 뿌리: md 는 #lec-view, html 문서는 iframe 의 body (htmldoc.js) */
+export function docRoot() {
+  const frame = document.querySelector('#lec-view > iframe.lec-html:not(.lec-loading)');
+  return frame?.contentDocument?.body || document.querySelector('#lec-view');
+}
+
+/** 요소·Range 의 화면 좌표. html 문서(iframe) 안의 것은 iframe 위치만큼 더한다 */
+export function screenRect(node) {
+  const r = node.getBoundingClientRect();
+  const doc = node.ownerDocument || node.startContainer?.ownerDocument;
+  const frame = doc?.defaultView?.frameElement;
+  if (!frame) return r;
+  const f = frame.getBoundingClientRect();
+  return { top: r.top + f.top, bottom: r.bottom + f.top, left: r.left + f.left, right: r.right + f.left, width: r.width, height: r.height };
+}
 
 const pad = (n) => String(n).padStart(2, '0');
 const startOfDay = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();

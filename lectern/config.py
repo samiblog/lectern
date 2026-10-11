@@ -34,6 +34,7 @@ DEFAULTS: dict[str, Any] = {
     'expand_first_level': True,  # 폴더를 열면 트리의 첫 단계 폴더를 펼쳐 둠
     'window': {'width': 1280, 'height': 860},
     'exclude_dirs': [],      # 기본 제외 폴더에 추가할 폴더 이름 (직접 편집)
+    'html_exclude_dirs': [], # 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 src·public 등에 더함, 직접 편집)
     'editor': None,          # 코드 파일을 열 편집기 실행 파일 경로 (None이면 PATH의 code)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
 }

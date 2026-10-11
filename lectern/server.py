@@ -19,7 +19,7 @@ from flask import Flask, Response, abort, jsonify, request, send_file
 from . import __version__, osutil
 from .docinfo import doc_info, read_text
 from .paths import web_dir
-from .scanner import is_md, iter_files, resolve_inside, scan
+from .scanner import doc_kind, iter_files, resolve_inside
 from .search import MAX_QUERY, search_docs
 from .state import AppState
 
@@ -49,8 +49,27 @@ def content_security_policy(external_images: bool) -> str:
         "font-src 'self' data:",
         "connect-src 'self'",
         "object-src 'none'",
-        "frame-src 'none'",
+        "frame-src 'self'",          # html 문서를 iframe 으로 보인다 (D27)
         "base-uri 'none'",
+        "form-action 'none'",
+    ))
+
+
+def html_doc_policy(external_images: bool) -> str:
+    """문서로 보는 html(/doc/*.html)의 CSP. 스크립트·연결·폼·하위 프레임은 막고, 문서 안의 스타일과 프로젝트 안의 그림만 허용한다.
+
+    allow-same-origin 이 있어야 앱이 iframe 안을 읽어 목차·찾기·링크를 다룰 수 있다. allow-scripts 가 없으므로
+    문서 자신의 스크립트는 돌지 않는다 (D27). 인터넷 그림은 md 와 같은 설정 external_images 를 따른다.
+    """
+    img = "'self' data:" + (' http: https:' if external_images else '')
+    return '; '.join((
+        'sandbox allow-same-origin',
+        "default-src 'none'",
+        f'img-src {img}',
+        "style-src 'self' 'unsafe-inline'",
+        "font-src 'self' data:",
+        "media-src 'self'",
+        "base-uri 'self'",
         "form-action 'none'",
     ))
 
@@ -92,8 +111,9 @@ def create_app(state: AppState) -> Flask:
         if request.path.startswith(('/api/', '/doc/')) or request.path == '/':
             resp.headers['Cache-Control'] = 'no-cache'
         if request.path.startswith('/doc/'):
-            # 프로젝트 안의 html·svg 를 주소로 직접 열어도 앱과 같은 출처에서 스크립트가 돌지 않게 한다 (D20)
-            resp.headers['Content-Security-Policy'] = 'sandbox'
+            # 프로젝트 안의 html·svg 를 주소로 직접 열어도 앱과 같은 출처에서 스크립트가 돌지 않게 한다 (D20).
+            # 문서로 보는 html 은 doc() 가 따로 정한다 (html_doc_policy)
+            resp.headers.setdefault('Content-Security-Policy', 'sandbox')
             resp.headers['X-Content-Type-Options'] = 'nosniff'
         return resp
 
@@ -125,7 +145,7 @@ def create_app(state: AppState) -> Flask:
     @app.get('/api/tree')
     def api_tree() -> Any:
         root = require_root()
-        return jsonify(root=str(root), tree=scan(root, state.exclude))
+        return jsonify(root=str(root), tree=state.scan())
 
     @app.get('/api/overview')
     def api_overview() -> Any:
@@ -137,7 +157,7 @@ def create_app(state: AppState) -> Flask:
                 abort(404)
             # 'docs/../docs' 나 대소문자가 다른 'DOCS' 도 트리와 같은 경로로 맞춘다
             rel = '' if target == root else target.relative_to(root).as_posix()
-        nodes = scan(root, state.exclude, rel=rel)
+        nodes = state.scan(rel=rel)
         dirs, files = [], []
         for node in nodes:
             if node['type'] == 'dir':
@@ -160,7 +180,7 @@ def create_app(state: AppState) -> Flask:
         query = request.args.get('q', '')
         if len(query) > MAX_QUERY:
             abort(400, description=f'검색어는 {MAX_QUERY}자까지입니다')
-        return jsonify(search_docs(root, list(iter_files(scan(root, state.exclude))), query))
+        return jsonify(search_docs(root, list(iter_files(state.scan())), query))
 
     @app.get('/api/changes')
     def api_changes() -> Any:
@@ -230,8 +250,15 @@ def create_app(state: AppState) -> Flask:
         target = resolve_inside(root, rel)
         if target is None or not target.is_file():
             abort(404)
-        if is_md(target.name):
+        kind = doc_kind(target.name)
+        if kind == 'markdown':
             return Response(read_text(target), content_type='text/markdown; charset=utf-8')
+        if kind == 'html':
+            # Claude 가 만드는 문서는 UTF-8 이다 (D1). meta charset 이 없어도 한글이 깨지지 않게 헤더로 정한다
+            resp = send_file(target, mimetype='text/html', conditional=True, max_age=0)
+            resp.headers['Content-Type'] = 'text/html; charset=utf-8'
+            resp.headers['Content-Security-Policy'] = html_doc_policy(state.config.get('external_images') is not False)
+            return resp
         return send_file(target, conditional=True, max_age=0)
 
     @app.errorhandler(404)

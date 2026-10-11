@@ -2,9 +2,13 @@
 
 import { S, emit, on } from './store.js';
 import { showDoc } from './doc.js';
+import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
 import { forgetFolds } from './fold.js';
-import { $ } from './util.js';
+import { $, isHtml } from './util.js';
+
+/** 문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js) */
+const render = (path, opts) => (isHtml(path) ? showHtml(path, opts) : showDoc(path, opts));
 
 const scrollPos = new Map();
 const keyOf = (t) => `${t.type}:${t.path || ''}`;
@@ -22,7 +26,7 @@ export async function navigate(target, { push = true, restoreScroll = false, ind
   let done;
   try {
     done = next.type === 'doc'
-      ? await showDoc(next.path, { hash: target.hash, scrollTop })
+      ? await render(next.path, { hash: target.hash, scrollTop })
       : await showOverview(next.path, { scrollTop });
   } finally {
     pending -= 1;
@@ -72,7 +76,7 @@ export function resetHistory() {
 export async function refreshView() {
   if (!S.view || pending) return;
   const scrollTop = $('#lec-content').scrollTop;
-  if (S.view.type === 'doc') await showDoc(S.view.path, { scrollTop });
+  if (S.view.type === 'doc') await render(S.view.path, { scrollTop });
   else await showOverview(S.view.path, { scrollTop });
 }
 

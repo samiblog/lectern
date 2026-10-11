@@ -111,7 +111,7 @@ flowchart LR
 | `GET /static/<경로>` | | `web/` 정적 파일 |
 | `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error, position}`. `position` 은 이 폴더의 `{doc, scroll}` (마지막 위치 복원). `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
 | `POST /api/open` | `{path}` | 폴더 열기. 성공 시 `/api/state` 와 같은 형식, 폴더가 아니면 400 |
-| `GET /api/tree` | | `{root, tree}` (스캔 결과). 폴더가 없으면 409 |
+| `GET /api/tree` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 폴더가 없으면 409 |
 | `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, hits:[{line, text}], more}], total, truncated}`. 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<seq>` | | `{seq, paths, structure, reset, root}` |
@@ -121,7 +121,7 @@ flowchart LR
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
 | `POST /api/open-external` | `{path, line?}` | `{action}` — `folder`·`default`·`editor`·`reveal` |
 | `POST /api/reveal` | `{path}` | 탐색기에서 선택. `{action:'reveal'}` |
-| `GET /doc/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, 그 밖은 파일 그대로. 숨김·밖·없음·폴더는 404. 응답에 `Content-Security-Policy: sandbox`·`X-Content-Type-Options: nosniff` (D20) |
+| `GET /doc/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20). 숨김·밖·없음·폴더는 404 |
 
 상태 코드: 400 잘못된 요청(필수 값 없음, JSON 객체가 아님, 폴더가 아님) · 403 토큰 불일치 또는 허용되지 않은 Host · 404 없음·숨김·프로젝트 밖 · 405 잘못된 메서드 · 409 열린 폴더 없음(`/api/tree`, `/api/overview`, `/doc/*` 등) · 500 OS가 파일 열기에 실패. `/api/*` 의 오류는 모두 `{error}` JSON이다.
 
@@ -171,6 +171,13 @@ sequenceDiagram
    - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다.
 5. 무대의 내용을 `#lec-view` 로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. `S.changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).
+
+### html 문서 (htmldoc.js)
+- `nav.js` 가 확장자로 렌더러를 고른다 (`.html`·`.htm` → `showHtml`). `HEAD /doc/<경로>` 로 있는지 보고, `<iframe sandbox="allow-same-origin">` 에 문서를 띄운다 (D27).
+- 불러온 뒤: `css/frame.css`(찾기 표시·바뀐 곳·우클릭 테두리)를 넣고, 문서가 불러온 스타일이 없으면 `base.css`·지금 스타일 css 를 넣고 `body` 에 `md-body` 를 단다. 스타일이 있으면 iframe 을 흰 바탕으로(다크 스타일에서 글자가 묻히지 않게). 목차용으로 id 없는 h1~h4 에 `lec-hN` 을 붙이고, 링크는 md 와 같은 `bindLink` 로 묶는다 (인터넷 링크는 앱이 `window.open` — sandbox 는 새 창을 못 연다).
+- iframe 안의 이벤트는 앱 문서로 올라오지 않으므로 keydown(단축키)·mouseup(마우스 뒤로/앞으로)·mousedown(메뉴 닫기)을 앱으로 넘기고, contextmenu 는 `docmenu.frameContextMenu` 로 보낸다.
+- 높이를 문서에 맞춘다 (ResizeObserver). 자동 새로고침 때는 새 iframe 을 옛 것 위에 보이지 않게 겹쳐 불러온 뒤 옛 것을 지운다 (iframe 은 DOM 에서 옮기면 다시 불러온다).
+- 다른 모듈은 `util.docRoot()`(md: `#lec-view`, html: iframe body)와 `util.screenRect()`(iframe 위치를 더한 화면 좌표)로 두 형식을 같이 다룬다 — 찾기·목차·바뀐 부분 강조. 바뀐 부분 강조는 html 에서 최상위 자식 대신 `p, li, h1~h6, tr, pre, blockquote, figure, dt, dd, img` 를 비교한다.
 
 ### 전체 검색 (search.js, lectern/search.py)
 - 사이드바 '검색' 탭(Ctrl+Shift+F). 입력을 250ms 기다렸다가 `GET /api/search?q=` 를 부르고, 늦게 온 결과는 버린다. 문서 목록이 바뀌면(자동 새로고침) 다시 찾는다.

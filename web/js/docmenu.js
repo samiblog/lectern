@@ -96,7 +96,7 @@ async function copyParts(parts, what) {
 /** 표 → 탭으로 나눈 글(엑셀이 칸으로 나눔)과 간단한 HTML 표(워드·메일이 표로 붙임) */
 function tableData(table) {
   const rows = [...table.rows].map((r) => [...r.cells].map((c) => {
-    const align = getComputedStyle(c).textAlign;
+    const align = c.ownerDocument.defaultView.getComputedStyle(c).textAlign;
     return { text: c.innerText.replace(/\s+/g, ' ').trim(), head: c.tagName === 'TH', align: /right|center/.test(align) ? align : '' };
   }));
   const tsv = rows.map((r) => r.map((c) => c.text).join('\t')).join('\n');
@@ -202,20 +202,30 @@ function docItems() {
   return items;
 }
 
-function onContextMenu(e) {
+/** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
+function openMenu(e, view, x, y) {
   if (!doc || S.view?.type !== 'doc' || S.view.path !== doc.path) return;   // 문서 화면에서만
-  if (e.target.closest('#lec-findbar')) return;
+  if (e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
-  const view = $('#lec-view');
   const el = pickBlock(e.target, view);
   const items = el ? blockItems(el) : docItems();
-  const sel = getSelection();
+  const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   if (selected) items.unshift({ label: '선택한 글 복사', hint: describe(selected), action: () => copyPlain(selected) }, '-');
   // 표는 가로 스크롤 상자가 테두리를 잘라 내므로 상자에 표시한다
   const mark = el?.tagName === 'TABLE' ? el.closest('.table-wrap') || el : el;
   mark?.classList.add('lec-picked');
-  showMenu(e.clientX, e.clientY, items, () => mark?.classList.remove('lec-picked'));
+  showMenu(x, y, items, () => mark?.classList.remove('lec-picked'));
+}
+
+function onContextMenu(e) {
+  openMenu(e, $('#lec-view'), e.clientX, e.clientY);
+}
+
+/** html 문서(iframe) 안의 우클릭 (htmldoc.js 가 붙인다). iframe 안의 좌표를 화면 좌표로 바꾼다 */
+export function frameContextMenu(e, frame) {
+  const r = frame.getBoundingClientRect();
+  openMenu(e, frame.contentDocument.body, r.left + e.clientX, r.top + e.clientY);
 }
 
 export function initDocMenu() {

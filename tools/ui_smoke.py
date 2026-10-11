@@ -70,8 +70,14 @@ def wait_http(url: str, timeout: float = 15) -> None:
 
 
 class _QuietHandler(http.server.SimpleHTTPRequestHandler):
+    received: list[str] = []   # '외부' 서버가 실제로 받은 경로 — 새는 요청을 가리는 최종 근거
+
     def log_message(self, *args) -> None:
         pass
+
+    def do_GET(self) -> None:
+        self.received.append(self.path)
+        super().do_GET()
 
 
 def start_image_server(folder: Path) -> tuple[http.server.ThreadingHTTPServer, int]:
@@ -118,6 +124,10 @@ def run(headed: bool) -> None:
         f'# 외부 이미지 확인\n\n![있는 그림]({remote}dot.svg)\n\n![없는 그림]({remote}missing.png)\n\n'
         + '\n\n'.join(x.format(r=remote) for x in LEAKS) + '\n', encoding='utf-8')
     (work / 'docs' / '98-원시-HTML.md').write_text(RAW_HTML.format(r=remote), encoding='utf-8')
+    # html 문서의 인터넷 CSS 는 막혀야 한다 (그림만 허용). 요청이 나가면 아래 '새지 않음' 점검이 잡는다
+    report = work / 'docs' / '04-HTML-보고서.html'
+    report.write_text(report.read_text(encoding='utf-8').replace(
+        '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
     server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
@@ -138,6 +148,9 @@ def run(headed: bool) -> None:
             outside: list[tuple[str, str]] = []
             page.on('request', lambda r: outside.append((r.url, r.resource_type))
                     if not r.url.startswith((url, 'data:', 'blob:')) else None)
+            # CSP 가 막은 요청은 브라우저가 '요청 → 실패(csp)'로 알리지만 밖으로 나가지 않는다 ('외부' 서버의 received 로도 확인)
+            blocked: set[str] = set()
+            page.on('requestfailed', lambda r: blocked.add(r.url) if 'csp' in (r.failure or '').lower() else None)
             shot = lambda name: page.screenshot(path=str(SHOTS / f'{name}.png'))
 
             print('[트리와 개요]')
@@ -406,6 +419,60 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
             check(page.url == url, 'SVG xlink:href 링크도 앱 안에서 문서를 엶')
 
+            print('[HTML 문서]')
+            frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
+            labels = page.locator('#lec-tree .row.file').all_inner_texts()
+            check(any('HTML 보고서 예시' in t and 'HTML' in t.replace('HTML 보고서', '') for t in labels)
+                  and page.locator('#lec-tree .row.dir', has_text='src').count() == 0,
+                  'html 문서는 트리에 HTML 표시와 함께, src 폴더의 html(앱 소스)은 보이지 않음')
+            page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').click()
+            wait_until(page, f"{frame_js}?.contentDocument?.querySelector('h1')")
+            frame = page.frame_locator('#lec-view iframe.lec-html:not(.lec-loading)')
+            frame.locator('button').click()
+            info = page.evaluate(f"""() => {{ const f = {frame_js}; const d = f.contentDocument;
+              return {{ title: d.title, red: getComputedStyle(d.body).backgroundColor === 'rgb(255, 0, 0)', own: f.classList.contains('own-style'),
+                       fit: Math.abs(f.getBoundingClientRect().height - d.documentElement.scrollHeight) < 4,
+                       toc: document.querySelectorAll('#lec-toc a').length }}; }}""")
+            check(info['title'] == 'HTML 보고서 예시' and not info['red'] and info['own'] and info['fit'] and info['toc'] == 4,
+                  f'html 문서: 자기 스타일 그대로, 스크립트·인라인 이벤트는 돌지 않음, 문서 높이에 맞춘 틀, 목차 ({info})')
+            frame.locator('td', has_text='코발트').click()
+            page.keyboard.press('Control+f')   # iframe 안에 초점이 있어도 단축키가 앱으로 간다
+            page.fill('#lec-find-input', '코발트')   # 찾기 막대는 앞의 검색어로 먼저 한 번 찾으므로 이 검색어의 결과를 기다린다
+            wait_until(page, "document.querySelector('#lec-find-count').textContent === '1/1'")
+            found = page.locator('#lec-find-count').inner_text()
+            page.keyboard.press('Escape')
+            frame.locator('td', has_text='코발트').click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            head = page.locator('#lec-menu .menu-head').inner_text()
+            frame.locator('h1').click()   # iframe 안을 누르면 메뉴가 닫힌다
+            check(found == '1/1' and head == '표 · 3행 4열' and page.locator('#lec-menu').is_hidden(),
+                  f'html 문서 안 찾기(Ctrl+F)와 우클릭 메뉴 ({found!r}, {head!r})')
+            frame.locator('a', has_text='Markdown 문서의 표 절').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.keyboard.press('Alt+ArrowLeft')
+            wait_until(page, f"{frame_js}?.contentDocument?.title === 'HTML 보고서 예시'")
+            check(True, 'html 문서의 링크로 md 문서를 열고 뒤로 돌아옴')
+            report.write_text(report.read_text(encoding='utf-8').replace('공급 과잉', '공급 과잉 해소'), encoding='utf-8')
+            changed_ok = wait_until(page, f"{frame_js}?.contentDocument?.body.textContent.includes('공급 과잉 해소')", 8000)
+            changed = page.evaluate(f"[...{frame_js}.contentDocument.querySelectorAll('.lec-changed')].map(e => e.tagName)")
+            frames = page.locator('#lec-view iframe').count()
+            check(changed_ok and changed == ['TR'] and frames == 1, f'html 문서도 자동 새로고침, 바뀐 행만 강조 ({changed}, 틀 {frames}개)')
+            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click()
+            wait_until(page, f"{frame_js}?.contentDocument?.title === '스타일 없는 HTML'")
+            themed = page.evaluate(f"""(() => {{ const d = {frame_js}.contentDocument;
+              return d.body.classList.contains('md-body') && !!d.querySelector('link[href*="/static/themes/base.css"]'); }})()""")
+            check(themed, '스타일이 없는 html 은 Lectern 스타일로')
+            shot('08-html-plain')
+            page.keyboard.press('Control+Shift+F')
+            page.fill('#lec-search-input', '배터리 수요')
+            stale = page.locator('#lec-search-results .sr-hit').count()   # 입력하면 앞 검색어의 결과는 바로 지운다
+            page.keyboard.press('Enter')   # 결과를 기다리지 않고 Enter — 이 검색어로 찾은 첫 결과가 열려야 한다
+            opened = wait_until(page, f"{frame_js}?.contentDocument?.title === 'HTML 보고서 예시' && document.querySelector('#lec-find-count').textContent === '1/1'")
+            check(stale == 0 and opened, f'전체 검색이 html 본문도 찾고, 누르면 그 문서에서 표시 (남은 옛 결과 {stale}개)')
+            shot('08-html')
+            page.keyboard.press('Escape')
+            page.locator('.side-tabs button[data-tab="files"]').click()
+
             print('[외부 이미지]')
             page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()
             page.wait_for_selector('#lec-view h1:has-text("외부 이미지 확인")')
@@ -416,7 +483,7 @@ def run(headed: bool) -> None:
             check(loaded == [120], '외부 이미지 표시' + ('' if loaded == [120] else f': naturalWidth={loaded}'))
             check(page.locator('#lec-view .image-off').inner_text().startswith('외부 이미지를 불러오지 못했습니다'),
                   '불러오지 못한 외부 이미지는 링크로 대체')
-            leaked = [u for u, _ in outside if 'leak-' in u]
+            leaked = [u for u, _ in outside if 'leak-' in u and u not in blocked] + [p for p in _QuietHandler.received if 'leak-' in p]
             check(not leaked, '표 배경·SVG·image-set 으로는 외부 요청이 나가지 않음' + (f': {leaked}' if leaked else ''))
             items = menu(page.locator('#lec-view img.external'))
             page.keyboard.press('Escape')
@@ -462,7 +529,7 @@ def run(headed: bool) -> None:
             print('[보안]')
             check(page.evaluate("fetch('/doc/.hidden-note.md').then(r => r.status)") == 404, '숨김 문서 직접 요청 차단')
             check(page.evaluate("fetch('/doc/..%2F..%2Fetc%2Fpasswd').then(r => r.status)") == 404, '프로젝트 밖 경로 차단')
-            not_images = [u for u, kind in outside if kind != 'image']
+            not_images = [u for u, kind in outside if kind != 'image' and u not in blocked]
             check(not not_images, '외부 요청은 문서 속 이미지뿐 (스크립트·글꼴·CDN 없음)' + (f': {not_images[:3]}' if not_images else ''))
 
             browser.close()

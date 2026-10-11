@@ -11,7 +11,7 @@ import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { setStatus } from './status.js';
 import { openLightbox } from './ui.js';
 import {
-  $, $$, esc, encodePath, isMd, toast, copyText, formatDateTime, findAnchor, dirname,
+  $, $$, esc, encodePath, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
 } from './util.js';
 
 const PURIFY = {
@@ -100,8 +100,8 @@ export function resolveRef(href, baseUrl) {
   return { kind: 'local', path: path.replace(/\/+$/, ''), hash: url.hash, isDir };
 }
 
-/** 문서 안의 앵커로 스크롤. 접힌 절 안이면 펴서 보여 준다. */
-function scrollToAnchor(root, hash) {
+/** 문서 안의 앵커로 스크롤. 접힌 절 안이면 펴서 보여 준다. root 는 #lec-view 또는 html 문서(iframe)의 document */
+export function scrollToAnchor(root, hash) {
   const el = findAnchor(root, hash);
   if (!el) return false;
   unfoldTo(el);
@@ -117,13 +117,17 @@ const lineFromHash = (hash) => {
 // ---------------------------------------------------------------------------
 // 렌더링 후 다듬기
 
-function bindLink(a, baseUrl, docPath) {
+/**
+ * 문서 속 링크를 앱 안의 동작으로 바꾼다. root 는 앵커(#id)를 찾을 곳 — html 문서면 iframe 의 document (htmldoc.js).
+ */
+export function bindLink(a, baseUrl, docPath, root = null) {
   const r = resolveRef(a.getAttribute('href'), baseUrl);
+  const where = () => root || $('#lec-view');
   switch (r.kind) {
     case 'anchor':
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        if (!scrollToAnchor($('#lec-view'), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+        if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
       });
       break;
     case 'external':
@@ -132,6 +136,13 @@ function bindLink(a, baseUrl, docPath) {
       a.setAttribute('rel', 'noopener noreferrer');
       a.classList.add('ext');
       a.title = r.url;
+      if (a.ownerDocument !== document) {
+        // html 문서(iframe sandbox)는 새 창을 열 수 없으므로 앱이 연다 (창 모드에서는 기본 브라우저로)
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          window.open(r.url, '_blank', 'noopener');
+        });
+      }
       break;
     case 'local':
       a.title = r.path || '프로젝트 루트';
@@ -140,11 +151,12 @@ function bindLink(a, baseUrl, docPath) {
           e.preventDefault();
           emit('open', { type: 'overview', path: r.path });
         });
-      } else if (isMd(r.path)) {
+      } else if (isMd(r.path) || (isHtml(r.path) && S.fileMap.has(r.path))) {
+        // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
         a.addEventListener('click', (e) => {
           e.preventDefault();
           if (r.path === docPath && r.hash) {
-            if (!scrollToAnchor($('#lec-view'), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+            if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
           } else {
             emit('open', { type: 'doc', path: r.path, hash: r.hash });
           }
@@ -334,7 +346,7 @@ function enhance(root, docPath, stamp) {
 
 // ---------------------------------------------------------------------------
 
-function showMissing(view, path, err) {
+export function showMissing(view, path, err) {
   view.className = 'md-body';
   const parent = dirname(path);
   const reason = err?.status === 404 ? '문서가 없거나(삭제·이동) 숨김 경로에 있습니다.' : `문서를 읽지 못했습니다: ${err?.message || ''}`;

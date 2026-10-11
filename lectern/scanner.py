@@ -5,7 +5,9 @@
 - Windows 숨김(HIDDEN)·시스템(SYSTEM) 속성 파일·폴더
 - 심볼릭 링크와 정션 (순환·프로젝트 밖 참조 방지)
 - 제외 폴더 (node_modules, __pycache__ … + 설정의 exclude_dirs)
-- .md 파일이 하나도 없는 폴더
+- 문서(.md, .html)가 하나도 없는 폴더
+- html 은 앱 소스·빌드 결과인 경우가 많아, src·public·static·templates·web·www·frontend·out 폴더 안에서는
+  문서로 보지 않는다 (md 는 그대로 보인다). 설정 html_exclude_dirs 로 이름을 더한다 (D27)
 """
 from __future__ import annotations
 
@@ -19,6 +21,8 @@ from typing import Any
 from .docinfo import doc_info
 
 MD_EXT = frozenset({'.md', '.markdown'})
+DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html'}
+DEFAULT_HTML_EXCLUDE_DIRS = frozenset({'src', 'public', 'static', 'templates', 'web', 'www', 'frontend', 'out'})
 DEFAULT_EXCLUDE_DIRS = frozenset({
     'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build', 'target',
     'site-packages', 'htmlcov',
@@ -38,6 +42,11 @@ def is_md(name: str) -> bool:
     return os.path.splitext(name)[1].lower() in MD_EXT
 
 
+def doc_kind(name: str) -> str | None:
+    """'markdown' | 'html' | None (문서가 아님)"""
+    return DOC_TYPES.get(os.path.splitext(name)[1].lower())
+
+
 def has_hidden_attr(st: os.stat_result) -> bool:
     # st_file_attributes 는 Windows에만 있다. 다른 OS에서는 점(.) 규칙만 적용된다.
     return bool(getattr(st, 'st_file_attributes', 0) & _HIDDEN_ATTRS)
@@ -55,13 +64,16 @@ def _is_link(entry: os.DirEntry) -> bool:
 
 
 def scan(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, rel: str = '',
-         with_info: bool = True) -> list[Node]:
-    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로."""
+         with_info: bool = True, html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS) -> list[Node]:
+    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로. 파일 노드의 kind 는 markdown | html."""
     excl = frozenset(x.lower() for x in exclude)
-    return _scan_dir(root, rel, excl, with_info)
+    html_excl = frozenset(x.lower() for x in html_exclude)
+    html_ok = not any(part.lower() in html_excl for part in rel.split('/') if part)
+    return _scan_dir(root, rel, excl, with_info, html_excl, html_ok)
 
 
-def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool) -> list[Node]:
+def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
+              html_excl: frozenset[str], html_ok: bool) -> list[Node]:
     base = root / rel if rel else root
     try:
         with os.scandir(base) as it:
@@ -85,11 +97,14 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool) ->
         if is_dir:
             if name.lower() in exclude:
                 continue
-            children = _scan_dir(root, path, exclude, with_info)
+            children = _scan_dir(root, path, exclude, with_info, html_excl, html_ok and name.lower() not in html_excl)
             if children:
                 dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
-        elif is_md(name):
-            node: Node = {'type': 'file', 'name': name, 'path': path,
+        else:
+            kind = doc_kind(name)
+            if kind is None or (kind == 'html' and not html_ok):
+                continue
+            node: Node = {'type': 'file', 'name': name, 'path': path, 'kind': kind,
                           'mtime': st.st_mtime, 'size': st.st_size}
             if with_info:
                 node['title'] = doc_info(Path(entry.path), st)['title']

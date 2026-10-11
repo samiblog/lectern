@@ -177,3 +177,12 @@
 - **글꼴**: PC에 있는 글꼴만 쓴다 (사용자가 정함). 웹 글꼴은 로컬 전용 원칙(D19 외 외부 요청 금지)에 어긋나고, 글꼴을 앱에 넣으면 설치 파일이 10~20MB 커진다. 글꼴 목록 끝을 Windows 기본 글꼴로 두어 어느 PC에서나 한글이 보이게 한다 (모양은 PC마다 다를 수 있다).
 - **지키는 것**: 모든 스타일에서 본문·흐린 글자·링크의 대비 4.5:1 이상(WCAG AA), 제목 색은 본문과 조금 다르게, 표 머리행은 본문 행과 구분 (v0.1.4 사용자 요청). `ui_smoke.py` 가 스타일마다 확인한다.
 - **기본값**: 고른 스타일은 설정에 저장되어 다음 실행의 기본이 된다. 처음 실행은 '자동'(Windows 다크 모드면 다크, 아니면 기본).
+
+## D27. HTML 문서는 스크립트 없는 같은 출처 iframe 으로 본다
+
+- **결정**: `.html`·`.htm` 를 문서로 보인다 (v0.3.0). 사용자가 정한 것 — 문서를 보는 위주로 한정해 스크립트는 돌리지 않는다. 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`, 설정 `html_exclude_dirs` 로 더함) 안의 html 은 문서로 보지 않는다 (md 는 그대로). 인터넷에서 불러오는 것은 그림만 `external_images` 를 따르고 CSS·글꼴·스크립트는 막는다. 문서에 CSS가 있으면 그대로, 없으면 Lectern 스타일을 입힌다.
+- **보이는 방법**: `<iframe sandbox="allow-same-origin">` 에 `/doc/<경로>` 를 띄운다. 서버는 html 응답에 `sandbox allow-same-origin; default-src 'none'; img-src 'self' data: [http: https:]; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self'; base-uri 'self'; form-action 'none'` 을 붙인다. `allow-scripts` 가 없으므로 문서의 `<script>`·인라인 이벤트(`onclick`)는 돌지 않는다.
+- **같은 출처를 고른 이유**: 처음 구상(ROADMAP 4단계 구현 메모)은 출처를 다르게 하고 `postMessage` 로 목차·찾기·링크를 주고받는 것이었다. 그러려면 iframe 안에서 작은 스크립트가 돌아야 한다. 스크립트를 아예 끄면 같은 출처여도 문서가 앱(`/api/*`, 토큰)에 닿을 길이 없고, 앱(부모)이 iframe 안을 직접 읽어 목차·찾기(CSS Highlight)·링크·우클릭 메뉴·바뀐 부분 강조를 md 와 같은 코드로 다룰 수 있다. 부모가 붙인 이벤트·ResizeObserver·하이라이트가 스크립트 없는 iframe 에서도 동작하는 것을 Chromium 에서 확인했다.
+- **높이**: iframe 을 문서 높이에 맞추고 `#lec-content` 가 스크롤한다 — 스크롤 위치 유지·마지막 위치·목차의 현재 위치가 md 와 같게 동작한다. `100vh` 를 쓰는 문서가 끝없이 커지지 않도록 같은 만큼 계속 커지면 멈춘다.
+- **앱 CSP**: `/` 의 `frame-src` 를 `'none'` 에서 `'self'` 로 바꿨다 (D20 에 적어 둔 대로). 문서가 `<meta http-equiv="refresh">` 로 iframe 을 바깥 주소로 보내려 해도 이 규칙이 막는다.
+- **감수하는 것**: 스크립트로 그리는 차트(Chart.js 등)·인터넷 CSS를 쓰는 보고서는 다르게 보인다. html 은 원문 줄과 화면을 이을 수 없어 원문 복사·Claude용 위치·전체 검색 결과의 줄 이동이 없다 (검색어 첫 결과로 간다). 제목 접기도 없다.

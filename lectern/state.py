@@ -9,7 +9,7 @@ from typing import Any
 from . import __version__
 from .changes import ChangeLog, Watcher
 from .config import Config
-from .scanner import DEFAULT_EXCLUDE_DIRS
+from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan
 
 
 class AppState:
@@ -26,6 +26,16 @@ class AppState:
     def exclude(self) -> frozenset[str]:
         extra = self.config.get('exclude_dirs') or []
         return DEFAULT_EXCLUDE_DIRS | frozenset(str(x).lower() for x in extra)
+
+    @property
+    def html_exclude(self) -> frozenset[str]:
+        extra = self.config.get('html_exclude_dirs') or []
+        return DEFAULT_HTML_EXCLUDE_DIRS | frozenset(str(x).lower() for x in extra)
+
+    def scan(self, rel: str = '', with_info: bool = True) -> list:
+        """열린 폴더의 트리 (설정의 제외 폴더를 반영)"""
+        assert self.root is not None
+        return scan(self.root, self.exclude, rel=rel, with_info=with_info, html_exclude=self.html_exclude)
 
     def open(self, folder: str | os.PathLike) -> Path:
         path = Path(folder).expanduser().resolve()

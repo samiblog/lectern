@@ -3,14 +3,17 @@
 파일 앞부분(16KB)만 읽고, (수정 시각, 크기)가 같으면 캐시를 쓴다.
 - 제목: frontmatter의 title/name → 첫 번째 H1 → 첫 번째 제목(H2~H6)
 - 요약: frontmatter의 description/summary → 본문 첫 문단 (마크다운 기호 제거, 160자)
+- html: 제목은 <title> → 첫 <h1> → 첫 제목, 요약은 <meta name="description"> → 첫 <p> (앞 64KB)
 """
 from __future__ import annotations
 
 import re
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
 HEAD_BYTES = 16 * 1024
+HTML_HEAD_BYTES = 64 * 1024   # html 은 앞에 큰 <style> 이 오기도 한다
 SUMMARY_LEN = 160
 
 _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
@@ -130,6 +133,54 @@ def extract_info(text: str) -> dict[str, Any]:
     }
 
 
+class _HtmlInfo(HTMLParser):
+    """<title>, 첫 h1·제목·p 의 글자와 meta description 을 모은다. 스크립트·스타일 안은 보지 않는다."""
+    SKIP = frozenset({'script', 'style', 'template', 'noscript', 'svg'})
+    GRAB = frozenset({'title', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p'})
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.found: dict[str, str] = {}
+        self.description = ''
+        self._skip = 0
+        self._tag: str | None = None
+        self._buf: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self.SKIP:
+            self._skip += 1
+        elif tag == 'meta':
+            a = {k: v or '' for k, v in attrs}
+            if a.get('name', '').lower() == 'description' and not self.description:
+                self.description = a.get('content', '').strip()
+        elif tag in self.GRAB and self._tag is None and not self._skip:
+            self._tag, self._buf = tag, []
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag in self.SKIP:
+            self._skip = max(0, self._skip - 1)
+        elif tag == self._tag:
+            text = re.sub(r'\s+', ' ', ''.join(self._buf)).strip()
+            if text:
+                self.found.setdefault('heading' if tag[0] == 'h' and tag != 'h1' else tag, text)
+            self._tag = None
+
+    def handle_data(self, data: str) -> None:
+        if self._tag and not self._skip:
+            self._buf.append(data)
+
+
+def extract_html_info(text: str) -> dict[str, Any]:
+    parser = _HtmlInfo()
+    parser.feed(text)
+    found = parser.found
+    summary = parser.description or found.get('p') or ''
+    return {
+        'title': found.get('title') or found.get('h1') or found.get('heading'),
+        'summary': _truncate(re.sub(r'\s+', ' ', summary)) if summary else '',
+    }
+
+
 def doc_info(path: Path, st: Any = None) -> dict[str, Any]:
     """파일의 제목·요약. 읽을 수 없으면 빈 값."""
     empty = {'title': None, 'summary': ''}
@@ -143,7 +194,10 @@ def doc_info(path: Path, st: Any = None) -> dict[str, Any]:
     if hit and hit[0] == sig:
         return hit[1]
     try:
-        info = extract_info(read_text(path, HEAD_BYTES))
+        if path.suffix.lower() in ('.html', '.htm'):
+            info = extract_html_info(read_text(path, HTML_HEAD_BYTES))
+        else:
+            info = extract_info(read_text(path, HEAD_BYTES))
     except OSError:
         return empty
     _CACHE[key] = (sig, info)

@@ -151,6 +151,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   transform: rotate(-45deg); transition: transform .12s ease;
 }
 .caret.open::before { transform: rotate(45deg); margin: -3px 0 0; }
+.kind { flex: none; padding: 0 4px; border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-faint); font-size: 10px; font-weight: 700; line-height: 15px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
 
 /* 전체 검색 (search.js) */
@@ -357,6 +358,11 @@ button.primary:hover { filter: brightness(1.08); }
 }
 .fresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* html 문서 (htmldoc.js): iframe 높이를 문서에 맞추고 #lec-content 가 스크롤한다 */
+iframe.lec-html { display: block; width: 100%; height: 480px; border: 0; background: transparent; }
+iframe.lec-html.own-style { background: #fff; }   /* 바탕색을 정하지 않은 문서가 다크 스타일에서 안 보이지 않게 */
+iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: hidden; }
 
 /* 렌더링용 무대 (화면 밖에서 먼저 그리기) */
 .lec-stage { position: absolute !important; left: -20000px !important; top: 0; visibility: hidden; pointer-events: none; }

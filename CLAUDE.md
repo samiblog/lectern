@@ -1,7 +1,7 @@
 # Lectern — Claude Code 작업 지침
 
 Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·Claude가 프로젝트 폴더에 만든 문서를 **기계가 아닌 사람이** 한눈에 훑어보고 읽는 것이 목적이고, **보기 전용**이다.
-지금은 Markdown(`.md`)만 본다. 나중에 HTML 문서도 볼 예정이므로 이름·구조에 'md 전용'을 새로 박아 넣지 않는다 (`docs/DECISIONS.md` D18, `docs/ROADMAP.md` 4단계).
+Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 `scanner.DOC_TYPES` 가 정한다.
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
 현재 버전 0.2.0 (MVP, 외부 이미지, 검토 후 수정, 제목 접기, 본문 우클릭 메뉴, 스타일 12종, 설치 파일). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
@@ -9,9 +9,9 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 ## 반드시 지킬 원칙
 
 1. **보기 전용.** 사용자 파일을 만들거나 고치거나 지우는 기능을 넣지 않는다. 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다.
-2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
+2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). html 문서도 같다 — 서버가 `/doc/*.html` 에 붙이는 CSP가 스크립트·연결·인터넷 CSS·글꼴을 막고 그림만 `external_images` 를 따르게 한다 (D27). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다.
-4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / md가 없는 폴더는 트리에 나오지 않는다.
+4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
 5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기).
 6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나. 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
 
@@ -76,6 +76,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
 | settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 마지막 문서·스크롤 위치 기록 |
+| htmldoc.js | html 문서 보기 — 스크립트 없는 같은 출처 iframe (css/frame.css 를 넣는다) |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |
 | theme.js | 문서 스타일 목록(THEMES)과 전환. 스타일 선택 목록도 이 표로 만든다 |
 | mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
@@ -107,4 +108,6 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - Windows에서 Python `mimetypes` 는 레지스트리 값을 기본값보다 우선한다. 레지스트리에 `.js` 가 `text/plain` 으로 잡힌 PC에서는 모듈 스크립트가 거부되어 화면이 빈다. 그래서 `server.py` 의 `FIXED_TYPES` 가 `.js`·`.css`·`.svg`·`.woff2` 의 형식을 정한다. 앱이 새 확장자의 파일을 내보내면 여기에 넣을지 본다.
 - 문서 스타일은 PC에 있는 글꼴만 쓴다 (웹 글꼴 금지, 내장도 안 함 — D26). 글꼴 목록은 영문 글꼴 → 한글 글꼴 → `Malgun Gothic`·`Batang` 같은 Windows 기본 글꼴 순으로 끝내서, 그 글꼴이 없는 PC에서도 한글이 보이게 한다. 새 스타일은 `ui_smoke.py` 가 글자 대비(WCAG 4.5:1)와 제목 색·표 머리행 구분을 확인한다.
 - `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.
+- html 문서는 `<iframe sandbox="allow-same-origin">` 이다. **`allow-scripts` 를 더하지 않는다** — 같은 출처라서 스크립트가 돌면 앱의 `/api/*`·토큰에 닿는다. 서버 CSP(`html_doc_policy`)도 함께 막는다.
+- iframe 안의 키·마우스 이벤트는 앱 문서로 올라오지 않는다. `htmldoc.js` 가 keydown·mouseup·mousedown 을 앱으로 넘기므로, 새 단축키는 `main.js` 에만 넣으면 html 문서에서도 된다. 문서 속 요소를 찾을 때는 `util.docRoot()`, 화면 좌표는 `util.screenRect()` 를 쓴다 (iframe 위치를 더함).
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

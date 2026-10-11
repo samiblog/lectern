@@ -4,6 +4,7 @@ import { S, emit } from './store.js';
 import { getJSON } from './api.js';
 import { clearToc } from './toc.js';
 import { setStatus } from './status.js';
+import { kindBadge } from './tree.js';
 import { $, esc, timeAgo, formatDateTime } from './util.js';
 
 function crumbs(path) {
@@ -50,7 +51,7 @@ function render(d) {
     parts.push(`<section class="ov-sec"><h2>${d.dirs.length ? '이 폴더의 문서' : '문서'}</h2><ul class="ov-files">${d.files.map((f) => {
       const fresh = S.changed.has(f.path);
       return `<li><button type="button" data-doc="${esc(f.path)}">
-        <span class="t">${esc(f.title || f.name)}${fresh ? '<span class="fresh-dot" title="열어 보기 전에 바뀜"></span>' : ''}</span>
+        <span class="t">${esc(f.title || f.name)}${kindBadge(f)}${fresh ? '<span class="fresh-dot" title="열어 보기 전에 바뀜"></span>' : ''}</span>
         <span class="when" title="${formatDateTime(f.mtime)}">${esc(timeAgo(f.mtime))}</span>
         ${f.title ? `<span class="fname">${esc(f.name)}</span>` : ''}
         ${f.summary ? `<span class="sum">${esc(f.summary)}</span>` : ''}

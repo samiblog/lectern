@@ -57,3 +57,12 @@ def test_doc_info_cache_follows_mtime(tmp_path):
     p.write_text('# 둘째 제목\n', encoding='utf-8')
     assert doc_info(p)['title'] == '둘째 제목'
     assert doc_info(tmp_path / 'none.md') == {'title': None, 'summary': ''}
+
+
+def test_html_info():
+    from lectern.docinfo import extract_html_info
+
+    head = '<html><head><title> 구리 보고서 </title><meta name="description" content="요약 문장"><style>p{}</style></head>'
+    assert extract_html_info(head + '<body><h1>제목</h1><p>첫 문단</p></body></html>') == {'title': '구리 보고서', 'summary': '요약 문장'}
+    body = '<body><script>var x = "<h1>아님</h1>"</script><h2>둘째</h2><p>첫 <b>문단</b>입니다</p></body>'
+    assert extract_html_info(body) == {'title': '둘째', 'summary': '첫 문단입니다'}

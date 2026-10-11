@@ -5,6 +5,8 @@ import sys
 
 import pytest
 
+from conftest import write
+
 from lectern.scanner import iter_files, natural_key, resolve_inside, scan
 
 
@@ -91,3 +93,15 @@ def test_resolve_inside(project):
     assert resolve_inside(project, 'a\x00b') is None
     # 제외 폴더는 트리에는 안 나오지만 링크로는 열 수 있다 (숨김이 아니므로)
     assert resolve_inside(project, 'node_modules/lib/README.md') is not None
+
+
+def test_html_docs_and_source_folders(project):
+    write(project / 'reports' / 'r.html', '<title>보고서</title><p>요약</p>')
+    write(project / 'src' / 'index.html', '<html></html>')        # 앱 소스 — 문서로 보지 않음
+    write(project / 'web' / 'notes.md', '# md 는 그대로')
+    write(project / 'web' / 'app.html', '<p>앱</p>')
+    kinds = {n['path']: n['kind'] for n in iter_files(scan(project))}
+    assert kinds['reports/r.html'] == 'html' and kinds['README.md'] == 'markdown'
+    assert 'src/index.html' not in kinds and 'web/app.html' not in kinds and kinds['web/notes.md'] == 'markdown'
+    assert [n['path'] for n in iter_files(scan(project, rel='web'))] == ['web/notes.md']   # 하위 폴더 개요도 같게
+    assert 'web/app.html' in {n['path'] for n in iter_files(scan(project, html_exclude=()))}

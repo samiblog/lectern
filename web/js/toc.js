@@ -2,7 +2,7 @@
 
 import { S } from './store.js';
 import { unfoldTo } from './fold.js';
-import { $, $$, esc } from './util.js';
+import { $, $$, esc, screenRect } from './util.js';
 
 let heads = [];
 let links = [];
@@ -51,14 +51,14 @@ function spy() {
   const shown = (h) => !h.classList.contains('lec-fold-hidden');   // 접힌 절 안의 제목은 위치가 0이다
   for (let i = 0; i < heads.length; i++) {
     if (!shown(heads[i])) continue;
-    if (heads[i].getBoundingClientRect().top <= limit) idx = i;
+    if (screenRect(heads[i]).top <= limit) idx = i;   // html 문서(iframe) 안의 제목도 화면 좌표로
     else break;
   }
   // 문서 끝까지 내려오면 마지막 절들은 위로 올라갈 수 없으므로, 화면에 보이는 마지막 제목을 현재 위치로 본다
   if (content.scrollTop + content.clientHeight >= content.scrollHeight - 4) {
     const bottom = content.getBoundingClientRect().bottom;
     for (let i = heads.length - 1; i > idx; i--) {
-      if (shown(heads[i]) && heads[i].getBoundingClientRect().top < bottom) { idx = i; break; }
+      if (shown(heads[i]) && screenRect(heads[i]).top < bottom) { idx = i; break; }
     }
   }
   if (idx === active) return;

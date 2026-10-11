@@ -8,7 +8,7 @@ import { switchTab } from './tree.js';
 import { findText } from './find.js';
 import { unfoldTo } from './fold.js';
 import { flashBlock } from './diffmark.js';
-import { $, esc, debounce, dirname } from './util.js';
+import { $, esc, debounce, dirname, isHtml } from './util.js';
 
 let query = '';    // 결과가 화면에 있는 검색어
 
@@ -83,8 +83,12 @@ function goToLine(line) {
 async function openHit(path, line) {
   const here = S.view?.type === 'doc' && S.view.path === path;
   if (!here && !(await navigate({ type: 'doc', path }))) return;
-  findText(query);
-  if (line) goToLine(line);
+  if (isHtml(path)) {
+    findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
+  } else {
+    findText(query);
+    if (line) goToLine(line);
+  }
 }
 
 export function openSearch() {
@@ -95,10 +99,17 @@ export function openSearch() {
 
 export function initSearch() {
   const later = debounce(run, 250);
-  input().addEventListener('input', later);
-  input().addEventListener('keydown', (e) => {
+  input().addEventListener('input', () => {
+    // 앞 검색어의 결과를 바로 지운다 — 남아 있으면 Enter·클릭이 옛 결과를 연다
+    query = '';
+    $('#lec-search-results').innerHTML = '';
+    $('#lec-search-info').textContent = input().value.trim() ? '찾는 중…' : '';
+    later();
+  });
+  input().addEventListener('keydown', async (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (query !== input().value.trim()) await run();   // 기다리는 중이면 바로 찾고 첫 결과로
       $('#lec-search-results .sr-hit')?.click();
     } else if (e.key === 'Escape' && input().value) {
       e.stopPropagation();

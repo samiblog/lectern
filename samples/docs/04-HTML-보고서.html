@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>HTML 보고서 예시</title>
+<meta name="description" content="스스로 스타일을 가진 html 문서가 어떻게 보이는지 확인하는 예시입니다. 값은 모두 예시입니다.">
+<style>
+  body { margin: 0; background: #f6f7f9; color: #222; font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
+  header { background: #20364f; color: #fff; padding: 28px 40px; }
+  header h1 { margin: 0; font-size: 26px; }
+  header p { margin: 6px 0 0; opacity: .8; }
+  main { max-width: 860px; margin: 0 auto; padding: 24px 40px 60px; }
+  .card { background: #fff; border: 1px solid #dde3ea; border-radius: 8px; padding: 18px 22px; margin: 18px 0; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #e3e7ec; padding: 6px 10px; text-align: left; }
+  th { background: #eef2f6; }
+  td.num { text-align: right; }
+  .note { color: #6a5000; background: #fff6d6; border-radius: 6px; padding: 10px 14px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>HTML 보고서 예시</h1>
+  <p>Claude가 html로 만든 보고서를 Lectern이 어떻게 보여 주는지 확인합니다.</p>
+</header>
+<main>
+  <section class="card">
+    <h2 id="summary">요약</h2>
+    <p>이 문서는 자기 스타일(CSS)을 가지고 있어 그 모양 그대로 보입니다. 스크립트는 돌지 않으므로, 스크립트로 그리는 차트는 보이지 않습니다.</p>
+    <p class="note">아래 버튼을 눌러도 아무 일도 일어나지 않아야 합니다 (스크립트를 막음).</p>
+    <button type="button" onclick="document.body.style.background = 'red'">스크립트 시험 버튼</button>
+  </section>
+
+  <section class="card">
+    <h2 id="prices">분기별 가격</h2>
+    <table>
+      <thead><tr><th>품목</th><th>1분기</th><th>2분기</th><th>비고</th></tr></thead>
+      <tbody>
+        <tr><td>구리</td><td class="num">$8,950</td><td class="num">$9,420</td><td>재고 감소</td></tr>
+        <tr><td>코발트</td><td class="num">$27,300</td><td class="num">$26,100</td><td>공급 과잉</td></tr>
+        <tr><td>리튬</td><td class="num">$11,800</td><td class="num">$12,600</td><td>배터리 수요</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section class="card">
+    <h2 id="chart">그림</h2>
+    <p>상대경로 그림은 문서 위치를 기준으로 찾습니다.</p>
+    <img src="../research/images/price-band.svg" alt="분기별 가격 범위" style="max-width: 100%">
+  </section>
+
+  <section class="card">
+    <h2 id="links">링크</h2>
+    <ul>
+      <li><a href="01-기능-점검.md#표">Markdown 문서의 표 절</a>: 뷰어 안에서 열립니다</li>
+      <li><a href="05-맨-HTML.html">스타일이 없는 html 문서</a>: 뷰어 안에서 열립니다</li>
+      <li><a href="#prices">이 문서의 가격 표</a>: 같은 문서 안</li>
+      <li><a href="https://spec.commonmark.org/">CommonMark 명세</a>: 기본 브라우저로 엽니다</li>
+    </ul>
+  </section>
+</main>
+<script>document.body.style.background = 'red'; document.title = '스크립트가 돌았음';</script>
+</body>
+</html>

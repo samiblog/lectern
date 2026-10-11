@@ -39,3 +39,10 @@ def test_limits_and_snippet(project):
     long = 'ㄱ' * 300 + '찾을말' + 'ㄴ' * 300
     s = snippet(long, 300)
     assert s.startswith('…') and s.endswith('…') and '찾을말' in s and len(s) <= SNIPPET + 2
+
+
+def test_html_searches_visible_text_only(project):
+    write(project / 'r.html', '<html><head><style>.구리 {}</style><script>var 구리 = 1</script></head>\n<body>\n<p>구리 <b>가격</b> &amp; 재고</p>\n</body></html>')
+    r = run(project, '구리 가격')
+    assert r['results'][0]['hits'] == [{'line': 3, 'text': '구리 가격 & 재고'}]
+    assert run(project, 'var')['results'] == []      # 스크립트·스타일 안은 찾지 않는다

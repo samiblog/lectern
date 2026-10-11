@@ -2,23 +2,25 @@
 //
 // pywebview는 디버그 모드가 아니면 WebView2의 기본 찾기(Ctrl+F)를 끈다.
 // 그래서 CSS Custom Highlight API로 직접 구현한다 (DOM을 바꾸지 않아 다시 그리기와 충돌이 없다).
+// html 문서는 iframe 안을 찾는다. 하이라이트는 문서마다 따로라서 iframe 창의 CSS.highlights 에 넣는다 (표시 색은 css/frame.css).
 
 import { on } from './store.js';
 import { unfoldTo } from './fold.js';
-import { $, debounce } from './util.js';
+import { $, debounce, docRoot, screenRect } from './util.js';
 
 const MAX_HITS = 2000;
 let ranges = [];
 let current = -1;
+let win = window;   // 하이라이트를 넣은 창 (html 문서면 iframe 의 창)
 
 const bar = () => $('#lec-findbar');
 const input = () => $('#lec-find-input');
-const supported = () => typeof CSS !== 'undefined' && CSS.highlights && typeof Highlight !== 'undefined';
+const supported = (w) => !!(w.CSS?.highlights && w.Highlight);
 
 function clearMarks() {
-  if (supported()) {
-    CSS.highlights.delete('lec-find');
-    CSS.highlights.delete('lec-find-current');
+  if (supported(win)) {
+    win.CSS.highlights.delete('lec-find');
+    win.CSS.highlights.delete('lec-find-current');
   }
   ranges = [];
   current = -1;
@@ -29,17 +31,19 @@ function search(keepIndex = false) {
   const prev = current;
   clearMarks();
   const query = input().value;
-  if (!query || !supported()) return;
+  const root = docRoot();
+  const doc = root.ownerDocument;
+  win = doc.defaultView;
+  if (!query || !supported(win)) return;
   const needle = query.toLowerCase();
-  const view = $('#lec-view');
-  const walker = document.createTreeWalker(view, NodeFilter.SHOW_TEXT, {
+  const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
     acceptNode: (n) => (n.parentElement?.closest('.code-tools, svg, .katex-mathml, script, style')
       ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
   for (let node = walker.nextNode(); node && ranges.length < MAX_HITS; node = walker.nextNode()) {
     const text = node.nodeValue.toLowerCase();
     for (let i = text.indexOf(needle); i !== -1 && ranges.length < MAX_HITS; i = text.indexOf(needle, i + needle.length)) {
-      const r = new Range();
+      const r = doc.createRange();
       r.setStart(node, i);
       r.setEnd(node, i + needle.length);
       ranges.push(r);
@@ -49,20 +53,20 @@ function search(keepIndex = false) {
     $('#lec-find-count').textContent = '없음';
     return;
   }
-  CSS.highlights.set('lec-find', new Highlight(...ranges));
+  win.CSS.highlights.set('lec-find', new win.Highlight(...ranges));
   go(keepIndex && prev >= 0 ? Math.min(prev, ranges.length - 1) : 0, !keepIndex);
 }
 
 function go(index, scroll = true) {
   if (!ranges.length) return;
   current = (index + ranges.length) % ranges.length;
-  CSS.highlights.set('lec-find-current', new Highlight(ranges[current]));
+  win.CSS.highlights.set('lec-find-current', new win.Highlight(ranges[current]));
   $('#lec-find-count').textContent = `${current + 1}/${ranges.length}`;
   if (!scroll) return;
   unfoldTo(ranges[current].startContainer.parentElement);   // 접힌 절 안의 결과는 펴서 보여 준다
   const content = $('#lec-content');
   const box = content.getBoundingClientRect();
-  const rect = ranges[current].getBoundingClientRect();
+  const rect = screenRect(ranges[current]);
   if (rect.top < box.top + 56 || rect.bottom > box.bottom - 24) {
     content.scrollTop += rect.top - box.top - box.height / 3;
   }
@@ -75,11 +79,11 @@ export function openFind() {
   if (input().value) search();
 }
 
-/** 검색어를 넣고 찾기 막대를 연다. 스크롤은 하지 않는다 (부른 쪽이 위치를 정한다 — 전체 검색 결과로 갈 때) */
-export function findText(query) {
+/** 검색어를 넣고 찾기 막대를 연다 (전체 검색 결과로 갈 때). scroll 이 거짓이면 부른 쪽이 위치를 정한다 */
+export function findText(query, { scroll = false } = {}) {
   bar().hidden = false;
   input().value = query;
-  search(true);
+  search(!scroll);
 }
 
 export function closeFind() {

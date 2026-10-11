@@ -1,0 +1,16 @@
+/* html 문서(iframe) 안에 넣는 Lectern 표시용 스타일 (htmldoc.js 가 넣는다).
+   iframe 은 앱의 CSS 변수를 물려받지 않으므로 색을 직접 적는다 — app.css 의 --ui-find·--ui-find-current·--ui-fresh 와 맞춘다. */
+
+::highlight(lec-find) { background-color: #ffe28a; color: inherit; }
+::highlight(lec-find-current) { background-color: #f6a623; color: #111; }
+
+/* 바뀐 부분 강조 (diffmark.js) */
+@keyframes lec-changed {
+  from { background-color: rgb(217 154 6 / .26); outline-color: rgb(217 154 6 / .8); }
+  to { background-color: transparent; outline-color: transparent; }
+}
+.lec-changed { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-changed 4s ease-in; }
+@media (prefers-reduced-motion: reduce) { .lec-changed { animation: none; outline-color: #d99a06; } }
+
+/* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
+.lec-picked { outline: 2px solid rgb(31 95 159 / .6) !important; outline-offset: 3px; border-radius: 2px; }

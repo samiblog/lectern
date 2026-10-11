@@ -4,7 +4,7 @@ Lectern의 기능을 확인하기 위한 예시 문서 모음입니다. `python 
 
 | 폴더 | 확인할 것 |
 |---|---|
-| `docs/` | 표·체크리스트·코드·콜아웃·각주·링크, 수식과 달러 표기, Mermaid |
+| `docs/` | 표·체크리스트·코드·콜아웃·각주·링크, 수식과 달러 표기, Mermaid, HTML 문서(자체 스타일 / 스타일 없음) |
 | `research/` | 리서치 문서 형식, 상대경로 이미지 |
 | `plans/` | frontmatter, 자연 정렬(2 → 10) |
 
@@ -12,6 +12,7 @@ Lectern의 기능을 확인하기 위한 예시 문서 모음입니다. `python 
 
 - `.hidden-note.md`, `.claude/` — 점으로 시작하는 이름
 - `node_modules/` — 제외 폴더
-- `empty-folder/` — md 파일이 없는 폴더
+- `empty-folder/` — 문서가 없는 폴더
+- `src/index.html` — 앱 소스 폴더의 html (문서로 보지 않음)
 
 Windows 숨김 속성 확인은 `attrib +h samples\docs\03-다이어그램.md` 처럼 속성을 붙여 확인합니다 (docs/TESTING.md 참고).

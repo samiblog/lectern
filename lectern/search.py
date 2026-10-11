@@ -2,10 +2,12 @@
 
 트리에 보이는 문서만 찾는다 — 숨김·제외·링크는 scan 이 이미 뺐다. 대소문자를 가리지 않고 글자 그대로 찾는다.
 결과는 문서별로 묶고, 긴 줄은 찾은 곳 둘레만 잘라 보낸다. 너무 많으면 자르고 truncated 를 켠다.
+html 은 태그를 빼고 화면에 보이는 글자만 찾는다 (script·style 안은 찾지 않음).
 줄 번호는 markdown-it 과 같게 센다 (\\r\\n·\\r·\\n 만 줄바꿈) — 화면에서 그 줄의 블록(data-lines)을 찾을 수 있도록.
 """
 from __future__ import annotations
 
+import html
 import re
 from pathlib import Path
 from typing import Any
@@ -22,10 +24,21 @@ SNIPPET = 160                 # 결과 한 줄의 최대 글자 수
 LEAD = 40                     # 잘라 낼 때 찾은 곳 앞에 남기는 글자 수
 
 _NEWLINE = re.compile(r'\r\n?')
+_HTML_HIDDEN = re.compile(r'<(script|style|template|svg)\b.*?</\1\s*>|<!--.*?-->', re.IGNORECASE | re.DOTALL)
+_HTML_TAG = re.compile(r'<[^>]*>')
 
 
-def lines_of(text: str) -> list[str]:
-    return _NEWLINE.sub('\n', text).split('\n')
+def _keep_newlines(m: re.Match) -> str:
+    return '\n' * m.group(0).count('\n') or ' '
+
+
+def lines_of(text: str, kind: str | None = None) -> list[str]:
+    """줄 목록. html 은 태그와 보이지 않는 부분(script·style·주석)을 지우되 그 안의 줄바꿈은 남겨 줄 번호를 지킨다."""
+    text = _NEWLINE.sub('\n', text)
+    if kind != 'html':
+        return text.split('\n')
+    text = _HTML_TAG.sub(_keep_newlines, _HTML_HIDDEN.sub(_keep_newlines, text))
+    return [' '.join(html.unescape(line).split()) for line in text.split('\n')]
 
 
 def snippet(line: str, at: int) -> str:
@@ -49,11 +62,12 @@ def search_docs(root: Path, files: list[Node], query: str) -> dict[str, Any]:
             text = read_text(root / f['path'], MAX_BYTES)
         except OSError:
             continue
-        if needle not in text.lower():
+        lines = lines_of(text, f.get('kind'))
+        if needle not in '\n'.join(lines).lower():   # html 은 태그를 뺀 글자로 본다 ('구리 <b>가격' → '구리 가격')
             continue
         hits = []
         more = False
-        for no, line in enumerate(lines_of(text), 1):
+        for no, line in enumerate(lines, 1):
             at = line.lower().find(needle)
             if at < 0:
                 continue

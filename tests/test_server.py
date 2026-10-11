@@ -4,6 +4,8 @@ from urllib.parse import quote
 
 import pytest
 
+from conftest import write
+
 from lectern import osutil
 from lectern.config import Config
 from lectern.server import create_app
@@ -224,3 +226,21 @@ def test_open_config(client, state, monkeypatch):
     monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor: calls.append(p) or 'editor')
     r = client.post('/api/open-config').get_json()
     assert r['action'] == 'editor' and calls == [state.config.path] and state.config.path.exists()
+
+
+def test_html_doc_policy(client, project):
+    write(project / 'docs' / 'r.html', '<title>보고서</title><p>본문</p>')
+    r = fetch(client, '/doc/docs/r.html')
+    csp = r.headers['Content-Security-Policy']
+    assert r.headers['Content-Type'] == 'text/html; charset=utf-8'
+    # 같은 출처(앱이 목차·찾기·링크를 다룸)지만 스크립트·연결·폼은 막고, 인터넷 그림은 설정을 따른다
+    assert csp.startswith('sandbox allow-same-origin;') and "default-src 'none'" in csp and 'https:' in csp
+    assert 'allow-scripts' not in csp and 'script-src' not in csp
+    client.post('/api/config', json={'external_images': False})
+    assert 'https:' not in fetch(client, '/doc/docs/r.html').headers['Content-Security-Policy']
+    assert fetch(client, '/doc/docs/img.svg').headers['Content-Security-Policy'] == 'sandbox'
+    assert csp_of(client)['frame-src'] == "'self'"
+    tree = client.get('/api/tree').get_json()['tree']
+    docs = next(n for n in tree if n['name'] == 'docs')
+    assert {'path': 'docs/r.html', 'kind': 'html', 'title': '보고서'}.items() <= next(
+        c for c in docs['children'] if c['name'] == 'r.html').items()

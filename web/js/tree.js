@@ -25,12 +25,15 @@ function hasChangedInside(dirPath) {
   return false;
 }
 
+/** html 문서 표시 (md 와 구분) */
+export const kindBadge = (f) => (f.kind === 'html' ? '<span class="kind" title="HTML 문서">HTML</span>' : '');
+
 function fileRow(f, depth, extra = '') {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
   const title = showTitles() && f.title ? `${f.path}\n${f.title}` : f.path;
   return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(title)}" tabindex="0">`
-    + `<span class="caret-space"></span><span class="label">${esc(labelOf(f))}</span>${extra}`
+    + `<span class="caret-space"></span><span class="label">${esc(labelOf(f))}</span>${kindBadge(f)}${extra}`
     + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
 }
 
@@ -85,7 +88,7 @@ function renderRecent() {
     const cls = ['row', 'recent'];
     if (f.path === activeDoc()) cls.push('active');
     return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" title="${esc(f.path)}" tabindex="0">`
-      + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${esc(labelOf(f))}</span>`
+      + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${esc(labelOf(f))}${kindBadge(f)}</span>`
       + `${S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
       + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
   }).join('') : '<p class="side-empty">문서가 없습니다</p>';
