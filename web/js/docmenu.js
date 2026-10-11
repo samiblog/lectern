@@ -250,11 +250,18 @@ function blockItems(el, target) {
   return items;
 }
 
+/** 인쇄 대화상자. html 문서는 그 문서 자체(자기 스타일)를 인쇄한다 — iframe 에 allow-modals 가 있어야 한다 */
+function printDoc() {
+  const frame = $('#lec-view > iframe.lec-html:not(.lec-loading)');
+  (frame ? frame.contentWindow : window).print();
+}
+
 function docItems() {
   const items = [{ header: doc.path }, ...pathMenuItems(doc.path, true)];
   if (hasFolds()) {
     items.push('-', { label: '모두 접기', action: () => foldAll(true) }, { label: '모두 펴기', action: () => foldAll(false) });
   }
+  items.push('-', { label: '인쇄 / PDF로 저장…', hint: "프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장", action: printDoc });
   return items;
 }
 

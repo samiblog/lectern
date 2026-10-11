@@ -234,7 +234,7 @@ def test_html_doc_policy(client, project):
     csp = r.headers['Content-Security-Policy']
     assert r.headers['Content-Type'] == 'text/html; charset=utf-8'
     # 같은 출처(앱이 목차·찾기·링크를 다룸)지만 스크립트·연결·폼은 막고, 인터넷 그림은 설정을 따른다
-    assert csp.startswith('sandbox allow-same-origin;') and "default-src 'none'" in csp and 'https:' in csp
+    assert csp.startswith('sandbox allow-same-origin allow-modals;') and "default-src 'none'" in csp and 'https:' in csp
     assert 'allow-scripts' not in csp and 'script-src' not in csp
     client.post('/api/config', json={'external_images': False})
     assert 'https:' not in fetch(client, '/doc/docs/r.html').headers['Content-Security-Policy']

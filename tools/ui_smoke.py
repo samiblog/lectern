@@ -614,6 +614,28 @@ def run(headed: bool) -> None:
             top = page.locator('#lec-content').evaluate('el => el.scrollTop')
             check(remembered and top == 500, f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top})')
 
+            print('[인쇄]')
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            items = menu(page.locator('#lec-content'), position={'x': 30, 'y': 420})
+            page.keyboard.press('Escape')
+            if not folded('코드'):
+                sec('코드').click()   # 접어 둔 절도 인쇄되는지
+            use_theme('dark')
+            page.emulate_media(media='print')
+            pr = page.evaluate('''() => ({
+              toolbar: getComputedStyle(document.querySelector('#lec-toolbar')).display,
+              folded: getComputedStyle(document.querySelector('#lec-view .lec-fold-hidden')).display,
+              fg: getComputedStyle(document.querySelector('#lec-view p')).color,
+              url: getComputedStyle(document.querySelector('#lec-view a.ext'), '::after').content })''')
+            pdf = b'' if headed else page.pdf()   # PDF 만들기는 headless 에서만 된다
+            page.emulate_media(media='screen')
+            use_theme('default')
+            sec('코드').click()
+            check('인쇄 / PDF로 저장' in items and pr['toolbar'] == 'none' and pr['folded'] != 'none'
+                  and pr['fg'] == 'rgb(17, 17, 17)' and 'https://' in pr['url'] and (headed or pdf.startswith(b'%PDF')),
+                  f'인쇄: 문서 메뉴에 인쇄, 화면 UI 빼고 접은 절 펴서, 어두운 스타일도 검은 글자, 링크 주소 표시 ({pr}, PDF {len(pdf)}바이트)')
+
             print('[보안]')
             check(page.evaluate("fetch('/doc/.hidden-note.md').then(r => r.status)") == 404, '숨김 문서 직접 요청 차단')
             check(page.evaluate("fetch('/doc/..%2F..%2Fetc%2Fpasswd').then(r => r.status)") == 404, '프로젝트 밖 경로 차단')

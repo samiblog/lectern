@@ -64,7 +64,7 @@ def html_doc_policy(external_images: bool) -> str:
     """
     img = "'self' data:" + (' http: https:' if external_images else '')
     return '; '.join((
-        'sandbox allow-same-origin',
+        'sandbox allow-same-origin allow-modals',   # allow-modals: 앱이 문서를 인쇄하려고 (스크립트는 여전히 없음)
         "default-src 'none'",
         f'img-src {img}',
         "style-src 'self' 'unsafe-inline'",

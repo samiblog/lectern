@@ -117,7 +117,8 @@ export async function showHtml(path, { hash = '', scrollTop } = {}) {
   const before = sameDoc && old.contentDocument?.body ? snapshot(old.contentDocument.body) : null;
   const frame = document.createElement('iframe');
   frame.className = 'lec-html';
-  frame.setAttribute('sandbox', 'allow-same-origin');   // allow-scripts 를 주지 않는다 (D27)
+  // allow-scripts 를 주지 않는다 (D27). allow-modals 는 앱이 이 문서를 인쇄(print)하려고 — 스크립트가 없으니 문서는 쓸 수 없다
+  frame.setAttribute('sandbox', 'allow-same-origin allow-modals');
   frame.title = path;
   if (sameDoc) {
     frame.classList.add('lec-loading');   // 옛 문서 위에 보이지 않게 겹쳐 불러온다 (iframe 은 옮기면 다시 불러오므로 제자리에서)
