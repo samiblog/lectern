@@ -13,6 +13,7 @@ Lectern의 기능을 확인하기 위한 예시 문서 모음입니다. `python 
 - `.hidden-note.md`, `.claude/` — 점으로 시작하는 이름
 - `node_modules/` — 제외 폴더
 - `empty-folder/` — 문서가 없는 폴더
+- `code/` — 문서가 없는 폴더. `example.py` 는 `docs/01-기능-점검.md` 의 'example.py 13번째 줄' 링크 대상 (편집기로 열림, 실행되면 안 됨)
 - `src/index.html` — 앱 소스 폴더의 html (문서로 보지 않음)
 
 Windows 숨김 속성 확인은 `attrib +h samples\docs\03-다이어그램.md` 처럼 속성을 붙여 확인합니다 (docs/TESTING.md 참고).

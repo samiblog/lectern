@@ -49,6 +49,7 @@
 - **결정**: 폴더를 누르거나 프로젝트를 열면 개요(최근 변경 레일, 하위 폴더, 문서별 제목·요약·수정 시각)를 보여 준다.
 - **이유**: 문서를 하나씩 열지 않고 무엇이 있는지, 무엇이 방금 바뀌었는지 파악하는 것이 이 도구의 핵심 가치다.
 - **보류**: 마지막에 본 문서로 시작하는 옵션은 ROADMAP에 있다.
+- **변경 (v0.3.0)**: 설정 `restore_last`(기본 켜짐 — 사용자가 고름)면 폴더를 열 때 마지막에 보던 문서·스크롤 위치로 시작한다. 그 문서가 없어졌거나 설정을 끄면 개요 (ROADMAP 2-4).
 
 ## D9. 변경 반영은 1초 폴링 (`/api/changes?since=seq`)
 
@@ -113,6 +114,7 @@
 - **이유**: 나중에 HTML 문서도 볼 예정이라 형식(md)이 이름에 들어가면 안 된다. 목적은 프로젝트 문서를 '기계가 아닌 사람이' 일목요연하게 보는 것이다. 독서대(lectern)는 사람이 문서를 펼쳐 놓고 읽는 받침대라 형식과 무관하게 이 목적을 담는다. 짧은 영문이라 터미널에서 `lectern .` 으로 치기 쉽다.
 - **검토한 다른 이름**: 열람실(Readroom), 일람(Illam), Glance(같은 이름이 흔함). Docent(도슨트)는 뜻이 가장 잘 맞았지만 AI 에이전트 기록 분석 도구(Transluce Docent)가 이미 쓰고 있어 뺐다.
 - **영향**: 새 코드·문서에 'md 전용'을 전제로 한 이름을 새로 만들지 않는다. 기존 `is_md`·`MD_EXT` 같은 이름은 HTML을 붙일 때(ROADMAP 4단계) 형식 표로 바꾼다.
+- **변경 (v0.3.0~)**: 형식 표 `DOC_TYPES`·`doc_kind()` 로 바꿨고, 쓰이지 않던 `is_md`·`MD_EXT` 는 지웠다 (점검 후).
 
 ## D19. 문서 속 외부 이미지는 보여 준다 (설정으로 끌 수 있음)
 
@@ -185,7 +187,7 @@
 ## D27. HTML 문서는 스크립트 없는 같은 출처 iframe 으로 본다
 
 - **결정**: `.html`·`.htm` 를 문서로 보인다 (v0.3.0). 사용자가 정한 것 — 문서를 보는 위주로 한정해 스크립트는 돌리지 않는다. 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`, 설정 `html_exclude_dirs` 로 더함) 안의 html 은 문서로 보지 않는다 (md 는 그대로). 인터넷에서 불러오는 것은 그림만 `external_images` 를 따르고 CSS·글꼴·스크립트는 막는다. 문서에 CSS가 있으면 그대로, 없으면 Lectern 스타일을 입힌다.
-- **보이는 방법**: `<iframe sandbox="allow-same-origin">` 에 `/doc/<경로>` 를 띄운다. 서버는 html 응답에 `sandbox allow-same-origin; default-src 'none'; img-src 'self' data: [http: https:]; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self'; base-uri 'self'; form-action 'none'` 을 붙인다. `allow-scripts` 가 없으므로 문서의 `<script>`·인라인 이벤트(`onclick`)는 돌지 않는다.
+- **보이는 방법**: `<iframe sandbox="allow-same-origin allow-modals">` 에 `/doc/<경로>` 를 띄운다 (`allow-modals` 는 v0.3.0 인쇄에서 더함 — 앱이 그 문서의 `print()` 를 부른다). 서버는 html 응답에 `sandbox allow-same-origin allow-modals; default-src 'none'; img-src 'self' data: [http: https:]; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self'; base-uri 'self'; form-action 'none'` 을 붙인다. `allow-scripts` 가 없으므로 문서의 `<script>`·인라인 이벤트(`onclick`)는 돌지 않는다.
 - **같은 출처를 고른 이유**: 처음 구상(ROADMAP 4단계 구현 메모)은 출처를 다르게 하고 `postMessage` 로 목차·찾기·링크를 주고받는 것이었다. 그러려면 iframe 안에서 작은 스크립트가 돌아야 한다. 스크립트를 아예 끄면 같은 출처여도 문서가 앱(`/api/*`, 토큰)에 닿을 길이 없고, 앱(부모)이 iframe 안을 직접 읽어 목차·찾기(CSS Highlight)·링크·우클릭 메뉴·바뀐 부분 강조를 md 와 같은 코드로 다룰 수 있다. 부모가 붙인 이벤트·ResizeObserver·하이라이트가 스크립트 없는 iframe 에서도 동작하는 것을 Chromium 에서 확인했다.
 - **높이**: iframe 을 문서 높이에 맞추고 `#lec-content` 가 스크롤한다 — 스크롤 위치 유지·마지막 위치·목차의 현재 위치가 md 와 같게 동작한다. `100vh` 를 쓰는 문서가 끝없이 커지지 않도록 같은 만큼 계속 커지면 멈춘다.
 - **앱 CSP**: `/` 의 `frame-src` 를 `'none'` 에서 `'self'` 로 바꿨다 (D20 에 적어 둔 대로). 문서가 `<meta http-equiv="refresh">` 로 iframe 을 바깥 주소로 보내려 해도 이 규칙이 막는다.
@@ -199,3 +201,12 @@
 - **이유**: 스타일 12종마다 UI 색을 따로 정하는 대신 한 규칙으로 맞추면 새 스타일도 `--md-*` 만 정하면 UI 가 따라온다. 종이 스타일은 세피아 사이드바, Nord 는 Nord 사이드바가 된다.
 - **규칙**: 툴바·사이드바 = 본문 바탕에 글자색 5%(어두운 스타일은 검정 16%로 본문보다 조금 어둡게), 팝업 = 본문 바탕, 고른 행 = 링크색 16~20%, 강조 = 링크색. 찾기·변경 표시(호박색)와 오류 색은 스타일과 상관없이 밝음/어두움만 나눈다.
 - **지키는 것**: `ui_smoke.py` 가 스타일마다 사이드바 글자·상태줄의 흐린 글자·고른 행의 대비 4.5:1 이상과, 사이드바 색이 스타일마다 다른지 본다. 어두운 스타일의 고른 행은 제목 색(Nord 청록 등)이 모자라 본문 글자를 밝게 해서 쓴다.
+
+## D29. 전체 점검에서 나온 보안 수정 (v0.3.2)
+
+사용자가 '모든 기능을 전체적으로 점검'하도록 요청했고, 보안·서버, 화면, 문서-코드 일치를 나눠 검토한 뒤 재현되는 것만 고쳤다 (2026-10-11).
+- **프로그램을 현재 폴더에서 찾지 않는다**: Windows 는 `code`·`explorer` 같은 이름을 PATH 보다 현재 폴더에서 먼저 찾는다 (`shutil.which` 도 같다). `run.bat .`·탐색기 우클릭(`%V`)으로 띄우면 현재 폴더가 열린 프로젝트라서, 내려받은 프로젝트에 든 `code.cmd` 가 코드 링크 한 번에 실행될 수 있었다 (`shutil.which('code')` 가 `.\code.CMD` 를 돌려줌을 확인). 그래서 `app.py` 는 폴더 인자를 푼 뒤 앱 폴더로 `chdir` 하고, `osutil` 은 `NoDefaultCurrentDirectoryInExePath=1` 로 편집기를 찾고 탐색기를 `%SystemRoot%\explorer.exe` 로 띄우며, 설정 `editor` 는 절대경로만 받는다.
+- **경로는 글자로 먼저 거른다**: `resolve_inside` 가 `(root / rel).resolve()` 를 먼저 했는데, `rel` 이 `\\서버\공유\x`(주소의 `%5C%5C`)면 `root` 가 버려지고 Windows 가 그 서버에 SMB 로 접속해 로그인 정보(NTLM 해시)를 건넨다. 문서 속 `<img src="/doc/%5C%5C서버…">` 하나로 일어나고, 인터넷 그림을 꺼도 막히지 않았다. 이제 `normpath` 로 root 안인지 본 뒤에만 `resolve()` 한다.
+- **설정 값의 형식**: 손으로 고치는 파일이라 JSON 은 맞아도 형식이 틀릴 수 있다 (`"exclude_dirs": "data"` 는 글자 하나하나가 폴더 이름이 되고, `5` 면 폴더 열기·트리가 500). `value_ok` 로 `DEFAULTS` 와 같은 형식인지 보고, 틀린 값만 기본값으로 돌며 알리고 저장을 멈춘다 (D21 과 같은 원칙 — 손으로 쓴 값을 덮어쓰지 않는다).
+- **그 밖에 고친 것**: 브라우저 모드의 폼 POST(`/api/open-config` 가 본문 없이 설정 파일을 열었다)를 415 로, 망가진 html 하나가 트리 전체를 500 으로 만들던 것, 공백이 많은 제목 줄에서 정규식이 수 초씩 멈추던 것(ReDoS), html 문서 속 인터넷 그림의 Referer.
+- **그대로 둔 것**: `/doc/a.md::$DATA`·`a.md.` 처럼 Windows 가 같은 파일로 여는 이름도 200 이다. 숨김·밖 경로는 이 방법으로도 404 이고, 보기 전용이라 해가 없다.

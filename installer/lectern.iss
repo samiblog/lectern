@@ -52,8 +52,8 @@ Type: filesandordirs; Name: "{app}\_internal"
 Source: "..\dist\Lectern\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "Markdown 문서 뷰어"
-Name: "{autodesktop}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "Markdown 문서 뷰어"; Tasks: desktopicon
+Name: "{autoprograms}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "프로젝트 문서 뷰어 (Markdown·HTML)"
+Name: "{autodesktop}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "프로젝트 문서 뷰어 (Markdown·HTML)"; Tasks: desktopicon
 
 [Registry]
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\Lectern"; ValueType: string; ValueName: ""; ValueData: "Lectern으로 열기"; Flags: uninsdeletekey; Tasks: contextmenu
