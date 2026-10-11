@@ -39,6 +39,9 @@
 .md-body .lec-folded::after { content: " …"; font-weight: 400; color: var(--md-muted); }
 .md-body .lec-fold-hidden { display: none !important; }
 
+/* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
+.md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }
+
 .md-body p, .md-body ul, .md-body ol, .md-body dl, .md-body blockquote,
 .md-body details, .md-body .code-block, .md-body .table-wrap, .md-body .math-block { margin: 0 0 1.05em; }
 

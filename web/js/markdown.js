@@ -139,7 +139,21 @@ function mathPlugin(md) {
   md.block.ruler.before('fence', 'math_block', mathBlock, { alt: ['paragraph', 'reference', 'blockquote', 'list'] });
   md.renderer.rules.math_inline = (tokens, i) => renderTex(tokens[i].content, false);
   md.renderer.rules.math_display_inline = (tokens, i) => renderTex(tokens[i].content, true);
-  md.renderer.rules.math_block = (tokens, i) => `<div class="math-block">${renderTex(tokens[i].content, true)}</div>\n`;
+  md.renderer.rules.math_block = (tokens, i, options, env, self) => (
+    `<div class="math-block"${self.renderAttrs(tokens[i])}>${renderTex(tokens[i].content, true)}</div>\n`);
+}
+
+/**
+ * 블록마다 원문 줄 범위를 data-lines="시작-끝"(1부터, 끝 줄 포함)으로 단다.
+ * 본문 우클릭 메뉴(docmenu.js)의 원문 복사·Claude용 위치 복사가 쓴다. env.lineOffset 은 떼어 낸 frontmatter 줄 수.
+ */
+function sourceLines(md) {
+  md.core.ruler.push('source_lines', (state) => {
+    const offset = state.env.lineOffset || 0;
+    for (const t of state.tokens) {
+      if (t.block && t.map && t.nesting !== -1) t.attrSet('data-lines', `${t.map[0] + 1 + offset}-${t.map[1] + offset}`);
+    }
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -150,29 +164,30 @@ function create(math) {
     .use(window.markdownitTaskLists, { enabled: false })
     .use(window.markdownItAnchor, { slugify, tabIndex: false });
   if (math) md.use(mathPlugin);
+  md.use(sourceLines);
 
   // ```mermaid 는 코드 하이라이트 대신 다이어그램 자리표시로
   const fence = md.renderer.rules.fence;
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const lang = tokens[idx].info.trim().split(/\s+/)[0].toLowerCase();
     if (lang === 'mermaid') {
-      return `<pre class="mermaid">${md.utils.escapeHtml(tokens[idx].content)}</pre>\n`;
+      return `<pre class="mermaid"${self.renderAttrs(tokens[idx])}>${md.utils.escapeHtml(tokens[idx].content)}</pre>\n`;
     }
     return fence(tokens, idx, options, env, self);
   };
   return md;
 }
 
-/** 맨 앞의 YAML frontmatter(--- ... ---)를 떼어 낸다. */
+/** 맨 앞의 YAML frontmatter(--- ... ---)를 떼어 낸다. lineOffset 은 떼어 낸 줄 수. */
 export function splitFrontMatter(text) {
   const m = /^﻿?---[ \t]*\r?\n([\s\S]*?)\r?\n(?:---|\.\.\.)[ \t]*(?:\r?\n|$)/.exec(text);
-  if (!m) return { frontMatter: null, body: text };
-  return { frontMatter: m[1], body: text.slice(m[0].length) };
+  if (!m) return { frontMatter: null, body: text, lineOffset: 0 };
+  return { frontMatter: m[1], body: text.slice(m[0].length), lineOffset: (m[0].match(/\n/g) || []).length };
 }
 
 export function renderMarkdown(text, { math = true } = {}) {
-  const { frontMatter, body } = splitFrontMatter(text);
+  const { frontMatter, body, lineOffset } = splitFrontMatter(text);
   const key = math ? 'math' : 'plain';
   if (!instances.has(key)) instances.set(key, create(math));
-  return { html: instances.get(key).render(body), frontMatter };
+  return { html: instances.get(key).render(body, { lineOffset }), frontMatter };
 }

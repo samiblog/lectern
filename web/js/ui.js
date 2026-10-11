@@ -5,14 +5,21 @@ import { $, esc } from './util.js';
 // ---- 팝업 메뉴 -------------------------------------------------------------
 
 let menuItems = [];
+let onMenuClose = null;
 
-/** items: [{label, hint?, action}] 또는 '-'(구분선) */
-export function showMenu(x, y, items) {
+function menuItemHtml(it, i) {
+  if (it === '-') return '<div class="menu-sep" role="separator"></div>';
+  if (it.header) return `<div class="menu-head">${esc(it.header)}</div>`;
+  return `<button role="menuitem" data-i="${i}"><span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
+}
+
+/** items: [{label, hint?, action}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때 */
+export function showMenu(x, y, items, onClose = null) {
   const menu = $('#lec-menu');
+  hideMenu();
   menuItems = items;
-  menu.innerHTML = items.map((it, i) => (it === '-'
-    ? '<div class="menu-sep" role="separator"></div>'
-    : `<button role="menuitem" data-i="${i}"><span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`)).join('');
+  onMenuClose = onClose;
+  menu.innerHTML = items.map(menuItemHtml).join('');
   menu.hidden = false;
   const { innerWidth: w, innerHeight: h } = window;
   const r = menu.getBoundingClientRect();
@@ -26,6 +33,9 @@ export function hideMenu() {
   if (menu.hidden) return false;
   menu.hidden = true;
   menuItems = [];
+  const done = onMenuClose;
+  onMenuClose = null;
+  done?.();
   return true;
 }
 

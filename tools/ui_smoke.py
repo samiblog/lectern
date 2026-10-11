@@ -129,7 +129,10 @@ def run(headed: bool) -> None:
         wait_http(url + 'api/state')
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=not headed)
-            page = browser.new_page(viewport={'width': 1440, 'height': 900}, locale='ko-KR')
+            # 클립보드 권한: 본문 우클릭 메뉴의 복사 결과를 읽어 본다 (headless 클립보드는 Windows 클립보드와 따로다)
+            context = browser.new_context(viewport={'width': 1440, 'height': 900}, locale='ko-KR',
+                                          permissions=['clipboard-read', 'clipboard-write'])
+            page = context.new_page()
             page.on('pageerror', lambda e: errors.append(str(e)))
             # 앱 서버 밖으로 나가는 요청 기록. 허용되는 것은 문서 속 외부 이미지뿐이다 (설정 external_images)
             outside: list[tuple[str, str]] = []
@@ -191,6 +194,63 @@ def run(headed: bool) -> None:
             page.locator('#lec-view p', has_text='상대경로 그림은').click(position={'x': 5, 'y': 10})
             sec('그림').click(position={'x': 30, 'y': 16}, modifiers=['Shift'])   # 끌어서 고르면 click 이 오지 않는다 (Chromium)
             check(not folded('그림'), 'Shift+클릭으로 글자를 고를 때는 접지 않음')
+
+            print('[본문 우클릭 메뉴]')
+            src = (work / 'docs' / '01-기능-점검.md').read_text(encoding='utf-8').split('\n')
+            first_line = lambda sel: int(page.locator(f'#lec-view {sel}').first.get_attribute('data-lines').split('-')[0])
+            starts = [src[first_line(s) - 1][:9] for s in ('[id="코드"]', 'table', '.code-block code')]
+            check(starts == ['## 코드', '| 품목 | 1분', '```python'], f'블록마다 원문 줄 범위를 앎: {starts}')
+
+            def menu(target, **kw) -> str:
+                target.click(button='right', **kw)
+                page.wait_for_selector('#lec-menu:not([hidden])')
+                return page.locator('#lec-menu').inner_text()
+
+            def choose(label: str) -> str:
+                """메뉴 항목을 누르고, 복사가 끝나면(알림이 뜨면) 클립보드 글을 돌려준다."""
+                page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+                page.locator('#lec-menu button', has_text=label).first.click()
+                wait_until(page, "document.querySelector('#lec-toast').textContent.startsWith('복사')")
+                return page.evaluate('navigator.clipboard.readText()').replace('\r\n', '\n')
+
+            clip_types = lambda: page.evaluate('navigator.clipboard.read().then(items => items.flatMap(i => i.types))')
+            para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
+            head = menu(para).split('\n')[0]
+            picked = page.locator('#lec-view .lec-picked').count()
+            copied = choose('원문 복사')
+            check(head == '단락' and picked == 1 and copied == src[6] and page.locator('#lec-view .lec-picked').count() == 0,
+                  f'단락 우클릭: 테두리 표시, 원문 복사 ({head!r}, 표시 {picked}개, {copied[:20]!r})')
+            a, b = src.index('## 코드') + 1, src.index('## 콜아웃')
+            while not src[b - 1].strip():
+                b -= 1
+            menu(sec('코드'))
+            section = choose('이 절 원문 복사')
+            menu(sec('코드'))
+            ref = choose('Claude용 위치 복사')
+            want = f"@docs/01-기능-점검.md {a}~{b}행 ('코드' 절)"
+            check(section == '\n'.join(src[a - 1:b]) and ref == want, f'제목 우클릭: 절 원문 복사, Claude용 위치 복사 ({ref!r})')
+            menu(page.locator('#lec-view td').nth(3))
+            shot('02-doc-menu')
+            tsv = choose('표 복사')
+            types = clip_types()
+            check(tsv.startswith('품목\t1분기\t2분기') and 'text/html' in types, f'표 복사: 탭으로 나눈 글 + HTML 표 ({types})')
+            menu(page.locator('#lec-view img').first)
+            choose('그림 복사')
+            check(clip_types() == ['image/png'], f'그림 복사: PNG ({clip_types()})')
+            items = menu(page.locator('#lec-content'), position={'x': 30, 'y': 420})
+            choose_fold = lambda label: page.locator('#lec-menu button', has_text=label).click()
+            choose_fold('모두 접기')
+            folded_all = page.locator('#lec-view .lec-folded').count() == page.locator('#lec-view .lec-fold').count()
+            menu(page.locator('#lec-content'), position={'x': 30, 'y': 420})
+            choose_fold('모두 펴기')
+            check('@docs/01-기능-점검.md 복사' in items and folded_all and page.locator('#lec-view .lec-folded').count() == 0,
+                  '빈 곳 우클릭: 문서 메뉴 (경로 복사, 모두 접기·펴기)')
+            para.click(click_count=3)
+            selected = page.evaluate('getSelection().toString().trim()')
+            items = menu(para)   # 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다
+            copied = choose('선택한 글 복사') if items.startswith('선택한 글 복사') else ''
+            check(selected and copied == selected, f'글을 고른 채 우클릭하면 맨 위에 선택한 글 복사 ({items[:10]!r}, {copied[:20]!r})')
+            page.evaluate('getSelection().removeAllRanges()')
             sec('표').click()   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
             shot('02-doc-folded')
 
@@ -211,6 +271,10 @@ def run(headed: bool) -> None:
             check(len(widths) == 2 and min(widths) > 200, 'Mermaid 그림 2개가 제 크기로 보임')
             check(page.locator('#lec-view h2#mermaid').count() == 1, "'## Mermaid' 제목(id=mermaid)이 있는 문서도 처음 열 때 그림을 그림")
             check(page.locator('.mermaid-error').count() == 1, '문법 오류 블록은 원문 표시')
+            head = menu(page.locator('pre.mermaid svg p').first).split('\n')[0]   # 그림 속 글자(<p>)를 눌러도 다이어그램
+            fence = choose('원문 복사')
+            check(head == '다이어그램' and fence.startswith('```mermaid') and fence.endswith('```'),
+                  f'다이어그램 우클릭: 원문 복사 ({head!r}, {fence[:12]!r})')
             shot('03-mermaid')
 
             print('[테마]')
@@ -278,6 +342,9 @@ def run(headed: bool) -> None:
                   '불러오지 못한 외부 이미지는 링크로 대체')
             leaked = [u for u, _ in outside if 'leak-' in u]
             check(not leaked, '표 배경·SVG·image-set 으로는 외부 요청이 나가지 않음' + (f': {leaked}' if leaked else ''))
+            items = menu(page.locator('#lec-view img.external'))
+            page.keyboard.press('Escape')
+            check('그림 주소 복사' in items and '그림 복사' not in items, '인터넷 그림은 그림 대신 주소를 복사 (브라우저가 픽셀을 막음)')
             shot('06-external-images')
             page.evaluate("fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_images:false})})")
             page.reload()

@@ -57,17 +57,31 @@ export function forgetFolds() {
   folds.clear();
 }
 
-function setFolded(h, folded) {
-  const root = view();
-  h.classList.toggle('lec-folded', folded);
+function remember(root) {
   const keys = headings(root).flatMap((x, i) => (x.classList.contains('lec-folded') ? [keyOf(x, i)] : []));
   if (keys.length) folds.set(docPath, new Set(keys));
   else folds.delete(docPath);
 }
 
+function setFolded(h, folded) {
+  h.classList.toggle('lec-folded', folded);
+  remember(view());
+}
+
 function toggle(h) {
   setFolded(h, !h.classList.contains('lec-folded'));
   apply(view());
+}
+
+/** 접을 수 있는 제목이 있는지 (본문 우클릭 메뉴가 '모두 접기'를 보일지) */
+export const hasFolds = () => !!view().querySelector(':scope > .lec-fold');
+
+/** 접을 수 있는 제목을 모두 접거나 편다. */
+export function foldAll(folded) {
+  const root = view();
+  for (const h of root.querySelectorAll(':scope > .lec-fold')) h.classList.toggle('lec-folded', folded);
+  remember(root);
+  apply(root);
 }
 
 /**

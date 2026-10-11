@@ -149,19 +149,23 @@ async function copy(text) {
   toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다', '');
 }
 
-function onContextMenu(e) {
-  const row = e.target.closest('.row');
-  if (!row) return;
-  e.preventDefault();
-  const isDoc = row.dataset.doc != null;
-  const path = isDoc ? row.dataset.doc : row.dataset.dir;
+/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사, 편집기로 열기, 탐색기에서 보기 */
+export function pathMenuItems(path, isDoc) {
   const items = [];
   if (path) items.push({ label: `@${path} 복사`, hint: 'Claude Code 프롬프트에 붙여 넣기', action: () => copy(`@${path}`) });
   items.push({ label: '전체 경로 복사', action: () => copy(fullPath(path)) });
   items.push('-');
   if (isDoc) items.push({ label: '편집기로 열기', action: () => openExternal(path) });
   items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(path) });
-  showMenu(e.clientX, e.clientY, items);
+  return items;
+}
+
+function onContextMenu(e) {
+  const row = e.target.closest('.row');
+  if (!row) return;
+  e.preventDefault();
+  const isDoc = row.dataset.doc != null;
+  showMenu(e.clientX, e.clientY, pathMenuItems(isDoc ? row.dataset.doc : row.dataset.dir, isDoc));
 }
 
 export function focusFilter() {

@@ -6,6 +6,7 @@ import { renderMarkdown } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { buildToc, clearToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
+import { setDocSource } from './docmenu.js';
 import { setStatus } from './status.js';
 import { openLightbox } from './ui.js';
 import {
@@ -357,6 +358,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   } catch (err) {
     if (id !== S.renderId) return false;
     showMissing(view, path, err);
+    setDocSource(null);
     clearToc();
     setStatus({ path, info: '' });
     emit('rendered');
@@ -382,6 +384,7 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   view.className = 'md-body';
   view.replaceChildren(...stage.childNodes);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
+  setDocSource(path, text);
   buildToc(view);
   if (scrollTop != null) content.scrollTop = scrollTop;
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
