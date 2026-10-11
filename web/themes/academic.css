@@ -1,0 +1,41 @@
+/* 논문: LaTeX·Tufte 풍. 미색 바탕에 명조, 좁은 단, 가운데 제목, 위아래 굵은 선만 있는 표(booktabs) */
+:root {
+  --md-bg: #fffff8;
+  --md-fg: #111111;
+  --md-heading: #1d2a3a;
+  --md-muted: #555555;
+  --md-border: #cfcfc8;
+  --md-link: #1a3d7c;
+  --md-code-bg: #f3f3ea;
+  --md-quote-bar: #b0b0a8;
+  --md-th-bg: #fffff8;
+  --md-th-rule: #111111;
+  --md-stripe: #fffff8;
+  --md-alert-note: #2b4f86;
+  --md-alert-tip: #2f6233;
+  --md-alert-important: #5a3d8a;
+  --md-alert-warning: #7d5a10;
+  --md-alert-caution: #922b21;
+  --md-font: Cambria, "Palatino Linotype", Georgia, "KoPubBatang", "NanumMyeongjo", "Noto Serif KR", "HCR Batang", "Batang", "바탕", serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: Consolas, "Cascadia Mono", "D2Coding", monospace;
+  --md-size: 16.5px;
+  --md-line: 1.8;
+  --md-width: 700px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { text-align: center; font-size: 1.9em; font-weight: 600; margin-bottom: 1.2em; }
+.md-body h2 { font-size: 1.35em; font-weight: 600; }
+.md-body h3 { font-size: 1.12em; font-weight: 600; }
+.md-body p { text-align: justify; text-justify: inter-character; }
+.md-body a { text-decoration-color: color-mix(in srgb, var(--md-link) 50%, transparent); }
+.md-body pre { border-radius: 0; border-left: 0; border-right: 0; }
+.md-body blockquote { border-left-width: 2px; }
+
+/* 표: booktabs — 위·아래 굵은 선, 머리행 아래 가는 선, 세로선과 줄무늬 없음, 가운데 정렬 */
+.md-body .table-wrap { border: 0; border-radius: 0; margin: 0 auto 1.2em; }
+.md-body table { border-top: 2px solid var(--md-fg); border-bottom: 2px solid var(--md-fg); }
+.md-body th, .md-body td { border-bottom: 0; }
+.md-body thead th { border-bottom: 1px solid var(--md-fg); }

@@ -1,0 +1,41 @@
+/* Nord: 북극의 푸른 회색 바탕과 서리빛 청록 제목 (nordtheme.com 팔레트). 차분한 다크 */
+:root {
+  --md-bg: #2e3440;
+  --md-fg: #d8dee9;
+  --md-heading: #88c0d0;
+  --md-muted: #a2abbc;
+  --md-border: #434c5e;
+  --md-link: #8fbcbb;
+  --md-code-bg: #3b4252;
+  --md-quote-bar: #4c566a;
+  --md-th-bg: #3b4252;
+  --md-th-rule: #5e81ac;
+  --md-stripe: #323946;
+  --md-strong: #eceff4;
+  --md-alert-note: #81a1c1;
+  --md-alert-tip: #a3be8c;
+  --md-alert-important: #c09bba;
+  --md-alert-warning: #ebcb8b;
+  --md-alert-caution: #d68b94;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.75;
+  --md-width: 860px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 1px solid var(--md-border);
+}
+
+.md-body img:not([src*=".svg"]) { filter: brightness(.92); }
+
+/* 코드 색: Nord */
+.md-body .hljs-keyword, .md-body .hljs-selector-tag, .md-body .hljs-literal { color: #81a1c1; }
+.md-body .hljs-string, .md-body .hljs-regexp, .md-body .hljs-addition { color: #a3be8c; }
+.md-body .hljs-number, .md-body .hljs-symbol { color: #b48ead; }
+.md-body .hljs-comment, .md-body .hljs-quote { color: #8692a8; font-style: italic; }
+.md-body .hljs-title, .md-body .hljs-section { color: #88c0d0; }
+.md-body .hljs-built_in, .md-body .hljs-type, .md-body .hljs-attr, .md-body .hljs-attribute, .md-body .hljs-property { color: #8fbcbb; }
+.md-body .hljs-variable, .md-body .hljs-params { color: #d8dee9; }
+.md-body .hljs-meta { color: #5e81ac; }
+.md-body .hljs-deletion { color: #bf616a; }

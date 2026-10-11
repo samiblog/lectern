@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
+  <!-- Lectern 아이콘: 독서대 위의 펼친 책. 바탕은 앱 강조색(app.css --ui-accent). 고치면 tools/make_icon.py 로 lectern.ico 를 다시 만든다 -->
+  <rect x="12" y="12" width="232" height="232" rx="56" fill="#2b5c8a"/>
+  <path d="M128 76 C108 62 78 58 50 64 V156 C78 150 108 154 128 168 Z" fill="#ffffff"/>
+  <path d="M128 76 C148 62 178 58 206 64 V156 C178 150 148 154 128 168 Z" fill="#d3e1ef"/>
+  <path d="M117 172 H139 L147 206 H109 Z" fill="#ffffff"/>
+  <rect x="78" y="202" width="100" height="16" rx="8" fill="#ffffff"/>
+</svg>

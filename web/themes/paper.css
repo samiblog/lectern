@@ -1,0 +1,33 @@
+/* 종이 (세피아): 누런 종이색 바탕과 명조 본문. 오래 읽어도 눈이 덜 피로하게 (Pocket·Firefox 읽기 보기의 세피아 #f4ecd8 / #5b4636) */
+:root {
+  --md-bg: #f4ecd8;
+  --md-fg: #5b4636;
+  --md-heading: #3d2b1c;
+  --md-muted: #725c47;
+  --md-border: #dccba6;
+  --md-link: #7a3f12;
+  --md-code-bg: #ece1c6;
+  --md-quote-bar: #c4ab7f;
+  --md-th-bg: #e6d6b2;
+  --md-th-rule: #b49868;
+  --md-stripe: #f0e6cf;
+  --md-strong: #3d2b1c;
+  --md-alert-note: #36607f;
+  --md-alert-tip: #466a30;
+  --md-alert-important: #6e4584;
+  --md-alert-warning: #835710;
+  --md-alert-caution: #993826;
+  --md-font: Georgia, "KoPubBatang", "NanumMyeongjo", "Noto Serif KR", "HCR Batang", "Batang", "바탕", serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, monospace;
+  --md-size: 17px;
+  --md-line: 1.85;
+  --md-width: 760px;
+  --md-h1-rule: 1px solid #cdb994;
+  --md-h2-rule: 0;
+}
+
+.md-body p { text-align: justify; text-justify: inter-character; }
+.md-body pre { border-color: var(--md-border); }
+.md-body img:not([src*=".svg"]) { filter: sepia(.12); }
+.md-body table { font-family: Cambria, var(--md-font); }   /* Georgia 숫자는 높낮이가 달라(올드스타일) 표에서는 Cambria */

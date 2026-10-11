@@ -1,0 +1,40 @@
+/* 노션풍: 넓은 여백과 산세리프, 선 없는 제목, 회색 바탕의 콜아웃. 가볍게 훑어볼 때 (Notion 기본 글자색 #37352f) */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #37352f;
+  --md-heading: #1f1e1b;
+  --md-muted: #6b6a65;
+  --md-border: #e6e5e2;
+  --md-link: #0b6e99;
+  --md-code-bg: #f1f1ef;
+  --md-quote-bar: #37352f;
+  --md-th-bg: #f4f3f0;
+  --md-th-rule: #dddcd8;
+  --md-stripe: #ffffff;
+  --md-alert-note: #2f6f99;
+  --md-alert-tip: #3d7556;
+  --md-alert-important: #7d55a0;
+  --md-alert-warning: #95601a;
+  --md-alert-caution: #b33a35;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
+  --md-size: 16px;
+  --md-line: 1.7;
+  --md-width: 780px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { font-size: 2.1em; letter-spacing: -.02em; }
+.md-body h2 { font-size: 1.5em; }
+.md-body h3 { font-size: 1.25em; }
+.md-body h1, .md-body h2, .md-body h3 { font-weight: 650; margin-top: 1.6em; }
+.md-body a { text-decoration-color: color-mix(in srgb, currentColor 40%, transparent); }
+.md-body :not(pre) > code { color: #b9483f; background: rgb(135 131 120 / .15); }
+.md-body pre { border: 0; border-radius: 4px; background: #f7f6f3; }
+.md-body blockquote { color: var(--md-fg); border-left: 3px solid var(--md-quote-bar); }
+.md-body blockquote.alert { border-left: 0; border-radius: 6px; background: #f6f5f3; padding: .8em 1.1em; }
+.md-body .table-wrap { border: 0; border-radius: 0; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); }
+.md-body tbody tr:last-child > * { border-bottom: 1px solid var(--md-border); }

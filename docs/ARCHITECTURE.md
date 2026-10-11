@@ -201,12 +201,15 @@ sequenceDiagram
 | Ctrl+휠 | 확대/축소 (pywebview `zoomable`) |
 
 ### 테마 (theme.js, themes/)
-- `base.css` 가 본문 규칙을 CSS 변수로 정의하고, `default.css`·`report.css`·`dark.css` 가 변수 값과 몇몇 규칙을 바꾼다. `<link id="lec-theme-css">` 의 href를 바꿔 전환한다.
+- 스타일 12종: 밝은 스타일 `default`(기본)·`report`(보고서)·`github`·`notion`(노션풍)·`paper`(종이·세피아)·`academic`(논문)·`newsprint`(신문)·`contrast`(고대비), 어두운 스타일 `dark`·`nord`·`solarized-dark`·`night`(밤 종이) (D26).
+- `base.css` 가 본문 규칙을 CSS 변수로 정의하고, 스타일마다 `<id>.css` 가 변수 값과 몇몇 규칙(표 테두리, 제목 장식, 코드 색)을 바꾼다. `<link id="lec-theme-css">` 의 href를 바꿔 전환한다.
 - 제목(`--md-heading`)은 본문(`--md-fg`)과 색을 조금 달리한다 (기본: 남색, 다크: 옅은 하늘색, 보고서: 남색). 표 머리행은 배경 `--md-th-bg`, 아래 2px 선 `--md-th-rule`, 글자는 제목 색으로 본문 행과 구분한다.
-- 테마마다 highlight.js 스타일(github / github-dark)과 Mermaid 테마(default / neutral / dark)를 짝지어 둔다. 전환하면 Mermaid 때문에 현재 문서를 다시 그린다.
+- `theme.js` 의 `THEMES` 가 스타일마다 이름, 밝음/어두움(앱 UI와 highlight.js github / github-dark), Mermaid 테마를 정한다. 선택 목록(밝은·어두운 묶음)도 이 표로 만든다. 코드 색을 바꾸는 스타일(Nord·Solarized)은 자기 css 에서 `.md-body .hljs-*` 를 덮는다. Mermaid는 기본 테마(default / neutral / dark)를 쓰거나, `base` + `mermaidVars`(themeVariables)로 스타일 색에 맞춘다(종이·Nord·Solarized·밤 종이). 전환하면 Mermaid 때문에 현재 문서를 다시 그린다.
+- 글꼴은 PC에 있는 것만 쓴다. 영문 글꼴 → 한글 글꼴(KoPub·나눔·Noto 등, 있으면) → Windows 기본(맑은 고딕·바탕) 순이다. Georgia 를 쓰는 스타일은 숫자 높낮이가 다른 글꼴이라 표만 Cambria 로 바꾼다.
+- 고른 스타일은 설정 `theme` 에 저장되어 다음 실행에도 쓰인다.
 - `auto` 는 `prefers-color-scheme` (WebView2는 Windows 앱 모드 설정을 따름)으로 기본/다크를 고른다.
 - 앱 UI 색은 `app.css` 의 `--ui-*` 변수, `data-ui="dark"` 일 때 다크 값.
-- 새 테마 추가: `themes/<id>.css` 작성 → `theme.js` 의 `THEMES` 에 한 줄 → `index.html` 의 `<select>` 에 option.
+- 새 스타일 추가: `themes/<id>.css` 작성 → `theme.js` 의 `THEMES` 에 한 줄. `ui_smoke.py` 가 스타일 수(지금 12)와 대비·구분을 확인하므로 수를 함께 고친다.
 
 ## 5. 보안 모델
 
@@ -226,7 +229,7 @@ sequenceDiagram
 
 ## 6. 배포 구조
 
-`pyinstaller lectern.spec` (또는 `build.bat`) → onedir.
+`build.bat` = pytest → `pyinstaller lectern.spec` (onedir) → Inno Setup(`installer\lectern.iss`)이 있으면 설치 파일.
 
 ```
 dist\Lectern\
@@ -236,4 +239,7 @@ dist\Lectern\
 ```
 
 `paths.resource_dir()` 가 `sys._MEIPASS`(= `_internal`)를 보고 `web/` 을 찾는다. 설정은 exe 옆이 아니라 `%APPDATA%\Lectern\` 에 저장된다.
-WebView2 런타임은 Windows 10/11에 기본 포함되어 있다.
+WebView2 런타임은 Windows 11과 대부분의 Windows 10에 있다.
+
+- `lectern.spec`: 아이콘 `assets\lectern.ico`, 버전 정보(제품 이름·설명·버전 — `lectern/__init__.py` 의 `__version__` 을 읽음).
+- 설치 파일(`dist\Lectern-버전-setup.exe`, D25): 현재 사용자 설치(`%LOCALAPPDATA%\Programs\Lectern`, 관리자 권한 불필요). 시작 메뉴 바로가기, 선택: 바탕화면 바로가기·탐색기 우클릭 메뉴(`HKCU\Software\Classes\Directory\shell\Lectern` 등, `tools/context_menu.py` 와 같은 키). 덮어 설치할 때 `_internal` 을 비우고 새로 넣는다. WebView2가 없으면 알린다. 제거해도 `%APPDATA%\Lectern` 은 남긴다.

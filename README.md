@@ -10,7 +10,7 @@ Lectern(렉턴, 독서대)은 Claude Code나 Claude가 프로젝트 폴더에 �
 - **왼쪽 트리**: 파일명 대신 문서 제목, 필터, 열어 보기 전에 바뀐 문서에 호박색 점
 - **자동 새로고침**: Claude가 문서를 쓰는 동안 1초 안에 반영, 보던 위치 유지
 - **읽기 좋은 본문**: 숫자 열이 정렬된 표, 코드 하이라이트·복사, 콜아웃, 각주, 수식(`$105` 같은 달러 표기는 그대로), Mermaid 다이어그램, 이미지(프로젝트 안 그림과 인터넷 그림, 클릭하면 확대), 목차, 제목을 눌러 절 접기·펴기
-- **스타일 3종**: 기본, 보고서(명조 본문), 다크 — '자동'은 Windows 다크 모드를 따름
+- **스타일 12종**: 밝은 스타일(기본, 보고서, GitHub, 노션풍, 종이·세피아, 논문, 신문, 고대비)과 어두운 스타일(다크, Nord, Solarized 다크, 밤 종이). 고른 스타일은 다음 실행에도 그대로이고, '자동'은 Windows 다크 모드를 따름
 - **빠른 이동**: Ctrl+P 빠른 열기, Ctrl+F 문서 안 찾기, 뒤로/앞으로, 트리 우클릭으로 `@경로` 복사(Claude Code 프롬프트용)
 - 숨김 파일·폴더(`.claude`, `.git` 등), `node_modules` 같은 폴더, md가 없는 폴더는 보이지 않습니다.
 
@@ -50,15 +50,26 @@ dev.bat                             :: 개발용: samples 를 브라우저 모�
 
 Claude Code 터미널에서 지금 프로젝트를 바로 띄우려면 `Lectern.exe .` (exe를 PATH에 둔 경우).
 
-## 실행 파일 만들기
+## 설치 파일로 설치하기
+
+`Lectern-버전-setup.exe` 를 실행합니다. 관리자 권한 없이 지금 사용자에게만 설치됩니다(`%LOCALAPPDATA%\Programs\Lectern`). Python은 필요 없습니다.
+
+- 시작 메뉴에 Lectern이 생깁니다. 설치할 때 '탐색기 폴더 우클릭에 Lectern으로 열기 추가'(기본 선택)와 '바탕화면 바로가기'를 고를 수 있습니다.
+- 새 버전의 설치 파일을 실행하면 같은 자리에 덮어 설치됩니다. 실행 중인 Lectern은 닫도록 안내합니다.
+- 제거는 'Windows 설정 → 앱'에서 합니다. 설정(`%APPDATA%\Lectern\config.json`)은 남겨 두므로 다시 설치하면 최근 폴더·스타일이 그대로입니다.
+- 창을 그리는 Microsoft Edge WebView2 런타임이 필요합니다. Windows 11과 대부분의 Windows 10에는 있고, 없으면 설치 중에 알려 줍니다.
+- 코드 서명이 없어서 처음 실행할 때 'Windows의 PC 보호' 경고가 뜰 수 있습니다. '추가 정보 → 실행'을 누릅니다.
+
+## 실행 파일·설치 파일 만들기
 
 ```bat
 pip install -r requirements-dev.txt
-build.bat                           :: 테스트 후 dist\Lectern\Lectern.exe
-python tools\context_menu.py        :: 탐색기 폴더 우클릭에 'Lectern으로 열기' 등록 (해제: --remove)
+winget install JRSoftware.InnoSetup   :: 설치 파일을 만들 때만 (한 번)
+build.bat                           :: 테스트 → dist\Lectern\Lectern.exe → dist\Lectern-버전-setup.exe
+python tools\context_menu.py        :: 설치 파일 없이 쓸 때 탐색기 폴더 우클릭에 'Lectern으로 열기' 등록 (해제: --remove)
 ```
 
-`dist\Lectern` 폴더째 복사하면 Python이 없는 PC에서도 실행됩니다.
+설치 파일 대신 `dist\Lectern` 폴더째 복사해도 Python이 없는 PC에서 실행됩니다 (`Lectern.exe` 하나만으로는 안 됨). 아이콘은 `assets/lectern.svg` 를 고친 뒤 `python tools\make_icon.py` 로 다시 만듭니다.
 
 ## 사용법
 

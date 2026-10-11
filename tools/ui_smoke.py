@@ -277,12 +277,58 @@ def run(headed: bool) -> None:
                   f'다이어그램 우클릭: 원문 복사 ({head!r}, {fence[:12]!r})')
             shot('03-mermaid')
 
-            print('[테마]')
-            for theme in ('report', 'dark', 'default'):
+            print('[스타일]')
+
+            def use_theme(theme: str) -> bool:
+                """스타일을 고르고, 그 스타일 파일이 실제로 적용될 때까지 기다린다."""
                 page.select_option('#lec-theme', theme)
-                check(wait_until(page, f"document.documentElement.dataset.theme === '{theme}'"), f'테마 전환: {theme}')
-                page.wait_for_timeout(500)   # 캡처용: 다시 그린 다이어그램이 자리 잡을 시간
+                return wait_until(page, f"""(() => {{ const s = document.querySelector('#lec-theme-css').sheet;
+                    return document.documentElement.dataset.theme === '{theme}' && s && s.href.endsWith('/{theme}.css') && s.cssRules.length > 0; }})()""")
+
+            themes = [t for t in page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)') if t != 'auto']
+            groups = page.eval_on_selector_all('#lec-theme optgroup', 'gs => gs.map(g => g.label)')
+            check(len(themes) == 12 and groups == ['밝은 스타일', '어두운 스타일'], f'스타일 {len(themes)}종, 밝은·어두운 묶음 ({groups})')
+            ok = use_theme('nord') and wait_until(page, "document.querySelectorAll('pre.mermaid.mermaid-ok svg').length === 2", 20000)
+            styled = ok and page.evaluate("[...document.querySelectorAll('pre.mermaid svg style')].some(s => s.textContent.includes('#3b4252'))")
+            check(styled, 'Mermaid 다이어그램을 스타일 색으로 다시 그림 (Nord)')
+            shot('04-theme-nord-mermaid')
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            measure = '''() => {
+              const v = document.querySelector('#lec-view');
+              const css = (sel) => getComputedStyle(v.querySelector(sel));
+              const rgb = (s) => s.match(/[\\d.]+/g).slice(0, 3).map(Number);
+              const lum = (c) => c.map((x) => { x /= 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4; })
+                .reduce((a, x, i) => a + x * [0.2126, 0.7152, 0.0722][i], 0);
+              const ratio = (a, b) => { const [x, y] = [lum(rgb(a)), lum(rgb(b))].sort((m, n) => n - m); return (x + 0.05) / (y + 0.05); };
+              const bg = getComputedStyle(document.querySelector('#lec-content')).backgroundColor;
+              const p = css('p').color, h = css('h2').color, th = css('thead th'), td = css('tbody td');
+              return { text: ratio(p, bg), heading: ratio(h, bg), muted: ratio(css('.footnotes').color, bg), link: ratio(css('p a').color, bg),
+                       headingDiffers: h !== p, headerDiffers: th.backgroundColor !== td.backgroundColor || th.color !== td.color };
+            }'''
+            if folded('표'):
+                sec('표').click()   # 캡처에 표가 보이도록
+            problems = []
+            for theme in themes:
+                if not use_theme(theme):
+                    problems.append(f'{theme}: 스타일 파일이 적용되지 않음')
+                    continue
+                m = page.evaluate(measure)
+                low = [k for k, need in (('text', 4.5), ('muted', 4.5), ('link', 4.5), ('heading', 3)) if m[k] < need]
+                if low or not m['headingDiffers'] or not m['headerDiffers']:
+                    problems.append(f"{theme}: 대비 부족 {low}, 제목 색 구분 {m['headingDiffers']}, 표 머리행 구분 {m['headerDiffers']}")
                 shot(f'04-theme-{theme}')
+            check(not problems, '모든 스타일: 글자 대비(WCAG 4.5:1), 제목 색·표 머리행 구분' + (f': {problems}' if problems else ''))
+            use_theme('paper')
+            saved = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.theme)")
+            page.reload()
+            page.wait_for_selector('.overview .ov-head h1')
+            check(saved == 'paper' and page.evaluate("document.documentElement.dataset.theme") == 'paper'
+                  and page.input_value('#lec-theme') == 'paper', f'고른 스타일은 다음 실행에도 그대로 ({saved})')
+            use_theme('default')
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            sec('표').click()   # 다시 불러오면 접은 상태를 잊는다(메모리에만 둠). 아래 찾기 점검을 위해 다시 접는다
 
             print('[빠른 열기와 찾기]')
             page.keyboard.press('Control+p')

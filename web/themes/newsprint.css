@@ -1,0 +1,36 @@
+/* 신문: 미색 신문 용지에 명조 본문과 굵은 제목, 좁은 단. 기사처럼 빠르게 훑어 읽을 때 (Typora Newsprint 풍) */
+:root {
+  --md-bg: #f3f2ee;
+  --md-fg: #2a2a2a;
+  --md-heading: #0c0c0c;
+  --md-muted: #57574f;
+  --md-border: #c9c6bc;
+  --md-link: #1d4a80;
+  --md-code-bg: #e7e5de;
+  --md-quote-bar: #2a2a2a;
+  --md-th-bg: #e2dfd5;
+  --md-th-rule: #2a2a2a;
+  --md-stripe: #edebe5;
+  --md-alert-note: #1f4f86;
+  --md-alert-tip: #2b5f2f;
+  --md-alert-important: #553a88;
+  --md-alert-warning: #74500f;
+  --md-alert-caution: #8f2a1f;
+  --md-font: Georgia, "NanumMyeongjo", "KoPubBatang", "Noto Serif KR", "HCR Batang", "Batang", "바탕", serif;
+  --md-heading-font: "Book Antiqua", "Palatino Linotype", Georgia, "NanumMyeongjo", "KoPubBatang", "Batang", "바탕", serif;
+  --md-mono: Consolas, "D2Coding", "Cascadia Mono", monospace;
+  --md-size: 16px;
+  --md-line: 1.7;
+  --md-width: 680px;
+  --md-h1-rule: 3px double var(--md-heading);
+  --md-h2-rule: 0;
+}
+
+.md-body h1 { font-size: 2.3em; line-height: 1.2; font-weight: 800; letter-spacing: -.01em; text-align: center; padding-bottom: .35em; }
+.md-body h2 { font-size: 1.35em; border-top: 1px solid var(--md-heading); padding-top: .45em; }
+.md-body h3 { font-size: 1.1em; }
+.md-body p { text-align: justify; text-justify: inter-character; }
+.md-body hr { border-top: 3px double var(--md-border); }
+.md-body blockquote { color: var(--md-fg); font-size: 1.06em; border-left-width: 4px; }
+.md-body .table-wrap { border: 0; border-top: 2px solid var(--md-heading); border-radius: 0; }
+.md-body table { font-family: Cambria, var(--md-font); }   /* Georgia 숫자는 높낮이가 달라(올드스타일) 표에서는 Cambria */

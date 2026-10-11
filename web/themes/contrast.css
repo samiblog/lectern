@@ -1,0 +1,35 @@
+/* 고대비: 흰 바탕에 검은 글자, 큰 글씨, 굵은 밑줄 링크와 굵은 표 테두리. 프로젝터 화면이나 눈이 피로할 때 */
+:root {
+  --md-bg: #ffffff;
+  --md-fg: #000000;
+  --md-heading: #00205b;
+  --md-muted: #303030;
+  --md-border: #6b6b6b;
+  --md-link: #0000c8;
+  --md-code-bg: #f0f0f0;
+  --md-quote-bar: #000000;
+  --md-th-bg: #dfe6f2;
+  --md-th-rule: #000000;
+  --md-stripe: #f2f2f2;
+  --md-alert-note: #003a8c;
+  --md-alert-tip: #00591f;
+  --md-alert-important: #4b1690;
+  --md-alert-warning: #6a3d00;
+  --md-alert-caution: #9b0000;
+  --md-font: "Segoe UI", "Pretendard", "Noto Sans KR", "Malgun Gothic", "맑은 고딕", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: Consolas, "D2Coding", "Cascadia Mono", monospace;
+  --md-size: 18px;
+  --md-line: 1.8;
+  --md-width: 880px;
+  --md-h1-rule: 3px solid var(--md-fg);
+  --md-h2-rule: 2px solid var(--md-fg);
+}
+
+.md-body a { text-decoration-color: currentColor; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.md-body a:hover, .md-body a:focus-visible { background: #ffeb3b; color: #000000; outline: none; }
+.md-body blockquote { color: var(--md-fg); border-left-width: 5px; }
+.md-body pre { border: 2px solid var(--md-fg); }
+.md-body .table-wrap { border: 2px solid var(--md-fg); border-radius: 0; }
+.md-body th, .md-body td { border: 1px solid var(--md-border); }
+.md-body .lec-fold:hover::before, .md-body .lec-folded::before { opacity: 1; }

@@ -19,7 +19,7 @@ DEFAULTS: dict[str, Any] = {
     'version': 1,
     'recent': [],            # 최근 연 프로젝트 폴더 (최신순)
     'last_folder': None,     # 실행 인자가 없을 때 열 폴더
-    'theme': 'auto',         # auto | default | report | dark
+    'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'show_titles': True,     # 트리에 파일명 대신 문서 제목 표시
     'sidebar_visible': True,
     'toc_visible': True,

@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 지금은 Markdown(`.md`)만 본다. 나중에 HTML 문서도 볼 예정이므로 이름·구조에 'md 전용'을 새로 박아 넣지 않는다 (`docs/DECISIONS.md` D18, `docs/ROADMAP.md` 4단계).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.1.5 (MVP 완료, 이름 Lectern, 외부 이미지 표시, 검토 후 수정, 제목 접기, 본문 우클릭 메뉴). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.2.0 (MVP, 외부 이미지, 검토 후 수정, 제목 접기, 본문 우클릭 메뉴, 스타일 12종, 설치 파일). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -26,7 +26,7 @@ python app.py --browser samples    :: 개발용: http://127.0.0.1:8765 를 일�
 python app.py --debug samples      :: 창 + 개발자 도구 (F12, 기본 Ctrl+F 등도 켜짐)
 python -m pytest -q                :: 단위 테스트 (Windows가 아니어도 돎)
 python tools/ui_smoke.py           :: 화면 회귀 점검 (playwright 필요, 캡처는 ui-shots/)
-build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe 생성
+build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
 변경을 마치면 최소한 `pytest` 를 돌리고, `web/` 을 고쳤다면 `tools/ui_smoke.py` 도 돌린다.
@@ -50,11 +50,13 @@ web/
   index.html            앱 뼈대. vendor 스크립트 로드 후 js/main.js
   js/                   ES modules (아래 표)
   css/app.css           앱 UI 스타일
-  themes/               문서 본문 스타일: base.css + default/report/dark.css
+  themes/               문서 본문 스타일: base.css + 스타일마다 <id>.css (목록은 theme.js 의 THEMES)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
 samples/                기능 점검용 예시 프로젝트 (숨김·제외 케이스 포함)
+assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
+installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest
-tools/                  update_vendor.py, ui_smoke.py, context_menu.py
+tools/                  update_vendor.py, ui_smoke.py, context_menu.py, make_icon.py
 docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 ```
 
@@ -71,7 +73,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치) |
-| theme.js / mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
+| theme.js | 문서 스타일 목록(THEMES)과 전환. 스타일 선택 목록도 이 표로 만든다 |
+| mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
 
 ## 코딩 규칙
 
@@ -98,4 +101,6 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
 - `config.json` 을 읽지 못하면(`Config.load_error`) 그 실행 동안은 저장하지 않는다 (D21). 설정을 쓰는 코드는 반드시 `Config.save()` 를 거친다.
 - Windows에서 Python `mimetypes` 는 레지스트리 값을 기본값보다 우선한다. 레지스트리에 `.js` 가 `text/plain` 으로 잡힌 PC에서는 모듈 스크립트가 거부되어 화면이 빈다. 그래서 `server.py` 의 `FIXED_TYPES` 가 `.js`·`.css`·`.svg`·`.woff2` 의 형식을 정한다. 앱이 새 확장자의 파일을 내보내면 여기에 넣을지 본다.
+- 문서 스타일은 PC에 있는 글꼴만 쓴다 (웹 글꼴 금지, 내장도 안 함 — D26). 글꼴 목록은 영문 글꼴 → 한글 글꼴 → `Malgun Gothic`·`Batang` 같은 Windows 기본 글꼴 순으로 끝내서, 그 글꼴이 없는 PC에서도 한글이 보이게 한다. 새 스타일은 `ui_smoke.py` 가 글자 대비(WCAG 4.5:1)와 제목 색·표 머리행 구분을 확인한다.
+- `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

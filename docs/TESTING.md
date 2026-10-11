@@ -16,7 +16,7 @@ python tools/ui_smoke.py     :: 화면 회귀 점검 (playwright + chromium 필�
 | `tests/test_config.py` | 설정 파일을 읽지 못하면 덮어쓰지 않음, BOM 허용 |
 | `tests/test_osutil.py` | 링크 대상 열기 방식 (코드 파일은 실행하지 않음) |
 | `tests/test_app.py` | 설정의 창 크기 읽기 (형식이 틀리거나 너무 작을 때) |
-| `tools/ui_smoke.py` | 트리, 렌더링(표·콜아웃·코드·각주·수식·달러·Mermaid, `## Mermaid` 제목 충돌), 제목·표 머리행 색, 제목 접기(하위 절, 각주 제외, 목차·찾기로 펴기, 두 번 누름·Shift+클릭은 접지 않음, 새로고침 뒤 유지), 본문 우클릭 메뉴(원문 줄 범위, 원문·절·표·그림·선택한 글 복사, Claude용 위치, 문서 메뉴, 다이어그램 글자, 인터넷 그림은 주소만 — 복사 결과는 headless 클립보드에서 읽음), 테마, Ctrl+P, Ctrl+F, 자동 새로고침, 문서 속 원시 HTML(SVG 링크·이미지 맵·`img name` 이 앱을 망가뜨리지 않음), 외부 이미지(표시·실패 대체·끄기, 표 배경·SVG·`image-set` 으로 새지 않음), 보안, 외부 요청은 이미지뿐 |
+| `tools/ui_smoke.py` | 트리, 렌더링(표·콜아웃·코드·각주·수식·달러·Mermaid, `## Mermaid` 제목 충돌), 제목·표 머리행 색, 제목 접기(하위 절, 각주 제외, 목차·찾기로 펴기, 두 번 누름·Shift+클릭은 접지 않음, 새로고침 뒤 유지), 본문 우클릭 메뉴(원문 줄 범위, 원문·절·표·그림·선택한 글 복사, Claude용 위치, 문서 메뉴, 다이어그램 글자, 인터넷 그림은 주소만 — 복사 결과는 headless 클립보드에서 읽음), 스타일 12종(글자 대비 4.5:1, 제목 색·표 머리행 구분, Mermaid 색, 다음 실행에도 유지), Ctrl+P, Ctrl+F, 자동 새로고침, 문서 속 원시 HTML(SVG 링크·이미지 맵·`img name` 이 앱을 망가뜨리지 않음), 외부 이미지(표시·실패 대체·끄기, 표 배경·SVG·`image-set` 으로 새지 않음), 보안, 외부 요청은 이미지뿐 |
 
 `ui_smoke.py` 는 `samples/` 를 임시 폴더에 복사해 브라우저 모드 서버를 띄우고 headless Chromium으로 확인한다. 화면 캡처는 `ui-shots/` 에 저장되니, UI를 고친 뒤 캡처를 직접 열어 보는 것도 점검의 일부다.
 
@@ -67,9 +67,9 @@ python app.py %TEMP%\lec-check
 
 ### 패키징 점검
 ```bat
-build.bat
+build.bat                                  :: dist\Lectern\Lectern.exe + dist\Lectern-버전-setup.exe
 dist\Lectern\Lectern.exe %TEMP%\lec-check
-python tools\context_menu.py
+python tools\context_menu.py               :: 설치 파일 없이 쓸 때 (P2~P4)
 ```
 | # | 할 일 | 기대 결과 |
 |---|---|---|
@@ -77,6 +77,16 @@ python tools\context_menu.py
 | P2 | 폴더 우클릭 → (Windows 11: 더 많은 옵션 표시) → 'Lectern으로 열기' | 그 폴더로 열림 |
 | P3 | 폴더 안 빈 곳 우클릭 → 'Lectern으로 열기' | 현재 폴더로 열림 |
 | P4 | `python tools\context_menu.py --remove` | 메뉴가 사라짐 |
+
+### 설치 파일 점검
+| # | 할 일 | 기대 결과 |
+|---|---|---|
+| I1 | `dist\Lectern-버전-setup.exe` 실행 (기본 선택 그대로) | 관리자 권한 요청 없이 한국어 화면으로 설치되고, 마지막에 'Lectern 실행'을 고르면 창이 뜸 |
+| I2 | 시작 메뉴에서 Lectern 실행 | 아이콘(독서대 위의 책)이 보이고, 마지막 폴더·스타일로 열림 |
+| I3 | 폴더 우클릭 / 폴더 안 빈 곳 우클릭 → 'Lectern으로 열기' | 설치한 Lectern으로 그 폴더가 열림 |
+| I4 | Lectern을 켜 둔 채 같은(또는 새) 버전 설치 파일을 다시 실행 | Lectern을 닫으라고 안내하고 덮어 설치됨 |
+| I5 | Windows 설정 → 앱 → Lectern 제거 | 시작 메뉴·우클릭 메뉴·설치 폴더가 사라지고 `%APPDATA%\Lectern\config.json` 은 남음 |
+| I6 | Python이 없는 PC에서 I1~I3 | 같게 동작 (P1과 함께) |
 
 ## 3. 정리
 ```bat

@@ -50,7 +50,7 @@ export async function renderMermaid(root) {
   mermaid.initialize({
     startOnLoad: false,
     securityLevel: 'strict',
-    theme: mermaidTheme(),
+    ...mermaidTheme(),   // theme, themeVariables
     suppressErrorRendering: true,
     fontFamily: '"Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif',
   });

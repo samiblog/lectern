@@ -1,0 +1,31 @@
+/* 밤 종이: 어두운 갈색 바탕에 따뜻한 미색 명조. 밤에 오래 읽을 때 (전자책 단말기의 밤 모드 풍) */
+:root {
+  --md-bg: #1e1a15;
+  --md-fg: #d4c8b0;
+  --md-heading: #f0dcb4;
+  --md-muted: #a89a82;
+  --md-border: #3a3228;
+  --md-link: #e0a872;
+  --md-code-bg: #29231c;
+  --md-quote-bar: #5a4d3c;
+  --md-th-bg: #2e271f;
+  --md-th-rule: #6b5a43;
+  --md-stripe: #221e18;
+  --md-strong: #f0dcb4;
+  --md-alert-note: #8fb3d1;
+  --md-alert-tip: #a3c27e;
+  --md-alert-important: #c4a0d8;
+  --md-alert-warning: #e2b65e;
+  --md-alert-caution: #e88a78;
+  --md-font: Georgia, "KoPubBatang", "NanumMyeongjo", "Noto Serif KR", "HCR Batang", "Batang", "바탕", serif;
+  --md-heading-font: var(--md-font);
+  --md-mono: "Cascadia Mono", "D2Coding", Consolas, monospace;
+  --md-size: 17px;
+  --md-line: 1.85;
+  --md-width: 760px;
+  --md-h1-rule: 1px solid var(--md-border);
+  --md-h2-rule: 0;
+}
+
+.md-body img:not([src*=".svg"]) { filter: brightness(.88); }
+.md-body table { font-family: Cambria, var(--md-font); }   /* Georgia 숫자는 높낮이가 달라(올드스타일) 표에서는 Cambria */

@@ -17,7 +17,7 @@
   --md-alert-important: #5d3f9e;
   --md-alert-warning: #95600a;
   --md-alert-caution: #a8322a;
-  --md-font: "Noto Serif KR", "KoPubWorld바탕체", "KoPubWorldBatang", Georgia, "Batang", "바탕", serif;
+  --md-font: "Noto Serif KR", "KoPubBatang", "NanumMyeongjo", Georgia, "HCR Batang", "Batang", "바탕", serif;
   --md-heading-font: "Pretendard", "Segoe UI Variable Display", "Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif;
   --md-mono: "Cascadia Mono", "D2Coding", Consolas, "Malgun Gothic", monospace;
   --md-size: 16px;
