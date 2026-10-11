@@ -73,7 +73,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 
 ## 코딩 규칙
 
-- Python 3.10+ (3.12+ 권장 — 정션 판정에 `DirEntry.is_junction` 사용), 타입 힌트, 표준 라이브러리 우선.
+- Python 3.10+ (3.12+ 권장), 타입 힌트, 표준 라이브러리 우선. 정션은 `DirEntry.is_junction`(3.12+) 대신 `st_reparse_tag` 로 판정하므로 3.10·3.11에서도 걸러진다.
 - 새 Python 의존성은 꼭 필요할 때만. 넣으면 `requirements.txt` 와 `docs/DECISIONS.md` 에 이유를 남긴다. 사내망 설치는 wheel 반입이 필요하다는 점을 잊지 않는다.
 - JS는 전역을 쓰지 않는다. 예외는 vendor 전역(`markdownit`, `markdownItAnchor`, `markdownitFootnote`, `markdownitTaskLists`, `hljs`, `katex`, `DOMPurify`, `mermaid`)과 `window.pywebview`.
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
@@ -85,7 +85,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 
 - pywebview는 디버그 모드가 아니면 WebView2의 기본 단축키(Ctrl+F, F5, Ctrl+P 인쇄 등)와 기본 우클릭 메뉴를 끈다. 필요한 기능은 직접 구현한다 (`find.js`, F5 처리 참고).
 - `/api/*` 는 창 모드에서 `X-Token` 헤더(= `window.pywebview.token`)를 검사한다. `<img>` 가 써야 하는 `/doc/*` 는 토큰 없이 열려 있다 (127.0.0.1 전용).
-- DOMPurify는 `SANITIZE_DOM: false` 로 쓴다. 기본값이면 'title', 'images' 같은 제목 앵커 id가 지워진다.
+- DOMPurify는 `SANITIZE_DOM: false` 로 쓴다. 기본값이면 'title', 'images' 같은 제목 앵커 id가 지워진다. 대신 `document.querySelector` 같은 이름을 가릴 수 있는 `img` 의 `name` 은 정화 훅이 지운다 (D15).
+- 문서 속 링크는 `a[href], area[href]` 를 모두 `bindLink` 가 다룬다. 다루지 않은 링크를 누르면 앱 창이 그 주소로 떠난다. SVG `<a>` 는 `target` 등이 읽기 전용 속성이라 `setAttribute` 로 준다.
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import sys
 
 import pytest
 
@@ -53,6 +54,26 @@ def test_scan_skips_symlinks(project, tmp_path):
     except OSError:
         pytest.skip('symlink 권한 없음')
     assert not any(p.startswith('link/') for p in paths(scan(project)))
+
+
+@pytest.mark.skipif(sys.platform != 'win32', reason='정션은 Windows 전용')
+def test_scan_skips_junctions(project, tmp_path):
+    import _winapi   # 정션은 관리자 권한 없이 만들 수 있어 Windows에서 늘 돈다 (심볼릭 링크 테스트와 달리)
+
+    outside = tmp_path / 'outside'
+    outside.mkdir()
+    (outside / 'x.md').write_text('# 밖', encoding='utf-8')
+    junctions = [project / 'to-outside', project / 'docs' / 'loop']
+    _winapi.CreateJunction(str(outside), str(junctions[0]))
+    _winapi.CreateJunction(str(project), str(junctions[1]))   # 상위 폴더를 가리키는 순환
+    try:
+        found = paths(scan(project))
+        assert not any(p.startswith(('to-outside/', 'docs/loop/')) for p in found)
+        assert 'docs/2-b.md' in found
+        assert resolve_inside(project, 'to-outside/x.md') is None
+    finally:
+        for j in junctions:
+            os.rmdir(j)   # 정션만 지운다 (대상 폴더는 그대로)
 
 
 def test_natural_key():

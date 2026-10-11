@@ -29,7 +29,9 @@
 - [x] `## Mermaid` 제목(id `mermaid`)이 있는 다이어그램 문서가 처음 열 때 그려지지 않던 문제
 - [x] 외부 이미지를 꺼도 표 배경·SVG·CSS로 외부 요청이 나가던 문제: 정화 훅 보강 + CSP (D19 변경, D20)
 - [x] `config.json` 을 읽지 못하면 기본값으로 덮어쓰던 문제: 저장하지 않고 알림, BOM 허용 (D21)
-- [x] 테스트: pytest 56개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀), `ui_smoke.py` 30항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
+- [x] Python 3.10/3.11에서 정션을 따라 들어가던 문제: `st_reparse_tag` 로 판정 (프로젝트 밖 문서 제목이 트리에 나오고 순환 정션이 중복되던 것)
+- [x] 문서 속 원시 HTML이 앱 화면을 망가뜨리던 문제: SVG 외부 링크가 있으면 문서가 안 그려짐, `<img name="querySelector">` 로 화면이 멈춤, SVG `xlink:href` 링크·이미지 맵 `<area>` 를 누르면 앱 창이 그 주소로 떠남 (D15 변경)
+- [x] 테스트: pytest 57개 (Windows에서 심볼릭 링크 1개는 권한 때문에 건너뜀, 정션 테스트는 Windows에서 늘 돎), `ui_smoke.py` 34항목 — **Windows 11 headless Chromium에서 통과** (WebView2 창 점검은 2-1)
 
 ## 2단계 — 다음 단계 (우선순위 순)
 
@@ -111,8 +113,6 @@
 
 - 문서 안 찾기는 텍스트 노드 경계를 넘는 검색어를 찾지 못한다 (2-7).
 - 문서 속 절대경로(`C:\...`) 이미지·링크는 프로젝트 안이어도 열리지 않는다 (2-2).
-- Windows 숨김 속성 판정, 정션 제외, 폴더 대화상자, 편집기 열기, 창 크기 저장은 Linux 자동 테스트로 확인할 수 없어 Windows 실기 점검(2-1)이 필요하다.
+- Windows 숨김 속성 판정, 폴더 대화상자, 편집기 열기, 창 크기 저장은 자동 테스트가 없어 Windows 실기 점검(2-1)이 필요하다. (정션 제외는 Windows에서 pytest가 확인한다.)
 - 트리 제목은 파일 앞 16KB에서만 찾는다. 앞부분이 아주 긴 frontmatter나 코드 블록이면 제목이 파일명으로 나온다.
 - 파일을 지우면 열려 있던 문서는 '문서 없음' 화면으로 바뀐다 (의도한 동작).
-- Python 3.10/3.11에서는 정션을 걸러 내지 못한다 (`DirEntry.is_junction` 이 3.12부터). 정션 너머 프로젝트 밖 문서의 제목이 트리에 나오고, 상위 폴더를 가리키는 정션은 경로 길이 한계까지 중복된다. `/doc/*` 는 `resolve_inside` 가 막으므로 내용은 열리지 않는다. 3.12 이상을 쓰거나 `scanner._is_link` 에 `st_reparse_tag` 판정을 더한다.
-- 문서 속 원시 HTML 일부가 화면을 멈춘다: SVG 안의 `<a href>` 는 `bindLink` 에서 오류가 나 그 문서가 표시되지 않고, `<img name="querySelector">` 같은 요소는 `document.querySelector` 를 가려 다른 화면으로 이동하지 못한다 (D15 재검토).

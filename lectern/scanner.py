@@ -24,6 +24,7 @@ DEFAULT_EXCLUDE_DIRS = frozenset({
     'site-packages', 'htmlcov',
 })
 _HIDDEN_ATTRS = getattr(stat, 'FILE_ATTRIBUTE_HIDDEN', 0x2) | getattr(stat, 'FILE_ATTRIBUTE_SYSTEM', 0x4)
+_JUNCTION_TAG = getattr(stat, 'IO_REPARSE_TAG_MOUNT_POINT', 0xA0000003)
 
 Node = dict[str, Any]
 
@@ -43,11 +44,12 @@ def has_hidden_attr(st: os.stat_result) -> bool:
 
 
 def _is_link(entry: os.DirEntry) -> bool:
+    """심볼릭 링크 또는 정션. 정션은 reparse tag 로 본다 (DirEntry.is_junction 은 3.12부터라 3.10·3.11에는 없다)."""
     try:
         if entry.is_symlink():
             return True
-        is_junction = getattr(entry, 'is_junction', None)  # Python 3.12+
-        return bool(is_junction and is_junction())
+        # st_reparse_tag 는 Windows에만 있다. 다른 OS에는 정션이 없다
+        return getattr(entry.stat(follow_symlinks=False), 'st_reparse_tag', 0) == _JUNCTION_TAG
     except OSError:
         return True
 

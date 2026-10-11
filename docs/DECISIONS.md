@@ -91,6 +91,7 @@
 - **결정**: DOM clobbering 보호를 끈다.
 - **이유**: 기본값이면 `id="title"`, `id="images"` 처럼 `document` 속성과 이름이 같은 제목 앵커가 지워져 목차·앵커 링크가 깨진다. 문서는 사용자 자신의 로컬 파일이고, 앱 코드는 문서 영역 밖에서 `document.<이름>` 전역 참조를 쓰지 않으며 앱 id는 `lec-` 접두사를 쓴다.
 - **재검토 필요 (v0.1.3 검토)**: 위 이유의 일부가 사실과 다르다. 앱은 `document.querySelector`·`createElement`·`body`·`title` 을 쓰고, 문서 속 `<img name="querySelector">` 가 이것을 가린다 (화면이 멈춤). 제목 id(`<h2 id="title">`)는 `document` 속성을 가리지 않으므로, `SANITIZE_DOM` 을 끈 채 `img` 의 `name` 만 지우는 방안을 검토한다. ROADMAP '알려진 문제' 참고.
+- **변경 (v0.1.3)**: 위 방안대로 한다. `SANITIZE_DOM: false` 는 그대로 두고, 정화 훅이 `img` 의 `name` 을 지운다. `document` 의 이름을 가릴 수 있는 요소 가운데 DOMPurify가 허용하는 것은 `img` 뿐이다 (`form` 은 금지, `embed`·`object`·`iframe` 은 DOMPurify가 막음). `window.<id>` 는 진짜 전역을 가리지 못하므로, 늦게 불러오는 전역(mermaid)만 조심한다 (CLAUDE.md 함정).
 
 ## D16. 제목 앵커는 GitHub 규칙
 

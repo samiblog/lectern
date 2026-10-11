@@ -81,6 +81,16 @@ LEAKS = (
     '<div style="background-image:image-set(\'{r}leak-imageset.svg\' 1x)">image-set</div>',
 )
 
+# 앱 화면을 망가뜨리던 원시 HTML: SVG 링크(target 읽기 전용, xlink:href), 이미지 맵, document 를 가리는 img name
+RAW_HTML = (
+    '# 원시 HTML 확인\n\n'
+    '<svg width="200" height="30"><a href="{r}page.html"><text x="4" y="20">SVG 외부 링크</text></a></svg>\n\n'
+    '<svg width="200" height="30"><a xlink:href="02-수식과-달러.md"><text x="4" y="20">SVG 문서 링크</text></a></svg>\n\n'
+    '<img src="../research/images/price-band.svg" usemap="#m" width="320" height="120" alt="이미지 맵">'
+    '<map name="m"><area shape="rect" coords="0,0,320,120" href="02-수식과-달러.md" alt="수식 문서"></map>\n\n'
+    '<img name="querySelector" src="../research/images/price-band.svg" width="160" height="60" alt="name 속성">\n'
+)
+
 
 def run(headed: bool) -> None:
     from playwright.sync_api import sync_playwright
@@ -95,6 +105,7 @@ def run(headed: bool) -> None:
     (work / 'docs' / '99-외부-이미지.md').write_text(
         f'# 외부 이미지 확인\n\n![있는 그림]({remote}dot.svg)\n\n![없는 그림]({remote}missing.png)\n\n'
         + '\n\n'.join(x.format(r=remote) for x in LEAKS) + '\n', encoding='utf-8')
+    (work / 'docs' / '98-원시-HTML.md').write_text(RAW_HTML.format(r=remote), encoding='utf-8')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
     server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
@@ -184,6 +195,20 @@ def run(headed: bool) -> None:
             check(page.locator('#lec-content').evaluate('el => el.scrollTop') == 600, '보던 문서는 스크롤 위치를 유지하며 다시 그림')
             check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
             shot('05-live-reload')
+
+            print('[문서 속 원시 HTML]')
+            page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click()
+            page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')
+            check(page.locator('#lec-view svg a[target="_blank"]').count() == 1, 'SVG 속 외부 링크가 있어도 문서를 그리고, 링크는 새 창으로')
+            check(page.evaluate('typeof document.querySelector') == 'function', '<img name="querySelector"> 가 document 를 가리지 않음')
+            page.locator('#lec-view img[usemap]').click()
+            page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
+            check(page.url == url, '이미지 맵 링크는 앱 안에서 문서를 엶 (앱 창이 떠나지 않음)')
+            page.keyboard.press('Alt+ArrowLeft')
+            page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')
+            page.locator('#lec-view svg a[href$=".md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
+            check(page.url == url, 'SVG xlink:href 링크도 앱 안에서 문서를 엶')
 
             print('[외부 이미지]')
             page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()

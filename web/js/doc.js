@@ -12,7 +12,7 @@ import {
 } from './util.js';
 
 const PURIFY = {
-  SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. 로컬 문서 전용이라 허용
+  SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
   FORBID_TAGS: ['style', 'form'],
 };
 
@@ -32,6 +32,9 @@ let purifyHookInstalled = false;
  * 그 밖에 그림을 불러오는 길은 모두 지운다 — srcset·poster, 표의 background,
  * SVG image·feImage 의 href, style 과 SVG 속성(fill·mask·clip-path·marker 등)의 url()·image-set().
  * 여기서 놓친 길은 서버가 / 에 붙이는 CSP(img-src)가 막는다 (server.py content_security_policy).
+ *
+ * 앱 화면을 망가뜨리는 것도 지운다. <img name="querySelector"> 는 document.querySelector 를 가리고 (D15),
+ * SVG 링크의 xlink:href 는 bindLink 가 보지 못해 누르면 앱 창이 그 주소로 떠나므로 href 로 옮긴다.
  */
 function installPurifyHook() {
   if (purifyHookInstalled) return;
@@ -42,10 +45,15 @@ function installPurifyHook() {
       node.setAttribute('data-src', node.getAttribute('src'));
       node.removeAttribute('src');
     }
+    if (node.nodeName === 'IMG') node.removeAttribute('name');
     node.removeAttribute('srcset');
     node.removeAttribute('poster');
     node.removeAttribute('background');
     const isSvg = node.namespaceURI === SVG_NS;
+    if (isSvg && node.nodeName === 'a' && node.hasAttribute('xlink:href')) {
+      if (!node.hasAttribute('href')) node.setAttribute('href', node.getAttribute('xlink:href'));
+      node.removeAttribute('xlink:href');
+    }
     if (isSvg && SVG_IMAGE_TAGS.test(node.nodeName)) {
       for (const name of ['href', 'xlink:href']) {
         const value = node.getAttribute(name);
@@ -107,8 +115,9 @@ function bindLink(a, baseUrl, docPath) {
       });
       break;
     case 'external':
-      a.target = '_blank';
-      a.rel = 'noopener noreferrer';
+      // SVG <a> 의 target 은 읽기 전용 속성이라 대입하면 오류가 난다
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
       a.classList.add('ext');
       a.title = r.url;
       break;
@@ -305,7 +314,7 @@ function frontMatterHtml(raw) {
 function enhance(root, docPath, stamp) {
   const baseUrl = new URL(`/doc/${encodePath(docPath)}`, location.origin);
   for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp);
-  for (const a of $$('a[href]', root)) bindLink(a, baseUrl, docPath);
+  for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath);   // 이미지 맵의 area 도 링크
   decorateAlerts(root);
   decorateTables(root);
   decorateCode(root);
