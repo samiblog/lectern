@@ -25,6 +25,24 @@ RECENT_IN_OVERVIEW = 6
 ALLOWED_HOSTS = frozenset({'127.0.0.1', 'localhost'})
 
 
+def content_security_policy(external_images: bool) -> str:
+    """앱 페이지(/)의 CSP. 문서 HTML은 앱과 같은 출처에서 그려지므로, 정화(doc.js)를 빠져나간 경로의 요청도 브라우저가 막게 한다.
+
+    스크립트·스타일 지시어는 두지 않는다 (D14: pywebview 가 eval 을 쓸 수 있고, KaTeX·Mermaid 는 인라인 스타일을 쓴다).
+    """
+    img = "'self' data: blob:" + (' http: https:' if external_images else '')
+    return '; '.join((
+        f'img-src {img}',
+        "media-src 'self'",
+        "font-src 'self' data:",
+        "connect-src 'self'",
+        "object-src 'none'",
+        "frame-src 'none'",
+        "base-uri 'none'",
+        "form-action 'none'",
+    ))
+
+
 def create_app(state: AppState) -> Flask:
     web = web_dir()
     app = Flask(__name__, static_folder=str(web), static_url_path='/static')
@@ -65,7 +83,10 @@ def create_app(state: AppState) -> Flask:
     def index() -> Response:
         html = (web / 'index.html').read_text(encoding='utf-8')
         html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__)
-        return Response(html, content_type='text/html; charset=utf-8')
+        resp = Response(html, content_type='text/html; charset=utf-8')
+        resp.headers['Content-Security-Policy'] = content_security_policy(state.config.get('external_images') is not False)
+        resp.headers['Referrer-Policy'] = 'no-referrer'
+        return resp
 
     @app.get('/api/state')
     def api_state() -> Any:

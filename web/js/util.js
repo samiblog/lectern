@@ -58,13 +58,13 @@ export async function copyText(text) {
 }
 
 let toastTimer = 0;
-export function toast(message, kind = '') {
+export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
   const el = $('#lec-toast');
   el.textContent = message;
   el.className = kind;
   el.hidden = false;
   clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => { el.hidden = true; }, kind === 'error' ? 4000 : 2200);
+  toastTimer = setTimeout(() => { el.hidden = true; }, ms);
 }
 
 export function debounce(fn, ms) {

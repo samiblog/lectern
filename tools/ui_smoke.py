@@ -73,6 +73,15 @@ def start_image_server(folder: Path) -> tuple[http.server.ThreadingHTTPServer, i
     return srv, srv.server_address[1]
 
 
+# <img> 가 아닌 길로 그림을 부르는 HTML. 정화 훅(doc.js)과 CSP(server.py)가 막아야 한다
+LEAKS = (
+    '<table background="{r}leak-table.svg"><tr><td background="{r}leak-td.svg">표 배경</td></tr></table>',
+    '<svg width="40" height="40"><image href="{r}leak-image.svg" width="40" height="40"/>'
+    '<rect width="40" height="40" fill="url({r}leak-fill.svg#g)"/></svg>',
+    '<div style="background-image:image-set(\'{r}leak-imageset.svg\' 1x)">image-set</div>',
+)
+
+
 def run(headed: bool) -> None:
     from playwright.sync_api import sync_playwright
 
@@ -84,7 +93,8 @@ def run(headed: bool) -> None:
     img_server, img_port = start_image_server(img_dir)
     remote = f'http://127.0.0.1:{img_port}/'
     (work / 'docs' / '99-외부-이미지.md').write_text(
-        f'# 외부 이미지 확인\n\n![있는 그림]({remote}dot.svg)\n\n![없는 그림]({remote}missing.png)\n', encoding='utf-8')
+        f'# 외부 이미지 확인\n\n![있는 그림]({remote}dot.svg)\n\n![없는 그림]({remote}missing.png)\n\n'
+        + '\n\n'.join(x.format(r=remote) for x in LEAKS) + '\n', encoding='utf-8')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
     server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
@@ -139,6 +149,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('pre.mermaid svg', timeout=20000)
             widths = page.evaluate("[...document.querySelectorAll('pre.mermaid svg')].map(s => s.getBoundingClientRect().width)")
             check(len(widths) == 2 and min(widths) > 200, 'Mermaid 그림 2개가 제 크기로 보임')
+            check(page.locator('#lec-view h2#mermaid').count() == 1, "'## Mermaid' 제목(id=mermaid)이 있는 문서도 처음 열 때 그림을 그림")
             check(page.locator('.mermaid-error').count() == 1, '문법 오류 블록은 원문 표시')
             shot('03-mermaid')
 
@@ -182,6 +193,8 @@ def run(headed: bool) -> None:
             check(loaded == [120], '외부 이미지 표시')
             check(page.locator('#lec-view .image-off').inner_text().startswith('외부 이미지를 불러오지 못했습니다'),
                   '불러오지 못한 외부 이미지는 링크로 대체')
+            leaked = [u for u, _ in outside if 'leak-' in u]
+            check(not leaked, '표 배경·SVG·image-set 으로는 외부 요청이 나가지 않음' + (f': {leaked}' if leaked else ''))
             shot('06-external-images')
             page.evaluate("fetch('/api/config', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({external_images:false})})")
             page.reload()

@@ -19,13 +19,19 @@ const PURIFY = {
 const ALERTS = { NOTE: '참고', TIP: '팁', IMPORTANT: '중요', WARNING: '경고', CAUTION: '주의' };
 
 const MEDIA_TAGS = /^(IMG|SOURCE|VIDEO|AUDIO|TRACK|EMBED|INPUT)$/;
+const SVG_NS = 'http://www.w3.org/2000/svg';
+const SVG_IMAGE_TAGS = /^(image|feImage)$/;
+// url(#id) 같은 문서 안 참조는 두고, 그 밖의 url()·image-set() 은 외부 요청이 될 수 있다
+const URL_REF = /url\s*\(\s*['"]?\s*(?!#)|image-set\s*\(/i;
 let purifyHookInstalled = false;
 
 /**
  * HTML을 DOM에 넣는 순간 브라우저는 이미지를 내려받기 시작한다 (외부 주소 포함).
  * 그래서 정화 단계에서 src 를 data-src 로 옮겨 두고, fixImage 가 허용된 이미지에만 주소를 다시 준다.
  * (로컬 이미지는 항상, 외부 이미지는 설정 external_images 가 켜져 있을 때만)
- * srcset·poster·url()이 든 style 은 지운다 — 이 경로로 외부 요청이 새지 않게.
+ * 그 밖에 그림을 불러오는 길은 모두 지운다 — srcset·poster, 표의 background,
+ * SVG image·feImage 의 href, style 과 SVG 속성(fill·mask·clip-path·marker 등)의 url()·image-set().
+ * 여기서 놓친 길은 서버가 / 에 붙이는 CSP(img-src)가 막는다 (server.py content_security_policy).
  */
 function installPurifyHook() {
   if (purifyHookInstalled) return;
@@ -38,8 +44,17 @@ function installPurifyHook() {
     }
     node.removeAttribute('srcset');
     node.removeAttribute('poster');
-    const style = node.getAttribute('style');
-    if (style && /url\s*\(/i.test(style)) node.removeAttribute('style');
+    node.removeAttribute('background');
+    const isSvg = node.namespaceURI === SVG_NS;
+    if (isSvg && SVG_IMAGE_TAGS.test(node.nodeName)) {
+      for (const name of ['href', 'xlink:href']) {
+        const value = node.getAttribute(name);
+        if (value && !/^\s*(#|data:)/i.test(value)) node.removeAttribute(name);
+      }
+    }
+    for (const { name, value } of [...node.attributes]) {
+      if ((name === 'style' || isSvg) && URL_REF.test(value)) node.removeAttribute(name);
+    }
   });
 }
 

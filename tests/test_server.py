@@ -39,6 +39,7 @@ def test_state_without_folder():
 def test_state_and_tree(client, project):
     st = client.get('/api/state').get_json()
     assert st['root'] == str(project) and st['name'] == 'proj' and st['seq'] >= 1
+    assert st['config_error'] is None
     tree = client.get('/api/tree').get_json()['tree']
     names = [n['name'] for n in tree]
     assert names == ['docs', 'CLAUDE.md', 'README.md']
@@ -92,6 +93,27 @@ def test_rejects_foreign_host_header(state):
     assert c.get('/doc/README.md', headers={'Host': 'evil.example:8765'}).status_code == 403
     assert c.get('/doc/README.md', headers={'Host': '127.0.0.1:8765'}).status_code == 200
     assert c.get('/doc/README.md', headers={'Host': 'localhost'}).status_code == 200
+
+
+def test_state_reports_config_error(tmp_path):
+    path = tmp_path / 'config.json'
+    path.write_text('{ "theme": "dark", }', encoding='utf-8')
+    c = create_app(AppState(Config(path), mode='browser')).test_client()
+    assert '설정 파일을 읽지 못해' in c.get('/api/state').get_json()['config_error']
+
+
+def csp_of(client) -> dict[str, str]:
+    header = client.get('/').headers['Content-Security-Policy']
+    return dict(d.strip().split(' ', 1) for d in header.split(';'))
+
+
+def test_index_csp_follows_external_images(client):
+    assert client.get('/').headers['Referrer-Policy'] == 'no-referrer'
+    csp = csp_of(client)
+    assert 'script-src' not in csp and 'default-src' not in csp   # D14: 스크립트는 CSP로 막지 않는다
+    assert 'https:' in csp['img-src'] and csp['connect-src'] == "'self'"
+    client.post('/api/config', json={'external_images': False})
+    assert 'http' not in csp_of(client)['img-src']
 
 
 def test_external_images_default_on_and_client_can_toggle(client):

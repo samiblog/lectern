@@ -6,14 +6,19 @@ import { openLightbox } from './ui.js';
 
 let loading = null;
 
+// 라이브러리를 불러오기 전에는 문서 속 id="mermaid" 요소(예: '## Mermaid' 제목)가 window.mermaid 로 잡힌다.
+// 그래서 전역이 있는지가 아니라 진짜 라이브러리인지를 본다.
+const loaded = () => (typeof window.mermaid?.run === 'function' ? window.mermaid : null);
+
 function ensureMermaid() {
-  if (window.mermaid) return Promise.resolve(window.mermaid);
+  if (loaded()) return Promise.resolve(loaded());
   if (!loading) {
     loading = new Promise((resolve, reject) => {
+      const fail = () => { loading = null; reject(new Error('mermaid 로드 실패')); };
       const s = document.createElement('script');
       s.src = '/static/vendor/mermaid/mermaid.min.js';
-      s.onload = () => resolve(window.mermaid);
-      s.onerror = () => { loading = null; reject(new Error('mermaid 로드 실패')); };
+      s.onload = () => (loaded() ? resolve(loaded()) : fail());
+      s.onerror = fail;
       document.head.append(s);
     });
   }

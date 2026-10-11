@@ -106,7 +106,10 @@ def run_window(state: AppState, port: int, debug: bool) -> None:
 def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     setup_logging(quiet=not (args.browser or args.debug))
-    state = AppState(Config(), mode='browser' if args.browser else 'app')
+    config = Config()
+    if config.load_error:
+        print(config.load_error, file=sys.stderr)
+    state = AppState(config, mode='browser' if args.browser else 'app')
     open_initial_folder(state, args.folder)
     try:
         if args.browser:

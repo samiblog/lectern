@@ -231,7 +231,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   background: #24303c; color: #f3f6f9; font-size: 13px; box-shadow: 0 8px 24px rgb(0 0 0 / .2);
   overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-#lec-toast.error { background: var(--ui-danger); color: #fff; }
+#lec-toast.error { background: var(--ui-danger); color: #fff; white-space: normal; }
 
 /* ---- 버튼 (본문 영역) ----------------------------------------------------- */
 button.primary {

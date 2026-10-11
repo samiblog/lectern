@@ -84,11 +84,13 @@
 - **결정**: `index.html` 에 Content-Security-Policy를 두지 않는다.
 - **이유**: pywebview가 js_api 결과를 돌려줄 때 `eval` 계열을 쓸 수 있어 `unsafe-eval` 없는 CSP와 충돌할 위험이 있다. 대신 DOMPurify 정화, 로컬 바인딩, 토큰, Host 검사로 막는다.
 - **재검토 조건**: 창 모드에서 CSP를 걸고 js_api·Mermaid가 모두 동작하는지 확인되면 추가한다.
+- **변경 (v0.1.3)**: 스크립트·스타일 지시어를 뺀 CSP는 eval 문제와 부딪치지 않으므로 건다. 이미지·연결·글꼴 출처만 제한한다 (D20). `script-src` 는 여전히 두지 않는다.
 
 ## D15. DOMPurify `SANITIZE_DOM: false`
 
 - **결정**: DOM clobbering 보호를 끈다.
 - **이유**: 기본값이면 `id="title"`, `id="images"` 처럼 `document` 속성과 이름이 같은 제목 앵커가 지워져 목차·앵커 링크가 깨진다. 문서는 사용자 자신의 로컬 파일이고, 앱 코드는 문서 영역 밖에서 `document.<이름>` 전역 참조를 쓰지 않으며 앱 id는 `lec-` 접두사를 쓴다.
+- **재검토 필요 (v0.1.3 검토)**: 위 이유의 일부가 사실과 다르다. 앱은 `document.querySelector`·`createElement`·`body`·`title` 을 쓰고, 문서 속 `<img name="querySelector">` 가 이것을 가린다 (화면이 멈춤). 제목 id(`<h2 id="title">`)는 `document` 속성을 가리지 않으므로, `SANITIZE_DOM` 을 끈 채 `img` 의 `name` 만 지우는 방안을 검토한다. ROADMAP '알려진 문제' 참고.
 
 ## D16. 제목 앵커는 GitHub 규칙
 
@@ -114,3 +116,18 @@
 - **유지하는 것**: 앱 자체의 외부 요청 금지(CDN·웹폰트 등), 프로젝트 밖 로컬 경로 차단, `srcset`·`poster`·CSS `url()` 제거. 외부 요청이 허용되는 길은 `<img>` 하나뿐이고 `tools/ui_smoke.py` 가 이를 확인한다.
 - **감수하는 것**: 이미지 주소의 서버는 그 그림을 요청한 사실(IP, 시각)을 안다. 사내망에서 막힌 주소는 링크로 바뀐다.
 - **HTML(ROADMAP 4단계)과의 관계**: 이 결정은 Markdown 속 이미지에 대한 것이다. HTML 문서의 스크립트·CDN 허용 여부는 4단계에서 따로 정한다.
+- **변경 (v0.1.3)**: v0.1.2에서는 `<img>` 가 아닌 길 — 표의 `background`, SVG `image`·`feImage` 의 href, SVG `fill`·`mask`·`clip-path`·`marker` 의 `url()`, style 의 `image-set()` — 로 외부 그림을 불렀고, 설정을 꺼도 막히지 않았다. 정화 훅에서 이 길을 지우고 CSP로 한 번 더 막는다 (D20). 이제 외부 요청이 나가는 길은 정말 `<img>` 하나다.
+
+## D20. 앱 페이지에 이미지·연결 출처만 제한하는 CSP를 건다
+
+- **결정**: `GET /` 응답에 `img-src 'self' data: blob:`(설정 `external_images` 가 켜져 있으면 `http: https:` 추가), `media-src 'self'`, `font-src 'self' data:`, `connect-src 'self'`, `object-src 'none'`, `frame-src 'none'`, `base-uri 'none'`, `form-action 'none'` 을 붙이고, `Referrer-Policy: no-referrer` 를 함께 보낸다 (`server.py` `content_security_policy`).
+- **이유**: 문서 HTML은 앱과 같은 출처에서 그려진다. DOMPurify 허용 목록은 넓어서 정화 훅만으로는 그림을 부르는 길을 다 막았다고 장담하기 어렵다 (v0.1.2에서 10가지가 새었다). 브라우저가 출처를 막으면 훅이 놓친 길도 막힌다.
+- **두지 않는 것**: `default-src`·`script-src`·`style-src`. pywebview가 eval 계열을 쓸 수 있고 (D14), KaTeX·Mermaid는 인라인 스타일을 쓴다.
+- **영향**: 설정 `external_images` 를 바꾸면 페이지를 다시 불러와야 CSP가 바뀐다 (설정 창을 만들 때 저장 후 다시 불러오기). ROADMAP 4단계에서 HTML 문서를 `<iframe>` 으로 보일 때는 `frame-src 'self'` 로 바꾼다.
+
+## D21. 설정 파일을 읽지 못하면 그 실행 동안 저장하지 않는다
+
+- **결정**: `config.json` 이 있는데 읽지 못하면(JSON 문법 오류, 맨 바깥이 객체가 아님, 읽기 오류) 기본 설정으로 실행하되 저장하지 않는다. 이유와 위치(몇 행 몇 열)를 화면 알림(`/api/state` 의 `config_error`)과 stderr로 알린다. UTF-8 BOM은 오류로 보지 않는다.
+- **이유**: README는 `editor`·`exclude_dirs` 를 손으로 고치라고 안내한다. Windows 경로의 역슬래시를 하나만 쓰거나(`"C:\Tools"`), 마지막 쉼표를 남기거나, 메모장·PowerShell 5.1이 BOM을 붙이면 파싱에 실패한다. v0.1.2는 이때 기본값으로 시작한 뒤 폴더를 여는 순간 파일을 덮어써서 사용자가 고친 내용이 조용히 사라졌다.
+- **고르지 않은 방안**: 깨진 파일을 `config.json.broken` 으로 옮기고 새로 쓰기. 디스크에 `config.json` 외의 파일을 만들어 보기 전용 원칙(디스크에 쓰는 것은 설정 파일 하나)과 어긋난다.
+- **대가**: 파일을 고칠 때까지 최근 폴더·테마·창 크기가 저장되지 않는다.

@@ -61,4 +61,5 @@ class AppState:
             'sep': os.sep,
             'watch': self.watch_backend,
             'version': __version__,
+            'config_error': self.config.load_error,
         }

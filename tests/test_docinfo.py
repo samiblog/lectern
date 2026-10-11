@@ -53,6 +53,7 @@ def test_doc_info_cache_follows_mtime(tmp_path):
     p = tmp_path / 'a.md'
     p.write_text('# 하나\n', encoding='utf-8')
     assert doc_info(p)['title'] == '하나'
-    p.write_text('# 둘둘\n', encoding='utf-8')   # 크기가 달라져 캐시가 무효화됨
-    assert doc_info(p)['title'] == '둘둘'
+    # 크기가 달라져 캐시가 무효화됨. Windows는 수정 시각 단위가 거칠어(약 15ms) 시각만으로는 바뀐 줄 모를 수 있다
+    p.write_text('# 둘째 제목\n', encoding='utf-8')
+    assert doc_info(p)['title'] == '둘째 제목'
     assert doc_info(tmp_path / 'none.md') == {'title': None, 'summary': ''}

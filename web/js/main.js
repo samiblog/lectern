@@ -34,11 +34,17 @@ function showWelcome() {
   setStatus({ path: '', info: '' });
 }
 
+let configErrorShown = false;
+
 async function reloadProject() {
   if (S.reloading) return;
   S.reloading = true;
   try {
     const st = await getJSON('/api/state');
+    if (st.config_error && !configErrorShown) {
+      configErrorShown = true;
+      toast(st.config_error, 'error', 15000);
+    }
     S.root = st.root;
     S.name = st.name;
     S.sep = st.sep;

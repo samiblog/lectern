@@ -38,21 +38,40 @@ class Config:
     def __init__(self, path: Path | None = None):
         self.path = path or (config_dir() / 'config.json')
         self._lock = threading.Lock()
+        # 파일이 있는데 읽지 못하면 그 이유. 이때는 기본값으로 돌고 저장하지 않는다 (손으로 고친 내용을 덮어쓰지 않도록)
+        self.load_error: str | None = None
         self.data = self._load()
 
     def _load(self) -> dict[str, Any]:
         data = copy.deepcopy(DEFAULTS)
         try:
-            loaded = json.loads(self.path.read_text(encoding='utf-8'))
-        except (OSError, ValueError):
+            text = self.path.read_text(encoding='utf-8-sig')  # 메모장·PowerShell 5.1 이 붙이는 BOM 허용
+        except FileNotFoundError:
             return data
-        if isinstance(loaded, dict):
-            for key, value in loaded.items():
-                if key in DEFAULTS:
-                    data[key] = value
+        except (OSError, ValueError) as exc:
+            self.load_error = self._error_message(f'파일을 읽을 수 없음 ({exc})')
+            return data
+        try:
+            loaded = json.loads(text)
+        except json.JSONDecodeError as exc:
+            hint = ' 경로 안의 \\ 는 \\\\ 로 씁니다.' if 'escape' in exc.msg else ''
+            self.load_error = self._error_message(f'{exc.lineno}행 {exc.colno}열: {exc.msg}', hint)
+            return data
+        if not isinstance(loaded, dict):
+            self.load_error = self._error_message('맨 바깥이 { } 객체가 아님')
+            return data
+        for key, value in loaded.items():
+            if key in DEFAULTS:
+                data[key] = value
         return data
 
+    def _error_message(self, detail: str, hint: str = '') -> str:
+        return (f'설정 파일을 읽지 못해 기본 설정으로 실행합니다 ({detail}).{hint} '
+                f'파일을 고칠 때까지 설정은 저장하지 않습니다: {self.path}')
+
     def save(self) -> None:
+        if self.load_error:
+            return
         with self._lock:
             try:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
