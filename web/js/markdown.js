@@ -99,9 +99,18 @@ function mathInlineParen(state, silent) {
   const close = open === '(' ? '\\)' : '\\]';
   const end = src.indexOf(close, start + 2);
   if (end === -1 || end === start + 2) return false;
+  // 마크다운의 \[ 는 대괄호를 글자로 쓰는 표기이기도 하다 ('원문은 \[판독 불확실\]로 표시').
+  // 그래서 \[…\] 는 줄을 통째로 차지할 때만 수식이고, 한글·한자가 있는데 TeX 명령이 없으면 \(…\) 도 수식이 아니다
+  if (open === '[') {
+    const before = src.slice(src.lastIndexOf('\n', start - 1) + 1, start);
+    const lineEnd = src.indexOf('\n', end);
+    if (before.trim() || src.slice(end + 2, lineEnd === -1 ? src.length : lineEnd).trim()) return false;
+  }
+  const content = src.slice(start + 2, end);
+  if (/[\p{Script=Hangul}\p{Script=Han}]/u.test(content) && !/\\[a-zA-Z]/.test(content)) return false;
   if (!silent) {
     const token = state.push(open === '(' ? 'math_inline' : 'math_display_inline', 'math', 0);
-    token.content = src.slice(start + 2, end);
+    token.content = content;
     token.markup = open === '(' ? '\\(' : '\\[';
   }
   state.pos = end + 2;

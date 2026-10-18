@@ -390,6 +390,8 @@ def run(headed: bool) -> None:
             check(page.locator('#lec-view .katex').count() >= 5, 'KaTeX 수식 렌더링')
             dollars = ' '.join(page.locator('#lec-view h2:has-text("달러 표기") + ul li').all_inner_texts())
             check('$105에서 $110' in dollars and 'US$1.2bn' in dollars, '달러 표기는 수식으로 바뀌지 않음')
+            bracket = page.locator('#lec-view p', has_text='[판독 불확실]')
+            check(bracket.count() == 1 and bracket.locator('.katex').count() == 0, r'문장 속 \[판독 불확실\] 은 대괄호 글자 (수식 아님)')
             menu(page.locator('#lec-view .math-inline').first)
             tex = choose('LaTeX 복사')
             check(tex == r'x_t = \beta x_{t-1} + \varepsilon_t', f'문장 속 수식 우클릭: LaTeX 복사 ({tex!r})')
