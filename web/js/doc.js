@@ -159,6 +159,7 @@ export function bindLink(a, baseUrl, docPath, root = null) {
   // 우클릭 메뉴의 '링크 주소 복사'가 쓸 값: 인터넷 주소, 또는 프로젝트 기준 경로(#앵커 포함)
   const target = { external: r.url, local: `${r.path || ''}${r.hash || ''}`, anchor: `${docPath}${r.hash}` }[r.kind];
   a.dataset.lecHref = target || a.getAttribute('href');
+  delete a.dataset.lecOpen;   // 우클릭 '오른쪽 창에 열기'가 쓸 값은 아래에서만 단다 (문서가 적어 둔 값은 버린다)
   switch (r.kind) {
     case 'anchor':
       a.addEventListener('click', (e) => {

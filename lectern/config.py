@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import copy
 import json
+import math
 import os
 import threading
 from collections.abc import Callable
@@ -54,7 +55,8 @@ _EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"�
 
 
 def is_number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """유한한 숫자. JSON 의 1e400 은 inf 로 읽히는데, 그대로 내보내면 화면이 받는 JSON 이 깨진다 (Infinity)"""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 def value_ok(key: str, value: Any) -> bool:
@@ -220,6 +222,7 @@ class Config:
             return {'doc': None, 'scroll': {}, 'panes': [], 'active': 0}
         doc = entry.get('doc') if isinstance(entry.get('doc'), str) else None
         scrolls = entry.get('scroll') if isinstance(entry.get('scroll'), dict) else {}
+        scrolls = {k: v for k, v in scrolls.items() if is_number(v)}
         raw = entry.get('panes')
         if isinstance(raw, list):
             panes = [{'doc': p['doc'], 'scroll': p.get('scroll') if is_number(p.get('scroll')) else 0}

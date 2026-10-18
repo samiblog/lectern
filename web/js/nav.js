@@ -77,20 +77,25 @@ export async function openBeside(target) {
 
 /**
  * 마지막에 열어 둔 창들을 되살린다 (position.js 가 기록한 /api/state 의 position). 없어진 문서는 건너뛴다.
+ * 칸을 먼저 모두 만들고 그린다 — 기록한 스크롤 위치는 나눈 폭에서 잰 값이라, 넓은 칸에 먼저 그리면 어긋난다.
  * 하나도 열지 못하면 false.
  */
 export async function restorePanes({ panes = [], active = 0 } = {}) {
   const want = panes[active];
-  let target = null;
+  const first = S.pane;
+  const slots = [];
   for (const p of panes.filter((x) => S.fileMap.has(x.doc)).slice(0, MAX_PANES)) {
-    const pane = target ? addPane(S.panes[S.panes.length - 1]) : S.pane;
-    if (await navigate({ type: 'doc', path: p.doc }, { pane, scrollTop: p.scroll })) {
-      if (!target || p === want) target = pane;
-    } else if (pane !== S.pane) {
-      closePane(pane);
-    }
+    const pane = slots.length ? addPane(slots[slots.length - 1][1]) : first;
+    if (pane) slots.push([p, pane]);
   }
-  if (target) selectPane(target);
+  const done = await Promise.all(slots.map(([p, pane]) => navigate({ type: 'doc', path: p.doc }, { pane, scrollTop: p.scroll })));
+  let target = null;
+  slots.forEach(([p, pane], i) => {
+    if (done[i] && (!target || p === want)) target = pane;
+    else if (!done[i] && !pane.current && !pane.pending) closePane(pane);   // 열지 못한 빈 칸
+  });
+  // 그리는 동안 사용자가 다른 칸을 골랐으면 그대로 둔다
+  if (target && S.pane === first) selectPane(target);
   return !!target;
 }
 

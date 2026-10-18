@@ -156,6 +156,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
   container-type: inline-size;   /* 좁은 칸에서 본문 여백·찾기 칸을 줄인다 (@container) */
 }
+.lec-scroll:focus { outline: none; }   /* Ctrl+1·2·3 이 키보드 스크롤을 위해 초점을 준다 (tabindex=-1) */
 #lec-toc {
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);

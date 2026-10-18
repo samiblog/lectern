@@ -107,7 +107,10 @@ RAW_HTML = (
     '<svg width="200" height="30"><a xlink:href="02-수식과-달러.md"><text x="4" y="20">SVG 문서 링크</text></a></svg>\n\n'
     '<img src="../research/images/price-band.svg" usemap="#m" width="320" height="120" alt="이미지 맵">'
     '<map name="m"><area shape="rect" coords="0,0,320,120" href="02-수식과-달러.md" alt="수식 문서"></map>\n\n'
-    '<img name="querySelector" src="../research/images/price-band.svg" width="160" height="60" alt="name 속성">\n'
+    '<img name="querySelector" src="../research/images/price-band.svg" width="160" height="60" alt="name 속성">\n\n'
+    # 우클릭 '오른쪽 창에 열기'가 쓰는 data-lec-open 을 문서가 적어 두어도 쓰지 않고, 깨진 값이어도 메뉴가 떠야 한다
+    '<p><a href="https://example.com/" data-lec-open=\'{{"type":"doc","path":"README.md"}}\'>심은 값 링크</a> '
+    '<a data-lec-href="x" data-lec-open="{{">깨진 값</a></p>\n'
 )
 
 
@@ -617,6 +620,12 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')
             check(page.locator('#lec-view svg a[target="_blank"]').count() == 1, 'SVG 속 외부 링크가 있어도 문서를 그리고, 링크는 새 창으로')
             check(page.evaluate('typeof document.querySelector') == 'function', '<img name="querySelector"> 가 document 를 가리지 않음')
+            planted = menu(page.locator('#lec-view a', has_text='심은 값 링크'))
+            page.keyboard.press('Escape')
+            broken = menu(page.locator('#lec-view a', has_text='깨진 값'))
+            page.keyboard.press('Escape')
+            check('오른쪽 창에 열기' not in planted and '링크 주소 복사' in broken,
+                  "문서가 적어 둔 data-lec-open 은 쓰지 않고, 깨진 값이어도 우클릭 메뉴가 뜸")
             page.locator('#lec-view img[usemap]').click()
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
             check(page.url == url, '이미지 맵 링크는 앱 안에서 문서를 엶 (앱 창이 떠나지 않음)')
@@ -942,21 +951,53 @@ def run(headed: bool) -> None:
             p = panes() if n_panes(3) and h1_has('수식과 달러') else []
             check(items.startswith('오른쪽 창에 열기') and [x['active'] for x in p] == [False, True, False],
                   f"트리·링크 우클릭 '오른쪽 창에 열기': 누른 창 바로 오른쪽에 ({p})")
+            scrolls = lambda: page.evaluate("[...document.querySelectorAll('.lec-scroll')].map(s => Math.round(s.scrollTop))")
+            page.locator('.lec-pane').nth(0).locator('.lec-scroll').evaluate('el => el.scrollTop = 1500')
             saved = None   # 스크롤이 멈추고 1.5초 뒤 저장
             for _ in range(40):
                 saved = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
-                if len(saved['panes']) == 3 and saved['active'] == 1:
+                if len(saved['panes']) == 3 and saved['active'] == 1 and saved['panes'][0]['scroll'] == 1500:
                     break
                 page.wait_for_timeout(200)
             page.reload()
             restored = n_panes(3) and wait_until(page, "[...document.querySelectorAll('.lec-pane article')].every(a => a.querySelector('h1'))", 15000)
-            check(restored and [(x['h1'], x['active']) for x in panes()] == [(x['h1'], x['active']) for x in p],
-                  f'다시 열면 창들과 선택된 창을 되살림 ({saved})')
+            page.wait_for_timeout(300)
+            check(restored and [(x['h1'], x['active']) for x in panes()] == [(x['h1'], x['active']) for x in p] and scrolls()[0] == 1500,
+                  f'다시 열면 창들·선택된 창·나눈 폭에서의 스크롤 위치를 되살림 ({scrolls()}, {saved})')
             page.keyboard.press('Control+1')
             check(panes()[0]['active'] and ui_now()['status'] == 'docs/01-기능-점검.md', 'Ctrl+1 로 첫 창을 고름')
+            page.keyboard.press('Control+2')
+            before = scrolls()
+            page.keyboard.press('PageDown')
+            wait_until(page, f"document.querySelectorAll('.lec-scroll')[1].scrollTop > {before[1]}")
+            after = scrolls()
+            check(after[1] > before[1] and after[0] == before[0], f'Ctrl+2 뒤 PageDown 은 둘째 창을 스크롤 ({before} → {after})')
+            page.keyboard.press('Control+1')
+            items = menu(page.locator('.lec-pane').nth(1).locator('.pane-close'))
+            page.keyboard.press('Escape')
+            check(items.startswith('docs/02-수식과-달러.md') and panes()[1]['active'],
+                  f'선택되지 않은 창의 × 를 우클릭하면 그 창이 선택되고 그 창의 메뉴 ({items[:30]!r})')
             items = menu(page.locator('.lec-pane').nth(2).locator('.lec-scroll'), position={'x': 6, 'y': 6})
             page.locator('#lec-menu button', has_text='이 창 닫기').click()
             check('이 창 닫기' in items and n_panes(2), "문서 빈 곳 우클릭 '이 창 닫기'")
+            soon_gone = work / 'docs' / '97-곧-지움.md'
+            soon_gone.write_text('# 곧 지울 문서\n\n본문\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-곧-지움.md"]', timeout=8000)
+            pane_title(1).click()
+            row('docs/97-곧-지움.md').click()
+            h1_has('곧 지울 문서')
+            soon_gone.unlink()
+            wait_until(page, "!!document.querySelectorAll('.lec-pane')[1].querySelector('.doc-missing')", 8000)
+            pane_title(0).click()
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 700')
+            kept = None
+            for _ in range(40):
+                kept = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
+                if kept['panes'] == [{'doc': 'docs/01-기능-점검.md', 'scroll': 700}]:
+                    break
+                page.wait_for_timeout(200)
+            check(kept['panes'] == [{'doc': 'docs/01-기능-점검.md', 'scroll': 700}],
+                  f"다른 창의 문서가 지워져도('문서 없음') 나머지 창의 위치는 계속 기록 ({kept['panes']})")
             page.locator('.lec-pane').nth(1).locator('.pane-close').click()
             check(n_panes(1) and page.locator('.pane-head').first.is_hidden() and abs(panes()[0]['w'] - one[0]['w']) <= 2,
                   '창이 하나로 돌아오면 다시 전체 폭')

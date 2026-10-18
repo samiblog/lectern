@@ -207,6 +207,16 @@ function sourceItems(range, label = '원문 복사', note = '') {
   ];
 }
 
+/** 링크가 뷰어에서 여는 곳 {type, path, hash?}. 문서 속 원시 HTML 이 data-lec-open 을 적었을 수도 있으니 형식을 본다 */
+function openTarget(link) {
+  try {
+    const t = JSON.parse(link.dataset.lecOpen || 'null');
+    return (t?.type === 'doc' || t?.type === 'overview') && typeof t.path === 'string' ? t : null;
+  } catch {
+    return null;
+  }
+}
+
 function blockItems(el, target) {
   const items = [{ header: kindOf(el) }];
   const tag = el.tagName;
@@ -215,10 +225,8 @@ function blockItems(el, target) {
   if (math && math !== el && el.contains(math)) items.push(texItem(math));
   const link = target.closest('a[data-lec-href]');
   if (link) items.push({ label: '링크 주소 복사', hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref) });
-  if (link?.dataset.lecOpen) {   // 뷰어에서 여는 문서·폴더 링크 (doc.js 의 bindLink, pathlink.js)
-    const open = JSON.parse(link.dataset.lecOpen);
-    items.push({ label: '오른쪽 창에 열기', hint: 'Ctrl+클릭', action: () => emit('open', { ...open, side: true }) });
-  }
+  const open = link && openTarget(link);   // 뷰어에서 여는 문서·폴더 링크 (doc.js 의 bindLink, pathlink.js)
+  if (open) items.push({ label: '오른쪽 창에 열기', hint: 'Ctrl+클릭', action: () => emit('open', { ...open, side: true }) });
   if (tag === 'IMG') {
     if (el.classList.contains('external')) items.push({ label: '그림 주소 복사', hint: el.src, action: () => copyPlain(el.src) });
     else items.push({ label: '그림 복사', hint: 'PNG — 워드·PPT·메일에 붙여 넣기', action: () => copyImage(el) });

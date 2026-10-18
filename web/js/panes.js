@@ -14,7 +14,7 @@ export const MAX_PANES = 3;
 
 const PANE_HTML = `<div class="pane-head"><span class="pane-title"></span>
   <button type="button" class="icon-btn small pane-close" title="이 창 닫기"><svg><use href="#i-close"/></svg></button></div>
-  <div class="lec-scroll"><article></article></div>`;
+  <div class="lec-scroll" tabindex="-1"><article></article></div>`;
 
 function createPane(el) {
   const pane = {
@@ -115,8 +115,9 @@ export function initPanes() {
   selectPane(S.panes[0]);
   layout();
   const box = $('#lec-panes');
-  // 누르기 전에 고른다 — 클릭·우클릭을 다루는 코드는 고른 칸(#lec-view)을 본다. 닫기 단추는 고르지 않고 닫는다
-  const pick = (e) => { if (!e.target.closest('.pane-close')) selectPane(paneOf(e.target)); };
+  // 누르기 전에 고른다 — 클릭·우클릭을 다루는 코드는 고른 칸(#lec-view)을 본다.
+  // 닫기 단추를 왼쪽 단추로 누르면 고르지 않고 닫는다 (우클릭은 그 칸을 골라 그 칸의 메뉴가 뜨게)
+  const pick = (e) => { if (!(e.button === 0 && e.target.closest('.pane-close'))) selectPane(paneOf(e.target)); };
   box.addEventListener('pointerdown', pick, true);
   box.addEventListener('focusin', pick);
   on('tree', () => S.panes.forEach(showTitle));   // 문서 제목이 바뀌었을 수 있다

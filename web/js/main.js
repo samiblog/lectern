@@ -240,7 +240,9 @@ function bindKeys() {
       forward();
     } else if (mod && !e.shiftKey && !e.altKey && S.panes[Number(e.key) - 1]) {   // Ctrl+1·2·3: 그 창을 고른다
       e.preventDefault();
-      selectPane(S.panes[Number(e.key) - 1]);
+      const pane = S.panes[Number(e.key) - 1];
+      selectPane(pane);
+      pane.scroller.focus({ preventScroll: true });   // PageUp·PageDown·방향키가 그 창을 스크롤하게
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();

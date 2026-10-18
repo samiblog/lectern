@@ -9,7 +9,8 @@ import { debounce } from './util.js';
 let sent = '';
 
 function send() {
-  const docs = S.panes.filter((p) => p.current?.type === 'doc');
+  // 지워졌거나 이름이 바뀐 문서('문서 없음' 화면)는 뺀다 — 하나라도 없으면 서버가 요청 전체를 거절한다
+  const docs = S.panes.filter((p) => p.current?.type === 'doc' && S.fileMap.has(p.current.path));
   if (S.config.restore_last === false || !docs.length) return;
   const body = {
     panes: docs.map((p) => ({ path: p.current.path, scroll: Math.round(p.scroller.scrollTop) })),
@@ -25,6 +26,7 @@ export function initPosition() {
   const later = debounce(send, 1500);
   on('view', later);
   on('panes', later);
+  on('rendered', later);   // 선택되지 않은 칸은 다 그려도 'view' 가 없다 (창 되살리기 — 늦게 끝난 칸도 기록되게)
   // 스크롤은 거품처럼 올라오지 않으므로 잡기 단계에서 듣는다 (모든 창)
   document.addEventListener('scroll', (e) => { if (e.target.classList?.contains('lec-scroll')) later(); }, { capture: true, passive: true });
 }

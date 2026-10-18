@@ -97,6 +97,13 @@ def test_positions_keep_panes(tmp_path):
     assert cfg.position(r'C:\old')['panes'] == [{'doc': 'x.md', 'scroll': 7}]
     bad = cfg.position(r'C:\bad')
     assert bad['panes'] == [{'doc': 'y.md', 'scroll': 0}] and bad['active'] == 0
+    # 1e400 은 JSON 으로 맞지만 inf 로 읽힌다 — 내보내면 화면이 받는 JSON 이 깨지므로 버린다
+    text = json.dumps({'projects': {os.path.normcase(r'C:\big'): {'doc': 'z.md', 'scroll': {'z.md': 1, 'w.md': 5},
+                                                                   'panes': [{'doc': 'z.md', 'scroll': 1}]}}})
+    path.write_text(text.replace('"scroll": 1}', '"scroll": 1e400}').replace('"z.md": 1,', '"z.md": 1e400,'), encoding='utf-8')
+    big = Config(path).position(r'C:\big')
+    assert big['panes'] == [{'doc': 'z.md', 'scroll': 0}] and big['scroll'] == {'w.md': 5}
+    json.dumps(big, allow_nan=False)
 
 
 def test_wrong_value_types_fall_back_and_are_reported(tmp_path):
