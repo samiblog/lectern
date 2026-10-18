@@ -22,7 +22,7 @@ function highlight(code, lang) {
 }
 
 // ---------------------------------------------------------------------------
-// 수식: $...$, $$...$$, \(...\), \[...\]
+// 수식: $...$, $$...$$, \(...\), \[...\], ```math·latex·tex 코드 블록
 //
 // 원자재 리서치 문서에는 '$105/t' 같은 달러 표기가 많다. 그래서 pandoc 규칙을 따른다.
 //   - 여는 $ 바로 뒤는 공백이 아니어야 함
@@ -36,6 +36,24 @@ function renderTex(tex, displayMode) {
     return window.katex.renderToString(tex, { displayMode, throwOnError: false, output: 'html', strict: 'ignore' });
   } catch {
     return `<code class="math-error">${tex.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]))}</code>`;
+  }
+}
+
+// ```math(GitHub)·```latex·```tex 코드 블록도 수식으로. Claude 는 식을 흔히 ```latex 블록에 쓴다.
+// KaTeX 가 못 읽으면 코드 그대로 둔다 — LaTeX 문서 원문 예시는 \documentclass·\section·\item 같은 명령에서 걸린다.
+const TEX_FENCES = new Set(['math', 'latex', 'tex']);
+
+/** 코드 블록 속 식을 { tex, html } 로. 빈 줄로 나뉜 식은 따로 그린다 (TeX 도 수식 안의 빈 줄은 오류). 못 읽으면 null */
+function fenceTex(content) {
+  const parts = content.split(/\n\s*\n/)
+    .map((s) => s.trim().replace(/^\$\$([\s\S]*)\$\$$|^\\\[([\s\S]*)\\\]$/, '$1$2').trim())   // 블록 안에 또 쓴 $$…$$, \[…\]
+    .filter(Boolean);
+  if (!parts.length) return null;
+  try {
+    const html = parts.map((t) => window.katex.renderToString(t, { displayMode: true, throwOnError: true, output: 'html', strict: 'ignore' }));
+    return { tex: parts.join('\n\n'), html: html.join('') };
+  } catch {
+    return null;
   }
 }
 
@@ -145,6 +163,12 @@ function mathPlugin(md) {
     `<span class="math-display"${tex(tokens[i].content)}>${renderTex(tokens[i].content, true)}</span>`);
   md.renderer.rules.math_block = (tokens, i, options, env, self) => (
     `<div class="math-block"${tex(tokens[i].content)}${self.renderAttrs(tokens[i])}>${renderTex(tokens[i].content, true)}</div>\n`);
+  const fence = md.renderer.rules.fence;
+  md.renderer.rules.fence = (tokens, i, options, env, self) => {
+    const t = tokens[i];
+    const m = TEX_FENCES.has(t.info.trim().split(/\s+/)[0].toLowerCase()) && fenceTex(t.content);
+    return m ? `<div class="math-block"${tex(m.tex)}${self.renderAttrs(t)}>${m.html}</div>\n` : fence(tokens, i, options, env, self);
+  };
 }
 
 /**

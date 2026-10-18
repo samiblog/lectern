@@ -393,6 +393,12 @@ def run(headed: bool) -> None:
             menu(page.locator('#lec-view .math-inline').first)
             tex = choose('LaTeX 복사')
             check(tex == r'x_t = \beta x_{t-1} + \varepsilon_t', f'문장 속 수식 우클릭: LaTeX 복사 ({tex!r})')
+            fenced = page.locator(r'#lec-view .math-block[data-tex="\\ln Z_t = r_0 + r_1 \\ln X_t"] .katex-display')   # CSS 문자열은 \\ 가 \
+            source = page.locator('#lec-view .code-block code', has_text=r'\documentclass')
+            check(fenced.count() == 1 and source.count() == 1, '```latex 블록: 식은 수식, LaTeX 문서 원문은 코드 그대로')
+            items = menu(fenced)
+            tex = choose('LaTeX 복사')
+            check(items.startswith('수식') and tex == r'\ln Z_t = r_0 + r_1 \ln X_t', f'```latex 수식 우클릭: LaTeX 복사 ({tex!r})')
             page.keyboard.press('Alt+ArrowLeft')
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             check(True, '뒤로 가기')
