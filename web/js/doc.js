@@ -4,12 +4,13 @@ import { S, emit } from './store.js';
 import { getText, openExternal } from './api.js';
 import { renderMarkdown } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
-import { buildToc, clearToc } from './toc.js';
+import { setToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { setDocSource } from './docmenu.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { linkPaths } from './pathlink.js';
 import { setStatus } from './status.js';
+import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import {
   $, $$, esc, encodePath, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
@@ -153,7 +154,8 @@ const lineFromHash = (hash) => {
  */
 export function bindLink(a, baseUrl, docPath, root = null) {
   const r = resolveRef(a.getAttribute('href'), baseUrl);
-  const where = () => root || $('#lec-view');
+  const where = () => root || paneOf(a)?.view;
+  const side = (e) => e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
   // 우클릭 메뉴의 '링크 주소 복사'가 쓸 값: 인터넷 주소, 또는 프로젝트 기준 경로(#앵커 포함)
   const target = { external: r.url, local: `${r.path || ''}${r.hash || ''}`, anchor: `${docPath}${r.hash}` }[r.kind];
   a.dataset.lecHref = target || a.getAttribute('href');
@@ -181,18 +183,20 @@ export function bindLink(a, baseUrl, docPath, root = null) {
     case 'local':
       a.title = r.path || '프로젝트 루트';
       if (r.isDir || S.dirs.has(r.path)) {
+        a.dataset.lecOpen = JSON.stringify({ type: 'overview', path: r.path });   // 우클릭 '오른쪽 창에 열기'
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('open', { type: 'overview', path: r.path });
+          emit('open', { type: 'overview', path: r.path, side: side(e) });
         });
       } else if (isMd(r.path) || (isHtml(r.path) && S.fileMap.has(r.path))) {
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
+        a.dataset.lecOpen = JSON.stringify({ type: 'doc', path: r.path, hash: r.hash });
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          if (r.path === docPath && r.hash) {
+          if (r.path === docPath && r.hash && !side(e)) {
             if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
           } else {
-            emit('open', { type: 'doc', path: r.path, hash: r.hash });
+            emit('open', { type: 'doc', path: r.path, hash: r.hash, side: side(e) });
           }
         });
       } else {
@@ -398,29 +402,28 @@ export function showMissing(view, path, err) {
 }
 
 /**
- * 문서를 그린다.
+ * 문서를 창(pane)에 그린다.
  * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
- * - 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
+ * - 그 창에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
  */
-export async function showDoc(path, { hash = '', scrollTop } = {}) {
-  const id = ++S.renderId;
-  const view = $('#lec-view');
-  const content = $('#lec-content');
+export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
+  const id = ++pane.renderId;
+  const { view, scroller: content } = pane;
 
   let text;
   try {
     text = await getText(`/doc/${encodePath(path)}`);
   } catch (err) {
-    if (id !== S.renderId) return false;
+    if (id !== pane.renderId) return false;
     showMissing(view, path, err);
-    setDocSource(null);
-    clearChanges();
-    clearToc();
-    setStatus({ path, info: '' });
-    emit('rendered');
+    setDocSource(pane, null);
+    clearChanges(pane);
+    setToc(pane, null);
+    setStatus({ path, info: '' }, pane);
+    emit('rendered', pane);
     return true;
   }
-  if (id !== S.renderId) return false;
+  if (id !== pane.renderId) return false;
 
   installPurifyHook();
   const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
@@ -436,25 +439,25 @@ export async function showDoc(path, { hash = '', scrollTop } = {}) {
   } finally {
     stage.remove();
   }
-  if (id !== S.renderId) return false;
+  if (id !== pane.renderId) return false;
 
   // 같은 문서를 다시 그리면(자동 새로고침) 바뀐 블록을 강조하려고 이전 화면을 기록해 둔다
-  const sameDoc = S.view?.type === 'doc' && S.view.path === path && !$('.doc-missing', view);
+  const sameDoc = pane.current?.type === 'doc' && pane.current.path === path && !$('.doc-missing', view);
   const before = sameDoc ? snapshot(view) : null;
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'md-body';
-  view.dataset.docPath = path;   // 장 하이라이트(spotlight.js)가 어느 문서를 그렸는지 본다
+  view.dataset.docPath = path;   // 장 하이라이트(spotlight.js)·접기(fold.js)가 어느 문서를 그렸는지 본다
   view.replaceChildren(...stage.childNodes);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
-  setDocSource(path, text);
-  buildToc(view);
+  setDocSource(pane, path, text);
+  setToc(pane, view);
   if (top != null) content.scrollTop = top;
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
-  markChanges(view, path, before);
+  markChanges(view, before, pane);
 
   if (S.changed.delete(path)) emit('changed');
   const file = S.fileMap.get(path);
-  setStatus({ path, info: file ? `수정 ${formatDateTime(file.mtime)}` : '' });
-  emit('rendered');
+  setStatus({ path, info: file ? `수정 ${formatDateTime(file.mtime)}` : '' }, pane);
+  emit('rendered', pane);
   return true;
 }

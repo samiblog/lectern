@@ -3,12 +3,12 @@
 // 문서 DOM은 markdown-it 이 만든 평평한 구조 그대로 둔다 (절을 <section> 으로 감싸면 CSS·찾기·목차가 영향을 받는다).
 // 접을 수 있는 제목에 lec-fold, 접힌 제목에 lec-folded, 그 아래 숨는 최상위 블록에 lec-fold-hidden 을 준다.
 // 접은 상태는 문서 경로별로 이번 실행 동안만 기억한다 (자동 새로고침·뒤로 가기에도 유지, 디스크에 쓰지 않음).
+// 창을 나누었으면 창마다 그 창의 문서(화면의 data-doc-path)를 접는다. 메뉴의 '모두 접기' 등은 선택된 창(#lec-view).
 
-import { emit } from './store.js';
+import { S, emit } from './store.js';
 import { $ } from './util.js';
 
 const folds = new Map();   // 문서 경로 → 접힌 제목 키 집합
-let docPath = '';          // 지금 보이는 문서. lec-fold 제목은 문서 화면에만 있으므로 접을 때는 늘 이 문서다
 let lastToggled = null;    // 두 번 눌러 낱말을 고를 때 첫 번째 누름의 접기를 되돌리기 위해
 
 const view = () => $('#lec-view');
@@ -39,7 +39,6 @@ function apply(root) {
 
 /** 문서를 그린 직후 부른다. 접을 수 있는 제목을 표시하고, 이 문서에서 접어 두었던 절을 다시 접는다. */
 export function setupFolds(root, path) {
-  docPath = path;
   const saved = folds.get(path);
   const list = headings(root);
   // 목차처럼, H1이 하나뿐이면 문서 제목으로 보고 접지 않는다 (접으면 문서 전체가 사라진다)
@@ -60,18 +59,19 @@ export function forgetFolds() {
 
 function remember(root) {
   const keys = headings(root).flatMap((x, i) => (x.classList.contains('lec-folded') ? [keyOf(x, i)] : []));
-  if (keys.length) folds.set(docPath, new Set(keys));
-  else folds.delete(docPath);
+  if (keys.length) folds.set(root.dataset.docPath, new Set(keys));
+  else folds.delete(root.dataset.docPath);
 }
 
+/** 접는 제목은 창 화면의 바로 아래 자식이다 */
 function setFolded(h, folded) {
   h.classList.toggle('lec-folded', folded);
-  remember(view());
+  remember(h.parentElement);
 }
 
 function toggle(h) {
   setFolded(h, !h.classList.contains('lec-folded'));
-  apply(view());
+  apply(h.parentElement);
 }
 
 /** 접을 수 있는 제목이 있는지 (본문 우클릭 메뉴가 '모두 접기'를 보일지) */
@@ -99,7 +99,8 @@ export function foldAll(folded) {
  */
 export function unfoldTo(el) {
   emit('reveal', el);   // 장 하이라이트(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
-  const root = view();
+  const root = S.panes.find((p) => p.view.contains(el))?.view;
+  if (!root) return;   // html 문서(iframe) 안 — 접기가 없다
   let top = el;
   while (top && top.parentElement !== root) top = top.parentElement;
   if (!top || !top.classList.contains('lec-fold-hidden')) return;
@@ -131,6 +132,6 @@ function onDoubleClick(e) {
 }
 
 export function initFold() {
-  view().addEventListener('click', onClick);
-  view().addEventListener('dblclick', onDoubleClick);
+  $('#lec-panes').addEventListener('click', onClick);
+  $('#lec-panes').addEventListener('dblclick', onDoubleClick);
 }

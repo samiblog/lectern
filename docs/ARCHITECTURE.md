@@ -102,7 +102,7 @@ flowchart LR
 | `exclude_dirs` | `[]` | 불가 | 추가 제외 폴더 이름 |
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
 | `html_exclude_dirs` | `[]` | 불가 | 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 목록 `src`·`public` 등에 더함, D27) |
-| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}}`. 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서 |
+| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}, panes:[{doc, scroll}], active}` — 마지막 창들(왼쪽부터)과 선택된 창, `doc` 은 선택된 창의 문서. 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서, 창 3개. `panes` 가 없는 옛 기록은 `doc` 하나의 창으로 읽는다 |
 
 '불가' 키는 `config.json` 을 직접 고쳐야 한다. 웹 페이지가 실행 파일 경로 같은 값을 바꾸지 못하게 하려는 제한이다 (`CLIENT_KEYS`).
 
@@ -117,14 +117,14 @@ flowchart LR
 |---|---|---|
 | `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}` 치환) + CSP 헤더 |
 | `GET /static/<경로>` | | `web/` 정적 파일 |
-| `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error, position}`. `position` 은 이 폴더의 `{doc, scroll}` (마지막 위치 복원). `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
+| `GET /api/state` | | `{root, name, seq, mode, sep, watch, version, config_error, position}`. `position` 은 이 폴더의 `{doc, scroll, panes, active}` (마지막 창들과 위치 복원). `root` 가 `null` 이면 열린 폴더 없음. `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`) |
 | `POST /api/open` | `{path}` | 폴더 열기. 성공 시 `/api/state` 와 같은 형식, 폴더가 아니면 400 |
 | `GET /api/tree?fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(seq)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다. 폴더가 없으면 409 |
 | `GET /api/overview?path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, named, hits:[{line, text}], more}], total, truncated}` (`named`: 제목·파일명에 검색어가 있음 — 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<seq>` | | `{seq, paths, structure, reset, root}` |
 | `GET /api/config` | | 설정 전체 |
-| `POST /api/position` | `{path, scroll}` | 지금 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
+| `POST /api/position` | `{panes:[{path, scroll}], active}` 또는 `{path, scroll}` | 창마다 보는 문서와 스크롤 위치, 선택된 창 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값·창 0개나 4개 이상·`active` 가 범위 밖 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
 | `POST /api/open-external` | `{path, line?}` | `{action}` — `folder`·`default`·`editor`·`reveal` |
@@ -147,22 +147,33 @@ sequenceDiagram
     participant N as nav.js
     participant D as doc.js / overview.js
     participant W as watch.js
-    T->>N: emit('open', {type, path, hash})
-    N->>D: showDoc / showOverview
+    T->>N: emit('open', {type, path, hash, side})
+    N->>D: showDoc / showOverview (pane — 선택된 창, side 면 오른쪽 새 창)
     D-->>N: true (또는 늦어서 버림: false)
     N->>T: emit('view') → 트리 강조·펼침, 창 제목, 뒤로 버튼
     loop 1초마다
         W->>W: GET /api/changes?since=seq
     end
     W->>T: loadTree() → emit('tree'), emit('changed')
-    W->>N: emit('refresh-view') (보던 문서가 바뀌었을 때)
+    W->>N: emit('refresh-view', pane) (그 창의 문서가 바뀌었을 때)
 ```
 
+### 창 나누기 (panes.js)
+- 문서 화면을 가로로 최대 3칸(창)까지 나눠 본다. 칸은 같은 폭(`flex: 1 1 0`)이고 하나면 전체 폭이다 (D33).
+- 칸(pane 객체)마다 화면(`view` — 본문 article)·스크롤 상자(`scroller` — `.lec-scroll`)·지금 화면(`current`)·뒤로/앞으로 기록·렌더링 순번(`renderId`)·목차 뿌리·상태줄·원문(우클릭 메뉴)·바뀐 곳이 따로다. `S.panes` 는 왼쪽부터, `S.pane` 은 선택된 칸, `S.view` 는 선택된 칸의 화면.
+- 선택된 칸의 스크롤 상자·본문에 `#lec-content`·`#lec-view` id 를 옮겨 단다. 선택된 칸만 다루는 코드(찾기·우클릭 메뉴·검색 결과로 가기·`util.docRoot()`)는 그 id 로 찾고, 선택되지 않은 칸도 그리는 코드(렌더러·자동 새로고침·글자 크기의 읽던 곳 지키기)는 칸 객체를 쓴다. 찾기 막대(`#lec-findbar`)도 선택된 칸으로 옮긴다. 문서 화면의 클릭·우클릭은 `#lec-panes` 에서 한꺼번에 받는다 (id 가 옮겨 다니므로).
+- 칸 안을 누르면(`pointerdown` 잡기 단계, 우클릭·키보드 초점 포함) 그 칸이 선택된다. html 문서는 iframe 안의 `mousedown` 을 `htmldoc.js` 가 받아 고른다. Ctrl+1·2·3 으로도 고른다. 고르면 `pane` 이벤트(목차·상태줄·찾기·장 하이라이트·바뀐 곳 버튼이 그 칸 것으로)와 `view` 이벤트(트리·뒤로 버튼·창 제목)를 보낸다. 장 하이라이트는 다른 칸을 고르면 꺼진다.
+- 새 칸은 선택된 칸 바로 오른쪽에 생기고 선택된다 (`nav.openBeside`). Ctrl+클릭(트리·최근 변경·개요·문서 속 링크·경로 링크·검색 결과, Ctrl+P 목록은 Ctrl+Enter도)과 우클릭 '오른쪽 창에 열기'(트리 행, 문서 속 링크 — `bindLink` 가 단 `data-lec-open`, 문서 빈 곳 — 같은 문서를 옆에)가 부른다. 이미 3칸이면 선택된 칸에 열고 알린다.
+- 칸이 둘 이상이면 칸마다 머리줄(문서 제목·닫기 ×)이 보이고 선택된 칸에 색 띠가 붙는다. 문서 빈 곳 우클릭 '이 창 닫기'로도 닫는다. 닫은 칸이 선택돼 있었으면 왼쪽 칸(없으면 오른쪽)을 고른다.
+- 나눠 볼 때는 목차가 없는 문서여도 목차 칸을 남긴다('목차가 없습니다') — 칸을 고를 때마다 모든 칸의 폭이 바뀌지 않게. 좁은 칸은 `@container` 로 본문 여백·찾기 칸을 줄이고, 표 칸의 낱말을 글자마다 끊지 않는다.
+- 자동 새로고침은 칸마다 그 칸의 문서가 바뀌었는지 본다. 칸에 보이는 문서는 '변경됨' 점을 달지 않는다. 스타일·수식 설정·F5 는 모든 칸을 다시 그린다.
+- 다음에 폴더를 열면 마지막 창들(문서·스크롤 위치)과 선택된 창을 되살린다 (`position.js` → `POST /api/position` 의 `panes`, `nav.restorePanes`). 폴더 개요를 보던 칸과 없어진 문서는 건너뛴다. 다른 폴더를 열면 칸 하나로 돌아간다. 인쇄는 선택된 칸의 문서만.
+
 ### 화면 이동 (nav.js)
-- `navigate(target)` 은 현재 스크롤 위치를 기억하고 새 화면을 그린 뒤 기록에 넣는다. 뒤로/앞으로는 기억한 스크롤로 돌아간다.
-- `refreshView()` 는 같은 화면을 같은 스크롤 위치로 다시 그린다. 위치는 렌더러에 함수로 넘겨 바꿔 끼우기 직전에 읽는다 (그리는 동안 사용자가 스크롤하면 그 위치). 사용자의 이동이 진행 중이면 미뤘다가 이동이 끝나면 한 번 한다 (`pending`·`missedRefresh` — 그사이 바뀐 문서를 놓치지 않게).
-- 뒤로/앞으로를 빠르게 여러 번 누르면 아직 그리는 중인 기록 위치(`wanted`)에서 이어 간다. 그리다 오류가 나면 알림(toast)을 띄우고 화면은 그대로 둔다.
-- 렌더링 함수는 시작할 때 `++S.renderId` 를 받아 두고, await 뒤에 값이 바뀌었으면 결과를 버린다.
+- `navigate(target, {pane})` 은 그 칸(기본은 선택된 칸)의 현재 스크롤 위치를 기억하고 새 화면을 그린 뒤 그 칸의 기록에 넣는다. 뒤로/앞으로는 선택된 칸의 기록으로, 기억한 스크롤로 돌아간다.
+- `refreshView(pane)` 은 그 칸(없으면 모든 칸)을 같은 화면, 같은 스크롤 위치로 다시 그린다. 위치는 렌더러에 함수로 넘겨 바꿔 끼우기 직전에 읽는다 (그리는 동안 사용자가 스크롤하면 그 위치). 사용자의 이동이 진행 중이면 미뤘다가 이동이 끝나면 한 번 한다 (`pending`·`missedRefresh` — 그사이 바뀐 문서를 놓치지 않게).
+- 뒤로/앞으로를 빠르게 여러 번 누르면 아직 그리는 중인 기록 위치(`wanted`)에서 이어 간다. 그리다 오류가 나면 알림(toast)을 띄우고 화면은 그대로 둔다. `pending`·`missedRefresh`·`wanted` 는 칸마다다.
+- 렌더링 함수(`showDoc`·`showHtml`·`showOverview`)는 칸을 첫 인자로 받고, 시작할 때 `++pane.renderId` 를 받아 두고, await 뒤에 값이 바뀌었으면 결과를 버린다 (칸을 닫아도 순번을 올려 버리게 한다). 목차·상태줄·원문·바뀐 곳은 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 그 칸에 남기고, 선택된 칸이면 바로 보인다.
 
 ### 문서 렌더링 순서 (doc.js `showDoc`)
 1. `GET /doc/<경로>` 로 원문을 받는다 (실패하면 '문서 없음' 화면).
@@ -182,7 +193,7 @@ sequenceDiagram
    - `> [!NOTE]` 등 → 콜아웃, 표 → 가로 스크롤 감싸기 + 숫자 열(70% 이상이 숫자) 오른쪽 정렬, 코드 블록 → 언어 표시 + 복사 버튼.
    - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다.
    - 본문 속 경로 표기(`src/app.py:42`, `../code/x.py`, `docs/a.md`)를 모아 `POST /api/exists` 로 한 번에 묻고, 있는 파일이면 `a.path-link` 로 감싼다 (`pathlink.js`). 코드 블록·링크·수식·다이어그램·메타데이터 안은 보지 않고, 문장 속 `코드` 는 내용 전체가 경로일 때만. 누르면 md·html 문서는 뷰어에서, 그 밖은 편집기의 그 줄로.
-5. 무대의 내용을 `#lec-view` 로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
+5. 무대의 내용을 그 창의 화면(선택된 창이면 `#lec-view`)으로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. `S.changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).
 
 ### html 문서 (htmldoc.js)
@@ -217,11 +228,11 @@ sequenceDiagram
 - 툴바 버튼으로 켜면 한 장(맨 위 수준 절 — H1 이 하나뿐이면 그것은 문서 제목이고 그 아래 수준, 보통 H2 절)만 그대로 두고 나머지 최상위 블록을 `opacity .16` 으로 흐린다 (`base.css` 의 `.lec-spotlight`/`.lec-lit`, 0.2초 전환). 첫 장 앞의 제목·머리말도 한 장(메타데이터 표가 있으면 함께), 각주는 어느 장에도 들지 않는다. 인쇄할 때는 모두 보인다.
 - 장의 범위는 그 장 제목을 눌러 접을 때 숨는 범위(+ 제목)와 같다 — 다음 같은 수준 이상의 제목 앞까지, 각주 제외 (`fold.js` 와 같은 규칙, H1 하나는 제목이라 접지 않는 것도 같다). `ui_smoke.py` 가 장마다 비교한다. 접기는 아무 수준 제목에서나 되지만 장은 맨 위 수준 하나다.
 - 켤 때는 화면 위쪽의 장부터. ↑·↓·PageUp·PageDown(`main.js` 가 `moveSpotlight`)과 버튼 옆 ∧·∨(`#lec-spot-prev`·`#lec-spot-next` — 하이라이트 중에만, 첫·마지막 장에서는 그쪽이 꺼짐)로 앞뒤 장으로 가며 그 장의 처음을 화면 위에 둔다. 흐린 장을 누르면(그 누름은 링크·접기로 쓰지 않음) 그 장, 목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 `fold.unfoldTo` 의 `reveal` 로 그 장. Esc 는 다른 것(팝업·찾기 등)을 먼저 닫고 마지막에 장 하이라이트를 끈다. 본문 우클릭 메뉴 끝에 '이 장 하이라이트'(꺼져 있거나 다른 장을 눌렀을 때)와 '하이라이트 해제'(켜져 있을 때)가 붙는다 (`spotlightItems`, 여백을 누르면 화면 위쪽의 장).
-- 자동 새로고침·스타일 변경으로 다시 그려도 같은 장(제목 id)을 강조하고, 다른 문서로 가면 켠 채로 화면 위쪽의 장부터. 'rendered' 때는 `S.view` 가 아직 앞 화면이라 `doc.js` 가 `#lec-view` 에 단 `data-doc-path` 로 문서를 안다.
+- 자동 새로고침·스타일 변경으로 다시 그려도 같은 장(제목 id)을 강조하고, 다른 문서로 가면 켠 채로 화면 위쪽의 장부터. 'rendered' 때는 `S.view` 가 아직 앞 화면이라 `doc.js` 가 `#lec-view` 에 단 `data-doc-path` 로 문서를 안다. 창을 나누었으면 선택된 창의 문서에 하고, 다른 창을 고르면 꺼진다.
 - md 문서만 (html 문서는 구조가 문서마다 달라 장을 나눌 수 없어 버튼이 꺼진다). 장이 둘 이상 나오지 않는 문서도 꺼진다.
 
 ### 제목 접기 (fold.js)
-- 문서의 최상위 제목(`#lec-view` 의 자식 h1~h6)을 누르면 그 절 — 다음 같은 수준 이상의 제목 전까지 — 을 접고, 다시 누르면 편다. 각주(`.footnotes-sep`, `.footnotes`)는 마지막 절에 속하지 않는다.
+- 문서의 최상위 제목(창 화면의 자식 h1~h6)을 누르면 그 절 — 다음 같은 수준 이상의 제목 전까지 — 을 접고, 다시 누르면 편다. 각주(`.footnotes-sep`, `.footnotes`)는 마지막 절에 속하지 않는다.
 - DOM은 markdown-it 이 만든 평평한 구조 그대로 두고 클래스만 붙인다: 접을 수 있는 제목 `lec-fold`, 접힌 제목 `lec-folded`, 숨는 블록 `lec-fold-hidden`(`display:none`). 펴면 따로 접어 둔 하위 절은 접힌 채 남는다.
 - 접지 않는 제목: 내용이 없는 제목, 문서에 H1이 하나뿐일 때의 H1(문서 제목 — 목차와 같은 규칙).
 - 제목 속 링크를 누르거나 Shift+클릭 등으로 글자를 고르면 접지 않는다. 두 번 눌러 낱말을 고르면 첫 번째 누름의 접기를 되돌린다.
@@ -236,18 +247,19 @@ sequenceDiagram
 - 블록 밖(여백, 문서 아래 빈 곳)은 문서 메뉴: 트리와 같은 경로 항목(`tree.js` 의 `pathMenuItems`) + 모두 접기·펴기.
 - md 문서면 블록·문서 메뉴 끝에 장 하이라이트 항목(`spotlight.js` 의 `spotlightItems`).
 - 글을 고른 채 우클릭하면 맨 위에 '선택한 글 복사'. 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다.
-- 원문은 `doc.js` 가 그릴 때마다 `setDocSource(path, text)` 로 넘긴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
+- 원문은 `doc.js` 가 그릴 때마다 `setDocSource(pane, path, text)` 로 그 창에 남기고, 메뉴는 누른 창(누르는 순간 선택된다)의 원문을 쓴다. 문서 속 뷰어 링크와 문서 빈 곳의 메뉴에는 '오른쪽 창에 열기', 창이 둘 이상이면 문서 빈 곳에 '이 창 닫기'. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
 
 ### 설정 창과 마지막 위치 (settings.js, position.js)
 - 툴바 톱니 버튼·Ctrl+, 로 설정 창: 스타일 목록 묶기(라디오 — 용도별·분위기별·밝기별), 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, '설정 파일 열기'(편집기 경로·제외 폴더 등).
-- `position.js` 는 화면 이동과 스크롤이 멈추고 1.5초 뒤 `POST /api/position` 으로 지금 문서와 위치를 보낸다 (같은 값이면 보내지 않음). 폴더를 열 때 `main.js` 가 `/api/state` 의 `position` 으로 그 문서를 열고 위치를 복원한다. 문서가 없어졌으면 폴더 개요.
+- `position.js` 는 화면 이동·창 열고 닫기와 스크롤이 멈추고 1.5초 뒤 `POST /api/position` 으로 창마다의 문서와 위치, 선택된 창을 보낸다 (같은 값이면 보내지 않음, 폴더 개요를 보는 창은 빼고). 폴더를 열 때 `main.js` 가 `/api/state` 의 `position` 으로 그 창들을 되살린다 (`nav.restorePanes`). 문서가 모두 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
 - 파일 탭: 루트 행(프로젝트 개요) + 트리. 폴더 이름을 누르면 개요 화면 + 펼침, 화살표는 펼치기/접기만. 처음 열 때 첫 단계 폴더는 펼쳐 둔다 (설정 `expand_first_level`, 기본 켜짐).
 - 필터: 입력하면 트리 대신 일치하는 문서 목록(제목+경로, 공백으로 나눈 모든 단어 포함). Enter는 첫 결과 열기, Esc는 지우기.
 - 최근 변경 탭: 수정 시각 순 40개.
 - 호박색 점: 열어 보기 전에 바뀐 문서(`S.changed`). 접힌 폴더는 안쪽에 바뀐 문서가 있으면 점을 단다.
-- 우클릭: `@경로` 복사(Claude Code 프롬프트용), 전체 경로 복사, 편집기로 열기, 탐색기에서 보기.
+- 우클릭: 오른쪽 창에 열기, `@경로` 복사(Claude Code 프롬프트용), 전체 경로 복사, 편집기로 열기, 탐색기에서 보기. Ctrl+클릭은 오른쪽 새 창에 연다.
+- 강조(선택된 행)는 선택된 창의 문서를 따른다.
 - 파일이 바뀌어 트리·최근 변경·검색 결과를 다시 그려도 키보드 초점은 같은 행에 남는다 (`util.keepFocus`).
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`main.js`).
 
@@ -261,8 +273,10 @@ sequenceDiagram
 | Ctrl+, | 설정 창 |
 | Ctrl+O | 폴더 열기 |
 | Ctrl+B | 사이드바 보이기/숨기기 |
-| Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 뒤로 / 앞으로 |
-| F5 | 트리와 현재 화면 다시 불러오기 |
+| Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 창에서 뒤로 / 앞으로 |
+| Ctrl+클릭 (트리·개요·링크·검색 결과), Ctrl+Enter (Ctrl+P) | 오른쪽 새 창에 열기 (3개까지) |
+| Ctrl+1 / 2 / 3 | 그 창 고르기 |
+| F5 | 트리와 모든 창 다시 불러오기 |
 | ↑ / ↓, PageUp / PageDown | 장 하이라이트 중: 앞 장 / 뒤 장 (입력칸·열린 팝업에서는 원래대로) |
 | Esc | 팝업·메뉴·확대·찾기 닫기, 그다음 장 하이라이트 끄기 |
 | Ctrl+휠 | 확대/축소 (pywebview `zoomable`) |

@@ -20,6 +20,7 @@ function link(doc, text, path, line) {
   a.dataset.path = path;
   if (line) a.dataset.line = line;
   a.dataset.lecHref = line ? `${path}:${line}` : path;   // 우클릭 '링크 주소 복사'
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) a.dataset.lecOpen = JSON.stringify({ type: 'doc', path });   // 우클릭 '오른쪽 창에 열기'
   a.title = line ? `${path} ${line}행` : path;
   a.append(text);
   return a;
@@ -30,7 +31,7 @@ function onClick(e) {
   if (!a) return;
   e.preventDefault();
   const { path, line } = a.dataset;
-  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path });
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path, side: e.ctrlKey || e.metaKey });
   else openExternal(path, line ? Number(line) : undefined);
 }
 
@@ -82,5 +83,5 @@ export async function linkPaths(root, docPath) {
 }
 
 export function initPathLinks() {
-  document.querySelector('#lec-view').addEventListener('click', onClick);
+  document.querySelector('#lec-panes').addEventListener('click', onClick);
 }

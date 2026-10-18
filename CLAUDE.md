@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.5.0 (v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.6.0 (v0.6.0 = 창 나누기 — 문서를 최대 3개 나란히, math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -66,7 +66,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 |---|---|
 | main.js | 초기화, 툴바, 단축키, 프로젝트 열기 |
 | store.js | 상태 `S` 와 이벤트 버스 (`on`/`emit`). 이벤트 목록이 파일 머리에 있음 |
-| nav.js | 화면 이동, 뒤로/앞으로, 다시 그리기 |
+| panes.js | 창 나누기 — 문서 창(칸) 최대 3개, 선택된 창, 칸 열기·닫기 |
+| nav.js | 화면 이동, 뒤로/앞으로, 다시 그리기 (칸마다), 오른쪽 창에 열기, 창 되살리기 |
 | doc.js | 문서 렌더링 후처리 (링크·이미지·표·코드·콜아웃·frontmatter) |
 | markdown.js | markdown-it 설정, 수식 규칙, mermaid 코드 블록 |
 | overview.js | 폴더 개요 화면 |
@@ -109,7 +110,9 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
-- 렌더링은 `S.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 같은 방식을 쓴다.
+- 렌더링은 칸마다 `pane.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 칸을 첫 인자로 받고 같은 방식을 쓴다.
+- 문서 화면은 최대 3칸(창)이다 (`panes.js`, D33). `#lec-view`·`#lec-content` id 는 **선택된 칸**의 본문·스크롤 상자로 옮겨 다닌다. 선택된 칸만 다루는 코드는 id 로 찾아도 되지만, 모든 칸에 해당하는 코드(렌더러·자동 새로고침 등)는 칸 객체(`S.panes`, `pane.view`·`pane.scroller`)를 쓴다. 문서 화면의 이벤트는 id 대신 `#lec-panes` 에 붙인다 (id 가 옮겨 가면 붙인 요소가 달라진다). 스크롤은 거품처럼 올라오지 않으므로 `document` 잡기 단계에서 듣는다 (`toc.js`·`position.js`).
+- 목차·상태줄·원문(우클릭 메뉴)·바뀐 곳은 칸마다 남기고 선택된 칸 것만 보인다 — 렌더러는 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 넘긴다. 다른 칸을 고르면 `pane` 이벤트가 간다.
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
 - `config.json` 은 JSON 이 맞아도 값의 형식이 틀릴 수 있다 (`"exclude_dirs": "data"`). `config.value_ok` 가 `DEFAULTS` 와 같은 형식인지 보고, 틀린 값은 기본값으로 돌며 알린다. 새 키가 `null` 도 되면 `NULLABLE` 에 넣는다 (D29).
 - `/api/*` 의 POST 는 `Content-Type: application/json` 만 받는다 (아니면 415). 토큰이 없는 브라우저 모드에서 다른 사이트의 폼이 보내지 못하게 하려는 것이니, 프런트는 `api.postJSON` 만 쓴다.

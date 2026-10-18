@@ -222,6 +222,20 @@ def test_position_is_remembered(client, project):
     assert client.get('/api/state').get_json()['position']['doc'] == 'docs/10-a.md'   # 꺼 두면 기록하지 않음
 
 
+def test_position_keeps_panes(client, project):
+    body = {'panes': [{'path': 'README.md', 'scroll': 5}, {'path': 'docs/10-a.md', 'scroll': 420}], 'active': 1}
+    assert client.post('/api/position', json=body).get_json() == {'ok': True}
+    pos = client.get('/api/state').get_json()['position']
+    assert pos['panes'] == [{'doc': 'README.md', 'scroll': 5}, {'doc': 'docs/10-a.md', 'scroll': 420}]
+    assert pos['active'] == 1 and pos['doc'] == 'docs/10-a.md'
+    bad = [{'panes': [], 'active': 0}, {'panes': [{'path': 'README.md'}] * 4}, {'panes': body['panes'], 'active': 2},
+           {'panes': body['panes'], 'active': True}, {'panes': ['README.md']}, {'panes': [{'path': 'docs'}]},
+           {'panes': [{'path': 'README.md', 'scroll': -1}]}]
+    assert [client.post('/api/position', json=b).status_code for b in bad] == [400] * len(bad)
+    assert client.post('/api/position', json={'panes': [{'path': 'README.md'}, {'path': '../x.md'}]}).status_code == 404
+    assert client.get('/api/state').get_json()['position']['panes'] == pos['panes']   # 잘못된 요청은 기록하지 않는다
+
+
 def test_open_config(client, state, monkeypatch):
     calls = []
     monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor: calls.append(p) or 'editor')

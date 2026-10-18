@@ -140,7 +140,22 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   width: var(--side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--ui-border); background: var(--ui-bg);
 }
-#lec-content { flex: 1; min-width: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto; }
+/* 문서 창 (panes.js): 최대 3칸을 같은 폭으로. 칸이 둘 이상이면 머리줄(제목·닫기)을 보이고 선택된 칸에 색 띠 */
+#lec-panes { flex: 1; min-width: 0; display: flex; }
+.lec-pane { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
+.lec-pane + .lec-pane { border-left: 1px solid var(--ui-border); }
+.pane-head { display: none; }
+.split .pane-head {
+  display: flex; align-items: center; gap: 4px; flex: none; height: 30px; padding: 0 4px 0 12px;
+  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-muted); font-size: 12.5px;
+}
+.split .lec-pane.active .pane-head { color: var(--ui-fg); font-weight: 600; background: var(--ui-panel); box-shadow: inset 0 2px 0 var(--ui-accent); }
+.pane-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pane-close svg { width: 14px; height: 14px; }
+.lec-scroll {
+  flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
+  container-type: inline-size;   /* 좁은 칸에서 본문 여백·찾기 칸을 줄인다 (@container) */
+}
 #lec-toc {
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
@@ -236,6 +251,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* ---- 목차 ------------------------------------------------------------------ */
 .toc-head { margin: 0 0 8px 10px; font-size: 12px; font-weight: 700; color: var(--ui-muted); }
 .toc-list { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--ui-border); }
+.toc-none { margin: 0 0 0 10px; color: var(--ui-faint); font-size: 12px; line-height: 1.5; }
 .toc-list a {
   display: block; padding: 3px 8px 3px 10px; margin-left: -1px; border-left: 2px solid transparent;
   color: var(--ui-muted); text-decoration: none; font-size: 12.5px; line-height: 1.4;
@@ -266,6 +282,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   box-shadow: 0 6px 20px rgb(15 25 40 / .14);
 }
 #lec-findbar input { width: 220px; height: 28px; border: 0; padding: 0 8px; background: none; outline: none; }
+@container (max-width: 520px) { #lec-findbar .fb { right: 8px; } #lec-findbar input { width: 130px; } }
 #lec-find-count { min-width: 52px; text-align: right; color: var(--ui-muted); font-size: 12px; padding-right: 4px; font-variant-numeric: tabular-nums; }
 ::highlight(lec-find) { background-color: var(--ui-find); color: inherit; }
 ::highlight(lec-find-current) { background-color: var(--ui-find-current); color: #111; }
@@ -424,7 +441,7 @@ button.primary:hover { filter: brightness(1.08); }
 .fresh-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
-/* html 문서 (htmldoc.js): iframe 높이를 문서에 맞추고 #lec-content 가 스크롤한다 */
+/* html 문서 (htmldoc.js): iframe 높이를 문서에 맞추고 창의 스크롤 상자(.lec-scroll)가 스크롤한다 */
 iframe.lec-html { display: block; width: 100%; height: 480px; border: 0; background: transparent; }
 iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: hidden; }
 
@@ -433,3 +450,4 @@ iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: h
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media (max-width: 760px) { .overview { padding: 24px 20px 80px; } }
+@container (max-width: 640px) { .overview { padding: 24px 20px 80px; } }   /* 나눈 좁은 창 */

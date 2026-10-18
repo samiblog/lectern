@@ -19,6 +19,7 @@ from .paths import config_dir
 MAX_RECENT = 10
 MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
+MAX_PANES = 3         # 나눠 보는 문서 창 수 (web/js/panes.js 와 같게)
 
 DEFAULTS: dict[str, Any] = {
     'version': 1,
@@ -52,19 +53,23 @@ NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width'})
 _EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"글자"', list: '["이름", ...] 목록', dict: '{ } 객체'}
 
 
+def is_number(value: Any) -> bool:
+    return isinstance(value, (int, float)) and not isinstance(value, bool)
+
+
 def value_ok(key: str, value: Any) -> bool:
     """설정 값의 형식이 맞는지. 손으로 고치는 파일이라 JSON 은 맞아도 형식이 틀릴 수 있다 (예: "exclude_dirs": "data")."""
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
     if key == 'sidebar_width':
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        return is_number(value)
     if key in ('last_folder', 'editor'):
         return isinstance(value, str)
     if isinstance(default, bool):
         return isinstance(value, bool)
     if isinstance(default, float):   # 1 처럼 정수로 적어도 된다
-        return isinstance(value, (int, float)) and not isinstance(value, bool)
+        return is_number(value)
     if isinstance(default, int):
         return isinstance(value, int) and not isinstance(value, bool)
     if isinstance(default, list):
@@ -183,25 +188,48 @@ class Config:
             data['last_folder'] = folder
         self._update(change)
 
-    def remember_position(self, root: str, doc: str, scroll: int) -> None:
-        """프로젝트의 마지막 문서와 그 문서의 스크롤 위치. 최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
+    def remember_position(self, root: str, panes: list[tuple[str, int]], active: int = 0) -> None:
+        """프로젝트의 마지막 창들(왼쪽부터 [(문서, 스크롤 위치)])과 선택된 창. 문서별 스크롤 위치도 남긴다
+        (뒤로 가기·다시 열 때). 최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
+        panes = panes[:MAX_PANES]
+        active = active if 0 <= active < len(panes) else 0
+
         def change(data: dict[str, Any]) -> None:
             projects = data.get('projects') if isinstance(data.get('projects'), dict) else {}
             key = os.path.normcase(root)
             entry = projects.pop(key, None)
             scrolls = entry.get('scroll') if isinstance(entry, dict) and isinstance(entry.get('scroll'), dict) else {}
-            scrolls.pop(doc, None)
-            scrolls[doc] = max(0, int(scroll))
-            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:])}
+            for doc, scroll in panes:
+                scrolls.pop(doc, None)
+                scrolls[doc] = max(0, int(scroll))
+            projects[key] = {
+                'doc': panes[active][0],   # 선택된 창의 문서 (창을 나누기 전 형식과 같은 뜻)
+                'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:]),
+                'panes': [{'doc': doc, 'scroll': max(0, int(scroll))} for doc, scroll in panes],
+                'active': active,
+            }
             data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
         self._update(change)
 
     def position(self, root: str) -> dict[str, Any]:
+        """{doc, scroll:{문서: 위치}, panes:[{doc, scroll}], active}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
+        창을 나누기 전에 남긴 기록(panes 없음)은 doc 하나의 창으로 본다."""
         projects = self.get('projects')
         entry = projects.get(os.path.normcase(root)) if isinstance(projects, dict) else None
         if not isinstance(entry, dict):
-            return {'doc': None, 'scroll': {}}
-        return {'doc': entry.get('doc'), 'scroll': entry.get('scroll') if isinstance(entry.get('scroll'), dict) else {}}
+            return {'doc': None, 'scroll': {}, 'panes': [], 'active': 0}
+        doc = entry.get('doc') if isinstance(entry.get('doc'), str) else None
+        scrolls = entry.get('scroll') if isinstance(entry.get('scroll'), dict) else {}
+        raw = entry.get('panes')
+        if isinstance(raw, list):
+            panes = [{'doc': p['doc'], 'scroll': p.get('scroll') if is_number(p.get('scroll')) else 0}
+                     for p in raw[:MAX_PANES] if isinstance(p, dict) and isinstance(p.get('doc'), str)]
+        else:
+            panes = [{'doc': doc, 'scroll': scrolls.get(doc) if is_number(scrolls.get(doc)) else 0}] if doc else []
+        active = entry.get('active')
+        if not (isinstance(active, int) and not isinstance(active, bool) and 0 <= active < len(panes)):
+            active = 0
+        return {'doc': doc, 'scroll': scrolls, 'panes': panes, 'active': active}
 
     def public(self) -> dict[str, Any]:
         with self._lock:

@@ -865,6 +865,102 @@ def run(headed: bool) -> None:
             check(remembered and reopened and top == 500,
                   f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top}, 열린 것 {opened!r}, 기억 {pos})')
 
+            print('[창 나누기]')
+            panes = lambda: page.evaluate('''() => [...document.querySelectorAll('.lec-pane')].map(p => ({
+              w: Math.round(p.getBoundingClientRect().width), active: p.classList.contains('active'),
+              h1: p.querySelector('article h1')?.textContent || '' }))''')
+            ui_now = lambda: page.evaluate('''() => ({ toc: document.querySelector('#lec-toc .toc-list a')?.textContent || '',
+              status: document.querySelector('#lec-st-path').textContent, tree: document.querySelector('#lec-tree .row.active')?.dataset.doc,
+              back: document.querySelector('#lec-btn-back').disabled })''')
+            row = lambda doc: page.locator(f'#lec-tree .row.file[data-doc="{doc}"]')
+            pane_title = lambda i: page.locator('.lec-pane').nth(i).locator('.pane-title')
+            n_panes = lambda n: wait_until(page, f"document.querySelectorAll('.lec-pane').length === {n}")
+            h1_has = lambda text: wait_until(page, f"document.querySelector('#lec-view h1')?.textContent.includes('{text}')")
+            one = panes()
+            check(len(one) == 1 and page.locator('.pane-head').first.is_hidden(), '창이 하나면 머리줄 없이 전체 폭')
+            row('docs/02-수식과-달러.md').click(modifiers=['Control'])
+            two = n_panes(2) and h1_has('수식과 달러')
+            p, st = panes(), ui_now()
+            check(two and abs(p[0]['w'] - p[1]['w']) <= 2 and abs(p[0]['w'] + p[1]['w'] - one[0]['w']) <= 2 and p[1]['active']
+                  and (st['toc'], st['status'], st['tree']) == ('수식', 'docs/02-수식과-달러.md', 'docs/02-수식과-달러.md'),
+                  f'트리 Ctrl+클릭: 오른쪽 새 창(1/2 폭)이 선택되고 목차·상태줄·트리가 그 문서를 따름 ({p}, {st})')
+            pane_title(0).click()
+            st = ui_now()
+            check(panes()[0]['active'] and (st['toc'], st['status'], st['tree']) == ('표', 'docs/01-기능-점검.md', 'docs/01-기능-점검.md'),
+                  f'왼쪽 창을 누르면 그 창이 선택되고 목차·상태줄·트리가 따라옴 ({st})')
+            pane_title(1).click()
+            row('docs/03-다이어그램.md').click()
+            h1_has('다이어그램')
+            right_back = ui_now()['back']
+            pane_title(0).click()
+            left_back = ui_now()['back']
+            pane_title(1).click()
+            page.keyboard.press('Alt+ArrowLeft')
+            check(not right_back and left_back and h1_has('수식과 달러') and '렌더링 기능 점검' in panes()[0]['h1'],
+                  '뒤로/앞으로는 창마다 — 선택된 창의 기록만')
+            row('docs/04-HTML-보고서.html').click(modifiers=['Control'])
+            three = n_panes(3) and wait_until(page, "!!document.querySelector('#lec-view > iframe.lec-html:not(.lec-loading)')?.dataset.ready")
+            p3 = panes()
+            shot('08-split')
+            check(three and max(x['w'] for x in p3) - min(x['w'] for x in p3) <= 2 and [x['active'] for x in p3] == [False, False, True],
+                  f'세 창은 같은 폭(1/3), 새 창은 선택된 창 바로 오른쪽 ({p3})')
+            pane_title(0).click()
+            page.frame_locator('.lec-pane >> nth=2 >> iframe.lec-html').locator('body').click(position={'x': 40, 'y': 40})
+            st = ui_now()
+            check(panes()[2]['active'] and (st['status'], st['toc']) == ('docs/04-HTML-보고서.html', '요약'),
+                  f'html 문서 안을 눌러도 그 창이 선택됨 ({st})')
+            row('README.md').click(modifiers=['Control'])
+            replaced = h1_has('샘플 프로젝트')
+            p, note = panes(), page.locator('#lec-toast').text_content()
+            check(replaced and len(p) == 3 and p[2]['active'] and '3개까지' in note and abs(p[0]['w'] - p3[0]['w']) <= 1
+                  and '목차가 없습니다' in page.locator('#lec-toc').inner_text(),
+                  f'넷째는 선택된 창에 열고 알림. 목차가 없는 문서여도 목차 칸이 남아 창 폭이 그대로 ({note!r}, {p})')
+            pane_title(1).click()
+            page.keyboard.press('Control+f')
+            page.keyboard.type('수식')
+            wait_until(page, "document.querySelector('#lec-find-count').textContent.includes('/')")
+            in_right = page.locator('#lec-find-count').text_content()
+            pane_title(0).click()
+            moved = wait_until(page, "document.querySelector('#lec-findbar').closest('.lec-pane') === document.querySelector('.lec-pane')")
+            in_left = page.locator('#lec-find-count').text_content()
+            page.keyboard.press('Escape')
+            check(moved and in_right != in_left, f'찾기 막대는 선택된 창으로 옮겨 가 그 문서에서 찾음 (오른쪽 {in_right}, 왼쪽 {in_left})')
+            pane_title(2).click()
+            math_doc = work / 'docs' / '02-수식과-달러.md'
+            math_doc.write_text(math_doc.read_text(encoding='utf-8') + '\n옆 창에서 고친 문단\n', encoding='utf-8')
+            side_fresh = wait_until(page, "document.querySelectorAll('.lec-pane')[1].querySelector('article').textContent.includes('옆 창에서 고친 문단')", 8000)
+            check(side_fresh and panes()[2]['active'] and row('docs/02-수식과-달러.md').locator('.dot').count() == 0,
+                  '선택되지 않은 창의 문서도 바뀌면 다시 그림 (변경 표시 없이, 선택은 그대로)')
+            page.locator('.lec-pane').nth(2).locator('.pane-close').click()
+            p = panes()
+            check(n_panes(2) and abs(p[0]['w'] - p[1]['w']) <= 2 and p[1]['active'], f'× 로 닫으면 남은 창이 같은 폭으로, 선택은 왼쪽 창 ({p})')
+            items = menu(row('README.md'))
+            page.keyboard.press('Escape')
+            pane_title(0).click()
+            menu(page.locator('#lec-view a', has_text='수식과 달러 표기'))
+            page.locator('#lec-menu button', has_text='오른쪽 창에 열기').click()
+            p = panes() if n_panes(3) and h1_has('수식과 달러') else []
+            check(items.startswith('오른쪽 창에 열기') and [x['active'] for x in p] == [False, True, False],
+                  f"트리·링크 우클릭 '오른쪽 창에 열기': 누른 창 바로 오른쪽에 ({p})")
+            saved = None   # 스크롤이 멈추고 1.5초 뒤 저장
+            for _ in range(40):
+                saved = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
+                if len(saved['panes']) == 3 and saved['active'] == 1:
+                    break
+                page.wait_for_timeout(200)
+            page.reload()
+            restored = n_panes(3) and wait_until(page, "[...document.querySelectorAll('.lec-pane article')].every(a => a.querySelector('h1'))", 15000)
+            check(restored and [(x['h1'], x['active']) for x in panes()] == [(x['h1'], x['active']) for x in p],
+                  f'다시 열면 창들과 선택된 창을 되살림 ({saved})')
+            page.keyboard.press('Control+1')
+            check(panes()[0]['active'] and ui_now()['status'] == 'docs/01-기능-점검.md', 'Ctrl+1 로 첫 창을 고름')
+            items = menu(page.locator('.lec-pane').nth(2).locator('.lec-scroll'), position={'x': 6, 'y': 6})
+            page.locator('#lec-menu button', has_text='이 창 닫기').click()
+            check('이 창 닫기' in items and n_panes(2), "문서 빈 곳 우클릭 '이 창 닫기'")
+            page.locator('.lec-pane').nth(1).locator('.pane-close').click()
+            check(n_panes(1) and page.locator('.pane-head').first.is_hidden() and abs(panes()[0]['w'] - one[0]['w']) <= 2,
+                  '창이 하나로 돌아오면 다시 전체 폭')
+
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')

@@ -2,8 +2,10 @@
 
 import { S, emit } from './store.js';
 import { getJSON } from './api.js';
-import { clearToc } from './toc.js';
+import { setToc } from './toc.js';
 import { setStatus } from './status.js';
+import { clearChanges } from './diffmark.js';
+import { paneOf } from './panes.js';
 import { kindBadge } from './tree.js';
 import { $, esc, timeAgo, formatDateTime } from './util.js';
 
@@ -65,41 +67,45 @@ function render(d) {
   return parts.join('');
 }
 
-export async function showOverview(path, { scrollTop } = {}) {
-  const id = ++S.renderId;
-  const view = $('#lec-view');
+/** 폴더 개요를 창(pane)에 그린다. 그 창에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false) */
+export async function showOverview(pane, path, { scrollTop } = {}) {
+  const id = ++pane.renderId;
+  const { view } = pane;
   let data;
   try {
     data = await getJSON(`/api/overview?path=${encodeURIComponent(path)}`);
   } catch (err) {
-    if (id !== S.renderId) return false;
+    if (id !== pane.renderId) return false;
     view.className = 'overview';
     view.innerHTML = `<div class="ov-empty"><h1>${esc(path || S.name)}</h1><p>폴더를 읽지 못했습니다 (${esc(err.message)}). 삭제되었거나 숨김 폴더일 수 있습니다.</p></div>`;
-    clearToc();
-    emit('rendered');
+    setToc(pane, null);
+    clearChanges(pane);
+    emit('rendered', pane);
     return true;
   }
-  if (id !== S.renderId) return false;
+  if (id !== pane.renderId) return false;
 
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'overview';
   view.innerHTML = render(data);
-  clearToc();
-  $('#lec-content').scrollTop = top ?? 0;
-  setStatus({ path: path ? `${path}/` : `${S.name} (프로젝트 루트)`, info: `문서 ${data.total}개` });
-  emit('rendered');
+  setToc(pane, null);
+  clearChanges(pane);
+  pane.scroller.scrollTop = top ?? 0;
+  setStatus({ path: path ? `${path}/` : `${S.name} (프로젝트 루트)`, info: `문서 ${data.total}개` }, pane);
+  emit('rendered', pane);
   return true;
 }
 
 export function initOverview() {
-  $('#lec-view').addEventListener('click', (e) => {
-    if (!$('#lec-view').classList.contains('overview')) return;
+  $('#lec-panes').addEventListener('click', (e) => {
+    if (!paneOf(e.target)?.view.classList.contains('overview')) return;
     const btn = e.target.closest('button[data-doc], button[data-dir]');
     if (!btn) return;
-    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc });
+    const side = e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
+    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc, side });
     else {
       if (btn.dataset.dir) S.open.add(btn.dataset.dir);
-      emit('open', { type: 'overview', path: btn.dataset.dir });
+      emit('open', { type: 'overview', path: btn.dataset.dir, side });
     }
   });
 }

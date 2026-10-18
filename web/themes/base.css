@@ -175,11 +175,18 @@
   .md-body { padding: 24px 20px 80px; }
   .md-body .lec-fold::before { left: -15px; }
 }
+@container (max-width: 640px) {   /* 앱의 나눈 좁은 창 (.lec-scroll). html 문서 안에서는 해당 없음 */
+  .md-body { padding: 24px 20px 80px; }
+  .md-body .lec-fold::before { left: -15px; }
+  /* 표 칸의 낱말을 글자마다 끊지 않는다 ('구/리') — 넓으면 표 상자가 가로로 스크롤한다 */
+  .md-body th, .md-body td { overflow-wrap: break-word; }
+}
 /* 인쇄·PDF (문서 우클릭 → '인쇄 / PDF로 저장'). 화면 UI는 빼고, 어두운 스타일도 종이에는 흰 바탕·검은 글자로 —
    브라우저는 기본으로 바탕색을 인쇄하지 않으므로 밝은 글자가 흰 종이에 묻힌다 */
 @media print {
   #lec-toolbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay { display: none !important; }
-  #lec-app, #lec-main, #lec-content { display: block; height: auto; overflow: visible; }
+  .pane-head, .lec-pane:not(.active) { display: none !important; }   /* 창을 나누었으면 선택된 창의 문서만 */
+  #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block; height: auto; overflow: visible; border: 0; }
   body { overflow: visible; background: #fff; }
   :root {
     --md-bg: #ffffff !important; --md-fg: #111111 !important; --md-heading: #000000 !important; --md-muted: #444444 !important;

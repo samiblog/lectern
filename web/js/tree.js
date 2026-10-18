@@ -133,8 +133,9 @@ export function switchTab(next) {
 function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
+  const side = e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
   if (row.dataset.doc != null) {
-    emit('open', { type: 'doc', path: row.dataset.doc });
+    emit('open', { type: 'doc', path: row.dataset.doc, side });
     return;
   }
   const dir = row.dataset.dir;
@@ -145,7 +146,7 @@ function onRowClick(e) {
     return;
   }
   if (dir) S.open.add(dir);
-  emit('open', { type: 'overview', path: dir });
+  emit('open', { type: 'overview', path: dir, side });
 }
 
 function fullPath(path) {
@@ -156,9 +157,10 @@ async function copy(text) {
   toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다', '');
 }
 
-/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사, 편집기로 열기, 탐색기에서 보기 */
+/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 오른쪽 창에 열기, 경로 복사, 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
-  const items = [];
+  const open = { type: isDoc ? 'doc' : 'overview', path, side: true };
+  const items = [{ label: '오른쪽 창에 열기', hint: 'Ctrl+클릭', action: () => emit('open', open) }, '-'];
   if (path) items.push({ label: `@${path} 복사`, hint: 'Claude Code 프롬프트에 붙여 넣기', action: () => copy(`@${path}`) });
   items.push({ label: '전체 경로 복사', action: () => copy(fullPath(path)) });
   items.push('-');

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 
 from lectern.config import Config
 
@@ -69,13 +70,33 @@ def test_positions_are_bounded(tmp_path):
 
     cfg = Config(tmp_path / 'config.json')
     for i in range(MAX_PROJECTS + 3):
-        cfg.remember_position(f'C:\p{i}', 'a.md', 10)
+        cfg.remember_position(rf'C:\p{i}', [('a.md', 10)])
     for i in range(MAX_POSITIONS + 5):
-        cfg.remember_position('C:\p0', f'd{i}.md', i)
+        cfg.remember_position(r'C:\p0', [(f'd{i}.md', i)])
     assert len(cfg.get('projects')) == MAX_PROJECTS
-    pos = cfg.position('C:\P0')                               # 대소문자 무시 (Windows 경로)
+    pos = cfg.position(r'C:\P0')                              # 대소문자 무시 (Windows 경로)
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
-    assert cfg.position('C:\nowhere') == {'doc': None, 'scroll': {}}
+    assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}, 'panes': [], 'active': 0}
+
+
+def test_positions_keep_panes(tmp_path):
+    from lectern.config import MAX_PANES
+
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    cfg.remember_position(r'C:\p', [('a.md', 10), ('b.md', 20), ('a.md', 30), ('c.md', 1)], active=2)
+    pos = cfg.position(r'C:\p')
+    assert pos['panes'] == [{'doc': 'a.md', 'scroll': 10}, {'doc': 'b.md', 'scroll': 20}, {'doc': 'a.md', 'scroll': 30}][:MAX_PANES]
+    assert pos['active'] == 2 and pos['doc'] == 'a.md' and pos['scroll'] == {'b.md': 20, 'a.md': 30}
+    # 창을 나누기 전의 기록은 창 하나로, 손으로 망가뜨린 값은 버린다
+    path.write_text(json.dumps({'projects': {
+        os.path.normcase(r'C:\old'): {'doc': 'x.md', 'scroll': {'x.md': 7}},
+        os.path.normcase(r'C:\bad'): {'doc': 'y.md', 'panes': [{'doc': 'y.md', 'scroll': 'z'}, 3, {}], 'active': 5},
+    }}), encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.position(r'C:\old')['panes'] == [{'doc': 'x.md', 'scroll': 7}]
+    bad = cfg.position(r'C:\bad')
+    assert bad['panes'] == [{'doc': 'y.md', 'scroll': 0}] and bad['active'] == 0
 
 
 def test_wrong_value_types_fall_back_and_are_reported(tmp_path):

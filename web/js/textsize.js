@@ -22,14 +22,17 @@ function render() {
   $('#lec-text-bigger').disabled = s >= STEPS[STEPS.length - 1];
 }
 
-/** 읽던 곳이 화면에서 움직이지 않게: 바꾸기 전 화면 위쪽 블록의 위치를 기억했다가 맞춘다 (md 문서) */
+/** 읽던 곳이 화면에서 움직이지 않게: 창마다 바꾸기 전 화면 위쪽 블록의 위치를 기억했다가 맞춘다 (md 문서) */
 function keepPlace(change) {
-  const content = $('#lec-content');
-  const top = content.getBoundingClientRect().top;
-  const anchor = [...$('#lec-view').children].find((el) => el.getBoundingClientRect().bottom > top);
-  const before = anchor?.getBoundingClientRect().top;
+  const spots = S.panes.map((pane) => {
+    const top = pane.scroller.getBoundingClientRect().top;
+    const anchor = [...pane.view.children].find((el) => el.getBoundingClientRect().bottom > top);
+    return [pane.scroller, anchor, anchor?.getBoundingClientRect().top];
+  });
   change();
-  if (anchor && anchor.isConnected) content.scrollTop += anchor.getBoundingClientRect().top - before;
+  for (const [scroller, anchor, before] of spots) {
+    if (anchor && anchor.isConnected) scroller.scrollTop += anchor.getBoundingClientRect().top - before;
+  }
 }
 
 function setScale(s) {

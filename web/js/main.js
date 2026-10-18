@@ -4,7 +4,7 @@ import { S, emit, on } from './store.js';
 import { getJSON, postJSON, saveConfig, native } from './api.js';
 import { initTheme } from './theme.js';
 import { initUi, showMenu, hideMenu, closeLightbox } from './ui.js';
-import { initToc, clearToc, updateTocVisibility } from './toc.js';
+import { initToc, setToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initSpotlight, spotlightOn, moveSpotlight, stopSpotlight } from './spotlight.js';
@@ -16,7 +16,8 @@ import { initStatus, setStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
-import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll } from './nav.js';
+import { initPanes, selectPane } from './panes.js';
+import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll, restorePanes } from './nav.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
@@ -41,7 +42,7 @@ function showWelcome() {
     <p><button type="button" class="primary" data-act="open">폴더 열기</button></p>
     ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
       <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
-  clearToc();
+  setToc(S.pane, null);
   setStatus({ path: '', info: '' });
 }
 
@@ -51,7 +52,7 @@ function showLoading() {
   view.className = 'welcome';
   view.innerHTML = `<p>${esc(S.name)} 폴더를 읽고 있습니다…</p>`;
   $('#lec-tree').innerHTML = '';
-  clearToc();
+  setToc(S.pane, null);
   setStatus({ path: '', info: '' });
 }
 
@@ -90,11 +91,11 @@ async function reloadProject() {
       clearTimeout(wait);
     }
     if (S.config.expand_first_level !== false) for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);
-    // 마지막에 보던 문서와 위치로 (설정 restore_last). 그 문서가 없어졌으면 폴더 개요로
+    // 마지막에 열어 둔 창들과 위치로 (설정 restore_last). 문서가 모두 없어졌으면 폴더 개요로
     const pos = st.position;
-    if (S.config.restore_last !== false && pos?.doc && S.fileMap.has(pos.doc)) {
+    if (S.config.restore_last !== false && pos) {
       seedScroll(pos.scroll);
-      if (await navigate({ type: 'doc', path: pos.doc }, { restoreScroll: true })) return;
+      if (await restorePanes(pos)) return;
     }
     await navigate({ type: 'overview', path: '' });
   } catch (e) {
@@ -139,9 +140,10 @@ function updateWindowTitle() {
   native.setTitle(`${title} - Lectern`);
 }
 
+/** 뒤로/앞으로는 선택된 창의 기록 */
 function updateNavButtons() {
-  $('#lec-btn-back').disabled = S.hIndex <= 0;
-  $('#lec-btn-forward').disabled = S.hIndex >= S.history.length - 1;
+  $('#lec-btn-back').disabled = S.pane.hIndex <= 0;
+  $('#lec-btn-forward').disabled = S.pane.hIndex >= S.pane.history.length - 1;
 }
 
 // ---- 레이아웃 -----------------------------------------------------------------
@@ -193,8 +195,8 @@ function bindToolbar() {
     items.push('-', { label: '다른 폴더 열기...', action: chooseAndOpen });
     showMenu(r.left, r.bottom + 4, items);
   });
-  $('#lec-view').addEventListener('click', (e) => {
-    if (!$('#lec-view').classList.contains('welcome')) return;
+  $('#lec-panes').addEventListener('click', (e) => {
+    if (!e.target.closest('.welcome')) return;
     const btn = e.target.closest('button');
     if (!btn) return;
     if (btn.dataset.act === 'open') chooseAndOpen();
@@ -236,6 +238,9 @@ function bindKeys() {
     } else if (e.altKey && e.key === 'ArrowRight') {
       e.preventDefault();
       forward();
+    } else if (mod && !e.shiftKey && !e.altKey && S.panes[Number(e.key) - 1]) {   // Ctrl+1·2·3: 그 창을 고른다
+      e.preventDefault();
+      selectPane(S.panes[Number(e.key) - 1]);
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
@@ -277,6 +282,7 @@ async function boot() {
   }
   initTheme();
   initUi();
+  initPanes();
   initToc();
   initFind();
   initFold();

@@ -21,21 +21,24 @@ async function tick() {
     S.seq = d.seq;
     await loadTree();
 
-    const view = S.view;
+    const shown = new Set(S.panes.filter((p) => p.current?.type === 'doc').map((p) => p.current.path));
     for (const p of d.paths) {
-      // 지워졌거나 이름이 바뀐(옛 이름) 경로는 표시하지 않는다
-      if (S.fileMap.has(p) && !(view?.type === 'doc' && view.path === p)) S.changed.add(p);
+      // 지워졌거나 이름이 바뀐(옛 이름) 경로, 창에 보이는 문서는 표시하지 않는다
+      if (S.fileMap.has(p) && !shown.has(p)) S.changed.add(p);
     }
     S.lastSync = new Date();
     emit('changed');
     emit('synced');
 
-    if (!view) return;
-    if (view.type === 'doc' && (d.reset || d.paths.includes(view.path) || !S.fileMap.has(view.path))) {
-      emit('refresh-view');
-    } else if (view.type === 'overview') {
-      const prefix = view.path ? `${view.path}/` : '';
-      if (d.structure || d.paths.some((p) => p.startsWith(prefix))) emit('refresh-view');
+    for (const pane of S.panes) {
+      const view = pane.current;
+      if (!view) continue;
+      if (view.type === 'doc' && (d.reset || d.paths.includes(view.path) || !S.fileMap.has(view.path))) {
+        emit('refresh-view', pane);
+      } else if (view.type === 'overview') {
+        const prefix = view.path ? `${view.path}/` : '';
+        if (d.structure || d.paths.some((p) => p.startsWith(prefix))) emit('refresh-view', pane);
+      }
     }
   } catch {
     // 서버가 잠시 응답하지 않음 — 다음 주기에 다시 시도

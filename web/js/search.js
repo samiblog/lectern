@@ -3,7 +3,7 @@
 
 import { S, on } from './store.js';
 import { getJSON } from './api.js';
-import { navigate } from './nav.js';
+import { navigate, openBeside } from './nav.js';
 import { switchTab } from './tree.js';
 import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
@@ -85,9 +85,10 @@ function goToLine(line) {
   return best;
 }
 
-async function openHit(path, line) {
-  const here = S.view?.type === 'doc' && S.view.path === path;
-  if (!here && !(await navigate({ type: 'doc', path }))) return;
+/** 검색 결과로 간다. side 면 오른쪽 새 창에 (Ctrl+클릭) */
+async function openHit(path, line, side = false) {
+  const here = S.view?.type === 'doc' && S.view.path === path && !side;
+  if (!here && !(await (side ? openBeside : navigate)({ type: 'doc', path }))) return;
   if (isHtml(path)) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
@@ -126,7 +127,7 @@ export function initSearch() {
   });
   $('#lec-search-results').addEventListener('click', (e) => {
     const row = e.target.closest('[data-doc]');
-    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0);
+    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0, e.ctrlKey || e.metaKey);
   });
   $('#lec-search-results').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.sr-hit')) e.target.click();

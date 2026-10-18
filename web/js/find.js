@@ -4,7 +4,7 @@
 // 그래서 CSS Custom Highlight API로 직접 구현한다 (DOM을 바꾸지 않아 다시 그리기와 충돌이 없다).
 // html 문서는 iframe 안을 찾는다. 하이라이트는 문서마다 따로라서 iframe 창의 CSS.highlights 에 넣는다 (표시 색은 css/frame.css).
 
-import { on } from './store.js';
+import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
 import { $, debounce, docRoot, screenRect } from './util.js';
 
@@ -148,6 +148,7 @@ export function initFind() {
   $('#lec-find-next').addEventListener('click', () => go(current + 1));
   $('#lec-find-prev').addEventListener('click', () => go(current - 1));
   $('#lec-find-close').addEventListener('click', closeFind);
-  // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시
-  on('rendered', () => { if (!bar().hidden) search(true); });
+  // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시. 다른 창을 고르면 그 창의 문서에서 (찾기 막대도 그 창으로 옮겨 간다)
+  on('rendered', (pane) => { if (pane === S.pane && !bar().hidden) search(true); });
+  on('pane', () => { if (!bar().hidden) search(true); });
 }

@@ -5,15 +5,13 @@
 // 판정은 블록의 '서명'(태그 + 글자 + 그림 주소, 다이어그램은 원문)이 이전 화면에 있었는지로 한다.
 // 지워진 블록은 표시할 곳이 없어 알리지 않는다.
 // html 문서(iframe)는 구조가 문서마다 달라, 최상위 자식 대신 문단·목록 항목·표의 행 같은 작은 블록을 비교한다.
+// 바뀐 블록은 창마다 따로 기억하고(pane.marks — list: 바뀐 블록, next: 버튼이 다음에 갈 순번), 버튼은 선택된 창의 것을 보인다.
 
-import { on } from './store.js';
+import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
 import { $, screenRect } from './util.js';
 
 const FLASH_MS = 4000;
-let marked = [];   // 이번 화면에서 바뀐 블록
-let next = 0;      // '바뀐 곳' 버튼이 다음에 갈 순번
-let path = null;   // 그 블록들이 있는 문서
 
 function signature(el) {
   const text = el.matches('pre.mermaid') ? (el.dataset.source ?? '') : el.textContent.replace(/\s+/g, ' ').trim();
@@ -45,13 +43,14 @@ export function flashBlock(...els) {
   setTimeout(() => { for (const el of els) el.classList.remove('lec-changed'); }, FLASH_MS + 200);
 }
 
-function outOfView(el) {
-  const box = $('#lec-content').getBoundingClientRect();
+function outOfView(el, pane) {
+  const box = pane.scroller.getBoundingClientRect();
   const r = screenRect(el);
   return r.height === 0 || r.bottom < box.top || r.top > box.bottom;
 }
 
 function renderButton() {
+  const marked = S.pane?.marks.list || [];
   const btn = $('#lec-st-changes');
   btn.hidden = !marked.length;
   btn.textContent = `바뀐 곳 ${marked.length}곳 ↓`;
@@ -59,13 +58,11 @@ function renderButton() {
 }
 
 /**
- * 문서를 그린 직후 부른다. before 는 snapshot() 결과(처음 열 때는 null).
+ * 창(pane)에 문서를 그린 직후 부른다. before 는 snapshot() 결과(처음 열 때는 null).
  * 바뀐 블록을 강조하고, 하나라도 화면 밖이면 '바뀐 곳' 버튼을 보인다.
  */
-export function markChanges(root, docPath, before) {
-  marked = [];
-  next = 0;
-  path = docPath;
+export function markChanges(root, before, pane) {
+  let marked = [];
   if (before) {
     const left = new Map(before);
     for (const el of blocksOf(root)) {
@@ -84,20 +81,22 @@ export function markChanges(root, docPath, before) {
     }
     flashBlock(...marked);
   }
-  if (!marked.some(outOfView)) marked = [];
-  renderButton();
+  if (!marked.some((el) => outOfView(el, pane))) marked = [];
+  pane.marks = { list: marked, next: 0 };
+  if (pane === S.pane) renderButton();
 }
 
-export function clearChanges() {
-  marked = [];
-  path = null;
-  renderButton();
+/** 창(pane)의 바뀐 곳을 지운다 (문서 없음·폴더 개요) */
+export function clearChanges(pane) {
+  pane.marks = { list: [], next: 0 };
+  if (pane === S.pane) renderButton();
 }
 
 function goNext() {
-  if (!marked.length) return;
-  const el = marked[next % marked.length];
-  next += 1;
+  const m = S.pane.marks;
+  if (!m.list.length) return;
+  const el = m.list[m.next % m.list.length];
+  m.next += 1;
   unfoldTo(el);
   el.scrollIntoView({ block: 'center' });
   flashBlock(el);
@@ -105,5 +104,5 @@ function goNext() {
 
 export function initChangeMarks() {
   $('#lec-st-changes').addEventListener('click', goNext);
-  on('view', (v) => { if (v.type !== 'doc' || v.path !== path) clearChanges(); });
+  on('pane', renderButton);
 }

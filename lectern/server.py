@@ -18,6 +18,7 @@ from typing import Any
 from flask import Flask, Response, abort, jsonify, request, send_file
 
 from . import __version__, osutil
+from .config import MAX_PANES, is_number
 from .docinfo import doc_info, read_text
 from .paths import web_dir
 from .scanner import doc_kind, iter_files, resolve_inside
@@ -209,14 +210,31 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/position')
     def api_position() -> Any:
-        """지금 보는 문서와 스크롤 위치 (다음에 열 때 복원). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
-        target = path_from_body()
-        scroll = (request.get_json(silent=True) or {}).get('scroll', 0)
-        if not target.is_file() or not isinstance(scroll, (int, float)) or not 0 <= scroll < 10**8:
+        """창마다 보는 문서와 스크롤 위치, 선택된 창 (다음에 열 때 되살림). 설정 restore_last 가 꺼져 있으면 기록하지 않는다.
+        본문은 {panes:[{path, scroll}], active} 또는 창 하나일 때의 {path, scroll}."""
+        data = request.get_json(silent=True) or {}
+        if not isinstance(data, dict):
             abort(400)
+        items = data.get('panes', [data])
+        active = data.get('active', 0)
+        if (not isinstance(items, list) or not 1 <= len(items) <= MAX_PANES
+                or not isinstance(active, int) or isinstance(active, bool) or not 0 <= active < len(items)):
+            abort(400)
+        root = require_root()
+        panes = []
+        for item in items:
+            rel = item.get('path') if isinstance(item, dict) else None
+            scroll = item.get('scroll', 0) if isinstance(item, dict) else None
+            if not isinstance(rel, str):
+                abort(400)
+            target = resolve_inside(root, rel)
+            if target is None or not target.exists():
+                abort(404)
+            if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
+                abort(400)
+            panes.append((target.relative_to(root).as_posix(), int(scroll)))
         if state.config.get('restore_last') is not False:
-            root = require_root()
-            state.config.remember_position(str(root), target.relative_to(root).as_posix(), int(scroll))
+            state.config.remember_position(str(root), panes, active)
         return jsonify(ok=True)
 
     @app.post('/api/open-config')

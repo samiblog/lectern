@@ -4,19 +4,20 @@
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
 // 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24).
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems } from './spotlight.js';
+import { closePane } from './panes.js';
 import { openExternal } from './api.js';
 import { $, esc, toast, copyText } from './util.js';
 
-let doc = null;   // 지금 보이는 문서 {path, lines}. 문서를 그리지 못했으면 null
+let doc = null;   // 메뉴를 띄운 창의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
-/** doc.js 가 문서를 그릴 때마다 원문을 넘긴다 (문서 없음 화면이면 path 가 null). */
-export function setDocSource(path, text = '') {
-  doc = path == null ? null : { path, lines: text.replace(/^﻿/, '').split(/\r\n?|\n/) };
+/** doc.js·htmldoc.js 가 창(pane)에 문서를 그릴 때마다 원문을 넘긴다 (문서 없음 화면이면 path 가 null). */
+export function setDocSource(pane, path, text = '') {
+  pane.source = path == null ? null : { path, lines: text.replace(/^﻿/, '').split(/\r\n?|\n/) };
 }
 
 // 우클릭으로 고르는 블록. 가장 안쪽 것을 고른다 (목록 항목 안의 단락이면 단락, 표의 칸이면 표)
@@ -214,6 +215,10 @@ function blockItems(el, target) {
   if (math && math !== el && el.contains(math)) items.push(texItem(math));
   const link = target.closest('a[data-lec-href]');
   if (link) items.push({ label: '링크 주소 복사', hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref) });
+  if (link?.dataset.lecOpen) {   // 뷰어에서 여는 문서·폴더 링크 (doc.js 의 bindLink, pathlink.js)
+    const open = JSON.parse(link.dataset.lecOpen);
+    items.push({ label: '오른쪽 창에 열기', hint: 'Ctrl+클릭', action: () => emit('open', { ...open, side: true }) });
+  }
   if (tag === 'IMG') {
     if (el.classList.contains('external')) items.push({ label: '그림 주소 복사', hint: el.src, action: () => copyPlain(el.src) });
     else items.push({ label: '그림 복사', hint: 'PNG — 워드·PPT·메일에 붙여 넣기', action: () => copyImage(el) });
@@ -263,11 +268,16 @@ function docItems() {
     items.push('-', { label: '모두 접기', action: () => foldAll(true) }, { label: '모두 펴기', action: () => foldAll(false) });
   }
   items.push('-', { label: '인쇄 / PDF로 저장…', hint: "프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장", action: printDoc });
+  if (S.panes.length > 1) {
+    const pane = S.pane;
+    items.push('-', { label: '이 창 닫기', action: () => closePane(pane) });
+  }
   return items;
 }
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
 function openMenu(e, view, x, y) {
+  doc = S.pane?.source ?? null;   // 누르는 순간 그 창이 선택된다 (panes.js)
   if (!doc || S.view?.type !== 'doc' || S.view.path !== doc.path) return;   // 문서 화면에서만
   if (e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
@@ -295,5 +305,5 @@ export function frameContextMenu(e, frame) {
 }
 
 export function initDocMenu() {
-  $('#lec-content').addEventListener('contextmenu', onContextMenu);
+  $('#lec-panes').addEventListener('contextmenu', onContextMenu);
 }

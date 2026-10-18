@@ -101,17 +101,24 @@
     </aside>
 
     <div id="lec-resizer" role="separator" aria-orientation="vertical" title="끌어서 사이드바 폭 조절 (두 번 누르면 기본 폭)"></div>
-    <main id="lec-content">
-      <div id="lec-findbar" hidden>
-        <div class="fb">
-          <input id="lec-find-input" type="text" placeholder="문서에서 찾기" spellcheck="false" autocomplete="off">
-          <span id="lec-find-count"></span>
-          <button id="lec-find-prev" class="icon-btn small" title="이전 (Shift+Enter)"><svg><use href="#i-up"/></svg></button>
-          <button id="lec-find-next" class="icon-btn small" title="다음 (Enter)"><svg><use href="#i-down"/></svg></button>
-          <button id="lec-find-close" class="icon-btn small" title="닫기 (Esc)"><svg><use href="#i-close"/></svg></button>
+    <!-- 문서 창: 최대 3칸 (panes.js). 선택된 칸의 스크롤 상자·본문이 #lec-content·#lec-view id 를 갖는다 -->
+    <main id="lec-panes">
+      <section class="lec-pane active">
+        <div class="pane-head"><span class="pane-title"></span>
+          <button type="button" class="icon-btn small pane-close" title="이 창 닫기"><svg><use href="#i-close"/></svg></button></div>
+        <div id="lec-content" class="lec-scroll">
+          <div id="lec-findbar" hidden>
+            <div class="fb">
+              <input id="lec-find-input" type="text" placeholder="문서에서 찾기" spellcheck="false" autocomplete="off">
+              <span id="lec-find-count"></span>
+              <button id="lec-find-prev" class="icon-btn small" title="이전 (Shift+Enter)"><svg><use href="#i-up"/></svg></button>
+              <button id="lec-find-next" class="icon-btn small" title="다음 (Enter)"><svg><use href="#i-down"/></svg></button>
+              <button id="lec-find-close" class="icon-btn small" title="닫기 (Esc)"><svg><use href="#i-close"/></svg></button>
+            </div>
+          </div>
+          <article id="lec-view"></article>
         </div>
-      </div>
-      <article id="lec-view"></article>
+      </section>
     </main>
 
     <aside id="lec-toc" aria-label="목차"></aside>
