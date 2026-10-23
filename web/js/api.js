@@ -58,10 +58,13 @@ const OPEN_RESULT = {
   folder: '폴더를 열었습니다',
 };
 
-/** 선택된 탭의 프로젝트 안 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기'). */
-export async function openExternal(path, line) {
+/**
+ * 선택된 탭의 프로젝트 안 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기', 문서 외 파일).
+ * how: 'editor' 면 기본 앱으로 여는 형식(csv 등)도 편집기로. 어떻게 열지는 서버가 정한다 (실행하지 않는다 — osutil.open_path)
+ */
+export async function openExternal(path, line, how) {
   try {
-    const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line });
+    const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line, how });
     toast(OPEN_RESULT[r.action] || '열었습니다');
   } catch (e) {
     toast(e.status === 404 ? `파일을 찾을 수 없습니다: ${path}` : `열지 못했습니다: ${e.message}`, 'error');

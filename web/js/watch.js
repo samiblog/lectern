@@ -13,6 +13,11 @@ let busy = false;
 
 /** 탭(tab)에 변경 기록(d)을 반영한다 */
 async function apply(tab, d) {
+  if (d.reset || d.structure || d.others) {   // 문서 외 파일 목록 (others.js — 보일 때만 다시 읽는다)
+    tab.others.stale = true;
+    if (tab === S.tab) emit('others', tab);
+  }
+  if (!d.reset && !d.structure && !d.paths.length) return;   // 문서 외 파일만 바뀜 — 문서 트리는 그대로
   if (!tab.loaded) {
     // 아직 고르지 않은 탭: 트리는 고를 때 읽는다. 바뀐 문서만 모아 탭에 점을 띄운다 (트리를 읽으면 없는 문서는 빠진다)
     for (const p of d.paths) tab.changed.add(p);

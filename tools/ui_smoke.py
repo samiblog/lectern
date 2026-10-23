@@ -145,6 +145,13 @@ def run(headed: bool) -> None:
     report = work / 'docs' / '04-HTML-보고서.html'
     report.write_text(report.read_text(encoding='utf-8').replace(
         '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
+    # 문서 외 파일: 목록에 나올 것(csv·실행 파일·루트의 pdf)과 나오지 않을 것(숨김·제외 폴더)
+    (work / 'data').mkdir()
+    (work / 'data' / '표.csv').write_text('품목,값\n구리,1\n', encoding='utf-8')
+    (work / 'data' / 'setup.exe').write_bytes(b'MZ')
+    (work / 'data' / '.secret.txt').write_text('숨김', encoding='utf-8')
+    (work / 'node_modules' / 'some-lib' / 'index.js').write_text('x', encoding='utf-8')
+    (work / '첨부.pdf').write_bytes(b'%PDF-1.4')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
     server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
@@ -626,6 +633,115 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             page.locator('.side-tabs button[data-tab="files"]').click()
 
+            print('[문서 외 파일]')
+            olist = '#lec-others-list'
+            orow = lambda path: page.locator(f'{olist} .row[data-path="{path}"]')
+            olabels = lambda: page.locator(f'{olist} .row .label').all_inner_texts()
+            picked = lambda: page.evaluate(f"document.querySelector('{olist} .row.selected')?.dataset.path || null")
+
+            def config_is(key, want, tries=20):
+                """설정 저장은 뒤에서 하므로 서버 값이 바뀔 때까지 되묻는다"""
+                for _ in range(tries):
+                    got = page.evaluate(f"fetch('/api/config').then(r => r.json()).then(c => c.{key})")
+                    if got == want:
+                        return True
+                    page.wait_for_timeout(100)
+                return False
+
+            def fake_open(route):   # 점검하는 PC 에서 엑셀·탐색기가 실제로 뜨지 않게 서버로 보내지 않는다
+                route.fulfill(status=200, content_type='application/json', body='{"action": "default"}')
+
+            page.route('**/api/open-external', fake_open)
+
+            def opens(action):
+                """action 을 하는 동안 보낸 '열기' 요청의 본문"""
+                with page.expect_request('**/api/open-external') as req:
+                    action()
+                return req.value.post_data_json
+
+            wait_until(page, f"document.querySelectorAll('{olist} .row').length > 0")
+            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-tree', '#lec-others-split', '#lec-others')]
+            count = page.inner_text('#lec-others-count')
+            check(olabels() == ['code', 'data', 'empty-folder', 'research', 'src', '첨부.pdf'] and count == '7'
+                  and boxes[0]['y'] + boxes[0]['height'] <= boxes[1]['y'] + 1 <= boxes[2]['y'] + 1,
+                  f'문서 트리 아래 분리선과 문서 외 파일 — 폴더 먼저·접힌 채로, 문서·숨김·제외 폴더의 파일은 없음 ({olabels()}, {count}개)')
+            orow('data').locator('[data-toggle]').click()
+            page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
+            in_data = olabels()[2:4]
+            csv = orow('data/표.csv')
+            csv.click()
+            one_click = picked() == 'data/표.csv'
+            body = opens(csv.dblclick)
+            wait_until(page, "document.querySelector('#lec-toast').textContent.includes('열었습니다')")
+            toast_text = page.locator('#lec-toast').text_content()
+            check(in_data == ['setup.exe', '표.csv'] and orow('data/.secret.txt').count() == 0 and one_click
+                  and body['path'] == 'data/표.csv' and 'how' not in body and '기본 앱' in toast_text,
+                  f'탐색기처럼 한 번 누르면 고르고, 두 번 누르면 연다 ({body}, {toast_text!r})')
+            items = menu(csv)
+            copied = choose('@data/표.csv 복사')
+            menu(csv)
+            body = opens(lambda: page.locator('#lec-menu button', has_text='편집기로 열기').click())
+            exe_items = menu(orow('data/setup.exe'))
+            page.keyboard.press('Escape')
+            check(all(x in items for x in ('열기', '편집기로 열기', '탐색기에서 보기', '전체 경로 복사', '파일 이름 복사', 'B ·'))
+                  and copied == '@data/표.csv' and body.get('how') == 'editor'
+                  and '실행하지 않음' in exe_items and '편집기로 열기' not in exe_items,
+                  "우클릭: 열기·편집기로 열기·탐색기에서 보기·경로 복사, 실행 파일은 열지 않고 탐색기에서 선택만 ('편집기로 열기' 없음)")
+            csv.click()
+            page.keyboard.press('ArrowUp')
+            up = picked()
+            body = opens(lambda: page.keyboard.press('Enter'))
+            page.keyboard.press('ArrowLeft')   # 파일 → 부모 폴더
+            parent = picked()
+            page.keyboard.press('ArrowLeft')   # 폴더 → 접기
+            folded_data = orow('data/표.csv').count() == 0
+            page.keyboard.press('ArrowDown')
+            down = picked()
+            page.keyboard.press('ArrowRight')  # 폴더 → 펼치기
+            opened_dir = orow('empty-folder/readme.txt').count() == 1
+            page.keyboard.press('s')           # 그 글자로 시작하는 다음 행
+            typed = picked()
+            check(up == 'data/setup.exe' and body['path'] == 'data/setup.exe' and parent == 'data' and folded_data
+                  and down == 'empty-folder' and opened_dir and typed == 'src',
+                  f'키보드: ↑↓ 로 고르고 Enter 로 열기, ← 부모·접기, → 펼치기, 글자로 찾아가기 ({up}, {parent}, {down}, {typed})')
+            page.fill('#lec-filter', 'csv')
+            flat = page.evaluate(f"""[...document.querySelectorAll('{olist} .row')]
+                .map(r => r.querySelector('.label').textContent + '|' + (r.querySelector('.sub')?.textContent || ''))""")
+            no_docs = '일치하는 문서가 없습니다' in page.inner_text('#lec-tree')
+            page.locator('#lec-filter').press('Escape')
+            check(flat == ['표.csv|data'] and no_docs and olabels()[0] == 'code',
+                  f'사이드바 거르기는 문서 외 파일에도 — 거른 파일을 폴더와 함께 평평하게, Esc 로 되돌림 ({flat})')
+            later_file = work / '나중-파일.txt'
+            later_file.write_text('x', encoding='utf-8')
+            appeared = wait_until(page, "!!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')", 8000)
+            count_after = page.inner_text('#lec-others-count')
+            later_file.unlink()
+            gone = wait_until(page, "!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')", 8000)
+            check(appeared and count_after == '8' and gone, f'파일이 생기거나 지워지면 목록에 바로 반영 ({count_after})')
+            tree_h = page.locator('#lec-tree').bounding_box()['height']
+            page.click('#lec-others-head')
+            wait_until(page, "document.querySelector('#lec-files').classList.contains('others-off')")
+            hidden_list = page.evaluate("getComputedStyle(document.querySelector('#lec-others-list')).display") == 'none'
+            taller = page.locator('#lec-tree').bounding_box()['height'] > tree_h + 100
+            saved_off = config_is('others_visible', False)
+            page.click('#lec-others-head')
+            check(hidden_list and taller and saved_off and wait_until(page, "!document.querySelector('#lec-files').classList.contains('others-off')"),
+                  '머리줄을 누르면 접히고 문서 트리가 그만큼 길어짐 (설정에 저장), 다시 누르면 펼침')
+            split = page.locator('#lec-others-split').bounding_box()
+            h0 = page.locator('#lec-others').bounding_box()['height']
+            page.mouse.move(split['x'] + 40, split['y'] + 4)
+            page.mouse.down()
+            page.mouse.move(split['x'] + 40, split['y'] - 96, steps=5)
+            page.mouse.up()
+            h1 = page.locator('#lec-others').bounding_box()['height']
+            saved_h = config_is('others_height', round(h1))
+            page.locator('#lec-others-split').dblclick()
+            h2 = page.locator('#lec-others').bounding_box()['height']
+            check(abs(h1 - h0 - 100) <= 4 and saved_h and abs(h2 - h0) <= 2 and config_is('others_height', None),
+                  f'분리선을 끌어 높이 조절·저장, 두 번 누르면 기본 높이 ({h0:.0f} → {h1:.0f} → {h2:.0f})')
+            shot('05-others')
+            page.unroute('**/api/open-external', fake_open)
+
             print('[문서 속 원시 HTML]')
             page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click()
             page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')
@@ -890,6 +1006,8 @@ def run(headed: bool) -> None:
             (second / 'notes').mkdir(parents=True)
             (second / 'README.md').write_text('# 둘째 프로젝트\n\n## 첫 절\n\n본문\n\n## 둘째 절\n\n' + '긴 문단입니다.\n\n' * 80, encoding='utf-8')
             (second / 'notes' / '메모.md').write_text('# 둘째의 메모\n\n내용\n', encoding='utf-8')
+            (second / 'assets').mkdir()
+            (second / 'assets' / 'logo.png').write_bytes(b'png')
             dup = tmp / 'other' / 'samples'   # 첫 프로젝트와 이름이 같은 폴더
             dup.mkdir(parents=True)
             (dup / 'a.md').write_text('# 같은 이름 폴더의 문서\n', encoding='utf-8')
@@ -914,8 +1032,10 @@ def run(headed: bool) -> None:
             opened = n_tabs(2) and wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'second'")
             t, labels = tabs(), page.locator('#lec-tree .row .label').all_inner_texts()
             check(opened and [x['active'] for x in t] == [False, True] and tree_root() == 'second'
-                  and '둘째의 메모' in labels and '렌더링 기능 점검' not in labels,
-                  f'폴더 열기(+)는 새 탭으로 열고, 왼쪽 트리와 화면이 그 폴더의 것으로 ({t})')
+                  and '둘째의 메모' in labels and '렌더링 기능 점검' not in labels
+                  and wait_until(page, "document.querySelector('#lec-others-list .row .label')?.textContent === 'assets'")
+                  and olabels() == ['assets'],
+                  f'폴더 열기(+)는 새 탭으로 열고, 왼쪽 트리·문서 외 파일과 화면이 그 폴더의 것으로 ({t})')
             page.locator('#lec-tree .row.file', has_text='둘째 프로젝트').click()
             h1_has('둘째 프로젝트')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 900')
@@ -947,7 +1067,7 @@ def run(headed: bool) -> None:
             wait_until(page, "document.querySelector('#lec-search-results .sr-hit')")
             tab_el(0).click()
             first_side = page.evaluate('''() => ({ filter: document.querySelector('#lec-filter').value,
-              files: !document.querySelector('#lec-tree').hidden, rows: document.querySelectorAll('#lec-tree .row.file').length })''')
+              files: !document.querySelector('#lec-files').hidden, rows: document.querySelectorAll('#lec-tree .row.file').length })''')
             tab_el(1).click()
             second_side = page.evaluate('''() => ({ search: !document.querySelector('#lec-search').hidden,
               q: document.querySelector('#lec-search-input').value, hits: document.querySelectorAll('#lec-search-results .sr-hit').length })''')

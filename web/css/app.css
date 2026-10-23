@@ -219,6 +219,35 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .side-list { flex: 1; overflow: auto; padding: 2px 6px 24px; }
 .side-empty { color: var(--ui-faint); padding: 8px 12px; margin: 0; }
 
+/* 문서 트리 + 분리선 + '문서 외 파일' (others.js). 분리선을 끌면 아래 목록의 높이(--others-h)가 바뀌고, 접으면 머리줄만 남는다 */
+#lec-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+#lec-files > #lec-tree { min-height: 60px; }
+#lec-others-split { flex: none; position: relative; height: 9px; cursor: row-resize; }
+#lec-others-split::before { content: ""; position: absolute; left: 8px; right: 8px; top: 4px; border-top: 1px solid var(--ui-border); }
+#lec-others-split:hover, .resizing-rows #lec-others-split { background: color-mix(in srgb, var(--ui-accent) 30%, transparent); }
+#lec-others { flex: 0 0 var(--others-h, 40%); max-height: calc(100% - 64px); min-height: 0; display: flex; flex-direction: column; }
+#lec-others-list { padding-bottom: 12px; }
+.others-off #lec-others { flex: none; border-top: 1px solid var(--ui-border); }
+.others-off #lec-others-split, .others-off #lec-others-list { display: none; }
+.resizing-rows, .resizing-rows * { cursor: row-resize !important; user-select: none; }
+.resizing-rows iframe { pointer-events: none; }
+.side-head {
+  display: flex; align-items: center; gap: 2px; flex: none; width: 100%; height: 28px; padding: 0 12px 0 6px;
+  border: 0; background: none; color: var(--ui-muted); font-size: 12px; font-weight: 700; text-align: left;
+}
+.side-head:hover { color: var(--ui-fg); }
+.side-head .n { margin-left: auto; color: var(--ui-faint); font-weight: 400; font-variant-numeric: tabular-nums; }
+/* 탐색기처럼: 누르면 고른 행(포커스가 목록에 있으면 짙게), 파일 종류 아이콘 */
+#lec-others-list .row:focus { outline: none; }
+#lec-others-list .row.selected { background: var(--ui-hover); }
+#lec-others-list:focus-within .row.selected { background: var(--ui-active-bg); color: var(--ui-active-fg); }
+#lec-others-list .row.dir .label { font-weight: 500; }
+#lec-others-list .ficon {
+  width: 16px; height: 16px; flex: none; margin-right: 2px;
+  fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; color: var(--ui-faint);
+}
+#lec-others-list .row.dir .ficon, #lec-others-list .row.selected .ficon { color: var(--ui-muted); }
+
 .row {
   display: flex; align-items: center; gap: 4px; min-height: 28px; padding: 3px 8px 3px calc(4px + var(--d, 0) * 14px);
   border-radius: 6px; cursor: pointer; white-space: nowrap; user-select: none;

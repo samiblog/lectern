@@ -6,6 +6,8 @@
 //   pane             다른 칸을 고름 = 다른 탭을 고름 (pane)               (panes → toc·status·find·spotlight·diffmark)
 //   tab              다른 탭을 고름 {tab, prev} — 사이드바를 그 탭의 것으로 (tabs → tree·search)
 //   tree             선택된 탭의 트리 데이터를 새로 받음                  (project → tree·search)
+//   panel            사이드바 탭(파일·최근 변경·검색)을 바꿈 (이름)       (tree → others)
+//   others           탭(tab)의 문서 외 파일이 생기거나 지워짐             (watch → others)
 //   changed          '변경됨' 표시 집합이 바뀜 (어느 탭이든)              (watch·doc → tree·tabs)
 //   refresh-view     칸(pane, 없으면 모든 탭)을 같은 스크롤 위치로 다시 그림 (watch·theme·settings → nav)
 //   rendered         칸(pane)의 문서/개요 렌더링 완료                     (doc·htmldoc·overview → find·spotlight·position)

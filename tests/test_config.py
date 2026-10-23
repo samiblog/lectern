@@ -154,3 +154,14 @@ def test_tree_shows_file_names_from_version_2(tmp_path):
     cfg.update_client({'show_titles': True})                                     # 그 뒤에 다시 켜면 그대로 남는다
     saved = json.loads(path.read_text(encoding='utf-8'))
     assert saved['version'] == 2 and saved['show_titles'] is True and Config(path).get('show_titles') is True
+
+
+def test_others_layout_settings(tmp_path):
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    assert cfg.get('others_visible') is True and cfg.get('others_height') is None
+    cfg.update_client({'others_visible': False, 'others_height': 240})
+    cfg.update_client({'others_height': 'tall'})                                # 형식이 틀리면 버린다
+    assert cfg.get('others_visible') is False and cfg.get('others_height') == 240
+    cfg.update_client({'others_height': None})                                  # 두 번 누르면 기본 높이
+    assert cfg.get('others_height') is None

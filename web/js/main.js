@@ -15,6 +15,7 @@ import { initSearch, openSearch } from './search.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
+import { initOthers, refreshOthers } from './others.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
 import { initPanes } from './panes.js';
 import { initNav, back, forward, refreshView } from './nav.js';
@@ -78,6 +79,7 @@ async function manualRefresh() {
       return;
     }
     await loadTree({ fresh: true, tab });
+    refreshOthers();
     await refreshView(tab.pane);
     toast('다시 불러왔습니다');
   } catch (e) {
@@ -194,6 +196,7 @@ async function boot() {
   initStatus();
   initOverview();
   initTree();
+  initOthers();   // initTree 다음에 — 탭을 바꿀 때 트리가 그 탭의 거르기 글자를 먼저 되살린다
   initPalette();
   initNav();
   initTabs();

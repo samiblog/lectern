@@ -47,6 +47,8 @@ function makeTab(p) {
     loaded: false,          // 첫 화면까지 그렸는지
     loading: null,          // 첫 화면을 그리는 중이면 그 Promise
     side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·search.js)
+    // 사이드바 '문서 외 파일' (others.js): 받은 목록(data·index), 다시 읽을지(stale), 펼친 폴더, 고른 행, 스크롤 위치
+    others: { data: null, index: null, error: null, stale: true, loading: null, open: new Set(), selected: null, scroll: 0 },
   };
   tab.pane = createPane(tab);
   return tab;

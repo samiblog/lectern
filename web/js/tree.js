@@ -130,11 +130,12 @@ function revealCurrent() {
 export function switchPanel(next, { focus = true } = {}) {
   panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
-  $('#lec-tree').hidden = next !== 'files';
+  $('#lec-files').hidden = next !== 'files';   // 문서 트리 + 문서 외 파일 (others.js)
   $('#lec-recent').hidden = next !== 'recent';
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
   if (next === 'search' && focus) $('#lec-search-input').focus();
+  emit('panel', next);
 }
 
 /** 프로젝트 탭을 바꾸면: 앞 탭의 사이드바 상태를 그 탭에 남기고, 새 탭의 것을 되살린다 */
@@ -170,7 +171,8 @@ function onRowClick(e) {
   emit('open', { type: 'overview', path: dir });
 }
 
-function fullPath(path) {
+/** 프로젝트 기준 경로 → 전체 경로 (서버 OS 의 구분자로). '' 면 프로젝트 폴더 */
+export function fullPath(path) {
   return path ? `${S.root}${S.sep}${path.split('/').join(S.sep)}` : S.root;
 }
 
@@ -219,7 +221,7 @@ export function initTree() {
     } else if (e.key === 'Escape' && filter.value) {
       e.stopPropagation();
       filter.value = '';
-      renderTree();
+      filter.dispatchEvent(new Event('input'));   // 트리와 문서 외 파일(others.js)을 함께 다시 그린다
     }
   });
   $('#lec-btn-titles').addEventListener('click', async () => {

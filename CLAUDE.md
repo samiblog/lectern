@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.7.1 (v0.7.1 = 트리는 파일 이름, 마우스를 올리면 문서 제목. v0.7.0 = 프로젝트 탭 — 폴더마다 탭 하나, 탭을 누르면 트리와 문서가 함께 바뀜, 창은 하나(또 실행하면 떠 있는 창에 탭으로). v0.6.0 의 창 나누기는 걷었다. v0.6.0 = math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.8.0 (v0.8.0 = 사이드바 '문서 외 파일' — 문서 트리 아래 분리선 너머에 문서가 아닌 파일을 탐색기처럼, 두 번 누르면 열기(실행하지 않음). v0.7.1 = 트리는 파일 이름, 마우스를 올리면 문서 제목. v0.7.0 = 프로젝트 탭 — 폴더마다 탭 하나, 탭을 누르면 트리와 문서가 함께 바뀜, 창은 하나(또 실행하면 떠 있는 창에 탭으로). v0.6.0 의 창 나누기는 걷었다. v0.6.0 = math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -74,6 +74,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | markdown.js | markdown-it 설정, 수식 규칙, mermaid 코드 블록 |
 | overview.js | 폴더 개요 화면 |
 | tree.js | 사이드바 트리·필터·최근 변경·우클릭 메뉴 |
+| others.js | 사이드바 '문서 외 파일' — 문서 트리 아래 분리선 너머의 탐색기 같은 목록 (GET /api/others) |
 | watch.js | 1초 폴링으로 변경 반영 (모든 탭을 한 번에, 숨은 탭은 고를 때 다시 그림) |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
@@ -130,6 +131,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.
 - html 문서는 `<iframe sandbox="allow-same-origin allow-modals">` 이다 (`allow-modals` 는 앱이 그 문서를 인쇄하려고). **`allow-scripts` 를 더하지 않는다** — 같은 출처라서 스크립트가 돌면 앱의 `/api/*`·토큰에 닿는다. 서버 CSP(`html_doc_policy`)도 함께 막는다.
 - iframe 안의 키·마우스 이벤트는 앱 문서로 올라오지 않는다. `htmldoc.js` 가 keydown·mouseup·mousedown 을 앱으로 넘기므로, 새 단축키는 `main.js` 에만 넣으면 html 문서에서도 된다. 문서 속 요소를 찾을 때는 `util.docRoot()`, 화면 좌표는 `util.screenRect()` 를 쓴다 (iframe 위치를 더함).
+- 문서 외 파일 목록(`/api/others`, `scanner.scan_others`)은 문서 트리와 따로 읽고, 감시는 문서 외 파일의 생성·삭제·이동만 `others` 로 남긴다 (내용 수정은 보지 않는다 — 소스를 고칠 때마다 다시 읽지 않게). 목록에서 여는 것도 `osutil.open_path` 를 거친다: 실행·설치 파일·압축 등(`REVEAL_ONLY_EXT`)은 탐색기에서 선택만 한다. 이 목록에 이름 바꾸기·지우기 같은 탐색기 기능을 넣지 않는다 (보기 전용).
 - 트리 스캔은 `Project.scan()` 을 거친다 (탭마다) — 변경 기록(seq)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.
 - 창 하나(`instance.py`)는 이름 있는 파이프로 JSON 바이트만 주고받는다 (`send_bytes`·`recv_bytes`). pickle 을 쓰는 `send`·`recv` 로 바꾸지 않는다 — 받은 바이트로 코드가 돌 수 있다. 파이프 이름이 설정 폴더를 따르므로 점검 스크립트는 `LECTERN_CONFIG_DIR` 을 바꿔 설치된 Lectern 창과 섞이지 않게 한다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

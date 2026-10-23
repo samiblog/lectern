@@ -21,7 +21,7 @@ from . import __version__, osutil
 from .config import is_number
 from .docinfo import doc_info, read_text
 from .paths import web_dir
-from .scanner import doc_kind, iter_files, resolve_inside
+from .scanner import MAX_OTHER_FILES, doc_kind, iter_files, resolve_inside
 from .search import MAX_QUERY, search_docs
 from .state import AppState, Project, TooManyTabs
 
@@ -182,6 +182,13 @@ def create_app(state: AppState) -> Flask:
         project = arg_project()
         return jsonify(root=str(project.root), tree=project.scan(fresh=request.args.get('fresh') == '1'))
 
+    @app.get('/api/others')
+    def api_others() -> Any:
+        """문서 외 파일의 트리 (사이드바 아래 목록). 문서 트리와 따로 — 화면이 그 목록을 보일 때만 부른다."""
+        project = arg_project()
+        nodes, count, truncated = project.scan_others(fresh=request.args.get('fresh') == '1')
+        return jsonify(tree=nodes, count=count, truncated=truncated, limit=MAX_OTHER_FILES)
+
     @app.get('/api/overview')
     def api_overview() -> Any:
         project = arg_project()
@@ -275,8 +282,9 @@ def create_app(state: AppState) -> Flask:
         target = path_from_body()
         line = body().get('line')
         line = int(line) if isinstance(line, int) or (isinstance(line, str) and line.isdigit()) else None
+        prefer_editor = body().get('how') == 'editor'   # '편집기로 열기' — 기본 앱 형식(csv 등)도 편집기로
         try:
-            how = osutil.open_path(target, line, state.config.get('editor'))
+            how = osutil.open_path(target, line, state.config.get('editor'), prefer_editor)
         except OSError as exc:
             return jsonify(error=str(exc)), 500
         return jsonify(action=how)

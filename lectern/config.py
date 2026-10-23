@@ -36,6 +36,8 @@ DEFAULTS: dict[str, Any] = {
     'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
+    'others_visible': True,  # 사이드바 아래 '문서 외 파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기)
+    'others_height': None,   # '문서 외 파일' 목록의 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
     'toc_visible': True,
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
@@ -51,10 +53,10 @@ DEFAULTS: dict[str, Any] = {
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level'})
+                         'external_images', 'restore_last', 'expand_first_level', 'others_visible', 'others_height'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
-NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width'})
+NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height'})
 _EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"글자"', list: '["이름", ...] 목록', dict: '{ } 객체'}
 
 
@@ -68,7 +70,7 @@ def value_ok(key: str, value: Any) -> bool:
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
-    if key == 'sidebar_width':
+    if key in ('sidebar_width', 'others_height'):
         return is_number(value)
     if key in ('last_folder', 'editor'):
         return isinstance(value, str)
@@ -94,7 +96,7 @@ def _upgrade(data: dict[str, Any]) -> None:
 
 def _expected(key: str) -> str:
     default = DEFAULTS[key]
-    kind = str if key in ('last_folder', 'editor') else int if key == 'sidebar_width' else type(default)
+    kind = str if key in ('last_folder', 'editor') else int if key in ('sidebar_width', 'others_height') else type(default)
     return _EXAMPLE.get(kind, '맞는 형식')
 
 

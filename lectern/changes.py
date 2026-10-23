@@ -5,6 +5,7 @@ Watcher 가 프로젝트 폴더를 감시해 ChangeLog 에 이벤트를 쌓고,
 (푸시 대신 폴링을 쓰는 이유는 docs/DECISIONS.md 참고)
 
 watchdog 가 없으면 2초 간격 스캔 비교(폴링)로 대신한다.
+문서가 아닌 파일은 생기고 지워지고 옮겨질 때만 기록한다 (others — 사이드바 '문서 외 파일'). 내용 수정은 보지 않는다.
 """
 from __future__ import annotations
 
@@ -14,7 +15,7 @@ from collections import deque
 from pathlib import Path
 from typing import Any
 
-from .scanner import doc_kind, iter_files, scan
+from .scanner import doc_kind, iter_files, scan, scan_others
 
 try:  # watchdog 는 선택 의존성
     from watchdog.events import FileSystemEventHandler
@@ -32,35 +33,45 @@ class ChangeLog:
     def __init__(self, maxlen: int = 5000):
         self._lock = threading.Lock()
         self._seq = 0
-        self._items: deque[tuple[int, str | None, bool]] = deque(maxlen=maxlen)
+        self._others_seq = 0   # 문서 외 파일 목록이 마지막으로 바뀌었을 수 있는 순번 (구조 변경 포함)
+        self._items: deque[tuple[int, str | None, bool, bool]] = deque(maxlen=maxlen)
 
     @property
     def seq(self) -> int:
         with self._lock:
             return self._seq
 
-    def push(self, path: str | None, structure: bool = False) -> None:
-        """path: 바뀐 md 파일 상대경로 (폴더 변경이면 None). structure: 트리 구성이 바뀜."""
+    @property
+    def others_seq(self) -> int:
+        with self._lock:
+            return self._others_seq
+
+    def push(self, path: str | None, structure: bool = False, others: bool = False) -> None:
+        """path: 바뀐 문서 상대경로 (폴더·문서 외 파일이면 None). structure: 문서 트리 구성이 바뀜.
+        others: 문서 외 파일이 생기거나 지워지거나 옮겨짐 (문서 트리는 그대로)."""
         with self._lock:
             self._seq += 1
-            self._items.append((self._seq, path, structure))
+            if structure or others:
+                self._others_seq = self._seq
+            self._items.append((self._seq, path, structure, others))
 
     def since(self, seq: int) -> dict[str, Any]:
         with self._lock:
             cur = self._seq
             if seq >= cur:
-                return {'seq': cur, 'paths': [], 'structure': False, 'reset': seq > cur}
+                return {'seq': cur, 'paths': [], 'structure': False, 'others': False, 'reset': seq > cur}
             oldest = self._items[0][0] if self._items else cur + 1
             reset = seq < oldest - 1  # 기록이 밀려나 놓친 이벤트가 있음
             paths: set[str] = set()
-            structure = False
-            for s, path, struct in self._items:
+            structure = others = False
+            for s, path, struct, other in self._items:
                 if s <= seq:
                     continue
                 if path:
                     paths.add(path)
                 structure = structure or struct
-        return {'seq': cur, 'paths': sorted(paths), 'structure': structure or reset, 'reset': reset}
+                others = others or other
+        return {'seq': cur, 'paths': sorted(paths), 'structure': structure or reset, 'others': others or reset, 'reset': reset}
 
 
 class _Handler(FileSystemEventHandler):
@@ -137,18 +148,24 @@ class Watcher:
                     self.log.push(None, True)
             elif doc_kind(rel):
                 self.log.push(rel, event_type != 'modified')
+            elif event_type != 'modified':
+                self.log.push(None, others=True)   # 문서 외 파일이 생기거나 지워짐 (내용 수정은 보지 않는다)
 
     # --- 폴링 대체 --------------------------------------------------------
-    def _snapshot(self) -> dict[str, tuple[float, int]]:
+    def _snapshot(self) -> tuple[dict[str, tuple[float, int]], set[str]]:
+        """(문서 → (수정 시각, 크기), 문서 외 파일 경로 집합)"""
         nodes = scan(self.root, self.exclude, with_info=False)
-        return {n['path']: (n['mtime'], n['size']) for n in iter_files(nodes)}
+        others, _, _ = scan_others(self.root, self.exclude)
+        return {n['path']: (n['mtime'], n['size']) for n in iter_files(nodes)}, {n['path'] for n in iter_files(others)}
 
     def _poll_loop(self) -> None:
-        prev = self._snapshot()
+        prev, prev_others = self._snapshot()
         while not self._stop.wait(self.poll_interval):
-            cur = self._snapshot()
+            cur, cur_others = self._snapshot()
             for path in sorted((cur.keys() - prev.keys()) | (prev.keys() - cur.keys())):
                 self.log.push(path, True)
             for path in sorted(k for k in cur.keys() & prev.keys() if cur[k] != prev[k]):
                 self.log.push(path, False)
-            prev = cur
+            if cur_others != prev_others:
+                self.log.push(None, others=True)
+            prev, prev_others = cur, cur_others

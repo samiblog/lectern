@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any
 
 from .docinfo import doc_info
+from .osutil import how_to_open
 
 DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html'}
 DEFAULT_HTML_EXCLUDE_DIRS = frozenset({'src', 'public', 'static', 'templates', 'web', 'www', 'frontend', 'out'})
@@ -107,6 +108,62 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
     dirs.sort(key=lambda n: natural_key(n['name']))
     files.sort(key=lambda n: natural_key(n['name']))
     return dirs + files
+
+
+MAX_OTHER_FILES = 5000   # '문서 외 파일' 목록에 싣는 파일 수. 넘으면 거기서 멈춘다 (소스가 아주 많은 프로젝트)
+
+
+def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
+                html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, limit: int = MAX_OTHER_FILES) -> tuple[list[Node], int, bool]:
+    """문서가 아닌 파일의 트리 — 사이드바 '문서 외 파일'. 문서는 md 와 트리에 보이는 html 이다 (소스 폴더의 html 은 여기 나온다).
+
+    숨김·링크·제외 폴더 규칙은 scan() 과 같고, 이런 파일이 없는 폴더는 뺀다. 파일 노드는 {type, name, path, mtime, size, open}
+    (open: osutil.how_to_open — 두 번 누르면 어떻게 열리는지). (노드 목록, 실은 파일 수, limit 에서 멈췄는지)
+    """
+    excl = frozenset(x.lower() for x in exclude)
+    html_excl = frozenset(x.lower() for x in html_exclude)
+    count = [0, False]   # 실은 파일 수, 멈췄는지
+
+    def walk(rel: str, html_ok: bool) -> list[Node]:
+        base = root / rel if rel else root
+        try:
+            with os.scandir(base) as it:
+                entries = sorted(it, key=lambda e: natural_key(e.name))
+        except OSError:
+            return []
+        dirs: list[Node] = []
+        files: list[Node] = []
+        for entry in entries:
+            name = entry.name
+            if name.startswith('.') or _is_link(entry):
+                continue
+            try:
+                st = entry.stat(follow_symlinks=False)
+                is_dir = entry.is_dir(follow_symlinks=False)
+            except OSError:
+                continue
+            if has_hidden_attr(st):
+                continue
+            path = f'{rel}/{name}' if rel else name
+            if is_dir:
+                if name.lower() not in excl and not count[1]:
+                    children = walk(path, html_ok and name.lower() not in html_excl)
+                    if children:
+                        dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
+                continue
+            kind = doc_kind(name)
+            if kind == 'markdown' or (kind == 'html' and html_ok):
+                continue   # 문서 트리에 있다
+            if count[0] >= limit:
+                count[1] = True
+                continue
+            count[0] += 1
+            files.append({'type': 'file', 'name': name, 'path': path, 'mtime': st.st_mtime, 'size': st.st_size,
+                          'open': how_to_open(name)})
+        return dirs + files
+
+    nodes = walk('', True)
+    return nodes, count[0], count[1]
 
 
 def iter_files(nodes: list[Node]) -> Iterator[Node]:

@@ -1,8 +1,9 @@
-"""문서 속 링크가 가리키는 파일을 OS에 넘겨 여는 기능.
+"""문서 속 링크와 사이드바 '문서 외 파일'이 가리키는 파일을 OS에 넘겨 여는 기능.
 
 주의: os.startfile 은 파일을 '실행'할 수 있다. .py/.js/.bat/.ps1 등은 Windows 기본 동작이
 실행이므로 절대 startfile 로 열지 않는다. 안전한 문서·이미지 형식만 기본 앱으로 열고,
-그 밖의 파일은 편집기(VS Code 등)로 열거나, 편집기가 없으면 탐색기에서 선택만 해 준다.
+실행 파일·압축·데이터처럼 편집기로 읽을 수 없는 형식은 탐색기에서 선택만 하고,
+그 밖의 파일은 편집기(VS Code 등)로 연다 (편집기가 없으면 탐색기에서 선택).
 """
 from __future__ import annotations
 
@@ -17,7 +18,18 @@ SAFE_DEFAULT_APP_EXT = frozenset({
     '.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.svg', '.ico',
     '.pdf', '.txt', '.log', '.csv', '.tsv',
     '.xlsx', '.xls', '.docx', '.doc', '.pptx', '.ppt', '.hwp', '.hwpx',
-    '.mp4', '.mp3', '.wav',
+    '.mp4', '.mp3', '.wav', '.m4a', '.mov', '.tif', '.tiff',
+})
+
+# 편집기로 열어도 읽을 수 없는 형식 (실행·설치 파일, 압축, 데이터베이스, 매크로가 든 오피스 문서 등).
+# 기본 앱으로도 편집기로도 열지 않고 탐색기에서 선택만 한다 — 실행은 사용자가 탐색기에서 직접
+REVEAL_ONLY_EXT = frozenset({
+    '.exe', '.msi', '.msix', '.appx', '.dll', '.sys', '.com', '.scr', '.cpl', '.ocx', '.lnk', '.url',
+    '.jar', '.apk', '.class', '.pyc', '.pyd', '.so', '.dylib', '.o', '.obj', '.lib', '.bin', '.dat',
+    '.zip', '.7z', '.rar', '.tar', '.gz', '.tgz', '.bz2', '.xz', '.cab', '.iso', '.img', '.vhd', '.vhdx',
+    '.db', '.sqlite', '.sqlite3', '.mdb', '.accdb', '.parquet', '.pkl', '.npy', '.h5',
+    '.docm', '.dotm', '.xlsm', '.xltm', '.xlsb', '.pptm',
+    '.ttf', '.otf', '.woff', '.woff2', '.psd', '.ai',
 })
 
 # 편집기 실행 인자에 들어가면 cmd 해석 문제를 일으킬 수 있는 문자 (code.cmd 는 배치 파일)
@@ -62,15 +74,27 @@ def reveal(path: Path) -> None:
         open_default(path.parent if path.is_file() else path)
 
 
-def open_path(path: Path, line: int | None = None, editor: str | None = None) -> str:
-    """경로를 적절한 방법으로 연다. 사용한 방법을 반환: folder | default | editor | reveal"""
+def how_to_open(name: str) -> str:
+    """파일을 열 방법: default(기본 앱) | editor(편집기 — 없으면 탐색기) | reveal(탐색기에서 선택만). 화면이 메뉴에 보인다"""
+    ext = os.path.splitext(name)[1].lower()
+    if ext in SAFE_DEFAULT_APP_EXT:
+        return 'default'
+    return 'reveal' if ext in REVEAL_ONLY_EXT else 'editor'
+
+
+def open_path(path: Path, line: int | None = None, editor: str | None = None, prefer_editor: bool = False) -> str:
+    """경로를 적절한 방법으로 연다. 사용한 방법을 반환: folder | default | editor | reveal
+
+    prefer_editor: 기본 앱으로 여는 형식(csv·txt 등)도 편집기로 ('편집기로 열기'). 읽을 수 없는 형식은 그래도 탐색기에서 선택만.
+    """
     if path.is_dir():
         open_default(path)
         return 'folder'
-    if path.suffix.lower() in SAFE_DEFAULT_APP_EXT:
+    how = how_to_open(path.name)
+    if how == 'default' and not prefer_editor:
         open_default(path)
         return 'default'
-    exe = find_editor(editor)
+    exe = find_editor(editor) if how != 'reveal' else None
     if exe and not (_UNSAFE_CHARS & set(str(path))):
         _launch([exe, '-g', f'{path}:{line or 1}'])  # VS Code / Cursor 형식
         return 'editor'

@@ -8,7 +8,7 @@ import pytest
 
 from conftest import write
 
-from lectern.scanner import iter_files, natural_key, resolve_inside, scan
+from lectern.scanner import iter_files, natural_key, resolve_inside, scan, scan_others
 
 
 def paths(nodes):
@@ -118,3 +118,28 @@ def test_html_docs_and_source_folders(project):
     assert 'src/index.html' not in kinds and 'web/app.html' not in kinds and kinds['web/notes.md'] == 'markdown'
     assert [n['path'] for n in iter_files(scan(project, rel='web'))] == ['web/notes.md']   # 하위 폴더 개요도 같게
     assert 'web/app.html' in {n['path'] for n in iter_files(scan(project, html_exclude=()))}
+
+
+def test_scan_others_lists_non_documents(project):
+    write(project / 'src' / 'index.html', '<title>앱</title>')                 # 소스 폴더의 html 은 문서가 아니다
+    write(project / 'docs' / 'r.html', '<title>보고서</title>')                 # 트리에 보이는 html 은 문서
+    write(project / 'data' / '표.csv', 'a,b\n1,2\n')
+    write(project / 'data' / '.secret.txt', 'x')
+    write(project / 'node_modules' / 'lib' / 'index.js', 'x')
+    (project / 'data' / 'run.exe').write_bytes(b'MZ')
+    nodes, count, truncated = scan_others(project)
+    found = paths(nodes)
+    assert found == ['data/run.exe', 'data/표.csv', 'docs/img.svg', 'empty/note.txt', 'src/app.py', 'src/index.html']
+    assert count == 6 and truncated is False
+    assert [n['name'] for n in nodes if n['type'] == 'dir'] == ['data', 'docs', 'empty', 'src']   # 폴더 먼저, 자연 정렬
+    files = {n['path']: n for n in iter_files(nodes)}
+    assert files['data/표.csv']['size'] == len('a,b\n1,2\n'.encode()) or files['data/표.csv']['size'] > 0
+    # 두 번 누르면 어떻게 열리는지: 기본 앱 / 편집기 / 탐색기에서 선택만 (실행하지 않음)
+    assert (files['data/표.csv']['open'], files['src/app.py']['open'], files['data/run.exe']['open']) == ('default', 'editor', 'reveal')
+
+
+def test_scan_others_stops_at_limit(project):
+    for i in range(5):
+        write(project / 'many' / f'{i}.txt', 'x')
+    nodes, count, truncated = scan_others(project, limit=3)
+    assert count == 3 and truncated is True and len(paths(nodes)) == 3

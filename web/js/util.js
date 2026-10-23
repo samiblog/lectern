@@ -42,6 +42,19 @@ export function formatDateTime(sec) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
+/** 바이트 → '532 B', '12.4 KB', '3.1 MB' (탐색기처럼 1024 단위) */
+export function formatSize(n) {
+  if (!Number.isFinite(n)) return '';
+  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  let v = n;
+  let i = 0;
+  while (v >= 1024 && i < units.length - 1) {
+    v /= 1024;
+    i += 1;
+  }
+  return `${i === 0 || v >= 10 ? Math.round(v) : v.toFixed(1)} ${units[i]}`;
+}
+
 export const formatClock = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
 /** 유닉스 초 → '방금', '5분 전', '어제', '10월 3일' */

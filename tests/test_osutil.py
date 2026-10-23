@@ -64,3 +64,26 @@ def test_editor_is_not_taken_from_current_folder(tmp_path, monkeypatch):
     configured = tmp_path / 'my-editor.exe'
     configured.write_bytes(b'')
     assert osutil.find_editor(str(configured)) == str(configured)
+
+
+def test_how_to_open():
+    assert [osutil.how_to_open(n) for n in ('표.CSV', 'a.pdf', 'app.py', 'setup.exe', 'a.zip', 'macro.xlsm', 'Makefile')] == \
+        ['default', 'default', 'editor', 'reveal', 'reveal', 'reveal', 'editor']
+
+
+def test_unreadable_types_are_only_revealed(tmp_path, calls, monkeypatch):
+    monkeypatch.setattr(osutil, 'find_editor', lambda _: '/usr/bin/code')
+    for name in ('setup.exe', 'a.zip', 'macro.xlsm'):
+        f = tmp_path / name
+        f.write_bytes(b'')
+        # 실행 파일·압축·매크로 문서는 기본 앱으로도 편집기로도 열지 않는다 ('편집기로 열기'를 보내도)
+        assert osutil.open_path(f) == 'reveal' and osutil.open_path(f, prefer_editor=True) == 'reveal'
+    assert all(kind == 'reveal' for kind, _ in calls)
+
+
+def test_prefer_editor_for_default_app_types(tmp_path, calls, monkeypatch):
+    monkeypatch.setattr(osutil, 'find_editor', lambda _: '/usr/bin/code')
+    f = tmp_path / 'data.csv'
+    f.write_text('a,b', encoding='utf-8')
+    assert osutil.open_path(f) == 'default' and osutil.open_path(f, prefer_editor=True) == 'editor'
+    assert calls == [('default', 'data.csv'), ('launch', ['/usr/bin/code', '-g', f'{f}:1'])]

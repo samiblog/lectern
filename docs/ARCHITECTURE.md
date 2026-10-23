@@ -46,7 +46,7 @@ flowchart LR
 
 ### AppState (state.py)
 열린 프로젝트들(`projects` — 프로젝트 id → `Project`, 열린 순서 = 탭 순서), 선택된 탭(`active`), 탭 목록 순번(`tabs_seq`), 화면에 알릴 말(`notices`), Config, 실행 모드, 토큰을 묶는다 (D34).
-- `Project` 하나가 탭 하나: 폴더(`root`, resolve된 절대경로), Watcher, ChangeLog, 스캔 캐시. id 는 실행마다 새로 만드는 무작위 8자리(`secrets.token_hex(4)`) — 주소(`/doc/<id>/…`, `?p=<id>`)에 폴더 경로가 드러나지 않고, 문서가 다른 탭의 주소를 짐작할 수 없다.
+- `Project` 하나가 탭 하나: 폴더(`root`, resolve된 절대경로), Watcher, ChangeLog, 스캔 캐시 (문서 트리는 `seq`, 문서 외 파일 목록은 `others_seq` 가 그대로면 다시 쓴다). id 는 실행마다 새로 만드는 무작위 8자리(`secrets.token_hex(4)`) — 주소(`/doc/<id>/…`, `?p=<id>`)에 폴더 경로가 드러나지 않고, 문서가 다른 탭의 주소를 짐작할 수 없다.
 - `open(folder)` 는 이미 열린 폴더(대소문자 무시)면 그 탭을, 아니면 새 `Project` 를 만들어 감시를 시작하고 `ChangeLog` 에 구조 변경을 하나 넣는다. 연 탭이 선택되고 `tabs_seq` 가 는다 (다른 실행이 넘긴 폴더면 화면이 그 탭으로 가야 하므로 이미 열린 탭이어도). 최근 폴더와 열린 탭 목록(`tabs`·`active_tab`)을 설정에 기록한다. 탭은 `MAX_TABS`(10)개까지 (넘으면 `TooManyTabs`).
 - `close_tab(id)` 는 그 감시를 멈추고, 선택된 탭이었으면 오른쪽(없으면 왼쪽) 탭을 고른다. `activate(id)` 는 선택된 탭만 바꾼다 (`tabs_seq` 는 그대로 — 화면이 고른 것이므로).
 - `restore(folders, active)` 는 시작할 때 지난 탭들을 연다 (최근 폴더 순서는 바꾸지 않는다). `notify(text)` 는 화면에 한 번 보일 알림을 남긴다 — 실행 인자나 다른 실행이 넘긴 폴더를 열지 못했을 때 (창 모드에서는 콘솔이 보이지 않는다).
@@ -73,9 +73,10 @@ flowchart LR
 
 ### 변경 감지 (changes.py)
 - `Watcher` 는 watchdog `Observer` 로 root를 재귀 감시한다. watchdog가 없거나 시작에 실패하면 2초 간격 스캔 비교로 대신한다 (`backend` = `watchdog` | `polling`).
-- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안, 문서(`doc_kind` — md·html)가 아닌 파일은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서 생성·삭제·이동도 `structure=True`, 수정은 `structure=False`.
+- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서(`doc_kind` — md·html) 생성·삭제·이동도 `structure=True`, 문서 수정은 `structure=False`. 문서가 아닌 파일은 생성·삭제·이동만 `others=True` 로 남기고(경로 없이) 수정은 버린다 — 화면은 문서 외 파일 목록만 다시 읽고 문서 트리는 그대로 둔다.
 - Windows 숨김 속성은 감시 단계에서 보지 않는다 (트리 재스캔 때 걸러진다).
-- `ChangeLog` 는 `(seq, path, structure)` 를 최대 5000개 보관한다. `since(seq)` 는 그 뒤의 경로 집합과 구조 변경 여부를 돌려준다. 오래된 기록이 밀려나 놓친 경우 `reset=True`.
+- `ChangeLog` 는 `(seq, path, structure, others)` 를 최대 5000개 보관한다. `since(seq)` 는 그 뒤의 경로 집합과 구조 변경·문서 외 파일 변경 여부를 돌려준다. 오래된 기록이 밀려나 놓친 경우 `reset=True` (structure·others 도 참). `others_seq` 는 문서 외 파일 목록이 마지막으로 바뀌었을 수 있는 순번 (structure 포함).
+- 폴링 대체는 문서(수정 시각·크기)와 문서 외 파일(경로 집합)을 함께 비교한다.
 
 ### 링크 대상 열기 (osutil.py)
 `open_path(path, line, editor)`:
@@ -83,9 +84,12 @@ flowchart LR
 | 대상 | 동작 | 반환 |
 |---|---|---|
 | 폴더 | 탐색기로 열기 | `folder` |
-| `SAFE_DEFAULT_APP_EXT` (이미지·PDF·txt·csv·오피스·hwp 등) | `os.startfile` | `default` |
+| `SAFE_DEFAULT_APP_EXT` (이미지·PDF·txt·csv·오피스·hwp·미디어 등) | `os.startfile` (`prefer_editor` — '편집기로 열기' — 면 편집기) | `default` |
+| `REVEAL_ONLY_EXT` (실행·설치 파일, 압축, 데이터베이스, 매크로가 든 오피스 문서, 글꼴 등) | 탐색기에서 파일 선택만 — 기본 앱으로도 편집기로도 열지 않는다 | `reveal` |
 | 그 밖의 파일 (코드·스크립트·md 등) | 편집기 `<editor> -g 경로:줄` | `editor` |
 | 편집기가 없거나 경로에 `&|<>^%!"` 포함 | 탐색기에서 파일 선택 (`explorer /select,`) | `reveal` |
+
+`how_to_open(name)` 은 위 규칙으로 `default`·`editor`·`reveal` 를 돌려준다. 문서 외 파일 목록이 파일마다 `open` 으로 실어 메뉴에 보인다 (편집기가 없으면 실제로는 `reveal`).
 
 편집기는 설정 `editor` (실행 파일의 절대경로) → PATH의 `code` 순으로 찾는다. VS Code·Cursor처럼 `-g file:line` 을 받는 편집기를 가정한다.
 현재 폴더에서는 찾지 않는다: `shutil.which` 앞에 `NoDefaultCurrentDirectoryInExePath=1` 을 두고, 탐색기는 `%SystemRoot%\explorer.exe` 로 띄운다. `app.py` 도 폴더 인자를 푼 뒤 앱 폴더로 `chdir` 한다. `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트라, 그 안의 `code.cmd`·`explorer.exe` 가 링크 한 번에 실행될 수 있었다 (D29).
@@ -109,6 +113,8 @@ flowchart LR
 | `show_titles` | `false` | 가능 | 트리·최근 변경에 파일 이름 대신 문서 제목 (트리의 '제목' 버튼). 기본은 파일 이름이고 마우스를 올리면 제목 |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
 | `sidebar_width` | `null` | 가능 | 사이드바 폭(px, 200~480). 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 288) |
+| `others_visible` | `true` | 가능 | 사이드바 '문서 외 파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기) |
+| `others_height` | `null` | 가능 | '문서 외 파일' 목록의 높이(px). 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 40%) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
 | `restore_last` | `true` | 가능 | 폴더(탭)를 처음 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다. 탭 목록은 이 설정과 상관없이 되살린다 |
@@ -138,14 +144,15 @@ flowchart LR
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤). 이미 닫혔으면 그대로. `/api/state` 와 같은 형식 |
 | `POST /api/activate` | `{p}` | 선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작). `{ok:true}` |
 | `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(seq)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
+| `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크·제외 폴더 규칙은 트리와 같다. 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, named, hits:[{line, text}], more}], total, truncated}` (`named`: 제목·파일명에 검색어가 있음 — 먼저 나옴). 검색어가 200자를 넘으면 400 |
-| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
+| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll}` | 그 탭에서 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
-| `POST /api/open-external` | `{p, path, line?}` | `{action}` — `folder`·`default`·`editor`·`reveal` |
+| `POST /api/open-external` | `{p, path, line?, how?}` | `{action}` — `folder`·`default`·`editor`·`reveal`. `how:'editor'` 면 기본 앱 형식도 편집기로 (`REVEAL_ONLY_EXT` 는 그래도 탐색기에서 선택만) |
 | `POST /api/exists` | `{p, paths:[...], base}` | 경로 표기 중 프로젝트 안에 있는 파일. 프로젝트 기준, 없으면 `base`(문서 폴더) 기준. `{found:{입력: 프로젝트 기준 경로}}`. 숨김·밖·폴더는 없는 것. 500개까지 |
 | `POST /api/reveal` | `{p, path}` | 탐색기에서 선택 (`path` 가 `''` 면 프로젝트 폴더 — 탭 우클릭). `{action:'reveal'}` |
 | `GET /doc/<id>/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin allow-modals`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20) 와 `Referrer-Policy: no-referrer` (html 문서 속 인터넷 그림이 앱 주소를 보내지 않게). 숨김·밖·없음·폴더·열려 있지 않은 id 는 404 |
@@ -284,6 +291,14 @@ sequenceDiagram
 - 강조(선택된 행)는 선택된 탭의 문서를 따른다.
 - 파일이 바뀌어 트리·최근 변경·검색 결과를 다시 그려도 키보드 초점은 같은 행에 남는다 (`util.keepFocus`).
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`tabs.js` 의 `loadTab`). 그동안 트리는 비워 둔다.
+
+### 문서 외 파일 (others.js)
+- 파일 탭의 문서 트리 아래, 분리선(`#lec-others-split`) 너머에 문서가 아닌 파일을 탐색기처럼 보인다 (D36). 머리줄 '문서 외 파일 N'을 누르면 접히고(설정 `others_visible`), 분리선을 끌면 높이가 바뀐다(`others_height`, 두 번 누르면 기본 — 파일 탭 높이의 40%, 위로 64px 이상 남김).
+- 목록은 `GET /api/others` 로 문서 트리와 따로 읽는다. 목록이 보일 때만(파일 탭이고 펼쳐 있을 때) 읽고, 파일이 생기거나 지워지면(`/api/changes` 의 `others`·`structure` → `watch.js` 가 `tab.others.stale` 을 달고 `others` 이벤트) 다시 읽는다. 문서 외 파일만 바뀌면 문서 트리는 다시 읽지 않는다. F5 는 서버에서 새로 훑는다.
+- 탭마다 받은 목록·펼친 폴더·고른 행·스크롤 위치를 남긴다 (`tab.others`). 폴더는 처음에 접혀 있다. 폴더 먼저, 자연 정렬. 행에는 파일 종류 아이콘(확장자 → `KINDS`), 마우스를 올리면 크기·수정 시각·경로.
+- 탐색기처럼: 누르면 고르고(목록에 초점이 있으면 짙게), 두 번 누르거나 Enter 면 연다 — `POST /api/open-external` (안전한 형식은 기본 앱, 코드·글은 편집기, 실행·설치 파일·압축 등은 탐색기에서 선택만). 폴더는 두 번 누르기·Enter·화살표로 펼치고 접는다. ↑↓·Home·End 로 옮기고, → 펼치기(펼쳐 있으면 첫 항목), ← 접기(파일이면 부모 폴더), 글자를 치면 그 글자로 시작하는 다음 행 (잇달아 치면 이어진 글자로). 처리한 키는 앱 단축키(장 하이라이트의 ↑↓ 등)로 넘기지 않는다.
+- 우클릭(메뉴 키·Shift+F10): 머리말에 이름·크기·수정 시각, 열기(어떻게 열리는지 함께), 편집기로 열기(기본 앱 형식만), 탐색기에서 보기, `@경로`·전체 경로·파일 이름 복사. 폴더는 펼치기/접기·탐색기에서 열기·경로 복사. 이름 바꾸기·지우기·옮기기는 없다 (보기 전용).
+- 사이드바 거르기는 이 목록에도 적용된다: 경로에 모든 단어가 든 파일을 평평하게(폴더를 옆에) 300개까지.
 
 ### 단축키
 

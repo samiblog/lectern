@@ -15,7 +15,7 @@ from typing import Any
 from . import __version__
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
-from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan
+from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan, scan_others
 
 
 class TooManyTabs(Exception):
@@ -63,6 +63,18 @@ class Project:
             self._scans.clear()
         self._scans[key] = (seq, nodes)
         return nodes
+
+    def scan_others(self, fresh: bool = False) -> tuple[list, int, bool]:
+        """문서 외 파일의 트리 (scanner.scan_others). 그 뒤로 파일이 생기거나 지워지지 않았으면(others_seq) 마지막 결과를 쓴다 —
+        문서 내용만 바뀔 때는 다시 훑지 않는다. 돌려준 목록은 고치지 않는다."""
+        key = ('others', self.exclude, self.html_exclude)
+        seq = self.log.others_seq
+        hit = self._scans.get(key)
+        if hit and hit[0] == seq and not fresh:
+            return hit[1]
+        result = scan_others(self.root, self.exclude, self.html_exclude)
+        self._scans[key] = (seq, result)
+        return result
 
     def start(self) -> None:
         self._watcher = Watcher(self.root, self.log, self.exclude)

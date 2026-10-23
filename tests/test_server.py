@@ -274,7 +274,7 @@ def test_api_errors_are_json(client):
 
 def test_open_external(client, monkeypatch, pid):
     calls = []
-    monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor: calls.append((p.name, line)) or 'editor')
+    monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor, prefer=False: calls.append((p.name, line)) or 'editor')
     r = client.post('/api/open-external', json={'p': pid, 'path': 'src/app.py', 'line': 3})
     assert r.get_json() == {'action': 'editor'} and calls == [('app.py', 3)]
     assert client.post('/api/open-external', json={'p': pid, 'path': '../x'}).status_code == 404
@@ -392,3 +392,33 @@ def test_startup_reads_old_last_folder(project):
         assert st.active_project.root == project
     finally:
         st.close()
+
+
+def test_others_endpoint(client, state, project, pid):
+    write(project / 'data' / 'b.csv', 'x')
+    state.get(pid).log.push(None, others=True)          # 감시가 알린 것처럼 (테스트가 기다리지 않게)
+    r = client.get(f'/api/others?p={pid}').get_json()
+    files = {n['path']: n for n in iter_files(r['tree'])}
+    assert set(files) == {'data/b.csv', 'docs/img.svg', 'empty/note.txt', 'src/app.py'} and r['count'] == 4
+    assert r['truncated'] is False and r['limit'] == 5000 and files['data/b.csv']['open'] == 'default'
+    assert client.get('/api/others').status_code == 404
+
+
+def test_others_scan_is_reused_until_files_come_or_go(state, project, pid):
+    state.close()   # 감시를 멈춰 기록(seq)을 이 테스트가 정한다
+    proj = state.get(pid)
+    first = proj.scan_others()
+    proj.log.push('README.md')                           # 문서 내용만 바뀜 — 문서 외 목록은 다시 훑지 않는다
+    assert proj.scan_others() is first
+    write(project / 'new.txt', 'x')
+    proj.log.push(None, others=True)
+    assert proj.scan_others() is not first and 'new.txt' in {n['path'] for n in iter_files(proj.scan_others()[0])}
+
+
+def test_open_external_can_prefer_editor(client, monkeypatch, pid, project):
+    calls = []
+    monkeypatch.setattr(osutil, 'open_path', lambda p, line, editor, prefer=False: calls.append((p.name, prefer)) or 'editor')
+    write(project / 'data' / 'b.csv', 'x')
+    client.post('/api/open-external', json={'p': pid, 'path': 'data/b.csv'})
+    client.post('/api/open-external', json={'p': pid, 'path': 'data/b.csv', 'how': 'editor'})
+    assert calls == [('b.csv', False), ('b.csv', True)]
