@@ -7,6 +7,7 @@
 // - 패널을 닫아도 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
 // - 터미널을 열면 목차를 감춘다 (본문 폭) — 목차 버튼으로 함께 볼 수 있다 (toc.js).
+// - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
 // - 터미널 안에서는 앱 단축키를 쓰지 않는다 (main.js — Ctrl+` 만 예외). Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단).
 //   Ctrl+V 는 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
 
@@ -21,13 +22,84 @@ const DOC_MIN = 360;   // 본문에 남길 폭
 const SEND_CHUNK = 16384;
 const root = document.documentElement;
 
-// 셸 글자 색(PSReadLine 기본)이 어두운 바탕을 가정하므로 스타일과 상관없이 어둡게 (Windows Terminal 의 Campbell)
-const THEME = {
-  background: '#1e1f22', foreground: '#cccccc', cursor: '#e6e6e6', cursorAccent: '#1e1f22', selectionBackground: '#3a5f8f',
-  black: '#0c0c0c', red: '#c50f1f', green: '#13a10e', yellow: '#c19c00', blue: '#3b78ff', magenta: '#a23fb0', cyan: '#3a96dd', white: '#cccccc',
-  brightBlack: '#767676', brightRed: '#e74856', brightGreen: '#16c60c', brightYellow: '#f9f1a5', brightBlue: '#5f9bff',
-  brightMagenta: '#c75fd6', brightCyan: '#61d6d6', brightWhite: '#f2f2f2',
+// ---- 색 (문서 스타일을 따른다 — 설정 terminal_follow_style, 끄면 늘 DARK) ----------------------
+// 바탕·글자·커서·선택 색은 지금 스타일의 CSS 변수(코드 블록 바탕 --md-code-bg, 글자 --md-fg, 링크 --md-link)에서,
+// ANSI 16색은 이름이 같은 터미널 색표가 있는 스타일은 그것을, 나머지는 밝은/어두운 기본 색표를 쓴다.
+// 셸·프로그램은 어두운 바탕을 가정하고 흰 글자 등을 쓰므로(PSReadLine 의 숫자 등), 글자와 그 칸 바탕의 대비가
+// MIN_CONTRAST 보다 낮으면 xterm 이 글자 색을 진하게·옅게 고친다 (minimumContrastRatio — 밝은 바탕에서도 다 읽히게).
+const MIN_CONTRAST = 4.5;
+const ANSI = ['black', 'red', 'green', 'yellow', 'blue', 'magenta', 'cyan', 'white',
+  'brightBlack', 'brightRed', 'brightGreen', 'brightYellow', 'brightBlue', 'brightMagenta', 'brightCyan', 'brightWhite'];
+const ansi = (...colors) => Object.fromEntries(ANSI.map((name, i) => [name, colors[i]]));
+const PALETTES = {
+  // Windows Terminal 의 Campbell (파랑만 밝게)
+  dark: ansi('#0c0c0c', '#c50f1f', '#13a10e', '#c19c00', '#3b78ff', '#a23fb0', '#3a96dd', '#cccccc',
+    '#767676', '#e74856', '#16c60c', '#f9f1a5', '#5f9bff', '#c75fd6', '#61d6d6', '#f2f2f2'),
+  // 밝은 바탕용: 흰색(white·brightWhite)은 프로그램이 '또렷한 글자'로 쓰므로 어두운 회색·검정으로
+  light: ansi('#24292f', '#c4262e', '#116329', '#8a5a00', '#0b62c4', '#8250df', '#1b7c83', '#57606a',
+    '#6e7781', '#a40e26', '#1a7f37', '#9a6700', '#0550ae', '#6639ba', '#136061', '#1f2328'),
+  solarized: ansi('#073642', '#dc322f', '#859900', '#b58900', '#268bd2', '#d33682', '#2aa198', '#eee8d5',
+    '#002b36', '#cb4b16', '#586e75', '#657b83', '#839496', '#6c71c4', '#93a1a1', '#fdf6e3'),
+  'gruvbox-light': ansi('#fbf1c7', '#cc241d', '#98971a', '#d79921', '#458588', '#b16286', '#689d6a', '#7c6f64',
+    '#928374', '#9d0006', '#79740e', '#b57614', '#076678', '#8f3f71', '#427b58', '#3c3836'),
+  nord: ansi('#3b4252', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#88c0d0', '#e5e9f0',
+    '#4c566a', '#bf616a', '#a3be8c', '#ebcb8b', '#81a1c1', '#b48ead', '#8fbcbb', '#eceff4'),
+  dracula: ansi('#21222c', '#ff5555', '#50fa7b', '#f1fa8c', '#bd93f9', '#ff79c6', '#8be9fd', '#f8f8f2',
+    '#6272a4', '#ff6e6e', '#69ff94', '#ffffa5', '#d6acff', '#ff92df', '#a4ffff', '#ffffff'),
+  'one-dark': ansi('#282c34', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#dcdfe4',
+    '#5a6374', '#e06c75', '#98c379', '#e5c07b', '#61afef', '#c678dd', '#56b6c2', '#dcdfe4'),
+  github: ansi('#24292f', '#cf222e', '#116329', '#4d2d00', '#0969da', '#8250df', '#1b7c83', '#6e7781',
+    '#57606a', '#a40e26', '#1a7f37', '#633c01', '#218bff', '#a475f9', '#3192aa', '#8c959f'),
+  'github-dark': ansi('#484f58', '#ff7b72', '#3fb950', '#d29922', '#58a6ff', '#bc8cff', '#39c5cf', '#b1bac4',
+    '#6e7681', '#ffa198', '#56d364', '#e3b341', '#79c0ff', '#d2a8ff', '#56d4dd', '#ffffff'),
 };
+// 스타일 id → 색표 (없으면 밝기에 따라 light / dark). 새 스타일은 따로 적지 않아도 된다
+const PALETTE_OF = { 'solarized-light': 'solarized', 'solarized-dark': 'solarized' };
+
+// 늘 어둡게: 스타일과 상관없이 (설정 terminal_follow_style 끔)
+const DARK = {
+  background: '#1e1f22', foreground: '#cccccc', cursor: '#e6e6e6', cursorAccent: '#1e1f22',
+  selectionBackground: '#3a5f8f', selectionInactiveBackground: '#33414f', ...PALETTES.dark,
+};
+
+/** '#rgb'·'#rrggbb' 를 투명도를 준 rgba() 로 (그 밖의 형식이면 그대로) */
+function withAlpha(color, alpha) {
+  let hex = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.exec(color)?.[1];
+  if (!hex) return color;
+  if (hex.length === 3) hex = [...hex].map((c) => c + c).join('');
+  const [r, g, b] = [0, 2, 4].map((i) => parseInt(hex.slice(i, i + 2), 16));
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+/** 지금 터미널 색 {theme(xterm), dark}. 스타일 파일(--md-*)이 적용된 뒤에 부른다 */
+function currentColors() {
+  if (S.config.terminal_follow_style === false) return { theme: DARK, dark: true };
+  const dark = root.dataset.ui === 'dark';
+  const css = getComputedStyle(root);
+  const v = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const background = v('--md-code-bg', DARK.background);
+  const foreground = v('--md-fg', DARK.foreground);
+  const accent = v('--md-link', foreground);
+  const palette = PALETTES[PALETTE_OF[root.dataset.theme] || root.dataset.theme] || PALETTES[dark ? 'dark' : 'light'];
+  return {
+    dark,
+    theme: {
+      background, foreground, cursor: accent, cursorAccent: background,
+      selectionBackground: withAlpha(accent, dark ? 0.4 : 0.25), selectionInactiveBackground: withAlpha(accent, dark ? 0.25 : 0.14),
+      ...palette,
+    },
+  };
+}
+
+/** 패널과 열린 모든 터미널에 지금 색을 입힌다 (스타일을 바꾸거나 설정을 바꿀 때) */
+function applyColors() {
+  const { theme, dark } = currentColors();
+  const panel = $('#lec-term');
+  panel.style.setProperty('--term-bg', theme.background);   // 터미널 둘레 여백도 같은 바탕 (app.css)
+  panel.classList.toggle('term-light', !dark);              // 스크롤바 색 (color-scheme)
+  for (const tab of S.tabs) if (tab.term) tab.term.xterm.options.theme = theme;
+  return theme;
+}
 // PC 에 있는 글꼴만 (D26): 고정폭 영문 → 한글 고정폭 → 맑은 고딕
 const FONT = '"Cascadia Mono", "Cascadia Code", Consolas, D2Coding, "NanumGothicCoding", "Malgun Gothic", monospace';
 
@@ -78,7 +150,7 @@ function create(tab) {
   const xterm = new window.Terminal({
     fontFamily: FONT, fontSize: 13, lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
     allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
-    theme: THEME,
+    theme: applyColors(), minimumContrastRatio: MIN_CONTRAST,
   });
   const fit = new window.FitAddon.FitAddon();
   xterm.loadAddon(fit);
@@ -330,4 +402,8 @@ export function initTerminal() {
   }).observe($('#lec-term-body'));
   // 다른 탭을 고르면 그 탭의 셸로. 터미널에서 Ctrl+Tab 으로 왔으면 새 셸에 입력이 가게
   on('tab', () => showCurrent({ focus: !!document.activeElement?.closest?.('#lec-term') }));
+  // 색: 스타일 파일을 바꿔 끼우면(theme.js) 다 불러온 뒤에 CSS 변수를 읽는다. 설정 창에서 '스타일에 맞춤'을 바꿔도
+  $('#lec-theme-css').addEventListener('load', applyColors);
+  on('term-colors', applyColors);
+  applyColors();
 }

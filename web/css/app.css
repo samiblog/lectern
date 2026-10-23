@@ -207,10 +207,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 @media (max-width: 760px) { #lec-sidebar { width: 240px; } .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; } }
 
 /* ---- 오른쪽 터미널 (terminal.js) -------------------------------------------------- */
-/* 셸 글자 색(PSReadLine 기본)은 어두운 바탕을 가정하므로 터미널은 스타일과 상관없이 어둡게. 머리줄은 앱 UI 색 */
+/* 터미널 바탕은 terminal.js 가 지금 스타일의 코드 블록 바탕(설정에서 끄면 늘 어둡게)으로 --term-bg 에 준다. 머리줄은 앱 UI 색 */
 #lec-term {
   flex: 0 0 var(--term-w, 42%); min-width: 280px; max-width: calc(100% - 360px); display: flex; flex-direction: column;
-  border-left: 1px solid var(--ui-border); background: #1e1f22;
+  border-left: 1px solid var(--ui-border); background: var(--term-bg, #1e1f22);
 }
 .term-head {
   display: flex; align-items: center; gap: 4px; flex: none; height: 32px; padding: 0 4px 0 10px;
@@ -218,7 +218,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .term-head .term-icon { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ui-accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 #lec-term-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#lec-term-body { flex: 1; min-height: 0; position: relative; color-scheme: dark; }   /* 스크롤바도 어둡게 */
+#lec-term-body { flex: 1; min-height: 0; position: relative; color-scheme: dark; }   /* 스크롤바도 바탕에 맞게 */
+#lec-term.term-light #lec-term-body { color-scheme: light; }
 .term-box { position: absolute; inset: 6px 2px 4px 8px; }
 #lec-term-resizer { flex: none; width: 7px; margin: 0 -3px 0 -4px; position: relative; z-index: 5; cursor: col-resize; }
 #lec-term-resizer:hover, .resizing-term #lec-term-resizer { background: color-mix(in srgb, var(--ui-accent) 35%, transparent); }

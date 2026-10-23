@@ -185,3 +185,11 @@ def test_terminal_settings(tmp_path):
     path.write_text(json.dumps({'terminal_shell': r'C:\Program Files\PowerShell\7\pwsh.exe', 'terminal_width': 'wide'}), encoding='utf-8')
     cfg = Config(path)
     assert cfg.get('terminal_shell') == r'C:\Program Files\PowerShell\7\pwsh.exe' and cfg.get('terminal_width') is None
+
+
+def test_terminal_follow_style_setting(tmp_path):
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('terminal_follow_style') is True                             # 터미널 색은 문서 스타일을 따른다
+    cfg.update_client({'terminal_follow_style': False})                         # 설정 창에서 끄면 늘 어둡게
+    cfg.update_client({'terminal_follow_style': 'no'})                          # 형식이 틀리면 버린다
+    assert cfg.get('terminal_follow_style') is False

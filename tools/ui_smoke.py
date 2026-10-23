@@ -1007,7 +1007,8 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
             boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
-            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'external_images=false'],
+            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'external_images=false',
+                                                   'terminal_follow_style=true'],
                   f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
             shot('07-settings')
             page.locator('#lec-settings input[data-key="expand_first_level"]').click()
@@ -1269,6 +1270,56 @@ def run(headed: bool) -> None:
             restarted = wait_until(page, '''![...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
               .map(r => r.textContent).join('').includes('lecterm')''') and term_has('PS ', 30000)
             check(restarted, '다시 시작 버튼: 셸을 새로 띄움 (화면도 비움)')
+            # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
+            term_colors = lambda: page.evaluate('''() => {
+              const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number);
+                const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+                return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
+              const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
+              const box = document.querySelector('#lec-term .term-box:not([hidden])');
+              const bg = getComputedStyle(box.querySelector('.xterm-viewport')).backgroundColor;
+              const probe = document.createElement('div');
+              probe.style.background = getComputedStyle(document.documentElement).getPropertyValue('--md-code-bg');
+              document.body.append(probe);
+              const code = getComputedStyle(probe).backgroundColor;
+              probe.remove();
+              let worst = 99;
+              for (const span of box.querySelectorAll('.xterm-rows span')) {
+                if (!span.textContent.trim()) continue;
+                const st = getComputedStyle(span);
+                worst = Math.min(worst, ratio(st.color, st.backgroundColor === 'rgba(0, 0, 0, 0)' ? bg : st.backgroundColor));
+              }
+              return { bg, code, panel: getComputedStyle(document.querySelector('#lec-term')).backgroundColor,
+                       light: document.querySelector('#lec-term').classList.contains('term-light'), worst: Math.round(worst * 100) / 100 }; }''')
+            page.click('#lec-term-body')
+            page.keyboard.type('Write-Host 흰글자 -ForegroundColor White; Write-Host 회색 -ForegroundColor DarkGray; $n = 42')
+            page.keyboard.press('Enter')
+            term_has('회색')
+            use_theme('default')
+            c_light = term_colors()
+            use_theme('solarized-dark')
+            c_dark = term_colors()
+            shot('10-terminal-solarized-dark')
+            check(c_light['bg'] == c_light['code'] == c_light['panel'] and c_light['light'] and c_light['worst'] >= 4.45
+                  and c_dark['bg'] == c_dark['code'] == 'rgb(7, 54, 66)' and not c_dark['light'] and c_dark['worst'] >= 4.45,
+                  f'터미널 색이 스타일을 따름 — 바탕은 코드 블록 바탕, 글자 대비 4.5:1 이상 (기본 {c_light}, Solarized 다크 {c_dark})')
+            follow = page.locator('#lec-settings input[data-key="terminal_follow_style"]')
+            page.click('#lec-btn-settings')
+            on_first = follow.is_checked()
+            follow.uncheck()
+            page.click('#lec-settings-close')
+            wait_until(page, "getComputedStyle(document.querySelector('#lec-term .term-box:not([hidden]) .xterm-viewport')).backgroundColor === 'rgb(30, 31, 34)'")
+            c_fixed = term_colors()
+            saved_off = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_follow_style)")
+            page.click('#lec-btn-settings')
+            follow.check()
+            page.click('#lec-settings-close')
+            wait_until(page, "getComputedStyle(document.querySelector('#lec-term .term-box:not([hidden]) .xterm-viewport')).backgroundColor === 'rgb(7, 54, 66)'")
+            back_style = term_colors()
+            use_theme('default')
+            check(on_first and c_fixed['bg'] == c_fixed['panel'] == 'rgb(30, 31, 34)' and not c_fixed['light'] and saved_off is False
+                  and back_style['bg'] == 'rgb(7, 54, 66)',
+                  f"설정 창 '터미널 색을 스타일에 맞춤'을 끄면 늘 어둡게, 켜면 다시 스타일 색 ({c_fixed['bg']}, 저장 {saved_off}, {back_style['bg']})")
             term_status = page.evaluate('''async () => {
               const secret = document.querySelector('meta[name="lec-term"]').content;
               const get = (h) => fetch('/api/term/read?t=nope&from=0', { headers: h }).then(r => r.status);

@@ -32,6 +32,7 @@ async function onChange(e) {
   await saveConfig({ [key]: e.target.checked });
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
+  else if (key === 'terminal_follow_style') emit('term-colors');
 }
 
 const OPENED = {

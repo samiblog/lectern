@@ -127,6 +127,7 @@ flowchart LR
 | `others_visible` | `true` | 가능 | 종류별 보기에서 아래 '파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기) |
 | `others_height` | `null` | 가능 | 종류별 보기의 '파일' 목록 높이(px). 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 40%) |
 | `terminal_width` | `null` | 가능 | 오른쪽 터미널 폭(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(본문 영역의 42%) |
+| `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
 | `restore_last` | `true` | 가능 | 폴더(탭)를 처음 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다. 탭 목록은 이 설정과 상관없이 되살린다 |
@@ -298,7 +299,7 @@ sequenceDiagram
 - 원문은 `doc.js` 가 그릴 때마다 `setDocSource(pane, path, text)` 로 그 칸에 남기고, 메뉴는 선택된 탭의 칸(보이는 칸은 그것뿐이다)의 원문을 쓴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
 
 ### 설정 창과 마지막 위치 (settings.js, position.js)
-- 툴바 톱니 버튼·Ctrl+, 로 설정 창: 스타일 목록 묶기(라디오 — 용도별·분위기별·밝기별), 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, '설정 파일 열기'(편집기 경로·제외 폴더 등).
+- 툴바 톱니 버튼·Ctrl+, 로 설정 창: 스타일 목록 묶기(라디오 — 용도별·분위기별·밝기별), 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, 터미널 색을 스타일에 맞춤, '설정 파일 열기'(편집기 경로·제외 폴더 등).
 - `position.js` 는 화면 이동·그리기(`rendered`)와 스크롤이 멈추고 1.5초 뒤 탭마다 `POST /api/position {p, path, scroll}` 으로 보는 문서와 위치를 보낸다 (탭마다 같은 값이면 보내지 않음 — 숨은 탭은 바뀌지 않으니 보내지 않는다. 폴더 개요와 지워진 문서는 빼고). 탭을 닫기 전에도 보낸다. 탭을 처음 고를 때 `tabs.js` 가 `/api/state` 의 `position` 으로 그 문서와 위치를 연다 (`nav.restorePosition`). 문서가 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
@@ -328,6 +329,7 @@ sequenceDiagram
 - 처음 열 때 `web/vendor/xterm` 의 css·js 를 불러온다 (`window.Terminal` 이 진짜 함수인지 본다 — 문서 속 id 가 이름을 가릴 수 있다). 탭마다 `tab.term` = {xterm, 상자(`.term-box`), 셸 id, 받은 순번 `next`, alive}. 상자는 `#lec-term-body` 에 겹쳐 두고 선택된 탭의 것만 보인다. 패널이 열려 있을 때 탭을 고르면 그 탭의 셸을 띄운다(`/api/term/open` — 서버에 돌고 있는 셸이 있으면 그것에 붙고 남은 출력부터 다시 보인다).
 - 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
+- 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
 - 머리줄: 셸 이름 — 탭 이름, 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 

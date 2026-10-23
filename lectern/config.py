@@ -50,13 +50,15 @@ DEFAULTS: dict[str, Any] = {
     'editor': None,          # 코드 파일을 열 편집기 실행 파일 경로 (None이면 PATH의 code)
     'terminal_shell': None,  # 오른쪽 터미널의 셸 실행 파일 전체 경로 (None 이면 Windows PowerShell 5.1, 직접 편집 — 예: pwsh.exe)
     'terminal_width': None,  # 오른쪽 터미널 폭(px). None 이면 기본 (경계를 끌어 바꾸고 두 번 누르면 기본)
+    'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height', 'terminal_width'})
+                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height', 'terminal_width',
+                         'terminal_follow_style'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'terminal_shell', 'terminal_width'})
