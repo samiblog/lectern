@@ -153,7 +153,7 @@ function kindOf(el) {
   if (el.matches('.math-block')) return '수식';
   if (el.matches('.front-matter')) return '메타데이터';
   if (tag === 'LI') return '목록 항목';
-  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? '콜아웃' : '인용';
+  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? `박스글 (${el.querySelector('.alert-title')?.textContent || ''})` : '인용';
   return '단락';
 }
 

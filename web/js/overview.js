@@ -30,7 +30,7 @@ function render(d, tab) {
   parts.push(`<header class="ov-head">${crumbs(d.path, tab)}<h1>${esc(d.name)}</h1>
     <p class="ov-sub">${d.total ? `문서 ${d.total}개` : '문서 없음'}${d.dirs.length ? `, 폴더 ${d.dirs.length}개` : ''}</p>
     ${d.total ? `<p class="ov-parts"><span>모아 보기</span>${Object.entries(PARTS).map(([k, p]) => `<button type="button" data-parts="${k}"
-      title="${esc(d.path || tab.name)}${d.path ? ' 폴더와 하위' : ' 전체'}의 ${esc(p.name)} — 사이드바에">${esc(p.name)}</button>`).join('')}</p>` : ''}</header>`);
+      title="${d.path ? `${esc(d.path)} 폴더(하위 포함)` : '프로젝트 전체'}의 ${esc(p.name)} 모아 보기 — 사이드바">${esc(p.name)}</button>`).join('')}</p>` : ''}</header>`);
 
   if (recent.length) {
     parts.push(`<section class="ov-sec"><h2>최근 변경</h2><ol class="ov-rail">${recent.map((f) => {

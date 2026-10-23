@@ -339,7 +339,7 @@ def run(headed: bool) -> None:
             page.click('#lec-view .ov-parts button[data-parts="diagram"]')
             read_done()
             p3 = pv()
-            check(p3['scope'] == 'docs/' and p3['active'] == 'diagram' and [i[1] for i in p3['items']] == ['다이어그램 1', '다이어그램 2', '다이어그램 3']
+            check(p3['scope'] == 'docs 폴더' and p3['active'] == 'diagram' and [i[1] for i in p3['items']] == ['다이어그램 1', '다이어그램 2', '다이어그램 3']
                   and all(i[0].startswith('docs/') for i in p3['items']),
                   f"폴더 개요의 '모아 보기' 버튼: 그 폴더(하위 포함)의 그 종류 ({p3['scope']}, {p3['items']})")
             page.click('.side-tabs button[data-tab="files"]')
@@ -347,7 +347,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-menu button', has_text='이 폴더의 표·그림 등 모아 보기').click()
             read_done()
             p4 = pv()
-            check(p4['scope'] == 'plans/' and p4['kinds'][p4['active']] > 0 and p4['kinds']['diagram'] == 0 and all(i[0].startswith('plans/') for i in p4['items']),
+            check(p4['scope'] == 'plans 폴더' and p4['kinds'][p4['active']] > 0 and p4['kinds']['diagram'] == 0 and all(i[0].startswith('plans/') for i in p4['items']),
                   f"트리 폴더 우클릭 '이 폴더의 표·그림 등 모아 보기' — 그 폴더에 있는 종류로 ({p4['scope']}, {p4['active']}, {p4['kinds']})")
             page.click('#lec-parts-all')
             read_done()
@@ -1075,7 +1075,7 @@ def run(headed: bool) -> None:
             wait_until(page, "[...document.querySelectorAll('#lec-view img.external')].every(i => i.complete)")
             loaded = page.evaluate("[...document.querySelectorAll('#lec-view img.external')].map(i => i.naturalWidth)")
             check(loaded == [120], '외부 이미지 표시' + ('' if loaded == [120] else f': naturalWidth={loaded}'))
-            check(page.locator('#lec-view .image-off').inner_text().startswith('외부 이미지를 불러오지 못했습니다'),
+            check(page.locator('#lec-view .image-off').inner_text().startswith('인터넷 그림을 불러오지 못했습니다'),
                   '불러오지 못한 외부 이미지는 링크로 대체')
             ext_doc = work / 'docs' / '99-외부-이미지.md'
             ext_doc.write_text(ext_doc.read_text(encoding='utf-8') + '\n새로 더한 문단\n', encoding='utf-8')
@@ -1252,7 +1252,7 @@ def run(headed: bool) -> None:
             h1_has('다른 탭 경로')
             cross = page.evaluate('''() => ({ off: document.querySelector('#lec-view a')?.classList.contains('link-off'),
               img: document.querySelector('#lec-view .image-off')?.textContent || '' })''')
-            check(cross['off'] and cross['img'].startswith('표시할 수 없는 이미지'), f'다른 탭 프로젝트로 넘어가는 상대경로는 막힘 ({cross})')
+            check(cross['off'] and cross['img'].startswith('표시할 수 없는 그림'), f'다른 탭 프로젝트로 넘어가는 상대경로는 막힘 ({cross})')
             # 숨은 탭에서 바뀐 문서: 탭에 점, 그 탭을 고르면 바뀐 곳을 강조하며 다시 그림
             page.keyboard.press('Alt+ArrowLeft')
             h1_has('렌더링 기능 점검')
@@ -1490,7 +1490,7 @@ def run(headed: bool) -> None:
             g1 = g_ui()
             shot('11-gather')
             check(before['count'] == '1' and g1['on'] and not g1['hidden'] and g1['pressed'] == 'true' and g1['cols'] == 2
-                  and g1['tiles'] == [['samples', '대기', 'xterm'], ['second', '셸 없음', 'start']] and g1['focus'] == 'second',
+                  and g1['tiles'] == [['samples', '대기', 'xterm'], ['second', '시작 전', 'start']] and g1['focus'] == 'second',
                   f"Ctrl+Shift+` 로 터미널 모음 — 탭마다 칸, 셸이 있으면 그 터미널, 없으면 '터미널 시작' ({before['count']}, {g1})")
             page.locator('.g-tile', has_text='second').locator('.g-start').click()
             started2 = tile_has('second', f'PS {second}>')

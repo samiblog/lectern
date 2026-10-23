@@ -7,7 +7,7 @@
 // - 프로젝트 탭을 누르면(이미 선택된 탭이어도) 모음을 닫고 그 프로젝트의 문서 화면으로. 칸의 '이 프로젝트로'·Ctrl+` 는
 //   그 프로젝트로 가서 오른쪽 터미널을 연다. 탭을 닫거나 폴더를 새로 열면 모음은 열린 채 칸만 바뀐다.
 // - 칸 안의 키는 셸 것이다. 앱은 Ctrl+Tab(다음 칸)·Ctrl+`·Ctrl+Shift+` 만 받는다 (main.js).
-// - 모아 보는 동안 2초마다 셸에서 프로그램이 도는지(/api/term/info) 보고 칸 머리에 '실행 중'·'대기'를 보인다.
+// - 모아 보는 동안 2초마다 셸에서 프로그램이 도는지(/api/term/info) 보고 칸 머리에 '실행 중'·'대기'·'끝남'·'시작 전'을 보인다.
 
 import { S, on } from './store.js';
 import { selectTab } from './tabs.js';
@@ -69,7 +69,7 @@ function fillBody(tab, tile) {
 function setState(tile, tab, busy) {
   const el = tile.querySelector('.g-state');
   const t = tab.term;
-  const [text, cls] = !t ? ['셸 없음', 'none'] : !t.alive ? ['끝남', 'ended'] : busy ? ['실행 중', 'busy'] : ['대기', 'idle'];
+  const [text, cls] = !t ? ['시작 전', 'none'] : !t.alive ? ['끝남', 'ended'] : busy ? ['실행 중', 'busy'] : ['대기', 'idle'];
   el.textContent = text;
   el.className = `g-state ${cls}`;
   tile.querySelector('.g-restart').disabled = !t;

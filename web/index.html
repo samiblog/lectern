@@ -71,7 +71,7 @@
       <button id="lec-btn-forward" class="icon-btn" title="앞으로 (Alt+→)" disabled><svg><use href="#i-forward"/></svg></button>
     </div>
     <div class="tb-spacer"></div>
-    <button id="lec-btn-palette" class="search-btn" title="문서 빠르게 열기 (Ctrl+P)"><svg><use href="#i-search"/></svg><span>문서 찾기</span><kbd>Ctrl P</kbd></button>
+    <button id="lec-btn-palette" class="search-btn" title="이름·제목으로 문서 열기 (Ctrl+P)"><svg><use href="#i-search"/></svg><span>문서 열기</span><kbd>Ctrl P</kbd></button>
     <div class="text-size" role="group" aria-label="글자 크기">
       <button id="lec-text-smaller" class="icon-btn step" title="글자 작게" aria-label="글자 작게"><svg><use href="#i-minus"/></svg></button>
       <button id="lec-text-reset" class="size-label" title="글자 크기 (누르면 100%로)">100%</button>
@@ -89,7 +89,7 @@
       <button id="lec-spot-next" class="icon-btn step" title="다음 장 하이라이트 (↓)" aria-label="다음 장 하이라이트" disabled><svg><use href="#i-down"/></svg></button>
     </div>
     <button id="lec-btn-settings" class="icon-btn" title="설정 (Ctrl+,)"><svg><use href="#i-gear"/></svg></button>
-    <button id="lec-btn-term" class="icon-btn" title="터미널 (Ctrl+`) — 이 프로젝트 폴더에서 PowerShell"><svg><use href="#i-term"/></svg></button>
+    <button id="lec-btn-term" class="icon-btn" title="터미널 열기/닫기 (Ctrl+`) — 이 프로젝트 폴더의 PowerShell"><svg><use href="#i-term"/></svg></button>
     <button id="lec-btn-toc" class="icon-btn" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg></button>
   </header>
 
@@ -178,7 +178,7 @@
       <div class="term-head">
         <svg class="term-icon" aria-hidden="true"><use href="#i-term"/></svg><span id="lec-term-title">터미널</span>
         <button type="button" id="lec-term-restart" class="icon-btn small" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)"><svg><use href="#i-restart"/></svg></button>
-        <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 그대로 돈다"><svg><use href="#i-close"/></svg></button>
+        <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 닫지 않음"><svg><use href="#i-close"/></svg></button>
       </div>
       <div id="lec-term-body"></div>
     </section>
@@ -217,7 +217,7 @@
     <label class="opt"><input type="checkbox" data-key="terminal_follow_style"><span><b>터미널 색을 스타일에 맞춤</b><small>오른쪽 터미널의 바탕·글자 색을 문서 스타일에 맞춥니다. 끄면 늘 어두운 색입니다</small></span></label>
     <div class="dialog-file">
       <button type="button" id="lec-settings-file" class="text-btn">설정 파일 열기</button>
-      <small>편집기 경로(editor)·제외 폴더(exclude_dirs)처럼 여기 없는 설정은 파일에서 고칩니다. 저장하면 반영되고, 트리는 F5로 다시 불러옵니다.</small>
+      <small>편집기 경로(editor)·제외 폴더(exclude_dirs)·터미널 셸(terminal_shell)처럼 여기 없는 설정은 파일에서 고칩니다. 저장하면 반영되고, 트리는 F5 를 누르면 다시 불러옵니다.</small>
     </div>
     <div class="dialog-foot">
       <span id="lec-settings-ver"></span>

@@ -112,7 +112,7 @@ function loadTab(tab) {
       if (!restored && !pane.current && !pane.pending) await navigate({ type: 'overview', path: '' }, { pane });
       tab.loaded = true;
     } catch (e) {
-      if (S.tabs.includes(tab)) showMessage(pane, `폴더를 읽지 못했습니다 (${esc(e.message)}). F5 로 다시 불러옵니다.`);
+      if (S.tabs.includes(tab)) showMessage(pane, `폴더를 읽지 못했습니다 (${esc(e.message)}). F5 를 누르면 다시 불러옵니다.`);
     } finally {
       clearTimeout(wait);
       tab.loading = null;
@@ -301,7 +301,7 @@ function recentMenu(e) {
       label: folderName(p), hint: S.tabs.some((t) => samePath(t.root, p)) ? `${p} (열린 탭)` : p, action: () => openFolder(p),
     }))
     : [{ label: '최근 연 폴더가 없습니다', action: () => {} }];
-  items.push('-', { label: '다른 폴더 열기...', hint: 'Ctrl+O', action: chooseAndOpen });
+  items.push('-', { label: '다른 폴더 열기…', hint: 'Ctrl+O', action: chooseAndOpen });
   showMenu(r.left, r.bottom + 4, items);
 }
 

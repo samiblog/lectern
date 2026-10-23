@@ -67,7 +67,7 @@ export async function renderMermaid(root) {
       continue;
     }
     n.classList.add('mermaid-ok');
-    n.title = '클릭하면 크게 봅니다';
+    n.title = '누르면 크게 봅니다';
     n.addEventListener('click', () => openLightbox(svg.cloneNode(true)));
   }
 }

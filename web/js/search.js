@@ -41,7 +41,7 @@ function render(d) {
   shown = d;
   const docs = d.results.length;
   $('#lec-search-info').textContent = docs
-    ? `${docs}개 문서, ${d.total}곳${d.truncated ? ' (많아서 일부만 보입니다)' : ''}`
+    ? `문서 ${docs}개, ${d.total}곳${d.truncated ? ' (많아서 일부만 보입니다)' : ''}`
     : '찾은 곳이 없습니다';
   const box = $('#lec-search-results');
   keepFocus(box, () => { box.innerHTML = d.results.map((r) => {

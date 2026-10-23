@@ -206,7 +206,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .resizing, .resizing * { cursor: col-resize !important; user-select: none; }
 .resizing iframe { pointer-events: none; }
 @media (max-width: 1080px) { #lec-toc { display: none; } }
-/* 좁은 창: 툴바가 한 줄에 들어가게 문서 찾기 칸부터 줄인다 */
+/* 좁은 창: 툴바가 한 줄에 들어가게 문서 열기 칸부터 줄인다 */
 @media (max-width: 1240px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
 @media (max-width: 1060px) { .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; padding: 0 8px; } .theme-pick select { max-width: 130px; } }
 /* 아주 좁은 창: '스타일'·'하이라이트' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명) */

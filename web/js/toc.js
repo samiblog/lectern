@@ -214,7 +214,7 @@ function buildToc(view) {
   const kinds = Object.keys(PARTS).filter((k) => counts[k]);
   const buttons = kinds.map((k) => {
     const on = !hidden.has(k);
-    return `<button type="button" data-part="${k}" aria-pressed="${on}" title="${esc(PARTS[k].name)} ${on ? '목차에서 감추기' : '목차에 보이기'}">`
+    return `<button type="button" data-part="${k}" aria-pressed="${on}" title="${on ? `목차에서 ${esc(PARTS[k].name)} 감추기` : `목차에 ${esc(PARTS[k].name)} 보이기`}">`
       + `<svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].name)} ${counts[k]}</button>`;
   }).join('');
   box.innerHTML = `<p class="toc-head">목차</p>${buttons ? `<div class="toc-parts" role="group" aria-label="목차에 보일 구성 요소">${buttons}</div>` : ''}`

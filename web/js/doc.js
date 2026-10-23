@@ -259,15 +259,15 @@ function fixImage(img, baseUrl, stamp, tab, zoom = true) {
   }
   const isWebImage = r.kind === 'external' && /^(https?:)?\/\//i.test(r.url);
   if (!isWebImage) {
-    img.replaceWith(imageStandIn('표시할 수 없는 이미지', img.alt));
+    img.replaceWith(imageStandIn('표시할 수 없는 그림', img.alt));
     return;
   }
   if (S.config.external_images === false) {
-    img.replaceWith(imageStandIn('외부 이미지 (설정에서 꺼 둠)', img.alt, r.url));
+    img.replaceWith(imageStandIn('인터넷 그림 (설정에서 꺼 둠)', img.alt, r.url));
     return;
   }
   if (failedImages.has(r.url)) {
-    img.replaceWith(imageStandIn('외부 이미지를 불러오지 못했습니다', img.alt, r.url));
+    img.replaceWith(imageStandIn('인터넷 그림을 불러오지 못했습니다', img.alt, r.url));
     return;
   }
   // 외부 이미지: 문서 주소가 전달되지 않게 referrer 를 숨기고, 실패·시간 초과면 링크로 바꾼다
@@ -279,7 +279,7 @@ function fixImage(img, baseUrl, stamp, tab, zoom = true) {
     if (settled) return;
     settled = true;
     failedImages.add(r.url);
-    img.replaceWith(imageStandIn('외부 이미지를 불러오지 못했습니다', img.alt, r.url));
+    img.replaceWith(imageStandIn('인터넷 그림을 불러오지 못했습니다', img.alt, r.url));
   };
   img.addEventListener('load', () => { settled = true; }, { once: true });
   img.addEventListener('error', fail, { once: true });

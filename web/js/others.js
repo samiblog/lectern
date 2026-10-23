@@ -199,7 +199,7 @@ function load(tab, { fresh = false } = {}) {
       o.error = null;
       for (const p of [...o.open]) if (!o.index.has(p)) o.open.delete(p);
     } catch (e) {
-      if (S.tabs.includes(tab)) o.error = `파일 목록을 읽지 못했습니다 (${e.message}). F5 로 다시 읽습니다.`;
+      if (S.tabs.includes(tab)) o.error = `파일 목록을 읽지 못했습니다 (${e.message}). F5 를 누르면 다시 읽습니다.`;
     } finally {
       o.loading = null;
     }

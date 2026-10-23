@@ -193,7 +193,7 @@ export function pathMenuItems(path, isDoc) {
   items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(path) });
   if (!isDoc && S.dirs.has(path)) {   // 문서가 있는 폴더 — 모아 보기 (parts.js)
     items.push('-', { label: path ? '이 폴더의 표·그림 등 모아 보기' : '프로젝트의 표·그림 등 모아 보기',
-      hint: '사이드바 모아 보기', action: () => emit('parts', { path }) });
+      hint: "사이드바 '모아 보기' 탭", action: () => emit('parts', { path }) });
   }
   return items;
 }

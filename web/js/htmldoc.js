@@ -239,7 +239,7 @@ export async function showHtml(pane, path, { hash = '', scrollTop } = {}) {
     if (sameDoc) frame.remove();
     return false;
   }
-  if (!ok) return missing(pane, path, { status: 0, message: '문서를 불러오는 데 시간이 너무 오래 걸립니다' });
+  if (!ok) return missing(pane, path, { status: 0, message: '시간이 너무 오래 걸립니다. F5 를 누르면 다시 불러옵니다' });
   // HEAD 뒤에 지워지면 404 응답(CSP sandbox)이 들어와 문서를 읽을 수 없다
   if (!frame.contentDocument?.body) return missing(pane, path, { status: 404 });
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)

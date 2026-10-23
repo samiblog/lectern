@@ -134,7 +134,7 @@ function loadLib() {
     await script('/static/vendor/xterm/xterm.js');
     await Promise.all([script('/static/vendor/xterm/addon-fit.js'), script('/static/vendor/xterm/addon-unicode11.js')]);
     // 문서 속 id 가 window.<id> 로 잡혀 이름을 가릴 수 있다 — 진짜 라이브러리인지 본다 (mermaid.js 처럼)
-    if (!loaded()) throw new Error('터미널 화면 라이브러리를 불러오지 못했습니다');
+    if (!loaded()) throw new Error('터미널 화면 라이브러리를 불러오지 못했습니다. Lectern 을 다시 실행해 보세요');
   })();
   loading.catch(() => { loading = null; });
   return loading;

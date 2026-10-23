@@ -141,8 +141,8 @@ function render() {
     + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].name)}`
     + `<span class="n">${counts[k]}</span></button>`).join('');
   // 범위
-  $('#lec-parts-scope').textContent = state.scope ? `${state.scope}/` : `${tab.name} 전체`;
-  $('#lec-parts-scope').title = state.scope ? `${state.scope} 폴더와 그 하위` : '프로젝트 전체';
+  $('#lec-parts-scope').textContent = state.scope ? `${state.scope} 폴더` : `${tab.name} 전체`;
+  $('#lec-parts-scope').title = state.scope ? `${state.scope} 폴더와 그 하위 폴더` : '프로젝트 전체';
   $('#lec-parts-all').hidden = !state.scope;
   const order = $('#lec-parts-order');
   order.textContent = state.order === 'recent' ? '최근 수정 순' : '트리 순서';
