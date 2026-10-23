@@ -67,6 +67,10 @@ async function toggleSidebar() {
 }
 
 async function toggleToc() {
+  if (gatherOn()) {   // 터미널 모음이 문서 화면을 가리고 있으면 닫고 목차를 보인다
+    leaveGather();
+    if (S.config.toc_visible !== false && !terminalOpen()) return;
+  }
   if (terminalOpen()) {   // 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
     document.documentElement.classList.toggle('toc-with-term');
     applyLayout();
@@ -103,7 +107,9 @@ function bindToolbar() {
   $('#lec-btn-back').addEventListener('click', back);
   $('#lec-btn-forward').addEventListener('click', forward);
   $('#lec-btn-palette').addEventListener('click', openPalette);
-  // 터미널 버튼은 initTerminal 이 잇는다
+  // 탭 막대의 터미널 버튼: 터미널 모음을 보는 중이면 모음을 닫고 이 프로젝트의 오른쪽 터미널을 연다
+  $('#lec-btn-term').addEventListener('click', () => (gatherOn() ? leaveGather({ tab: S.tab, panel: true }) : toggleTerminal()));
+  // 툴바의 터미널 모음 버튼은 initGather 가 잇는다
 }
 
 // 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)

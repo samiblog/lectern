@@ -23,7 +23,9 @@ export function updateTocVisibility() {
   const has = !!$('#lec-toc').firstChild;
   const show = S.config.toc_visible !== false && has && !hiddenByTerminal();
   root.classList.toggle('toc-off', !show);
-  $('#lec-btn-toc').classList.toggle('on', S.config.toc_visible !== false && !hiddenByTerminal());
+  const on = S.config.toc_visible !== false && !hiddenByTerminal();
+  $('#lec-btn-toc').classList.toggle('on', on);
+  $('#lec-btn-toc').setAttribute('aria-pressed', String(on));
 }
 
 export function clearToc() {

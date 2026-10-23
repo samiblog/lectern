@@ -271,7 +271,8 @@ sequenceDiagram
 - 목차는 제목이 둘 이상이거나 구성 요소가 하나라도 있으면 보인다 (`toc-off`). 터미널을 연 동안은 감춘다 (터미널 절).
 
 ### 툴바
-- 오른쪽 묶음: 글자 크기 `− 100% +`, `스타일` 이름표 + 목록 + ∧∨, `하이라이트` 버튼 + ∧∨, 설정(톱니), 목차. 무엇을 고르는지 보이게 이름표를 붙였다 (사용자 요청).
+- 오른쪽 묶음: 글자 크기 `− 100% +`, `스타일` 이름표 + 목록 + ∧∨, `하이라이트` 버튼 + ∧∨, 설정(톱니), `터미널 모음` 버튼(돌고 있는 셸 수). 무엇을 고르는지 보이게 이름표를 붙였다 (사용자 요청).
+- 탭 막대 오른쪽 끝: `목차`·`터미널` 버튼(`.tabbar-btn`) — 오른쪽 패널을 보이고 감춘다 (v0.13.2, 사용자 요청). 보이면 `aria-pressed` 로 강조색과 밑줄. 860px 이하에서는 아이콘만.
 - 왼쪽 묶음은 사이드바·뒤로·앞으로. 폴더 이름·폴더 열기·최근 폴더는 탭 막대에 있다 (v0.7.0).
 - 좁은 창에서는 한 줄에 들어가게 차례로 줄인다: 1240px 이하 문서 열기 칸을 좁히고 단축키 표시를 빼고, 1060px 이하 문서 열기 글자(아이콘만), 860px 이하 '스타일'·'하이라이트' 이름표와 글자 크기 숫자 (마우스를 올리면 설명). 720px(창 최소 폭)까지 겹치지 않는다.
 
@@ -338,7 +339,7 @@ sequenceDiagram
 - 사이드바 거르기는 이 목록에도 적용된다: 경로에 모든 단어가 든 파일을 평평하게(폴더를 옆에) 300개까지.
 
 ### 터미널 (terminal.js)
-- 툴바 버튼(`#lec-btn-term`)·`` Ctrl+` `` 로 본문 오른쪽(목차 자리, `#lec-term`)에 연다. 열면 `html.term-on` — 목차를 감추고(`toc.js` 의 `updateTocVisibility`), 목차 버튼은 `toc-with-term` 으로 목차를 함께 볼지만 바꾼다 (설정은 그대로). 앱을 켤 때마다 닫힌 채다.
+- 탭 막대 오른쪽 끝 '터미널' 버튼(`#lec-btn-term`)·`` Ctrl+` `` 로 본문 오른쪽(목차 자리, `#lec-term`)에 연다. 열면 `html.term-on` — 목차를 감추고(`toc.js` 의 `updateTocVisibility`), 목차 버튼은 `toc-with-term` 으로 목차를 함께 볼지만 바꾼다 (설정은 그대로). 앱을 켤 때마다 닫힌 채다.
 - 처음 열 때 `web/vendor/xterm` 의 css·js 를 불러온다 (`window.Terminal` 이 진짜 함수인지 본다 — 문서 속 id 가 이름을 가릴 수 있다). 탭마다 `tab.term` = {xterm, 상자(`.term-box`), 셸 id, 받은 순번 `next`, alive}. 상자는 `#lec-term-body` 에 겹쳐 두고 선택된 탭의 것만 보인다. 패널이 열려 있을 때 탭을 고르면 그 탭의 셸을 띄운다(`/api/term/open` — 서버에 돌고 있는 셸이 있으면 그것에 붙고 남은 출력부터 다시 보인다).
 - 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
@@ -347,7 +348,7 @@ sequenceDiagram
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 
 ### 터미널 모음 (gather.js)
-- 탭 막대 오른쪽 끝 `#lec-btn-gather`(돌고 있는 셸 수 `#lec-gather-count`)·`` Ctrl+Shift+` `` 로 연다. 열면 `html.gather-on`, `#lec-gather`(문서 화면 영역 `#lec-main` 위를 덮는 격자, `--g-cols`·`--g-rows`)에 탭마다 칸(`.g-tile`) 하나 (D40).
+- 툴바의 `#lec-btn-gather`(돌고 있는 셸 수 `#lec-gather-count`)·`` Ctrl+Shift+` `` 로 연다. 열면 `html.gather-on`, `#lec-gather`(문서 화면 영역 `#lec-main` 위를 덮는 격자, `--g-cols`·`--g-rows`)에 탭마다 칸(`.g-tile`) 하나 (D40).
 - 칸 몸통: 셸이 있으면 그 탭의 터미널 화면(`tab.term.box`)을 오른쪽 패널에서 옮겨 온다. 없으면 '터미널 시작'(`ensureTerminal(tab, 칸)` — xterm 을 칸에 만들고 셸을 띄운다). 모음을 닫으면 `returnTerminals()` 가 화면을 패널로 되돌리고 `showCurrent` 가 다시 맡는다. 모으는 동안 `terminal.js` 의 `showCurrent`·패널 크기 맞추기는 화면을 건드리지 않는다 (`gathered()`).
 - 칸 머리: 폴더 이름, 상태(2초마다 `/api/term/info` — 실행 중·대기·끝남·시작 전), 크게/모두 보기(`.solo`), 다시 시작, 이 프로젝트로(`leaveGather({tab, panel:true})` — 그 탭을 고르고 오른쪽 터미널을 연다). 머리를 두 번 누르면 크게.
 - 닫기: 버튼·`` Ctrl+Shift+` ``, 프로젝트 탭 누르기(잡기 단계에서 먼저 닫고 tabs.js 가 그 탭을 고른다), Ctrl+1~9. 탭 목록이 바뀌면(`tabs` 이벤트) 칸을 맞추고, 셸이 생기거나 끝나면(`terms` 이벤트) 상태와 버튼의 수를 고친다.

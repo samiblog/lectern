@@ -334,6 +334,7 @@ export function toggleTerminal(want = !open) {
   $('#lec-term').hidden = !open;
   $('#lec-term-resizer').hidden = !open;
   $('#lec-btn-term').classList.toggle('on', open);
+  $('#lec-btn-term').setAttribute('aria-pressed', String(open));
   updateTocVisibility();
   if (open) showCurrent({ focus: true });
   else if (document.activeElement?.closest?.('#lec-term')) $('#lec-content')?.focus({ preventScroll: true });
@@ -431,7 +432,6 @@ function bindResizer() {
 }
 
 export function initTerminal() {
-  $('#lec-btn-term').addEventListener('click', () => toggleTerminal());
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   bindResizer();

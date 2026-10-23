@@ -1527,6 +1527,23 @@ def run(headed: bool) -> None:
             page.locator('#lec-tablist .lec-tab', has_text='samples').click()
             left = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.querySelector('.lec-tab.active .name').textContent === 'samples'")
             check(again and left and h1_has('렌더링 기능 점검'), '프로젝트 탭을 누르면 모음을 닫고 그 프로젝트의 문서 화면으로')
+            place = page.evaluate('''() => ({ term: !!document.querySelector('#lec-tabbar #lec-btn-term'), gather: !!document.querySelector('#lec-toolbar #lec-btn-gather') })''')
+            page.keyboard.press('Control+Shift+Backquote')
+            wait_until(page, "document.documentElement.classList.contains('gather-on')")
+            page.click('#lec-btn-term')
+            by_term_btn = wait_until(page, '''!document.documentElement.classList.contains('gather-on') && !document.querySelector('#lec-term').hidden
+              && document.querySelector('#lec-btn-term').getAttribute('aria-pressed') === 'true'
+              && document.querySelector('#lec-term-title').textContent === 'PowerShell — samples' ''')
+            check(place['term'] and place['gather'] and by_term_btn,
+                  f"터미널 버튼은 탭 막대 끝, 터미널 모음 버튼은 툴바 — 모음에서 터미널 버튼을 누르면 모음을 닫고 이 프로젝트의 터미널 ({place}, {by_term_btn})")
+            page.keyboard.press('Control+Shift+Backquote')
+            wait_until(page, "document.documentElement.classList.contains('gather-on')")
+            page.click('#lec-btn-toc')
+            toc_shown = wait_until(page, '''!document.documentElement.classList.contains('gather-on') && !document.documentElement.classList.contains('toc-off')
+              && document.querySelector('#lec-btn-toc').getAttribute('aria-pressed') === 'true' && !!document.querySelector('#lec-tabbar #lec-btn-toc')''')
+            page.click('#lec-btn-toc')   # 되돌린다 (터미널을 연 동안 목차를 함께 보던 것)
+            check(toc_shown and wait_until(page, "document.documentElement.classList.contains('toc-off')"),
+                  '목차 버튼도 탭 막대 끝 — 모음에서 누르면 모음을 닫고 목차를 보임, 다시 누르면 감춤')
             tab_el(1).hover()   # 고르지 않은 탭의 × 는 마우스를 올려야 보인다
             tab_el(1).locator('.tab-close').click()
             n_tabs(1)

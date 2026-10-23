@@ -107,6 +107,16 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .spot-pick .step svg { width: 15px; height: 15px; }
 .spot-pick .icon-btn:disabled { color: var(--ui-faint); }
 .spot-pick #lec-btn-spot.on { color: var(--ui-accent); background: var(--ui-active-bg); }
+/* 이름이 보이는 툴바 버튼: [▭ 터미널 모음 2] (gather.js — 숫자는 돌고 있는 셸 수) */
+.icon-btn.labeled {
+  display: inline-flex; align-items: center; gap: 5px; width: auto; padding: 0 9px 0 7px;
+  border: 1px solid var(--ui-border); background: var(--ui-panel); font-size: 12.5px; white-space: nowrap;
+}
+.icon-btn.labeled[aria-pressed="true"] { color: var(--ui-accent); background: var(--ui-active-bg); }
+.icon-btn.labeled .n {
+  min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-hover); color: var(--ui-fg);
+  font-size: 11.5px; line-height: 18px; text-align: center;
+}
 
 /* 스타일 목록과 위·아래 버튼을 한 덩어리로: [ 기본 ▾ ][∧][∨] */
 .theme-pick { display: flex; align-items: stretch; height: 30px; }
@@ -164,16 +174,17 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .lec-tab:hover .tab-close, .lec-tab.active .tab-close, .tab-close:focus-visible { visibility: visible; }
 .tab-close:hover { background: var(--ui-hover); color: var(--ui-fg); }
 #lec-tabbar > .icon-btn { align-self: center; flex: none; }
-/* 터미널 모음 버튼 (gather.js): 탭 막대 오른쪽 끝, 켜면 탭처럼. 모으는 동안 프로젝트 탭은 고르지 않은 모양 */
-.gather-btn {
-  display: flex; align-items: center; gap: 6px; flex: none; margin: 4px 0 0 auto; padding: 0 12px 0 10px;
+/* 목차·터미널 버튼 (toc.js·terminal.js): 탭 막대 오른쪽 끝 — 오른쪽 패널을 보이고 감춘다. 보이면 강조색과 밑줄 */
+.tabbar-btn {
+  display: flex; align-items: center; gap: 6px; flex: none; margin: 4px 0 0; padding: 0 12px 0 10px;
   border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; background: transparent;
   color: var(--ui-muted); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
 }
-.gather-btn > svg { width: 17px; height: 17px; }
-.gather-btn:hover { background: var(--ui-hover); color: var(--ui-fg); }
-.gather-btn[aria-pressed="true"] { background: var(--ui-active-bg); color: var(--ui-active-fg); font-weight: 700; border-bottom-color: var(--ui-accent); }
-.gather-btn .n { min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-hover); color: var(--ui-fg); font-size: 11.5px; text-align: center; line-height: 18px; }
+.tabbar-btn > svg { width: 17px; height: 17px; }
+.tabbar-btn:not(.tabbar-btn + .tabbar-btn) { margin-left: auto; }   /* 첫 버튼부터 탭 막대 오른쪽 끝으로 */
+.tabbar-btn:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.tabbar-btn[aria-pressed="true"] { color: var(--ui-accent); border-bottom-color: var(--ui-accent); }
+/* 터미널 모음(gather.js)을 보는 동안 프로젝트 탭은 고르지 않은 모양 */
 .gather-on .lec-tab.active { background: transparent; color: var(--ui-muted); font-weight: 600; border-bottom-color: transparent; }
 .gather-on .lec-tab.active .ficon { color: var(--ui-faint); }
 .gather-on .lec-tab.active:not(:hover) .tab-close:not(:focus-visible) { visibility: hidden; }
@@ -211,7 +222,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 @media (max-width: 1060px) { .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; padding: 0 8px; } .theme-pick select { max-width: 130px; } }
 /* 아주 좁은 창: '스타일'·'하이라이트' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명) */
 @media (max-width: 860px) {
-  .pick-label, #lec-btn-spot span, .size-label { display: none; }
+  .pick-label, #lec-btn-spot span, .size-label, .icon-btn.labeled .lb, .tabbar-btn span { display: none; }
+  .tabbar-btn { padding: 0 9px; }
   .spot-pick .icon-btn:first-child { width: 32px; padding: 0; justify-content: center; }
   .text-size .step:first-child { border-radius: 6px 0 0 6px; }
   .text-size .step:last-child { border-left: 0; }
@@ -266,7 +278,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .term-box { position: absolute; inset: 6px 2px 4px 8px; }
 #lec-term-resizer { flex: none; width: 7px; margin: 0 -3px 0 -4px; position: relative; z-index: 5; cursor: col-resize; }
 #lec-term-resizer:hover, .resizing-term #lec-term-resizer { background: color-mix(in srgb, var(--ui-accent) 35%, transparent); }
-#lec-btn-term.on { color: var(--ui-accent); }
 
 /* ---- 사이드바 ---------------------------------------------------------------- */
 .side-tabs { display: flex; gap: 4px; padding: 10px 10px 6px; }
