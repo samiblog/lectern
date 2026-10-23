@@ -193,3 +193,11 @@ def test_terminal_follow_style_setting(tmp_path):
     cfg.update_client({'terminal_follow_style': False})                         # 설정 창에서 끄면 늘 어둡게
     cfg.update_client({'terminal_follow_style': 'no'})                          # 형식이 틀리면 버린다
     assert cfg.get('terminal_follow_style') is False
+
+
+def test_toc_hidden_parts_setting(tmp_path):
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('toc_hidden_parts') == []                                    # 목차에 구성 요소를 모두 보인다
+    cfg.update_client({'toc_hidden_parts': ['code', 'math']})                  # 목차 머리의 종류 버튼
+    cfg.update_client({'toc_hidden_parts': 'code'})                            # 형식이 틀리면 버린다
+    assert cfg.get('toc_hidden_parts') == ['code', 'math']

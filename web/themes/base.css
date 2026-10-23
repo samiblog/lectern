@@ -47,6 +47,14 @@
 .md-body .lec-changed { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-changed 4s ease-in; }
 @media (prefers-reduced-motion: reduce) { .md-body .lec-changed { animation: none; outline-color: var(--ui-fresh, #d99a06); } }
 
+/* 목차에서 고른 구성 요소 (toc.js): 그 자리에 잠깐 링크 색 테두리 */
+@keyframes lec-target {
+  from { background-color: color-mix(in srgb, var(--md-link) 12%, transparent); outline-color: color-mix(in srgb, var(--md-link) 85%, transparent); }
+  to { background-color: transparent; outline-color: transparent; }
+}
+.md-body .lec-target { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-target 1.8s ease-in; }
+@media (prefers-reduced-motion: reduce) { .md-body .lec-target { animation: none; outline-color: var(--md-link); } }
+
 /* 장 하이라이트 (spotlight.js): 고른 장(lec-lit)만 그대로, 나머지 글자·선·그림은 바탕색 쪽으로 흐리게 */
 .md-body.lec-spotlight > * { transition: opacity .2s; }
 .md-body.lec-spotlight > :not(.lec-lit) { opacity: .16; }
@@ -202,7 +210,7 @@
   .md-body .table-wrap { max-height: none; overflow: visible; }
   .md-body thead th { position: static; }
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
-  .md-body .lec-changed, .md-body .lec-picked { outline: none !important; animation: none !important; }
+  .md-body .lec-changed, .md-body .lec-picked, .md-body .lec-target { outline: none !important; animation: none !important; }
   .md-body.lec-spotlight > * { opacity: 1 !important; }   /* 장 하이라이트 중이어도 모두 인쇄 */
 }
 .md-body .front-matter tr { background: none !important; }

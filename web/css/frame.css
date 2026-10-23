@@ -13,5 +13,13 @@
 .lec-changed { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-changed 4s ease-in; }
 @media (prefers-reduced-motion: reduce) { .lec-changed { animation: none; outline-color: #d99a06; } }
 
+/* 목차에서 고른 구성 요소 (toc.js) */
+@keyframes lec-target {
+  from { background-color: rgb(31 95 159 / .12); outline-color: rgb(31 95 159 / .85); }
+  to { background-color: transparent; outline-color: transparent; }
+}
+.lec-target { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-target 1.8s ease-in; }
+@media (prefers-reduced-motion: reduce) { .lec-target { animation: none; outline-color: #1f5f9f; } }
+
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .lec-picked { outline: 2px solid rgb(31 95 159 / .6) !important; outline-offset: 3px; border-radius: 2px; }

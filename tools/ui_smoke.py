@@ -211,7 +211,7 @@ def run(headed: bool) -> None:
             check(page.locator('td.num').count() >= 15, '숫자 열 오른쪽 정렬')
             check(page.locator('blockquote.alert').count() == 4, '콜아웃 4개')
             check(page.locator('.code-block .code-copy').count() == 3, '코드 블록 복사 버튼')
-            check(page.locator('#lec-toc a').count() == 7, '목차 7개')
+            check(page.locator('#lec-toc a[data-i]').count() == 7, '목차 7개')
             check(page.locator('.footnotes li').count() == 2, '각주 2개')
             shot('02-doc')
 
@@ -240,7 +240,7 @@ def run(headed: bool) -> None:
             hidden += [sec('파일과-바깥-주소').is_visible(), not text('CommonMark 명세').is_visible()]
             check(all(hidden), f'하위 절도 함께 접히고, 펴면 따로 접어 둔 하위 절은 접힌 채 (각주는 접히지 않음): {hidden}')
             sec('링크').click()
-            page.locator('#lec-toc a', has_text='파일과 바깥 주소').click()
+            page.locator('#lec-toc a[data-i]', has_text='파일과 바깥 주소').click()
             check(sec('파일과-바깥-주소').is_visible() and not folded('링크'), '목차로 접힌 절 안의 제목에 가면 펴짐')
             sec('파일과-바깥-주소').click()
             sec('코드').dblclick(position={'x': 12, 'y': 16})   # 제목 글자 위
@@ -249,6 +249,54 @@ def run(headed: bool) -> None:
             page.locator('#lec-view p', has_text='상대경로 그림은').click(position={'x': 5, 'y': 10})
             sec('그림').click(position={'x': 30, 'y': 16}, modifiers=['Shift'])   # 끌어서 고르면 click 이 오지 않는다 (Chromium)
             check(not folded('그림'), 'Shift+클릭으로 글자를 고를 때는 접지 않음')
+
+            print('[목차의 구성 요소]')
+            toc_rows = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-toc li')].map(li => li.classList.contains('part')
+              ? [[...li.classList].find(c => c.startsWith('part-')).slice(5), li.querySelector('.tp-name').textContent, li.querySelector('.tp-label')?.textContent || '']
+              : ['head', li.textContent.trim()])''')
+            toc_buttons = lambda: page.evaluate('''[...document.querySelectorAll('#lec-toc .toc-parts button')]
+              .map(b => b.textContent.trim() + (b.getAttribute('aria-pressed') === 'true' ? '' : ' 꺼짐'))''')
+            rows = toc_rows()
+            under = {}
+            head = ''
+            for r in rows:
+                if r[0] == 'head':
+                    head = r[1]
+                else:
+                    under.setdefault(head, []).append(f'{r[1]} · {r[2]}' if r[2] else r[1])
+            check(under.get('표') == ['표 1 · 품목·1분기·2분기 · 6행 5열']
+                  and [x.split(' · ')[1] for x in under.get('코드', [])] == ['python', 'powershell', 'json']
+                  and [x.split(' · ')[0] for x in under.get('콜아웃', [])] == ['참고', '팁', '중요', '경고', '인용']
+                  and under.get('그림') == ['그림 1 · 분기별 가격 범위']
+                  and toc_buttons() == ['표 1', '그림 1', '박스글 5', '코드 3'],
+                  f'목차의 제목 아래에 그 절의 표·코드·박스글·그림이 문서 순서로, 머리에 종류 버튼 ({under}, {toc_buttons()})')
+            shot('02-toc-parts')
+            sec('콜아웃').click()   # 접힌 절 안의 박스글로 가면 편다
+            page.locator('#lec-toc li.part-box a', has_text='경고').click()
+            warn = page.locator('#lec-view blockquote.alert-warning')
+            went = wait_until(page, '''(() => { const el = document.querySelector('#lec-view blockquote.alert-warning');
+              const r = el.getBoundingClientRect(), c = document.querySelector('#lec-content').getBoundingClientRect();
+              return el.classList.contains('lec-target') && r.top >= c.top && r.bottom <= c.bottom; })()''')
+            check(went and warn.is_visible() and not folded('콜아웃'), '목차의 구성 요소를 누르면 그 자리로 (접힌 절은 펴고), 잠깐 테두리로 표시')
+            page.locator('#lec-toc li.part-table a').click()
+            table_went = wait_until(page, "document.querySelector('#lec-view .table-wrap').classList.contains('lec-target')")
+            check(table_went, '표를 누르면 표로 (표 상자에 표시)')
+            page.locator('#lec-toc .toc-parts button', has_text='코드').click()
+            no_code = page.locator('#lec-toc li.part-code').count() == 0 and toc_buttons()[3] == '코드 3 꺼짐'
+            saved_hidden = wait_until(page, "fetch('/api/config').then(r => r.json()).then(c => JSON.stringify(c.toc_hidden_parts) === '[\"code\"]')")
+            page.locator('#lec-tree .row.file', has_text='수식과 달러').click()
+            page.wait_for_selector('#lec-view h1:has-text("수식과 달러")')
+            math = [r for r in toc_rows() if r[0] == 'math']
+            maths_btn = toc_buttons()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            still_off = page.locator('#lec-toc li.part-code').count() == 0
+            page.locator('#lec-toc .toc-parts button', has_text='코드').click()
+            back_on = page.locator('#lec-toc li.part-code').count() == 3 and wait_until(page, "fetch('/api/config').then(r => r.json()).then(c => c.toc_hidden_parts.length === 0)")
+            check(no_code and saved_hidden and still_off and back_on,
+                  '종류 버튼으로 그 종류를 목차에서 감추고 보이기 — 다른 문서·다시 그려도 그대로 (설정 toc_hidden_parts)')
+            check(len(math) >= 3 and math[0][1] == '수식 1' and '\\frac' in ''.join(m[2] for m in math) and any(b.startswith('수식') for b in maths_btn),
+                  f'수식 블록도 목차에 (TeX 원문으로): {math[:3]}')
 
             print('[글자 크기와 장 하이라이트]')
             size = lambda: page.evaluate("parseFloat(getComputedStyle(document.querySelector('#lec-view p')).fontSize)")
@@ -316,7 +364,7 @@ def run(headed: bool) -> None:
             check(spans == ['title'] + ['same'] * 6, f'하이라이트하는 장의 범위는 그 장 제목을 눌러 접히는 범위와 같음 ({spans})')
             page.locator('#lec-view p', has_text='표시가 없는 인용문').click()
             by_click = lit()
-            page.locator('#lec-toc a', has_text='링크').first.click()
+            page.locator('#lec-toc a[data-i]', has_text='링크').first.click()
             by_toc = lit()
             page.keyboard.press('Escape')
             off = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && !document.querySelector('#lec-view .lec-lit')"
@@ -864,7 +912,7 @@ def run(headed: bool) -> None:
             info = page.evaluate(f"""() => {{ const f = {frame_js}; const d = f.contentDocument;
               return {{ title: d.title, red: getComputedStyle(d.body).backgroundColor === 'rgb(255, 0, 0)', own: f.classList.contains('own-style'),
                        fit: Math.abs(f.getBoundingClientRect().height - d.documentElement.scrollHeight) < 4,
-                       toc: document.querySelectorAll('#lec-toc a').length }}; }}""")
+                       toc: document.querySelectorAll('#lec-toc a[data-i]').length }}; }}""")
             check(info['title'] == 'HTML 보고서 예시' and not info['red'] and info['own'] and info['fit'] and info['toc'] == 4,
                   f'html 문서: 자기 스타일 그대로, 스크립트·인라인 이벤트는 돌지 않음, 문서 높이에 맞춘 틀, 목차 ({info})')
             spot_off = page.is_disabled('#lec-btn-spot')
@@ -1063,7 +1111,7 @@ def run(headed: bool) -> None:
             tab_el = lambda i: page.locator('#lec-tablist .lec-tab').nth(i)
             h1_has = lambda text: wait_until(page, f"document.querySelector('#lec-view h1')?.textContent.includes('{text}')", 10000)
             tree_root = lambda: page.evaluate("document.querySelector('#lec-tree .row.root .label')?.textContent")
-            ui_now = lambda: page.evaluate('''() => ({ toc: document.querySelector('#lec-toc .toc-list a')?.textContent || '',
+            ui_now = lambda: page.evaluate('''() => ({ toc: document.querySelector('#lec-toc .toc-list a[data-i]')?.textContent || '',
               status: document.querySelector('#lec-st-path').textContent, tree: document.querySelector('#lec-tree .row.active')?.dataset.doc,
               top: Math.round(document.querySelector('#lec-content').scrollTop) })''')
             api_state = lambda: page.evaluate('fetch("/api/state").then(r => r.json())')

@@ -40,6 +40,7 @@ DEFAULTS: dict[str, Any] = {
     'others_visible': True,  # 종류별 보기에서 아래 '파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기)
     'others_height': None,   # 종류별 보기의 '파일' 목록 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
     'toc_visible': True,
+    'toc_hidden_parts': [],  # 목차에서 감춘 구성 요소 종류: table·figure·box·diagram·code·math (목차 머리의 종류 버튼)
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
     'restore_last': True,    # 폴더를 열면 마지막에 보던 문서와 위치로
@@ -58,7 +59,7 @@ DEFAULTS: dict[str, Any] = {
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height', 'terminal_width',
-                         'terminal_follow_style'})
+                         'terminal_follow_style', 'toc_hidden_parts'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'terminal_shell', 'terminal_width'})
