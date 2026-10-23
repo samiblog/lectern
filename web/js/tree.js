@@ -1,5 +1,5 @@
 // 왼쪽 사이드바: 파일 트리, 필터, 최근 변경 목록, 우클릭 메뉴. 선택된 프로젝트 탭의 것을 보인다.
-// 사이드바 탭(파일·최근 변경·검색)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
+// 사이드바 탭(파일·최근 변경·검색·모아 보기)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
 
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
@@ -8,7 +8,7 @@ import { fileIcon, folderIcon } from './icons.js';
 import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
 
 const MAX_FILTER_RESULTS = 300;
-let panel = 'files';   // 사이드바 탭: files | recent | search
+let panel = 'files';   // 사이드바 탭: files | recent | search | parts
 
 // 목록에는 파일 이름을 보이고 마우스를 올리면 문서 제목 (사용자 요청, v0.7.1). '제목' 버튼(설정 show_titles)을 켜면 반대로
 // 폴더 보기(others.js)의 문서 행도 같은 글을 쓴다
@@ -128,7 +128,7 @@ function revealCurrent() {
   $(`#lec-${panel === 'files' ? 'tree' : 'recent'} ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
-/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색). focus: 검색이면 입력칸에 초점 */
+/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | parts(모아 보기). focus: 검색이면 입력칸에 초점 */
 export function switchPanel(next, { focus = true } = {}) {
   panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
@@ -136,6 +136,7 @@ export function switchPanel(next, { focus = true } = {}) {
   $('#lec-recent').hidden = next !== 'recent';
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
+  $('#lec-parts').hidden = next !== 'parts';     // 모아 보기 (parts.js)
   if (next === 'search' && focus) $('#lec-search-input').focus();
   emit('panel', next);
 }
@@ -190,6 +191,10 @@ export function pathMenuItems(path, isDoc) {
   items.push('-');
   if (isDoc) items.push({ label: '편집기로 열기', action: () => openExternal(path) });
   items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(path) });
+  if (!isDoc && S.dirs.has(path)) {   // 문서가 있는 폴더 — 모아 보기 (parts.js)
+    items.push('-', { label: path ? '이 폴더의 표·그림 등 모아 보기' : '프로젝트의 표·그림 등 모아 보기',
+      hint: '사이드바 모아 보기', action: () => emit('parts', { path }) });
+  }
   return items;
 }
 

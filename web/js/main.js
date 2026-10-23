@@ -12,6 +12,7 @@ import { initTextSize } from './textsize.js';
 import { initDocMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
+import { initParts } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
@@ -220,6 +221,7 @@ async function boot() {
   initDocMenu();
   initChangeMarks();
   initSearch();
+  initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다
   initSettings();
   initPosition();
   initResize();
@@ -239,6 +241,7 @@ async function boot() {
   applyLayout();
 
   on('view', () => { updateNavButtons(); updateWindowTitle(); });
+  on('show-sidebar', () => { if (S.config.sidebar_visible === false) toggleSidebar(); });
 
   await loadTabs();
   startWatch();

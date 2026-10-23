@@ -320,6 +320,12 @@ sequenceDiagram
 - 파일이 바뀌어 트리·최근 변경·검색 결과를 다시 그려도 키보드 초점은 같은 행에 남는다 (`util.keepFocus`).
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`tabs.js` 의 `loadTab`). 그동안 트리는 비워 둔다.
 
+### 모아 보기 (parts.js)
+- 사이드바 '모아 보기' 탭(`#lec-parts`): 종류 버튼(표·그림·박스글·다이어그램·코드·수식, 범위 안의 개수), 범위(프로젝트 전체 또는 폴더 — '전체'로 되돌림), 순서(트리 순서 / 최근 수정 순), 거르기(이름·설명·절·문서 제목·경로의 모든 낱말), 문서별 목록 (D41).
+- 세기: 범위 안의 문서(`tab.files`)를 4개씩 `GET /doc/<id>/<경로>` 로 받아 화면 밖에서 그린다 — md 는 `renderMarkdown` → `doc.js` 의 `sanitizeHtml`(본문과 같은 정화, 그림 주소는 data-src) → `template` → `prepareParts`(콜아웃·표·코드 꾸미기), html 은 `DOMParser`. 그다음 `toc.js` 의 `readParts` 로 센다 (목차와 같은 종류·번호·이름·절). 결과는 `tab.partsCache`(경로 → {mtime, items}) — 수정 시각이 같으면 다시 읽지 않는다. 트리를 새로 받으면(`tree` 이벤트) 보이는 동안 바뀐 문서만 다시 읽는다.
+- 항목: 아이콘, 종류·번호(박스글은 콜아웃 종류), 짧은 설명, 절(`§`). 그림은 작은 그림 격자 — 보일 때(IntersectionObserver) `doc.js` 의 `loadImage` 로 본문과 같은 규칙으로 불러오고, 같은 그림(`imageKey`)은 처음 것 하나에 '+N곳'. 누르거나 Enter: 그 문서를 열고(`navigate`) 그려진 화면에서 `readParts` 로 같은 종류·번호를 찾아 `goToPart`. 문서 머리줄은 그 문서를 연다.
+- 여는 곳: 탭, 폴더 개요의 '모아 보기' 버튼(`data-parts`), 트리·폴더 보기의 폴더·프로젝트 우클릭 (`pathMenuItems`) — 둘 다 `parts` 이벤트 {path, kind}. 종류 없이 열면 그 범위에 있는 첫 종류로. 사이드바가 숨어 있으면 `show-sidebar` 이벤트로 보인다. 종류·범위·거르기·순서·스크롤은 탭마다 (`tab.side.parts`).
+
 ### 파일 목록 (others.js)
 - 파일 탭을 보는 방법 두 가지 — 거르기 칸 옆 '폴더' 버튼, 설정 `files_view` (D37):
   - 종류별(`kind`, 기본): 문서 트리 아래, 분리선(`#lec-others-split`) 너머 '파일' 목록에 문서가 아닌 파일을 탐색기처럼 보인다 (D36).

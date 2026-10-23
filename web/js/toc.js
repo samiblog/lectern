@@ -45,8 +45,8 @@ const showPaneToc = (pane) => (pane.tocRoot ? buildToc(pane.tocRoot) : clearToc(
 
 // ---- 구성 요소 ------------------------------------------------------------------
 
-// 종류: 이름(머리 버튼·번호), 아이콘(index.html 의 기호). 머리 버튼은 이 순서
-const PARTS = {
+// 종류: 이름(머리 버튼·번호), 아이콘(index.html 의 기호). 머리 버튼은 이 순서 (모아 보기 parts.js 도 이 표를 쓴다)
+export const PARTS = {
   table: { name: '표', icon: 'i-table' },
   figure: { name: '그림', icon: 'i-image' },
   box: { name: '박스글', icon: 'i-box' },
@@ -56,7 +56,8 @@ const PARTS = {
 };
 // md(doc.js 가 꾸민 것)와 html 문서의 후보. 박스글은 인용·콜아웃과 html 의 aside·callout 류
 const BOXES = 'blockquote, aside, [role="note"], .callout, .admonition';
-const CANDIDATES = `table, img, figure, ${BOXES}, .code-block, pre, .math-block, .mermaid-error`;
+// .image-off: 불러오지 못한 그림 자리(doc.js) — 화면 밖에서 센 모아 보기와 번호가 같게 그림으로 센다
+const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, .math-block, .mermaid-error`;
 const HEADS = 'h1[id], h2[id], h3[id], h4[id]';
 
 /** 목차에 넣을 구성 요소면 그 종류, 아니면 null */
@@ -65,9 +66,12 @@ function partKind(el) {
   const tag = el.tagName;
   if (tag === 'TABLE') return 'table';
   if (tag === 'FIGURE') return 'figure';
-  if (tag === 'IMG') {
+  if (tag === 'IMG' || el.classList.contains('image-off')) {
     if (el.closest('figure, table')) return null;   // 그림 틀·표 안의 그림은 그 틀·표로
-    if (el.complete && el.naturalWidth && el.naturalWidth < 32 && el.naturalHeight < 32) return null;   // 아이콘
+    // 아이콘: 크기 속성으로만 본다 (불러온 크기로 보면 불러오기 전에 센 모아 보기와 번호가 어긋난다)
+    const w = Number(el.getAttribute('width')) || 0;
+    const h = Number(el.getAttribute('height')) || 0;
+    if (w && h && w < 32 && h < 32) return null;
     return 'figure';
   }
   if (el.matches(BOXES)) return el.parentElement?.closest(BOXES) ? null : 'box';   // 박스 안의 박스는 바깥 것만
@@ -102,6 +106,7 @@ function tableLabel(table) {
 
 function figureLabel(el) {
   if (el.tagName === 'FIGURE') return clip(el.querySelector('figcaption')?.textContent || el.querySelector('img')?.alt);
+  if (el.classList.contains('image-off')) return clip(el.textContent);
   const holder = el.parentElement?.tagName === 'P' && squeeze(el.parentElement.textContent) === '' ? el.parentElement : null;
   const src = el.getAttribute('src') || el.dataset.src || '';
   let file = src.split(/[?#]/)[0].split(/[/\\]/).pop() || '';
@@ -152,24 +157,37 @@ const hiddenParts = () => new Set(Array.isArray(S.config.toc_hidden_parts) ? S.c
 
 const INDENT = [10, 22, 34, 44];   // 제목 수준별 왼쪽 여백 (app.css 의 .lv1~3 과 같게)
 
-function buildToc(view) {
-  const all = $$(HEADS, view).filter((h) => !h.closest('.front-matter, .footnotes'));
+/**
+ * 문서(root — 칸의 본문, html 문서의 body, 화면 밖에서 그린 조각)의 제목과 구성 요소를 문서 순서로 읽는다.
+ * {listed: 목차에 넣을 제목들, rows: [{head} | {kind, el, n(종류별 번호), name, label, section(바로 앞 제목)}], counts: 종류별 개수}.
+ * 모아 보기(parts.js)도 이것으로 세고 이것으로 찾아가므로 목차와 번호·이름이 같다.
+ */
+export function readParts(root) {
+  const all = $$(HEADS, root).filter((h) => !h.closest('.front-matter, .footnotes'));
   const h1s = all.filter((h) => h.tagName === 'H1');
-  const listed = new Set(h1s.length === 1 ? all.filter((h) => h.tagName !== 'H1') : all);   // 문서 제목(H1 하나)은 빼고
-  const top = Math.min(4, ...[...listed].map((h) => +h.tagName[1]));
-  const hidden = hiddenParts();
+  const title = h1s.length === 1 ? h1s[0] : null;   // 문서 제목(H1 하나)은 목차에서 뺀다
+  const listed = new Set(title ? all.filter((h) => h !== title) : all);
   const counts = {};
-  const rows = [];   // 문서 순서: {head} | {kind, el, name, label}
-  for (const el of $$(`${HEADS}, ${CANDIDATES}`, view)) {
-    if (listed.has(el)) {
-      rows.push({ head: el });
+  const rows = [];
+  let section = '';
+  for (const el of $$(`h1, h2, h3, h4, ${CANDIDATES}`, root)) {
+    if (/^H[1-4]$/.test(el.tagName)) {   // id 가 없는 제목(html 문서를 화면 밖에서 읽을 때)도 절 이름으로는 쓴다
+      if (el !== title && !el.closest('.front-matter, .footnotes')) section = squeeze(el.textContent);
+      if (listed.has(el)) rows.push({ head: el });
       continue;
     }
     const kind = partKind(el);
     if (!kind) continue;
     counts[kind] = (counts[kind] || 0) + 1;
-    rows.push({ kind, el, ...describe(kind, el, counts[kind]) });
+    rows.push({ kind, el, n: counts[kind], section, ...describe(kind, el, counts[kind]) });
   }
+  return { listed, rows, counts };
+}
+
+function buildToc(view) {
+  const { listed, rows, counts } = readParts(view);
+  const top = Math.min(4, ...[...listed].map((h) => +h.tagName[1]));
+  const hidden = hiddenParts();
   const box = $('#lec-toc');
   const total = Object.values(counts).reduce((a, b) => a + b, 0);
   if (listed.size < 2 && !total) {   // 목차로 보일 것이 없다
@@ -234,7 +252,7 @@ function spy() {
 }
 
 /** 구성 요소로 간다: 접힌 절을 펴고, 크면 위를 맞추고 작으면 가운데로, 잠깐 테두리로 표시 (base.css·frame.css 의 lec-target) */
-function goToPart(el) {
+export function goToPart(el) {
   const target = el.closest('.table-wrap') || el;
   unfoldTo(target);
   const tall = screenRect(target).height > $('#lec-content').clientHeight * 0.7;

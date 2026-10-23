@@ -243,7 +243,7 @@ function makeZoomable(img) {
   img.addEventListener('click', () => openLightbox(img.cloneNode()));
 }
 
-function fixImage(img, baseUrl, stamp, tab) {
+function fixImage(img, baseUrl, stamp, tab, zoom = true) {
   const src = img.getAttribute('data-src');
   img.removeAttribute('data-src');
   const r = resolveRef(src, baseUrl, tab);
@@ -254,7 +254,7 @@ function fixImage(img, baseUrl, stamp, tab) {
   if (r.kind === 'local') {
     img.src = `${docUrl(tab, r.path)}?v=${stamp}`;   // 다시 그릴 때 바뀐 이미지가 보이도록
     img.loading = 'lazy';
-    makeZoomable(img);
+    if (zoom) makeZoomable(img);
     return;
   }
   const isWebImage = r.kind === 'external' && /^(https?:)?\/\//i.test(r.url);
@@ -284,8 +284,34 @@ function fixImage(img, baseUrl, stamp, tab) {
   img.addEventListener('load', () => { settled = true; }, { once: true });
   img.addEventListener('error', fail, { once: true });
   setTimeout(() => { if (!settled && !(img.complete && img.naturalWidth)) fail(); }, EXTERNAL_IMAGE_TIMEOUT_MS);
-  makeZoomable(img);
+  if (zoom) makeZoomable(img);
   img.src = r.url;
+}
+
+// ---- 모아 보기(parts.js)가 쓰는 것: 문서를 화면 밖에서 본문과 같은 규칙으로 읽고, 그림을 본문과 같은 규칙으로 불러온다 ----
+
+/** md 렌더링 결과를 본문과 같은 규칙으로 정화한다 (그림 주소는 data-src 로 떼어 둔다 — 넣어도 내려받지 않는다) */
+export function sanitizeHtml(html) {
+  installPurifyHook();
+  return window.DOMPurify.sanitize(html, PURIFY);
+}
+
+/** 화면 밖 조각의 콜아웃·표·코드 블록을 본문처럼 꾸민다 (목차·모아 보기가 같은 규칙으로 세게) */
+export function prepareParts(root) {
+  decorateAlerts(root);
+  decorateTables(root);
+  decorateCode(root);
+}
+
+/** 그림(img, data-src 에 문서 속 주소)을 docPath 문서 기준으로 불러온다 — 프로젝트 밖은 막고, 인터넷 그림은 설정을 따른다 */
+export function loadImage(img, docPath, tab, { zoom = false } = {}) {
+  fixImage(img, new URL(docUrl(tab, docPath), location.origin), Date.now(), tab, zoom);
+}
+
+/** 문서 속 그림 주소가 가리키는 것 (같은 그림을 한 번만 보이려고): 프로젝트 안이면 경로, 인터넷이면 주소 */
+export function imageKey(src, docPath, tab) {
+  const r = resolveRef(src, new URL(docUrl(tab, docPath), location.origin), tab);
+  return r.kind === 'local' ? r.path : r.kind === 'external' ? r.url : `${docPath}#${src}`;
 }
 
 function decorateAlerts(root) {

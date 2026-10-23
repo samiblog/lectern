@@ -2,7 +2,7 @@
 
 import { S, emit } from './store.js';
 import { getJSON } from './api.js';
-import { setToc } from './toc.js';
+import { setToc, PARTS } from './toc.js';
 import { setStatus } from './status.js';
 import { clearChanges } from './diffmark.js';
 import { paneOf } from './panes.js';
@@ -28,7 +28,9 @@ function render(d, tab) {
   const recent = d.total > 3 ? d.recent : [];
   const parts = [];
   parts.push(`<header class="ov-head">${crumbs(d.path, tab)}<h1>${esc(d.name)}</h1>
-    <p class="ov-sub">${d.total ? `문서 ${d.total}개` : '문서 없음'}${d.dirs.length ? `, 폴더 ${d.dirs.length}개` : ''}</p></header>`);
+    <p class="ov-sub">${d.total ? `문서 ${d.total}개` : '문서 없음'}${d.dirs.length ? `, 폴더 ${d.dirs.length}개` : ''}</p>
+    ${d.total ? `<p class="ov-parts"><span>모아 보기</span>${Object.entries(PARTS).map(([k, p]) => `<button type="button" data-parts="${k}"
+      title="${esc(d.path || tab.name)}${d.path ? ' 폴더와 하위' : ' 전체'}의 ${esc(p.name)} — 사이드바에">${esc(p.name)}</button>`).join('')}</p>` : ''}</header>`);
 
   if (recent.length) {
     parts.push(`<section class="ov-sec"><h2>최근 변경</h2><ol class="ov-rail">${recent.map((f) => {
@@ -98,7 +100,13 @@ export async function showOverview(pane, path, { scrollTop } = {}) {
 
 export function initOverview() {
   $('#lec-panes').addEventListener('click', (e) => {
-    if (!paneOf(e.target)?.view.classList.contains('overview')) return;
+    const pane = paneOf(e.target);
+    if (!pane?.view.classList.contains('overview')) return;
+    const part = e.target.closest('button[data-parts]');   // 이 폴더의 표·그림 등 모아 보기 (parts.js)
+    if (part) {
+      emit('parts', { path: pane.current?.path || '', kind: part.dataset.parts });
+      return;
+    }
     const btn = e.target.closest('button[data-doc], button[data-dir]');
     if (!btn) return;
     if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc });

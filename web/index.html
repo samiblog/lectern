@@ -108,6 +108,7 @@
         <button role="tab" data-tab="files" class="active">파일</button>
         <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
         <button role="tab" data-tab="search" title="모든 문서의 본문에서 찾기 (Ctrl+Shift+F)">검색</button>
+        <button role="tab" data-tab="parts" title="프로젝트의 표·그림·박스글·다이어그램·코드·수식을 종류마다 모아 보기">모아 보기</button>
       </div>
       <div class="side-filter">
         <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
@@ -132,6 +133,21 @@
         </div>
         <p id="lec-search-info" class="side-info"></p>
         <nav id="lec-search-results" class="side-list" aria-label="검색 결과"></nav>
+      </div>
+      <!-- 모아 보기 (parts.js, D41): 종류 버튼, 범위(폴더), 거르기, 문서별 목록 (그림은 작은 그림 격자) -->
+      <div id="lec-parts" hidden>
+        <div id="lec-parts-kinds" class="parts-kinds" role="tablist" aria-label="모아 볼 종류"></div>
+        <div class="parts-bar">
+          <span class="parts-scope-label">범위</span><span id="lec-parts-scope" class="parts-scope"></span>
+          <button type="button" id="lec-parts-all" class="text-btn" title="프로젝트 전체로" hidden>전체</button>
+          <span class="tb-spacer"></span>
+          <button type="button" id="lec-parts-order" class="icon-btn small toggle">트리 순서</button>
+        </div>
+        <div class="side-filter">
+          <input id="lec-parts-filter" type="search" placeholder="이름·절·문서로 거르기" spellcheck="false" autocomplete="off">
+        </div>
+        <p id="lec-parts-info" class="side-info"></p>
+        <nav id="lec-parts-list" class="side-list" aria-label="모아 본 구성 요소"></nav>
       </div>
     </aside>
 
