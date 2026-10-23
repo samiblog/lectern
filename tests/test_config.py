@@ -140,3 +140,17 @@ def test_font_scale_accepts_whole_numbers(tmp_path):
     c.update_client({'font_scale': 1.35})
     c.update_client({'font_scale': 'big'})                        # 형식이 틀리면 버린다
     assert c.get('font_scale') == 1.35
+
+def test_tree_shows_file_names_from_version_2(tmp_path):
+    from lectern.config import CONFIG_VERSION
+
+    path = tmp_path / 'config.json'
+    assert Config(path).get('show_titles') is False and CONFIG_VERSION == 2      # 새로 깔면 파일 이름
+    # 옛 판(1)의 파일은 기본값도 함께 적혀 있어 show_titles: true 가 사용자가 고른 것인지 알 수 없다 — 한 번 파일 이름으로
+    path.write_text(json.dumps({'version': 1, 'show_titles': True, 'theme': 'nord'}), encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.get('show_titles') is False and cfg.get('version') == 2 and cfg.get('theme') == 'nord' and cfg.load_error is None
+    assert json.loads(path.read_text(encoding='utf-8'))['version'] == 1          # 파일은 다음에 저장할 때 바뀐다
+    cfg.update_client({'show_titles': True})                                     # 그 뒤에 다시 켜면 그대로 남는다
+    saved = json.loads(path.read_text(encoding='utf-8'))
+    assert saved['version'] == 2 and saved['show_titles'] is True and Config(path).get('show_titles') is True

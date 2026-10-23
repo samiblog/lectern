@@ -9,8 +9,14 @@ import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util
 const MAX_FILTER_RESULTS = 300;
 let panel = 'files';   // 사이드바 탭: files | recent | search
 
-const showTitles = () => S.config.show_titles !== false;
+// 목록에는 파일 이름을 보이고 마우스를 올리면 문서 제목 (사용자 요청, v0.7.1). '제목' 버튼(설정 show_titles)을 켜면 반대로
+const showTitles = () => S.config.show_titles === true;
 const labelOf = (f) => (showTitles() ? (f.title || f.name) : f.name);
+/** 마우스를 올리면 보일 글: 목록에 보이지 않는 쪽을 앞에 (파일 이름을 보이면 문서 제목), 그다음 경로 */
+const tipOf = (f) => {
+  if (!f.title) return f.path;
+  return showTitles() ? `${f.path}\n${f.title}` : `${f.title}\n${f.path}`;
+};
 
 function activeDoc() {
   return S.view?.type === 'doc' ? S.view.path : null;
@@ -32,8 +38,7 @@ export const kindBadge = (f) => (f.kind === 'html' ? '<span class="kind" title="
 function fileRow(f, depth, extra = '') {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
-  const title = showTitles() && f.title ? `${f.path}\n${f.title}` : f.path;
-  return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(title)}" tabindex="0">`
+  return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(tipOf(f))}" tabindex="0">`
     + `<span class="caret-space"></span><span class="label">${esc(labelOf(f))}</span>${kindBadge(f)}${extra}`
     + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
 }
@@ -88,7 +93,7 @@ function renderRecent() {
   box.innerHTML = files.length ? files.map((f) => {
     const cls = ['row', 'recent'];
     if (f.path === activeDoc()) cls.push('active');
-    return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" title="${esc(f.path)}" tabindex="0">`
+    return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" title="${esc(tipOf(f))}" tabindex="0">`
       + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${esc(labelOf(f))}${kindBadge(f)}</span>`
       + `${S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
       + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;

@@ -181,8 +181,18 @@ def run(headed: bool) -> None:
             page.unroute(is_tree)
             page.wait_for_selector('.overview .ov-head h1')
             check(loading, '폴더를 훑는 동안 빈 화면 대신 읽는 중이라고 알림')
+            row_tip = lambda box: page.locator(f'#lec-{box} .row[data-doc="docs/01-기능-점검.md"]').get_attribute('title')
+            names = page.locator('#lec-tree .row.file .label').all_inner_texts()
+            tip = row_tip('tree')
+            check('01-기능-점검.md' in names and '렌더링 기능 점검' not in names
+                  and tip == '렌더링 기능 점검\ndocs/01-기능-점검.md' and row_tip('recent') == tip,
+                  f'트리·최근 변경은 파일 이름, 마우스를 올리면 문서 제목과 경로 ({tip!r})')
+            page.click('#lec-btn-titles')   # 아래 점검은 문서 제목으로 행을 찾는다
+            wait_until(page, "document.querySelector('#lec-btn-titles').classList.contains('on')")   # 설정을 저장한 뒤에 켜진다
+            titles_on = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.show_titles)")
             labels = page.locator('#lec-tree .row .label').all_inner_texts()
-            check('렌더링 기능 점검' in labels, '트리에 문서 제목 표시')
+            check('렌더링 기능 점검' in labels and titles_on is True and row_tip('tree') == 'docs/01-기능-점검.md\n렌더링 기능 점검',
+                  "'제목' 버튼을 켜면 문서 제목 (마우스를 올리면 경로와 제목, 설정에 저장)")
             check(not any('숨김' in t or 'some-lib' in t for t in labels), '숨김·제외 문서는 트리에 없음')
             check('empty-folder' not in labels, 'md 없는 폴더는 트리에 없음')
             check(labels.index('우선순위') < labels.index('후속 과제'), '자연 정렬 (2 → 10)')

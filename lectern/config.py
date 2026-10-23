@@ -22,8 +22,10 @@ MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 
+CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
+
 DEFAULTS: dict[str, Any] = {
-    'version': 1,
+    'version': CONFIG_VERSION,
     'recent': [],            # 최근 연 프로젝트 폴더 (최신순)
     'last_folder': None,     # 마지막으로 연 폴더 (tabs 가 없던 옛 설정이면 이 폴더를 연다)
     'tabs': [],              # 열어 둔 프로젝트 탭 (왼쪽부터). 다음 실행에 되살린다 (서버가 기록)
@@ -31,7 +33,7 @@ DEFAULTS: dict[str, Any] = {
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
-    'show_titles': True,     # 트리에 파일명 대신 문서 제목 표시
+    'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'toc_visible': True,
@@ -79,6 +81,15 @@ def value_ok(key: str, value: Any) -> bool:
     if isinstance(default, list):
         return isinstance(value, list) and all(isinstance(x, str) for x in value)
     return isinstance(value, type(default))
+
+
+def _upgrade(data: dict[str, Any]) -> None:
+    """옛 판(version)의 설정을 지금 판으로 바꾼다. 파일에는 다음에 설정을 저장할 때 쓰인다 (그 전까지는 읽을 때마다 같은 값으로 바꾼다)."""
+    if data['version'] < 2:
+        # v0.7.1: 트리는 파일 이름이 기본이 됐다 (사용자 요청 — 마우스를 올리면 제목). 앱은 저장할 때 기본값도 함께 적으므로
+        # 옛 파일의 show_titles: true 는 사용자가 고른 것인지 알 수 없다. 한 번 파일 이름으로 돌린다
+        data['show_titles'] = False
+    data['version'] = max(data['version'], CONFIG_VERSION)
 
 
 def _expected(key: str) -> str:
@@ -129,6 +140,7 @@ class Config:
                 data[key] = value
             else:
                 wrong.append(f'{key} 는 {_expected(key)}')
+        _upgrade(data)
         if wrong:
             # 맞는 값은 쓰고 틀린 값만 기본값으로. 파일을 고칠 때까지 저장하지 않는다 (손으로 쓴 값을 덮어쓰지 않게, D21)
             return data, (f'설정 파일의 값 형식이 틀려 그 값은 기본값으로 실행합니다 ({"; ".join(wrong)}). '
