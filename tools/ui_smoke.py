@@ -1080,6 +1080,15 @@ def run(headed: bool) -> None:
                   and wait_until(page, "document.querySelector('#lec-others-list .row .label')?.textContent === 'assets'")
                   and olabels() == ['assets'],
                   f'폴더 열기(+)는 새 탭으로 열고, 왼쪽 트리·문서 외 파일과 화면이 그 폴더의 것으로 ({t})')
+            look = page.evaluate('''() => {
+              const css = (sel) => getComputedStyle(document.querySelector(sel));
+              const tab = css('#lec-tablist .lec-tab.active'), other = css('#lec-tablist .lec-tab:not(.active)');
+              return { size: parseFloat(tab.fontSize), side: parseFloat(css('#lec-tree .row .label').fontSize),
+                       weight: Number(tab.fontWeight), otherWeight: Number(other.fontWeight),
+                       filled: tab.backgroundColor !== css('#lec-tabbar').backgroundColor && tab.backgroundColor !== other.backgroundColor,
+                       icons: document.querySelectorAll('#lec-tablist .lec-tab .ficon use[href="#i-folder"]').length }; }''')
+            check(look['size'] > look['side'] and look['weight'] >= 700 and look['otherWeight'] >= 600 and look['filled'] and look['icons'] == 2,
+                  f'프로젝트 탭은 사이드바 글자보다 크고 굵게, 선택된 탭은 바탕색으로, 이름 앞에 폴더 아이콘 ({look})')
             page.locator('#lec-tree .row.file', has_text='둘째 프로젝트').click()
             h1_has('둘째 프로젝트')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 900')

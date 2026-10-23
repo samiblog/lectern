@@ -16,6 +16,7 @@ import { setToc } from './toc.js';
 import { setStatus } from './status.js';
 import { rememberPosition } from './position.js';
 import { showMenu } from './ui.js';
+import { folderIcon } from './icons.js';
 import { $, esc, basename, toast, copyText } from './util.js';
 
 let maxTabs = 10;          // 서버의 MAX_TABS (/api/state 의 max_tabs)
@@ -268,7 +269,7 @@ function renderTabs() {
     const parent = count.get(t.name.toLowerCase()) > 1 ? parentName(t.root) : '';   // 같은 이름의 폴더는 상위 폴더 이름으로 구분
     const key = i < 8 ? `Ctrl+${i + 1}` : i === S.tabs.length - 1 ? 'Ctrl+9' : '';
     return `<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${esc(t.id)}"
-      title="${esc(t.root)}${key ? `\n${key}` : ''}"><span class="name">${esc(t.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
+      title="${esc(t.root)}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(t.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
       + `${!active && t.changed.size ? '<span class="dot" title="열어 보기 전에 바뀐 문서가 있습니다"></span>' : ''}`
       + `<button type="button" class="tab-close" title="탭 닫기 (Ctrl+W)" aria-label="${esc(t.name)} 탭 닫기"><svg><use href="#i-close"/></svg></button></div>`;
   }).join('');
