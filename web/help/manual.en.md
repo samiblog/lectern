@@ -59,21 +59,26 @@ The **Files** tab is split into three groups.
 
 ### Recent
 
-Documents in the order they were modified. The number next to the 'Recent' tab is the number of changed documents you have not opened yet.
+- Files in the order they were changed. The **Documents**, **Code** and **Other files** buttons at the top choose what to show (with all on, they are mixed, newest first).
+- Click a document or code file once to open it; double-click an other file or press Enter to open it. Right-click for the same menu as in the 'Code' and 'Other files' lists.
+- The number next to the 'Recent' tab is the number of changed documents you have not opened yet.
 
 ### Search
 
-- Searches the text of all documents and code (Ctrl+Shift+F). Case does not matter.
-- The **Documents** and **Code** buttons under the search box choose where to search. Document results come first, followed by a 'Code' group.
+- Searches the text of all documents and code, and file names (Ctrl+Shift+F). Case does not matter.
+- The **Documents**, **Code** and **Other files** buttons under the search box choose where to search. **Matching file names** (titles too, for documents) come first, then text results — documents first, followed by a 'Code' group. Other files (PDF, Excel and so on) are searched by name only.
 - Click a result line to go to that line of the document (or code) with the search text marked.
 - To open something by name or title, **Quick open** (Ctrl+P) in the toolbar is faster. Matching documents come first, then code.
 
 ### Elements
 
-- Collects the tables, figures, callouts, diagrams, code and math across the project, by type and by document. Pick a type with the buttons at the top (such as 'Tables 7').
+- Choose **In documents** or **File types** at the top.
+- In documents: collects the tables, figures, callouts, diagrams, code and math across the project, by type and by document. Pick a type with the buttons (such as 'Tables 7').
 - Click an item to go to that place in its document; it is outlined briefly.
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
+- File types: each group — documents, code and other files — gets a button per format, such as 'PDF 2', 'Excel 3', 'PNG 10', 'PY 12' or 'IPYNB 2', and the files of the chosen format are collected. Excel, PowerPoint, Word and Hangul files count as one format whatever their extension. Image files appear as thumbnails. The 'Tree order' button switches to the most recently changed files first.
+- Right-click a folder in the 'Code' or 'Other files' list and choose **Collect the files in this folder by type** to collect just that folder.
 
 ## Reading documents
 

@@ -16,6 +16,15 @@ export const docUrl = (tab, p) => `/doc/${tab.id}/${encodePath(p)}`;
 
 export const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
 export const dirname = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
+// 서버(scanner.natural_key)와 같은 자연 정렬: 숫자 부분은 수로, 나머지는 소문자로 ('2장' < '10장')
+const natKey = (s) => s.split(/(\d+)/).map((w, i) => (i % 2 ? Number(w) : w.toLowerCase()));
+export function natCompare(a, b) {
+  const x = natKey(a);
+  const y = natKey(b);
+  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
+  return x.length - y.length;
+}
+
 export const isMd = (p) => /\.(md|markdown)$/i.test(p);
 export const isHtml = (p) => /\.html?$/i.test(p);
 

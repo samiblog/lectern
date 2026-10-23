@@ -49,7 +49,9 @@ function makeTab(p) {
     treeLoaded: false,      // 트리를 받았는지 (project.js)
     loaded: false,          // 첫 화면까지 그렸는지
     loading: null,          // 첫 화면을 그리는 중이면 그 Promise
-    side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·search.js)
+    side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·recent.js·search.js·parts.js)
+    // 최근 변경의 코드·자료 (recent.js, D50): 받은 파일(files — 받을 때의 버튼 key), 다시 받을지(stale), 받는 중(loading)
+    recent: { files: null, key: '', stale: true, loading: null, again: false, error: null },
     // 사이드바 '코드'·'자료' 목록 (others.js): 받은 문서 외 파일(data), 펼쳐서 읽은 제외 폴더의 안(lazy: 경로 → {nodes…}, 읽는 중 loadingDirs)을
     // 붙인 트리(tree), 파일·코드로 나눈 트리(trees·index·counts), 다시 읽을지(stale),
     // 목록마다 펼친 폴더(open, 폴더 보기 folderOpen), 폴더 보기에서 문서와 합친 트리(all·allIndex), 고른 행(selected), 스크롤 위치

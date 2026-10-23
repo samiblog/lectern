@@ -112,8 +112,8 @@
       <div class="side-tabs" role="tablist">
         <button role="tab" data-tab="files" class="active">파일</button>
         <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
-        <button role="tab" data-tab="search" title="모든 문서·코드의 본문에서 찾기 (Ctrl+Shift+F)">검색</button>
-        <button role="tab" data-tab="parts" title="프로젝트의 표·그림·박스글·다이어그램·코드·수식을 종류마다 모아 보기">모아 보기</button>
+        <button role="tab" data-tab="search" title="문서·코드의 본문과 파일 이름에서 찾기 (Ctrl+Shift+F)">검색</button>
+        <button role="tab" data-tab="parts" title="문서 속 표·그림·박스글 등이나 파일을 종류마다 모아 보기">모아 보기</button>
       </div>
       <div class="side-filter">
         <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
@@ -141,20 +141,33 @@
           <div id="lec-others-list" class="side-list explorer" role="tree" aria-label="자료" data-list="files"></div>
         </section>
       </div>
-      <nav id="lec-recent" class="side-list" aria-label="최근 변경" hidden></nav>
+      <!-- 최근 변경 (recent.js, D50): 보일 것 버튼과 최근에 고친 문서·코드·자료 -->
+      <div id="lec-recent-panel" hidden>
+        <div class="scope-btns" role="group" aria-label="보일 것">
+          <button type="button" id="lec-recent-docs" class="icon-btn small toggle" aria-pressed="true" title="최근에 고친 문서(Markdown·HTML) 보이기">문서</button>
+          <button type="button" id="lec-recent-code" class="icon-btn small toggle" aria-pressed="true" title="최근에 고친 코드(소스·스크립트·설정) 보이기">코드</button>
+          <button type="button" id="lec-recent-others" class="icon-btn small toggle" aria-pressed="true" title="최근에 고친 자료(문서도 코드도 아닌 파일) 보이기">자료</button>
+        </div>
+        <nav id="lec-recent" class="side-list" aria-label="최근 변경"></nav>
+      </div>
       <div id="lec-search" hidden>
         <div class="side-filter">
-          <input id="lec-search-input" type="search" placeholder="모든 문서·코드의 본문에서 찾기" spellcheck="false" autocomplete="off">
+          <input id="lec-search-input" type="search" placeholder="문서·코드의 본문과 파일 이름에서 찾기" spellcheck="false" autocomplete="off">
         </div>
-        <div class="search-kinds" role="group" aria-label="찾을 곳">
-          <button type="button" id="lec-search-docs" class="icon-btn small toggle" aria-pressed="true" title="문서(Markdown·HTML)에서 찾기">문서</button>
-          <button type="button" id="lec-search-code" class="icon-btn small toggle" aria-pressed="true" title="코드(소스·스크립트·설정)에서 찾기 — 사이드바 '코드' 목록의 파일">코드</button>
+        <div class="scope-btns" role="group" aria-label="찾을 곳">
+          <button type="button" id="lec-search-docs" class="icon-btn small toggle" aria-pressed="true" title="문서(Markdown·HTML)의 본문과 이름에서 찾기">문서</button>
+          <button type="button" id="lec-search-code" class="icon-btn small toggle" aria-pressed="true" title="코드(소스·스크립트·설정)의 본문과 이름에서 찾기 — 사이드바 '코드' 목록의 파일">코드</button>
+          <button type="button" id="lec-search-others" class="icon-btn small toggle" aria-pressed="true" title="자료(문서도 코드도 아닌 파일)를 이름으로 찾기">자료</button>
         </div>
         <p id="lec-search-info" class="side-info"></p>
         <nav id="lec-search-results" class="side-list" aria-label="검색 결과"></nav>
       </div>
-      <!-- 모아 보기 (parts.js, D41): 종류 버튼, 범위(폴더), 거르기, 문서별 목록 (그림은 작은 그림 격자) -->
+      <!-- 모아 보기 (parts.js, D41·D50): 문서 속 요소 / 파일 종류, 종류 버튼, 범위(폴더), 거르기, 문서별 목록 (그림은 작은 그림 격자) -->
       <div id="lec-parts" hidden>
+        <div id="lec-parts-mode" class="parts-mode" role="tablist" aria-label="모아 볼 것">
+          <button type="button" role="tab" data-mode="parts" title="문서 속 표·그림·박스글·다이어그램·코드·수식">문서 속 요소</button>
+          <button type="button" role="tab" data-mode="files" title="문서·코드·자료 파일을 형식별로 (엑셀·PDF·그림·py·ipynb 등)">파일 종류</button>
+        </div>
         <div id="lec-parts-kinds" class="parts-kinds" role="tablist" aria-label="모아 볼 종류"></div>
         <div class="parts-bar">
           <span class="parts-scope-label">범위</span><span id="lec-parts-scope" class="parts-scope"></span>

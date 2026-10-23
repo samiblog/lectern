@@ -77,7 +77,7 @@ flowchart LR
 
 ### 변경 감지 (changes.py)
 - `Watcher` 는 watchdog `Observer` 로 root를 재귀 감시한다. watchdog가 없거나 시작에 실패하면 2초 간격 스캔 비교로 대신한다 (`backend` = `watchdog` | `polling`).
-- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서(`doc_kind` — md·html) 생성·삭제·이동도 `structure=True`, 문서 수정은 `structure=False`. 문서가 아닌 파일은 생성·삭제·이동만 `others=True` 로 남기고(경로 없이) 수정은 버린다 — 화면은 문서 외 파일 목록만 다시 읽고 문서 트리는 그대로 둔다. 제외 폴더 자체(그 위는 숨김도 제외도 아님)가 생기거나 지워져도 `others=True` ('자료' 목록에 접힌 채 나오므로, D49).
+- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서(`doc_kind` — md·html) 생성·삭제·이동도 `structure=True`, 문서 수정은 `structure=False`. 문서가 아닌 파일은 생성·삭제·이동을 `others=True` 로 남기고(경로 없이) — 화면은 문서 외 파일 목록만 다시 읽고 문서 트리는 그대로 둔다 — 내용 수정은 `touch(경로)` 로 남긴다 (D50: 순번은 늘지만 `others_seq` 는 그대로라 목록은 다시 훑지 않고, `/api/changes` 의 `touched` 로 최근 변경만 다시 받는다. `Project.recent_others` 가 그 경로들의 수정 시각만 새로 읽는다). 제외 폴더 자체(그 위는 숨김도 제외도 아님)가 생기거나 지워져도 `others=True` ('자료' 목록에 접힌 채 나오므로, D49).
 - Windows 숨김 속성은 감시 단계에서 보지 않는다 (트리 재스캔 때 걸러진다).
 - `ChangeLog` 는 `(seq, path, structure, others)` 를 최대 5000개 보관한다. `since(seq)` 는 그 뒤의 경로 집합과 구조 변경·문서 외 파일 변경 여부를 돌려준다. 오래된 기록이 밀려나 놓친 경우 `reset=True` (structure·others 도 참). `others_seq` 는 문서 외 파일 목록이 마지막으로 바뀌었을 수 있는 순번 (structure 포함).
 - 폴링 대체는 문서(수정 시각·크기)와 문서 외 파일(경로 집합)을 함께 비교한다.
@@ -130,6 +130,8 @@ flowchart LR
 | `files_view` | `"kind"` | 가능 | 사이드바 파일 탭을 보는 방법 ('폴더' 버튼): `kind`(종류별 — 위에서부터 '문서' 트리·'코드'·'자료' 목록) · `folder`(폴더 구조 그대로 — 문서와 파일을 한 트리에) (D37) |
 | `docs_visible` / `others_visible` / `code_visible` | `true` | 가능 | 종류별 보기의 '문서'·'자료'·'코드' 묶음을 펼쳐 둠 (머리줄을 눌러 접기, D42 — '자료'가 others, D48) |
 | `search_docs` / `search_code` | `true` | 가능 | 전체 검색에서 찾을 곳 — 검색 칸 아래 '문서'·'코드' 버튼 (D44) |
+| `search_others` | `true` | 가능 | 전체 검색에서 자료를 이름으로 찾음 — '자료' 버튼 (D50) |
+| `recent_docs` / `recent_code` / `recent_others` | `true` | 가능 | 최근 변경 탭에 보일 것 — 위의 '문서'·'코드'·'자료' 버튼 (D50) |
 | `others_height` / `code_height` | `null` | 가능 | 종류별 보기의 '자료'·'코드' 묶음 높이(px) — 펼친 첫 묶음이 아닐 때. 위 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 30%·26%) |
 | `terminal_width` | `null` | 가능 | 오른쪽 터미널 폭(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(본문 영역의 42%) |
 | `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
@@ -163,12 +165,13 @@ flowchart LR
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤). 이미 닫혔으면 그대로. `/api/state` 와 같은 형식 |
 | `POST /api/activate` | `{p}` | 선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작). `{ok:true}` |
-| `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(seq)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
+| `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(`tree_seq` — 문서 외 파일의 내용 수정(touch)은 세지 않는다, D50)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
 | `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크 규칙은 트리와 같고, 제외 폴더는 안을 훑지 않은 접힌 노드 `{type:'dir', children: null, excluded: true}` 로만 (D49 — 파일 수에 넣지 않음). 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
 | `GET /api/others/dir?p=<id>&path=<경로>` | | 제외 폴더 안의 한 단계 `{path, nodes, truncated, limit}` — '자료' 목록에서 펼칠 때 (D49). 숨김·링크는 빼고 종류는 나누지 않으며, 하위 폴더는 다시 `children: null`, 모든 노드에 `excluded: true`. 5000개(`MAX_DIR_ENTRIES`)에서 멈추고 `truncated`. 제외 폴더 안이 아니면 400, 숨김·밖·폴더가 아니면 404 |
+| `GET /api/others/recent?p=<id>&code=1&others=1` | | 최근에 고친 코드·자료 파일 `{files, limit}` — 사이드바 '최근 변경' (D50). `code`·`others`(기본 0): 코드 파일·자료. 최근 것부터 50개(`RECENT_FILES`), 노드는 `/api/others` 의 파일 노드와 같다. `scan_others` 의 목록에 그 뒤로 내용이 바뀐 파일(`touch`)의 수정 시각·크기만 새로 읽어 덮는다 |
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
-| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
+| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll}` | 그 탭에서 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
@@ -260,7 +263,8 @@ sequenceDiagram
 
 ### 전체 검색 (search.js, lectern/search.py)
 - 사이드바 '검색' 탭(Ctrl+Shift+F). 입력을 250ms 기다렸다가 `GET /api/search?q=` 를 부르고, 늦게 온 결과는 버린다 (Enter 는 기다리지 않고 바로 — 기다리던 검색은 취소). 선택된 탭의 프로젝트에서 찾는다. 문서 목록이 바뀌면(자동 새로고침) 다시 찾고, 검색어와 결과는 탭마다 남겨 두었다가 그 탭을 고르면 되살린다 (다른 탭에서 찾는 중이던 결과는 버린다).
-- 검색 칸 아래 '문서'·'코드' 버튼으로 찾을 곳을 고른다 (설정 `search_docs`·`search_code`, 둘 다 끄면 찾지 않고 고르라고 알림, D44).
+- 검색 칸 아래 '문서'·'코드'·'자료' 버튼으로 찾을 곳을 고른다 (설정 `search_docs`·`search_code`·`search_others`, 모두 끄면 찾지 않고 고르라고 알림, D44·D50).
+- 맨 위 '이름이 맞는 파일'(D50): 켠 종류에서 이름(문서는 제목도)에 검색어가 든 파일 — 화면이 트리(`tab.files`)와 '코드'·'자료' 목록(`others.js` 의 `loadOthers`·`otherFiles`, 제외 폴더 안은 빼고)에서 찾는다. 이름이 검색어로 시작하는 것 먼저, 그다음 최근에 고친 순, 100개까지. 행(`.sr-name[data-file]`)은 `bindFileRows`. 그 아래 본문 결과에는 이름이 있을 때 '문서 본문' 머리가 붙는다. 자료는 본문을 찾지 않으므로 '자료'만 켜면 서버에 묻지 않는다.
 - 서버는 트리와 같은 `scan()` 결과의 문서와, '코드' 목록과 같은 `scan_others()` 결과 중 `is_code` 인 파일을 읽는다 (숨김·제외는 찾지 않음). 대소문자 무시, 글자 그대로 (html 문서는 보이는 글자만, 코드는 파일 그대로). 줄 번호는 markdown-it 과 같게 센다 (`\r\n`·`\r`·`\n` 만 줄바꿈). 문서 먼저, 그다음 코드 — 묶음 안에서는 제목·경로에 검색어가 든 파일을 먼저, 그다음 최근에 고친 순. 파일당 20줄, 묶음마다 1000줄·200파일까지. 2MB 가 넘는 코드는 건너뛴다. 읽은 글은 탭마다 `TextCache` 에 두고 수정 시각·크기가 그대로면 다시 쓴다.
 - 결과 줄을 누르면 문서를 열고, 그 줄이 든 가장 작은 `data-lines` 블록(표의 행까지)으로 가서 깜박이고, 문서 안 찾기(`findText`)로 검색어를 표시한다. 찾기 막대의 '지금 결과'도 그 블록 안의 것으로 둔다 (`pickMatchAt`). 코드 결과(`data-kind="code"`)는 코드 화면의 그 줄로 가서(`navigate({type:'code', line})`) 같은 방법으로 검색어를 표시한다.
 
@@ -321,10 +325,10 @@ sequenceDiagram
 - `position.js` 는 화면 이동·그리기(`rendered`)와 스크롤이 멈추고 1.5초 뒤 탭마다 `POST /api/position {p, path, scroll}` 으로 보는 문서와 위치를 보낸다 (탭마다 같은 값이면 보내지 않음 — 숨은 탭은 바뀌지 않으니 보내지 않는다. 폴더 개요와 지워진 문서는 빼고). 탭을 닫기 전에도 보낸다. 탭을 처음 고를 때 `tabs.js` 가 `/api/state` 의 `position` 으로 그 문서와 위치를 연다 (`nav.restorePosition`). 문서가 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
-- 선택된 프로젝트 탭의 것을 보인다. 사이드바 탭(파일·최근 변경·검색)·거르기 글자·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (`tab.side`).
+- 선택된 프로젝트 탭의 것을 보인다. 사이드바 탭(파일·최근 변경·검색·모아 보기)·거르기 글자·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (`tab.side`).
 - 파일 탭: 루트 행(프로젝트 개요) + 트리. 행마다 이름 앞에 종류 아이콘 (`icons.js` — md·html 문서는 강조색, 폴더, 최근 변경도. 전에 붙던 'HTML' 글자 표시는 폴더 개요에만 남았다). 문서는 파일 이름으로 보이고 마우스를 올리면 문서 제목과 경로 (D35). '제목' 버튼(설정 `show_titles`)을 켜면 제목으로 보이고 마우스를 올리면 경로와 제목. 최근 변경 목록도 같다. 폴더 이름을 누르면 개요 화면 + 펼침, 화살표는 펼치기/접기만. 처음 열 때 첫 단계 폴더는 펼쳐 둔다 (설정 `expand_first_level`, 기본 켜짐).
 - 필터: 입력하면 트리 대신 일치하는 문서 목록(제목+경로, 공백으로 나눈 모든 단어 포함). Enter는 첫 결과 열기, Esc는 지우기.
-- 최근 변경 탭: 수정 시각 순 40개.
+- 최근 변경 탭 (`recent.js`, D50): 위에 '문서'·'코드'·'자료' 버튼(설정 `recent_docs`·`recent_code`·`recent_others`). 켠 종류를 섞어 수정 시각 순 50개 — 문서는 `S.files`, 코드·자료는 `GET /api/others/recent`(`tab.recent` — 이 탭이 보일 때만, `touched`·`others` 이벤트나 F5 뒤에 다시 받는다). 행은 모두 `data-file` 이고 `others.js` 의 `bindFileRows` 가 다룬다 (문서·코드는 한 번 누르면 열고, 자료는 두 번 누르거나 Enter, 우클릭은 '코드'·'자료' 목록과 같은 메뉴).
 - 호박색 점: 열어 보기 전에 바뀐 문서(`S.changed`). 접힌 폴더는 안쪽에 바뀐 문서가 있으면 점을 단다.
 - 우클릭: `@경로` 복사(Claude Code 프롬프트용), 전체 경로 복사, 편집기로 열기, 탐색기에서 보기.
 - 강조(선택된 행)는 선택된 탭의 문서를 따른다.
@@ -332,10 +336,12 @@ sequenceDiagram
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`tabs.js` 의 `loadTab`). 그동안 트리는 비워 둔다.
 
 ### 모아 보기 (parts.js)
+- 맨 위 '문서 속 요소' / '파일 종류'(`#lec-parts-mode`, D50 — `tab.side.parts.mode`). 아래는 문서 속 요소이고, 파일 종류는 이 절 끝에.
 - 사이드바 '모아 보기' 탭(`#lec-parts`): 종류 버튼(표·그림·박스글·다이어그램·코드·수식, 범위 안의 개수), 범위(프로젝트 전체 또는 폴더 — '전체'로 되돌림), 순서(트리 순서 / 최근 수정 순), 거르기(이름·설명·절·문서 제목·경로의 모든 낱말), 문서별 목록 (D41).
 - 세기: 범위 안의 문서(`tab.files`)를 4개씩 `GET /doc/<id>/<경로>` 로 받아 화면 밖에서 그린다 — md 는 `renderMarkdown` → `doc.js` 의 `sanitizeHtml`(본문과 같은 정화, 그림 주소는 data-src) → `template` → `prepareParts`(콜아웃·표·코드 꾸미기), html 은 `DOMParser`. 그다음 `toc.js` 의 `readParts` 로 센다 (목차와 같은 종류·번호·이름·절). 결과는 `tab.partsCache`(경로 → {mtime, items}) — 수정 시각이 같으면 다시 읽지 않는다. 트리를 새로 받으면(`tree` 이벤트) 보이는 동안 바뀐 문서만 다시 읽는다.
 - 항목: 아이콘, 종류·번호(박스글은 콜아웃 종류), 짧은 설명, 절(`§`). 그림은 작은 그림 격자 — 보일 때(IntersectionObserver) `doc.js` 의 `loadImage` 로 본문과 같은 규칙으로 불러오고, 같은 그림(`imageKey`)은 처음 것 하나에 '+N곳'. 누르거나 Enter: 그 문서를 열고(`navigate`) 그려진 화면에서 `readParts` 로 같은 종류·번호를 찾아 `goToPart`. 문서 머리줄은 그 문서를 연다.
 - 여는 곳: 탭, 폴더 개요의 '모아 보기' 버튼(`data-parts`), 트리·폴더 보기의 폴더·프로젝트 우클릭 (`pathMenuItems`) — 둘 다 `parts` 이벤트 {path, kind}. 종류 없이 열면 그 범위에 있는 첫 종류로. 사이드바가 숨어 있으면 `show-sidebar` 이벤트로 보인다. 종류·범위·거르기·순서·스크롤은 탭마다 (`tab.side.parts`).
+- 파일 종류 (D50): 범위 안의 파일 — 문서는 `tab.files`, 코드·자료는 `others.js` 의 `otherFiles`(`loadOthers` 로 받아 두고, 제외 폴더 안은 빼고) — 을 묶음(문서·코드·자료)마다 `icons.js` 의 `fileType` 으로 나눠 형식 버튼(`data-ftype="묶음:형식"`, 묶음마다 한 줄 `.ft-group`)을 만든다. 고른 형식의 파일을 트리 순서(폴더마다 하위 폴더 먼저) 또는 최근 수정 순으로 800개까지 (`.ft-row[data-file]` — `bindFileRows`). 자료의 그림 파일(`PICTURE_EXT`)은 작은 그림 격자(`.ft-thumb`) — 보일 때 그 파일을 `/doc/<id>/<경로>` 로 불러온다. 파일이 생기거나 지워지면(`others` 이벤트) 다시 그린다. '코드'·'자료' 목록의 폴더 우클릭 '이 폴더의 파일을 종류별로 모아 보기'는 `parts` 이벤트 {path, mode: 'files'}.
 
 ### 파일 목록 (others.js)
 - 파일 탭을 보는 방법 두 가지 — 거르기 칸 옆 '폴더' 버튼, 설정 `files_view` (D37):

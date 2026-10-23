@@ -188,7 +188,7 @@ def run(headed: bool) -> None:
             page.unroute(is_tree)
             page.wait_for_selector('.overview .ov-head h1')
             check(loading, '폴더를 훑는 동안 빈 화면 대신 읽는 중이라고 알림')
-            row_tip = lambda box: page.locator(f'#lec-{box} .row[data-doc="docs/01-기능-점검.md"]').get_attribute('title')
+            row_tip = lambda box: page.locator(f'#lec-{box} .row[data-{"doc" if box == "tree" else "file"}="docs/01-기능-점검.md"]').get_attribute('title')
             names = page.locator('#lec-tree .row.file .label').all_inner_texts()
             tip = row_tip('tree')
             check('01-기능-점검.md' in names and '렌더링 기능 점검' not in names
@@ -778,12 +778,14 @@ def run(headed: bool) -> None:
                                    " && !document.querySelector('#lec-search-results .sr-group')", 5000)
             saved_docs = cfg_is('search_docs', False)
             page.click('#lec-search-code')
+            page.click('#lec-search-others')
             none = wait_until(page, "document.querySelector('#lec-search-info').textContent.includes('고르세요')", 3000)
             page.click('#lec-search-docs')
             page.click('#lec-search-code')
+            page.click('#lec-search-others')
             back_both = wait_until(page, "!!document.querySelector('#lec-search-results .sr-group')", 5000)
-            check(only_code and saved_docs and none and back_both and cfg_is('search_code', True) and cfg_is('search_docs', True),
-                  "'문서'·'코드' 버튼으로 찾을 곳을 고름 (설정에 저장), 둘 다 끄면 고르라고 알림")
+            check(only_code and saved_docs and none and back_both and cfg_is('search_code', True) and cfg_is('search_docs', True) and cfg_is('search_others', True),
+                  "'문서'·'코드'·'자료' 버튼으로 찾을 곳을 고름 (설정에 저장), 모두 끄면 고르라고 알림")
             page.fill('#lec-search-input', '')
             page.locator('.side-tabs button[data-tab="files"]').click()
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
@@ -837,7 +839,7 @@ def run(headed: bool) -> None:
             # 이름 앞의 종류 아이콘: 문서(md·html)와 폴더, 최근 변경, 파일 목록
             icon_of = lambda sel: page.evaluate(f"document.querySelector('{sel} .ficon use')?.getAttribute('href') || null")
             icons = [icon_of(sel) for sel in ('#lec-tree .row[data-doc="docs/01-기능-점검.md"]', '#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]',
-                                              '#lec-tree .row.dir[data-dir="docs"]', '#lec-recent .row[data-doc="docs/01-기능-점검.md"]',
+                                              '#lec-tree .row.dir[data-dir="docs"]', '#lec-recent .row[data-file="docs/01-기능-점검.md"]',
                                               f'{olist} .row[data-path="data/표.csv"]', f'{olist} .row[data-path="data/setup.exe"]',
                                               f'{olist} .row[data-path="첨부.pdf"]', f'{olist} .row[data-path="data"]')]
             head = page.inner_text('#lec-others-head')
@@ -1020,6 +1022,71 @@ def run(headed: bool) -> None:
             check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'data' and page.is_visible('#lec-code-head')
                   and config_is('files_view', 'kind'),
                   "다시 누르면 종류별 보기 ('문서'·'코드'·'자료' 묶음)")
+
+            print('[코드·자료의 최근 변경·검색·파일 종류]')
+            page.locator('.side-tabs button[data-tab="recent"]').click()
+            rrow = lambda path: page.locator(f'#lec-recent .row[data-file="{path}"]')
+            got_files = wait_until(page, "!!document.querySelector('#lec-recent .row[data-file=\"첨부.pdf\"]')"
+                                   " && !!document.querySelector('#lec-recent .row[data-file=\"code/example.py\"]')", 8000)
+            pressed = page.evaluate("['docs', 'code', 'others'].map(k => document.querySelector('#lec-recent-' + k).getAttribute('aria-pressed'))")
+            example = work / 'code' / 'example.py'
+            example.write_bytes(example.read_bytes())   # 내용은 그대로 고침 — 감시가 touch 로 남긴다
+            touched = wait_until(page, "document.querySelector('#lec-recent .row')?.dataset.file === 'code/example.py'", 8000)
+            page.click('#lec-recent-code')
+            no_code = wait_until(page, "!document.querySelector('#lec-recent .row[data-file$=\".py\"]')"
+                                 " && !!document.querySelector('#lec-recent .row[data-file=\"첨부.pdf\"]')", 5000)
+            saved_off = config_is('recent_code', False)
+            page.click('#lec-recent-code')
+            back = wait_until(page, "document.querySelector('#lec-recent .row')?.dataset.file === 'code/example.py'", 5000)
+            body = opens(rrow('첨부.pdf').dblclick)
+            rrow('code/example.py').click()
+            to_code = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'code/example.py' && !!document.querySelector('#lec-view .cv-line')", 5000)
+            r_menu = menu(rrow('첨부.pdf'))
+            page.keyboard.press('Escape')
+            check(got_files and pressed == ['true'] * 3 and touched and no_code and saved_off and back and body['path'] == '첨부.pdf' and to_code
+                  and '탐색기에서 보기' in r_menu and '@첨부.pdf 복사' in r_menu,
+                  "최근 변경에 코드·자료도 — '문서'·'코드'·'자료' 버튼(설정 저장), 코드를 고치면 맨 위로, 자료는 두 번 눌러 열기, 코드는 한 번 눌러 읽기 화면, 우클릭은 자료 목록과 같은 메뉴")
+            page.locator('.side-tabs button[data-tab="search"]').click()
+            page.fill('#lec-search-input', 'setup')
+            names_ok = wait_until(page, "!!document.querySelector('#lec-search-results .sr-name[data-file=\"data/setup.exe\"]')", 5000)
+            sinfo = page.inner_text('#lec-search-info')
+            body = opens(page.locator('#lec-search-results .sr-name[data-file="data/setup.exe"]').dblclick)
+            page.click('#lec-search-others')
+            no_name = wait_until(page, "!document.querySelector('#lec-search-results .sr-name[data-file=\"data/setup.exe\"]')"
+                                 " && !document.querySelector('#lec-search-info').textContent.includes('…')", 5000)
+            saved_off = cfg_is('search_others', False)
+            page.click('#lec-search-others')
+            page.fill('#lec-search-input', 'example')
+            code_name = wait_until(page, "!!document.querySelector('#lec-search-results .sr-name[data-file=\"code/example.py\"]')", 5000)
+            page.fill('#lec-search-input', '')
+            check(names_ok and '이름 1개' in sinfo and body['path'] == 'data/setup.exe' and no_name and saved_off and code_name,
+                  f"검색에 '자료' 버튼 — 맨 위에 이름이 맞는 파일(자료는 이름으로만, 코드도), 자료는 두 번 눌러 열기, 끄면 빠짐 ({sinfo})")
+            page.locator('.side-tabs button[data-tab="parts"]').click()
+            page.locator('#lec-parts-mode button[data-mode="files"]').click()
+            page.wait_for_selector('#lec-parts-kinds button[data-ftype="others:csv"]', timeout=8000)
+            chips = page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-parts-kinds .ft-group')].map(g =>
+              [g.querySelector('.ft-label').textContent, [...g.querySelectorAll('button')].map(b => b.dataset.ftype.split(':')[1])]))''')
+            page.locator('#lec-parts-kinds button[data-ftype="others:svg"]').click()
+            thumb = wait_until(page, "document.querySelector('#lec-parts-list .ft-thumb img')?.naturalWidth > 0", 5000)
+            page.locator('#lec-parts-kinds button[data-ftype="others:csv"]').click()
+            wait_until(page, "!!document.querySelector('#lec-parts-list .ft-row[data-file=\"data/표.csv\"]')", 3000)
+            csv_rows = page.evaluate("[...document.querySelectorAll('#lec-parts-list [data-file]')].map(r => r.dataset.file)")
+            pinfo = page.inner_text('#lec-parts-info')
+            body = opens(page.locator('#lec-parts-list .ft-row[data-file="data/표.csv"]').dblclick)
+            page.locator('.side-tabs button[data-tab="files"]').click()
+            menu(orow('data'))
+            page.locator('#lec-menu button', has_text='이 폴더의 파일을 종류별로 모아 보기').click()
+            scoped = wait_until(page, "!document.querySelector('#lec-parts').hidden && document.querySelector('#lec-parts-scope').textContent === 'data 폴더'", 5000)
+            data_chips = page.evaluate("[...document.querySelectorAll('#lec-parts-kinds button[data-ftype]')].map(b => b.dataset.ftype).sort()")
+            shot('12-parts-files')
+            page.click('#lec-parts-all')
+            page.locator('#lec-parts-mode button[data-mode="parts"]').click()   # 아래 점검은 문서 속 요소로
+            back_parts = wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-kind]')", 5000)
+            check(chips.get('문서', [])[:1] == ['md'] and 'py' in chips.get('코드', []) and {'csv', 'exe', 'pdf', 'svg'} <= set(chips.get('자료', []))
+                  and thumb and csv_rows == ['data/표.csv'] and pinfo == '파일 1개' and body['path'] == 'data/표.csv'
+                  and scoped and data_chips == ['others:csv', 'others:exe'] and back_parts,
+                  f"모아 보기 '파일 종류' — 문서·코드·자료마다 형식 버튼, 그림 파일은 작은 그림, 자료는 두 번 눌러 열기, '자료' 목록의 폴더 우클릭으로 그 폴더만 ({chips}, {data_chips})")
+            page.locator('.side-tabs button[data-tab="files"]').click()
             page.unroute('**/api/open-external', fake_open)
 
             print('[문서 속 원시 HTML]')
@@ -1968,7 +2035,12 @@ def run_english(headed: bool) -> None:
             wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length > 0", 8000)
             parts = page.evaluate("[document.querySelector('#lec-parts-kinds .active')?.textContent, document.querySelector('#lec-parts-info').textContent]")
             scan('모아 보기')
+            page.locator('#lec-parts-mode button[data-mode="files"]').click()
+            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-ftype]')", 8000)
+            scan('모아 보기 — 파일 종류')
+            page.locator('#lec-parts-mode button[data-mode="parts"]').click()
             page.locator('.side-tabs button[data-tab="recent"]').click()
+            wait_until(page, "!!document.querySelector('#lec-recent .row[data-file$=\".py\"]')", 8000)
             scan('최근 변경')
             page.locator('.side-tabs button[data-tab="files"]').click()
             page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click()

@@ -16,7 +16,7 @@ from . import __version__, i18n
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
-from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan, scan_others
+from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
 
@@ -36,6 +36,7 @@ class Project:
         self._watcher: Watcher | None = None
         # 스캔 결과. 변경 기록(seq)이 그대로면 다시 쓴다 — 문서가 수천 개여도 트리·개요·검색이 폴더를 매번 훑지 않게
         self._scans: dict[tuple, tuple[int, list]] = {}
+        self._others_at = 0        # 마지막 문서 외 파일 스캔을 시작할 때의 변경 순번 (그 뒤로 내용이 바뀐 파일은 recent_others 가 다시 본다)
         self.texts = TextCache()   # 전체 검색이 읽은 글 (수정 시각·크기가 그대로면 다시 쓴다)
 
     @property
@@ -58,7 +59,7 @@ class Project:
         감시가 놓칠 수 있는 변경(숨김 속성 바꾸기 등)은 fresh=True(화면의 F5)로 새로 훑는다. 돌려준 목록은 고치지 않는다.
         """
         key = (rel, with_info, self.exclude, self.html_exclude)
-        seq = self.log.seq
+        seq = self.log.tree_seq   # 문서 외 파일의 내용 수정(touch)으로는 다시 훑지 않는다
         hit = self._scans.get(key)
         if hit and hit[0] == seq and not fresh:
             return hit[1]
@@ -76,9 +77,29 @@ class Project:
         hit = self._scans.get(key)
         if hit and hit[0] == seq and not fresh:
             return hit[1]
+        self._others_at = self.log.seq
         result = scan_others(self.root, self.exclude, self.html_exclude)
         self._scans[key] = (seq, result)
         return result
+
+    def recent_others(self, code: bool, others: bool, limit: int) -> list[Node]:
+        """최근에 고친 문서 외 파일 (사이드바 '최근 변경'의 코드·자료, D50). code: 코드 파일, others: 자료.
+        목록은 scan_others 의 것을 쓰고, 그 뒤로 내용이 바뀐 파일(감시가 남긴 touch)만 수정 시각을 새로 읽는다. 최근 것부터 limit 개"""
+        nodes, _, _ = self.scan_others()
+        touched = set(self.log.touched_since(self._others_at))
+        files = []
+        for f in iter_files(nodes):
+            if not (code if is_code(f['name']) else others):
+                continue
+            if f['path'] in touched:
+                try:
+                    st = (self.root / f['path']).stat()
+                except OSError:
+                    continue   # 그사이 지워짐 (목록은 다음 변경 때 다시 읽는다)
+                f = {**f, 'mtime': st.st_mtime, 'size': st.st_size}
+            files.append(f)
+        files.sort(key=lambda f: -f['mtime'])
+        return files[:limit]
 
     def start(self) -> None:
         self._watcher = Watcher(self.root, self.log, self.exclude)

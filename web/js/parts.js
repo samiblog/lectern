@@ -1,4 +1,5 @@
 // 사이드바 '모아 보기' 탭 (D41): 프로젝트(또는 고른 폴더와 그 하위)의 표·그림·박스글·다이어그램·코드·수식을 종류마다 모아 보인다.
+// 위의 '문서 속 요소' / '파일 종류'(D50)로 무엇을 모을지 고른다 — 파일 종류는 아래 '파일 종류' 절.
 //
 // - 문서마다 본문과 같은 해석기로 화면 밖에서 그려(md: markdown-it + 정화, html: DOMParser — 스크립트·그림을 부르지 않는다)
 //   목차와 같은 규칙(toc.js 의 readParts)으로 센다. 그래서 번호·이름이 그 문서의 목차와 같다.
@@ -6,18 +7,20 @@
 // - 문서별로 묶어 트리 순서(또는 최근 수정 순)로. 그림은 작은 그림 격자 — 같은 그림을 여러 문서가 쓰면 처음 것 하나에 '+N곳'.
 //   그림은 목록에서 보일 때 불러온다 (본문과 같은 규칙 — 프로젝트 밖은 막고 인터넷 그림은 설정 external_images).
 // - 누르면 그 문서를 열고 목차와 같은 방법으로 그 자리로 간다 (접힌 절은 펴고 잠깐 테두리).
-// - 여는 곳: 이 탭, 폴더 개요의 '모아 보기' 버튼, 트리의 폴더 우클릭 ('parts' 이벤트 {path, kind}).
-// - 종류·범위·거르기·순서·스크롤은 프로젝트 탭마다 남긴다 (tab.side.parts).
+// - 여는 곳: 이 탭, 폴더 개요의 '모아 보기' 버튼, 트리의 폴더 우클릭, '코드'·'자료' 목록의 폴더 우클릭 ('parts' 이벤트 {path, kind, mode}).
+// - 모을 것·종류·범위·거르기·순서·스크롤은 프로젝트 탭마다 남긴다 (tab.side.parts).
 
 import { S, on, emit } from './store.js';
 import { getText } from './api.js';
 import { navigate } from './nav.js';
-import { switchPanel } from './tree.js';
+import { switchPanel, labelOf, tipOf } from './tree.js';
+import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
+import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, PARTS } from './toc.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, loadImage, imageKey } from './doc.js';
 import {
-  $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot,
+  $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -25,7 +28,8 @@ const KINDS = Object.keys(PARTS);
 const MAX_SHOWN = 800;     // 목록에 그리는 항목 수 (넘으면 거르기로 좁히라고 알린다)
 const PARALLEL = 4;        // 문서를 함께 읽는 수
 
-const DEFAULT = { kind: 'table', scope: '', filter: '', order: 'tree', scroll: 0 };
+// mode: parts(문서 속 요소) | files(파일 종류, D50). kind: 문서 속 요소의 종류, ftype: 파일 형식 ('묶음:형식' — 'others:pdf')
+const DEFAULT = { mode: 'parts', kind: 'table', ftype: null, scope: '', filter: '', order: 'tree', scroll: 0 };
 let state = { ...DEFAULT };
 let scanning = null;       // 지금 읽는 중인 {tab, scope, done, total}
 let thumbs = null;         // 그림 칸이 보일 때 그림을 불러오는 IntersectionObserver
@@ -120,13 +124,39 @@ function thumb(file, item, others) {
     + `<span class="pt-cap">${esc(item.label || item.name)}</span>${more}</div>`;
 }
 
+/** 모을 것 버튼과 거르기 칸의 안내 */
+function renderMode() {
+  for (const b of $$('#lec-parts-mode button')) {
+    const on = b.dataset.mode === state.mode;
+    b.classList.toggle('active', on);
+    b.setAttribute('aria-selected', String(on));
+  }
+  $('#lec-parts-filter').placeholder = state.mode === 'files' ? t('이름·경로로 거르기') : t('이름·절·문서로 거르기');
+}
+
+/** 범위와 순서 (두 모드가 같이 쓴다) */
+function renderBar(tab) {
+  $('#lec-parts-scope').textContent = state.scope ? t('{folder} 폴더', { folder: state.scope }) : t('{name} 전체', { name: tab.name });
+  $('#lec-parts-scope').title = state.scope ? t('{folder} 폴더와 그 하위 폴더', { folder: state.scope }) : t('프로젝트 전체');
+  $('#lec-parts-all').hidden = !state.scope;
+  const order = $('#lec-parts-order');
+  order.textContent = state.order === 'recent' ? t('최근 수정 순') : t('트리 순서');
+  order.title = state.order === 'recent' ? t('누르면 트리 순서로') : (state.mode === 'files' ? t('누르면 최근 수정한 파일부터') : t('누르면 최근 수정한 문서부터'));
+}
+
 function render() {
   const tab = S.tab;
   const list = $('#lec-parts-list');
+  renderMode();
   if (!tab) {
     $('#lec-parts-kinds').innerHTML = '';
     $('#lec-parts-info').textContent = t('열린 프로젝트가 없습니다');
     list.innerHTML = '';
+    return;
+  }
+  renderBar(tab);
+  if (state.mode === 'files') {
+    renderFiles(tab);
     return;
   }
   const groups = collected(tab);
@@ -141,13 +171,6 @@ function render() {
   $('#lec-parts-kinds').innerHTML = KINDS.map((k) => `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === state.kind}"`
     + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].many)}`
     + `<span class="n">${counts[k]}</span></button>`).join('');
-  // 범위
-  $('#lec-parts-scope').textContent = state.scope ? t('{folder} 폴더', { folder: state.scope }) : t('{name} 전체', { name: tab.name });
-  $('#lec-parts-scope').title = state.scope ? t('{folder} 폴더와 그 하위 폴더', { folder: state.scope }) : t('프로젝트 전체');
-  $('#lec-parts-all').hidden = !state.scope;
-  const order = $('#lec-parts-order');
-  order.textContent = state.order === 'recent' ? t('최근 수정 순') : t('트리 순서');
-  order.title = state.order === 'recent' ? t('누르면 트리 순서로') : t('누르면 최근 수정한 문서부터');
   // 목록
   const match = matcher(state.filter);
   const seen = new Map();   // 그림 → 처음 보인 칸의 '다른 문서' 목록 (같은 그림을 한 번만)
@@ -204,6 +227,87 @@ function render() {
   $('#lec-parts-info').textContent = info;
 }
 
+// ---- 파일 종류 (D50) ----------------------------------------------------------
+// 범위 안의 파일을 묶음(문서·코드·자료)마다 형식별로 센다 (icons.js 의 fileType — 엑셀·파워포인트·워드·한글은 한 이름, 나머지는 확장자).
+// 문서는 탭의 트리, 코드·자료는 '코드'·'자료' 목록과 같은 것 (others.js — 제외 폴더 안은 세지 않는다). 그림 파일은 작은 그림 격자.
+// 행은 others.js 의 bindFileRows — 문서·코드는 한 번 누르면 열고, 자료는 두 번 누르거나 Enter.
+
+const GROUPS = [['docs', t('문서')], ['code', t('코드')], ['others', t('자료')]];
+let fileRows = new Map();   // 화면의 파일 행: 경로 → 노드
+
+/** 범위 안의 파일: [{f, group, type, key}] */
+function fileEntries(tab) {
+  const all = [...tab.files.map((f) => [f, 'docs']), ...otherFiles(tab).map((f) => [f, isCode(f.name) ? 'code' : 'others'])];
+  return all.filter(([f]) => inScope(f.path, state.scope)).map(([f, group]) => {
+    const type = fileType(f.name);
+    return { f, group, type, key: `${group}:${type.key}` };
+  });
+}
+
+/** 트리 순서: 폴더마다 하위 폴더 먼저, 그다음 파일 (자연 정렬) */
+function treeOrder(a, b) {
+  const x = a.split('/');
+  const y = b.split('/');
+  for (let i = 0; i < Math.min(x.length, y.length); i++) {
+    if (x[i] === y[i]) continue;
+    const dirX = i < x.length - 1;
+    if (dirX !== i < y.length - 1) return dirX ? -1 : 1;
+    return natCompare(x[i], y[i]);
+  }
+  return x.length - y.length;
+}
+
+function renderFiles(tab) {
+  const list = $('#lec-parts-list');
+  const o = tab.others;
+  const entries = fileEntries(tab);
+  const chips = new Map();   // 'docs:md' → {group, type, n, icon}
+  for (const e of entries) {
+    if (!chips.has(e.key)) chips.set(e.key, { group: e.group, type: e.type, n: 0, icon: fileIcon(e.f.name, e.f.kind) });
+    chips.get(e.key).n += 1;
+  }
+  const reading = !o.data && !o.error ? t('파일 목록을 읽는 중…') : '';
+  if (!chips.has(state.ftype) && !reading) {   // 고른 형식이 이 범위에 없으면: 자료 → 코드 → 문서 순으로, 그 안에서 가장 많은 것
+    const order = ['others', 'code', 'docs'];
+    const [best] = [...chips.entries()].sort(([, a], [, b]) => order.indexOf(a.group) - order.indexOf(b.group) || b.n - a.n);
+    if (best) state.ftype = best[0];
+  }
+  $('#lec-parts-kinds').innerHTML = GROUPS.map(([group, name]) => {
+    const mine = [...chips.entries()].filter(([, c]) => c.group === group)
+      .sort(([, a], [, b]) => b.n - a.n || natCompare(a.type.label, b.type.label));
+    if (!mine.length) return '';
+    return `<div class="ft-group"><span class="ft-label">${esc(name)}</span>${mine.map(([key, c]) => `<button type="button" role="tab" data-ftype="${esc(key)}"`
+      + ` aria-selected="${key === state.ftype}" class="${key === state.ftype ? 'active' : ''}">${c.icon}${esc(c.type.label)}<span class="n">${c.n}</span></button>`).join('')}</div>`;
+  }).join('');
+  // 목록: 고른 형식의 파일 (거르기는 이름·경로, 문서는 제목도)
+  const match = matcher(state.filter);
+  let files = entries.filter((e) => e.key === state.ftype && match(e.f.name, e.f.path, e.f.title || '')).map((e) => e.f);
+  files.sort(state.order === 'recent' ? (a, b) => b.mtime - a.mtime : (a, b) => treeOrder(a.path, b.path));
+  const matched = files.length;
+  files = files.slice(0, MAX_SHOWN);
+  fileRows = new Map(files.map((f) => [f.path, f]));
+  const current = S.view?.type === 'doc' || S.view?.type === 'code' ? S.view.path : null;
+  const [group, typeKey] = (state.ftype || '').split(':');
+  const html = group === 'others' && PICTURE_EXT.has(typeKey)
+    ? `<div class="pt-grid">${files.map((f) => `<div class="ft-thumb" tabindex="0" data-file="${esc(f.path)}" title="${esc(fileTip(f))}">`
+      + `<div class="pt-pic" data-file-src="${esc(f.path)}"></div><span class="pt-cap">${esc(f.name)}</span></div>`).join('')}</div>`
+    : files.map((f) => `<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${esc(f.path)}"`
+      + ` title="${esc(f.kind ? tipOf(f) : fileTip(f))}">${fileIcon(f.name, f.kind)}<span class="label">${esc(f.kind ? labelOf(f) : f.name)}</span>`
+      + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`).join('');
+  keepFocus(list, () => { list.innerHTML = html; });
+  watchThumbs(tab);
+  const total = chips.get(state.ftype)?.n || 0;
+  let info;
+  if (reading) info = reading;
+  else if (o.error && !o.data) info = o.error;
+  else if (!chips.size) info = t('이 범위에는 파일이 없습니다');
+  else {
+    info = state.filter ? t('거른 결과 {shown}개 (모두 {total}개)', { shown: matched, total }) : t('파일 {n}개', { n: total });
+    if (matched > MAX_SHOWN) info += ` — ${t('처음 {n}개만, 거르기로 좁히세요', { n: MAX_SHOWN })}`;
+  }
+  $('#lec-parts-info').textContent = info;
+}
+
 /** 받침이 있으면 a, 없으면 b (표가 / 그림이) */
 function josa(word, a, b) {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
@@ -218,6 +322,15 @@ function watchThumbs(tab) {
       if (!e.isIntersecting) continue;
       thumbs.unobserve(e.target);
       const pic = e.target;
+      if (pic.dataset.fileSrc) {   // 파일 종류의 그림 파일 (D50) — 그 파일 그대로
+        if (tab !== S.tab) continue;
+        const img = document.createElement('img');
+        img.alt = '';
+        img.addEventListener('error', () => { pic.innerHTML = `<span class="image-off">${esc(t('그림을 그리지 못했습니다'))}</span>`; }, { once: true });
+        img.src = docUrl(tab, pic.dataset.fileSrc);
+        pic.append(img);
+        continue;
+      }
       const docPath = pic.closest('.pt-thumb')?.dataset.doc;
       if (!pic.dataset.src || !docPath || tab !== S.tab) continue;
       const img = document.createElement('img');
@@ -238,6 +351,13 @@ async function refresh() {
     render();
     return;
   }
+  if (state.mode === 'files') {
+    const others = loadOthers(tab);   // 받아 둔 목록이 그대로면 바로 끝난다
+    render();
+    await others;
+    if (tab === S.tab && panelShown()) render();
+    return;
+  }
   const job = scan(tab, state.scope);   // 읽을 것이 있으면 여기서 바로 '읽는 중'이 된다 (첫 await 전까지는 이어서 돈다)
   render();
   await job;
@@ -256,8 +376,10 @@ async function openItem(el) {
   if (row) goToPart(row.el);
 }
 
-/** 모아 보기를 연다 (폴더 개요의 버튼·트리 우클릭). path: 범위 폴더 ('' = 프로젝트 전체), kind: 종류 (없으면 그대로) */
-export function openParts({ path = '', kind = null } = {}) {
+/** 모아 보기를 연다 (폴더 개요의 버튼·트리 우클릭·'코드'·'자료' 목록의 폴더 우클릭). path: 범위 폴더 ('' = 프로젝트 전체),
+ * kind: 문서 속 요소의 종류 (없으면 그대로), mode: 'files' 면 파일 종류 (아니면 문서 속 요소) */
+export function openParts({ path = '', kind = null, mode = 'parts' } = {}) {
+  state.mode = mode === 'files' ? 'files' : 'parts';
   state.scope = path;
   if (kind && PARTS[kind]) state.kind = kind;
   state.autoKind = !kind;
@@ -280,7 +402,21 @@ function onTab({ tab, prev }) {
 }
 
 export function initParts() {
+  $('#lec-parts-mode').addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-mode]');
+    if (!b || b.dataset.mode === state.mode) return;
+    state.mode = b.dataset.mode;
+    $('#lec-parts-list').scrollTop = 0;
+    refresh();
+  });
   $('#lec-parts-kinds').addEventListener('click', (e) => {
+    const f = e.target.closest('button[data-ftype]');
+    if (f && f.dataset.ftype !== state.ftype) {   // 파일 형식
+      state.ftype = f.dataset.ftype;
+      $('#lec-parts-list').scrollTop = 0;
+      render();
+      return;
+    }
     const b = e.target.closest('button[data-kind]');
     if (!b || b.dataset.kind === state.kind) return;
     state.kind = b.dataset.kind;
@@ -303,7 +439,8 @@ export function initParts() {
     if (e.key === 'Enter') {
       state.filter = filter.value.trim();
       render();   // 거르기가 아직 반영되기 전이어도 지금 글자로 거른 첫 항목을 연다
-      $('#lec-parts-list .pt-item, #lec-parts-list .pt-thumb')?.click();
+      if (state.mode === 'files') $('#lec-parts-list [data-file]')?.focus();   // 파일은 초점만 (Enter 로 연다 — 자료는 다른 앱이 뜬다)
+      else $('#lec-parts-list .pt-item, #lec-parts-list .pt-thumb')?.click();
     }
     else if (e.key === 'Escape' && filter.value) {
       e.stopPropagation();
@@ -312,6 +449,7 @@ export function initParts() {
     }
   });
   const list = $('#lec-parts-list');
+  bindFileRows(list, (path) => fileRows.get(path));   // 파일 종류의 행 (D50)
   list.addEventListener('click', (e) => {
     const el = e.target.closest('.pt-item, .pt-thumb, .pt-doc');
     if (el) openItem(el);
@@ -323,4 +461,6 @@ export function initParts() {
   on('parts', openParts);
   on('tab', onTab);
   on('tree', () => { if (panelShown()) refresh(); });   // 문서가 바뀌면 (트리를 새로 받으면) 바뀐 문서만 다시 읽는다
+  on('others', (tab) => { if (tab === S.tab && panelShown() && state.mode === 'files') refresh(); });   // 파일이 생기거나 지워짐
+  on('titles', () => { if (panelShown() && state.mode === 'files') render(); });
 }

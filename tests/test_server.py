@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 from urllib.parse import quote
 
@@ -10,7 +11,7 @@ from conftest import write
 import app as lectern_app
 from lectern import osutil, state as state_module, terminal
 from lectern.config import Config
-from lectern.scanner import iter_files
+from lectern.scanner import is_code, iter_files
 from lectern.server import create_app
 from lectern.state import AppState
 
@@ -443,6 +444,34 @@ def test_others_scan_is_reused_until_files_come_or_go(state, project, pid):
     write(project / 'new.txt', 'x')
     proj.log.push(None, others=True)
     assert proj.scan_others() is not first and 'new.txt' in {n['path'] for n in iter_files(proj.scan_others()[0])}
+
+
+def test_recent_others_sees_edits_without_rescanning(client, state, project, pid):
+    # 최근 변경의 코드·자료 (D50): 목록은 마지막 스캔을 쓰고, 그 뒤로 내용이 바뀐 파일(touch)만 수정 시각을 새로 읽는다
+    state.close()   # 감시를 멈춰 기록(seq)을 이 테스트가 정한다
+    proj = state.get(pid)
+    write(project / 'src' / 'app.py', 'x')
+    write(project / 'data' / 'old.csv', 'a')
+    os.utime(project / 'src' / 'app.py', (1_000_000, 1_000_000))
+    os.utime(project / 'data' / 'old.csv', (2_000_000, 2_000_000))
+    proj.scan_others(fresh=True)
+    first = proj.scan_others()
+    r = client.get(f'/api/others/recent?p={pid}&code=1&others=1').get_json()
+    names = [f['name'] for f in r['files']]
+    assert r['limit'] == 50 and names.index('old.csv') < names.index('app.py')
+    write(project / 'src' / 'app.py', 'y = 2')                # 고침 — 감시가 남기는 touch
+    os.utime(project / 'src' / 'app.py', (3_000_000, 3_000_000))
+    proj.log.touch('src/app.py')
+    r = client.get(f'/api/others/recent?p={pid}&code=1&others=0').get_json()
+    assert r['files'][0]['path'] == 'src/app.py' and r['files'][0]['mtime'] == 3_000_000 and r['files'][0]['size'] == 5
+    assert all(is_code(f['name']) for f in r['files']) and proj.scan_others() is first   # 목록은 다시 훑지 않았다
+    tree = proj.scan()
+    proj.log.touch('src/app.py')
+    assert proj.scan() is tree                                # 문서 트리도 다시 훑지 않는다
+    r = client.get(f'/api/others/recent?p={pid}&code=0&others=1').get_json()
+    assert r['files'] and not any(is_code(f['name']) for f in r['files'])
+    assert client.get(f'/api/others/recent?p={pid}').get_json()['files'] == []
+    assert client.get('/api/others/recent?code=1').status_code == 404
 
 
 def test_open_external_can_prefer_editor(client, monkeypatch, pid, project):

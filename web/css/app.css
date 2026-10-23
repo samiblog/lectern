@@ -374,14 +374,31 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .kind { flex: none; padding: 0 4px; border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-faint); font-size: 10px; font-weight: 700; line-height: 15px; }
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
 
-/* 전체 검색 (search.js) */
-#lec-search { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.search-kinds { display: flex; gap: 4px; padding: 0 10px 6px; }
-.search-kinds .toggle { width: auto; padding: 0 10px; }
+/* 최근 변경 (recent.js)·전체 검색 (search.js): 위에 '문서'·'코드'·'자료' 버튼 (D50) */
+#lec-recent-panel, #lec-search { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.scope-btns { display: flex; gap: 4px; padding: 0 10px 6px; }
+.scope-btns .toggle { width: auto; padding: 0 10px; }
+.sr-name { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px; cursor: pointer; }
+.sr-name:hover, .sr-name:focus { background: var(--ui-hover); outline: none; }
+.sr-name .label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-name .sub { flex: none; max-width: 45%; color: var(--ui-faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sr-group.names { margin-top: 2px; padding-top: 0; border-top: 0; }   /* 이름이 맞는 파일 — 맨 위 */
+.sr-group .n { margin-left: 6px; color: var(--ui-faint); font-weight: 400; }
 .sr-group { margin: 12px 8px 2px; padding-top: 8px; border-top: 1px solid var(--ui-border); color: var(--ui-muted); font-size: 12px; font-weight: 700; }
 .sr-doc .ficon { width: 15px; height: 15px; flex: none; align-self: center; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; color: var(--ui-faint); }
-/* 모아 보기 (parts.js): 종류 버튼, 범위, 거르기, 문서별 목록 — 그림은 작은 그림 격자 */
+/* 모아 보기 (parts.js): 문서 속 요소 / 파일 종류, 종류 버튼, 범위, 거르기, 문서별 목록 — 그림은 작은 그림 격자 */
 #lec-parts { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.parts-mode { display: flex; margin: 0 10px 8px; border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden; }
+.parts-mode button { flex: 1; height: 26px; padding: 0 6px; border: 0; background: none; color: var(--ui-muted); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.parts-mode button + button { border-left: 1px solid var(--ui-border); }
+.parts-mode button:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.parts-mode button.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }
+/* 파일 종류 (D50): 묶음(문서·코드·자료)마다 한 줄 — 이름표 뒤에 형식 버튼 */
+.ft-group { flex-basis: 100%; display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
+.ft-label { flex: none; min-width: 30px; margin-right: 2px; color: var(--ui-faint); font-size: 11.5px; font-weight: 600; }
+.parts-kinds .ficon { width: 14px; height: 14px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; }
+.parts-kinds .ficon.doc { color: var(--ui-accent); }
+.ft-row { padding-left: 14px; }
 .parts-kinds { display: flex; flex-wrap: wrap; gap: 4px; padding: 2px 10px 8px; }
 .parts-kinds button {
   display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px 2px 6px; border: 1px solid var(--ui-border); border-radius: 999px;
@@ -404,7 +421,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .pt-doc:hover .label, .pt-doc:focus .label { color: var(--ui-accent); }
 .pt-doc:focus { outline: none; }
 .pt-item { display: flex; align-items: flex-start; gap: 6px; padding: 4px 8px 4px 14px; border-radius: 6px; cursor: pointer; }
-.pt-item:hover, .pt-item:focus, .pt-thumb:hover, .pt-thumb:focus { background: var(--ui-hover); outline: none; }
+.pt-item:hover, .pt-item:focus, .pt-thumb:hover, .pt-thumb:focus, .ft-thumb:hover, .ft-thumb:focus { background: var(--ui-hover); outline: none; }
 .pt-item .tp-icon {
   width: 14px; height: 14px; flex: none; margin-top: 2px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round;
   color: var(--ui-accent);
@@ -415,7 +432,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .pt-sec { flex-basis: 100%; min-width: 0; color: var(--ui-faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pt-sec::before { content: "§ "; }
 .pt-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr)); gap: 6px; padding: 2px 8px 6px 14px; }
-.pt-thumb { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 4px; border-radius: 6px; cursor: pointer; }
+.pt-thumb, .ft-thumb { position: relative; display: flex; flex-direction: column; gap: 3px; min-width: 0; padding: 4px; border-radius: 6px; cursor: pointer; }
 .pt-pic {
   aspect-ratio: 1; display: flex; align-items: center; justify-content: center; overflow: hidden;
   border: 1px solid var(--ui-border); border-radius: 5px; background: var(--md-bg, #fff);

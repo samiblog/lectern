@@ -1,11 +1,12 @@
-// 왼쪽 사이드바: 파일 트리, 필터, 최근 변경 목록, 우클릭 메뉴. 선택된 프로젝트 탭의 것을 보인다.
+// 왼쪽 사이드바: 사이드바 탭 바꾸기, 파일 트리, 필터, 우클릭 메뉴. 선택된 프로젝트 탭의 것을 보인다.
 // 사이드바 탭(파일·최근 변경·검색·모아 보기)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
+// 최근 변경 목록은 recent.js (D50).
 
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
+import { $, $$, esc, dirname, copyText, toast, keepFocus } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -90,19 +91,6 @@ function renderTree() {
   box.scrollTop = scroll;
 }
 
-function renderRecent() {
-  const box = $('#lec-recent');
-  const files = [...S.files].sort((a, b) => b.mtime - a.mtime).slice(0, 40);
-  box.innerHTML = files.length ? files.map((f) => {
-    const cls = ['row', 'recent'];
-    if (f.path === activeDoc()) cls.push('active');
-    return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" title="${esc(tipOf(f))}" tabindex="0">`
-      + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${fileIcon(f.name, f.kind)}${esc(labelOf(f))}</span>`
-      + `${S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
-      + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
-  }).join('') : `<p class="side-empty">${t('문서가 없습니다')}</p>`;
-}
-
 function renderCount() {
   const el = $('#lec-changed-count');
   el.textContent = S.changed.size;
@@ -110,10 +98,7 @@ function renderCount() {
 }
 
 function render() {
-  keepFocus($('#lec-sidebar'), () => {
-    renderTree();
-    renderRecent();
-  });
+  keepFocus($('#lec-tree'), renderTree);
   renderCount();
   $('#lec-btn-titles').classList.toggle('on', showTitles());
 }
@@ -130,7 +115,7 @@ function revealCurrent() {
   for (let i = 1; i <= upto; i++) S.open.add(parts.slice(0, i).join('/'));
   render();
   const sel = S.view.type === 'doc' ? `[data-doc="${CSS.escape(S.view.path)}"]` : `[data-dir="${CSS.escape(S.view.path)}"]`;
-  $(`#lec-${panel === 'files' ? 'tree' : 'recent'} ${sel}`)?.scrollIntoView({ block: 'nearest' });
+  if (panel === 'files') $(`#lec-tree ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
 /** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | parts(모아 보기). focus: 검색이면 입력칸에 초점 */
@@ -138,7 +123,7 @@ export function switchPanel(next, { focus = true } = {}) {
   panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
   $('#lec-files').hidden = next !== 'files';   // 문서 트리 + 문서 외 파일 (others.js)
-  $('#lec-recent').hidden = next !== 'recent';
+  $('#lec-recent-panel').hidden = next !== 'recent';   // 최근 변경 (recent.js)
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
   $('#lec-parts').hidden = next !== 'parts';     // 모아 보기 (parts.js)
@@ -149,16 +134,13 @@ export function switchPanel(next, { focus = true } = {}) {
 /** 프로젝트 탭을 바꾸면: 앞 탭의 사이드바 상태를 그 탭에 남기고, 새 탭의 것을 되살린다 */
 function onTab({ tab, prev }) {
   if (prev && S.tabs.includes(prev)) {
-    Object.assign(prev.side, {
-      panel, filter: $('#lec-filter').value, treeScroll: $('#lec-tree').scrollTop, recentScroll: $('#lec-recent').scrollTop,
-    });
+    Object.assign(prev.side, { panel, filter: $('#lec-filter').value, treeScroll: $('#lec-tree').scrollTop });
   }
-  const side = tab?.side || { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0 };
+  const side = tab?.side || { panel: 'files', filter: '', treeScroll: 0 };
   $('#lec-filter').value = side.filter;
   switchPanel(side.panel, { focus: false });
   render();
   $('#lec-tree').scrollTop = side.treeScroll;
-  $('#lec-recent').scrollTop = side.recentScroll;
 }
 
 function onRowClick(e) {
@@ -218,13 +200,12 @@ export function focusFilter() {
 }
 
 export function initTree() {
-  for (const id of ['#lec-tree', '#lec-recent']) {
-    $(id).addEventListener('click', onRowClick);
-    $(id).addEventListener('contextmenu', onContextMenu);
-    $(id).addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && e.target.classList.contains('row')) e.target.click();
-    });
-  }
+  const tree = $('#lec-tree');
+  tree.addEventListener('click', onRowClick);
+  tree.addEventListener('contextmenu', onContextMenu);
+  tree.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && e.target.classList.contains('row')) e.target.click();
+  });
   const filter = $('#lec-filter');
   filter.addEventListener('input', renderTree);
   filter.addEventListener('keydown', (e) => {
@@ -239,6 +220,7 @@ export function initTree() {
   $('#lec-btn-titles').addEventListener('click', async () => {
     await saveConfig({ show_titles: !showTitles() });
     render();
+    emit('titles');   // 최근 변경·검색·폴더 보기의 문서 행도
   });
   for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
@@ -246,5 +228,4 @@ export function initTree() {
   on('changed', render);
   on('tab', onTab);
   on('view', revealCurrent);
-  setInterval(renderRecent, 60_000);   // '5분 전' 같은 표시 갱신
 }

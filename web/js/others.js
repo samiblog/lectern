@@ -16,6 +16,8 @@
 // - 코드(목록의 코드, 폴더 보기의 코드 파일)는 한 번 누르거나 Enter 면 본문에 읽기 전용으로 (codeview.js, D43), 두 번 누르면 편집기로.
 //   보고 있는 코드는 목록에서 상위 폴더를 펴고 강조한다.
 // - 사이드바 거르기(#lec-filter)는 이 목록들에도 적용된다: 거른 파일(폴더 보기는 문서도)을 평평하게 보인다.
+// - 다른 사이드바 탭(최근 변경·검색의 이름·모아 보기의 파일 종류, D50)에 나온 파일 행도 여기 규칙을 따른다 (bindFileRows):
+//   문서·코드는 한 번 누르면 열고, 자료는 두 번 누르거나 Enter, 우클릭은 이 목록과 같은 메뉴.
 // - 제외 폴더(dist·build·node_modules 등, D49)는 '자료'(폴더 보기는 합친 트리)에 흐린 접힌 폴더로 나온다. 서버가 안을 훑지 않으므로
 //   펼칠 때 한 단계씩 받아(GET /api/others/dir) 붙이고(tab.others.lazy), 접으면 버린다 — 다시 펼치면 새로 읽는다.
 //   안의 파일은 종류를 나누지 않고 모두 '자료'에 두고, 개수·거르기에는 넣지 않는다.
@@ -25,7 +27,7 @@ import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { fullPath, labelOf, tipOf, pathMenuItems, hasChangedInside } from './tree.js';
 import { fileIcon, folderIcon, isCode } from './icons.js';
 import { showMenu } from './ui.js';
-import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus } from './util.js';
+import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -49,7 +51,7 @@ const keyOf = (el) => el?.closest?.('[data-list]')?.dataset.list || 'files';
 const state = () => S.tab?.others || null;
 const folderView = () => S.config.files_view === 'folder';
 const isOpen = (key) => S.config[key] !== false;
-const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
+export const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
 
 /** 목록 k 가 보이는지: 탭이 있고, 사이드바 '파일' 탭이고, (폴더 보기의 파일 목록이거나) 그 묶음이 펼쳐 있음 */
 function shown(k) {
@@ -111,14 +113,7 @@ function build(o) {
   o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code) };
 }
 
-// 서버(scanner.natural_key)와 같은 자연 정렬: 숫자 부분은 수로, 나머지는 소문자로 ('2장' < '10장')
-const natKey = (s) => s.split(/(\d+)/).map((w, i) => (i % 2 ? Number(w) : w.toLowerCase()));
-function byName(a, b) {
-  const x = natKey(a.name);
-  const y = natKey(b.name);
-  for (let i = 0; i < Math.min(x.length, y.length); i++) if (x[i] !== y[i]) return x[i] < y[i] ? -1 : 1;
-  return x.length - y.length;
-}
+const byName = (a, b) => natCompare(a.name, b.name);
 
 /** 폴더 보기: 문서 트리와 문서 외 파일 트리를 폴더마다 합친다. 문서 노드에는 doc: true. 폴더 먼저, 자연 정렬 */
 function merge(docs = [], others = []) {
@@ -354,7 +349,10 @@ function ensure() {
   if (o && (shown('files') || shown('code')) && (o.stale || !o.data) && !o.loading) load(S.tab);
 }
 
-/** 탭의 파일·코드 목록을 (보이지 않아도) 받아 둔다 — 빠른 열기(palette.js)가 코드를 찾을 때 */
+/** 받아 둔 문서 외 파일 노드 (제외 폴더 안은 빼고) — 검색의 이름·모아 보기의 파일 종류 (loadOthers 뒤에) */
+export const otherFiles = (tab) => [...filesIn(tab?.others.data?.tree || [])];
+
+/** 탭의 파일·코드 목록을 (보이지 않아도) 받아 둔다 — 빠른 열기(palette.js)·검색·모아 보기가 쓸 때 */
 export function loadOthers(tab) {
   const o = tab?.others;
   if (!o) return Promise.resolve(null);
@@ -428,31 +426,77 @@ async function copy(text) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'));
 }
 
-function menuItems(k, n) {
-  if (n.doc) return [{ header: n.path }, ...pathMenuItems(n.path, true)];   // 문서 트리와 같은 메뉴
-  const items = [];
-  if (n.type === 'dir') {
-    const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
-    items.push({ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
-      { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) });
-    if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
-    items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });
-  } else {
-    items.push({ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` });
-    if (isCodeFile(n)) {
-      items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
-        { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) });
-    } else {
-      items.push({ label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기·Enter')}`, action: () => openExternal(n.path) });
-    }
-    // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
-    if (n.open === 'default') items.push({ label: t('편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
-    items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
-  }
-  items.push('-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`) },
-    { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)) });
+/** 경로 복사 항목 (메뉴 끝) */
+function copyItems(n) {
+  const items = ['-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`) },
+    { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)) }];
   if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name) });
   return items;
+}
+
+/** 코드·자료 파일의 우클릭 메뉴 — 이 목록과 다른 탭의 파일 행(bindFileRows)이 함께 쓴다 */
+export function fileMenuItems(n) {
+  const items = [{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }];
+  if (isCodeFile(n)) {
+    items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
+      { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) });
+  } else {
+    items.push({ label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기·Enter')}`, action: () => openExternal(n.path) });
+  }
+  // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
+  if (n.open === 'default') items.push({ label: t('편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
+  items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
+  return [...items, ...copyItems(n)];
+}
+
+function menuItems(k, n) {
+  if (n.doc) return [{ header: n.path }, ...pathMenuItems(n.path, true)];   // 문서 트리와 같은 메뉴
+  if (n.type !== 'dir') return fileMenuItems(n);
+  const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
+  const items = [{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
+    { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) }];
+  if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
+  items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });
+  if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
+    items.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path: n.path, mode: 'files' }) });
+  }
+  return [...items, ...copyItems(n)];
+}
+
+/**
+ * 다른 사이드바 탭의 파일 행 (D50 — 최근 변경, 검색의 이름, 모아 보기의 파일 종류): data-file 이 있는 행을 이 목록처럼 다룬다.
+ * 문서는 한 번 누르면 뷰어, 코드는 한 번 누르면 읽기 화면·두 번 누르면 편집기, 자료는 두 번 누르거나 Enter 로 연다 (실행하지 않음).
+ * fileOf(path): 그 행의 파일 노드 (문서는 트리의 노드 — kind 가 있다)
+ */
+export function bindFileRows(box, fileOf) {
+  const nodeOf = (e) => {
+    const row = e.target.closest('[data-file]');
+    return row && box.contains(row) ? fileOf(row.dataset.file) : null;
+  };
+  box.addEventListener('click', (e) => {
+    const n = nodeOf(e);
+    if (n?.kind) emit('open', { type: 'doc', path: n.path });
+    else if (isCodeFile(n)) emit('open', { type: 'code', path: n.path });
+  });
+  box.addEventListener('dblclick', (e) => {
+    const n = nodeOf(e);
+    if (n && !n.kind) openExternal(n.path);
+  });
+  box.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const n = nodeOf(e);
+    if (!n) return;
+    e.preventDefault();
+    if (n.kind) emit('open', { type: 'doc', path: n.path });
+    else if (isCodeFile(n)) emit('open', { type: 'code', path: n.path });
+    else openExternal(n.path);
+  });
+  box.addEventListener('contextmenu', (e) => {
+    const n = nodeOf(e);
+    if (!n) return;
+    e.preventDefault();
+    showMenu(e.clientX, e.clientY, n.kind ? [{ header: n.path }, ...pathMenuItems(n.path, true)] : fileMenuItems(n));
+  });
 }
 
 function openMenu(k, path, x, y) {
@@ -629,5 +673,6 @@ export function initOthers() {
   // 문서 개수, 그리고 폴더 보기는 문서 트리도 그린다: 트리·바뀜 점·지금 보는 문서가 바뀌면 다시
   on('tree', () => { if (folderView()) render(); else renderHead(); });
   on('changed', () => { if (folderView()) render(); });
+  on('titles', () => { if (folderView()) render(); });
   on('view', revealCurrent);
 }

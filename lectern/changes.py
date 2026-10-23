@@ -27,14 +27,17 @@ except ImportError:  # pragma: no cover - 폴링 대체 경로
 _IGNORED_EVENTS = {'opened', 'closed', 'closed_no_write'}
 
 
-def _other_paths(nodes: list[dict[str, Any]]) -> set[str]:
-    """scan_others 트리의 파일과 제외 폴더(안은 읽지 않은 접힌 노드, D49) 경로"""
-    out: set[str] = set()
+MAX_TOUCHED = 5000   # 내용이 바뀐 문서 외 파일을 기억하는 수 (최근 변경 — 넘으면 오래된 것부터 잊는다)
+
+
+def _other_paths(nodes: list[dict[str, Any]]) -> dict[str, float]:
+    """scan_others 트리의 파일과 제외 폴더(안은 읽지 않은 접힌 노드, D49) 경로 → 수정 시각 (폴더는 0)"""
+    out: dict[str, float] = {}
     for n in nodes:
         if n['type'] == 'file' or n.get('excluded'):
-            out.add(n['path'])
+            out[n['path']] = n.get('mtime', 0)
         if n.get('children'):
-            out |= _other_paths(n['children'])
+            out.update(_other_paths(n['children']))
     return out
 
 
@@ -45,7 +48,10 @@ class ChangeLog:
         self._lock = threading.Lock()
         self._seq = 0
         self._others_seq = 0   # 문서 외 파일 목록이 마지막으로 바뀌었을 수 있는 순번 (구조 변경 포함)
-        self._items: deque[tuple[int, str | None, bool, bool]] = deque(maxlen=maxlen)
+        self._tree_seq = 0     # touch 가 아닌 마지막 순번 — 문서 트리 스캔을 다시 쓸지 (문서 외 파일의 내용 수정으로는 다시 훑지 않게)
+        self._items: deque[tuple[int, str | None, bool, bool, bool]] = deque(maxlen=maxlen)
+        # 내용이 바뀐 문서 외 파일 → 그 순번 (최근 변경, D50). 목록(others_seq)은 그대로 두고 수정 시각만 새로 보게
+        self._touched: dict[str, int] = {}
 
     @property
     def seq(self) -> int:
@@ -57,32 +63,55 @@ class ChangeLog:
         with self._lock:
             return self._others_seq
 
+    @property
+    def tree_seq(self) -> int:
+        with self._lock:
+            return self._tree_seq
+
     def push(self, path: str | None, structure: bool = False, others: bool = False) -> None:
         """path: 바뀐 문서 상대경로 (폴더·문서 외 파일이면 None). structure: 문서 트리 구성이 바뀜.
         others: 문서 외 파일이 생기거나 지워지거나 옮겨짐 (문서 트리는 그대로)."""
         with self._lock:
             self._seq += 1
+            self._tree_seq = self._seq
             if structure or others:
                 self._others_seq = self._seq
-            self._items.append((self._seq, path, structure, others))
+            self._items.append((self._seq, path, structure, others, False))
+
+    def touch(self, path: str) -> None:
+        """문서 외 파일(path)의 내용이 바뀜 — 목록은 그대로이고 최근 변경만 다시 볼 일 (D50)"""
+        with self._lock:
+            self._seq += 1
+            self._items.append((self._seq, None, False, False, True))
+            self._touched.pop(path, None)
+            self._touched[path] = self._seq
+            if len(self._touched) > MAX_TOUCHED:
+                del self._touched[next(iter(self._touched))]
+
+    def touched_since(self, seq: int) -> list[str]:
+        """seq 뒤로 내용이 바뀐 문서 외 파일"""
+        with self._lock:
+            return [p for p, s in self._touched.items() if s > seq]
 
     def since(self, seq: int) -> dict[str, Any]:
         with self._lock:
             cur = self._seq
             if seq >= cur:
-                return {'seq': cur, 'paths': [], 'structure': False, 'others': False, 'reset': seq > cur}
+                return {'seq': cur, 'paths': [], 'structure': False, 'others': False, 'touched': False, 'reset': seq > cur}
             oldest = self._items[0][0] if self._items else cur + 1
             reset = seq < oldest - 1  # 기록이 밀려나 놓친 이벤트가 있음
             paths: set[str] = set()
-            structure = others = False
-            for s, path, struct, other in self._items:
+            structure = others = touched = False
+            for s, path, struct, other, touch in self._items:
                 if s <= seq:
                     continue
                 if path:
                     paths.add(path)
                 structure = structure or struct
                 others = others or other
-        return {'seq': cur, 'paths': sorted(paths), 'structure': structure or reset, 'others': others or reset, 'reset': reset}
+                touched = touched or touch
+        return {'seq': cur, 'paths': sorted(paths), 'structure': structure or reset, 'others': others or reset,
+                'touched': touched or reset, 'reset': reset}
 
 
 class _Handler(FileSystemEventHandler):
@@ -171,11 +200,13 @@ class Watcher:
             elif doc_kind(rel):
                 self.log.push(rel, event_type != 'modified')
             elif event_type != 'modified':
-                self.log.push(None, others=True)   # 문서 외 파일이 생기거나 지워짐 (내용 수정은 보지 않는다)
+                self.log.push(None, others=True)   # 문서 외 파일이 생기거나 지워짐
+            else:
+                self.log.touch(rel)   # 문서 외 파일의 내용 수정 — 목록은 다시 읽지 않고 최근 변경만 (D50)
 
     # --- 폴링 대체 --------------------------------------------------------
-    def _snapshot(self) -> tuple[dict[str, tuple[float, int]], set[str]]:
-        """(문서 → (수정 시각, 크기), 문서 외 파일과 제외 폴더의 경로 집합)"""
+    def _snapshot(self) -> tuple[dict[str, tuple[float, int]], dict[str, float]]:
+        """(문서 → (수정 시각, 크기), 문서 외 파일과 제외 폴더 → 수정 시각)"""
         nodes = scan(self.root, self.exclude, with_info=False)
         others, _, _ = scan_others(self.root, self.exclude)
         return {n['path']: (n['mtime'], n['size']) for n in iter_files(nodes)}, _other_paths(others)
@@ -188,6 +219,8 @@ class Watcher:
                 self.log.push(path, True)
             for path in sorted(k for k in cur.keys() & prev.keys() if cur[k] != prev[k]):
                 self.log.push(path, False)
-            if cur_others != prev_others:
+            if cur_others.keys() != prev_others.keys():
                 self.log.push(None, others=True)
+            for path in sorted(k for k in cur_others.keys() & prev_others.keys() if cur_others[k] != prev_others[k]):
+                self.log.touch(path)
             prev, prev_others = cur, cur_others

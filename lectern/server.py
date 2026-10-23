@@ -26,6 +26,8 @@ from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, doc_kind, in_excluded, is
 from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
 
+RECENT_FILES = 50   # 최근 변경에 싣는 코드·자료 파일 수 (/api/others/recent)
+
 RECENT_IN_OVERVIEW = 6
 ALLOWED_HOSTS = frozenset({'127.0.0.1', 'localhost'})
 
@@ -193,6 +195,14 @@ def create_app(state: AppState) -> Flask:
         project = arg_project()
         nodes, count, truncated = project.scan_others(fresh=request.args.get('fresh') == '1')
         return jsonify(tree=nodes, count=count, truncated=truncated, limit=MAX_OTHER_FILES)
+
+    @app.get('/api/others/recent')
+    def api_others_recent() -> Any:
+        """?code=1&others=1 — 최근에 고친 코드·자료 파일 (사이드바 '최근 변경', D50). 최근 것부터 RECENT_FILES 개.
+        문서는 화면이 트리의 수정 시각으로 섞는다."""
+        project = arg_project()
+        files = project.recent_others(request.args.get('code') == '1', request.args.get('others') == '1', RECENT_FILES)
+        return jsonify(files=files, limit=RECENT_FILES)
 
     @app.get('/api/others/dir')
     def api_others_dir() -> Any:

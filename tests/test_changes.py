@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import time
 
 from lectern.changes import ChangeLog, Watcher
@@ -8,7 +9,7 @@ from lectern.scanner import DEFAULT_EXCLUDE_DIRS
 
 def test_changelog_since():
     log = ChangeLog()
-    assert log.since(0) == {'seq': 0, 'paths': [], 'structure': False, 'others': False, 'reset': False}
+    assert log.since(0) == {'seq': 0, 'paths': [], 'structure': False, 'others': False, 'touched': False, 'reset': False}
     log.push('a.md')
     log.push('b.md', structure=True)
     log.push('a.md')
@@ -17,6 +18,19 @@ def test_changelog_since():
     r = log.since(2)
     assert r['paths'] == ['a.md'] and r['structure'] is False
     assert log.since(3)['paths'] == []
+
+
+def test_changelog_touch_keeps_other_files_list():
+    # 문서 외 파일의 내용 수정 (D50): 순번은 늘지만 목록(others_seq)은 그대로 — 최근 변경만 다시 본다
+    log = ChangeLog()
+    log.push(None, others=True)
+    log.touch('src/app.py')
+    log.touch('data/a.csv')
+    log.touch('src/app.py')                                   # 다시 바뀌면 그 순번으로
+    r = log.since(1)
+    assert r == {'seq': 4, 'paths': [], 'structure': False, 'others': False, 'touched': True, 'reset': False}
+    assert log.others_seq == 1 and log.since(4)['touched'] is False
+    assert log.touched_since(0) == ['data/a.csv', 'src/app.py'] and log.touched_since(3) == ['src/app.py']
 
 
 def test_changelog_reset_when_history_dropped():
@@ -41,23 +55,23 @@ def test_watcher_handle_filters(tmp_path):
     w.handle('created', str(tmp_path / 'newdir'), '', True)
     r = log.since(0)
     assert r['paths'] == ['a.md', 'docs/b.md', 'final.md']
-    assert r['structure'] is True and r['others'] is True
-    assert r['seq'] == 5
+    assert r['structure'] is True and r['others'] is True and r['touched'] is True   # c.txt 의 내용 수정 (D50)
+    assert r['seq'] == 6 and log.touched_since(0) == ['c.txt']
 
 
 def test_other_files_are_logged_apart_from_documents(tmp_path):
     log = ChangeLog()
     w = Watcher(tmp_path, log, DEFAULT_EXCLUDE_DIRS)
-    w.handle('modified', str(tmp_path / 'data.csv'), '', False)              # 문서 외 파일의 내용 수정은 보지 않는다
-    assert log.seq == 0
+    w.handle('modified', str(tmp_path / 'data.csv'), '', False)              # 문서 외 파일의 내용 수정: 목록은 그대로 (D50)
+    assert log.since(0)['touched'] is True and log.since(0)['others'] is False and log.others_seq == 0
     w.handle('created', str(tmp_path / 'data.csv'), '', False)
-    r = log.since(0)
+    r = log.since(1)
     # 문서 외 파일만 바뀌면 문서 트리는 그대로 (structure 아님) — 화면은 문서 외 파일 목록만 다시 읽는다
-    assert r == {'seq': 1, 'paths': [], 'structure': False, 'others': True, 'reset': False} and log.others_seq == 1
+    assert r == {'seq': 2, 'paths': [], 'structure': False, 'others': True, 'touched': False, 'reset': False} and log.others_seq == 2
     w.handle('modified', str(tmp_path / 'a.md'), '', False)
-    assert log.since(1)['others'] is False and log.others_seq == 1            # 문서 내용 수정은 문서 외 목록과 상관없다
+    assert log.since(2)['others'] is False and log.others_seq == 2            # 문서 내용 수정은 문서 외 목록과 상관없다
     w.handle('created', str(tmp_path / 'newdir'), '', True)
-    assert log.others_seq == 3                                                # 폴더가 생기면 둘 다
+    assert log.others_seq == 4                                                # 폴더가 생기면 둘 다
 
 
 def test_excluded_folder_coming_or_going_updates_other_files(tmp_path):
@@ -130,5 +144,13 @@ def test_polling_backend_notices_other_files(tmp_path):
         while time.time() < deadline + 3 and log.seq == seq:
             time.sleep(0.05)
         assert log.since(seq)['others'] is True
+        seq = log.seq
+        time.sleep(0.05)
+        (tmp_path / 'data.csv').write_text('xy', encoding='utf-8')   # 내용 수정은 touch (D50)
+        os.utime(tmp_path / 'data.csv', (time.time() + 5, time.time() + 5))
+        while time.time() < deadline + 6 and log.seq == seq:
+            time.sleep(0.05)
+        r = log.since(seq)
+        assert r['touched'] is True and r['others'] is False and log.touched_since(seq) == ['data.csv']
     finally:
         w.stop()

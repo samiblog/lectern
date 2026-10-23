@@ -16,6 +16,7 @@ import { initParts } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
+import { initRecent, refreshRecent } from './recent.js';
 import { initOthers, refreshOthers } from './others.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
 import { initPanes } from './panes.js';
@@ -99,6 +100,7 @@ async function manualRefresh() {
     }
     await loadTree({ fresh: true, tab });
     refreshOthers();
+    refreshRecent();
     await refreshView(tab.pane);
     toast(t('다시 불러왔습니다'));
   } catch (e) {
@@ -246,6 +248,7 @@ async function boot() {
   initChangeMarks();
   initSearch();
   initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다
+  initRecent();  // 같은 까닭 (트리가 사이드바 탭을 바꾸면 숨은 목록의 스크롤 위치를 읽지 못한다)
   initSettings();
   initHelp();
   initPosition();
