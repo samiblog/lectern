@@ -820,17 +820,17 @@ def run(headed: bool) -> None:
 
             wait_until(page, f"document.querySelectorAll('{olist} .row').length > 0")
             wait_until(page, "document.querySelectorAll('#lec-code-list .row').length > 0")
-            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-docs', '#lec-others-split', '#lec-others', '#lec-code-split', '#lec-code')]
+            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-docs', '#lec-code-split', '#lec-code', '#lec-others-split', '#lec-others')]
             count = page.inner_text('#lec-others-count')
             clabels = lambda: page.locator('#lec-code-list .row .label').all_inner_texts()
             ccount = page.inner_text('#lec-code-count')
-            heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'others', 'code')]
+            heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'code', 'others')]
             docs_n = page.inner_text('#lec-docs-count')
             check(olabels() == ['data', 'empty-folder', 'research', '첨부.pdf'] and clabels() == ['code', 'src']
-                  and int(count) + int(ccount) == 7 and heads == ['문서', '파일', '코드'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
+                  and int(count) + int(ccount) == 7 and heads == ['문서', '코드', '자료'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
                   and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(4)),
-                  f"'문서'·'파일'·'코드' 세 묶음 — 파일은 문서·코드가 아닌 것, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김·제외 폴더는 없음 "
-                  f"({olabels()}, {clabels()}, 파일 {count}·코드 {ccount}·문서 {docs_n})")
+                  f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김·제외 폴더는 없음 "
+                  f"({olabels()}, {clabels()}, 자료 {count}·코드 {ccount}·문서 {docs_n})")
             orow('data').locator('[data-toggle]').click()
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
             in_data = olabels()[1:3]
@@ -841,8 +841,8 @@ def run(headed: bool) -> None:
                                               f'{olist} .row[data-path="data/표.csv"]', f'{olist} .row[data-path="data/setup.exe"]',
                                               f'{olist} .row[data-path="첨부.pdf"]', f'{olist} .row[data-path="data"]')]
             head = page.inner_text('#lec-others-head')
-            check(icons == ['#i-md', '#i-html', '#i-folder', '#i-md', '#i-table', '#i-app', '#i-text', '#i-folder'] and head.startswith('파일'),
-                  f"파일 이름 앞에 종류 아이콘 — 문서(md·html)·폴더·최근 변경·파일 목록, 머리줄은 '파일' ({icons}, {head!r})")
+            check(icons == ['#i-md', '#i-html', '#i-folder', '#i-md', '#i-table', '#i-app', '#i-text', '#i-folder'] and head.startswith('자료'),
+                  f"파일 이름 앞에 종류 아이콘 — 문서(md·html)·폴더·최근 변경·자료 목록, 머리줄은 '자료' ({icons}, {head!r})")
             csv = orow('data/표.csv')
             csv.click()
             one_click = picked() == 'data/표.csv'
@@ -918,13 +918,13 @@ def run(headed: bool) -> None:
             check(hidden_list and taller and saved_off and wait_until(page, "!document.querySelector('#lec-others').classList.contains('closed')"),
                   '머리줄을 누르면 접히고 문서 트리가 그만큼 길어짐 (설정에 저장), 다시 누르면 펼침')
             page.click('#lec-docs-head')
-            docs_closed = wait_until(page, "document.querySelector('#lec-docs').classList.contains('closed') && document.querySelector('#lec-others').classList.contains('grow')")
+            docs_closed = wait_until(page, "document.querySelector('#lec-docs').classList.contains('closed') && document.querySelector('#lec-code').classList.contains('grow')")
             tree_hidden = page.evaluate("getComputedStyle(document.querySelector('#lec-tree')).display") == 'none'
             saved_docs = config_is('docs_visible', False)
             page.click('#lec-docs-head')
             docs_back = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow') && getComputedStyle(document.querySelector('#lec-tree')).display !== 'none'")
             check(docs_closed and tree_hidden and saved_docs and docs_back,
-                  "'문서' 머리줄로 문서 트리도 접음 — 접으면 아래 '파일'이 남은 높이를 가짐, 다시 누르면 펼침")
+                  "'문서' 머리줄로 문서 트리도 접음 — 접으면 바로 아래 '코드'가 남은 높이를 가짐, 다시 누르면 펼침")
             split = page.locator('#lec-others-split').bounding_box()
             h0 = page.locator('#lec-others').bounding_box()['height']
             page.mouse.move(split['x'] + 40, split['y'] + 4)
@@ -946,7 +946,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-code-split').dblclick()
             check(abs(h1 - h0 - 100) <= 4 and saved_h and abs(h2 - h0) <= 2 and config_is('others_height', None)
                   and abs(c1 - c0 - 60) <= 4 and saved_c and config_is('code_height', None),
-                  f'분리선을 끌어 파일·코드 높이 조절·저장, 두 번 누르면 기본 높이 (파일 {h0:.0f} → {h1:.0f} → {h2:.0f}, 코드 {c0:.0f} → {c1:.0f})')
+                  f'분리선을 끌어 코드·자료 높이 조절·저장, 두 번 누르면 기본 높이 (자료 {h0:.0f} → {h1:.0f} → {h2:.0f}, 코드 {c0:.0f} → {c1:.0f})')
             shot('05-others')
             print('[폴더 보기]')
             page.click('#lec-btn-view')
@@ -982,7 +982,7 @@ def run(headed: bool) -> None:
             back_kind = wait_until(page, "!document.querySelector('#lec-files').classList.contains('folder-view')")
             check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'data' and page.is_visible('#lec-code-head')
                   and config_is('files_view', 'kind'),
-                  "다시 누르면 종류별 보기 ('문서'·'파일'·'코드' 묶음)")
+                  "다시 누르면 종류별 보기 ('문서'·'코드'·'자료' 묶음)")
             page.unroute('**/api/open-external', fake_open)
 
             print('[문서 속 원시 HTML]')

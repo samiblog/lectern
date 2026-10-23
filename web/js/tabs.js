@@ -50,7 +50,7 @@ function makeTab(p) {
     loaded: false,          // 첫 화면까지 그렸는지
     loading: null,          // 첫 화면을 그리는 중이면 그 Promise
     side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·search.js)
-    // 사이드바 '파일'·'코드' 목록 (others.js): 받은 문서 외 파일(data), 파일·코드로 나눈 트리(trees·index·counts), 다시 읽을지(stale),
+    // 사이드바 '코드'·'자료' 목록 (others.js): 받은 문서 외 파일(data), 파일·코드로 나눈 트리(trees·index·counts), 다시 읽을지(stale),
     // 목록마다 펼친 폴더(open, 폴더 보기 folderOpen), 폴더 보기에서 문서와 합친 트리(all·allIndex), 고른 행(selected), 스크롤 위치
     others: {
       data: null, trees: null, index: null, counts: null, error: null, stale: true, loading: null,

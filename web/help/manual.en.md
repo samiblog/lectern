@@ -39,21 +39,21 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 
 ## Sidebar
 
-### Files — documents, files and code
+### Files — documents, code and other files
 
 The **Files** tab is split into three groups.
 
 | Group | What it holds | Clicking |
 |---|---|---|
 | Documents | Markdown and HTML documents (a folder tree) | Click once to open in the main area |
-| Files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
 | Code | Source (py, js, ts…), scripts (ps1, bat), web (css) and config (json, yaml, toml) | Click once for the code view, double-click for the editor |
+| Other files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
 
-- Click a group header ('Documents 10', 'Files 4', 'Code 3') to collapse that group. Drag the divider between groups to resize them, and double-click it to reset.
+- Click a group header ('Documents 10', 'Code 3', 'Other files 4') to collapse that group. Drag the divider between groups to resize them, and double-click it to reset.
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
 - Documents that changed since you last looked get an amber dot.
-- The 'Files' and 'Code' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
+- The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
 - Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in editor, Show in Explorer. Right-click a folder to collect the elements in just that folder.
 
 ### Recent
