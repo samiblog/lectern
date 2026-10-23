@@ -1,10 +1,16 @@
-# Lectern
+# Lectern (렉턴)
 
 Lectern(렉턴, 독서대)은 Claude Code나 Claude가 프로젝트 폴더에 만든 문서를 **사람이 한눈에 훑어보고 읽는** Windows용 로컬 뷰어입니다.
 문서를 고치지 않고, 스스로 인터넷에 연결하지 않으며(문서 속 인터넷 그림만 예외, 설정으로 끌 수 있음), 고른 프로젝트 폴더 안만 봅니다.
 Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립트는 돌리지 않습니다.
 
-> **English**: Lectern can show its interface in English — open Settings (Ctrl+,) and choose **Language · English** (by default it follows the Windows display language). Press F1 for the English user guide.
+![문서 화면](docs/images/doc.png)
+
+> **English**: Lectern is a Windows viewer for skimming and reading the Markdown and HTML documents that Claude Code writes into a project folder. Its interface is available in English — it follows the Windows display language, or choose **Settings (Ctrl+,) → Language → English**. Press **F1** in the app for the English user guide. Download the installer from [Releases](https://github.com/samiblog/lectern/releases/latest). MIT licensed.
+
+## 내려받기
+
+**[최신 판 내려받기 (Releases)](https://github.com/samiblog/lectern/releases/latest)** — `Lectern-버전-setup.exe` 를 실행하면 Python 없이 설치됩니다 (아래 '설치 파일로 설치하기'). 누구나 무료로 쓸 수 있습니다 (MIT 라이선스).
 
 ## 무엇을 하나
 
@@ -28,11 +34,34 @@ Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립�
 - **HTML 문서**: Claude가 만든 html 보고서를 트리에 `HTML` 표시와 함께 보입니다. 문서의 스타일은 그대로(스타일이 없으면 Lectern 스타일), 스크립트·인터넷 CSS는 막습니다(스크립트로 그리는 차트는 보이지 않음). `src`·`public`·`web` 같은 앱 소스 폴더의 html 은 문서로 보지 않습니다.
 - 숨김 파일·폴더(`.claude`, `.git` 등), `node_modules` 같은 폴더, 문서가 없는 폴더는 보이지 않습니다.
 
-## 설치
+| 코드 읽기 화면 | 모아 보기 |
+|---|---|
+| ![코드 읽기 화면](docs/images/code.png) | ![모아 보기](docs/images/parts.png) |
+
+| 장 하이라이트 | 어두운 스타일 (Dracula) |
+|---|---|
+| ![장 하이라이트](docs/images/spotlight.png) | ![어두운 스타일](docs/images/dark.png) |
+
+| English 화면 (사용설명서) |
+|---|
+| ![English](docs/images/en.png) |
+
+## 설치 파일로 설치하기
+
+[Releases](https://github.com/samiblog/lectern/releases/latest) 에서 받은 `Lectern-버전-setup.exe` 를 실행합니다. 관리자 권한 없이 지금 사용자에게만 설치됩니다(`%LOCALAPPDATA%\Programs\Lectern`). Python은 필요 없습니다.
+
+- 시작 메뉴에 Lectern이 생깁니다. 설치할 때 '탐색기 폴더 우클릭에 Lectern으로 열기 추가'(기본 선택)와 '바탕화면 바로가기'를 고를 수 있습니다.
+- 새 버전의 설치 파일을 실행하면 같은 자리에 덮어 설치됩니다. 실행 중인 Lectern은 닫도록 안내합니다.
+- 제거는 'Windows 설정 → 앱'에서 합니다. 설정(`%APPDATA%\Lectern\config.json`)은 남겨 두므로 다시 설치하면 최근 폴더·스타일이 그대로입니다.
+- 창을 그리는 Microsoft Edge WebView2 런타임이 필요합니다. Windows 11과 대부분의 Windows 10에는 있고, 없으면 설치 중에 알려 줍니다.
+- 코드 서명이 없어서 처음 실행할 때 'Windows의 PC 보호' 경고가 뜰 수 있습니다. '추가 정보 → 실행'을 누릅니다.
+
+## 소스에서 실행하기 (Python)
 
 Python 3.10 이상(3.12 권장)과 Windows 10/11(WebView2 기본 포함)이 필요합니다. JS 라이브러리는 `web/vendor/` 에 들어 있어 npm은 필요 없습니다.
 
 ```bat
+git clone https://github.com/samiblog/lectern.git
 cd lectern
 python -m venv .venv
 .venv\Scripts\activate
@@ -63,16 +92,6 @@ dev.bat                             :: 개발용: samples 를 브라우저 모�
 ```
 
 Claude Code 터미널에서 지금 프로젝트를 바로 띄우려면 `Lectern.exe .` (exe를 PATH에 둔 경우).
-
-## 설치 파일로 설치하기
-
-`Lectern-버전-setup.exe` 를 실행합니다. 관리자 권한 없이 지금 사용자에게만 설치됩니다(`%LOCALAPPDATA%\Programs\Lectern`). Python은 필요 없습니다.
-
-- 시작 메뉴에 Lectern이 생깁니다. 설치할 때 '탐색기 폴더 우클릭에 Lectern으로 열기 추가'(기본 선택)와 '바탕화면 바로가기'를 고를 수 있습니다.
-- 새 버전의 설치 파일을 실행하면 같은 자리에 덮어 설치됩니다. 실행 중인 Lectern은 닫도록 안내합니다.
-- 제거는 'Windows 설정 → 앱'에서 합니다. 설정(`%APPDATA%\Lectern\config.json`)은 남겨 두므로 다시 설치하면 최근 폴더·스타일이 그대로입니다.
-- 창을 그리는 Microsoft Edge WebView2 런타임이 필요합니다. Windows 11과 대부분의 Windows 10에는 있고, 없으면 설치 중에 알려 줍니다.
-- 코드 서명이 없어서 처음 실행할 때 'Windows의 PC 보호' 경고가 뜰 수 있습니다. '추가 정보 → 실행'을 누릅니다.
 
 ## 실행 파일·설치 파일 만들기
 
@@ -175,7 +194,7 @@ Claude Code로 이어서 작업한다면 `CLAUDE.md` 부터 읽습니다. 구조
 
 ### Claude Code로 이어 가기
 
-1. 압축을 풀고 `git init` 후 첫 커밋을 만듭니다 (`.gitattributes` 가 .bat 줄바꿈을 지켜 줍니다).
+1. `git clone https://github.com/samiblog/lectern.git` 으로 받습니다 (`.gitattributes` 가 .bat 줄바꿈을 지켜 줍니다).
 2. 프로젝트 폴더에서 Claude Code를 엽니다. `CLAUDE.md` 는 자동으로 읽힙니다.
 3. 첫 요청 예시:
    - "docs/ROADMAP.md 의 2-1을 진행하자. Windows 수동 점검표를 같이 하면서 문제를 고쳐 줘."
@@ -188,6 +207,8 @@ python -m pytest -q
 python tools\ui_smoke.py     :: playwright 필요: pip install playwright && python -m playwright install chromium
 ```
 
-## 라이선스 참고
+## 라이선스
 
-`web/vendor/` 의 라이브러리(markdown-it, highlight.js, KaTeX, Mermaid, DOMPurify, xterm.js 등)는 각자의 라이선스를 따릅니다. 원문은 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.
+Lectern 은 [MIT 라이선스](LICENSE)입니다. 누구나 무료로 쓰고, 고치고, 배포할 수 있습니다 (저작권 표시를 남겨 주세요). 있는 그대로 제공되며, 사용으로 생긴 문제에 대해 보증이나 책임을 지지 않습니다.
+
+설치 파일에는 Python, pywebview, Flask, watchdog, markdown-it, Mermaid, KaTeX, highlight.js, DOMPurify, xterm.js 등 오픈소스 소프트웨어가 들어 있습니다. 각각의 저작권 표시와 라이선스 전문은 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 에 있습니다. `web/vendor/` 의 라이브러리 원문 라이선스는 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.

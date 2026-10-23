@@ -65,7 +65,9 @@ assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → le
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest
 tools/                  update_vendor.py, ui_smoke.py, context_menu.py, make_icon.py
-docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
+docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING, images/(README 화면)
+LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
+THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다
 ```
 
 | JS 모듈 | 역할 |
