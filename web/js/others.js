@@ -16,6 +16,9 @@
 // - 코드(목록의 코드, 폴더 보기의 코드 파일)는 한 번 누르거나 Enter 면 본문에 읽기 전용으로 (codeview.js, D43), 두 번 누르면 편집기로.
 //   보고 있는 코드는 목록에서 상위 폴더를 펴고 강조한다.
 // - 사이드바 거르기(#lec-filter)는 이 목록들에도 적용된다: 거른 파일(폴더 보기는 문서도)을 평평하게 보인다.
+// - 제외 폴더(dist·build·node_modules 등, D49)는 '자료'(폴더 보기는 합친 트리)에 흐린 접힌 폴더로 나온다. 서버가 안을 훑지 않으므로
+//   펼칠 때 한 단계씩 받아(GET /api/others/dir) 붙이고(tab.others.lazy), 접으면 버린다 — 다시 펼치면 새로 읽는다.
+//   안의 파일은 종류를 나누지 않고 모두 '자료'에 두고, 개수·거르기에는 넣지 않는다.
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
@@ -55,34 +58,57 @@ function shown(k) {
   return isOpen(LISTS[k].visible);
 }
 
-/** 경로 → 노드 (부모 경로를 parent 로 단다 — ← 로 부모에 갈 때) */
+/** 경로 → 노드 (부모 경로를 parent 로 단다 — ← 로 부모에 갈 때). 아직 읽지 않은 제외 폴더는 children 이 null */
 function indexOf(nodes, parent = null, map = new Map()) {
   for (const n of nodes) {
     map.set(n.path, { ...n, parent });
-    if (n.type === 'dir') indexOf(n.children, n.path, map);
+    if (n.type === 'dir' && n.children) indexOf(n.children, n.path, map);
   }
   return map;
 }
 
+/** 트리의 파일 (제외 폴더 안은 세지도 거르지도 않는다) */
 function* filesIn(nodes) {
   for (const n of nodes) {
     if (n.type === 'file') yield n;
-    else yield* filesIn(n.children);
+    else if (!n.excluded) yield* filesIn(n.children);
   }
 }
 
-/** keep 에 맞는 파일만 남긴 트리 (빈 폴더는 뺀다) */
-function pick(nodes, keep) {
+/** keep 에 맞는 파일만 남긴 트리 (빈 폴더는 뺀다). 제외 폴더는 excluded 가 참일 때만 그대로 (안은 종류를 나누지 않는다) */
+function pick(nodes, keep, excluded = false) {
   const out = [];
   for (const n of nodes) {
     if (n.type === 'file') {
       if (keep(n)) out.push(n);
       continue;
     }
-    const children = pick(n.children, keep);
+    if (n.excluded) {
+      if (excluded) out.push(n);
+      continue;
+    }
+    const children = pick(n.children, keep, excluded);
     if (children.length) out.push({ ...n, children });
   }
   return out;
+}
+
+/** 서버 트리에 펼쳐서 읽어 둔 제외 폴더의 안(o.lazy)을 붙인 복사본 */
+function withLazy(o, nodes) {
+  return nodes.map((n) => {
+    if (n.type !== 'dir') return n;
+    const got = n.excluded ? o.lazy.get(n.path) : null;
+    const children = got ? got.nodes : n.children;
+    return children ? { ...n, children: withLazy(o, children), truncated: got?.truncated, limit: got?.limit, error: got?.error } : n;
+  });
+}
+
+/** 받은 트리(o.data)와 읽어 둔 제외 폴더로 목록의 트리·색인을 만든다 */
+function build(o) {
+  const code = (f) => isCode(f.name);
+  o.tree = withLazy(o, o.data.tree);
+  o.trees = { files: pick(o.tree, (f) => !code(f), true), code: pick(o.tree, code) };
+  o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code) };
 }
 
 // 서버(scanner.natural_key)와 같은 자연 정렬: 숫자 부분은 수로, 나머지는 소문자로 ('2장' < '10장')
@@ -104,12 +130,16 @@ function merge(docs = [], others = []) {
         files.push({ ...n, doc });
         continue;
       }
+      if (n.excluded) {   // 제외 폴더 (문서 트리에는 없다)
+        dirs.set(n.path, n);
+        continue;
+      }
       const d = dirs.get(n.path) || { type: 'dir', name: n.name, path: n.path, docs: [], others: [] };
       d[doc ? 'docs' : 'others'] = n.children;
       dirs.set(n.path, d);
     }
   }
-  const merged = [...dirs.values()].map((d) => ({ type: 'dir', name: d.name, path: d.path, children: merge(d.docs, d.others) }));
+  const merged = [...dirs.values()].map((d) => (d.excluded ? d : { type: 'dir', name: d.name, path: d.path, children: merge(d.docs, d.others) }));
   return [...merged.sort(byName), ...files.sort(byName)];
 }
 
@@ -137,11 +167,14 @@ function fileRow(o, v, f, depth, sub = '') {
       + `${S.changed.has(f.path) ? `<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`;
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
-  return `<div ${rowAttrs(o, v, f.path, depth, ` file${cur}`)} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
+  return `<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
     + `<span class="label">${esc(f.name)}</span>${subHtml(sub)}</div>`;
 }
 
-function nodesHtml(o, v, nodes, depth) {
+/** 목록 안의 안내 줄 (제외 폴더를 읽는 중 등) — 그 깊이의 행 글자에 맞춰 들인다 */
+const noteHtml = (depth, text) => `<p class="side-note" style="--d:${depth}">${esc(text)}</p>`;
+
+function nodesHtml(o, v, nodes, depth, inside = false) {
   let html = '';
   for (const n of nodes) {
     if (n.type === 'file') {
@@ -152,9 +185,20 @@ function nodesHtml(o, v, nodes, depth) {
     const folder = v.sel === 'folder';
     const cur = folder && S.view?.type === 'overview' && S.view.path === n.path ? ' active' : '';
     const dot = folder && !open && hasChangedInside(n.path) ? `<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : '';
-    html += `<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}`)} aria-expanded="${open}" title="${esc(n.path)}/">`
+    const tip = n.excluded && !inside ? `${n.path}/\n${t('제외 폴더 — 펼칠 때 안을 읽습니다. 문서 트리와 검색에는 나오지 않습니다.')}` : `${n.path}/`;
+    html += `<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}${n.excluded ? ' excluded' : ''}`)} aria-expanded="${open}" title="${esc(tip)}">`
       + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>${dot}</div>`;
-    if (open) html += nodesHtml(o, v, n.children, depth + 1);
+    if (!open) continue;
+    if (!n.children) {   // 아직 읽지 않은 제외 폴더
+      html += noteHtml(depth + 1, t('읽는 중…'));
+      const tab = S.tab;
+      queueMicrotask(() => loadDir(tab, n.path));
+    } else if (n.error) html += noteHtml(depth + 1, t('이 폴더를 읽지 못했습니다 ({error})', { error: n.error }));
+    else if (n.excluded && !n.children.length) html += noteHtml(depth + 1, t('빈 폴더'));
+    else {
+      html += nodesHtml(o, v, n.children, depth + 1, inside || n.excluded);
+      if (n.truncated) html += noteHtml(depth + 1, t('항목이 많아 {n}개까지만 보입니다', { n: n.limit }));
+    }
   }
   return html;
 }
@@ -174,7 +218,7 @@ function kindHtml(o, k, v, terms) {
 function folderHtml(o, v, terms) {
   if (terms) {
     const docs = S.files.filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
-    const files = [...filesIn(o.data?.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
+    const files = [...filesIn(o.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     const hits = [...docs.map((f) => ({ ...f, doc: true })), ...files];
     return hits.length
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
@@ -204,7 +248,7 @@ function renderList(k) {
   }
   if (folder) {
     o.folderOpen ??= new Set(S.open);   // 처음 폴더 보기로 볼 때 문서 트리에서 펼쳐 둔 폴더대로
-    o.all = merge(S.tree, o.data?.tree);
+    o.all = merge(S.tree, o.tree);
     o.allIndex = indexOf(o.all);
   }
   const v = view(o, k);
@@ -249,19 +293,25 @@ const isCodeFile = (n) => n?.type === 'file' && !n.doc && isCode(n.name);
 
 // ---- 읽기 ---------------------------------------------------------------------
 
+/** 펼쳐 둔 폴더 경로를 남길지: 목록에 있거나, 제외 폴더 안이라 아직 읽지 않았을 뿐인 것 (다시 읽으면 그대로 펼친다) */
+function stillThere(index, path) {
+  if (index.has(path)) return true;
+  const parts = path.split('/');
+  return parts.some((_, i) => index.get(parts.slice(0, i + 1).join('/'))?.excluded);
+}
+
 function load(tab, { fresh = false } = {}) {
   const o = tab.others;
   o.stale = false;
+  if (fresh) o.lazy.clear();   // F5: 펼쳐 둔 제외 폴더도 새로 읽는다
   o.loading = (async () => {
     try {
       const d = await getJSON(`/api/others?p=${encodeURIComponent(tab.id)}${fresh ? '&fresh=1' : ''}`);
       o.data = d;
-      const code = (f) => isCode(f.name);
-      o.trees = { files: pick(d.tree, (f) => !code(f)), code: pick(d.tree, code) };
-      o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code) };
+      build(o);
       o.counts = { files: [...filesIn(o.trees.files)].length, code: [...filesIn(o.trees.code)].length };
       o.error = null;
-      for (const k of Object.keys(LISTS)) for (const p of [...o.open[k]]) if (!o.index[k].has(p)) o.open[k].delete(p);
+      for (const k of Object.keys(LISTS)) for (const p of [...o.open[k]]) if (!stillThere(o.index[k], p)) o.open[k].delete(p);
     } catch (e) {
       if (S.tabs.includes(tab)) o.error = t('파일 목록을 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: e.message });
     } finally {
@@ -271,6 +321,31 @@ function load(tab, { fresh = false } = {}) {
     if (o.stale) ensure();   // 읽는 동안 또 바뀌었다
   })();
   return o.loading;
+}
+
+/** 제외 폴더 하나의 안(한 단계)을 받아 붙인다 — 그 폴더를 펼쳤을 때 (nodesHtml) */
+async function loadDir(tab, path) {
+  const o = tab.others;
+  if (o.loadingDirs.has(path) || o.lazy.has(path) || !o.data) return;
+  o.loadingDirs.add(path);
+  try {
+    const d = await getJSON(`/api/others/dir?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}`);
+    o.lazy.set(path, { nodes: d.nodes, truncated: d.truncated, limit: d.limit });
+  } catch (e) {
+    o.lazy.set(path, { nodes: [], error: e.message });   // 접었다 펼치면 다시 읽는다
+  } finally {
+    o.loadingDirs.delete(path);
+  }
+  if (!o.data) return;
+  build(o);
+  if (tab === S.tab) render();
+}
+
+/** 제외 폴더를 접으면 읽어 둔 안(그 아래 폴더들 것까지)을 버린다 — 다시 펼치면 새로 읽는다 */
+function forgetDir(o, path) {
+  const before = o.lazy.size;
+  for (const p of [...o.lazy.keys()]) if (p === path || p.startsWith(`${path}/`)) o.lazy.delete(p);
+  if (o.lazy.size !== before) build(o);
 }
 
 /** 목록이 보이는데 아직 받지 않았거나 그 뒤로 파일이 바뀌었으면 읽는다 */
@@ -318,10 +393,14 @@ function select(k, path, { focus = true } = {}) {
 }
 
 function toggle(k, path, open) {
-  const set = view(state(), k).open;
-  const want = open ?? !set.has(path);
-  if (want) set.add(path);
-  else set.delete(path);
+  const o = state();
+  const v = view(o, k);
+  const want = open ?? !v.open.has(path);
+  if (want) v.open.add(path);
+  else {
+    v.open.delete(path);
+    if (v.index.get(path)?.excluded) forgetDir(o, path);
+  }
   renderList(k);
   select(k, path);
 }
@@ -353,7 +432,8 @@ function menuItems(k, n) {
   if (n.doc) return [{ header: n.path }, ...pathMenuItems(n.path, true)];   // 문서 트리와 같은 메뉴
   const items = [];
   if (n.type === 'dir') {
-    items.push({ header: `${n.path}/` },
+    const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
+    items.push({ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
       { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) });
     if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
     items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });

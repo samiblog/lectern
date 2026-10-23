@@ -8,7 +8,7 @@ import pytest
 
 from conftest import write
 
-from lectern.scanner import iter_files, natural_key, resolve_inside, scan, scan_others
+from lectern.scanner import iter_files, list_dir, natural_key, resolve_inside, scan, scan_others
 
 
 def paths(nodes):
@@ -131,11 +131,41 @@ def test_scan_others_lists_non_documents(project):
     found = paths(nodes)
     assert found == ['data/run.exe', 'data/표.csv', 'docs/img.svg', 'empty/note.txt', 'src/app.py', 'src/index.html']
     assert count == 6 and truncated is False
-    assert [n['name'] for n in nodes if n['type'] == 'dir'] == ['data', 'docs', 'empty', 'src']   # 폴더 먼저, 자연 정렬
+    # 폴더 먼저, 자연 정렬. 제외 폴더(Build·node_modules)는 접힌 채로 실린다 (D49 — 안은 펼칠 때 list_dir)
+    assert [n['name'] for n in nodes if n['type'] == 'dir'] == ['Build', 'data', 'docs', 'empty', 'node_modules', 'src']
     files = {n['path']: n for n in iter_files(nodes)}
     assert files['data/표.csv']['size'] == len('a,b\n1,2\n'.encode()) or files['data/표.csv']['size'] > 0
     # 두 번 누르면 어떻게 열리는지: 기본 앱 / 편집기 / 탐색기에서 선택만 (실행하지 않음)
     assert (files['data/표.csv']['open'], files['src/app.py']['open'], files['data/run.exe']['open']) == ('default', 'editor', 'reveal')
+
+
+def test_scan_others_folds_excluded_folders(project):
+    # 제외 폴더는 안을 훑지 않고(비었는지도 보지 않고) 접힌 노드로만 — 파일 수에 넣지 않는다. 숨김 폴더는 싣지 않는다
+    write(project / 'node_modules' / 'lib' / 'index.js', 'x')
+    (project / 'dist').mkdir()                          # 빈 제외 폴더
+    write(project / 'build2' / 'x.txt', 'x')            # 이름이 비슷한 보통 폴더
+    write(project / '.cache' / 'dist' / 'x.txt', 'x')   # 숨김 폴더 안
+    nodes, count, _ = scan_others(project)
+    excluded = {n['path']: n for n in nodes if n.get('excluded')}
+    assert set(excluded) == {'Build', 'dist', 'node_modules'}
+    assert all(n['children'] is None and n['type'] == 'dir' for n in excluded.values())
+    assert count == len(paths(nodes)) and 'build2/x.txt' in paths(nodes)
+    assert not any(p.startswith(('node_modules/', 'Build/', '.claude')) for p in paths(nodes))
+
+
+def test_list_dir_reads_one_level(project):
+    write(project / 'node_modules' / 'lib' / 'sub' / 'a.js', 'x')
+    write(project / 'node_modules' / 'lib' / '.cache', 'x')
+    nodes, truncated = list_dir(project, 'node_modules')
+    assert [(n['path'], n['type'], n['children']) for n in nodes] == [('node_modules/lib', 'dir', None)] and not truncated
+    nodes, _ = list_dir(project, 'node_modules/lib')
+    # 하위 폴더는 다시 접힌 채로, 문서·코드도 종류를 나누지 않고 모두. 숨김은 뺀다
+    assert [(n['path'], n['type']) for n in nodes] == [('node_modules/lib/sub', 'dir'), ('node_modules/lib/README.md', 'file')]
+    assert all(n['excluded'] for n in nodes) and nodes[1]['open'] and nodes[1]['size'] > 0
+    for i in range(4):
+        write(project / 'dist' / f'{i}.txt', 'x')
+    nodes, truncated = list_dir(project, 'dist', limit=2)
+    assert len(nodes) == 2 and truncated
 
 
 def test_scan_others_stops_at_limit(project):

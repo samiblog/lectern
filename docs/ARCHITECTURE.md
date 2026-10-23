@@ -65,8 +65,9 @@ flowchart LR
   - 파일 노드: `{type:'file', name, path, kind, mtime, size, title}` (`path` 는 root 기준 `/` 구분 상대경로, `kind` 는 `DOC_TYPES` 의 `markdown`·`html`)
   - html 은 `html_exclude`(기본 `DEFAULT_HTML_EXCLUDE_DIRS` + 설정 `html_exclude_dirs`) 이름의 폴더 안에 있으면 뺀다 (앱 소스의 `index.html` 등, D27).
 - 제외 규칙: 모듈 머리 주석 참고. 제외 폴더 기본값은 `DEFAULT_EXCLUDE_DIRS`, 설정 `exclude_dirs` 로 추가(대소문자 무시).
+- `scan_others(root, exclude, html_exclude)` → 문서가 아닌 파일의 트리 ('코드'·'자료' 목록, `/api/others`). 숨김·링크 규칙은 `scan()` 과 같다. 제외 폴더는 안을 훑지 않고 접힌 노드 `{type:'dir', name, path, children: None, excluded: True}` 로만 싣는다 (D49 — 파일 수에 넣지 않음). `list_dir(root, rel)` 은 제외 폴더 안의 한 단계 (`/api/others/dir`). 트리를 도는 코드(`iter_files` 등)는 `children` 이 None 일 수 있음을 본다.
 - `resolve_inside(root, rel)` → 실제 경로 또는 `None`. 먼저 글자만으로(`normpath`) root 안인지 보고 — `\\서버\공유`·드라이브 경로를 `resolve()` 하면 Windows 가 그 서버에 접속하므로 (D29) — 그다음 `resolve()` 로 `..`·링크를 푼 뒤 root 안인지, 경로 중 숨김 요소가 없는지 확인한다. **파일을 내주는 모든 경로는 이 함수를 거친다.**
-  - 제외 폴더(`node_modules` 등)는 숨김이 아니므로 링크로는 열 수 있다. 트리에만 안 나온다.
+  - 제외 폴더(`node_modules` 등)는 숨김이 아니므로 링크로는 열 수 있다. 문서 트리에만 안 나오고, '자료' 목록에는 접힌 채 나온다 (D49).
 
 ### 제목·요약 (docinfo.py)
 파일 앞 16KB(html 은 64KB)만 읽는다. (mtime_ns, size)가 같으면 캐시 사용.
@@ -76,7 +77,7 @@ flowchart LR
 
 ### 변경 감지 (changes.py)
 - `Watcher` 는 watchdog `Observer` 로 root를 재귀 감시한다. watchdog가 없거나 시작에 실패하면 2초 간격 스캔 비교로 대신한다 (`backend` = `watchdog` | `polling`).
-- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서(`doc_kind` — md·html) 생성·삭제·이동도 `structure=True`, 문서 수정은 `structure=False`. 문서가 아닌 파일은 생성·삭제·이동만 `others=True` 로 남기고(경로 없이) 수정은 버린다 — 화면은 문서 외 파일 목록만 다시 읽고 문서 트리는 그대로 둔다.
+- 이벤트 필터: root 밖, 숨김(`.`), 제외 폴더 안은 버린다. 폴더 생성·삭제·이동은 `structure=True`, 문서(`doc_kind` — md·html) 생성·삭제·이동도 `structure=True`, 문서 수정은 `structure=False`. 문서가 아닌 파일은 생성·삭제·이동만 `others=True` 로 남기고(경로 없이) 수정은 버린다 — 화면은 문서 외 파일 목록만 다시 읽고 문서 트리는 그대로 둔다. 제외 폴더 자체(그 위는 숨김도 제외도 아님)가 생기거나 지워져도 `others=True` ('자료' 목록에 접힌 채 나오므로, D49).
 - Windows 숨김 속성은 감시 단계에서 보지 않는다 (트리 재스캔 때 걸러진다).
 - `ChangeLog` 는 `(seq, path, structure, others)` 를 최대 5000개 보관한다. `since(seq)` 는 그 뒤의 경로 집합과 구조 변경·문서 외 파일 변경 여부를 돌려준다. 오래된 기록이 밀려나 놓친 경우 `reset=True` (structure·others 도 참). `others_seq` 는 문서 외 파일 목록이 마지막으로 바뀌었을 수 있는 순번 (structure 포함).
 - 폴링 대체는 문서(수정 시각·크기)와 문서 외 파일(경로 집합)을 함께 비교한다.
@@ -163,7 +164,8 @@ flowchart LR
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤). 이미 닫혔으면 그대로. `/api/state` 와 같은 형식 |
 | `POST /api/activate` | `{p}` | 선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작). `{ok:true}` |
 | `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(seq)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
-| `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크·제외 폴더 규칙은 트리와 같다. 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
+| `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크 규칙은 트리와 같고, 제외 폴더는 안을 훑지 않은 접힌 노드 `{type:'dir', children: null, excluded: true}` 로만 (D49 — 파일 수에 넣지 않음). 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
+| `GET /api/others/dir?p=<id>&path=<경로>` | | 제외 폴더 안의 한 단계 `{path, nodes, truncated, limit}` — '자료' 목록에서 펼칠 때 (D49). 숨김·링크는 빼고 종류는 나누지 않으며, 하위 폴더는 다시 `children: null`, 모든 노드에 `excluded: true`. 5000개(`MAX_DIR_ENTRIES`)에서 멈추고 `truncated`. 제외 폴더 안이 아니면 400, 숨김·밖·폴더가 아니면 404 |
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
@@ -341,6 +343,7 @@ sequenceDiagram
   - 폴더(`folder`): `#lec-files.folder-view` — 묶음 머리줄·문서 트리·코드 목록·분리선을 감추고, '자료' 목록(`#lec-others-list`) 하나에 맨 위 프로젝트 행(누르면 개요) + 문서와 파일을 폴더 구조 그대로 보인다. 탭의 문서 트리(`S.tree`)와 `/api/others` 의 트리를 폴더마다 합친다 (`merge` — 서버와 같은 자연 정렬). 문서 행은 문서 트리처럼 한 번 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조, 우클릭은 문서 트리와 같은 메뉴), 파일 행은 아래처럼 탐색기식. 폴더 행은 누르면 고르기(개요는 우클릭 '폴더 개요 보기'). 펼친 폴더는 보기마다 따로 기억하고, 처음 폴더 보기로 볼 때 문서 트리에서 펼쳐 둔 폴더대로 시작한다. 지금 보는 문서가 바뀌면 그 상위 폴더를 펴고 그 행까지 스크롤한다.
 - 종류별 보기에서 머리줄 '문서 N'·'코드 N'·'자료 N'을 누르면 그 묶음이 접힌다(`.closed`, 설정 `docs_visible`·`others_visible`·`code_visible`). 펼친 첫 묶음(`.grow`)이 남은 높이를 갖고, 나머지 펼친 묶음은 위 분리선을 끌어 높이를 바꾼다(`others_height`·`code_height`, 두 번 누르면 기본 — 30%·26%, 키운 만큼 남은 높이를 갖는 묶음이 줄고 64px 이상 남김).
 - 목록은 `GET /api/others` 로 문서 트리와 따로 읽고, 받은 트리를 `isCode` 로 '코드'·'자료' 두 트리로 나눈다(`tab.others.trees`, 빈 폴더는 뺀다). 목록이 보일 때만(파일 탭이고 그 묶음이 펼쳐 있을 때) 읽고, 파일이 생기거나 지워지면(`/api/changes` 의 `others`·`structure` → `watch.js` 가 `tab.others.stale` 을 달고 `others` 이벤트) 다시 읽는다. 문서 외 파일만 바뀌면 문서 트리는 다시 읽지 않는다. F5 는 서버에서 새로 훑는다.
+- 제외 폴더(D49)는 '자료' 트리(폴더 보기는 합친 트리)에만 서버가 준 접힌 노드 그대로 넣는다 (`pick` 의 `excluded`, `merge`). 펼치면 `nodesHtml` 이 '읽는 중…'을 그리고 `loadDir` 가 `/api/others/dir` 로 한 단계를 받아 `tab.others.lazy`(경로 → 받은 노드)에 두고, `build` 가 서버 트리에 붙인 복사본(`tab.others.tree`)으로 목록을 다시 만든다 — 목록을 다시 읽어도 붙여 쓴다. 접으면(`toggle` → `forgetDir`) 그 폴더와 그 아래 것을 버려 다시 펼칠 때 새로 읽고, F5 는 모두 버린다. 펼쳐 둔 경로는 제외 폴더 안이면 아직 읽지 않았어도 남긴다 (`stillThere`). 개수·거르기(`filesIn`)는 제외 폴더 안을 세지 않는다. 행은 `.row.excluded`(흐리게), 안내 줄은 `.side-note`(읽는 중·빈 폴더·못 읽음·항목이 많음).
 - 탭마다 받은 목록, 목록(자료·코드·폴더 보기)마다 펼친 폴더·고른 행·스크롤 위치를 남긴다 (`tab.others`). 폴더는 처음에 접혀 있다. 폴더 먼저, 자연 정렬. 행에는 파일 종류 아이콘(`icons.js` 의 확장자 → 종류), 마우스를 올리면 크기·수정 시각·경로.
 - 탐색기처럼: 누르면 고르고(목록에 초점이 있으면 짙게), 두 번 누르거나 Enter 면 연다 — `POST /api/open-external` (안전한 형식은 기본 앱, 코드·글은 편집기, 실행·설치 파일·압축 등은 탐색기에서 선택만). 폴더는 두 번 누르기·Enter·화살표로 펼치고 접는다. ↑↓·Home·End 로 옮기고, → 펼치기(펼쳐 있으면 첫 항목), ← 접기(파일이면 부모 폴더), 글자를 치면 그 글자로 시작하는 다음 행 (같은 글자를 거듭 치면 그다음 행, 다른 글자를 잇달아 치면 이어진 글자로). 처리한 키는 앱 단축키(장 하이라이트의 ↑↓ 등)로 넘기지 않는다.
 - 우클릭(메뉴 키·Shift+F10): 머리말에 이름·크기·수정 시각, 열기(어떻게 열리는지 함께), 편집기로 열기(기본 앱 형식만), 탐색기에서 보기, `@경로`·전체 경로·파일 이름 복사. 폴더는 펼치기/접기·탐색기에서 열기·경로 복사. 이름 바꾸기·지우기·옮기기는 없다 (보기 전용).

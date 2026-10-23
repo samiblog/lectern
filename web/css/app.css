@@ -302,6 +302,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .side-filter .toggle { width: auto; padding: 0 8px; font-size: 12px; font-weight: 600; border: 1px solid var(--ui-border); }
 .side-list { flex: 1; overflow: auto; padding: 2px 6px 24px; }
 .side-empty { color: var(--ui-faint); padding: 8px 12px; margin: 0; }
+/* 목록 안의 안내 줄 (제외 폴더를 읽는 중 등, others.js) — 그 깊이 행의 아이콘 자리에 맞춘다 */
+.side-note { color: var(--ui-faint); font-size: 12px; margin: 0; padding: 3px 8px 3px calc(26px + var(--d, 0) * 14px); }
 
 /* 종류별 보기: '문서'·'파일'·'코드' 세 묶음 (others.js). 묶음마다 머리줄을 눌러 접고(.closed — 머리줄만), 펼친 첫 묶음(.grow)이
    남은 높이를 갖는다. 나머지 펼친 묶음은 위 분리선을 끌어 높이(--others-h·--code-h)를 정한다.
@@ -355,6 +357,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .row.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }
 .row .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row.dir .label { font-weight: 600; }
+.row.excluded > .label, .row.excluded > .ficon { opacity: .6; }   /* 제외 폴더와 그 안 ('자료' 목록, D49) */
 .row.root { padding-left: 8px; margin-bottom: 2px; }
 .row.root .label { font-weight: 700; }
 .row .sub { color: var(--ui-faint); font-size: 12px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }

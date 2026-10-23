@@ -415,6 +415,25 @@ def test_others_endpoint(client, state, project, pid):
     assert client.get('/api/others').status_code == 404
 
 
+def test_others_dir_endpoint(client, state, project, pid):
+    # 제외 폴더 안을 한 단계씩 (D49) — 자료 목록에서 펼칠 때
+    write(project / 'node_modules' / 'lib' / 'sub' / 'a.js', 'x')
+    r = client.get(f'/api/others/dir?p={pid}&path=node_modules').get_json()
+    assert r['path'] == 'node_modules' and [n['name'] for n in r['nodes']] == ['lib'] and r['nodes'][0]['children'] is None
+    assert r['truncated'] is False and r['limit'] == 5000
+    r = client.get(f'/api/others/dir?p={pid}&path=node_modules/lib').get_json()
+    assert [n['name'] for n in r['nodes']] == ['sub', 'README.md'] and r['nodes'][1]['open']
+    assert client.get(f'/api/others/dir?p={pid}&path=docs').status_code == 400          # 제외 폴더 안이 아니다
+    assert client.get(f'/api/others/dir?p={pid}&path=.claude').status_code == 404       # 숨김
+    assert client.get(f'/api/others/dir?p={pid}&path=../x').status_code == 404          # 밖
+    assert client.get(f'/api/others/dir?p={pid}&path=README.md').status_code == 404     # 폴더가 아님
+    assert client.get(f'/api/others/dir?p={pid}&path=').status_code == 404
+    assert client.get('/api/others/dir?path=node_modules').status_code == 404           # 탭 없음
+    write(project / 'data' / 'x.csv', 'a')
+    state.config._update(lambda c: c.__setitem__('exclude_dirs', ['data']))             # 설정의 제외 폴더도
+    assert client.get(f'/api/others/dir?p={pid}&path=data').status_code == 200
+
+
 def test_others_scan_is_reused_until_files_come_or_go(state, project, pid):
     state.close()   # 감시를 멈춰 기록(seq)을 이 테스트가 정한다
     proj = state.get(pid)

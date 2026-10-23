@@ -145,7 +145,7 @@ def run(headed: bool) -> None:
     report = work / 'docs' / '04-HTML-보고서.html'
     report.write_text(report.read_text(encoding='utf-8').replace(
         '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
-    # 문서 외 파일: 목록에 나올 것(csv·실행 파일·루트의 pdf)과 나오지 않을 것(숨김·제외 폴더)
+    # 문서 외 파일: 목록에 나올 것(csv·실행 파일·루트의 pdf, 접힌 제외 폴더)과 나오지 않을 것(숨김)
     (work / 'data').mkdir()
     (work / 'data' / '표.csv').write_text('품목,값\n구리,1\n', encoding='utf-8')
     (work / 'data' / 'setup.exe').write_bytes(b'MZ')
@@ -826,10 +826,10 @@ def run(headed: bool) -> None:
             ccount = page.inner_text('#lec-code-count')
             heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'code', 'others')]
             docs_n = page.inner_text('#lec-docs-count')
-            check(olabels() == ['data', 'empty-folder', 'research', '첨부.pdf'] and clabels() == ['code', 'src']
+            check(olabels() == ['data', 'empty-folder', 'node_modules', 'research', '첨부.pdf'] and clabels() == ['code', 'src']
                   and int(count) + int(ccount) == 7 and heads == ['문서', '코드', '자료'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
                   and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(4)),
-                  f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김·제외 폴더는 없음 "
+                  f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것과 제외 폴더, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김은 없음 "
                   f"({olabels()}, {clabels()}, 자료 {count}·코드 {ccount}·문서 {docs_n})")
             orow('data').locator('[data-toggle]').click()
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
@@ -843,6 +843,43 @@ def run(headed: bool) -> None:
             head = page.inner_text('#lec-others-head')
             check(icons == ['#i-md', '#i-html', '#i-folder', '#i-md', '#i-table', '#i-app', '#i-text', '#i-folder'] and head.startswith('자료'),
                   f"파일 이름 앞에 종류 아이콘 — 문서(md·html)·폴더·최근 변경·자료 목록, 머리줄은 '자료' ({icons}, {head!r})")
+            # 제외 폴더 (D49): 흐린 접힌 폴더 — 펼칠 때 안을 한 단계씩 읽고, 안의 것은 종류를 나누지 않고 모두 여기 (개수에는 넣지 않는다)
+            nm = orow('node_modules')
+            faded = float(page.evaluate(f"getComputedStyle(document.querySelector('{olist} .row[data-path=\"node_modules\"] .label')).opacity"))
+            nm_tip = nm.get_attribute('title') or ''
+            with page.expect_request('**/api/others/dir*'):
+                nm.locator('[data-toggle]').click()
+            page.wait_for_selector(f'{olist} .row[data-path="node_modules/some-lib"]')
+            orow('node_modules/some-lib').locator('[data-toggle]').click()
+            page.wait_for_selector(f'{olist} .row[data-path="node_modules/some-lib/index.js"]')
+            lib_js = orow('node_modules/some-lib/index.js')
+            inner = 'excluded' in (lib_js.get_attribute('class') or '')
+            in_code = page.locator('#lec-code-list .row[data-path^="node_modules"]').count()
+            same_count = page.inner_text('#lec-others-count') == count
+            nm_menu = menu(nm)
+            page.keyboard.press('Escape')
+            lib_js.click()   # 코드는 한 번 누르면 읽기 화면 (제외 폴더 안이어도)
+            code_view = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'node_modules/some-lib/index.js'"
+                                   " && !!document.querySelector('#lec-view .cv-line')")
+            nm.locator('[data-toggle]').click()   # 접으면 읽어 둔 것을 버리고, 다시 펼치면 새로 읽는다 (안에서 펼쳐 둔 폴더도)
+            (work / 'node_modules' / 'new-lib').mkdir()
+            with page.expect_request('**/api/others/dir*'):
+                nm.locator('[data-toggle]').click()
+            reread = wait_until(page, f"!!document.querySelector('{olist} .row[data-path=\"node_modules/new-lib\"]')"
+                                f" && !!document.querySelector('{olist} .row[data-path=\"node_modules/some-lib/index.js\"]')")
+            nm.locator('[data-toggle]').click()
+            (work / 'node_modules' / 'new-lib').rmdir()
+            check(faded < 1 and '제외 폴더' in nm_tip and inner and in_code == 0 and same_count and '제외 폴더' in nm_menu and code_view and reread,
+                  f"제외 폴더(node_modules)는 '자료'에 흐린 접힌 폴더 — 펼칠 때 읽고, 안의 코드도 여기서 읽기 화면으로, 개수에는 넣지 않음, "
+                  f"접었다 펼치면 새로 읽음 (흐림 {faded}, 자료 {page.inner_text('#lec-others-count')})")
+            (work / 'dist').mkdir()
+            dist_came = wait_until(page, f"!!document.querySelector('{olist} .row.excluded[data-path=\"dist\"]')", 8000)
+            if dist_came:
+                orow('dist').locator('[data-toggle]').click()
+            empty_note = wait_until(page, f"document.querySelector('{olist} .side-note')?.textContent === '빈 폴더'")
+            (work / 'dist').rmdir()
+            dist_gone = wait_until(page, f"!document.querySelector('{olist} .row[data-path=\"dist\"]')", 8000)
+            check(dist_came and empty_note and dist_gone, "제외 폴더가 생기면(비어 있어도) '자료'에 바로 나오고, 지우면 사라짐")
             csv = orow('data/표.csv')
             csv.click()
             one_click = picked() == 'data/표.csv'

@@ -68,6 +68,7 @@ EN: dict[str, str] = {
     '셸을 시작하지 못했습니다 ({error}). 설정 파일의 terminal_shell 을 확인하세요':
         'Could not start the shell ({error}). Check terminal_shell in the settings file.',
     '한 번에 보낼 수 있는 글은 65536자까지입니다': 'Up to 65536 characters can be sent at once.',
+    '제외 폴더 안이 아닙니다': 'This is not inside an excluded folder.',
     # state.py
     '폴더가 아닙니다: {path}': 'Not a folder: {path}',
     '탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요': 'You can open up to {n} tabs. Close a tab you are not using and try again.',

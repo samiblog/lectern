@@ -111,6 +111,7 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
 
 
 MAX_OTHER_FILES = 5000   # '문서 외 파일' 목록에 싣는 파일 수. 넘으면 거기서 멈춘다 (소스가 아주 많은 프로젝트)
+MAX_DIR_ENTRIES = 5000   # 제외 폴더 안을 한 단계씩 볼 때(list_dir) 싣는 항목 수
 
 # 코드 파일: 소스·스크립트·웹(css·소스 폴더의 html)·설정. 사이드바 '코드' 목록·코드 화면(화면은 web/js/icons.js 의 code 종류)과
 # 전체 검색의 '코드'(D44)가 같은 목록을 쓴다 — 두 곳을 함께 고친다 (tests/test_search.py 가 맞춰 본다)
@@ -127,10 +128,13 @@ def is_code(name: str) -> bool:
 
 def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
                 html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, limit: int = MAX_OTHER_FILES) -> tuple[list[Node], int, bool]:
-    """문서가 아닌 파일의 트리 — 사이드바 '문서 외 파일'. 문서는 md 와 트리에 보이는 html 이다 (소스 폴더의 html 은 여기 나온다).
+    """문서가 아닌 파일의 트리 — 사이드바 '코드'·'자료' 목록. 문서는 md 와 트리에 보이는 html 이다 (소스 폴더의 html 은 여기 나온다).
 
-    숨김·링크·제외 폴더 규칙은 scan() 과 같고, 이런 파일이 없는 폴더는 뺀다. 파일 노드는 {type, name, path, mtime, size, open}
-    (open: osutil.how_to_open — 두 번 누르면 어떻게 열리는지). (노드 목록, 실은 파일 수, limit 에서 멈췄는지)
+    숨김·링크 규칙은 scan() 과 같고, 이런 파일이 없는 폴더는 뺀다. 파일 노드는 {type, name, path, mtime, size, open}
+    (open: osutil.how_to_open — 두 번 누르면 어떻게 열리는지). 제외 폴더(dist·build·node_modules 등)는 안을 훑지 않고
+    접힌 폴더 노드 {type: 'dir', children: None, excluded: True} 로만 싣는다 — 안이 비었는지도 보지 않고, 화면이 펼칠 때 list_dir 로 읽는다
+    (D49, 파일 수에 넣지 않음).
+    (노드 목록, 실은 파일 수, limit 에서 멈췄는지)
     """
     excl = frozenset(x.lower() for x in exclude)
     html_excl = frozenset(x.lower() for x in html_exclude)
@@ -158,10 +162,14 @@ def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
                 continue
             path = f'{rel}/{name}' if rel else name
             if is_dir:
-                if name.lower() not in excl and not count[1]:
-                    children = walk(path, html_ok and name.lower() not in html_excl)
-                    if children:
-                        dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
+                if count[1]:
+                    continue
+                if name.lower() in excl:
+                    dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': None, 'excluded': True})
+                    continue
+                children = walk(path, html_ok and name.lower() not in html_excl)
+                if children:
+                    dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
                 continue
             kind = doc_kind(name)
             if kind == 'markdown' or (kind == 'html' and html_ok):
@@ -178,12 +186,51 @@ def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
     return nodes, count[0], count[1]
 
 
+def in_excluded(rel: str, exclude: Iterable[str]) -> bool:
+    """root 기준 경로 rel 이 제외 폴더(그 자체나 그 안)인지"""
+    excl = frozenset(x.lower() for x in exclude)
+    return any(part.lower() in excl for part in rel.split('/') if part)
+
+
+def list_dir(root: Path, rel: str, limit: int = MAX_DIR_ENTRIES) -> tuple[list[Node], bool]:
+    """제외 폴더 안의 한 단계 (D49) — 자료 목록에서 펼칠 때. 숨김·링크는 빼고 종류는 나누지 않는다 (문서·코드도 여기).
+    하위 폴더는 다시 접힌 노드(children None)로, 모든 노드에 excluded: True. (노드 목록, limit 에서 멈췄는지)"""
+    try:
+        with os.scandir(root / rel) as it:
+            entries = sorted(it, key=lambda e: natural_key(e.name))
+    except OSError:
+        return [], False
+    dirs: list[Node] = []
+    files: list[Node] = []
+    for entry in entries:
+        name = entry.name
+        if name.startswith('.') or _is_link(entry):
+            continue
+        try:
+            st = entry.stat(follow_symlinks=False)
+            is_dir = entry.is_dir(follow_symlinks=False)
+        except OSError:
+            continue
+        if has_hidden_attr(st):
+            continue
+        if len(dirs) + len(files) >= limit:
+            return dirs + files, True
+        path = f'{rel}/{name}'
+        if is_dir:
+            dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': None, 'excluded': True})
+        else:
+            files.append({'type': 'file', 'name': name, 'path': path, 'mtime': st.st_mtime, 'size': st.st_size,
+                          'open': how_to_open(name), 'excluded': True})
+    return dirs + files, False
+
+
 def iter_files(nodes: list[Node]) -> Iterator[Node]:
+    """트리의 파일 노드 (아직 읽지 않은 제외 폴더 — children None — 는 건너뛴다)"""
     for node in nodes:
         if node['type'] == 'file':
             yield node
         else:
-            yield from iter_files(node['children'])
+            yield from iter_files(node['children'] or [])
 
 
 def is_hidden_path(root: Path, target: Path) -> bool:

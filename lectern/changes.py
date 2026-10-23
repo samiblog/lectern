@@ -27,6 +27,17 @@ except ImportError:  # pragma: no cover - 폴링 대체 경로
 _IGNORED_EVENTS = {'opened', 'closed', 'closed_no_write'}
 
 
+def _other_paths(nodes: list[dict[str, Any]]) -> set[str]:
+    """scan_others 트리의 파일과 제외 폴더(안은 읽지 않은 접힌 노드, D49) 경로"""
+    out: set[str] = set()
+    for n in nodes:
+        if n['type'] == 'file' or n.get('excluded'):
+            out.add(n['path'])
+        if n.get('children'):
+            out |= _other_paths(n['children'])
+    return out
+
+
 class ChangeLog:
     """단조 증가하는 순번(seq)이 붙은 변경 기록. 스레드 안전."""
 
@@ -136,12 +147,23 @@ class Watcher:
             return None
         return rel.as_posix()
 
+    def _excluded_top(self, raw: str | bytes) -> bool:
+        """제외 폴더 자체인지 (그 위는 숨김도 제외도 아님). 안의 변경은 보지 않는다"""
+        try:
+            parts = Path(os.fsdecode(raw)).relative_to(self.root).parts
+        except ValueError:
+            return False
+        return bool(parts) and parts[-1].lower() in self.exclude and not any(
+            p.startswith('.') or p.lower() in self.exclude for p in parts[:-1])
+
     def handle(self, event_type: str, src: str | bytes, dest: str | bytes, is_dir: bool) -> None:
         for raw in (src, dest):
             if not raw:
                 continue
             rel = self._rel(raw)
             if rel is None:
+                if event_type != 'modified' and self._excluded_top(raw):
+                    self.log.push(None, others=True)   # 제외 폴더가 생기거나 지워짐 — '자료' 목록에 접힌 채 나온다 (D49)
                 continue
             if is_dir:
                 if event_type != 'modified':
@@ -153,10 +175,10 @@ class Watcher:
 
     # --- 폴링 대체 --------------------------------------------------------
     def _snapshot(self) -> tuple[dict[str, tuple[float, int]], set[str]]:
-        """(문서 → (수정 시각, 크기), 문서 외 파일 경로 집합)"""
+        """(문서 → (수정 시각, 크기), 문서 외 파일과 제외 폴더의 경로 집합)"""
         nodes = scan(self.root, self.exclude, with_info=False)
         others, _, _ = scan_others(self.root, self.exclude)
-        return {n['path']: (n['mtime'], n['size']) for n in iter_files(nodes)}, {n['path'] for n in iter_files(others)}
+        return {n['path']: (n['mtime'], n['size']) for n in iter_files(nodes)}, _other_paths(others)
 
     def _poll_loop(self) -> None:
         prev, prev_others = self._snapshot()

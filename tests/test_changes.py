@@ -60,6 +60,22 @@ def test_other_files_are_logged_apart_from_documents(tmp_path):
     assert log.others_seq == 3                                                # 폴더가 생기면 둘 다
 
 
+def test_excluded_folder_coming_or_going_updates_other_files(tmp_path):
+    # 제외 폴더는 '자료' 목록에 접힌 채 나온다 (D49) — 그 폴더가 생기거나 지워지면 알리고, 안의 변경은 보지 않는다
+    log = ChangeLog()
+    w = Watcher(tmp_path, log, DEFAULT_EXCLUDE_DIRS)
+    w.handle('created', str(tmp_path / 'node_modules' / 'lib' / 'a.js'), '', False)
+    w.handle('created', str(tmp_path / 'node_modules' / 'lib'), '', True)
+    w.handle('modified', str(tmp_path / 'dist'), '', True)
+    w.handle('created', str(tmp_path / '.venv' / 'dist'), '', True)          # 숨김 폴더 안
+    w.handle('created', str(tmp_path / 'build' / 'dist'), '', True)          # 제외 폴더 안
+    assert log.seq == 0
+    w.handle('created', str(tmp_path / 'dist'), '', True)
+    w.handle('deleted', str(tmp_path / 'src' / 'Build'), '', False)          # 지운 폴더는 폴더인지 모를 때가 있다
+    r = log.since(0)
+    assert r['others'] is True and r['structure'] is False and r['paths'] == [] and log.others_seq == 2
+
+
 def test_polling_backend_detects_changes(tmp_path):
     (tmp_path / 'a.md').write_text('# a', encoding='utf-8')
     log = ChangeLog()
@@ -109,5 +125,10 @@ def test_polling_backend_notices_other_files(tmp_path):
             time.sleep(0.05)
         r = log.since(0)
         assert r['others'] is True and r['paths'] == [] and r['structure'] is False
+        seq = log.seq
+        (tmp_path / 'dist').mkdir()                                  # 빈 제외 폴더도 '자료' 목록에 나온다 (D49)
+        while time.time() < deadline + 3 and log.seq == seq:
+            time.sleep(0.05)
+        assert log.since(seq)['others'] is True
     finally:
         w.stop()

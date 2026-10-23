@@ -4,7 +4,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 
 - **View only.** Lectern never edits or deletes your documents; the only file it writes is its settings file. The one exception is commands you type yourself in the right-hand terminal.
 - **It does not connect to the internet on its own.** Only web images inside documents are loaded, and you can turn that off in Settings.
-- **It only looks inside the folder you open.** Hidden files and folders (`.git`, `.claude` and so on), folders such as `node_modules`, and folders without documents are not shown.
+- **It only looks inside the folder you open.** Hidden files and folders (`.git`, `.claude` and so on) are not shown. Excluded folders such as `node_modules` and `dist` stay out of the document tree and search, and appear dimmed only in the 'Other files' list.
 
 > [!TIP]
 > Press F1 to open and close this guide (Esc also closes it). Click an entry in the contents on the left to jump to it, and press Ctrl+F to search the guide. For just the keyboard shortcuts, click the **?** button in the toolbar or press Ctrl+/.
@@ -54,6 +54,7 @@ The **Files** tab is split into three groups.
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
 - Documents that changed since you last looked get an amber dot.
 - The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
+- **Excluded folders** such as `node_modules`, `dist`, `build`, `venv` and `__pycache__` appear dimmed and collapsed in 'Other files'. They can hold a great many files, so their contents are read when you expand them, and everything inside is listed there whatever its type (code still opens in the code view with one click). Changes inside are not followed automatically — collapse and expand the folder again, or press F5, to read it afresh. They are not counted in the group header or matched by the filter.
 - Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in editor, Show in Explorer. Right-click a folder to collect the elements in just that folder.
 
 ### Recent
@@ -206,7 +207,7 @@ Settings that are not in the window are edited with **Open settings file** in yo
 |---|---|
 | `language` | `auto`, `ko` or `en` |
 | `editor` | Full path of the editor for code files. When empty, VS Code (`code`) is used |
-| `exclude_dirs` | Folder names to leave out of the tree (for example `["data", "output"]`) |
+| `exclude_dirs` | Folder names to leave out of the tree (for example `["data", "output"]`) — they still appear collapsed in 'Other files' |
 | `terminal_shell` | Full path of the terminal shell (for example PowerShell 7). When empty, Windows PowerShell is used |
 
 Write backslashes in paths twice (`\\`). If the file has a syntax error, Lectern starts with the default settings and tells you where the error is.

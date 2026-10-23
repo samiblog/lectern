@@ -22,7 +22,7 @@ from .config import is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
 from .paths import web_dir
-from .scanner import MAX_OTHER_FILES, doc_kind, is_code, iter_files, resolve_inside
+from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
 from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
 
@@ -193,6 +193,21 @@ def create_app(state: AppState) -> Flask:
         project = arg_project()
         nodes, count, truncated = project.scan_others(fresh=request.args.get('fresh') == '1')
         return jsonify(tree=nodes, count=count, truncated=truncated, limit=MAX_OTHER_FILES)
+
+    @app.get('/api/others/dir')
+    def api_others_dir() -> Any:
+        """제외 폴더(dist·build·node_modules 등) 안의 한 단계 — 자료 목록에서 그 폴더를 펼칠 때 (D49).
+        숨김·밖·없는 경로는 404, 제외 폴더 안이 아니면 400 (그 밖의 폴더는 /api/others 가 이미 싣는다)."""
+        project = arg_project()
+        rel = request.args.get('path', '').strip('/')
+        target = resolve_inside(project.root, rel) if rel else None
+        if target is None or target == project.root or not target.is_dir():
+            abort(404)
+        rel = target.relative_to(project.root).as_posix()
+        if not in_excluded(rel, project.exclude):
+            abort(400, description=t('제외 폴더 안이 아닙니다'))
+        nodes, truncated = list_dir(project.root, rel)
+        return jsonify(path=rel, nodes=nodes, truncated=truncated, limit=MAX_DIR_ENTRIES)
 
     @app.get('/api/overview')
     def api_overview() -> Any:
