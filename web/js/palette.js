@@ -53,12 +53,11 @@ function renderList() {
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 
-/** side: 오른쪽 새 창에 (Ctrl+Enter, Ctrl+클릭) */
-function choose(i, side = false) {
+function choose(i) {
   const f = items[i];
   if (!f) return;
   closePalette();
-  emit('open', { type: 'doc', path: f.path, side });
+  emit('open', { type: 'doc', path: f.path });
 }
 
 export function openPalette() {
@@ -84,7 +83,7 @@ export function initPalette() {
       renderList();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      choose(selected, e.ctrlKey || e.metaKey);
+      choose(selected);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();   // 문서 전체 Esc 처리(찾기 닫기 등)까지 가지 않게
@@ -93,7 +92,7 @@ export function initPalette() {
   });
   $('#lec-palette-list').addEventListener('click', (e) => {
     const li = e.target.closest('li[data-i]');
-    if (li) choose(+li.dataset.i, e.ctrlKey || e.metaKey);
+    if (li) choose(+li.dataset.i);
   });
   box().addEventListener('mousedown', (e) => {
     if (e.target === box()) closePalette();

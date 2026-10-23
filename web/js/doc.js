@@ -13,7 +13,7 @@ import { setStatus } from './status.js';
 import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import {
-  $, $$, esc, encodePath, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
+  $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
 } from './util.js';
 
 const PURIFY = {
@@ -81,11 +81,11 @@ const NUM_CELL = /^(?:[-+−]?(?:[$₩€¥£]\s?)?[-+−]?\d[\d,]*(?:\.\d+)?\s?
 // 경로 해석
 
 /**
- * 절대경로(C:\proj\a.md, C:/proj/a.md, \\server\share\a.md, file:///C:/proj/a.md)가 열린 프로젝트 안이면 상대경로로 (ROADMAP 2-2).
- * 절대경로가 아니면 null, 프로젝트 밖이면 outside. markdown-it 이 \ 를 %5C 로 바꿔 주므로 풀어서 본다.
+ * 절대경로(C:\proj\a.md, C:/proj/a.md, \\server\share\a.md, file:///C:/proj/a.md)가 문서가 든 탭의 프로젝트 안이면 상대경로로 (ROADMAP 2-2).
+ * 절대경로가 아니면 null, 프로젝트 밖이면 outside (다른 탭에 열린 프로젝트도 밖이다). markdown-it 이 \ 를 %5C 로 바꿔 주므로 풀어서 본다.
  * 경로 비교는 Windows처럼 대소문자를 가리지 않는다. 실제로 열 수 있는지는 서버의 resolve_inside 가 다시 본다.
  */
-function absoluteRef(href) {
+function absoluteRef(href, tab) {
   let raw = href;
   try { raw = decodeURIComponent(href); } catch { /* 그대로 */ }
   const unc = raw.startsWith('\\\\');
@@ -99,32 +99,36 @@ function absoluteRef(href) {
   const at = s.indexOf('#');
   const hash = at >= 0 ? s.slice(at) : '';
   const full = (at >= 0 ? s.slice(0, at) : s).replace(/\?.*$/, '');
-  const root = (S.root || '').replace(/\\/g, '/').replace(/\/+$/, '');
+  const root = (tab.root || '').replace(/\\/g, '/').replace(/\/+$/, '');
   const low = full.toLowerCase();
   if (!root || (low !== root.toLowerCase() && !low.startsWith(`${root.toLowerCase()}/`))) return { kind: 'outside' };
   const path = full.slice(root.length + 1).replace(/\/+$/, '');
-  return { kind: 'local', path, hash, isDir: full.endsWith('/') || path === '' || S.dirs.has(path) };
+  return { kind: 'local', path, hash, isDir: full.endsWith('/') || path === '' || tab.dirs.has(path) };
 }
 
-/** 문서 속 href/src 를 해석한다. */
-export function resolveRef(href, baseUrl) {
+/**
+ * 문서 속 href/src 를 해석한다. tab: 문서가 든 탭 — 그 프로젝트 안(/doc/<탭 id>/…)만 local 이다.
+ * '../<다른 id>/x' 처럼 다른 탭 프로젝트로 넘어가는 상대경로는 밖으로 본다.
+ */
+export function resolveRef(href, baseUrl, tab) {
   if (!href) return { kind: 'none' };
   if (href.startsWith('#')) return { kind: 'anchor', hash: href };
   if (/^data:/i.test(href)) return { kind: 'data' };
-  const abs = absoluteRef(href);
+  const abs = absoluteRef(href, tab);
   if (abs) return abs;
   if (/^(https?:|mailto:)/i.test(href) || href.startsWith('//')) return { kind: 'external', url: href };
   if (/^[a-z][a-z0-9+.-]*:/i.test(href)) return { kind: 'blocked' };
+  const base = `/doc/${tab.id}/`;
   let url;
   try {
-    url = new URL(href.startsWith('/') ? `/doc${href}` : href, baseUrl);   // '/docs/a.md' = 프로젝트 루트 기준
+    url = new URL(href.startsWith('/') ? `${base}${href.slice(1)}` : href, baseUrl);   // '/docs/a.md' = 프로젝트 루트 기준
   } catch {
     return { kind: 'blocked' };
   }
-  if (url.origin !== location.origin || !url.pathname.startsWith('/doc/')) return { kind: 'outside' };
+  if (url.origin !== location.origin || !url.pathname.startsWith(base)) return { kind: 'outside' };
   let path;
   try {
-    path = url.pathname.slice(5).split('/').map(decodeURIComponent).join('/');
+    path = url.pathname.slice(base.length).split('/').map(decodeURIComponent).join('/');
   } catch {
     return { kind: 'blocked' };
   }
@@ -150,16 +154,15 @@ const lineFromHash = (hash) => {
 // 렌더링 후 다듬기
 
 /**
- * 문서 속 링크를 앱 안의 동작으로 바꾼다. root 는 앵커(#id)를 찾을 곳 — html 문서면 iframe 의 document (htmldoc.js).
+ * 문서 속 링크를 앱 안의 동작으로 바꾼다. tab: 문서가 든 탭. root 는 앵커(#id)를 찾을 곳 — html 문서면 iframe 의 document (htmldoc.js).
+ * 링크는 보이는 칸(선택된 탭)에서만 누를 수 있으므로, 여는 동작은 선택된 탭에서 한다 ('open' → nav.js).
  */
-export function bindLink(a, baseUrl, docPath, root = null) {
-  const r = resolveRef(a.getAttribute('href'), baseUrl);
+export function bindLink(a, baseUrl, docPath, tab, root = null) {
+  const r = resolveRef(a.getAttribute('href'), baseUrl, tab);
   const where = () => root || paneOf(a)?.view;
-  const side = (e) => e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
   // 우클릭 메뉴의 '링크 주소 복사'가 쓸 값: 인터넷 주소, 또는 프로젝트 기준 경로(#앵커 포함)
   const target = { external: r.url, local: `${r.path || ''}${r.hash || ''}`, anchor: `${docPath}${r.hash}` }[r.kind];
   a.dataset.lecHref = target || a.getAttribute('href');
-  delete a.dataset.lecOpen;   // 우클릭 '오른쪽 창에 열기'가 쓸 값은 아래에서만 단다 (문서가 적어 둔 값은 버린다)
   switch (r.kind) {
     case 'anchor':
       a.addEventListener('click', (e) => {
@@ -183,21 +186,19 @@ export function bindLink(a, baseUrl, docPath, root = null) {
       break;
     case 'local':
       a.title = r.path || '프로젝트 루트';
-      if (r.isDir || S.dirs.has(r.path)) {
-        a.dataset.lecOpen = JSON.stringify({ type: 'overview', path: r.path });   // 우클릭 '오른쪽 창에 열기'
+      if (r.isDir || tab.dirs.has(r.path)) {
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('open', { type: 'overview', path: r.path, side: side(e) });
+          emit('open', { type: 'overview', path: r.path });
         });
-      } else if (isMd(r.path) || (isHtml(r.path) && S.fileMap.has(r.path))) {
+      } else if (isMd(r.path) || (isHtml(r.path) && tab.fileMap.has(r.path))) {
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
-        a.dataset.lecOpen = JSON.stringify({ type: 'doc', path: r.path, hash: r.hash });
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          if (r.path === docPath && r.hash && !side(e)) {
+          if (r.path === docPath && r.hash) {
             if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
           } else {
-            emit('open', { type: 'doc', path: r.path, hash: r.hash, side: side(e) });
+            emit('open', { type: 'doc', path: r.path, hash: r.hash });
           }
         });
       } else {
@@ -242,16 +243,16 @@ function makeZoomable(img) {
   img.addEventListener('click', () => openLightbox(img.cloneNode()));
 }
 
-function fixImage(img, baseUrl, stamp) {
+function fixImage(img, baseUrl, stamp, tab) {
   const src = img.getAttribute('data-src');
   img.removeAttribute('data-src');
-  const r = resolveRef(src, baseUrl);
+  const r = resolveRef(src, baseUrl, tab);
   if (r.kind === 'data') {
     img.src = src;
     return;
   }
   if (r.kind === 'local') {
-    img.src = `/doc/${encodePath(r.path)}?v=${stamp}`;   // 다시 그릴 때 바뀐 이미지가 보이도록
+    img.src = `${docUrl(tab, r.path)}?v=${stamp}`;   // 다시 그릴 때 바뀐 이미지가 보이도록
     img.loading = 'lazy';
     makeZoomable(img);
     return;
@@ -382,10 +383,10 @@ function frontMatterHtml(raw) {
   return `<details class="front-matter" open><summary>메타데이터</summary><table>${rows}</table></details>`;
 }
 
-function enhance(root, docPath, stamp) {
-  const baseUrl = new URL(`/doc/${encodePath(docPath)}`, location.origin);
-  for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp);
-  for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath);   // 이미지 맵의 area 도 링크
+function enhance(root, docPath, stamp, tab) {
+  const baseUrl = new URL(docUrl(tab, docPath), location.origin);
+  for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp, tab);
+  for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath, tab);   // 이미지 맵의 area 도 링크
   decorateAlerts(root);
   decorateTables(root);
   decorateCode(root);
@@ -403,17 +404,17 @@ export function showMissing(view, path, err) {
 }
 
 /**
- * 문서를 창(pane)에 그린다.
+ * 문서를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab)이다 — 그리는 중에 다른 탭을 골라도 이 탭에 그린다.
  * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
- * - 그 창에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
+ * - 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
  */
 export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   const id = ++pane.renderId;
-  const { view, scroller: content } = pane;
+  const { view, scroller: content, tab } = pane;
 
   let text;
   try {
-    text = await getText(`/doc/${encodePath(path)}`);
+    text = await getText(docUrl(tab, path));
   } catch (err) {
     if (id !== pane.renderId) return false;
     showMissing(view, path, err);
@@ -434,9 +435,9 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   stage.innerHTML = (frontMatter ? frontMatterHtml(frontMatter) : '') + window.DOMPurify.sanitize(html, PURIFY);
   document.body.append(stage);
   try {
-    enhance(stage, path, Date.now());
+    enhance(stage, path, Date.now(), tab);
     await renderMermaid(stage);
-    await linkPaths(stage, path);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
+    await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
   } finally {
     stage.remove();
   }
@@ -456,8 +457,8 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   else if (!hash || !scrollToAnchor(view, hash)) content.scrollTop = 0;
   markChanges(view, before, pane);
 
-  if (S.changed.delete(path)) emit('changed');
-  const file = S.fileMap.get(path);
+  if (tab.changed.delete(path)) emit('changed');
+  const file = tab.fileMap.get(path);
   setStatus({ path, info: file ? `수정 ${formatDateTime(file.mtime)}` : '' }, pane);
   emit('rendered', pane);
   return true;

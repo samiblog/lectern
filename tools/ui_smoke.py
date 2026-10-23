@@ -108,7 +108,7 @@ RAW_HTML = (
     '<img src="../research/images/price-band.svg" usemap="#m" width="320" height="120" alt="이미지 맵">'
     '<map name="m"><area shape="rect" coords="0,0,320,120" href="02-수식과-달러.md" alt="수식 문서"></map>\n\n'
     '<img name="querySelector" src="../research/images/price-band.svg" width="160" height="60" alt="name 속성">\n\n'
-    # 우클릭 '오른쪽 창에 열기'가 쓰는 data-lec-open 을 문서가 적어 두어도 쓰지 않고, 깨진 값이어도 메뉴가 떠야 한다
+    # 문서가 앱이 쓰는 data-lec-* 값을 적어 두거나 깨진 값을 적어도 우클릭 메뉴가 떠야 한다
     '<p><a href="https://example.com/" data-lec-open=\'{{"type":"doc","path":"README.md"}}\'>심은 값 링크</a> '
     '<a data-lec-href="x" data-lec-open="{{">깨진 값</a></p>\n'
 )
@@ -172,12 +172,13 @@ def run(headed: bool) -> None:
 
             print('[트리와 개요]')
             held = []   # 문서가 수천 개면 트리를 처음 훑는 데 몇 초 걸린다 — 응답을 붙잡아 그동안의 화면을 본다
-            page.route('**/api/tree', lambda route: held.append(route))
+            is_tree = lambda u: '/api/tree' in u
+            page.route(is_tree, lambda route: held.append(route))
             page.goto(url)
             loading = wait_until(page, "document.querySelector('#lec-view').textContent.includes('폴더를 읽고 있습니다')")
             for r in held:
                 r.continue_()
-            page.unroute('**/api/tree')
+            page.unroute(is_tree)
             page.wait_for_selector('.overview .ov-head h1')
             check(loading, '폴더를 훑는 동안 빈 화면 대신 읽는 중이라고 알림')
             labels = page.locator('#lec-tree .row .label').all_inner_texts()
@@ -624,8 +625,8 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             broken = menu(page.locator('#lec-view a', has_text='깨진 값'))
             page.keyboard.press('Escape')
-            check('오른쪽 창에 열기' not in planted and '링크 주소 복사' in broken,
-                  "문서가 적어 둔 data-lec-open 은 쓰지 않고, 깨진 값이어도 우클릭 메뉴가 뜸")
+            check('링크 주소 복사' in planted and '링크 주소 복사' in broken,
+                  '문서가 적어 둔 data-lec-* 값이 있거나 깨져 있어도 우클릭 메뉴가 뜸')
             page.locator('#lec-view img[usemap]').click()
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
             check(page.url == url, '이미지 맵 링크는 앱 안에서 문서를 엶 (앱 창이 떠나지 않음)')
@@ -741,7 +742,7 @@ def run(headed: bool) -> None:
             svg_ok = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('렌더링 기능 점검')")
             check(svg_ok, 'html 문서 속 SVG 링크(xlink:href)도 뷰어 안에서 열림 (iframe 이 떠나지 않음)')
             # HEAD 뒤에 문서가 사라지면(404) 안내 화면, 앞 문서의 목차가 남지 않음
-            fold_url = lambda u: '/doc/docs/93-' in urllib.parse.unquote(u)
+            fold_url = lambda u: '/doc/' in u and '/docs/93-' in urllib.parse.unquote(u)
             page.route(fold_url, lambda route: route.fulfill(status=404, body='없음', headers={'Content-Security-Policy': 'sandbox'})
                        if route.request.method == 'GET' else route.continue_())
             page.locator('#lec-tree .row.file', has_text='접는 html').click()
@@ -861,7 +862,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-content').evaluate('el => el.scrollTop = 500')
             remembered = False   # wait_until 은 Promise 를 참으로 보므로 서버 상태는 여기서 되묻는다 (스크롤이 멈추고 1.5초 뒤 저장)
             for _ in range(40):
-                pos = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
+                pos = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.projects.find(p => p.id === s.active).position)")
                 if pos['doc'] == 'docs/01-기능-점검.md' and pos['scroll'].get('docs/01-기능-점검.md') == 500:
                     remembered = True
                     break
@@ -874,133 +875,155 @@ def run(headed: bool) -> None:
             check(remembered and reopened and top == 500,
                   f'다시 열면 마지막에 보던 문서와 스크롤 위치로 (scrollTop {top}, 열린 것 {opened!r}, 기억 {pos})')
 
-            print('[창 나누기]')
-            panes = lambda: page.evaluate('''() => [...document.querySelectorAll('.lec-pane')].map(p => ({
-              w: Math.round(p.getBoundingClientRect().width), active: p.classList.contains('active'),
-              h1: p.querySelector('article h1')?.textContent || '' }))''')
+            print('[프로젝트 탭]')
+            second = tmp / 'second'
+            (second / 'notes').mkdir(parents=True)
+            (second / 'README.md').write_text('# 둘째 프로젝트\n\n## 첫 절\n\n본문\n\n## 둘째 절\n\n' + '긴 문단입니다.\n\n' * 80, encoding='utf-8')
+            (second / 'notes' / '메모.md').write_text('# 둘째의 메모\n\n내용\n', encoding='utf-8')
+            dup = tmp / 'other' / 'samples'   # 첫 프로젝트와 이름이 같은 폴더
+            dup.mkdir(parents=True)
+            (dup / 'a.md').write_text('# 같은 이름 폴더의 문서\n', encoding='utf-8')
+            tabs = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-tablist .lec-tab')].map(t => ({
+              name: t.querySelector('.name').textContent, sub: t.querySelector('.sub')?.textContent || '',
+              active: t.classList.contains('active'), dot: !!t.querySelector('.dot') }))''')
+            n_tabs = lambda n: wait_until(page, f"document.querySelectorAll('#lec-tablist .lec-tab').length === {n}")
+            tab_el = lambda i: page.locator('#lec-tablist .lec-tab').nth(i)
+            h1_has = lambda text: wait_until(page, f"document.querySelector('#lec-view h1')?.textContent.includes('{text}')", 10000)
+            tree_root = lambda: page.evaluate("document.querySelector('#lec-tree .row.root .label')?.textContent")
             ui_now = lambda: page.evaluate('''() => ({ toc: document.querySelector('#lec-toc .toc-list a')?.textContent || '',
               status: document.querySelector('#lec-st-path').textContent, tree: document.querySelector('#lec-tree .row.active')?.dataset.doc,
-              back: document.querySelector('#lec-btn-back').disabled })''')
-            row = lambda doc: page.locator(f'#lec-tree .row.file[data-doc="{doc}"]')
-            pane_title = lambda i: page.locator('.lec-pane').nth(i).locator('.pane-title')
-            n_panes = lambda n: wait_until(page, f"document.querySelectorAll('.lec-pane').length === {n}")
-            h1_has = lambda text: wait_until(page, f"document.querySelector('#lec-view h1')?.textContent.includes('{text}')")
-            one = panes()
-            check(len(one) == 1 and page.locator('.pane-head').first.is_hidden(), '창이 하나면 머리줄 없이 전체 폭')
-            row('docs/02-수식과-달러.md').click(modifiers=['Control'])
-            two = n_panes(2) and h1_has('수식과 달러')
-            p, st = panes(), ui_now()
-            check(two and abs(p[0]['w'] - p[1]['w']) <= 2 and abs(p[0]['w'] + p[1]['w'] - one[0]['w']) <= 2 and p[1]['active']
-                  and (st['toc'], st['status'], st['tree']) == ('수식', 'docs/02-수식과-달러.md', 'docs/02-수식과-달러.md'),
-                  f'트리 Ctrl+클릭: 오른쪽 새 창(1/2 폭)이 선택되고 목차·상태줄·트리가 그 문서를 따름 ({p}, {st})')
-            pane_title(0).click()
+              top: Math.round(document.querySelector('#lec-content').scrollTop) })''')
+            api_state = lambda: page.evaluate('fetch("/api/state").then(r => r.json())')
+            one = tabs()
+            page.evaluate("window.__firstH1 = document.querySelector('#lec-view h1')")   # 탭을 오가도 다시 그리지 않는지 볼 표시
+            first = ui_now()
+            check(len(one) == 1 and one[0]['name'] == 'samples' and one[0]['active'] and first['status'] == 'docs/01-기능-점검.md',
+                  f'연 폴더 하나가 탭 하나 ({one})')
+            page.once('dialog', lambda d: d.accept(str(second)))   # 브라우저 모드의 폴더 열기는 경로를 묻는다
+            page.click('#lec-btn-open')
+            opened = n_tabs(2) and wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'second'")
+            t, labels = tabs(), page.locator('#lec-tree .row .label').all_inner_texts()
+            check(opened and [x['active'] for x in t] == [False, True] and tree_root() == 'second'
+                  and '둘째의 메모' in labels and '렌더링 기능 점검' not in labels,
+                  f'폴더 열기(+)는 새 탭으로 열고, 왼쪽 트리와 화면이 그 폴더의 것으로 ({t})')
+            page.locator('#lec-tree .row.file', has_text='둘째 프로젝트').click()
+            h1_has('둘째 프로젝트')
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 900')
+            tab_el(0).click()
+            back_first = h1_has('렌더링 기능 점검')
+            same = page.evaluate("document.querySelector('#lec-view h1') === window.__firstH1")
             st = ui_now()
-            check(panes()[0]['active'] and (st['toc'], st['status'], st['tree']) == ('표', 'docs/01-기능-점검.md', 'docs/01-기능-점검.md'),
-                  f'왼쪽 창을 누르면 그 창이 선택되고 목차·상태줄·트리가 따라옴 ({st})')
-            pane_title(1).click()
-            row('docs/03-다이어그램.md').click()
-            h1_has('다이어그램')
-            right_back = ui_now()['back']
-            pane_title(0).click()
-            left_back = ui_now()['back']
-            pane_title(1).click()
+            shot('09-tabs')
+            check(back_first and same and st == first and tree_root() == 'samples',
+                  f'탭을 누르면 트리·목차·상태줄과 문서가 그 탭의 것으로 — 문서는 다시 그리지 않고 읽던 위치 그대로 ({st})')
+            tab_el(1).click()
+            h1_has('둘째 프로젝트')
+            second_top = ui_now()['top']
             page.keyboard.press('Alt+ArrowLeft')
-            check(not right_back and left_back and h1_has('수식과 달러') and '렌더링 기능 점검' in panes()[0]['h1'],
-                  '뒤로/앞으로는 창마다 — 선택된 창의 기록만')
-            row('docs/04-HTML-보고서.html').click(modifiers=['Control'])
-            three = n_panes(3) and wait_until(page, "!!document.querySelector('#lec-view > iframe.lec-html:not(.lec-loading)')?.dataset.ready")
-            p3 = panes()
-            shot('08-split')
-            check(three and max(x['w'] for x in p3) - min(x['w'] for x in p3) <= 2 and [x['active'] for x in p3] == [False, False, True],
-                  f'세 창은 같은 폭(1/3), 새 창은 선택된 창 바로 오른쪽 ({p3})')
-            pane_title(0).click()
-            page.frame_locator('.lec-pane >> nth=2 >> iframe.lec-html').locator('body').click(position={'x': 40, 'y': 40})
-            st = ui_now()
-            check(panes()[2]['active'] and (st['status'], st['toc']) == ('docs/04-HTML-보고서.html', '요약'),
-                  f'html 문서 안을 눌러도 그 창이 선택됨 ({st})')
-            row('README.md').click(modifiers=['Control'])
-            replaced = h1_has('샘플 프로젝트')
-            p, note = panes(), page.locator('#lec-toast').text_content()
-            check(replaced and len(p) == 3 and p[2]['active'] and '3개까지' in note and abs(p[0]['w'] - p3[0]['w']) <= 1
-                  and '목차가 없습니다' in page.locator('#lec-toc').inner_text(),
-                  f'넷째는 선택된 창에 열고 알림. 목차가 없는 문서여도 목차 칸이 남아 창 폭이 그대로 ({note!r}, {p})')
-            pane_title(1).click()
-            page.keyboard.press('Control+f')
-            page.keyboard.type('수식')
-            wait_until(page, "document.querySelector('#lec-find-count').textContent.includes('/')")
-            in_right = page.locator('#lec-find-count').text_content()
-            pane_title(0).click()
-            moved = wait_until(page, "document.querySelector('#lec-findbar').closest('.lec-pane') === document.querySelector('.lec-pane')")
-            in_left = page.locator('#lec-find-count').text_content()
+            went_back = wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'second'")
+            tab_el(0).click()
+            first_kept = h1_has('렌더링 기능 점검')
+            tab_el(1).click()
+            page.keyboard.press('Alt+ArrowRight')
+            forward_ok = h1_has('둘째 프로젝트')
+            check(second_top == 900 and went_back and first_kept and forward_ok, '뒤로/앞으로와 스크롤 위치는 탭마다')
+            # 사이드바(파일 거르기·전체 검색)도 탭마다
+            tab_el(0).click()
+            page.fill('#lec-filter', '우선')
+            tab_el(1).click()
+            other_filter = page.input_value('#lec-filter')
+            page.keyboard.press('Control+Shift+F')
+            page.fill('#lec-search-input', '긴 문단')
+            wait_until(page, "document.querySelector('#lec-search-results .sr-hit')")
+            tab_el(0).click()
+            first_side = page.evaluate('''() => ({ filter: document.querySelector('#lec-filter').value,
+              files: !document.querySelector('#lec-tree').hidden, rows: document.querySelectorAll('#lec-tree .row.file').length })''')
+            tab_el(1).click()
+            second_side = page.evaluate('''() => ({ search: !document.querySelector('#lec-search').hidden,
+              q: document.querySelector('#lec-search-input').value, hits: document.querySelectorAll('#lec-search-results .sr-hit').length })''')
+            check(other_filter == '' and first_side == {'filter': '우선', 'files': True, 'rows': 1}
+                  and second_side['search'] and second_side['q'] == '긴 문단' and second_side['hits'] > 0,
+                  f'사이드바의 거르기·검색어·검색 결과는 탭마다 ({first_side}, {second_side})')
+            page.locator('.side-tabs button[data-tab="files"]').click()
+            tab_el(0).click()
+            page.fill('#lec-filter', '')
+            page.locator('#lec-filter').dispatch_event('input')
+            # 다른 탭 프로젝트의 파일은 링크·그림으로도 열지 않는다 (id 를 알아도)
+            second_id = next(p['id'] for p in api_state()['projects'] if p['name'] == 'second')
+            (work / 'docs' / '92-다른-탭.md').write_text(
+                f'# 다른 탭 경로\n\n[다른 탭 문서](../../{second_id}/README.md)\n\n![다른 탭 그림](../../{second_id}/notes/x.png)\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file:has-text("다른 탭 경로")', timeout=8000)
+            page.locator('#lec-tree .row.file', has_text='다른 탭 경로').click()
+            h1_has('다른 탭 경로')
+            cross = page.evaluate('''() => ({ off: document.querySelector('#lec-view a')?.classList.contains('link-off'),
+              img: document.querySelector('#lec-view .image-off')?.textContent || '' })''')
+            check(cross['off'] and cross['img'].startswith('표시할 수 없는 이미지'), f'다른 탭 프로젝트로 넘어가는 상대경로는 막힘 ({cross})')
+            # 숨은 탭에서 바뀐 문서: 탭에 점, 그 탭을 고르면 바뀐 곳을 강조하며 다시 그림
+            page.keyboard.press('Alt+ArrowLeft')
+            h1_has('렌더링 기능 점검')
+            readme2 = second / 'README.md'
+            readme2.write_text(readme2.read_text(encoding='utf-8').replace('본문\n', '본문\n\n숨은 탭에서 고친 문단\n'), encoding='utf-8')
+            dotted = wait_until(page, "!!document.querySelectorAll('#lec-tablist .lec-tab')[1]?.querySelector('.dot')", 8000)
+            not_yet = 'second' not in (page.evaluate("document.querySelector('#lec-view h1')?.textContent") or '')
+            tab_el(1).click()
+            redrawn = wait_until(page, "document.querySelector('#lec-view').textContent.includes('숨은 탭에서 고친 문단')", 8000)
+            flashed = page.evaluate("[...document.querySelectorAll('#lec-view .lec-changed')].map(e => e.textContent.trim())")
+            check(dotted and not_yet and redrawn and flashed == ['숨은 탭에서 고친 문단'] and not tabs()[1]['dot'],
+                  f'숨은 탭의 문서가 바뀌면 탭에 점, 고르면 다시 그리고 바뀐 곳 강조 ({flashed})')
+            # 다른 실행(탐색기 우클릭 등)이 서버에 폴더를 넘기면 그 탭이 생기고 고른다. 같은 이름의 폴더는 상위 폴더 이름으로 구분
+            page.evaluate("p => fetch('/api/open', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({path: p})})"
+                          ".then(r => r.status)", str(dup))
+            ext = n_tabs(3) and wait_until(page, "document.querySelectorAll('#lec-tablist .lec-tab')[2]?.classList.contains('active')", 8000)
+            t = tabs()
+            check(ext and h1_has('samples') and t[2]['sub'] == 'other' and t[0]['sub'] == tmp.name,
+                  f'서버에 새로 연 폴더는 탭으로 생기고 고름, 같은 이름의 탭은 상위 폴더 이름을 붙임 ({t})')
+            page.click('#lec-btn-recent')
+            page.locator('#lec-menu button', has_text='second').first.click()
+            again = wait_until(page, "document.querySelectorAll('#lec-tablist .lec-tab')[1]?.classList.contains('active')")
+            check(again and len(tabs()) == 3 and h1_has('둘째 프로젝트'), '이미 열린 폴더를 다시 열면 새 탭 대신 그 탭으로')
+            page.keyboard.press('Control+1')
+            k1 = tabs()[0]['active']
+            before = ui_now()['top']
+            page.keyboard.press('PageDown')
+            scrolled = wait_until(page, f"document.querySelector('#lec-content').scrollTop > {before}")
+            page.keyboard.press('Control+9')
+            k9 = tabs()[2]['active']
+            page.keyboard.press('Control+PageDown')
+            wrap = tabs()[0]['active']
+            page.keyboard.press('Control+Shift+Tab')
+            prev = tabs()[2]['active']
+            check(k1 and scrolled and k9 and wrap and prev, 'Ctrl+1~8·Ctrl+9(마지막), Ctrl+PageDown·Ctrl+Shift+Tab 으로 탭, 고른 뒤 PageDown 은 그 탭 문서를 스크롤')
+            items = menu(tab_el(2))
             page.keyboard.press('Escape')
-            check(moved and in_right != in_left, f'찾기 막대는 선택된 창으로 옮겨 가 그 문서에서 찾음 (오른쪽 {in_right}, 왼쪽 {in_left})')
-            pane_title(2).click()
-            math_doc = work / 'docs' / '02-수식과-달러.md'
-            math_doc.write_text(math_doc.read_text(encoding='utf-8') + '\n옆 창에서 고친 문단\n', encoding='utf-8')
-            side_fresh = wait_until(page, "document.querySelectorAll('.lec-pane')[1].querySelector('article').textContent.includes('옆 창에서 고친 문단')", 8000)
-            check(side_fresh and panes()[2]['active'] and row('docs/02-수식과-달러.md').locator('.dot').count() == 0,
-                  '선택되지 않은 창의 문서도 바뀌면 다시 그림 (변경 표시 없이, 선택은 그대로)')
-            page.locator('.lec-pane').nth(2).locator('.pane-close').click()
-            p = panes()
-            check(n_panes(2) and abs(p[0]['w'] - p[1]['w']) <= 2 and p[1]['active'], f'× 로 닫으면 남은 창이 같은 폭으로, 선택은 왼쪽 창 ({p})')
-            items = menu(row('README.md'))
-            page.keyboard.press('Escape')
-            pane_title(0).click()
-            menu(page.locator('#lec-view a', has_text='수식과 달러 표기'))
-            page.locator('#lec-menu button', has_text='오른쪽 창에 열기').click()
-            p = panes() if n_panes(3) and h1_has('수식과 달러') else []
-            check(items.startswith('오른쪽 창에 열기') and [x['active'] for x in p] == [False, True, False],
-                  f"트리·링크 우클릭 '오른쪽 창에 열기': 누른 창 바로 오른쪽에 ({p})")
-            scrolls = lambda: page.evaluate("[...document.querySelectorAll('.lec-scroll')].map(s => Math.round(s.scrollTop))")
-            page.locator('.lec-pane').nth(0).locator('.lec-scroll').evaluate('el => el.scrollTop = 1500')
-            saved = None   # 스크롤이 멈추고 1.5초 뒤 저장
+            tab_el(2).locator('.tab-close').click()
+            closed = n_tabs(2) and tabs()[1]['active'] and h1_has('둘째 프로젝트')
+            cfg = page.evaluate("fetch('/api/config').then(r => r.json())")
+            check('탭 닫기' in items and '다른 탭 모두 닫기' in items and closed and cfg['tabs'] == [str(work), str(second)],
+                  f'× 로 탭을 닫으면 옆 탭으로, 설정의 열린 탭 목록도 ({cfg["tabs"]})')
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 700')
+            saved = False   # 스크롤이 멈추고 1.5초 뒤 저장
             for _ in range(40):
-                saved = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
-                if len(saved['panes']) == 3 and saved['active'] == 1 and saved['panes'][0]['scroll'] == 1500:
+                pos = next(p['position'] for p in api_state()['projects'] if p['id'] == second_id)
+                if pos['doc'] == 'README.md' and pos['scroll'].get('README.md') == 700:
+                    saved = True
                     break
                 page.wait_for_timeout(200)
             page.reload()
-            restored = n_panes(3) and wait_until(page, "[...document.querySelectorAll('.lec-pane article')].every(a => a.querySelector('h1'))", 15000)
-            page.wait_for_timeout(300)
-            check(restored and [(x['h1'], x['active']) for x in panes()] == [(x['h1'], x['active']) for x in p] and scrolls()[0] == 1500,
-                  f'다시 열면 창들·선택된 창·나눈 폭에서의 스크롤 위치를 되살림 ({scrolls()}, {saved})')
-            page.keyboard.press('Control+1')
-            check(panes()[0]['active'] and ui_now()['status'] == 'docs/01-기능-점검.md', 'Ctrl+1 로 첫 창을 고름')
-            page.keyboard.press('Control+2')
-            before = scrolls()
-            page.keyboard.press('PageDown')
-            wait_until(page, f"document.querySelectorAll('.lec-scroll')[1].scrollTop > {before[1]}")
-            after = scrolls()
-            check(after[1] > before[1] and after[0] == before[0], f'Ctrl+2 뒤 PageDown 은 둘째 창을 스크롤 ({before} → {after})')
-            page.keyboard.press('Control+1')
-            items = menu(page.locator('.lec-pane').nth(1).locator('.pane-close'))
-            page.keyboard.press('Escape')
-            check(items.startswith('docs/02-수식과-달러.md') and panes()[1]['active'],
-                  f'선택되지 않은 창의 × 를 우클릭하면 그 창이 선택되고 그 창의 메뉴 ({items[:30]!r})')
-            items = menu(page.locator('.lec-pane').nth(2).locator('.lec-scroll'), position={'x': 6, 'y': 6})
-            page.locator('#lec-menu button', has_text='이 창 닫기').click()
-            check('이 창 닫기' in items and n_panes(2), "문서 빈 곳 우클릭 '이 창 닫기'")
-            soon_gone = work / 'docs' / '97-곧-지움.md'
-            soon_gone.write_text('# 곧 지울 문서\n\n본문\n', encoding='utf-8')
-            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-곧-지움.md"]', timeout=8000)
-            pane_title(1).click()
-            row('docs/97-곧-지움.md').click()
-            h1_has('곧 지울 문서')
-            soon_gone.unlink()
-            wait_until(page, "!!document.querySelectorAll('.lec-pane')[1].querySelector('.doc-missing')", 8000)
-            pane_title(0).click()
-            page.locator('#lec-content').evaluate('el => el.scrollTop = 700')
-            kept = None
-            for _ in range(40):
-                kept = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.position)")
-                if kept['panes'] == [{'doc': 'docs/01-기능-점검.md', 'scroll': 700}]:
-                    break
-                page.wait_for_timeout(200)
-            check(kept['panes'] == [{'doc': 'docs/01-기능-점검.md', 'scroll': 700}],
-                  f"다른 창의 문서가 지워져도('문서 없음') 나머지 창의 위치는 계속 기록 ({kept['panes']})")
-            page.locator('.lec-pane').nth(1).locator('.pane-close').click()
-            check(n_panes(1) and page.locator('.pane-head').first.is_hidden() and abs(panes()[0]['w'] - one[0]['w']) <= 2,
-                  '창이 하나로 돌아오면 다시 전체 폭')
+            restored = n_tabs(2) and h1_has('둘째 프로젝트')
+            top2 = ui_now()['top']
+            tab_el(0).click()   # 처음 고를 때 트리를 읽고 마지막 문서로
+            lazy = h1_has('렌더링 기능 점검') and tree_root() == 'samples'
+            check(saved and restored and tabs()[0]['active'] and top2 == 700 and lazy,
+                  f'다시 열면 탭들과 선택된 탭, 탭마다 마지막 문서·스크롤 위치를 되살림 (scrollTop {top2})')
+            tab_el(1).click(button='middle')   # 가운데 버튼으로 닫기
+            middle = n_tabs(1) and tabs()[0]['active'] and h1_has('렌더링 기능 점검')
+            tab_el(0).locator('.tab-close').click()
+            welcome = wait_until(page, "!!document.querySelector('#lec-view.welcome h1') && !document.querySelector('#lec-tree .row')")
+            title = page.title()
+            page.locator('#lec-view.welcome button[data-path]', has_text=str(work)).click()   # 최근 연 폴더에서 다시 열기
+            reopened = n_tabs(1) and h1_has('렌더링 기능 점검') and tree_root() == 'samples'
+            check(middle and welcome and title == 'Lectern' and reopened,
+                  f'탭을 가운데 버튼으로도 닫고, 모두 닫으면 시작 화면(트리 비움), 최근 연 폴더로 다시 열기 ({middle}, {welcome}, {title!r}, {reopened})')
 
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
@@ -1025,8 +1048,11 @@ def run(headed: bool) -> None:
                   f'인쇄: 문서 메뉴에 인쇄, 화면 UI 빼고 접은 절 펴서, 어두운 스타일도 검은 글자, 링크 주소 표시 ({pr}, PDF {len(pdf)}바이트)')
 
             print('[보안]')
-            check(page.evaluate("fetch('/doc/.hidden-note.md').then(r => r.status)") == 404, '숨김 문서 직접 요청 차단')
-            check(page.evaluate("fetch('/doc/..%2F..%2Fetc%2Fpasswd').then(r => r.status)") == 404, '프로젝트 밖 경로 차단')
+            pid = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.active)")
+            status = lambda u: page.evaluate(f"fetch('{u}').then(r => r.status)")
+            check(status(f'/doc/{pid}/README.md') == 200 and status(f'/doc/{pid}/.hidden-note.md') == 404, '숨김 문서 직접 요청 차단')
+            check(status(f'/doc/{pid}/..%2F..%2Fetc%2Fpasswd') == 404, '프로젝트 밖 경로 차단')
+            check(status('/doc/README.md') == 404 and status('/doc/0badc0de/README.md') == 404, '열려 있지 않은 프로젝트(탭) 주소는 404')
             not_images = [u for u, kind in outside if kind != 'image' and u not in blocked]
             check(not not_images, '외부 요청은 문서 속 이미지뿐 (스크립트·글꼴·CDN 없음)' + (f': {not_images[:3]}' if not_images else ''))
 

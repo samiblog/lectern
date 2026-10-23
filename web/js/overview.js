@@ -9,9 +9,9 @@ import { paneOf } from './panes.js';
 import { kindBadge } from './tree.js';
 import { $, esc, timeAgo, formatDateTime } from './util.js';
 
-function crumbs(path) {
+function crumbs(path, tab) {
   const parts = path ? path.split('/') : [];
-  const items = [`<button type="button" data-dir="">${esc(S.name)}</button>`];
+  const items = [`<button type="button" data-dir="">${esc(tab.name)}</button>`];
   parts.slice(0, -1).forEach((name, i) => {
     items.push(`<button type="button" data-dir="${esc(parts.slice(0, i + 1).join('/'))}">${esc(name)}</button>`);
   });
@@ -24,15 +24,15 @@ function relativeDir(filePath, base) {
   return dir === base ? '' : dir.slice(base.length + 1);
 }
 
-function render(d) {
+function render(d, tab) {
   const recent = d.total > 3 ? d.recent : [];
   const parts = [];
-  parts.push(`<header class="ov-head">${crumbs(d.path)}<h1>${esc(d.name)}</h1>
+  parts.push(`<header class="ov-head">${crumbs(d.path, tab)}<h1>${esc(d.name)}</h1>
     <p class="ov-sub">${d.total ? `문서 ${d.total}개` : '문서 없음'}${d.dirs.length ? `, 폴더 ${d.dirs.length}개` : ''}</p></header>`);
 
   if (recent.length) {
     parts.push(`<section class="ov-sec"><h2>최근 변경</h2><ol class="ov-rail">${recent.map((f) => {
-      const fresh = S.changed.has(f.path);
+      const fresh = tab.changed.has(f.path);
       const where = relativeDir(f.path, d.path);
       return `<li><button type="button" data-doc="${esc(f.path)}" title="${esc(f.path)}, ${formatDateTime(f.mtime)}">
         <span class="when">${esc(timeAgo(f.mtime))}</span><span class="mark${fresh ? ' fresh' : ''}" aria-hidden="true"></span>
@@ -51,7 +51,7 @@ function render(d) {
 
   if (d.files.length) {
     parts.push(`<section class="ov-sec"><h2>${d.dirs.length ? '이 폴더의 문서' : '문서'}</h2><ul class="ov-files">${d.files.map((f) => {
-      const fresh = S.changed.has(f.path);
+      const fresh = tab.changed.has(f.path);
       return `<li><button type="button" data-doc="${esc(f.path)}">
         <span class="t">${esc(f.title || f.name)}${kindBadge(f)}${fresh ? '<span class="fresh-dot" title="열어 보기 전에 바뀜"></span>' : ''}</span>
         <span class="when" title="${formatDateTime(f.mtime)}">${esc(timeAgo(f.mtime))}</span>
@@ -67,17 +67,17 @@ function render(d) {
   return parts.join('');
 }
 
-/** 폴더 개요를 창(pane)에 그린다. 그 창에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false) */
+/** 폴더 개요를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab). 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false) */
 export async function showOverview(pane, path, { scrollTop } = {}) {
   const id = ++pane.renderId;
-  const { view } = pane;
+  const { view, tab } = pane;
   let data;
   try {
-    data = await getJSON(`/api/overview?path=${encodeURIComponent(path)}`);
+    data = await getJSON(`/api/overview?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}`);
   } catch (err) {
     if (id !== pane.renderId) return false;
     view.className = 'overview';
-    view.innerHTML = `<div class="ov-empty"><h1>${esc(path || S.name)}</h1><p>폴더를 읽지 못했습니다 (${esc(err.message)}). 삭제되었거나 숨김 폴더일 수 있습니다.</p></div>`;
+    view.innerHTML = `<div class="ov-empty"><h1>${esc(path || tab.name)}</h1><p>폴더를 읽지 못했습니다 (${esc(err.message)}). 삭제되었거나 숨김 폴더일 수 있습니다.</p></div>`;
     setToc(pane, null);
     clearChanges(pane);
     emit('rendered', pane);
@@ -87,11 +87,11 @@ export async function showOverview(pane, path, { scrollTop } = {}) {
 
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
   view.className = 'overview';
-  view.innerHTML = render(data);
+  view.innerHTML = render(data, tab);
   setToc(pane, null);
   clearChanges(pane);
   pane.scroller.scrollTop = top ?? 0;
-  setStatus({ path: path ? `${path}/` : `${S.name} (프로젝트 루트)`, info: `문서 ${data.total}개` }, pane);
+  setStatus({ path: path ? `${path}/` : `${tab.name} (프로젝트 루트)`, info: `문서 ${data.total}개` }, pane);
   emit('rendered', pane);
   return true;
 }
@@ -101,11 +101,10 @@ export function initOverview() {
     if (!paneOf(e.target)?.view.classList.contains('overview')) return;
     const btn = e.target.closest('button[data-doc], button[data-dir]');
     if (!btn) return;
-    const side = e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
-    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc, side });
+    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc });
     else {
       if (btn.dataset.dir) S.open.add(btn.dataset.dir);
-      emit('open', { type: 'overview', path: btn.dataset.dir, side });
+      emit('open', { type: 'overview', path: btn.dataset.dir });
     }
   });
 }

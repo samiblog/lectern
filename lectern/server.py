@@ -2,8 +2,8 @@
 
 - /              index.html (모드 정보 주입)
 - /static/...    web/ 정적 파일 (앱 UI, vendor 라이브러리, 테마)
-- /api/...       JSON API — pywebview 모드에서는 X-Token 헤더 검사
-- /doc/<경로>     프로젝트 안의 파일 (md 원문, 이미지 등). 숨김·프로젝트 밖은 404
+- /api/...       JSON API — pywebview 모드에서는 X-Token 헤더 검사. 프로젝트(탭)를 다루는 요청은 p=<프로젝트 id>
+- /doc/<id>/<경로> 그 프로젝트 안의 파일 (md 원문, 이미지 등). 숨김·프로젝트 밖·모르는 id 는 404
 
 API 명세는 docs/ARCHITECTURE.md 에 있다. 바꾸면 문서도 함께 고친다.
 """
@@ -18,12 +18,12 @@ from typing import Any
 from flask import Flask, Response, abort, jsonify, request, send_file
 
 from . import __version__, osutil
-from .config import MAX_PANES, is_number
+from .config import is_number
 from .docinfo import doc_info, read_text
 from .paths import web_dir
 from .scanner import doc_kind, iter_files, resolve_inside
 from .search import MAX_QUERY, search_docs
-from .state import AppState
+from .state import AppState, Project, TooManyTabs
 
 RECENT_IN_OVERVIEW = 6
 ALLOWED_HOSTS = frozenset({'127.0.0.1', 'localhost'})
@@ -84,17 +84,29 @@ def create_app(state: AppState) -> Flask:
     app.json.ensure_ascii = False
     app.json.sort_keys = False
 
-    def require_root() -> Path:
-        if state.root is None:
-            abort(409, description='열린 폴더가 없습니다')
-        return state.root
+    def project_of(pid: Any) -> Project:
+        project = state.get(pid)
+        if project is None:
+            abort(404, description='열려 있지 않은 프로젝트입니다. 탭이 닫혔을 수 있습니다')
+        return project
+
+    def arg_project() -> Project:
+        """GET 요청의 ?p=<프로젝트 id>"""
+        return project_of(request.args.get('p'))
+
+    def body() -> dict[str, Any]:
+        data = request.get_json(silent=True)
+        if not isinstance(data, dict):
+            abort(400)
+        return data
 
     def path_from_body() -> Path:
-        data = request.get_json(silent=True) or {}
+        data = body()
+        root = project_of(data.get('p')).root
         rel = data.get('path')
         if not isinstance(rel, str):
             abort(400)
-        target = resolve_inside(require_root(), rel)
+        target = resolve_inside(root, rel)
         if target is None or not target.exists():
             abort(404)
         return target
@@ -139,24 +151,41 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/open')
     def api_open() -> Any:
-        data = request.get_json(silent=True) or {}
-        folder = data.get('path')
+        """폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. 돌려주는 것은 /api/state 와 같고 opened 가 그 탭의 id."""
+        folder = body().get('path')
         if not isinstance(folder, str) or not folder.strip():
             abort(400)
         try:
-            state.open(folder.strip().strip('"'))
-        except (OSError, NotADirectoryError) as exc:
+            project = state.open(folder.strip().strip('"'))
+        except (OSError, NotADirectoryError, TooManyTabs) as exc:
             return jsonify(error=str(exc)), 400
+        return jsonify(state.info() | {'opened': project.id})
+
+    @app.post('/api/close')
+    def api_close() -> Any:
+        """탭을 닫는다 (그 폴더의 감시를 멈춘다). 이미 닫혔으면 그대로. /api/state 와 같은 것을 돌려준다."""
+        pid = body().get('p')
+        if not isinstance(pid, str):
+            abort(400)
+        state.close_tab(pid)
         return jsonify(state.info())
+
+    @app.post('/api/activate')
+    def api_activate() -> Any:
+        """선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작)."""
+        project = project_of(body().get('p'))
+        state.activate(project.id)
+        return jsonify(ok=True)
 
     @app.get('/api/tree')
     def api_tree() -> Any:
-        root = require_root()
-        return jsonify(root=str(root), tree=state.scan(fresh=request.args.get('fresh') == '1'))
+        project = arg_project()
+        return jsonify(root=str(project.root), tree=project.scan(fresh=request.args.get('fresh') == '1'))
 
     @app.get('/api/overview')
     def api_overview() -> Any:
-        root = require_root()
+        project = arg_project()
+        root = project.root
         rel = request.args.get('path', '').strip('/')
         if rel:
             target = resolve_inside(root, rel)
@@ -164,7 +193,7 @@ def create_app(state: AppState) -> Flask:
                 abort(404)
             # 'docs/../docs' 나 대소문자가 다른 'DOCS' 도 트리와 같은 경로로 맞춘다
             rel = '' if target == root else target.relative_to(root).as_posix()
-        nodes = state.scan(rel=rel)
+        nodes = project.scan(rel=rel)
         dirs, files = [], []
         for node in nodes:
             if node['type'] == 'dir':
@@ -183,18 +212,23 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/search')
     def api_search() -> Any:
-        root = require_root()
+        project = arg_project()
         query = request.args.get('q', '')
         if len(query) > MAX_QUERY:
             abort(400, description=f'검색어는 {MAX_QUERY}자까지입니다')
-        return jsonify(search_docs(root, list(iter_files(state.scan())), query))
+        return jsonify(search_docs(project.root, list(iter_files(project.scan())), query))
 
     @app.get('/api/changes')
     def api_changes() -> Any:
-        since = request.args.get('since', default=0, type=int)
-        result = state.log.since(since)
-        result['root'] = str(state.root) if state.root else None
-        return jsonify(result)
+        """?since=<id>:<seq>,<id>:<seq>… — 화면이 아는 탭마다 그 순번 뒤의 변경. 한 번의 요청으로 모든 탭을 본다.
+        닫힌 탭은 빠진다. tabs_seq 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것이다 (다른 실행이 넘긴 폴더)."""
+        projects = {}
+        for item in request.args.get('since', '').split(','):
+            pid, _, seq = item.partition(':')
+            project = state.get(pid)
+            if project is not None and seq.isdigit():
+                projects[pid] = project.log.since(int(seq))
+        return jsonify(tabs_seq=state.tabs_seq, projects=projects)
 
     @app.get('/api/config')
     def api_config_get() -> Any:
@@ -210,31 +244,19 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/position')
     def api_position() -> Any:
-        """창마다 보는 문서와 스크롤 위치, 선택된 창 (다음에 열 때 되살림). 설정 restore_last 가 꺼져 있으면 기록하지 않는다.
-        본문은 {panes:[{path, scroll}], active} 또는 창 하나일 때의 {path, scroll}."""
-        data = request.get_json(silent=True) or {}
-        if not isinstance(data, dict):
+        """탭(p)에서 보는 문서와 스크롤 위치 {p, path, scroll} (다음에 열 때 되살림). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
+        data = body()
+        root = project_of(data.get('p')).root
+        rel, scroll = data.get('path'), data.get('scroll', 0)
+        if not isinstance(rel, str):
             abort(400)
-        items = data.get('panes', [data])
-        active = data.get('active', 0)
-        if (not isinstance(items, list) or not 1 <= len(items) <= MAX_PANES
-                or not isinstance(active, int) or isinstance(active, bool) or not 0 <= active < len(items)):
+        target = resolve_inside(root, rel)
+        if target is None or not target.exists():
+            abort(404)
+        if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
             abort(400)
-        root = require_root()
-        panes = []
-        for item in items:
-            rel = item.get('path') if isinstance(item, dict) else None
-            scroll = item.get('scroll', 0) if isinstance(item, dict) else None
-            if not isinstance(rel, str):
-                abort(400)
-            target = resolve_inside(root, rel)
-            if target is None or not target.exists():
-                abort(404)
-            if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
-                abort(400)
-            panes.append((target.relative_to(root).as_posix(), int(scroll)))
         if state.config.get('restore_last') is not False:
-            state.config.remember_position(str(root), panes, active)
+            state.config.remember_position(str(root), target.relative_to(root).as_posix(), int(scroll))
         return jsonify(ok=True)
 
     @app.post('/api/open-config')
@@ -251,7 +273,7 @@ def create_app(state: AppState) -> Flask:
     @app.post('/api/open-external')
     def api_open_external() -> Any:
         target = path_from_body()
-        line = (request.get_json(silent=True) or {}).get('line')
+        line = body().get('line')
         line = int(line) if isinstance(line, int) or (isinstance(line, str) and line.isdigit()) else None
         try:
             how = osutil.open_path(target, line, state.config.get('editor'))
@@ -263,11 +285,11 @@ def create_app(state: AppState) -> Flask:
     def api_exists() -> Any:
         """문서 속 경로 표기(src/app.py:42) 중 프로젝트 안에 실제로 있는 파일 (본문 경로 자동 링크, pathlink.js).
 
-        {paths:[...], base:'문서가 있는 폴더'} → {found:{입력: 프로젝트 기준 경로}}. 프로젝트 기준으로 먼저,
+        {p, paths:[...], base:'문서가 있는 폴더'} → {found:{입력: 프로젝트 기준 경로}}. 프로젝트 기준으로 먼저,
         없으면 문서 폴더 기준으로 본다. 숨김·밖·폴더는 없는 것으로 한다 (resolve_inside).
         """
-        root = require_root()
-        data = request.get_json(silent=True) or {}
+        data = body()
+        root = project_of(data.get('p')).root
         paths, base = data.get('paths'), data.get('base') or ''
         if not isinstance(paths, list) or len(paths) > 500 or not isinstance(base, str):
             abort(400)
@@ -292,9 +314,9 @@ def create_app(state: AppState) -> Flask:
             return jsonify(error=str(exc)), 500
         return jsonify(action='reveal')
 
-    @app.get('/doc/<path:rel>')
-    def doc(rel: str) -> Response:
-        root = require_root()
+    @app.get('/doc/<pid>/<path:rel>')
+    def doc(pid: str, rel: str) -> Response:
+        root = project_of(pid).root
         target = resolve_inside(root, rel)
         if target is None or not target.is_file():
             abort(404)
@@ -311,7 +333,6 @@ def create_app(state: AppState) -> Flask:
 
     @app.errorhandler(404)
     @app.errorhandler(403)
-    @app.errorhandler(409)
     @app.errorhandler(400)
     @app.errorhandler(405)
     @app.errorhandler(415)

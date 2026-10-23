@@ -70,40 +70,49 @@ def test_positions_are_bounded(tmp_path):
 
     cfg = Config(tmp_path / 'config.json')
     for i in range(MAX_PROJECTS + 3):
-        cfg.remember_position(rf'C:\p{i}', [('a.md', 10)])
+        cfg.remember_position(rf'C:\p{i}', 'a.md', 10)
     for i in range(MAX_POSITIONS + 5):
-        cfg.remember_position(r'C:\p0', [(f'd{i}.md', i)])
+        cfg.remember_position(r'C:\p0', f'd{i}.md', i)
     assert len(cfg.get('projects')) == MAX_PROJECTS
     pos = cfg.position(r'C:\P0')                              # 대소문자 무시 (Windows 경로)
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
-    assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}, 'panes': [], 'active': 0}
+    assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}}
 
 
-def test_positions_keep_panes(tmp_path):
-    from lectern.config import MAX_PANES
+def test_old_and_broken_positions(tmp_path):
+    path = tmp_path / 'config.json'
+    # 창을 나누던 때(v0.6)의 기록: doc 이 선택된 창의 문서였다. panes·active 는 읽지 않고, 다시 쓰면 없어진다
+    path.write_text(json.dumps({'projects': {
+        os.path.normcase(r'C:\old'): {'doc': 'b.md', 'scroll': {'a.md': 3, 'b.md': 7},
+                                     'panes': [{'doc': 'a.md', 'scroll': 3}, {'doc': 'b.md', 'scroll': 7}], 'active': 1},
+        os.path.normcase(r'C:\bad'): {'doc': 5, 'scroll': {'y.md': 'z', 'w.md': 2}},
+    }}), encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.position(r'C:\old') == {'doc': 'b.md', 'scroll': {'a.md': 3, 'b.md': 7}}
+    assert cfg.position(r'C:\bad') == {'doc': None, 'scroll': {'w.md': 2}}   # 손으로 망가뜨린 값은 버린다
+    cfg.remember_position(r'C:\old', 'a.md', 30)
+    assert cfg.get('projects')[os.path.normcase(r'C:\old')] == {'doc': 'a.md', 'scroll': {'b.md': 7, 'a.md': 30}}
+    # 1e400 은 JSON 으로 맞지만 inf 로 읽힌다 — 내보내면 화면이 받는 JSON 이 깨지므로 버린다
+    text = json.dumps({'projects': {os.path.normcase(r'C:\big'): {'doc': 'z.md', 'scroll': {'z.md': 1, 'w.md': 5}}}})
+    path.write_text(text.replace('"z.md": 1,', '"z.md": 1e400,'), encoding='utf-8')
+    big = Config(path).position(r'C:\big')
+    assert big['scroll'] == {'w.md': 5}
+    json.dumps(big, allow_nan=False)
+
+
+def test_tabs_are_recorded(tmp_path):
+    from lectern.config import MAX_TABS
 
     path = tmp_path / 'config.json'
     cfg = Config(path)
-    cfg.remember_position(r'C:\p', [('a.md', 10), ('b.md', 20), ('a.md', 30), ('c.md', 1)], active=2)
-    pos = cfg.position(r'C:\p')
-    assert pos['panes'] == [{'doc': 'a.md', 'scroll': 10}, {'doc': 'b.md', 'scroll': 20}, {'doc': 'a.md', 'scroll': 30}][:MAX_PANES]
-    assert pos['active'] == 2 and pos['doc'] == 'a.md' and pos['scroll'] == {'b.md': 20, 'a.md': 30}
-    # 창을 나누기 전의 기록은 창 하나로, 손으로 망가뜨린 값은 버린다
-    path.write_text(json.dumps({'projects': {
-        os.path.normcase(r'C:\old'): {'doc': 'x.md', 'scroll': {'x.md': 7}},
-        os.path.normcase(r'C:\bad'): {'doc': 'y.md', 'panes': [{'doc': 'y.md', 'scroll': 'z'}, 3, {}], 'active': 5},
-    }}), encoding='utf-8')
+    cfg.set_tabs([r'C:\a', r'C:\b'], 1)
+    saved = json.loads(path.read_text(encoding='utf-8'))
+    assert saved['tabs'] == [r'C:\a', r'C:\b'] and saved['active_tab'] == 1
+    cfg.set_tabs([rf'C:\p{i}' for i in range(MAX_TABS + 2)], 99)   # 상한을 넘는 것은 자르고, 없는 순번은 첫 탭
+    assert len(cfg.get('tabs')) == MAX_TABS and cfg.get('active_tab') == 0
+    path.write_text(json.dumps({'tabs': r'C:\a', 'active_tab': 'x'}), encoding='utf-8')   # 손으로 고친 틀린 형식
     cfg = Config(path)
-    assert cfg.position(r'C:\old')['panes'] == [{'doc': 'x.md', 'scroll': 7}]
-    bad = cfg.position(r'C:\bad')
-    assert bad['panes'] == [{'doc': 'y.md', 'scroll': 0}] and bad['active'] == 0
-    # 1e400 은 JSON 으로 맞지만 inf 로 읽힌다 — 내보내면 화면이 받는 JSON 이 깨지므로 버린다
-    text = json.dumps({'projects': {os.path.normcase(r'C:\big'): {'doc': 'z.md', 'scroll': {'z.md': 1, 'w.md': 5},
-                                                                   'panes': [{'doc': 'z.md', 'scroll': 1}]}}})
-    path.write_text(text.replace('"scroll": 1}', '"scroll": 1e400}').replace('"z.md": 1,', '"z.md": 1e400,'), encoding='utf-8')
-    big = Config(path).position(r'C:\big')
-    assert big['panes'] == [{'doc': 'z.md', 'scroll': 0}] and big['scroll'] == {'w.md': 5}
-    json.dumps(big, allow_nan=False)
+    assert cfg.get('tabs') == [] and cfg.get('active_tab') == 0 and 'tabs' in cfg.load_error
 
 
 def test_wrong_value_types_fall_back_and_are_reported(tmp_path):

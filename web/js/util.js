@@ -9,6 +9,9 @@ export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
 /** 'docs/한글 문서.md' → URL 경로 조각마다 인코딩 */
 export const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
 
+/** 탭(프로젝트) 안 파일의 주소: /doc/<탭 id>/<경로>. 상대경로 링크·그림은 이 주소를 기준으로 푼다 (doc.js 의 resolveRef) */
+export const docUrl = (tab, p) => `/doc/${tab.id}/${encodePath(p)}`;
+
 export const basename = (p) => p.slice(p.lastIndexOf('/') + 1);
 export const dirname = (p) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
 export const isMd = (p) => /\.(md|markdown)$/i.test(p);

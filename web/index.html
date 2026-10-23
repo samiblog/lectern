@@ -51,11 +51,6 @@
       <button id="lec-btn-back" class="icon-btn" title="뒤로 (Alt+←)" disabled><svg><use href="#i-back"/></svg></button>
       <button id="lec-btn-forward" class="icon-btn" title="앞으로 (Alt+→)" disabled><svg><use href="#i-forward"/></svg></button>
     </div>
-    <div class="tb-project">
-      <button id="lec-btn-project" class="project-name" title="프로젝트 개요">폴더를 열어 주세요</button>
-      <button id="lec-btn-recent" class="icon-btn small" title="최근 연 폴더"><svg><use href="#i-chevron"/></svg></button>
-      <button id="lec-btn-open" class="text-btn" title="폴더 열기 (Ctrl+O)"><svg><use href="#i-folder"/></svg><span>폴더 열기</span></button>
-    </div>
     <div class="tb-spacer"></div>
     <button id="lec-btn-palette" class="search-btn" title="문서 빠르게 열기 (Ctrl+P)"><svg><use href="#i-search"/></svg><span>문서 찾기</span><kbd>Ctrl P</kbd></button>
     <div class="text-size" role="group" aria-label="글자 크기">
@@ -77,6 +72,13 @@
     <button id="lec-btn-settings" class="icon-btn" title="설정 (Ctrl+,)"><svg><use href="#i-gear"/></svg></button>
     <button id="lec-btn-toc" class="icon-btn" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg></button>
   </header>
+
+  <!-- 프로젝트 탭 (tabs.js): 폴더마다 탭 하나. 탭을 누르면 사이드바와 문서 화면이 함께 바뀐다 -->
+  <nav id="lec-tabbar" aria-label="프로젝트 탭">
+    <div id="lec-tablist" role="tablist"></div>
+    <button id="lec-btn-open" class="icon-btn small" title="폴더 열기 — 새 탭으로 (Ctrl+O)" aria-label="폴더 열기"><svg><use href="#i-plus"/></svg></button>
+    <button id="lec-btn-recent" class="icon-btn small" title="최근 연 폴더" aria-label="최근 연 폴더"><svg><use href="#i-chevron"/></svg></button>
+  </nav>
 
   <div id="lec-main">
     <aside id="lec-sidebar">
@@ -101,11 +103,10 @@
     </aside>
 
     <div id="lec-resizer" role="separator" aria-orientation="vertical" title="끌어서 사이드바 폭 조절 (두 번 누르면 기본 폭)"></div>
-    <!-- 문서 창: 최대 3칸 (panes.js). 선택된 칸의 스크롤 상자·본문이 #lec-content·#lec-view id 를 갖는다 -->
+    <!-- 문서 칸 (panes.js): 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보인다. 여기 있는 칸은 탭이 없을 때의 시작 화면.
+         선택된 칸의 스크롤 상자·본문이 #lec-content·#lec-view id 를 갖는다 -->
     <main id="lec-panes">
       <section class="lec-pane active">
-        <div class="pane-head"><span class="pane-title"></span>
-          <button type="button" class="icon-btn small pane-close" title="이 창 닫기"><svg><use href="#i-close"/></svg></button></div>
         <div id="lec-content" class="lec-scroll" tabindex="-1">
           <div id="lec-findbar" hidden>
             <div class="fb">

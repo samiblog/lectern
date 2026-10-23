@@ -1,29 +1,27 @@
-// 화면 이동, 뒤로/앞으로, 다시 그리기. 칸(panes.js)마다 따로 — 기본은 선택된 칸
+// 화면 이동, 뒤로/앞으로, 다시 그리기. 칸(panes.js — 프로젝트 탭마다 하나)마다 따로 — 기본은 선택된 탭의 칸
 
 import { S, emit, on } from './store.js';
 import { showDoc } from './doc.js';
 import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
-import { forgetFolds } from './fold.js';
-import { MAX_PANES, addPane, closePane, selectPane, resetPanes, showTitle } from './panes.js';
 import { isHtml, toast } from './util.js';
 
 /** 문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js) */
 const render = (pane, path, opts) => (isHtml(path) ? showHtml(pane, path, opts) : showDoc(pane, path, opts));
 
-const scrollPos = new Map();   // 문서·폴더별 마지막 스크롤 위치 (모든 칸이 함께 쓴다)
 const keyOf = (t) => `${t.type}:${t.path || ''}`;
 
 /**
  * 화면 이동. 성공하면 true.
  * index: 뒤로/앞으로처럼 기록 안의 위치로 갈 때, 렌더링이 실제로 끝난 뒤에만 pane.hIndex 를 그 값으로 바꾼다.
- * scrollTop: 이 위치로 (마지막에 열어 둔 창 되살리기). 없으면 restoreScroll 일 때 그 문서의 마지막 위치, 아니면 맨 위나 앵커
+ * scrollTop: 이 위치로. 없으면 restoreScroll 일 때 그 문서의 마지막 위치, 아니면 맨 위나 앵커
  */
 export async function navigate(target, { pane = S.pane, push = true, restoreScroll = false, index = null, scrollTop } = {}) {
-  if (pane.current) scrollPos.set(keyOf(pane.current), pane.scroller.scrollTop);
+  if (!pane?.tab) return false;   // 시작 화면 (열린 탭이 없음)
+  if (pane.current) pane.scrollPos.set(keyOf(pane.current), pane.scroller.scrollTop);
   if (index == null) pane.wanted = null;
   const next = { type: target.type, path: target.path || '' };
-  const top = scrollTop ?? (restoreScroll ? scrollPos.get(keyOf(next)) : undefined);
+  const top = scrollTop ?? (restoreScroll ? pane.scrollPos.get(keyOf(next)) : undefined);
   pane.pending += 1;   // 이동 중에는 자동 새로고침이 끼어들지 않게 한다
   let done;
   try {
@@ -41,7 +39,7 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
       setTimeout(() => refreshView(pane));
     }
   }
-  if (!done) return false;   // 더 나중의 이동이 이겼음 (또는 오류, 닫힌 칸)
+  if (!done) return false;   // 더 나중의 이동이 이겼음 (또는 오류, 닫힌 탭)
   pane.current = next;
   if (index != null) {
     pane.hIndex = index;
@@ -53,7 +51,6 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
       pane.hIndex = pane.history.length - 1;
     }
   }
-  showTitle(pane);
   if (pane === S.pane) {
     S.view = next;
     emit('view', next);
@@ -61,42 +58,14 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
   return true;
 }
 
-/** 선택된 칸 오른쪽에 새 칸을 열어 target 을 보인다 (Ctrl+클릭, 우클릭 '오른쪽 창에 열기'). 이미 3칸이면 선택된 칸에 연다 */
-export async function openBeside(target) {
-  if (!S.root) return false;
-  const pane = addPane();
-  if (!pane) {
-    toast(`창은 ${MAX_PANES}개까지 열 수 있습니다. 선택된 창에 열었습니다`);
-    return navigate(target);
-  }
-  selectPane(pane);
-  if (await navigate(target, { pane })) return true;
-  if (!pane.current && !pane.pending) closePane(pane);   // 열지 못했으면 빈 칸을 남기지 않는다
-  return false;
-}
-
 /**
- * 마지막에 열어 둔 창들을 되살린다 (position.js 가 기록한 /api/state 의 position). 없어진 문서는 건너뛴다.
- * 칸을 먼저 모두 만들고 그린다 — 기록한 스크롤 위치는 나눈 폭에서 잰 값이라, 넓은 칸에 먼저 그리면 어긋난다.
- * 하나도 열지 못하면 false.
+ * 탭을 처음 열 때 마지막에 보던 문서와 스크롤 위치로 (position.js 가 기록한 /api/state 의 position).
+ * 문서별 위치도 넣어 두어 뒤로 가기·다시 열 때 쓴다. 그 문서가 없어졌으면 false (부르는 쪽이 폴더 개요를 연다).
  */
-export async function restorePanes({ panes = [], active = 0 } = {}) {
-  const want = panes[active];
-  const first = S.pane;
-  const slots = [];
-  for (const p of panes.filter((x) => S.fileMap.has(x.doc)).slice(0, MAX_PANES)) {
-    const pane = slots.length ? addPane(slots[slots.length - 1][1]) : first;
-    if (pane) slots.push([p, pane]);
-  }
-  const done = await Promise.all(slots.map(([p, pane]) => navigate({ type: 'doc', path: p.doc }, { pane, scrollTop: p.scroll })));
-  let target = null;
-  slots.forEach(([p, pane], i) => {
-    if (done[i] && (!target || p === want)) target = pane;
-    else if (!done[i] && !pane.current && !pane.pending) closePane(pane);   // 열지 못한 빈 칸
-  });
-  // 그리는 동안 사용자가 다른 칸을 골랐으면 그대로 둔다
-  if (target && S.pane === first) selectPane(target);
-  return !!target;
+export async function restorePosition(pane, pos) {
+  for (const [path, top] of Object.entries(pos?.scroll || {})) pane.scrollPos.set(keyOf({ type: 'doc', path }), top);
+  if (!pos?.doc || !pane.tab.fileMap.has(pos.doc)) return false;
+  return navigate({ type: 'doc', path: pos.doc }, { pane, restoreScroll: true });
 }
 
 function go(step) {
@@ -112,32 +81,24 @@ function go(step) {
 export const back = () => go(-1);
 export const forward = () => go(1);
 
-/** 서버가 기억한 문서별 스크롤 위치를 넣어 둔다 (폴더를 열 때 마지막 위치 복원, position.js) */
-export function seedScroll(positions) {
-  for (const [path, top] of Object.entries(positions || {})) scrollPos.set(keyOf({ type: 'doc', path }), top);
-}
-
-export function resetHistory() {
-  resetPanes();
-  scrollPos.clear();
-  forgetFolds();
-}
-
 /**
- * 칸의 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경). pane 이 없으면 모든 칸.
+ * 칸의 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경).
+ * pane 이 없으면 모든 탭: 선택된 탭은 바로, 숨은 탭은 표시만 해 두고 그 탭을 고를 때 그린다 (tabs.js — 보이지 않는 탭을 모두 그리지 않게).
  * 위치는 시작할 때가 아니라 바꿔 끼우기 직전에 읽는다 — 그리는 동안 사용자가 스크롤해도 되돌리지 않게.
  */
 export async function refreshView(pane) {
   if (!pane) {
-    await Promise.all(S.panes.map((p) => refreshView(p)));
+    for (const p of S.panes) if (p !== S.pane && p.current) p.stale = true;
+    if (S.pane) await refreshView(S.pane);
     return;
   }
   const view = pane.current;
-  if (!view || !S.panes.includes(pane)) return;   // 빈 칸, 닫힌 칸
+  if (!view || !S.panes.includes(pane)) return;   // 빈 칸, 닫힌 탭
   if (pane.pending) {
     pane.missedRefresh = true;
     return;
   }
+  pane.stale = false;
   const scrollTop = () => pane.scroller.scrollTop;
   try {
     if (view.type === 'doc') await render(pane, view.path, { scrollTop });
@@ -149,6 +110,6 @@ export async function refreshView(pane) {
 }
 
 export function initNav() {
-  on('open', (t) => (t.side ? openBeside(t) : navigate(t)));
+  on('open', (t) => navigate(t));
   on('refresh-view', (pane) => refreshView(pane));
 }

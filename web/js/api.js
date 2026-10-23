@@ -58,19 +58,20 @@ const OPEN_RESULT = {
   folder: '폴더를 열었습니다',
 };
 
-/** 프로젝트 안의 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기'). */
+/** 선택된 탭의 프로젝트 안 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기'). */
 export async function openExternal(path, line) {
   try {
-    const r = await postJSON('/api/open-external', { path, line });
+    const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line });
     toast(OPEN_RESULT[r.action] || '열었습니다');
   } catch (e) {
     toast(e.status === 404 ? `파일을 찾을 수 없습니다: ${path}` : `열지 못했습니다: ${e.message}`, 'error');
   }
 }
 
-export async function revealInExplorer(path) {
+/** 탐색기에서 보기. path 가 '' 면 프로젝트 폴더 (탭 우클릭) */
+export async function revealInExplorer(path, tab = S.tab) {
   try {
-    await postJSON('/api/reveal', { path });
+    await postJSON('/api/reveal', { p: tab?.id, path });
   } catch (e) {
     toast(`탐색기에서 열지 못했습니다: ${e.message}`, 'error');
   }

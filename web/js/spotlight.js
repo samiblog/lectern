@@ -7,7 +7,7 @@
 //   목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 그곳의 장으로 옮긴다 (fold.js 의 unfoldTo 가 보내는 'reveal').
 // - 흐리게 하는 것은 CSS 뿐이다 (base.css 의 .lec-spotlight, opacity). 문서 DOM 은 그대로 두고 블록에 lec-lit 만 붙인다.
 // - md 문서만. html 문서(iframe)는 구조가 문서마다 달라 장을 나눌 수 없다.
-// - 창을 나누었으면 선택된 창(#lec-view)의 문서에 한다. 다른 창을 고르면 꺼진다.
+// - 선택된 탭의 칸(#lec-view)의 문서에 한다. 다른 탭을 고르면 꺼진다.
 
 import { S, on } from './store.js';
 import { $ } from './util.js';
@@ -16,7 +16,7 @@ let active = false;
 let chapters = [];   // [[블록, …], …] — 블록은 #lec-view 의 자식
 let current = 0;
 let shownPath = null;   // 장을 나눈 문서
-let painted = null;     // 마지막으로 칠한 화면 — 다른 창을 고르면 거기서 지운다
+let painted = null;     // 마지막으로 칠한 화면 — 다른 탭을 고르면 거기서 지운다
 
 const view = () => $('#lec-view');
 // 'rendered' 때는 S.view 가 아직 앞 화면이므로 화면(DOM)으로 본다. doc.js 가 그린 md 문서에 data-doc-path 를 단다

@@ -5,7 +5,7 @@
 // 판정은 블록의 '서명'(태그 + 글자 + 그림 주소, 다이어그램은 원문)이 이전 화면에 있었는지로 한다.
 // 지워진 블록은 표시할 곳이 없어 알리지 않는다.
 // html 문서(iframe)는 구조가 문서마다 달라, 최상위 자식 대신 문단·목록 항목·표의 행 같은 작은 블록을 비교한다.
-// 바뀐 블록은 창마다 따로 기억하고(pane.marks — list: 바뀐 블록, next: 버튼이 다음에 갈 순번), 버튼은 선택된 창의 것을 보인다.
+// 바뀐 블록은 칸(탭)마다 따로 기억하고(pane.marks — list: 바뀐 블록, next: 버튼이 다음에 갈 순번), 버튼은 선택된 탭의 것을 보인다.
 
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
@@ -58,7 +58,7 @@ function renderButton() {
 }
 
 /**
- * 창(pane)에 문서를 그린 직후 부른다. before 는 snapshot() 결과(처음 열 때는 null).
+ * 칸(pane)에 문서를 그린 직후 부른다. before 는 snapshot() 결과(처음 열 때는 null).
  * 바뀐 블록을 강조하고, 하나라도 화면 밖이면 '바뀐 곳' 버튼을 보인다.
  */
 export function markChanges(root, before, pane) {
@@ -86,7 +86,7 @@ export function markChanges(root, before, pane) {
   if (pane === S.pane) renderButton();
 }
 
-/** 창(pane)의 바뀐 곳을 지운다 (문서 없음·폴더 개요) */
+/** 칸(pane)의 바뀐 곳을 지운다 (문서 없음·폴더 개요) */
 export function clearChanges(pane) {
   pane.marks = { list: [], next: 0 };
   if (pane === S.pane) renderButton();

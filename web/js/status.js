@@ -1,4 +1,4 @@
-// 아래 상태 표시줄: 경로, 수정 시각, 자동 갱신 상태. 창을 나누었으면 선택된 창의 것
+// 아래 상태 표시줄: 경로, 수정 시각, 자동 갱신 상태. 선택된 탭의 것 (경로·정보는 칸마다 남겨 두었다가 그 탭을 고르면 보인다)
 
 import { S, on } from './store.js';
 import { $, formatClock } from './util.js';
@@ -10,7 +10,7 @@ function show({ path = '', info = '' }) {
   $('#lec-st-info').textContent = info;
 }
 
-/** 창(pane, 없으면 선택된 창)의 경로·정보. 선택된 창이면 바로 보인다 */
+/** 칸(pane, 없으면 선택된 칸)의 경로·정보. 선택된 칸이면 바로 보인다 */
 export function setStatus(status = {}, pane = S.pane) {
   if (pane) pane.status = status;
   if (!pane || pane === S.pane) show(status);

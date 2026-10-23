@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.6.0 (v0.6.0 = 창 나누기 — 문서를 최대 3개 나란히, math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.7.0 (v0.7.0 = 프로젝트 탭 — 폴더마다 탭 하나, 탭을 누르면 트리와 문서가 함께 바뀜, 창은 하나(또 실행하면 떠 있는 창에 탭으로). v0.6.0 의 창 나누기는 걷었다. v0.6.0 = math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -13,7 +13,7 @@ Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 �
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다. 이 함수는 `resolve()` 전에 글자만으로 root 안인지 먼저 본다 — `\\서버\공유` 를 `resolve()` 하면 Windows 가 그 서버에 접속해 로그인 정보(NTLM)를 건넨다 (D29).
 4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
 5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29).
-6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나. 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
+6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나 (툴바 아래 프로젝트 탭 막대 — 탭은 프로젝트만, 문서 탭은 하지 않는다, D34). 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
 
 ## 실행과 확인
 
@@ -21,9 +21,9 @@ Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 �
 python -m venv .venv && .venv\Scripts\activate
 pip install -r requirements-dev.txt
 
-python app.py samples              :: 창으로 실행
+python app.py samples              :: 창으로 실행 (Lectern 창이 떠 있으면 그 창에 탭으로 넘기고 끝남)
 python app.py --browser samples    :: 개발용: http://127.0.0.1:8765 를 일반 브라우저로 (dev.bat)
-python app.py --debug samples      :: 창 + 개발자 도구 (F12, 기본 Ctrl+F 등도 켜짐)
+python app.py --debug samples      :: 창 + 개발자 도구 (F12, 기본 Ctrl+F 등도 켜짐). --browser 와 함께 떠 있는 창에 넘기지 않고 따로 뜬다
 python -m pytest -q                :: 단위 테스트 (Windows가 아니어도 돎)
 python tools/ui_smoke.py           :: 화면 회귀 점검 (playwright 필요, 캡처는 ui-shots/)
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
@@ -37,7 +37,8 @@ Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열�
 ```
 app.py                  진입점: 인자 처리, 서버 스레드, pywebview 창
 lectern/
-  state.py              열린 폴더·감시·설정을 묶는 AppState
+  state.py              열린 프로젝트들(탭마다 Project — 감시·변경 기록·스캔 캐시)·설정을 묶는 AppState
+  instance.py           창 하나: 또 실행하면 이름 있는 파이프로 떠 있는 창에 폴더를 넘김
   server.py             Flask 라우트 (/api/*, /doc/*, /static/*)
   scanner.py            폴더 스캔, 숨김·제외 판정, resolve_inside()
   docinfo.py            제목·요약 추출 (트리 제목, 폴더 개요)
@@ -64,22 +65,23 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 
 | JS 모듈 | 역할 |
 |---|---|
-| main.js | 초기화, 툴바, 단축키, 프로젝트 열기 |
-| store.js | 상태 `S` 와 이벤트 버스 (`on`/`emit`). 이벤트 목록이 파일 머리에 있음 |
-| panes.js | 창 나누기 — 문서 창(칸) 최대 3개, 선택된 창, 칸 열기·닫기 |
-| nav.js | 화면 이동, 뒤로/앞으로, 다시 그리기 (칸마다), 오른쪽 창에 열기, 창 되살리기 |
+| main.js | 초기화, 툴바, 단축키 |
+| store.js | 상태 `S` 와 이벤트 버스 (`on`/`emit`). 이벤트 목록이 파일 머리에 있음. `S.root`·`S.tree` 등은 선택된 탭의 값 |
+| tabs.js | 프로젝트 탭 — 탭 막대, 폴더 열기(새 탭)·닫기·고르기, 처음 고를 때 트리·마지막 문서, 서버의 탭 목록에 맞추기, 시작 화면 |
+| panes.js | 문서 칸 — 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보임, 선택된 칸에 id 옮겨 달기 |
+| nav.js | 화면 이동, 뒤로/앞으로, 다시 그리기 (칸마다), 탭을 처음 열 때 마지막 문서·위치 |
 | doc.js | 문서 렌더링 후처리 (링크·이미지·표·코드·콜아웃·frontmatter) |
 | markdown.js | markdown-it 설정, 수식 규칙, mermaid 코드 블록 |
 | overview.js | 폴더 개요 화면 |
 | tree.js | 사이드바 트리·필터·최근 변경·우클릭 메뉴 |
-| watch.js | 1초 폴링으로 변경 반영 |
+| watch.js | 1초 폴링으로 변경 반영 (모든 탭을 한 번에, 숨은 탭은 고를 때 다시 그림) |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
 | spotlight.js | 장 하이라이트 — 한 장만 그대로, 나머지는 흐리게. ↑·↓·PageUp·PageDown 으로 앞뒤 장 |
 | textsize.js | 툴바의 글자 크기 − 100% + (설정 font_scale, CSS 변수 --md-scale) |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
 | search.js | 사이드바 '검색' 탭 — 전체 본문 검색 (서버는 lectern/search.py) |
-| settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 마지막 문서·스크롤 위치 기록 |
+| settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 탭마다 마지막 문서·스크롤 위치 기록 |
 | pathlink.js | 본문 속 경로 표기(`src/app.py:42`) 자동 링크 |
 | resize.js | 사이드바 폭 조절 (경계 끌기, 두 번 누르면 기본) |
 | htmldoc.js | html 문서 보기 — 스크립트 없는 같은 출처 iframe (css/frame.css 를 넣는다) |
@@ -100,7 +102,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 ## 알아 둘 함정
 
 - pywebview는 디버그 모드가 아니면 WebView2의 기본 단축키(Ctrl+F, F5, Ctrl+P 인쇄 등)와 기본 우클릭 메뉴를 끈다. 필요한 기능은 직접 구현한다 (`find.js`, F5 처리 참고).
-- `/api/*` 는 창 모드에서 `X-Token` 헤더(= `window.pywebview.token`)를 검사한다. `<img>` 가 써야 하는 `/doc/*` 는 토큰 없이 열려 있다 (127.0.0.1 전용).
+- `/api/*` 는 창 모드에서 `X-Token` 헤더(= `window.pywebview.token`)를 검사한다. `<img>` 가 써야 하는 `/doc/<탭 id>/*` 는 토큰 없이 열려 있다 (127.0.0.1 전용).
+- 서버는 여러 프로젝트(탭)를 함께 연다 (D34). 프로젝트를 다루는 API 는 탭 id 를 `p` 로 받는다 (GET 은 `?p=`, POST 는 본문). 문서 주소는 `util.docUrl(tab, path)` 로 만든다 (`/doc/<id>/<경로>`). id 는 실행마다 무작위라 문서가 다른 탭의 주소를 짐작할 수 없다 — 상대경로가 `/doc/<그 탭 id>/` 밖으로 나가면 `resolveRef` 가 막는다.
 - DOMPurify는 `SANITIZE_DOM: false` 로 쓴다. 기본값이면 'title', 'images' 같은 제목 앵커 id가 지워진다. 대신 `document.querySelector` 같은 이름을 가릴 수 있는 `img` 의 `name` 은 정화 훅이 지운다 (D15).
 - 블록의 원문 줄 범위는 `data-lines="시작-끝"` 이다 (`markdown.js` 의 `sourceLines`). `data-src` 는 정화 훅이 그림 주소를 떼어 두는 데 쓰므로 다른 뜻으로 쓰지 않는다. 블록을 그리는 렌더러 규칙을 새로 만들면 `self.renderAttrs(token)` 으로 `data-lines` 를 내보낸다 (수식 블록·Mermaid 참고). 안 그러면 그 블록은 원문 복사가 안 된다.
 - 문서 속 절대경로(`C:\...`, `file:///...`)는 프로젝트 안일 때만 열린다 (`doc.js` 의 `absoluteRef`). DOMPurify 설정의 `ALLOWED_URI_REGEXP` 를 좁히면 이 기능이 조용히 깨진다 (`ui_smoke` 의 [절대경로]가 잡는다).
@@ -110,9 +113,10 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
-- 렌더링은 칸마다 `pane.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 칸을 첫 인자로 받고 같은 방식을 쓴다.
-- 문서 화면은 최대 3칸(창)이다 (`panes.js`, D33). `#lec-view`·`#lec-content` id 는 **선택된 칸**의 본문·스크롤 상자로 옮겨 다닌다. 선택된 칸만 다루는 코드는 id 로 찾아도 되지만, 모든 칸에 해당하는 코드(렌더러·자동 새로고침 등)는 칸 객체(`S.panes`, `pane.view`·`pane.scroller`)를 쓴다. 문서 화면의 이벤트는 id 대신 `#lec-panes` 에 붙인다 (id 가 옮겨 가면 붙인 요소가 달라진다). 스크롤은 거품처럼 올라오지 않으므로 `document` 잡기 단계에서 듣는다 (`toc.js`·`position.js`).
-- 목차·상태줄·원문(우클릭 메뉴)·바뀐 곳은 칸마다 남기고 선택된 칸 것만 보인다 — 렌더러는 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 넘긴다. 다른 칸을 고르면 `pane` 이벤트가 간다.
+- 렌더링은 칸마다 `pane.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 칸을 첫 인자로 받고 같은 방식을 쓴다. 렌더러는 프로젝트를 `S.root`·`S.fileMap` 이 아니라 칸의 탭(`pane.tab.root`·`pane.tab.fileMap`·`pane.tab.id`)에서 읽는다 — 그리는 중에 다른 탭을 고를 수 있다.
+- 문서 칸은 프로젝트 탭마다 하나다 (`panes.js`·`tabs.js`, D34). 칸은 겹쳐 두고 고르지 않은 탭의 칸은 `visibility: hidden` 이다 (`display:none` 으로 바꾸면 숨은 탭의 스크롤 위치를 잃고 다시 그릴 때 크기를 못 잰다). `S.root`·`S.tree`·`S.files`·`S.fileMap`·`S.dirs`·`S.changed`·`S.open`·`S.seq` 는 선택된 탭(`S.tab`)의 값을 읽고 쓰는 접근자다 — 선택된 탭만 다루는 모듈은 그대로 쓰고, 모든 탭을 다루는 코드(자동 새로고침·위치 기록)는 `S.tabs` 의 탭 객체를 쓴다. 탭마다 남길 사이드바 상태는 `tab.side` 에 두고 `tab` 이벤트({tab, prev})에서 앞 탭에 남기고 새 탭 것을 되살린다 (`tree.js`·`search.js`).
+- `#lec-view`·`#lec-content` id 는 **선택된 칸**의 본문·스크롤 상자로 옮겨 다닌다 (D33 에서 만든 방식). 선택된 칸만 다루는 코드는 id 로 찾아도 되지만, 모든 칸에 해당하는 코드(렌더러·자동 새로고침 등)는 칸 객체(`S.panes`, `pane.view`·`pane.scroller`)를 쓴다. 문서 화면의 이벤트는 id 대신 `#lec-panes` 에 붙인다 (id 가 옮겨 가면 붙인 요소가 달라진다). 스크롤은 거품처럼 올라오지 않으므로 `document` 잡기 단계에서 듣는다 (`toc.js`·`position.js`).
+- 목차·상태줄·원문(우클릭 메뉴)·바뀐 곳은 칸마다 남기고 선택된 칸 것만 보인다 — 렌더러는 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 넘긴다. 다른 탭을 고르면 `pane` 이벤트가 간다. 숨은 탭의 화면이 바뀌면 바로 그리지 않고 `pane.stale` 을 달아 그 탭을 고를 때 그린다 (`watch.js`·`nav.refreshView()`).
 - 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
 - `config.json` 은 JSON 이 맞아도 값의 형식이 틀릴 수 있다 (`"exclude_dirs": "data"`). `config.value_ok` 가 `DEFAULTS` 와 같은 형식인지 보고, 틀린 값은 기본값으로 돌며 알린다. 새 키가 `null` 도 되면 `NULLABLE` 에 넣는다 (D29).
 - `/api/*` 의 POST 는 `Content-Type: application/json` 만 받는다 (아니면 415). 토큰이 없는 브라우저 모드에서 다른 사이트의 폼이 보내지 못하게 하려는 것이니, 프런트는 `api.postJSON` 만 쓴다.
@@ -125,5 +129,6 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.
 - html 문서는 `<iframe sandbox="allow-same-origin allow-modals">` 이다 (`allow-modals` 는 앱이 그 문서를 인쇄하려고). **`allow-scripts` 를 더하지 않는다** — 같은 출처라서 스크립트가 돌면 앱의 `/api/*`·토큰에 닿는다. 서버 CSP(`html_doc_policy`)도 함께 막는다.
 - iframe 안의 키·마우스 이벤트는 앱 문서로 올라오지 않는다. `htmldoc.js` 가 keydown·mouseup·mousedown 을 앱으로 넘기므로, 새 단축키는 `main.js` 에만 넣으면 html 문서에서도 된다. 문서 속 요소를 찾을 때는 `util.docRoot()`, 화면 좌표는 `util.screenRect()` 를 쓴다 (iframe 위치를 더함).
-- 트리 스캔은 `AppState.scan()` 을 거친다 — 변경 기록(seq)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.
+- 트리 스캔은 `Project.scan()` 을 거친다 (탭마다) — 변경 기록(seq)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.
+- 창 하나(`instance.py`)는 이름 있는 파이프로 JSON 바이트만 주고받는다 (`send_bytes`·`recv_bytes`). pickle 을 쓰는 `send`·`recv` 로 바꾸지 않는다 — 받은 바이트로 코드가 돌 수 있다. 파이프 이름이 설정 폴더를 따르므로 점검 스크립트는 `LECTERN_CONFIG_DIR` 을 바꿔 설치된 Lectern 창과 섞이지 않게 한다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

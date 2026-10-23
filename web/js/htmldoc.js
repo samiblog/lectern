@@ -1,8 +1,8 @@
-// html 문서 보기 (D27): <iframe sandbox="allow-same-origin"> 에 /doc/<경로> 를 띄운다.
+// html 문서 보기 (D27): <iframe sandbox="allow-same-origin"> 에 /doc/<탭 id>/<경로> 를 띄운다.
 //
 // - 문서 자신의 스크립트·인라인 이벤트·폼은 돌지 않는다 (iframe sandbox 에 allow-scripts 가 없고, 서버 CSP 도 막는다).
 //   같은 출처라서 앱(부모)이 iframe 안을 읽고 이벤트를 붙여 목차·찾기·링크·우클릭 메뉴·바뀐 부분 강조를 다룬다.
-// - iframe 높이를 문서 높이에 맞춰 창의 스크롤 상자(.lec-scroll)가 스크롤한다 (md 와 같게 스크롤 위치·마지막 위치가 동작).
+// - iframe 높이를 문서 높이에 맞춰 칸의 스크롤 상자(.lec-scroll)가 스크롤한다 (md 와 같게 스크롤 위치·마지막 위치가 동작).
 // - 문서에 스타일(CSS)이 있으면 그대로, 없으면 지금 고른 Lectern 스타일을 입힌다 (사용자가 고름).
 // - 자동 새로고침 때는 새 iframe 을 보이지 않게 겹쳐 불러온 뒤 바꿔 끼운다 (깜박임과 스크롤 튐 방지).
 
@@ -14,14 +14,13 @@ import { setDocSource, frameContextMenu } from './docmenu.js';
 import { hideMenu } from './ui.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { textScale } from './textsize.js';
-import { paneOf, selectPane } from './panes.js';
-import { $, encodePath, formatDateTime } from './util.js';
+import { $, docUrl, formatDateTime } from './util.js';
 
 const LOAD_TIMEOUT_MS = 20000;
 const MAX_HEIGHT = 200000;
 const XLINK = 'http://www.w3.org/1999/xlink';
 
-/** 창 화면(view)의 html 문서 iframe (없으면 null) */
+/** 칸 화면(view)의 html 문서 iframe (없으면 null) */
 const frameIn = (view) => view.querySelector(':scope > iframe.lec-html:not(.lec-loading)');
 
 function load(frame) {
@@ -159,7 +158,7 @@ on('text-size', () => {
   }
 });
 
-function prepare(frame, path) {
+function prepare(frame, path, tab) {
   const doc = frame.contentDocument;
   const own = hasOwnStyle(doc);
   doc.head.append(link(doc, '/static/css/frame.css'));   // 찾기 표시·바뀐 곳·우클릭 테두리
@@ -176,21 +175,18 @@ function prepare(frame, path) {
   applyScale(frame);
   let n = 0;
   for (const h of doc.querySelectorAll('h1, h2, h3, h4')) if (!h.id) h.id = `lec-h${++n}`;   // 목차용
-  const baseUrl = new URL(`/doc/${encodePath(path)}`, location.origin);
+  const baseUrl = new URL(docUrl(tab, path), location.origin);
   // SVG 의 옛 링크(xlink:href)도 bindLink 가 다루게 한다 — 아니면 누를 때 iframe 이 그 주소로 떠나 문서를 잃는다
   for (const a of doc.querySelectorAll('a')) {
     if (!a.hasAttribute('href') && a.hasAttributeNS(XLINK, 'href')) a.setAttribute('href', a.getAttributeNS(XLINK, 'href'));
   }
-  for (const a of doc.querySelectorAll('a[href], area[href]')) bindLink(a, baseUrl, path, doc);
+  for (const a of doc.querySelectorAll('a[href], area[href]')) bindLink(a, baseUrl, path, tab, doc);
   doc.addEventListener('contextmenu', (e) => frameContextMenu(e, frame));
   // iframe 안의 키·마우스는 앱 문서로 올라오지 않는다. 단축키(Ctrl+F, Esc, Alt+← …)와 마우스 뒤로 버튼, 메뉴 닫기를 위해 넘겨 준다
   doc.addEventListener('keydown', (e) => {
     if (!document.dispatchEvent(new KeyboardEvent('keydown', e))) e.preventDefault();
   });
-  doc.addEventListener('mousedown', () => {   // 우클릭도 — 메뉴는 고른 창의 문서를 본다
-    hideMenu();
-    selectPane(paneOf(frame));
-  });
+  doc.addEventListener('mousedown', hideMenu);   // 앱의 메뉴는 바깥을 누르면 닫힌다 — iframe 안의 누름은 앱 문서에 오지 않는다
   doc.addEventListener('mouseup', (e) => {
     if (e.button === 3 || e.button === 4) window.dispatchEvent(new MouseEvent('mouseup', { button: e.button }));
   });
@@ -209,12 +205,13 @@ function missing(pane, path, err) {
 }
 
 /**
- * html 문서를 창(pane)에 그린다 (nav.js 가 확장자로 고른다). 그 창에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
+ * html 문서를 칸(pane)에 그린다 (nav.js 가 확장자로 고른다). 프로젝트는 칸의 탭(pane.tab)이다.
+ * 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
  */
 export async function showHtml(pane, path, { hash = '', scrollTop } = {}) {
   const id = ++pane.renderId;
-  const { view, scroller: content } = pane;
-  const src = `/doc/${encodePath(path)}`;
+  const { view, scroller: content, tab } = pane;
+  const src = docUrl(tab, path);
   const head = await fetch(src, { method: 'HEAD', cache: 'no-store' }).catch((e) => ({ ok: false, status: 0, statusText: e.message }));
   if (id !== pane.renderId) return false;
   if (!head.ok) return missing(pane, path, { status: head.status, message: head.statusText });
@@ -246,7 +243,7 @@ export async function showHtml(pane, path, { hash = '', scrollTop } = {}) {
   // HEAD 뒤에 지워지면 404 응답(CSP sandbox)이 들어와 문서를 읽을 수 없다
   if (!frame.contentDocument?.body) return missing(pane, path, { status: 404 });
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
-  prepare(frame, path);
+  prepare(frame, path, tab);
   frame.dataset.ready = path;
   if (sameDoc) {
     old.remove();
@@ -259,8 +256,8 @@ export async function showHtml(pane, path, { hash = '', scrollTop } = {}) {
   setDocSource(pane, path, '');
   markChanges(doc.body, before, pane);
 
-  if (S.changed.delete(path)) emit('changed');
-  const file = S.fileMap.get(path);
+  if (tab.changed.delete(path)) emit('changed');
+  const file = tab.fileMap.get(path);
   setStatus({ path, info: file ? `HTML · 수정 ${formatDateTime(file.mtime)}` : 'HTML' }, pane);
   emit('rendered', pane);
   return true;

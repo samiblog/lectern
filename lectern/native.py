@@ -23,7 +23,8 @@ class NativeApi:
             return None
         dialog = getattr(webview, 'FileDialog', None)
         kind = dialog.FOLDER if dialog else webview.FOLDER_DIALOG
-        start = str(self._state.root) if self._state.root else ''
+        project = self._state.active_project   # 선택된 탭의 폴더에서 시작
+        start = str(project.root) if project else ''
         result = self._window.create_file_dialog(kind, directory=start)
         if not result:
             return None

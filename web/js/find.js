@@ -148,7 +148,7 @@ export function initFind() {
   $('#lec-find-next').addEventListener('click', () => go(current + 1));
   $('#lec-find-prev').addEventListener('click', () => go(current - 1));
   $('#lec-find-close').addEventListener('click', closeFind);
-  // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시. 다른 창을 고르면 그 창의 문서에서 (찾기 막대도 그 창으로 옮겨 간다)
+  // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시. 다른 탭을 고르면 그 탭의 문서에서 (찾기 막대도 그 칸으로 옮겨 간다)
   on('rendered', (pane) => { if (pane === S.pane && !bar().hidden) search(true); });
   on('pane', () => { if (!bar().hidden) search(true); });
 }

@@ -1,10 +1,10 @@
-// 시작점: 초기화, 툴바, 단축키, 프로젝트 열기
+// 시작점: 초기화, 툴바, 단축키
 
-import { S, emit, on } from './store.js';
-import { getJSON, postJSON, saveConfig, native } from './api.js';
+import { S, on } from './store.js';
+import { getJSON, saveConfig, native } from './api.js';
 import { initTheme } from './theme.js';
-import { initUi, showMenu, hideMenu, closeLightbox } from './ui.js';
-import { initToc, setToc, updateTocVisibility } from './toc.js';
+import { initUi, hideMenu, closeLightbox } from './ui.js';
+import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initSpotlight, spotlightOn, moveSpotlight, stopSpotlight } from './spotlight.js';
@@ -12,12 +12,15 @@ import { initTextSize } from './textsize.js';
 import { initDocMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
-import { initStatus, setStatus } from './status.js';
+import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
-import { initPanes, selectPane } from './panes.js';
-import { initNav, navigate, back, forward, resetHistory, refreshView, seedScroll, restorePanes } from './nav.js';
+import { initPanes } from './panes.js';
+import { initNav, back, forward, refreshView } from './nav.js';
+import {
+  initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded,
+} from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
@@ -25,107 +28,7 @@ import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
-import { $, esc, basename, toast } from './util.js';
-
-// ---- 프로젝트 ---------------------------------------------------------------
-
-function folderName(p) {
-  return basename(p.replace(/[\\/]+$/, '').replace(/\\/g, '/')) || p;
-}
-
-function showWelcome() {
-  const recent = (S.config.recent || []).slice(0, 8);
-  const view = $('#lec-view');
-  view.className = 'welcome';
-  view.innerHTML = `<h1>프로젝트 폴더를 여세요</h1>
-    <p>폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
-    <p><button type="button" class="primary" data-act="open">폴더 열기</button></p>
-    ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
-      <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
-  setToc(S.pane, null);
-  setStatus({ path: '', info: '' });
-}
-
-/** 문서가 수천 개인 폴더는 처음 훑는 데 몇 초 걸린다 (막 만든 파일이 많으면 더). 그동안 빈 화면·옛 폴더 대신 알린다 */
-function showLoading() {
-  const view = $('#lec-view');
-  view.className = 'welcome';
-  view.innerHTML = `<p>${esc(S.name)} 폴더를 읽고 있습니다…</p>`;
-  $('#lec-tree').innerHTML = '';
-  setToc(S.pane, null);
-  setStatus({ path: '', info: '' });
-}
-
-let configErrorShown = false;
-
-async function reloadProject() {
-  if (S.reloading) return;
-  S.reloading = true;
-  try {
-    const st = await getJSON('/api/state');
-    if (st.config_error && !configErrorShown) {
-      configErrorShown = true;
-      toast(st.config_error, 'error', 15000);
-    }
-    S.root = st.root;
-    S.name = st.name;
-    S.sep = st.sep;
-    S.seq = st.seq;
-    S.watch = st.watch;
-    S.lastSync = null;
-    S.changed.clear();
-    S.open.clear();
-    resetHistory();
-    updateProjectHeader();
-    if (!S.root) {
-      S.tree = [];
-      S.files = [];
-      emit('tree');
-      showWelcome();
-      return;
-    }
-    const wait = setTimeout(showLoading, 400);
-    try {
-      await loadTree();
-    } finally {
-      clearTimeout(wait);
-    }
-    if (S.config.expand_first_level !== false) for (const n of S.tree) if (n.type === 'dir') S.open.add(n.path);
-    // 마지막에 열어 둔 창들과 위치로 (설정 restore_last). 문서가 모두 없어졌으면 폴더 개요로
-    const pos = st.position;
-    if (S.config.restore_last !== false && pos) {
-      seedScroll(pos.scroll);
-      if (await restorePanes(pos)) return;
-    }
-    await navigate({ type: 'overview', path: '' });
-  } catch (e) {
-    toast(`프로젝트를 불러오지 못했습니다: ${e.message}`, 'error');
-  } finally {
-    S.reloading = false;
-  }
-}
-
-async function openFolder(path) {
-  try {
-    await postJSON('/api/open', { path });
-    S.config = await getJSON('/api/config');
-    await reloadProject();
-  } catch (e) {
-    toast(`폴더를 열 수 없습니다: ${e.message}`, 'error');
-  }
-}
-
-async function chooseAndOpen() {
-  const path = await native.chooseFolder();
-  if (path) await openFolder(path);
-}
-
-function updateProjectHeader() {
-  const btn = $('#lec-btn-project');
-  btn.textContent = S.root ? S.name : '폴더를 열어 주세요';
-  btn.title = S.root || '';
-  btn.disabled = !S.root;
-}
+import { $, basename, toast } from './util.js';
 
 function updateWindowTitle() {
   if (!S.root) {
@@ -140,7 +43,7 @@ function updateWindowTitle() {
   native.setTitle(`${title} - Lectern`);
 }
 
-/** 뒤로/앞으로는 선택된 창의 기록 */
+/** 뒤로/앞으로는 선택된 탭의 기록 */
 function updateNavButtons() {
   $('#lec-btn-back').disabled = S.pane.hIndex <= 0;
   $('#lec-btn-forward').disabled = S.pane.hIndex >= S.pane.history.length - 1;
@@ -164,12 +67,18 @@ async function toggleToc() {
   applyLayout();
 }
 
+/** F5: 선택된 탭의 트리를 새로 훑고 화면을 다시 그린다 (처음 열 때 읽지 못한 탭이면 다시 연다) */
 async function manualRefresh() {
-  if (!S.root) return;
+  const tab = S.tab;
+  if (!tab) return;
   forgetFailedImages();   // 불러오지 못했던 외부 이미지도 다시 시도
   try {
-    await loadTree({ fresh: true });
-    await refreshView();
+    if (!tab.loaded) {
+      await ensureLoaded(tab);
+      return;
+    }
+    await loadTree({ fresh: true, tab });
+    await refreshView(tab.pane);
     toast('다시 불러왔습니다');
   } catch (e) {
     toast(`다시 불러오지 못했습니다: ${e.message}`, 'error');
@@ -183,25 +92,7 @@ function bindToolbar() {
   $('#lec-btn-toc').addEventListener('click', toggleToc);
   $('#lec-btn-back').addEventListener('click', back);
   $('#lec-btn-forward').addEventListener('click', forward);
-  $('#lec-btn-open').addEventListener('click', chooseAndOpen);
   $('#lec-btn-palette').addEventListener('click', openPalette);
-  $('#lec-btn-project').addEventListener('click', () => S.root && navigate({ type: 'overview', path: '' }));
-  $('#lec-btn-recent').addEventListener('click', (e) => {
-    const recent = S.config.recent || [];
-    const r = e.currentTarget.getBoundingClientRect();
-    const items = recent.length
-      ? recent.map((p) => ({ label: folderName(p), hint: p, action: () => openFolder(p) }))
-      : [{ label: '최근 연 폴더가 없습니다', action: () => {} }];
-    items.push('-', { label: '다른 폴더 열기...', action: chooseAndOpen });
-    showMenu(r.left, r.bottom + 4, items);
-  });
-  $('#lec-panes').addEventListener('click', (e) => {
-    if (!e.target.closest('.welcome')) return;
-    const btn = e.target.closest('button');
-    if (!btn) return;
-    if (btn.dataset.act === 'open') chooseAndOpen();
-    else if (btn.dataset.path) openFolder(btn.dataset.path);
-  });
 }
 
 // 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
@@ -232,17 +123,20 @@ function bindKeys() {
     } else if (mod && key === 'b') {
       e.preventDefault();
       toggleSidebar();
+    } else if (mod && !e.shiftKey && key === 'w') {   // 탭 닫기 (브라우저 탭처럼)
+      e.preventDefault();
+      closeCurrentTab();
+    } else if (mod && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 탭
+      e.preventDefault();
+      cycleTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
+    } else if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {   // Ctrl+1~8: 그 탭, Ctrl+9: 마지막 탭
+      if (selectTabAt(Number(e.key))) e.preventDefault();
     } else if (e.altKey && e.key === 'ArrowLeft') {
       e.preventDefault();
       back();
     } else if (e.altKey && e.key === 'ArrowRight') {
       e.preventDefault();
       forward();
-    } else if (mod && !e.shiftKey && !e.altKey && S.panes[Number(e.key) - 1]) {   // Ctrl+1·2·3: 그 창을 고른다
-      e.preventDefault();
-      const pane = S.panes[Number(e.key) - 1];
-      selectPane(pane);
-      pane.scroller.focus({ preventScroll: true });   // PageUp·PageDown·방향키가 그 창을 스크롤하게
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
@@ -276,6 +170,7 @@ async function waitForBridge() {
 }
 
 async function boot() {
+  initPanes();   // 시작 화면 칸 — 연결을 기다리는 안내도 여기에
   await waitForBridge();
   try {
     S.config = await getJSON('/api/config');
@@ -284,7 +179,6 @@ async function boot() {
   }
   initTheme();
   initUi();
-  initPanes();
   initToc();
   initFind();
   initFold();
@@ -302,15 +196,15 @@ async function boot() {
   initTree();
   initPalette();
   initNav();
+  initTabs();
   initWatch();
   bindToolbar();
   bindKeys();
   applyLayout();
 
   on('view', () => { updateNavButtons(); updateWindowTitle(); });
-  on('project-switched', reloadProject);
 
-  await reloadProject();
+  await loadTabs();
   startWatch();
 }
 

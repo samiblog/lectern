@@ -1,17 +1,18 @@
-// 프로젝트 전체 본문 검색: 사이드바 '검색' 탭 (Ctrl+Shift+F). 서버가 찾고(GET /api/search) 여기서 보여 준다.
+// 프로젝트 전체 본문 검색: 사이드바 '검색' 탭 (Ctrl+Shift+F). 서버가 선택된 프로젝트 탭에서 찾고(GET /api/search) 여기서 보여 준다.
 // 결과 줄을 누르면 그 문서를 열고, 그 줄이 든 블록(data-lines)으로 가서 깜박이고, 문서 안 찾기로 검색어를 표시한다.
+// 검색어와 결과는 프로젝트 탭마다 남겨 두었다가 그 탭을 고르면 되살린다 (tab.side.search).
 
 import { S, on } from './store.js';
 import { getJSON } from './api.js';
-import { navigate, openBeside } from './nav.js';
-import { switchTab } from './tree.js';
+import { navigate } from './nav.js';
+import { switchPanel } from './tree.js';
 import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
 import { flashBlock } from './diffmark.js';
 import { $, esc, debounce, dirname, isHtml, keepFocus } from './util.js';
 
-let query = '';    // 결과가 화면에 있는 검색어
-let root = null;   // 그 결과를 찾은 프로젝트
+let query = '';     // 결과가 화면에 있는 검색어
+let shown = null;   // 화면의 결과 (/api/search 의 답) — 탭을 바꿀 때 그 탭에 남긴다
 
 const input = () => $('#lec-search-input');
 
@@ -29,7 +30,15 @@ function highlight(text, q) {
   return out + esc(text.slice(from));
 }
 
+function clear(info = '') {
+  query = '';
+  shown = null;
+  $('#lec-search-info').textContent = info;
+  $('#lec-search-results').innerHTML = '';
+}
+
 function render(d) {
+  shown = d;
   const docs = d.results.length;
   $('#lec-search-info').textContent = docs
     ? `${docs}개 문서, ${d.total}곳${d.truncated ? ' (많아서 일부만 보입니다)' : ''}`
@@ -48,23 +57,22 @@ function render(d) {
 /** again: 같은 검색어라도 다시 찾는다 (파일이 바뀌었을 때). 아니면 이미 결과가 있는 검색어는 건너뛴다 (Enter 뒤의 늦은 입력 처리) */
 async function run(again = false) {
   const q = input().value.trim();
-  if (!again && q && q === query && root === S.root) return;
-  query = q;
-  root = S.root;
-  if (!q || !S.root) {
-    $('#lec-search-info').textContent = '';
-    $('#lec-search-results').innerHTML = '';
+  if (!again && q && q === query && shown) return;
+  const tab = S.tab;
+  if (!q || !tab) {
+    clear();
     return;
   }
+  query = q;
   $('#lec-search-info').textContent = '찾는 중…';
   let d;
   try {
-    d = await getJSON(`/api/search?q=${encodeURIComponent(q)}`);
+    d = await getJSON(`/api/search?p=${encodeURIComponent(tab.id)}&q=${encodeURIComponent(q)}`);
   } catch (e) {
-    if (q === query) $('#lec-search-info').textContent = `찾지 못했습니다: ${e.message}`;
+    if (q === query && tab === S.tab) $('#lec-search-info').textContent = `찾지 못했습니다: ${e.message}`;
     return;
   }
-  if (q === query) render(d);   // 늦게 온 결과는 버린다
+  if (q === query && tab === S.tab) render(d);   // 늦게 온 결과(다른 검색어·다른 탭)는 버린다
 }
 
 /** 지금 문서에서 line 번째 원문 줄이 든 가장 작은 블록으로 간다. 그 블록(없으면 null) */
@@ -85,10 +93,10 @@ function goToLine(line) {
   return best;
 }
 
-/** 검색 결과로 간다. side 면 오른쪽 새 창에 (Ctrl+클릭) */
-async function openHit(path, line, side = false) {
-  const here = S.view?.type === 'doc' && S.view.path === path && !side;
-  if (!here && !(await (side ? openBeside : navigate)({ type: 'doc', path }))) return;
+/** 검색 결과로 간다 */
+async function openHit(path, line) {
+  const here = S.view?.type === 'doc' && S.view.path === path;
+  if (!here && !(await navigate({ type: 'doc', path }))) return;
   if (isHtml(path)) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
@@ -98,8 +106,25 @@ async function openHit(path, line, side = false) {
   }
 }
 
+/** 프로젝트 탭을 바꾸면: 앞 탭의 검색어·결과를 그 탭에 남기고, 새 탭의 것을 되살린다 */
+function onTab({ tab, prev }) {
+  if (prev && S.tabs.includes(prev)) {
+    prev.side.search = { input: input().value, query, data: shown, scroll: $('#lec-search-results').scrollTop };
+  }
+  const s = tab?.side.search;
+  input().value = s?.input || '';
+  if (s?.data) {
+    render(s.data);
+    query = s.query;
+    $('#lec-search-results').scrollTop = s.scroll;
+  } else {
+    clear();
+    if (input().value.trim()) run();   // 찾는 중에 탭을 바꿨으면 다시 찾는다
+  }
+}
+
 export function openSearch() {
-  switchTab('search');
+  switchPanel('search');
   input().focus();
   input().select();
 }
@@ -108,9 +133,7 @@ export function initSearch() {
   const later = debounce(run, 250);
   input().addEventListener('input', () => {
     // 앞 검색어의 결과를 바로 지운다 — 남아 있으면 Enter·클릭이 옛 결과를 연다
-    query = '';
-    $('#lec-search-results').innerHTML = '';
-    $('#lec-search-info').textContent = input().value.trim() ? '찾는 중…' : '';
+    clear(input().value.trim() ? '찾는 중…' : '');
     later();
   });
   input().addEventListener('keydown', async (e) => {
@@ -127,19 +150,17 @@ export function initSearch() {
   });
   $('#lec-search-results').addEventListener('click', (e) => {
     const row = e.target.closest('[data-doc]');
-    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0, e.ctrlKey || e.metaKey);
+    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0);
   });
   $('#lec-search-results').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.sr-hit')) e.target.click();
   });
-  // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다. 다른 프로젝트를 열면 옛 결과는 바로 지운다 (누르면 없는 문서가 열린다)
+  // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다
   const again = debounce(() => run(true), 250);
-  on('tree', () => {
-    if (query && root !== S.root) {
-      query = '';
-      $('#lec-search-results').innerHTML = '';
-      $('#lec-search-info').textContent = '';
-    }
-    if (input().value.trim() && !$('#lec-search').hidden) again();
+  on('tree', () => { if (input().value.trim() && !$('#lec-search').hidden) again(); });
+  on('tab', (t) => {
+    later.cancel();
+    again.cancel();
+    onTab(t);
   });
 }

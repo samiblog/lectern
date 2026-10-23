@@ -1,4 +1,5 @@
-// 왼쪽 사이드바: 파일 트리, 필터, 최근 변경 목록, 우클릭 메뉴
+// 왼쪽 사이드바: 파일 트리, 필터, 최근 변경 목록, 우클릭 메뉴. 선택된 프로젝트 탭의 것을 보인다.
+// 사이드바 탭(파일·최근 변경·검색)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
 
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
@@ -6,7 +7,7 @@ import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
 
 const MAX_FILTER_RESULTS = 300;
-let tab = 'files';
+let panel = 'files';   // 사이드바 탭: files | recent | search
 
 const showTitles = () => S.config.show_titles !== false;
 const labelOf = (f) => (showTitles() ? (f.title || f.name) : f.name);
@@ -58,7 +59,7 @@ function nodesHtml(nodes, depth) {
 function renderTree() {
   const box = $('#lec-tree');
   const scroll = box.scrollTop;
-  if (!S.root) {
+  if (!S.tab?.treeLoaded) {   // 탭이 없거나 아직 트리를 읽는 중
     box.innerHTML = '';
     return;
   }
@@ -117,25 +118,40 @@ function revealCurrent() {
   for (let i = 1; i <= upto; i++) S.open.add(parts.slice(0, i).join('/'));
   render();
   const sel = S.view.type === 'doc' ? `[data-doc="${CSS.escape(S.view.path)}"]` : `[data-dir="${CSS.escape(S.view.path)}"]`;
-  $(`#lec-${tab === 'files' ? 'tree' : 'recent'} ${sel}`)?.scrollIntoView({ block: 'nearest' });
+  $(`#lec-${panel === 'files' ? 'tree' : 'recent'} ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
-export function switchTab(next) {
-  tab = next;
+/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색). focus: 검색이면 입력칸에 초점 */
+export function switchPanel(next, { focus = true } = {}) {
+  panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
   $('#lec-tree').hidden = next !== 'files';
   $('#lec-recent').hidden = next !== 'recent';
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
-  if (next === 'search') $('#lec-search-input').focus();
+  if (next === 'search' && focus) $('#lec-search-input').focus();
+}
+
+/** 프로젝트 탭을 바꾸면: 앞 탭의 사이드바 상태를 그 탭에 남기고, 새 탭의 것을 되살린다 */
+function onTab({ tab, prev }) {
+  if (prev && S.tabs.includes(prev)) {
+    Object.assign(prev.side, {
+      panel, filter: $('#lec-filter').value, treeScroll: $('#lec-tree').scrollTop, recentScroll: $('#lec-recent').scrollTop,
+    });
+  }
+  const side = tab?.side || { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0 };
+  $('#lec-filter').value = side.filter;
+  switchPanel(side.panel, { focus: false });
+  render();
+  $('#lec-tree').scrollTop = side.treeScroll;
+  $('#lec-recent').scrollTop = side.recentScroll;
 }
 
 function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
-  const side = e.ctrlKey || e.metaKey;   // Ctrl+클릭은 오른쪽 새 창에
   if (row.dataset.doc != null) {
-    emit('open', { type: 'doc', path: row.dataset.doc, side });
+    emit('open', { type: 'doc', path: row.dataset.doc });
     return;
   }
   const dir = row.dataset.dir;
@@ -146,7 +162,7 @@ function onRowClick(e) {
     return;
   }
   if (dir) S.open.add(dir);
-  emit('open', { type: 'overview', path: dir, side });
+  emit('open', { type: 'overview', path: dir });
 }
 
 function fullPath(path) {
@@ -157,10 +173,9 @@ async function copy(text) {
   toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다', '');
 }
 
-/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 오른쪽 창에 열기, 경로 복사, 편집기로 열기, 탐색기에서 보기 */
+/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사, 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
-  const open = { type: isDoc ? 'doc' : 'overview', path, side: true };
-  const items = [{ label: '오른쪽 창에 열기', hint: 'Ctrl+클릭', action: () => emit('open', open) }, '-'];
+  const items = [];
   if (path) items.push({ label: `@${path} 복사`, hint: 'Claude Code 프롬프트에 붙여 넣기', action: () => copy(`@${path}`) });
   items.push({ label: '전체 경로 복사', action: () => copy(fullPath(path)) });
   items.push('-');
@@ -178,7 +193,7 @@ function onContextMenu(e) {
 }
 
 export function focusFilter() {
-  switchTab('files');
+  switchPanel('files');
   $('#lec-filter').focus();
   $('#lec-filter').select();
 }
@@ -206,10 +221,11 @@ export function initTree() {
     await saveConfig({ show_titles: !showTitles() });
     render();
   });
-  for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchTab(b.dataset.tab));
+  for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
   on('tree', render);
   on('changed', render);
+  on('tab', onTab);
   on('view', revealCurrent);
   setInterval(renderRecent, 60_000);   // '5분 전' 같은 표시 갱신
 }

@@ -52,15 +52,14 @@ button > svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stro
 kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-muted); }
 [hidden] { display: none !important; }
 
-#lec-app { display: grid; grid-template-rows: 44px minmax(0, 1fr) 26px; height: 100vh; }
+#lec-app { display: grid; grid-template-rows: 44px 34px minmax(0, 1fr) 26px; height: 100vh; }
 
 /* ---- 툴바 ---------------------------------------------------------------- */
 #lec-toolbar {
   display: flex; align-items: center; gap: 8px; padding: 0 10px;
   border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); min-width: 0;
 }
-.tb-group, .tb-project { display: flex; align-items: center; gap: 2px; min-width: 0; }
-.tb-project { margin-left: 8px; }
+.tb-group { display: flex; align-items: center; gap: 2px; min-width: 0; }
 .tb-spacer { flex: 1; }
 .icon-btn {
   display: inline-grid; place-items: center; width: 32px; height: 30px;
@@ -74,12 +73,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-fg); white-space: nowrap;
 }
 .text-btn:hover { border-color: var(--ui-faint); }
-.project-name {
-  border: 0; background: none; font-weight: 650; font-size: 14.5px; padding: 4px 6px; border-radius: 6px;
-  max-width: 340px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.project-name:hover:not(:disabled) { background: var(--ui-hover); }
-.project-name:disabled { opacity: 1; color: var(--ui-muted); font-weight: 500; }
 .search-btn {
   display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 6px 0 10px; min-width: 210px;
   border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-muted);
@@ -134,29 +127,53 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .theme-pick .step svg { width: 15px; height: 15px; }
 .theme-pick .step:disabled { color: var(--ui-faint); }
 
+/* ---- 프로젝트 탭 (tabs.js) ----------------------------------------------------- */
+/* 폴더마다 탭 하나: [이름 · 상위 폴더(같은 이름일 때) ● ×] … [+][▾]. 선택된 탭은 밑줄. ● 는 숨은 탭에서 바뀐 문서가 있음 */
+#lec-tabbar {
+  display: flex; align-items: stretch; gap: 2px; min-width: 0; padding: 0 8px 0 4px;
+  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg);
+}
+#lec-tablist { display: flex; align-items: stretch; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+#lec-tablist::-webkit-scrollbar { display: none; }
+.lec-tab {
+  position: relative; display: flex; align-items: center; gap: 6px; flex: 0 1 auto; min-width: 84px; max-width: 240px;
+  padding: 0 4px 0 12px; border-bottom: 2px solid transparent; color: var(--ui-muted); cursor: pointer; white-space: nowrap; user-select: none;
+}
+.lec-tab + .lec-tab::before {   /* 탭 사이의 짧은 구분선 */
+  content: ""; position: absolute; left: 0; top: 9px; bottom: 9px; border-left: 1px solid var(--ui-border);
+}
+.lec-tab:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.lec-tab.active { color: var(--ui-fg); font-weight: 600; border-bottom-color: var(--ui-accent); }
+.lec-tab:focus-visible { outline-offset: -2px; }
+.lec-tab .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.lec-tab .sub { min-width: 0; overflow: hidden; text-overflow: ellipsis; color: var(--ui-faint); font-size: 11.5px; font-weight: 400; }
+.lec-tab .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ui-fresh); flex: none; }
+.tab-close {
+  display: inline-grid; place-items: center; flex: none; width: 22px; height: 22px; margin-left: auto;
+  border: 0; border-radius: 5px; background: none; color: var(--ui-muted); visibility: hidden;
+}
+.tab-close svg { width: 13px; height: 13px; }
+.lec-tab:hover .tab-close, .lec-tab.active .tab-close, .tab-close:focus-visible { visibility: visible; }
+.tab-close:hover { background: var(--ui-hover); color: var(--ui-fg); }
+#lec-tabbar > .icon-btn { align-self: center; flex: none; }
+#lec-btn-open svg { width: 16px; height: 16px; }
+
 /* ---- 본문 영역 ------------------------------------------------------------- */
 #lec-main { display: flex; min-height: 0; }
 #lec-sidebar {
   width: var(--side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--ui-border); background: var(--ui-bg);
 }
-/* 문서 창 (panes.js): 최대 3칸을 같은 폭으로. 칸이 둘 이상이면 머리줄(제목·닫기)을 보이고 선택된 칸에 색 띠 */
-#lec-panes { flex: 1; min-width: 0; display: flex; }
-.lec-pane { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; }
-.lec-pane + .lec-pane { border-left: 1px solid var(--ui-border); }
-.pane-head { display: none; }
-.split .pane-head {
-  display: flex; align-items: center; gap: 4px; flex: none; height: 30px; padding: 0 4px 0 12px;
-  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-muted); font-size: 12.5px;
-}
-.split .lec-pane.active .pane-head { color: var(--ui-fg); font-weight: 600; background: var(--ui-panel); box-shadow: inset 0 2px 0 var(--ui-accent); }
-.pane-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pane-close svg { width: 14px; height: 14px; }
+/* 문서 칸 (panes.js): 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보인다. 숨은 칸은 자리를 지킨다 (visibility) —
+   display:none 이면 스크롤 위치를 잃고, 숨은 동안 그림·html 문서의 크기를 잴 수 없다 */
+#lec-panes { flex: 1; min-width: 0; position: relative; }
+.lec-pane { position: absolute; inset: 0; display: flex; flex-direction: column; }
+.lec-pane:not(.active) { visibility: hidden; }
 .lec-scroll {
   flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
-  container-type: inline-size;   /* 좁은 칸에서 본문 여백·찾기 칸을 줄인다 (@container) */
+  container-type: inline-size;   /* 좁은 창에서 본문 여백·찾기 칸을 줄인다 (@container) */
 }
-.lec-scroll:focus { outline: none; }   /* Ctrl+1·2·3 이 키보드 스크롤을 위해 초점을 준다 (tabindex=-1) */
+.lec-scroll:focus { outline: none; }   /* 키보드 스크롤을 위해 초점을 받는다 (tabindex=-1) */
 #lec-toc {
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
@@ -168,9 +185,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .resizing, .resizing * { cursor: col-resize !important; user-select: none; }
 .resizing iframe { pointer-events: none; }
 @media (max-width: 1080px) { #lec-toc { display: none; } }
-/* 좁은 창: 폴더 이름이 먼저 줄지 않게 문서 찾기 칸과 '폴더 열기' 글자를 먼저 줄인다 */
+/* 좁은 창: 툴바가 한 줄에 들어가게 문서 찾기 칸부터 줄인다 */
 @media (max-width: 1240px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
-@media (max-width: 1140px) { #lec-btn-open span { display: none; } #lec-btn-open { padding: 0 7px; } }
 @media (max-width: 1060px) { .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; padding: 0 8px; } .theme-pick select { max-width: 130px; } }
 /* 아주 좁은 창: '스타일'·'하이라이트' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명) */
 @media (max-width: 860px) {
@@ -451,4 +467,4 @@ iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: h
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media (max-width: 760px) { .overview { padding: 24px 20px 80px; } }
-@container (max-width: 640px) { .overview { padding: 24px 20px 80px; } }   /* 나눈 좁은 창 */
+@container (max-width: 640px) { .overview { padding: 24px 20px 80px; } }   /* 좁은 창 */

@@ -1,4 +1,4 @@
-// 오른쪽 목차와 '지금 읽는 위치' 표시. 창을 나누었으면 선택된 창의 문서를 따른다
+// 오른쪽 목차와 '지금 읽는 위치' 표시. 선택된 탭의 문서를 따른다 (목차는 칸마다 남겨 두고 탭을 고르면 그 칸의 것을 보인다)
 
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
@@ -10,8 +10,7 @@ let active = -1;
 let raf = 0;
 
 export function updateTocVisibility() {
-  // 창을 나누었으면 목차가 없는 문서여도 칸을 남긴다 — 창을 고를 때마다 모든 창의 폭이 바뀌지 않게
-  const show = S.config.toc_visible !== false && (heads.length > 0 || S.panes.length > 1);
+  const show = S.config.toc_visible !== false && heads.length > 0;
   document.documentElement.classList.toggle('toc-off', !show);
   $('#lec-btn-toc').classList.toggle('on', S.config.toc_visible !== false);
 }
@@ -20,11 +19,11 @@ export function clearToc() {
   heads = [];
   links = [];
   active = -1;
-  $('#lec-toc').innerHTML = S.panes.length > 1 ? '<p class="toc-head">목차</p><p class="toc-none">선택된 창의 문서에는 목차가 없습니다</p>' : '';
+  $('#lec-toc').innerHTML = '';
   updateTocVisibility();
 }
 
-/** 창(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 창이면 바로 다시 그린다 */
+/** 칸(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 칸이면 바로 다시 그린다 */
 export function setToc(pane, root) {
   pane.tocRoot = root;
   if (pane === S.pane) showPaneToc(pane);
@@ -78,12 +77,11 @@ function spy() {
 }
 
 export function initToc() {
-  // 스크롤은 거품처럼 올라오지 않으므로 잡기 단계에서 듣는다. 선택된 창(#lec-content)의 스크롤만
+  // 스크롤은 거품처럼 올라오지 않으므로 잡기 단계에서 듣는다. 선택된 칸(#lec-content)의 스크롤만
   document.addEventListener('scroll', (e) => {
     if (e.target === S.pane?.scroller && !raf) raf = requestAnimationFrame(spy);
   }, { capture: true, passive: true });
   on('pane', showPaneToc);
-  on('panes', () => showPaneToc(S.pane));   // 창 수에 따라 목차 칸을 남길지가 다르다
   $('#lec-toc').addEventListener('click', (e) => {
     const a = e.target.closest('a[data-i]');
     if (!a) return;

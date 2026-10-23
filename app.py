@@ -4,7 +4,9 @@
     python app.py --browser [폴더]    개발용: 서버만 띄우고 일반 브라우저로 확인
     python app.py --debug [폴더]      창 + 개발자 도구
 
-폴더를 주지 않으면 마지막으로 연 폴더를 연다.
+지난 실행에 열어 둔 프로젝트 탭들을 되살리고, 폴더를 주면 그 폴더를 탭으로 더해 고른다.
+창 모드에서 Lectern 창이 이미 떠 있으면 새 창을 띄우지 않고 그 창에 폴더를 탭으로 넘긴다 (lectern/instance.py).
+--browser·--debug 실행은 따로 뜬다 (개발용).
 """
 from __future__ import annotations
 
@@ -13,14 +15,13 @@ import logging
 import os
 import sys
 import threading
-from pathlib import Path
 from typing import Any
 
-from lectern import __version__
+from lectern import __version__, instance
 from lectern.config import DEFAULTS, Config
 from lectern.paths import resource_dir
 from lectern.server import create_app
-from lectern.state import AppState
+from lectern.state import AppState, TooManyTabs
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -47,13 +48,23 @@ def setup_logging(quiet: bool) -> None:
         log.setLevel(logging.ERROR)
 
 
-def open_initial_folder(state: AppState, folder: str | None) -> None:
-    target = folder or state.config.get('last_folder')
-    if target and Path(target).is_dir():
-        try:
-            state.open(target)
-        except OSError as exc:
-            print(f'폴더를 열 수 없습니다: {exc}', file=sys.stderr)
+def open_initial(state: AppState, folder: str | None) -> None:
+    """지난 실행의 탭들을 되살리고(없어진 폴더는 건너뜀), 폴더 인자가 있으면 그 폴더를 탭으로 더해 고른다."""
+    tabs = state.config.get('tabs') or []
+    if not tabs and state.config.get('last_folder'):
+        tabs = [state.config.get('last_folder')]   # 탭이 생기기 전(v0.6 이하)의 설정
+    state.restore(tabs, state.config.get('active_tab'))
+    if folder:
+        open_folder(state, folder)
+
+
+def open_folder(state: AppState, folder: str) -> None:
+    """실행 인자로 받은 폴더를 탭으로 연다. 열지 못하면 창에 알린다 (창 모드에서는 콘솔이 보이지 않는다)."""
+    try:
+        state.open(folder)
+    except (OSError, NotADirectoryError, TooManyTabs) as exc:
+        print(f'폴더를 열 수 없습니다: {exc}', file=sys.stderr)
+        state.notify(f'폴더를 열 수 없습니다: {exc}')
 
 
 def make_http_server(state: AppState, port: int):
@@ -86,7 +97,7 @@ def window_size(saved: Any) -> tuple[int, int]:
     return max(width, MIN_WINDOW[0]), max(height, MIN_WINDOW[1])
 
 
-def run_window(state: AppState, port: int, debug: bool) -> None:
+def run_window(state: AppState, port: int, debug: bool, receiver: instance.Receiver | None = None) -> None:
     import webview
 
     from lectern.native import NativeApi
@@ -122,6 +133,17 @@ def run_window(state: AppState, port: int, debug: bool) -> None:
             pass
 
     window.events.closing += on_closing
+
+    def bring_forward(folder: str | None) -> None:
+        """다음 실행(탐색기 우클릭 등)이 넘긴 폴더를 탭으로 열고 창을 앞으로. 화면은 tabs_seq 로 새 탭을 알아챈다."""
+        if folder:
+            open_folder(state, folder)
+        if shown['state'] == 'minimized':
+            window.restore()
+        window.show()
+
+    if receiver:
+        receiver.start(bring_forward)
     try:
         webview.start(debug=debug)
     finally:
@@ -132,10 +154,18 @@ def main(argv: list[str] | None = None) -> None:
     args = parse_args(argv)
     setup_logging(quiet=not (args.browser or args.debug))
     config = Config()
+    # 창은 하나, 프로젝트는 탭 (D34): Lectern 창이 이미 떠 있으면 폴더를 그 창에 넘기고 끝낸다.
+    # 폴더는 이 실행의 현재 폴더 기준이라(run.bat .) 넘기기 전에 절대경로로 바꾼다
+    receiver = None
+    if not (args.browser or args.debug):
+        pipe = instance.pipe_name(config.path.parent)
+        if instance.forward(pipe, os.path.abspath(os.path.expanduser(args.folder)) if args.folder else None):
+            return
+        receiver = instance.listen(pipe)
     if config.load_error:
         print(config.load_error, file=sys.stderr)
     state = AppState(config, mode='browser' if args.browser else 'app')
-    open_initial_folder(state, args.folder)
+    open_initial(state, args.folder)
     # 폴더 인자(run.bat . 등 현재 폴더 기준)를 푼 뒤에는 앱 폴더로 옮긴다. 현재 폴더가 열린 프로젝트면
     # Windows 가 프로그램을 찾을 때 그 안의 파일(code.cmd 등)을 먼저 잡을 수 있다 (osutil.find_editor 참고)
     os.chdir(resource_dir())
@@ -143,7 +173,7 @@ def main(argv: list[str] | None = None) -> None:
         if args.browser:
             run_browser(state, args.port)
         else:
-            run_window(state, args.port, args.debug)
+            run_window(state, args.port, args.debug, receiver)
     finally:
         state.close()
 

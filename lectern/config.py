@@ -20,12 +20,14 @@ from .paths import config_dir
 MAX_RECENT = 10
 MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
-MAX_PANES = 3         # 나눠 보는 문서 창 수 (web/js/panes.js 와 같게)
+MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 
 DEFAULTS: dict[str, Any] = {
     'version': 1,
     'recent': [],            # 최근 연 프로젝트 폴더 (최신순)
-    'last_folder': None,     # 실행 인자가 없을 때 열 폴더
+    'last_folder': None,     # 마지막으로 연 폴더 (tabs 가 없던 옛 설정이면 이 폴더를 연다)
+    'tabs': [],              # 열어 둔 프로젝트 탭 (왼쪽부터). 다음 실행에 되살린다 (서버가 기록)
+    'active_tab': 0,         # 선택돼 있던 탭의 순번
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
@@ -45,7 +47,7 @@ DEFAULTS: dict[str, Any] = {
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
-# recent·last_folder·projects 는 서버가 기록한다 (add_recent, remember_position).
+# recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level'})
 
@@ -190,49 +192,43 @@ class Config:
             data['last_folder'] = folder
         self._update(change)
 
-    def remember_position(self, root: str, panes: list[tuple[str, int]], active: int = 0) -> None:
-        """프로젝트의 마지막 창들(왼쪽부터 [(문서, 스크롤 위치)])과 선택된 창. 문서별 스크롤 위치도 남긴다
-        (뒤로 가기·다시 열 때). 최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
-        panes = panes[:MAX_PANES]
-        active = active if 0 <= active < len(panes) else 0
+    def set_tabs(self, roots: list[str], active: int = 0) -> None:
+        """열어 둔 탭(왼쪽부터 폴더 경로)과 선택된 탭의 순번. 다음 실행에 이대로 되살린다."""
+        roots = roots[:MAX_TABS]
+        active = active if 0 <= active < len(roots) else 0
 
+        def change(data: dict[str, Any]) -> bool:
+            if data.get('tabs') == roots and data.get('active_tab') == active:
+                return False
+            data['tabs'] = roots
+            data['active_tab'] = active
+            return True
+        self._update(change)
+
+    def remember_position(self, root: str, doc: str, scroll: int) -> None:
+        """프로젝트의 마지막 문서와 스크롤 위치. 문서별 스크롤 위치도 남긴다 (뒤로 가기·다시 열 때).
+        최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
         def change(data: dict[str, Any]) -> None:
             projects = data.get('projects') if isinstance(data.get('projects'), dict) else {}
             key = os.path.normcase(root)
             entry = projects.pop(key, None)
             scrolls = entry.get('scroll') if isinstance(entry, dict) and isinstance(entry.get('scroll'), dict) else {}
-            for doc, scroll in panes:
-                scrolls.pop(doc, None)
-                scrolls[doc] = max(0, int(scroll))
-            projects[key] = {
-                'doc': panes[active][0],   # 선택된 창의 문서 (창을 나누기 전 형식과 같은 뜻)
-                'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:]),
-                'panes': [{'doc': doc, 'scroll': max(0, int(scroll))} for doc, scroll in panes],
-                'active': active,
-            }
+            scrolls.pop(doc, None)
+            scrolls[doc] = max(0, int(scroll))
+            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:])}
             data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
         self._update(change)
 
     def position(self, root: str) -> dict[str, Any]:
-        """{doc, scroll:{문서: 위치}, panes:[{doc, scroll}], active}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
-        창을 나누기 전에 남긴 기록(panes 없음)은 doc 하나의 창으로 본다."""
+        """{doc, scroll:{문서: 위치}}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
+        창을 나누던 때(v0.6)의 기록에 남은 panes·active 는 읽지 않는다 — doc 이 그때 선택된 창의 문서다."""
         projects = self.get('projects')
         entry = projects.get(os.path.normcase(root)) if isinstance(projects, dict) else None
         if not isinstance(entry, dict):
-            return {'doc': None, 'scroll': {}, 'panes': [], 'active': 0}
+            return {'doc': None, 'scroll': {}}
         doc = entry.get('doc') if isinstance(entry.get('doc'), str) else None
         scrolls = entry.get('scroll') if isinstance(entry.get('scroll'), dict) else {}
-        scrolls = {k: v for k, v in scrolls.items() if is_number(v)}
-        raw = entry.get('panes')
-        if isinstance(raw, list):
-            panes = [{'doc': p['doc'], 'scroll': p.get('scroll') if is_number(p.get('scroll')) else 0}
-                     for p in raw[:MAX_PANES] if isinstance(p, dict) and isinstance(p.get('doc'), str)]
-        else:
-            panes = [{'doc': doc, 'scroll': scrolls.get(doc) if is_number(scrolls.get(doc)) else 0}] if doc else []
-        active = entry.get('active')
-        if not (isinstance(active, int) and not isinstance(active, bool) and 0 <= active < len(panes)):
-            active = 0
-        return {'doc': doc, 'scroll': scrolls, 'panes': panes, 'active': active}
+        return {'doc': doc, 'scroll': {k: v for k, v in scrolls.items() if is_number(v)}}
 
     def public(self) -> dict[str, Any]:
         with self._lock:

@@ -20,7 +20,6 @@ function link(doc, text, path, line) {
   a.dataset.path = path;
   if (line) a.dataset.line = line;
   a.dataset.lecHref = line ? `${path}:${line}` : path;   // 우클릭 '링크 주소 복사'
-  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) a.dataset.lecOpen = JSON.stringify({ type: 'doc', path });   // 우클릭 '오른쪽 창에 열기'
   a.title = line ? `${path} ${line}행` : path;
   a.append(text);
   return a;
@@ -31,12 +30,12 @@ function onClick(e) {
   if (!a) return;
   e.preventDefault();
   const { path, line } = a.dataset;
-  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path, side: e.ctrlKey || e.metaKey });
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path });   // 누를 수 있는 것은 선택된 탭의 문서뿐
   else openExternal(path, line ? Number(line) : undefined);
 }
 
-/** root(무대) 안의 경로 표기를 찾아 있는 파일이면 링크로 바꾼다. 서버에 묻지 못하면 그대로 둔다. */
-export async function linkPaths(root, docPath) {
+/** root(무대) 안의 경로 표기를 찾아 탭(tab)의 프로젝트에 있는 파일이면 링크로 바꾼다. 서버에 묻지 못하면 그대로 둔다. */
+export async function linkPaths(root, docPath, tab) {
   const doc = root.ownerDocument;
   const codes = [];   // 내용 전체가 경로인 문장 속 `코드`
   const texts = [];   // [텍스트 노드, 찾은 것들]
@@ -61,7 +60,7 @@ export async function linkPaths(root, docPath) {
   if (!wanted.size) return;
   let found;
   try {
-    ({ found } = await postJSON('/api/exists', { paths: [...wanted].slice(0, MAX_CANDIDATES), base: dirname(docPath) }));
+    ({ found } = await postJSON('/api/exists', { p: tab.id, paths: [...wanted].slice(0, MAX_CANDIDATES), base: dirname(docPath) }));
   } catch {
     return;
   }

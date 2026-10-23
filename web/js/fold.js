@@ -2,13 +2,17 @@
 //
 // 문서 DOM은 markdown-it 이 만든 평평한 구조 그대로 둔다 (절을 <section> 으로 감싸면 CSS·찾기·목차가 영향을 받는다).
 // 접을 수 있는 제목에 lec-fold, 접힌 제목에 lec-folded, 그 아래 숨는 최상위 블록에 lec-fold-hidden 을 준다.
-// 접은 상태는 문서 경로별로 이번 실행 동안만 기억한다 (자동 새로고침·뒤로 가기에도 유지, 디스크에 쓰지 않음).
-// 창을 나누었으면 창마다 그 창의 문서(화면의 data-doc-path)를 접는다. 메뉴의 '모두 접기' 등은 선택된 창(#lec-view).
+// 접은 상태는 탭마다(칸의 화면별로) 문서 경로별로 이번 실행 동안만 기억한다 (자동 새로고침·뒤로 가기에도 유지, 디스크에 쓰지 않음).
+// 두 프로젝트에 같은 경로의 문서(README.md 등)가 있어도 섞이지 않는다. 메뉴의 '모두 접기' 등은 선택된 탭의 칸(#lec-view).
 
 import { S, emit } from './store.js';
 import { $ } from './util.js';
 
-const folds = new Map();   // 문서 경로 → 접힌 제목 키 집합
+const folds = new WeakMap();   // 칸의 화면(article) → (문서 경로 → 접힌 제목 키 집합). 탭을 닫으면 함께 사라진다
+const foldsOf = (root) => {
+  if (!folds.has(root)) folds.set(root, new Map());
+  return folds.get(root);
+};
 let lastToggled = null;    // 두 번 눌러 낱말을 고를 때 첫 번째 누름의 접기를 되돌리기 위해
 
 const view = () => $('#lec-view');
@@ -39,7 +43,7 @@ function apply(root) {
 
 /** 문서를 그린 직후 부른다. 접을 수 있는 제목을 표시하고, 이 문서에서 접어 두었던 절을 다시 접는다. */
 export function setupFolds(root, path) {
-  const saved = folds.get(path);
+  const saved = foldsOf(root).get(path);
   const list = headings(root);
   // 목차처럼, H1이 하나뿐이면 문서 제목으로 보고 접지 않는다 (접으면 문서 전체가 사라진다)
   const title = list.filter((h) => h.tagName === 'H1').length === 1;
@@ -52,18 +56,13 @@ export function setupFolds(root, path) {
   apply(root);
 }
 
-/** 다른 폴더를 열면 접은 상태를 잊는다. */
-export function forgetFolds() {
-  folds.clear();
-}
-
 function remember(root) {
   const keys = headings(root).flatMap((x, i) => (x.classList.contains('lec-folded') ? [keyOf(x, i)] : []));
-  if (keys.length) folds.set(root.dataset.docPath, new Set(keys));
-  else folds.delete(root.dataset.docPath);
+  if (keys.length) foldsOf(root).set(root.dataset.docPath, new Set(keys));
+  else foldsOf(root).delete(root.dataset.docPath);
 }
 
-/** 접는 제목은 창 화면의 바로 아래 자식이다 */
+/** 접는 제목은 칸 화면의 바로 아래 자식이다 */
 function setFolded(h, folded) {
   h.classList.toggle('lec-folded', folded);
   remember(h.parentElement);
