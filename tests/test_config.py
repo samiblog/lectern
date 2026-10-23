@@ -172,3 +172,16 @@ def test_files_view_setting(tmp_path):
     assert cfg.get('files_view') == 'kind'                                     # 종류별 (문서 트리 위, 파일 아래)
     cfg.update_client({'files_view': 'folder'})
     assert cfg.get('files_view') == 'folder'
+
+
+def test_terminal_settings(tmp_path):
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    assert cfg.get('terminal_shell') is None and cfg.get('terminal_width') is None
+    cfg.update_client({'terminal_width': 520, 'terminal_shell': r'C:\evil.exe'})   # 셸은 화면에서 바꿀 수 없다 (파일만)
+    assert cfg.get('terminal_width') == 520 and cfg.get('terminal_shell') is None
+    cfg.update_client({'terminal_width': None})
+    assert cfg.get('terminal_width') is None
+    path.write_text(json.dumps({'terminal_shell': r'C:\Program Files\PowerShell\7\pwsh.exe', 'terminal_width': 'wide'}), encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.get('terminal_shell') == r'C:\Program Files\PowerShell\7\pwsh.exe' and cfg.get('terminal_width') is None

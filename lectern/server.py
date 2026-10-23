@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, osutil
+from . import __version__, osutil, terminal
 from .config import is_number
 from .docinfo import doc_info, read_text
 from .paths import web_dir
@@ -42,10 +42,13 @@ FIXED_TYPES = {
 def content_security_policy(external_images: bool) -> str:
     """앱 페이지(/)의 CSP. 문서 HTML은 앱과 같은 출처에서 그려지므로, 정화(doc.js)를 빠져나간 경로의 요청도 브라우저가 막게 한다.
 
-    스크립트·스타일 지시어는 두지 않는다 (D14: pywebview 가 eval 을 쓸 수 있고, KaTeX·Mermaid 는 인라인 스타일을 쓴다).
+    스타일 지시어는 두지 않는다 (KaTeX·Mermaid 는 인라인 스타일을 쓴다). 스크립트는 앱 자신의 파일만 (D14 → D38).
     """
     img = "'self' data: blob:" + (' http: https:' if external_images else '')
     return '; '.join((
+        # 스크립트는 앱 자신의 파일만 (문서에 끼어든 인라인 스크립트·이벤트 속성을 브라우저가 막는다 — 터미널이 생겨 한 단계 올림, D38).
+        # pywebview 가 결과를 돌려줄 때 eval 을 쓸 수 있어 'unsafe-eval' 은 둔다 (D14). pywebview 가 넣는 스크립트는 페이지 CSP 를 받지 않는다
+        "script-src 'self' 'unsafe-eval'",
         f'img-src {img}',
         "media-src 'self'",
         "font-src 'self' data:",
@@ -139,7 +142,7 @@ def create_app(state: AppState) -> Flask:
     @app.get('/')
     def index() -> Response:
         html = (web / 'index.html').read_text(encoding='utf-8')
-        html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__)
+        html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__).replace('{{TERM}}', state.term_secret)
         resp = Response(html, content_type='text/html; charset=utf-8')
         resp.headers['Content-Security-Policy'] = content_security_policy(state.config.get('external_images') is not False)
         resp.headers['Referrer-Policy'] = 'no-referrer'
@@ -266,6 +269,89 @@ def create_app(state: AppState) -> Flask:
             state.config.remember_position(str(root), target.relative_to(root).as_posix(), int(scroll))
         return jsonify(ok=True)
 
+    # ---- 오른쪽 터미널 (D38) ----------------------------------------------------------
+    # 셸로 가는 길은 사용자의 키 입력(/api/term/input)뿐이다. 토큰(창 모드)에 더해 페이지에 실은 비밀값(X-Term)과
+    # 요청을 보낸 페이지(Origin)를 확인한다 — 다른 사이트나 다른 프로그램이 셸에 명령을 넣지 못하게.
+
+    def term_guard() -> None:
+        if not state.terminals.available:
+            abort(501, description='터미널은 Windows 10(1809) 이상에서만 쓸 수 있습니다')
+        if request.headers.get('X-Term') != state.term_secret:
+            abort(403)
+        origin = request.headers.get('Origin')
+        if origin and origin != f'{request.scheme}://{request.host}':
+            abort(403)
+
+    def session_of(sid: Any) -> terminal.Session:
+        session = state.terminals.get(sid)
+        if session is None:
+            abort(404, description='끝난 터미널입니다')
+        return session
+
+    def term_size(data: dict[str, Any]) -> tuple[int, int]:
+        cols, rows = data.get('cols', 80), data.get('rows', 24)
+        if not all(isinstance(v, int) and not isinstance(v, bool) and 1 <= v <= 1000 for v in (cols, rows)):
+            abort(400)
+        return cols, rows
+
+    @app.post('/api/term/open')
+    def api_term_open() -> Any:
+        """탭(p)의 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그것). {id, shell, cwd}"""
+        term_guard()
+        data = body()
+        project = project_of(data.get('p'))
+        cols, rows = term_size(data)
+        try:
+            session = state.terminals.open(project.id, str(project.root), state.config.get('terminal_shell'), cols, rows)
+        except OSError as exc:
+            return jsonify(error=f'셸을 시작하지 못했습니다 ({exc}). 설정 파일의 terminal_shell 을 확인하세요'), 500
+        return jsonify(id=session.id, shell=terminal.shell_label(session.exe), cwd=str(project.root))
+
+    @app.get('/api/term/read')
+    def api_term_read() -> Any:
+        """from(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝날 때까지 기다린다 (긴 폴링). {data, next, reset, alive, exit}"""
+        term_guard()
+        session = session_of(request.args.get('t'))
+        since = request.args.get('from', default=0, type=int)
+        return jsonify(session.read(max(0, since), terminal.READ_WAIT))
+
+    @app.post('/api/term/input')
+    def api_term_input() -> Any:
+        """사용자가 친 키·붙여 넣은 글 {t, data}"""
+        term_guard()
+        data = body()
+        text = data.get('data')
+        if not isinstance(text, str):
+            abort(400)
+        if len(text) > 65536:
+            abort(413, description='한 번에 보낼 수 있는 글은 65536자까지입니다')
+        session_of(data.get('t')).write(text)
+        return jsonify(ok=True)
+
+    @app.post('/api/term/resize')
+    def api_term_resize() -> Any:
+        term_guard()
+        data = body()
+        session_of(data.get('t')).resize(*term_size(data))
+        return jsonify(ok=True)
+
+    @app.get('/api/term/info')
+    def api_term_info() -> Any:
+        """{alive, busy} — busy: 셸에서 띄운 프로그램이 돌고 있음 (탭을 닫기 전에 묻는다)"""
+        term_guard()
+        session = session_of(request.args.get('t'))
+        return jsonify(alive=session.alive, busy=session.busy())
+
+    @app.post('/api/term/close')
+    def api_term_close() -> Any:
+        """셸과 셸에서 띄운 프로그램을 끝낸다 (다시 시작할 때)"""
+        term_guard()
+        sid = body().get('t')
+        if not isinstance(sid, str):
+            abort(400)
+        state.terminals.close(sid)
+        return jsonify(ok=True)
+
     @app.post('/api/open-config')
     def api_open_config() -> Any:
         """설정 파일을 편집기로 연다 (API로 못 바꾸는 editor·exclude_dirs 를 고치도록). 파일이 없으면 기본값으로 만든다."""
@@ -343,7 +429,9 @@ def create_app(state: AppState) -> Flask:
     @app.errorhandler(403)
     @app.errorhandler(400)
     @app.errorhandler(405)
+    @app.errorhandler(413)
     @app.errorhandler(415)
+    @app.errorhandler(501)
     @app.errorhandler(500)
     def json_error(err: Any) -> Any:
         if request.path.startswith('/api/'):

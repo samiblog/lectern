@@ -1208,6 +1208,100 @@ def run(headed: bool) -> None:
             check(middle and welcome and title == 'Lectern' and reopened,
                   f'탭을 가운데 버튼으로도 닫고, 모두 닫으면 시작 화면(트리 비움), 최근 연 폴더로 다시 열기 ({middle}, {welcome}, {title!r}, {reopened})')
 
+            print('[터미널]')
+            page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)
+
+            def term_has(text: str, ms: int = 15000) -> bool:
+                """보이는 터미널 화면에 text 가 나올 때까지 (줄바꿈으로 나뉜 긴 경로도 이어서 본다)"""
+                try:
+                    page.wait_for_function('''t => [...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
+                      .map(r => r.textContent).join('').includes(t)''', arg=text, timeout=ms)
+                    return True
+                except Exception:
+                    return False
+
+            term_ui = lambda: page.evaluate('''() => { const h = document.documentElement; return {
+              on: h.classList.contains('term-on'), toc: !h.classList.contains('toc-off'), hidden: document.querySelector('#lec-term').hidden,
+              btn: document.querySelector('#lec-btn-term').classList.contains('on'), title: document.querySelector('#lec-term-title').textContent,
+              focus: !!document.activeElement?.closest('#lec-term'), boxes: document.querySelectorAll('#lec-term .term-box').length }; }''')
+            page.click('#lec-btn-term')
+            started = term_has('PS ', 30000)
+            t1 = term_ui()
+            check(started and t1['on'] and not t1['hidden'] and t1['btn'] and not t1['toc'] and t1['focus'] and t1['title'] == 'PowerShell — samples',
+                  f'터미널 버튼: 오른쪽에 PowerShell 이 프로젝트 폴더에서 뜨고, 목차는 감추고, 입력이 터미널로 ({t1})')
+            page.keyboard.type('Write-Output ("lec" + "term" + "한글"); (Get-Location).Path')
+            page.keyboard.press('Enter')
+            ran = term_has('lecterm한글') and term_has(str(work))
+            shot('10-terminal')
+            check(ran, '터미널에 친 명령이 돌고, 한글 출력과 현재 폴더(프로젝트)가 보임')
+            page.keyboard.press('Control+p')   # 터미널 안의 키는 셸 것 — 앱 단축키가 가로채지 않는다
+            page.keyboard.press('Control+f')
+            page.keyboard.press('Escape')
+            no_app_keys = page.evaluate("document.querySelector('#lec-palette').hidden && document.querySelector('#lec-findbar').hidden")
+            page.click('#lec-btn-toc')   # 터미널을 연 동안 목차 버튼은 목차를 함께 볼지만 바꾼다 (설정은 그대로)
+            toc_with = term_ui()['toc']
+            page.click('#lec-btn-toc')
+            toc_cfg = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.toc_visible)")
+            check(no_app_keys and toc_with and not term_ui()['toc'] and toc_cfg is not False,
+                  f'터미널 안에서는 Ctrl+P·Ctrl+F 가 셸로, 목차 버튼으로 목차를 함께 볼 수 있음 ({no_app_keys}, {toc_with}, {toc_cfg})')
+            page.click('#lec-term-body')
+            page.keyboard.press('Control+Backquote')
+            closed = term_ui()
+            page.keyboard.press('Control+Backquote')
+            reopened = term_ui()
+            kept = term_has('lecterm한글', 3000)
+            check(closed['hidden'] and not closed['on'] and closed['toc'] and not reopened['hidden'] and reopened['focus'] and kept,
+                  f'Ctrl+` 로 터미널을 닫고 열기 — 닫아도 셸은 그대로, 다시 열면 이어서 ({closed}, {reopened})')
+            handle = page.locator('#lec-term-resizer').bounding_box()
+            width0 = page.locator('#lec-term').bounding_box()['width']
+            page.mouse.move(handle['x'] + 3, handle['y'] + 200)
+            page.mouse.down()
+            page.mouse.move(handle['x'] - 117, handle['y'] + 200, steps=4)
+            page.mouse.up()
+            width1 = page.locator('#lec-term').bounding_box()['width']
+            saved_w = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_width)")
+            page.dblclick('#lec-term-resizer')
+            width2 = page.locator('#lec-term').bounding_box()['width']
+            reset_w = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_width)")
+            check(abs(width1 - width0 - 120) <= 3 and saved_w and abs(saved_w - width1) <= 2 and reset_w is None and abs(width2 - width0) <= 2,
+                  f'경계를 끌어 터미널 폭 조절·저장, 두 번 누르면 기본 폭 ({width0:.0f} → {width1:.0f} 저장 {saved_w}, → {width2:.0f})')
+            page.click('#lec-term-restart')
+            restarted = wait_until(page, '''![...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
+              .map(r => r.textContent).join('').includes('lecterm')''') and term_has('PS ', 30000)
+            check(restarted, '다시 시작 버튼: 셸을 새로 띄움 (화면도 비움)')
+            term_status = page.evaluate('''async () => {
+              const secret = document.querySelector('meta[name="lec-term"]').content;
+              const get = (h) => fetch('/api/term/read?t=nope&from=0', { headers: h }).then(r => r.status);
+              return [await get({}), await get({ 'X-Term': 'wrong' }), await get({ 'X-Term': secret })]; }''')
+            check(term_status == [403, 403, 404], f'터미널 API 는 페이지의 비밀값(X-Term) 없이는 403 ({term_status})')
+            page.once('dialog', lambda d: d.accept(str(second)))
+            page.click('#lec-btn-open')
+            per_tab = n_tabs(2) and term_has(f'PS {second}>', 30000)
+            t2 = term_ui()
+            check(per_tab and t2['title'] == 'PowerShell — second' and t2['boxes'] == 2,
+                  f'탭마다 셸이 따로 — 새 탭을 고르면 그 폴더의 셸 ({t2})')
+            page.click('#lec-term-body')
+            page.keyboard.type('ping -n 30 127.0.0.1')
+            page.keyboard.press('Enter')
+            pinging = term_has('TTL=')
+            asked: list[str] = []
+            page.once('dialog', lambda d: (asked.append(d.message), d.dismiss()))
+            tab_el(1).locator('.tab-close').click()
+            for _ in range(50):   # 서버에 물어본 뒤 묻는다
+                if asked:
+                    break
+                page.wait_for_timeout(100)
+            kept_tab = len(asked) == 1 and n_tabs(2)
+            page.once('dialog', lambda d: (asked.append(d.message), d.accept()))
+            tab_el(1).locator('.tab-close').click()
+            closed_tab = n_tabs(1) and wait_until(page, "document.querySelector('#lec-term-title').textContent === 'PowerShell — samples'")
+            check(pinging and kept_tab and closed_tab and len(asked) == 2 and '실행 중' in asked[0]
+                  and page.evaluate("document.querySelectorAll('#lec-term .term-box').length") == 1 and term_has('PS ', 3000),
+                  f'터미널에서 프로그램이 돌면 탭을 닫기 전에 묻고, 닫으면 그 셸도 끝 — 남은 탭의 셸로 ({asked[:1]})')
+            page.click('#lec-term-close')
+            gone = term_ui()
+            check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'✕ 로 터미널 닫기 ({gone})')
+
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')

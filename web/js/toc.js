@@ -9,10 +9,14 @@ let links = [];
 let active = -1;
 let raf = 0;
 
+/** 터미널(terminal.js)을 열면 목차를 감춘다 — 본문 폭이 모자라므로. 그동안 목차 버튼은 목차를 함께 보일지만 바꾼다 */
+const root = document.documentElement;
+const hiddenByTerminal = () => root.classList.contains('term-on') && !root.classList.contains('toc-with-term');
+
 export function updateTocVisibility() {
-  const show = S.config.toc_visible !== false && heads.length > 0;
-  document.documentElement.classList.toggle('toc-off', !show);
-  $('#lec-btn-toc').classList.toggle('on', S.config.toc_visible !== false);
+  const show = S.config.toc_visible !== false && heads.length > 0 && !hiddenByTerminal();
+  root.classList.toggle('toc-off', !show);
+  $('#lec-btn-toc').classList.toggle('on', S.config.toc_visible !== false && !hiddenByTerminal());
 }
 
 export function clearToc() {

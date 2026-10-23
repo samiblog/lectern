@@ -48,16 +48,18 @@ DEFAULTS: dict[str, Any] = {
     'exclude_dirs': [],      # 기본 제외 폴더에 추가할 폴더 이름 (직접 편집)
     'html_exclude_dirs': [], # 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 src·public 등에 더함, 직접 편집)
     'editor': None,          # 코드 파일을 열 편집기 실행 파일 경로 (None이면 PATH의 code)
+    'terminal_shell': None,  # 오른쪽 터미널의 셸 실행 파일 전체 경로 (None 이면 Windows PowerShell 5.1, 직접 편집 — 예: pwsh.exe)
+    'terminal_width': None,  # 오른쪽 터미널 폭(px). None 이면 기본 (경계를 끌어 바꾸고 두 번 누르면 기본)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height'})
+                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height', 'terminal_width'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
-NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height'})
+NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'terminal_shell', 'terminal_width'})
 _EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"글자"', list: '["이름", ...] 목록', dict: '{ } 객체'}
 
 
@@ -71,9 +73,9 @@ def value_ok(key: str, value: Any) -> bool:
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
-    if key in ('sidebar_width', 'others_height'):
+    if key in ('sidebar_width', 'others_height', 'terminal_width'):
         return is_number(value)
-    if key in ('last_folder', 'editor'):
+    if key in ('last_folder', 'editor', 'terminal_shell'):
         return isinstance(value, str)
     if isinstance(default, bool):
         return isinstance(value, bool)
@@ -97,7 +99,8 @@ def _upgrade(data: dict[str, Any]) -> None:
 
 def _expected(key: str) -> str:
     default = DEFAULTS[key]
-    kind = str if key in ('last_folder', 'editor') else int if key in ('sidebar_width', 'others_height') else type(default)
+    kind = (str if key in ('last_folder', 'editor', 'terminal_shell')
+            else int if key in ('sidebar_width', 'others_height', 'terminal_width') else type(default))
     return _EXAMPLE.get(kind, '맞는 형식')
 
 

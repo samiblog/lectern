@@ -27,6 +27,7 @@ import { initPosition } from './position.js';
 import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
+import { initTerminal, toggleTerminal, terminalOpen } from './terminal.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
 import { $, basename, toast } from './util.js';
@@ -64,6 +65,11 @@ async function toggleSidebar() {
 }
 
 async function toggleToc() {
+  if (terminalOpen()) {   // 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
+    document.documentElement.classList.toggle('toc-with-term');
+    applyLayout();
+    return;
+  }
   await saveConfig({ toc_visible: S.config.toc_visible === false });
   applyLayout();
 }
@@ -95,17 +101,26 @@ function bindToolbar() {
   $('#lec-btn-back').addEventListener('click', back);
   $('#lec-btn-forward').addEventListener('click', forward);
   $('#lec-btn-palette').addEventListener('click', openPalette);
+  // 터미널 버튼은 initTerminal 이 잇는다
 }
 
 // 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
 const SPOT_KEYS = { ArrowUp: -1, ArrowDown: 1, PageUp: -1, PageDown: 1 };
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden;
+const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 
 function bindKeys() {
   document.addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
+    if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도)
+      e.preventDefault();
+      toggleTerminal();
+      return;
+    }
+    // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
+    if (inTerminal(e) && !(mod && e.key === 'Tab')) return;
     if (mod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       openPalette();
@@ -151,6 +166,7 @@ function bindKeys() {
   });
   // 마우스 뒤로/앞으로 버튼
   window.addEventListener('mouseup', (e) => {
+    if (inTerminal(e)) return;
     if (e.button === 3) { e.preventDefault(); back(); }
     if (e.button === 4) { e.preventDefault(); forward(); }
   });
@@ -201,6 +217,7 @@ async function boot() {
   initNav();
   initTabs();
   initWatch();
+  initTerminal();
   bindToolbar();
   bindKeys();
   applyLayout();

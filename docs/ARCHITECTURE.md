@@ -13,6 +13,7 @@ flowchart LR
         LOG[(ChangeLog — 탭마다)]
         CFG[(config.json)]
         RCV[Receiver<br/>instance.py]
+        TERM[셸 — 탭마다<br/>Windows 의사 콘솔·작업 개체]
     end
     FS[(프로젝트 폴더들)]
     NEXT[다음 실행<br/>탐색기 우클릭·run.bat]
@@ -23,11 +24,13 @@ flowchart LR
     W --> LOG
     HTTP --> LOG
     HTTP --> CFG
+    HTTP -- "키 입력 / 출력" --> TERM
+    TERM --> FS
     NEXT -- "이름 있는 파이프: 폴더" --> RCV
     RCV -- "탭으로 열기, 창을 앞으로" --> PW
 ```
 
-- 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다.
+- 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38).
 - 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
 - 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
@@ -94,6 +97,13 @@ flowchart LR
 편집기는 설정 `editor` (실행 파일의 절대경로) → PATH의 `code` 순으로 찾는다. VS Code·Cursor처럼 `-g file:line` 을 받는 편집기를 가정한다.
 현재 폴더에서는 찾지 않는다: `shutil.which` 앞에 `NoDefaultCurrentDirectoryInExePath=1` 을 두고, 탐색기는 `%SystemRoot%\explorer.exe` 로 띄운다. `app.py` 도 폴더 인자를 푼 뒤 앱 폴더로 `chdir` 한다. `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트라, 그 안의 `code.cmd`·`explorer.exe` 가 링크 한 번에 실행될 수 있었다 (D29).
 
+### 터미널 (terminal.py, conpty.py)
+오른쪽 터미널의 셸 (D38). 화면(`terminal.js`)이 열 때만 띄운다.
+- `conpty.PseudoConsole(cmdline, cwd, env, cols, rows)`: Windows 의사 콘솔(ConPTY, `CreatePseudoConsole`)을 ctypes 로 — 파이프 두 개, 의사 콘솔, 작업 개체(`KILL_ON_JOB_CLOSE`). 셸은 `CREATE_SUSPENDED` 로 만들어 작업 개체에 넣고 재개한다. `STARTF_USESTDHANDLES` 와 빈 표준 핸들을 준다 (창 없는 앱의 핸들이 넘어가지 않게). `read()`(막고 기다림, 끝나면 `b''`)·`write`·`resize`·`wait`·`exit_code`·`active_processes()`(작업 개체 안 프로세스 수)·`terminate()`(작업 개체째)·`close()`. Windows 10 1809 미만이면 `AVAILABLE` 이 거짓.
+- `terminal.Session`: 셸 하나. 읽는 스레드가 UTF-8 로 풀어(글자가 나뉘어 와도 이어 붙임) 버퍼에 쌓고(최근 `MAX_KEEP` 512K 글자, 앞부분을 버리면 순번 `_start` 가 는다), 지켜보는 스레드가 셸이 끝나면 종료 코드를 남기고 정리한다. `read(since, timeout)` 은 순번 `since` 다음의 출력을 `MAX_READ`(256K)까지 — 없으면 새 출력·종료·`timeout`(20초)까지 기다린다 (긴 폴링). `since` 가 버린 앞부분이면 남은 맨 앞부터 주고 `reset`. `busy()` 는 작업 개체 안에 셸 말고도 프로세스가 있는지.
+- `terminal.Terminals`(`AppState.terminals`): 프로젝트(탭)마다 셸 하나 — `open` 은 돌고 있는 셸이 있으면 그것을, 끝났으면 새로. 탭을 닫으면(`close_tab`) `close_project`, 앱이 끝나면(`AppState.close`) `close_all`.
+- 셸: 설정 `terminal_shell` 이 실제로 있는 실행 파일의 전체 경로면 그것, 아니면 `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe` (`-NoLogo`). 이름만으로 띄우지 않는다 (D29). 작업 폴더는 프로젝트 폴더, 환경 변수는 앱이 시작할 때의 값(`_START_ENV`).
+
 ### 설정 (config.py)
 `%APPDATA%\Lectern\config.json` (테스트에서는 `LECTERN_CONFIG_DIR` 로 바꿈). 원자적 저장(임시 파일 → `os.replace`).
 값마다 형식을 본다(`value_ok` — `DEFAULTS` 와 같은 형식, `NULLABLE` 키는 `null` 도). 형식이 틀린 값은 기본값으로 돌고 나머지는 그대로 쓰며, `load_error` 에 키와 맞는 형식을 남긴다 (화면의 `POST /api/config` 값도 형식이 틀리면 버린다, D29).
@@ -116,6 +126,7 @@ flowchart LR
 | `files_view` | `"kind"` | 가능 | 사이드바 파일 탭을 보는 방법 ('폴더' 버튼): `kind`(종류별 — 문서 트리 위, 분리선 아래 '파일' 목록) · `folder`(폴더 구조 그대로 — 문서와 파일을 한 트리에) (D37) |
 | `others_visible` | `true` | 가능 | 종류별 보기에서 아래 '파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기) |
 | `others_height` | `null` | 가능 | 종류별 보기의 '파일' 목록 높이(px). 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 40%) |
+| `terminal_width` | `null` | 가능 | 오른쪽 터미널 폭(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(본문 영역의 42%) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
 | `restore_last` | `true` | 가능 | 폴더(탭)를 처음 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다. 탭 목록은 이 설정과 상관없이 되살린다 |
@@ -123,6 +134,7 @@ flowchart LR
 | `window` | `{width:1280,height:860}` | 불가 | 창 크기 (닫을 때 저장. 최소화·최대화한 채 닫으면 저장하지 않음. 형식이 틀리면 기본값, 720×480보다 작으면 그 크기로) |
 | `exclude_dirs` | `[]` | 불가 | 추가 제외 폴더 이름 |
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
+| `terminal_shell` | `null` | 불가 | 터미널 셸 실행 파일의 전체 경로 (예: `C:\\Program Files\\PowerShell\\7\\pwsh.exe`). `null`·없는 파일·이름만이면 Windows PowerShell 5.1 (D38) |
 | `html_exclude_dirs` | `[]` | 불가 | 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 목록 `src`·`public` 등에 더함, D27) |
 | `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}}` — 마지막 문서와 문서별 스크롤 위치. 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서. 창을 나누던 때(v0.6)의 `panes`·`active` 는 읽지 않는다 (`doc` 이 그때 선택된 창의 문서라 그대로 쓴다) |
 
@@ -133,12 +145,13 @@ flowchart LR
 창 모드에서는 `/api/*` 요청에 `X-Token: <window.pywebview.token>` 헤더가 필요하다. 응답은 JSON, 오류는 `{error: "..."}`.
 프로젝트(탭)를 다루는 요청은 프로젝트 id 를 `p` 로 준다 (GET 은 `?p=`, POST 는 본문). 열려 있지 않은 id(닫힌 탭)는 404.
 `/api/*`, `/doc/*`, `/` 응답에는 `Cache-Control: no-cache` 가 붙는다.
-`/` 응답에는 이미지·연결·글꼴 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20).
+`/` 응답에는 스크립트(`'self' 'unsafe-eval'` — 앱 파일만, D38)·이미지·연결·글꼴 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20).
+터미널 API(`/api/term/*`)는 `X-Term: <페이지의 meta lec-term 값>` 헤더가 더 필요하다 (실행마다 새 비밀값, 브라우저 모드에서도). `Origin` 이 오면 같은 출처여야 한다. 아니면 403 (D38).
 `.js`·`.mjs`·`.css`·`.svg`·`.woff2` 의 응답 형식은 서버가 정한다 (`FIXED_TYPES`). Windows의 `mimetypes` 는 레지스트리 값을 따르는데, `.js` 가 `text/plain` 으로 잡힌 PC에서는 브라우저가 모듈 스크립트를 거부해 화면이 비기 때문이다. `img-src` 는 설정 `external_images` 에 따라 바뀌므로, 설정을 바꾸면 페이지를 다시 불러와야 반영된다.
 
 | 메서드·경로 | 요청 | 응답 / 설명 |
 |---|---|---|
-| `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}` 치환) + CSP 헤더 |
+| `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}`, `{{TERM}}`(터미널 비밀값) 치환) + CSP 헤더 |
 | `GET /static/<경로>` | | `web/` 정적 파일 |
 | `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}]}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
@@ -156,9 +169,15 @@ flowchart LR
 | `POST /api/open-external` | `{p, path, line?, how?}` | `{action}` — `folder`·`default`·`editor`·`reveal`. `how:'editor'` 면 기본 앱 형식도 편집기로 (`REVEAL_ONLY_EXT` 는 그래도 탐색기에서 선택만) |
 | `POST /api/exists` | `{p, paths:[...], base}` | 경로 표기 중 프로젝트 안에 있는 파일. 프로젝트 기준, 없으면 `base`(문서 폴더) 기준. `{found:{입력: 프로젝트 기준 경로}}`. 숨김·밖·폴더는 없는 것. 500개까지 |
 | `POST /api/reveal` | `{p, path}` | 탐색기에서 선택 (`path` 가 `''` 면 프로젝트 폴더 — 탭 우클릭). `{action:'reveal'}` |
+| `POST /api/term/open` | `{p, cols?, rows?}` | 탭의 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그 셸). `{id, shell, cwd}` — `shell` 은 머리줄에 보일 이름(`PowerShell` 등). 크기는 1~1000 (아니면 400). 띄우지 못하면 500 |
+| `GET /api/term/read?t=<셸 id>&from=<순번>` | | 긴 폴링: 순번 다음의 출력 `{data, next, reset, alive, exit}`. 없으면 새 출력·종료·20초까지 기다린다. `alive` 가 거짓이면 셸이 끝났고 남은 출력도 다 받은 것 (`exit`: 종료 코드) |
+| `POST /api/term/input` | `{t, data}` | 사용자가 친 키·붙여 넣은 글을 셸로. 65536자가 넘으면 413 |
+| `POST /api/term/resize` | `{t, cols, rows}` | 셸 화면 크기 |
+| `GET /api/term/info?t=<셸 id>` | | `{alive, busy}` — `busy`: 셸에서 띄운 프로그램이 돎 (탭을 닫기 전에 묻는다) |
+| `POST /api/term/close` | `{t}` | 셸과 셸에서 띄운 프로그램을 끝낸다 (다시 시작). 없는 셸도 `{ok:true}` |
 | `GET /doc/<id>/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin allow-modals`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20) 와 `Referrer-Policy: no-referrer` (html 문서 속 인터넷 그림이 앱 주소를 보내지 않게). 숨김·밖·없음·폴더·열려 있지 않은 id 는 404 |
 
-상태 코드: 400 잘못된 요청(필수 값 없음, JSON 객체가 아님, 폴더가 아님, 탭이 10개) · 403 토큰 불일치 또는 허용되지 않은 Host · 404 없음·숨김·프로젝트 밖·열려 있지 않은 프로젝트 id · 405 잘못된 메서드 · 415 `/api/*` POST 의 본문이 JSON(`Content-Type: application/json`)이 아님 · 500 OS가 파일 열기에 실패. `/api/*` 의 오류는 모두 `{error}` JSON이다.
+상태 코드: 400 잘못된 요청(필수 값 없음, JSON 객체가 아님, 폴더가 아님, 탭이 10개) · 403 토큰 불일치 또는 허용되지 않은 Host · 404 없음·숨김·프로젝트 밖·열려 있지 않은 프로젝트 id · 405 잘못된 메서드 · 413 터미널 입력이 너무 김 · 415 `/api/*` POST 의 본문이 JSON(`Content-Type: application/json`)이 아님 · 500 OS가 파일 열기·셸 띄우기에 실패 · 501 터미널을 쓸 수 없는 Windows (1809 미만). 터미널 API 는 비밀값이 틀리면 403, 끝났거나 없는 셸은 404. `/api/*` 의 오류는 모두 `{error}` JSON이다.
 
 ## 4. 프런트엔드 (web/)
 
@@ -304,6 +323,14 @@ sequenceDiagram
 - 우클릭(메뉴 키·Shift+F10): 머리말에 이름·크기·수정 시각, 열기(어떻게 열리는지 함께), 편집기로 열기(기본 앱 형식만), 탐색기에서 보기, `@경로`·전체 경로·파일 이름 복사. 폴더는 펼치기/접기·탐색기에서 열기·경로 복사. 이름 바꾸기·지우기·옮기기는 없다 (보기 전용).
 - 사이드바 거르기는 이 목록에도 적용된다: 경로에 모든 단어가 든 파일을 평평하게(폴더를 옆에) 300개까지.
 
+### 터미널 (terminal.js)
+- 툴바 버튼(`#lec-btn-term`)·`` Ctrl+` `` 로 본문 오른쪽(목차 자리, `#lec-term`)에 연다. 열면 `html.term-on` — 목차를 감추고(`toc.js` 의 `updateTocVisibility`), 목차 버튼은 `toc-with-term` 으로 목차를 함께 볼지만 바꾼다 (설정은 그대로). 앱을 켤 때마다 닫힌 채다.
+- 처음 열 때 `web/vendor/xterm` 의 css·js 를 불러온다 (`window.Terminal` 이 진짜 함수인지 본다 — 문서 속 id 가 이름을 가릴 수 있다). 탭마다 `tab.term` = {xterm, 상자(`.term-box`), 셸 id, 받은 순번 `next`, alive}. 상자는 `#lec-term-body` 에 겹쳐 두고 선택된 탭의 것만 보인다. 패널이 열려 있을 때 탭을 고르면 그 탭의 셸을 띄운다(`/api/term/open` — 서버에 돌고 있는 셸이 있으면 그것에 붙고 남은 출력부터 다시 보인다).
+- 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
+- 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
+- 머리줄: 셸 이름 — 탭 이름, 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
+- 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
+
 ### 단축키
 
 | 키 | 동작 |
@@ -314,6 +341,7 @@ sequenceDiagram
 | Ctrl+, | 설정 창 |
 | Ctrl+O | 폴더 열기 (새 탭으로, 이미 열린 폴더면 그 탭) |
 | Ctrl+B | 사이드바 보이기/숨기기 |
+| `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음) |
 | Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 탭에서 뒤로 / 앞으로 |
 | Ctrl+1 ~ 8 / Ctrl+9 | 그 순번의 탭 / 마지막 탭 |
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |
@@ -348,6 +376,9 @@ sequenceDiagram
 | 한 탭의 문서가 다른 탭 프로젝트의 파일을 부름 (`../<다른 id>/x.png`) | 프로젝트 id 는 실행마다 새로 만드는 무작위 값이라 문서가 알 수 없다. md 의 링크·그림은 `resolveRef` 가 `/doc/<그 탭 id>/` 밖을 막는다. 서버는 id 마다 그 폴더 안만 내준다 (D34) |
 | 다른 프로그램이 파이프로 Lectern 을 조작 | 파이프는 기본 보안이라 다른 사용자는 쓰지 못한다. JSON 만 받고(pickle 쓰지 않음), 하는 일은 폴더를 탭으로 열고 창을 앞으로 가져오는 것뿐 (보기 전용) |
 | 문서 속 스크립트 | md: DOMPurify, `style`·`form` 금지, `javascript:` 등 위험한 스킴 차단 (`file:`·드라이브 경로는 `absoluteRef` 가 프로젝트 안만 상대경로로 열고 밖은 막음). html: `allow-scripts` 없는 iframe sandbox + 문서용 CSP (D27) |
+| 웹 페이지·문서가 터미널로 명령을 보냄 | 셸에 글자를 보내는 API 는 사용자의 키 입력(`/api/term/input`) 하나. 터미널 API 는 페이지에 실린 실행마다 새 비밀값(`X-Term`)과 같은 출처(`Origin`)를 요구하고, 다른 사이트는 페이지를 읽을 수 없어 값을 모른다. 문서 속 스크립트는 DOMPurify·스크립트 없는 iframe 에 더해 `/` 의 CSP `script-src 'self'` 가 막는다 (D38) |
+| 터미널을 닫아도 셸에서 띄운 프로그램이 남음 | 셸은 작업 개체(`KILL_ON_JOB_CLOSE`) 안에서 돈다 — 탭을 닫거나 다시 시작하거나 앱이 끝나면(강제 종료 포함) 함께 끝난다. 탭을 닫기 전에 실행 중이면 묻는다 |
+| 프로젝트 폴더의 `powershell.exe` 가 셸 대신 실행됨 | 셸은 전체 경로로 띄우고, 설정 `terminal_shell` 은 실제로 있는 전체 경로일 때만, 화면에서는 바꿀 수 없다 |
 | 링크 클릭으로 코드 실행 | `osutil.open_path` 의 확장자 화이트리스트, 편집기 인자 문자 검사 |
 | 웹 페이지가 실행 경로 설정을 바꿈 | `editor`·`exclude_dirs` 등은 API로 못 바꿈 (`CLIENT_KEYS`) |
 | 외부로 정보 유출 | 앱은 외부 리소스를 불러오지 않음. 문서 속 외부 이미지만 예외(설정 `external_images`, 기본 켜짐): referrer를 보내지 않으므로 이미지 서버가 아는 것은 '이 PC가 그 그림을 요청했다'는 사실뿐. `<img>` 가 아닌 길(`srcset`·`poster`·표 `background`·SVG `image`·CSS `url()`·`image-set()`)은 정화 훅이 지우고, `/` 의 CSP(`img-src`·`connect-src` 등)가 한 번 더 막음 (D20) |

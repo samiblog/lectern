@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="lec-mode" content="{{MODE}}">
 <meta name="lec-version" content="{{VERSION}}">
+<meta name="lec-term" content="{{TERM}}"><!-- 터미널 API 의 비밀값 (실행마다 새로, terminal.js) -->
 <title>Lectern</title>
 <link rel="stylesheet" href="/static/vendor/katex/katex.min.css">
 <link id="lec-hljs-css" rel="stylesheet" href="/static/vendor/highlight/github.min.css">
@@ -40,6 +41,8 @@
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M5 10h10M10 5v10"/></symbol>
     <symbol id="i-spot" viewBox="0 0 20 20"><path d="M4 3.5h12M4 16.5h12" opacity=".45"/><rect x="2.5" y="7" width="15" height="6" rx="1.5"/><path d="M5.5 10h9"/></symbol>
     <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
+    <symbol id="i-term" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="m6 8 2.6 2.1L6 12.2M10.5 12.5h3.5"/></symbol>
+    <symbol id="i-restart" viewBox="0 0 20 20"><path d="M15.6 10.6A5.6 5.6 0 1 1 13.9 6M14.4 3.4V6.6H11.2"/></symbol>
     <!-- 사이드바 목록의 파일 종류 (icons.js). md·html 은 문서 -->
     <symbol id="i-md" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7 14.5v-4.3l1.6 2.1 1.6-2.1v4.3M12.6 10.2v4.3m-1.3-1.4 1.3 1.4 1.3-1.4"/></symbol>
     <symbol id="i-html" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M8.7 10.2 6.9 12l1.8 1.8M11.3 10.2l1.8 1.8-1.8 1.8"/></symbol>
@@ -81,6 +84,7 @@
       <button id="lec-spot-next" class="icon-btn step" title="다음 장 하이라이트 (↓)" aria-label="다음 장 하이라이트" disabled><svg><use href="#i-down"/></svg></button>
     </div>
     <button id="lec-btn-settings" class="icon-btn" title="설정 (Ctrl+,)"><svg><use href="#i-gear"/></svg></button>
+    <button id="lec-btn-term" class="icon-btn" title="터미널 (Ctrl+`) — 이 프로젝트 폴더에서 PowerShell"><svg><use href="#i-term"/></svg></button>
     <button id="lec-btn-toc" class="icon-btn" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg></button>
   </header>
 
@@ -145,6 +149,16 @@
     </main>
 
     <aside id="lec-toc" aria-label="목차"></aside>
+    <!-- 오른쪽 터미널 (terminal.js, D38): 프로젝트 탭마다 셸 하나. 사용자가 열 때만 시작한다. 경계를 끌어 폭 조절 -->
+    <div id="lec-term-resizer" role="separator" aria-orientation="vertical" title="끌어서 터미널 폭 조절 (두 번 누르면 기본 폭)" hidden></div>
+    <section id="lec-term" aria-label="터미널" hidden>
+      <div class="term-head">
+        <svg class="term-icon" aria-hidden="true"><use href="#i-term"/></svg><span id="lec-term-title">터미널</span>
+        <button type="button" id="lec-term-restart" class="icon-btn small" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)"><svg><use href="#i-restart"/></svg></button>
+        <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 그대로 돈다"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <div id="lec-term-body"></div>
+    </section>
   </div>
 
   <footer id="lec-status">

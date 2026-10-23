@@ -22,15 +22,16 @@ async function check(res) {
   throw err;
 }
 
-export async function getJSON(path) {
-  const res = await fetch(path, { headers: headers(), cache: 'no-store' });
+/** extra: 더 붙일 헤더 (터미널 API 의 X-Term — terminal.js) */
+export async function getJSON(path, extra = {}) {
+  const res = await fetch(path, { headers: headers(extra), cache: 'no-store' });
   return (await check(res)).json();
 }
 
-export async function postJSON(path, body) {
+export async function postJSON(path, body, extra = {}) {
   const res = await fetch(path, {
     method: 'POST',
-    headers: headers({ 'Content-Type': 'application/json' }),
+    headers: headers({ ...extra, 'Content-Type': 'application/json' }),
     body: JSON.stringify(body ?? {}),
   });
   return (await check(res)).json();

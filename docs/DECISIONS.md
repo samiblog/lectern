@@ -10,6 +10,7 @@
 - **결정**: 편집 기능, DRM·클라우드 드라이브(OneDrive 등) 대응, cp949 인코딩 대응을 넣지 않는다. 프로젝트 폴더와 그 하위만 본다.
 - **이유**: 사용자는 Claude Code / Claude가 쓴 리서치·계획·설계 문서를 일목요연하게 읽으려고 한다. Claude가 쓰는 파일은 UTF-8이고 로컬 프로젝트 폴더에 있다.
 - **영향**: 요구가 바뀌지 않는 한 위 기능은 다시 넣지 않는다.
+- **변경 (v0.10.0, D38)**: 오른쪽 터미널을 넣는다. Lectern 자신은 여전히 파일을 만들거나 고치지 않고 아무것도 실행하지 않는다 — 터미널에서 사용자가 친 명령이 하는 일은 사용자가 한 것이다.
 
 ## D2. Python + pywebview(WebView2) + 순수 JS
 
@@ -90,6 +91,7 @@
 - **이유**: pywebview가 js_api 결과를 돌려줄 때 `eval` 계열을 쓸 수 있어 `unsafe-eval` 없는 CSP와 충돌할 위험이 있다. 대신 DOMPurify 정화, 로컬 바인딩, 토큰, Host 검사로 막는다.
 - **재검토 조건**: 창 모드에서 CSP를 걸고 js_api·Mermaid가 모두 동작하는지 확인되면 추가한다.
 - **변경 (v0.1.3)**: 스크립트·스타일 지시어를 뺀 CSP는 eval 문제와 부딪치지 않으므로 건다. 이미지·연결·글꼴 출처만 제한한다 (D20). `script-src` 는 여전히 두지 않는다.
+- **변경 (v0.10.0, D38)**: 셸을 다루는 터미널 API 가 생겨, 문서에 끼어든 스크립트가 앱 출처에서 돌 때의 피해가 커졌다. `script-src 'self' 'unsafe-eval'` 을 둔다 — 앱 자신의 파일만 돌고 인라인 스크립트·이벤트 속성은 브라우저가 막는다. pywebview 가 넣는 스크립트(토큰·js_api)는 호스트가 `ExecuteScript` 로 넣어 페이지 CSP 를 받지 않고, js_api 결과를 돌려줄 때 eval 을 쓸 수 있어 `'unsafe-eval'` 은 남긴다. `ui_smoke` 전체(수식·Mermaid 포함)가 그대로 통과하고, 창 모드에서 js_api·토큰이 동작하며 CSP 위반 기록이 없다.
 
 ## D15. DOMPurify `SANITIZE_DOM: false`
 
@@ -132,6 +134,7 @@
 - **결정**: `GET /` 응답에 `img-src 'self' data: blob:`(설정 `external_images` 가 켜져 있으면 `http: https:` 추가), `media-src 'self'`, `font-src 'self' data:`, `connect-src 'self'`, `object-src 'none'`, `frame-src 'none'`, `base-uri 'none'`, `form-action 'none'` 을 붙이고, `Referrer-Policy: no-referrer` 를 함께 보낸다 (`server.py` `content_security_policy`).
 - **이유**: 문서 HTML은 앱과 같은 출처에서 그려진다. DOMPurify 허용 목록은 넓어서 정화 훅만으로는 그림을 부르는 길을 다 막았다고 장담하기 어렵다 (v0.1.2에서 10가지가 새었다). 브라우저가 출처를 막으면 훅이 놓친 길도 막힌다.
 - **두지 않는 것**: `default-src`·`script-src`·`style-src`. pywebview가 eval 계열을 쓸 수 있고 (D14), KaTeX·Mermaid는 인라인 스타일을 쓴다.
+- **변경 (v0.10.0)**: `script-src 'self' 'unsafe-eval'` 을 더한다 (D14 변경, D38). `default-src`·`style-src` 는 여전히 두지 않는다.
 - **영향**: 설정 `external_images` 를 바꾸면 페이지를 다시 불러와야 CSP가 바뀐다 (설정 창을 만들 때 저장 후 다시 불러오기). ROADMAP 4단계에서 HTML 문서를 `<iframe>` 으로 보일 때는 `frame-src 'self'` 로 바꾼다.
 - **`/doc/*`**: 응답에 `Content-Security-Policy: sandbox` 와 `X-Content-Type-Options: nosniff` 를 붙인다. 프로젝트 안의 html·svg 는 앱과 같은 출처로 내려가므로, 창이 그 주소로 바로 이동하는 일이 생겨도 스크립트가 앱 출처(토큰·`/api/*`)에 닿지 못하게 한다. `<img>`·`fetch` 로 쓰는 데는 영향이 없다. 4단계의 HTML 문서 iframe은 이 헤더를 그대로 두고 필요한 것만 `sandbox` 값에 더한다.
 
@@ -281,3 +284,22 @@
 - **두 보기 (사용자 말을 이렇게 읽음)**: '종류별로 모아 보기'는 지금처럼 문서는 위 트리, 문서가 아닌 파일은 분리선 아래로 나눠 보는 것, '폴더 구조 그대로'는 둘을 디스크의 폴더 구조대로 한 트리에 섞어 보는 것. 거르기 칸 옆 '폴더' 버튼으로 바꾸고 설정 `files_view` 에 남긴다. 기본은 지금과 같은 종류별.
 - **폴더 보기의 행 동작**: 이 앱은 뷰어라 문서는 문서 트리처럼 한 번 눌러 연다. 문서가 아닌 파일은 탐색기처럼 두 번 눌러 연다 (실행하지 않음, D36). 폴더 행은 탐색기처럼 누르면 고르기만 하고, 폴더 개요는 우클릭 메뉴로 — 파일과 섞인 트리에서 폴더를 누를 때마다 본문이 개요로 바뀌면 탐색이 번거롭다.
 - **만든 방법**: 폴더 보기는 서버에 새 API 를 두지 않고, 화면이 탭의 문서 트리와 `/api/others` 의 트리를 합친다 (둘 다 이미 받아 두므로). 정렬은 서버의 `natural_key` 와 같은 규칙을 JS 로.
+
+## D38. 오른쪽 터미널 — 프로젝트 탭마다 PowerShell
+
+- **결정 (사용자 요청, 2026-10-23)**: '오른쪽에 윈도우 파워셸 터미널을 넣고 싶다. 시작 위치는 프로젝트 폴더와 동일한 위치' — 먼저 검토안을 보이고, 사용자가 권장대로 진행하라고 했다 (v0.10.0). 본문 오른쪽(목차 자리)에 터미널 패널을 두고, 프로젝트 탭마다 셸 하나를 그 프로젝트 폴더에서 띄운다. 툴바 버튼·`` Ctrl+` `` 로 열고 닫는다.
+- **원칙을 바꾼다**: 원칙 1(보기 전용)·5(코드를 실행하지 않음)를 Lectern 이 스스로 하는 일에 대한 것으로 좁힌다 (D1 변경). Lectern 은 여전히 파일을 만들거나 고치지 않고, 문서·링크·파일 목록에서 무엇도 실행하지 않는다. 터미널은 사용자가 직접 친 명령만 돌린다 — 셸로 글자를 보내는 길은 사용자의 키 입력·붙여 넣기(`POST /api/term/input`)뿐이고, 문서·링크·다른 기능이 셸에 명령을 보내는 API 는 두지 않는다.
+- **사용자가 권장대로 고른 것**: 창 안의 웹 터미널(xterm.js + Windows 의사 콘솔) — 외부 Windows Terminal 창을 띄우는 것보다 문서와 한 화면에서 본다. 터미널을 열면 목차를 감춘다 (목차 버튼으로 함께 볼 수 있고, 설정 `toc_visible` 은 바꾸지 않는다). 탭마다 셸 하나. 기본 셸은 모든 Windows 에 있는 Windows PowerShell 5.1, 설정 파일의 `terminal_shell`(전체 경로)로 PowerShell 7 등으로 바꾼다. 아래 보안 장치를 함께 넣는다.
+- **화면**: xterm.js 5.5 (+ fit·unicode11 애드온, `web/vendor/xterm`, MIT). 처음 열 때만 불러온다. 색은 문서 스타일과 상관없이 어둡게(Windows Terminal 의 Campbell) — PSReadLine 의 글자 색이 어두운 바탕을 가정한다. 글꼴은 PC 의 것만 (Cascadia Mono → Consolas → D2Coding → 맑은 고딕, D26). 한글처럼 두 칸인 글자는 unicode11 로 폭을 맞춘다.
+- **주고받기**: 키 입력은 `POST /api/term/input`, 출력은 긴 폴링 `GET /api/term/read` (받은 곳 다음부터, 새 출력이 오거나 20초가 지나면 돌아온다). WebSocket 은 쓰지 않았다 — 새 의존성(flask-sock 등)이 필요하고 사내망 설치가 번거로워진다. 키 하나에 요청 하나지만 127.0.0.1 이라 지연을 느낄 수 없다. 출력은 셸마다 최근 512K 글자를 서버가 들고 있어, 패널을 닫았다 열거나 페이지를 다시 불러와도 이어 보인다.
+- **의사 콘솔은 ctypes 로 Windows ConPTY 를 직접 부른다 (`conpty.py`, 새 의존성 없음)**: 검토안에서는 pywinpty 를 권했으나 시험해 보니 pywinpty 3.1.0 에 함께 든 OpenConsole/conpty.dll 로 띄운 PowerShell 5.1 이 한글을 cp949 로 내보내 깨졌다 (chcp 65001·출력 인코딩을 UTF-8 로 바꿔도 `한글` → `�ѱ�`). Windows 에 들어 있는 ConPTY(`kernel32.CreatePseudoConsole`)로는 같은 명령이 UTF-8 로 바르게 나왔다. pywinpty 의 `PtyProcess` 가 127.0.0.1 TCP 소켓으로 출력을 넘기는 점도 걸렸다. 그래서 pywinpty 를 빼고 표준 라이브러리로 만들었다 (Windows 10 1809 이상 — 그 밖에서는 터미널 API 가 501).
+  - 셸은 작업 개체(Job Object, `KILL_ON_JOB_CLOSE`) 안에서 돈다: 멈춘 채 만들어 작업 개체에 넣은 뒤 시작한다. 셸에서 띄운 프로그램도 같은 작업 개체라, 탭을 닫거나 다시 시작하거나 앱이 끝나면(강제 종료 포함) 함께 끝난다. 탭을 닫기 전 '실행 중' 확인도 작업 개체 안의 프로세스 수로 한다.
+  - `STARTF_USESTDHANDLES` 에 빈 핸들을 준다. 없으면 창 없는 앱(pythonw·Lectern.exe)의 표준 핸들이 셸로 넘어가 입출력이 의사 콘솔을 거치지 않는다.
+  - 셸은 전체 경로로 띄운다 (D29 — 프로젝트 폴더의 `powershell.exe` 가 대신 실행되지 않게). 환경 변수는 앱이 시작할 때의 값을 준다 (`osutil` 이 실행 중에 넣는 `NoDefaultCurrentDirectoryInExePath` 가 셸로 새지 않게).
+- **보안**: 터미널 API 는 셸을 다루므로 다른 API 보다 한 겹 더 막는다.
+  - 비밀값: 서버가 실행마다 새 값(`term_secret`)을 만들어 `index.html` 에 싣고(`meta lec-term`), 터미널 API 는 `X-Term` 헤더로 그 값을 받아야 한다 — 창 모드 토큰이 없는 브라우저 모드에서도. 다른 사이트는 이 페이지를 읽을 수 없으므로(CORS 없음, Host 검사로 DNS 리바인딩도 막힘) 값을 모른다. `Origin` 이 오면 같은 출처여야 한다.
+  - 스크립트: 문서 속 스크립트가 앱 출처에서 돌면 비밀값을 읽을 수 있으므로 `/` 의 CSP 에 `script-src 'self' 'unsafe-eval'` 을 둔다 (D14 변경). md 는 DOMPurify, html 문서는 스크립트 없는 iframe(D27) 이라는 지금의 방어에 한 겹 더한 것이다.
+  - 셸 경로는 화면에서 바꿀 수 없다 (`terminal_shell` 은 `CLIENT_KEYS` 가 아님). 입력은 한 번에 65536자까지.
+- **키**: 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc·방향키 — Claude Code 같은 TUI 가 쓴다). 앱 단축키는 `` Ctrl+` ``(패널)와 Ctrl+Tab(다음 탭)만 받는다. Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단). Ctrl+V 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
+- **탭과 패널**: 패널을 닫아도 셸은 돈다. 다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다). 탭을 닫으면 그 셸을 끝내는데, 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다. 셸이 끝나면(`exit`) Enter 로 다시 시작한다. 앱을 켤 때 패널은 늘 닫힌 채다 — 셸은 사용자가 열 때만 띄운다. 패널 폭은 경계를 끌어 바꾸고(`terminal_width`) 두 번 누르면 기본(본문 영역의 42%).
+- **하지 않은 것**: 창을 닫을 때는 셸에서 프로그램이 돌고 있어도 묻지 않고 함께 끝낸다. 셸의 출력은 디스크에 남기지 않고, 앱을 다시 실행하면 셸은 새로 시작한다.

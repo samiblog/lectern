@@ -33,6 +33,9 @@ PACKAGES: dict[str, str] = {
     '@highlightjs/cdn-assets': '11.12.0',
     'mermaid': '12.1.0',
     'dompurify': '3.4.16',
+    '@xterm/xterm': '5.5.0',            # 오른쪽 터미널 (D38) — 처음 열 때 terminal.js 가 불러온다
+    '@xterm/addon-fit': '0.10.0',
+    '@xterm/addon-unicode11': '0.8.0',  # 한글처럼 두 칸을 차지하는 글자의 폭
 }
 
 # (패키지, 패키지 안 원본 경로, vendor 안 대상 경로). 원본이 폴더면 woff2 글꼴만 복사한다.
@@ -52,6 +55,10 @@ FILES: list[tuple[str, str, str]] = [
     ('@highlightjs/cdn-assets', 'styles/github-dark.min.css', 'highlight/github-dark.min.css'),
     ('mermaid', 'dist/mermaid.min.js', 'mermaid/mermaid.min.js'),
     ('dompurify', 'dist/purify.min.js', 'dompurify/purify.min.js'),
+    ('@xterm/xterm', 'lib/xterm.js', 'xterm/xterm.js'),
+    ('@xterm/xterm', 'css/xterm.css', 'xterm/xterm.css'),
+    ('@xterm/addon-fit', 'lib/addon-fit.js', 'xterm/addon-fit.js'),
+    ('@xterm/addon-unicode11', 'lib/addon-unicode11.js', 'xterm/addon-unicode11.js'),
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')

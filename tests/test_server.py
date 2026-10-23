@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from urllib.parse import quote
 
 import pytest
@@ -7,7 +8,7 @@ import pytest
 from conftest import write
 
 import app as lectern_app
-from lectern import osutil, state as state_module
+from lectern import osutil, state as state_module, terminal
 from lectern.config import Config
 from lectern.scanner import iter_files
 from lectern.server import create_app
@@ -169,7 +170,8 @@ def csp_of(client) -> dict[str, str]:
 def test_index_csp_follows_external_images(client):
     assert client.get('/').headers['Referrer-Policy'] == 'no-referrer'
     csp = csp_of(client)
-    assert 'script-src' not in csp and 'default-src' not in csp   # D14: 스크립트는 CSP로 막지 않는다
+    # 스크립트는 앱 파일만 — 문서에 끼어든 인라인 스크립트가 터미널 API 에 닿지 않게 (D38). pywebview 때문에 eval 은 둔다 (D14)
+    assert csp['script-src'] == "'self' 'unsafe-eval'" and 'default-src' not in csp
     assert 'https:' in csp['img-src'] and csp['connect-src'] == "'self'"
     client.post('/api/config', json={'external_images': False})
     assert 'http' not in csp_of(client)['img-src']
@@ -422,3 +424,77 @@ def test_open_external_can_prefer_editor(client, monkeypatch, pid, project):
     client.post('/api/open-external', json={'p': pid, 'path': 'data/b.csv'})
     client.post('/api/open-external', json={'p': pid, 'path': 'data/b.csv', 'how': 'editor'})
     assert calls == [('b.csv', False), ('b.csv', True)]
+
+
+# ---- 터미널 (D38) ----------------------------------------------------------------
+
+def test_index_carries_term_secret(client, state):
+    html = client.get('/').get_data(as_text=True)
+    assert f'<meta name="lec-term" content="{state.term_secret}">' in html and '{{TERM}}' not in html
+    assert len(state.term_secret) == 32
+
+
+def test_term_api_needs_secret_and_same_origin(client, state, pid, monkeypatch):
+    monkeypatch.setattr(terminal, 'AVAILABLE', True)   # 셸을 띄우지 않는 검사만 (Windows 가 아니어도)
+    ok = {'X-Term': state.term_secret}
+    calls = [
+        lambda h: client.post('/api/term/open', json={'p': pid}, headers=h),
+        lambda h: client.get('/api/term/read?t=x&from=0', headers=h),
+        lambda h: client.post('/api/term/input', json={'t': 'x', 'data': 'dir\r'}, headers=h),
+        lambda h: client.post('/api/term/resize', json={'t': 'x', 'cols': 80, 'rows': 24}, headers=h),
+        lambda h: client.get('/api/term/info?t=x', headers=h),
+        lambda h: client.post('/api/term/close', json={'t': 'x'}, headers=h),
+    ]
+    for call in calls:
+        assert call({}).status_code == 403                                   # 비밀값 없이
+        assert call({'X-Term': 'wrong'}).status_code == 403
+        assert call({**ok, 'Origin': 'http://evil.example'}).status_code == 403   # 다른 사이트의 요청
+    # 비밀값이 맞으면 통과 — 없는 셸은 404
+    for call in calls[1:5]:
+        assert call(ok).status_code == 404
+    assert calls[1]({**ok, 'Origin': 'http://localhost'}).status_code == 404   # 같은 출처의 Origin 은 된다
+    assert client.post('/api/term/close', json={'t': 'x'}, headers=ok).get_json() == {'ok': True}
+    # 입력 크기·형식, 화면 크기
+    assert client.post('/api/term/input', json={'t': 'x', 'data': 'a' * 65537}, headers=ok).status_code == 413
+    assert client.post('/api/term/input', json={'t': 'x', 'data': 1}, headers=ok).status_code == 400
+    assert client.post('/api/term/open', json={'p': pid, 'cols': 0}, headers=ok).status_code == 400
+    assert client.post('/api/term/open', json={'p': pid, 'rows': True}, headers=ok).status_code == 400
+    assert client.post('/api/term/open', json={'p': 'nope'}, headers=ok).status_code == 404
+    assert client.post('/api/term/open', data='{}', content_type='text/plain', headers=ok).status_code == 415
+
+
+def test_term_api_unavailable(client, state, pid, monkeypatch):
+    monkeypatch.setattr(terminal, 'AVAILABLE', False)
+    r = client.post('/api/term/open', json={'p': pid}, headers={'X-Term': state.term_secret})
+    assert r.status_code == 501 and 'Windows' in r.get_json()['error']
+
+
+@pytest.mark.skipif(not terminal.AVAILABLE, reason='Windows 의사 콘솔(ConPTY)이 있어야 한다')
+def test_term_flow(client, state, project, pid):
+    h = {'X-Term': state.term_secret}
+    d = client.post('/api/term/open', json={'p': pid, 'cols': 100, 'rows': 30}, headers=h).get_json()
+    assert d['shell'] == 'PowerShell' and d['cwd'] == str(project)
+    assert client.post('/api/term/open', json={'p': pid}, headers=h).get_json()['id'] == d['id']   # 탭마다 하나
+
+    def read_until(want: str) -> str:
+        out, pos = '', 0
+        for _ in range(40):
+            r = client.get(f'/api/term/read?t={d["id"]}&from={pos}', headers=h).get_json()
+            out, pos = out + r['data'], r['next']
+            if want in out or not r['alive']:
+                break
+        return out
+
+    assert '>' in read_until('>')
+    assert client.post('/api/term/input', json={'t': d['id'], 'data': 'Write-Output ("a" + "b" + "한글")\r'}, headers=h).status_code == 200
+    assert 'ab한글' in read_until('ab한글')
+    assert client.post('/api/term/resize', json={'t': d['id'], 'cols': 120, 'rows': 40}, headers=h).status_code == 200
+    assert client.get(f'/api/term/info?t={d["id"]}', headers=h).get_json() == {'alive': True, 'busy': False}
+    session = state.terminals.get(d['id'])
+    client.post('/api/close', json={'p': pid})   # 탭을 닫으면 셸도 끝난다
+    assert state.terminals.get(d['id']) is None
+    for _ in range(100):
+        if not session.alive:
+            break
+        time.sleep(0.1)
+    assert not session.alive

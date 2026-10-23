@@ -4,16 +4,16 @@ Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·C
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.9.1 (v0.9.1 = 프로젝트 탭 강조 — 크고 굵은 글자, 폴더 아이콘, 선택된 탭 바탕색. v0.9.0 = 사이드바 이름 앞 종류 아이콘, 종류별·폴더 보기 고르기('폴더' 버튼). v0.8.0 = 사이드바 '파일' 목록 — 문서 트리 아래 분리선 너머에 문서가 아닌 파일을 탐색기처럼, 두 번 누르면 열기(실행하지 않음). v0.7.1 = 트리는 파일 이름, 마우스를 올리면 문서 제목. v0.7.0 = 프로젝트 탭 — 폴더마다 탭 하나, 탭을 누르면 트리와 문서가 함께 바뀜, 창은 하나(또 실행하면 떠 있는 창에 탭으로). v0.6.0 의 창 나누기는 걷었다. v0.6.0 = math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
+현재 버전 0.10.0 (v0.10.0 = 오른쪽 터미널 — 프로젝트 탭마다 PowerShell 하나를 그 폴더에서, 툴바 버튼·`` Ctrl+` ``. v0.9.1 = 프로젝트 탭 강조 — 크고 굵은 글자, 폴더 아이콘, 선택된 탭 바탕색. v0.9.0 = 사이드바 이름 앞 종류 아이콘, 종류별·폴더 보기 고르기('폴더' 버튼). v0.8.0 = 사이드바 '파일' 목록 — 문서 트리 아래 분리선 너머에 문서가 아닌 파일을 탐색기처럼, 두 번 누르면 열기(실행하지 않음). v0.7.1 = 트리는 파일 이름, 마우스를 올리면 문서 제목. v0.7.0 = 프로젝트 탭 — 폴더마다 탭 하나, 탭을 누르면 트리와 문서가 함께 바뀜, 창은 하나(또 실행하면 떠 있는 창에 탭으로). v0.6.0 의 창 나누기는 걷었다. v0.6.0 = math·latex 코드 블록 수식. v0.5.0 = 글자 크기 −·+ 와 장 하이라이트. v0.4.0 = 스타일 24종과 목록 묶는 방식 3가지. v0.3.2 = 전체 점검 후 수정 — 보안 3건 포함. ROADMAP 2·3·4단계 기능: 바뀐 부분 강조, 전체 검색, 설정 창·마지막 위치, HTML 문서, 절대경로, 사이드바 폭, 찾기 개선, 우클릭 2차, 경로 자동 링크, 인쇄, 트리 캐시, html 글자 바탕·앱 UI가 스타일을 따름). 남은 것은 Windows 실기 점검(2-1). 다음 할 일은 `docs/ROADMAP.md` 의 "다음 단계"에서 고른다.
 
 ## 반드시 지킬 원칙
 
-1. **보기 전용.** 사용자 파일을 만들거나 고치거나 지우는 기능을 넣지 않는다. 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다.
+1. **보기 전용.** 사용자 파일을 만들거나 고치거나 지우는 기능을 넣지 않는다. 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다. **예외는 오른쪽 터미널(D38)이다**: 사용자가 직접 친 명령이 하는 일은 Lectern 이 한 것이 아니다. 대신 문서·링크·다른 기능이 셸로 명령을 보내는 길은 만들지 않는다.
 2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). html 문서도 같다 — 서버가 `/doc/*.html` 에 붙이는 CSP가 스크립트·연결·인터넷 CSS·글꼴을 막고 그림만 `external_images` 를 따르게 한다 (D27). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다. 이 함수는 `resolve()` 전에 글자만으로 root 안인지 먼저 본다 — `\\서버\공유` 를 `resolve()` 하면 Windows 가 그 서버에 접속해 로그인 정보(NTLM)를 건넨다 (D29).
 4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
-5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29).
-6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나 (툴바 아래 프로젝트 탭 막대 — 탭은 프로젝트만, 문서 탭은 하지 않는다, D34). 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
+5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29). 터미널은 사용자가 친 명령만 돌린다 (D38) — 셸은 전체 경로로 띄우고, 셸에 글자를 보내는 API 는 사용자의 키 입력을 받는 `POST /api/term/input` 하나뿐이다.
+6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나 (툴바 아래 프로젝트 탭 막대 — 탭은 프로젝트만, 문서 탭은 하지 않는다, D34. 오른쪽 터미널은 열 때만, D38). 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
 
 ## 실행과 확인
 
@@ -47,6 +47,8 @@ lectern/
   search.py             전체 본문 검색 (/api/search)
   osutil.py             링크 대상 열기 (기본 앱 / 편집기 / 탐색기)
   native.py             pywebview js_api — 폴더 대화상자, 창 제목만
+  terminal.py           오른쪽 터미널: 탭마다 셸 하나, 출력 버퍼·긴 폴링 (/api/term/*)
+  conpty.py             Windows 의사 콘솔(ConPTY)을 ctypes 로 — 셸 하나를 작업 개체 안에서
   paths.py              리소스·설정 경로 (PyInstaller 대응)
 web/
   index.html            앱 뼈대. vendor 스크립트 로드 후 js/main.js
@@ -76,6 +78,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 | tree.js | 사이드바 트리·필터·최근 변경·우클릭 메뉴 |
 | others.js | 사이드바 '파일' 목록 — 종류별 보기는 문서 트리 아래 분리선 너머의 탐색기 같은 목록 (GET /api/others), 폴더 보기는 문서와 파일을 합친 한 트리 |
 | icons.js | 사이드바 목록의 파일 종류 아이콘 (확장자 → 종류, md·html 은 문서) |
+| terminal.js | 오른쪽 터미널 — xterm.js(처음 열 때 불러옴), 탭마다 셸(`tab.term`), 긴 폴링으로 출력·키 입력 보내기, 패널 열기·닫기·폭, 탭을 닫기 전에 묻기 |
 | watch.js | 1초 폴링으로 변경 반영 (모든 탭을 한 번에, 숨은 탭은 고를 때 다시 그림) |
 | toc.js / find.js / palette.js | 목차 / 문서 안 찾기 / Ctrl+P |
 | fold.js | 제목을 눌러 절 접기·펴기 |
@@ -95,7 +98,7 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 
 - Python 3.10+ (3.12+ 권장), 타입 힌트, 표준 라이브러리 우선. 정션은 `DirEntry.is_junction`(3.12+) 대신 `st_reparse_tag` 로 판정하므로 3.10·3.11에서도 걸러진다.
 - 새 Python 의존성은 꼭 필요할 때만. 넣으면 `requirements.txt` 와 `docs/DECISIONS.md` 에 이유를 남긴다. 사내망 설치는 wheel 반입이 필요하다는 점을 잊지 않는다. 버전은 `==` 로 고정하고, 요구사항 파일 첫 줄의 `coding: utf-8` 선언은 지우지 않는다 (D22: 없으면 한국어 Windows의 pip 24 이하가 한글 주석을 못 읽는다).
-- JS는 전역을 쓰지 않는다. 예외는 vendor 전역(`markdownit`, `markdownItAnchor`, `markdownitFootnote`, `markdownitTaskLists`, `hljs`, `katex`, `DOMPurify`, `mermaid`)과 `window.pywebview`.
+- JS는 전역을 쓰지 않는다. 예외는 vendor 전역(`markdownit`, `markdownItAnchor`, `markdownitFootnote`, `markdownitTaskLists`, `hljs`, `katex`, `DOMPurify`, `mermaid`, 터미널을 처음 열 때 불러오는 `Terminal`·`FitAddon`·`Unicode11Addon`)과 `window.pywebview`.
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
 - UI 문구는 한국어, 짧은 평서문. 오류 메시지는 무엇이 안 됐고 어떻게 하면 되는지 말한다.
 - API를 추가·변경하면 `docs/ARCHITECTURE.md` 의 API 표를 같이 고친다. 설계 판단은 `docs/DECISIONS.md` 에 한 항목으로 남긴다.
@@ -135,4 +138,8 @@ docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING
 - 문서 외 파일 목록(`/api/others`, `scanner.scan_others`)은 문서 트리와 따로 읽고, 감시는 문서 외 파일의 생성·삭제·이동만 `others` 로 남긴다 (내용 수정은 보지 않는다 — 소스를 고칠 때마다 다시 읽지 않게). 목록에서 여는 것도 `osutil.open_path` 를 거친다: 실행·설치 파일·압축 등(`REVEAL_ONLY_EXT`)은 탐색기에서 선택만 한다. 이 목록에 이름 바꾸기·지우기 같은 탐색기 기능을 넣지 않는다 (보기 전용).
 - 트리 스캔은 `Project.scan()` 을 거친다 (탭마다) — 변경 기록(seq)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.
 - 창 하나(`instance.py`)는 이름 있는 파이프로 JSON 바이트만 주고받는다 (`send_bytes`·`recv_bytes`). pickle 을 쓰는 `send`·`recv` 로 바꾸지 않는다 — 받은 바이트로 코드가 돌 수 있다. 파이프 이름이 설정 폴더를 따르므로 점검 스크립트는 `LECTERN_CONFIG_DIR` 을 바꿔 설치된 Lectern 창과 섞이지 않게 한다.
+- 터미널 API(`/api/term/*`)는 `X-Term` 헤더(= 페이지의 `meta lec-term`, 실행마다 새 비밀값)를 검사한다 — 토큰이 없는 브라우저 모드에서도. 셸에 글자를 보내는 길은 사용자의 키 입력(`/api/term/input`) 하나로 둔다. 문서·링크·다른 기능에서 셸로 명령을 보내는 API 를 만들지 않는다 (D38).
+- `/` 의 CSP 는 `script-src 'self' 'unsafe-eval'` 이다 (D38 — 문서에 끼어든 스크립트가 터미널 비밀값을 읽지 못하게). `index.html` 에 인라인 `<script>`·`onclick=` 을 넣으면 돌지 않는다. vendor 를 더할 때 인라인 스크립트를 끼워 넣는 라이브러리인지 본다.
+- 의사 콘솔은 pywinpty 가 아니라 `conpty.py`(ctypes)다 — pywinpty 3.1 에 든 OpenConsole 은 PowerShell 5.1 의 한글 출력을 cp949 로 깨뜨렸다 (D38). `STARTF_USESTDHANDLES` 와 빈 표준 핸들을 지우지 않는다 (지우면 창 없는 앱에서 셸 입출력이 의사 콘솔을 거치지 않는다). 셸은 멈춘 채 만들어 작업 개체에 넣은 뒤 시작한다 — 그래야 탭을 닫거나 앱이 끝날 때(강제 종료 포함) 셸에서 띄운 프로그램까지 끝난다.
+- 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등 — Claude Code 가 쓴다). `main.js` 의 keydown 은 `#lec-term` 안에서는 `` Ctrl+` ``·Ctrl+Tab 만 다룬다. 새 앱 단축키를 터미널 안에서도 쓰게 하려면 `main.js` 와 `terminal.js` 의 `keyFor`(xterm 이 셸로 보내기 전에 거르는 곳)를 함께 고친다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

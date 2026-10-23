@@ -35,10 +35,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 
 class _QuietPolling(logging.Filter):
-    """1초마다 오는 /api/changes 요청 로그는 숨긴다."""
+    """1초마다 오는 /api/changes 와 터미널의 키 입력·출력 요청 로그는 숨긴다."""
 
     def filter(self, record: logging.LogRecord) -> bool:
-        return '/api/changes' not in record.getMessage()
+        message = record.getMessage()
+        return '/api/changes' not in message and '/api/term/' not in message
 
 
 def setup_logging(quiet: bool) -> None:

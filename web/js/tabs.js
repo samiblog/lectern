@@ -17,6 +17,7 @@ import { setStatus } from './status.js';
 import { rememberPosition } from './position.js';
 import { showMenu } from './ui.js';
 import { folderIcon } from './icons.js';
+import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { $, esc, basename, toast, copyText } from './util.js';
 
 let maxTabs = 10;          // 서버의 MAX_TABS (/api/state 의 max_tabs)
@@ -82,6 +83,7 @@ function syncTabs(info) {
   for (const tab of dropped) {
     if (tab === S.tab) S.tab = null;   // 부르는 쪽이 곧 다른 탭(없으면 시작 화면)을 고른다
     removePane(tab.pane);
+    disposeTerminal(tab);   // 셸은 서버가 탭을 닫을 때 끝냈다
   }
   renderTabs();
   return added;
@@ -194,9 +196,10 @@ export async function chooseAndOpen() {
   if (path) await openFolder(path);
 }
 
-/** 탭을 닫는다. 선택된 탭이었으면 그 오른쪽(없으면 왼쪽) 탭을 고른다. 마지막 탭이면 시작 화면 */
+/** 탭을 닫는다 (그 탭의 터미널도 끝난다). 선택된 탭이었으면 그 오른쪽(없으면 왼쪽) 탭을 고른다. 마지막 탭이면 시작 화면 */
 export async function closeTab(tab) {
   if (!S.tabs.includes(tab)) return;
+  if (!await confirmCloseTerminal(tab)) return;   // 터미널에서 프로그램이 돌고 있으면 묻는다
   await rememberPosition(tab);   // 스크롤을 멈춘 지 얼마 안 됐어도 마지막 위치를 남긴다 (닫은 뒤에는 서버가 받지 않는다)
   const i = S.tabs.indexOf(tab);
   const next = tab === S.tab ? (S.tabs[i + 1] || S.tabs[i - 1] || null) : S.tab;

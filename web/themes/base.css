@@ -184,7 +184,7 @@
 /* 인쇄·PDF (문서 우클릭 → '인쇄 / PDF로 저장'). 화면 UI는 빼고, 어두운 스타일도 종이에는 흰 바탕·검은 글자로 —
    브라우저는 기본으로 바탕색을 인쇄하지 않으므로 밝은 글자가 흰 종이에 묻힌다 */
 @media print {
-  #lec-toolbar, #lec-tabbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay { display: none !important; }
+  #lec-toolbar, #lec-tabbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay { display: none !important; }
   .lec-pane:not(.active) { display: none !important; }   /* 선택된 탭의 문서만 */
   #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block; position: static; height: auto; overflow: visible; border: 0; }
   body { overflow: visible; background: #fff; }

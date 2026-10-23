@@ -16,6 +16,7 @@ from . import __version__
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan, scan_others
+from .terminal import Terminals
 
 
 class TooManyTabs(Exception):
@@ -111,6 +112,9 @@ class AppState:
         # 탭 목록이 바뀔 때마다 늘어난다. 다른 실행이 넘긴 폴더로 탭이 생기면 화면이 /api/changes 로 알아챈다
         self.tabs_seq = 0
         self.notices: list[dict[str, Any]] = []   # 화면에 알릴 말 [{id, text}] — 화면이 처음 보는 id 만 한 번 보인다
+        # 오른쪽 터미널 (D38): 탭마다 셸. 터미널 API 는 페이지에 실어 주는 실행마다 새 비밀값(X-Term)도 확인한다
+        self.terminals = Terminals()
+        self.term_secret = secrets.token_hex(16)
         self._lock = threading.RLock()
 
     def get(self, pid: Any) -> Project | None:
@@ -178,6 +182,7 @@ class AppState:
                 self.active = rest[min(i, len(rest) - 1)] if rest else None
             self.tabs_seq += 1
         project.stop()
+        self.terminals.close_project(pid)   # 그 탭의 셸과 셸에서 띄운 프로그램도
         self.remember_tabs()
         return True
 
@@ -209,6 +214,7 @@ class AppState:
             projects = list(self.projects.values())
         for project in projects:
             project.stop()
+        self.terminals.close_all()
 
     def info(self) -> dict[str, Any]:
         with self._lock:
