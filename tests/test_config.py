@@ -187,6 +187,20 @@ def test_terminal_settings(tmp_path):
     assert cfg.get('terminal_shell') == r'C:\Program Files\PowerShell\7\pwsh.exe' and cfg.get('terminal_width') is None
 
 
+def test_toc_width_setting(tmp_path):
+    # 목차 폭 (D47): 경계를 끌면 화면이 저장하고, 두 번 누르면 null(기본 폭). 손으로 틀린 값을 적으면 기본값
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    assert cfg.get('toc_width') is None
+    cfg.update_client({'toc_width': 320})
+    assert cfg.get('toc_width') == 320
+    cfg.update_client({'toc_width': None})
+    assert cfg.get('toc_width') is None
+    path.write_text(json.dumps({'toc_width': 'wide'}), encoding='utf-8')
+    cfg = Config(path)
+    assert cfg.get('toc_width') is None and 'toc_width' in (cfg.load_error or '')
+
+
 def test_terminal_follow_style_setting(tmp_path):
     cfg = Config(tmp_path / 'config.json')
     assert cfg.get('terminal_follow_style') is True                             # 터미널 색은 문서 스타일을 따른다

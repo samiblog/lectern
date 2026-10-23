@@ -7,16 +7,22 @@ import { saveConfig } from './api.js';
 import { $ } from './util.js';
 
 const STEPS = [0.8, 0.9, 1, 1.1, 1.2, 1.35, 1.5, 1.7, 2];
+// 글자의 기준 (D47): 툴바의 100% 는 예전 110% — 사용자 요청으로 한 단계 키웠다. md 문서·코드 화면·스타일 없는 html 에 곱한다
+// (스타일 있는 html 은 문서가 정한 크기 그대로 — 그 문서의 zoom 은 textScale())
+const BASE = 1.1;
 
-/** 지금 글자 배율 (설정이 없거나 이상하면 1) */
+/** 지금 글자 배율 — 툴바에 보이는 값 (설정이 없거나 이상하면 1) */
 export function textScale() {
   const s = Number(S.config.font_scale);
   return Number.isFinite(s) && s >= STEPS[0] && s <= STEPS[STEPS.length - 1] ? s : 1;
 }
 
+/** Lectern 스타일 문서에 쓰는 배율 (CSS --md-scale): 툴바의 배율 × 기준 */
+export const mdScale = () => textScale() * BASE;
+
 function render() {
   const s = textScale();
-  document.documentElement.style.setProperty('--md-scale', String(s));
+  document.documentElement.style.setProperty('--md-scale', String(mdScale()));
   $('#lec-text-reset').textContent = `${Math.round(s * 100)}%`;
   $('#lec-text-smaller').disabled = s <= STEPS[0];
   $('#lec-text-bigger').disabled = s >= STEPS[STEPS.length - 1];

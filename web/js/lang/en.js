@@ -64,6 +64,7 @@ export default {
 "이름·절·문서로 거르기": "Filter by name, section or document",
 "모아 본 구성 요소": "Collected elements",
 "끌어서 사이드바 폭 조절 (두 번 누르면 기본 폭)": "Drag to resize the sidebar (double-click to reset)",
+"끌어서 목차 폭 조절 (두 번 누르면 기본 폭)": "Drag to resize the contents (double-click to reset)",
 "문서에서 찾기": "Find in document",
 "이전 (Shift+Enter)": "Previous (Shift+Enter)",
 "다음 (Enter)": "Next (Enter)",

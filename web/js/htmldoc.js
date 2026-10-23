@@ -13,7 +13,7 @@ import { setStatus } from './status.js';
 import { setDocSource, frameContextMenu } from './docmenu.js';
 import { hideMenu } from './ui.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
-import { textScale } from './textsize.js';
+import { textScale, mdScale } from './textsize.js';
 import { $, docUrl, formatDateTime } from './util.js';
 import { t } from './i18n.js';
 
@@ -150,7 +150,7 @@ function applyScale(frame) {
   if (!doc) return;
   const s = textScale();
   if (frame.classList.contains('own-style')) doc.documentElement.style.zoom = s === 1 ? '' : String(s);
-  else doc.documentElement.style.setProperty('--md-scale', String(s));
+  else doc.documentElement.style.setProperty('--md-scale', String(mdScale()));
 }
 on('text-size', () => {
   for (const pane of S.panes) {

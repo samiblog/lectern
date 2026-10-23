@@ -364,6 +364,9 @@ def run(headed: bool) -> None:
             print('[글자 크기와 장 하이라이트]')
             size = lambda: page.evaluate("parseFloat(getComputedStyle(document.querySelector('#lec-view p')).fontSize)")
             base_size = size()
+            # 100% 의 글자는 스타일의 --md-size 보다 한 단계(×1.1) 크다 (D47)
+            md_size = page.evaluate("parseFloat(getComputedStyle(document.querySelector('#lec-view')).getPropertyValue('--md-size'))")
+            check(abs(base_size - md_size * 1.1) < 0.1, f'100% 글자는 스타일 기본 크기의 한 단계 위 ({md_size}px × 1.1 = {base_size}px)')
             page.click('#lec-text-bigger')
             page.click('#lec-text-bigger')
             bigger, size_label = size(), page.inner_text('#lec-text-reset')
@@ -1280,6 +1283,27 @@ def run(headed: bool) -> None:
                   f'사이드바 경계를 끌어 폭 조절·저장, 두 번 누르면 기본 폭 ({dragged:.0f} → 저장 {saved_w}, 기본 {reset:.0f})')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            # 목차 폭 (D47): 문서와 목차 사이 경계를 왼쪽으로 끌면 목차가 넓어지고 저장, 두 번 누르면 기본 폭, 목차를 감추면 경계도 감춤
+            toc_w = lambda: page.locator('#lec-toc').bounding_box()['width']
+            toc_before, doc_before = toc_w(), page.locator('#lec-panes').bounding_box()['width']
+            tbox = page.locator('#lec-toc-resizer').bounding_box()
+            page.mouse.move(tbox['x'] + 3, tbox['y'] + 200)
+            page.mouse.down()
+            page.mouse.move(tbox['x'] + 3 - 100, tbox['y'] + 220, steps=6)
+            page.mouse.up()
+            toc_dragged, doc_after = toc_w(), page.locator('#lec-panes').bounding_box()['width']
+            saved_toc = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.toc_width)")
+            page.locator('#lec-toc-resizer').dblclick()
+            page.wait_for_timeout(100)
+            toc_reset = toc_w()
+            handle_shown = "getComputedStyle(document.querySelector('#lec-toc-resizer')).display !== 'none'"
+            page.click('#lec-btn-toc')   # 목차 버튼은 설정을 저장한 뒤 화면을 바꾼다 — 바뀔 때까지 기다린다
+            handle_hidden = wait_until(page, f'!({handle_shown})', 3000)
+            page.click('#lec-btn-toc')
+            handle_back = wait_until(page, handle_shown, 3000)
+            check(abs(toc_dragged - toc_before - 100) <= 3 and abs((doc_before - doc_after) - 100) <= 3 and saved_toc
+                  and abs(saved_toc - toc_dragged) <= 1 and abs(toc_reset - toc_before) <= 1 and handle_hidden and handle_back,
+                  f'목차 경계를 끌어 목차 폭 조절·저장(문서 칸은 그만큼 좁아짐), 두 번 누르면 기본 폭, 목차를 감추면 경계도 ({toc_before:.0f} → {toc_dragged:.0f}, 저장 {saved_toc}, 기본 {toc_reset:.0f})')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 500')
             remembered = False   # wait_until 은 Promise 를 참으로 보므로 서버 상태는 여기서 되묻는다 (스크롤이 멈추고 1.5초 뒤 저장)
             for _ in range(40):

@@ -94,6 +94,7 @@ This is the first screen when a folder opens. It shows recently changed document
 - Under each heading, the section's tables, figures, callouts, diagrams, code and math are listed like 'Table 1 · Price comparison · 6 × 4'. Click one to jump to it.
 - The buttons at the top of the contents, such as 'Tables 2' or 'Code 5', hide that type from the contents; click again to show it.
 - The **Contents** button at the right end of the tab bar shows or hides the contents.
+- Drag the border between the document and the contents to resize the contents. Double-click it to reset.
 
 ### Folding sections
 
@@ -101,7 +102,7 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 
 ### Text size and style
 
-- The − / + buttons in the toolbar set the document text size from 80% to 200%. Click '100%' in the middle to reset. To zoom the whole app, use Ctrl+Wheel.
+- The − / + buttons in the toolbar set the document text size from 80% to 200% (100% is already set slightly large for comfortable reading). Click '100%' in the middle to reset. To zoom the whole app, use Ctrl+Wheel.
 - The **Style** list has 24 styles; picking one changes the document and the toolbar and sidebar colors together. The ∧ ∨ buttons next to the list step through the styles so you can compare them. 'Auto' follows the Windows dark mode.
 - How the style list is grouped (by use, by mood or by brightness) is chosen in Settings.
 
