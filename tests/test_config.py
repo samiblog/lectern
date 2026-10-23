@@ -165,3 +165,10 @@ def test_others_layout_settings(tmp_path):
     assert cfg.get('others_visible') is False and cfg.get('others_height') == 240
     cfg.update_client({'others_height': None})                                  # 두 번 누르면 기본 높이
     assert cfg.get('others_height') is None
+
+
+def test_files_view_setting(tmp_path):
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('files_view') == 'kind'                                     # 종류별 (문서 트리 위, 파일 아래)
+    cfg.update_client({'files_view': 'folder'})
+    assert cfg.get('files_view') == 'folder'

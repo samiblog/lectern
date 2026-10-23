@@ -219,7 +219,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .side-list { flex: 1; overflow: auto; padding: 2px 6px 24px; }
 .side-empty { color: var(--ui-faint); padding: 8px 12px; margin: 0; }
 
-/* 문서 트리 + 분리선 + '문서 외 파일' (others.js). 분리선을 끌면 아래 목록의 높이(--others-h)가 바뀌고, 접으면 머리줄만 남는다 */
+/* 종류별 보기: 문서 트리 + 분리선 + '파일' 목록 (others.js). 분리선을 끌면 아래 목록의 높이(--others-h)가 바뀌고, 접으면 머리줄만 남는다.
+   폴더 보기(.folder-view): 문서 트리·분리선·머리줄을 감추고 '파일' 목록 하나에 문서와 파일을 폴더 구조 그대로 */
 #lec-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 #lec-files > #lec-tree { min-height: 60px; }
 #lec-others-split { flex: none; position: relative; height: 9px; cursor: row-resize; }
@@ -229,6 +230,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-others-list { padding-bottom: 12px; }
 .others-off #lec-others { flex: none; border-top: 1px solid var(--ui-border); }
 .others-off #lec-others-split, .others-off #lec-others-list { display: none; }
+#lec-files.folder-view > #lec-tree, #lec-files.folder-view > #lec-others-split, #lec-files.folder-view #lec-others-head { display: none; }
+#lec-files.folder-view #lec-others { flex: 1 1 auto; max-height: none; border-top: 0; }
+#lec-files.folder-view #lec-others-list { display: block; }
 .resizing-rows, .resizing-rows * { cursor: row-resize !important; user-select: none; }
 .resizing-rows iframe { pointer-events: none; }
 .side-head {
@@ -237,16 +241,21 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .side-head:hover { color: var(--ui-fg); }
 .side-head .n { margin-left: auto; color: var(--ui-faint); font-weight: 400; font-variant-numeric: tabular-nums; }
-/* 탐색기처럼: 누르면 고른 행(포커스가 목록에 있으면 짙게), 파일 종류 아이콘 */
+/* 탐색기처럼: 누르면 고른 행(포커스가 목록에 있으면 짙게) */
 #lec-others-list .row:focus { outline: none; }
 #lec-others-list .row.selected { background: var(--ui-hover); }
 #lec-others-list:focus-within .row.selected { background: var(--ui-active-bg); color: var(--ui-active-fg); }
+#lec-others-list .row.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }   /* 폴더 보기: 지금 보는 문서·폴더 */
 #lec-others-list .row.dir .label { font-weight: 500; }
-#lec-others-list .ficon {
+#lec-others-list .row.root .label { font-weight: 700; }
+/* 파일 종류 아이콘 (icons.js): 문서 트리·최근 변경·파일 목록. 문서(md·html)는 강조색 */
+.side-list .ficon {
   width: 16px; height: 16px; flex: none; margin-right: 2px;
   fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; color: var(--ui-faint);
 }
-#lec-others-list .row.dir .ficon, #lec-others-list .row.selected .ficon { color: var(--ui-muted); }
+.side-list .row.dir .ficon, #lec-others-list .row.selected .ficon { color: var(--ui-muted); }
+.side-list .ficon.doc { color: var(--ui-accent); }
+.row.recent .label .ficon { vertical-align: -3px; margin-right: 5px; }   /* 최근 변경은 글자 칸 안에 */
 
 .row {
   display: flex; align-items: center; gap: 4px; min-height: 28px; padding: 3px 8px 3px calc(4px + var(--d, 0) * 14px);

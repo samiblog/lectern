@@ -36,8 +36,9 @@ DEFAULTS: dict[str, Any] = {
     'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
-    'others_visible': True,  # 사이드바 아래 '문서 외 파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기)
-    'others_height': None,   # '문서 외 파일' 목록의 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
+    'files_view': 'kind',    # 사이드바 파일 탭을 보는 방법: kind(종류별 — 문서 트리 위, 파일 목록 아래) | folder(폴더 구조 그대로 한 트리)
+    'others_visible': True,  # 종류별 보기에서 아래 '파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기)
+    'others_height': None,   # 종류별 보기의 '파일' 목록 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
     'toc_visible': True,
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
@@ -53,7 +54,7 @@ DEFAULTS: dict[str, Any] = {
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'others_visible', 'others_height'})
+                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height'})

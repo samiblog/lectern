@@ -40,7 +40,9 @@
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M5 10h10M10 5v10"/></symbol>
     <symbol id="i-spot" viewBox="0 0 20 20"><path d="M4 3.5h12M4 16.5h12" opacity=".45"/><rect x="2.5" y="7" width="15" height="6" rx="1.5"/><path d="M5.5 10h9"/></symbol>
     <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
-    <!-- '문서 외 파일' 목록의 파일 종류 (others.js 의 KINDS) -->
+    <!-- 사이드바 목록의 파일 종류 (icons.js). md·html 은 문서 -->
+    <symbol id="i-md" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7 14.5v-4.3l1.6 2.1 1.6-2.1v4.3M12.6 10.2v4.3m-1.3-1.4 1.3 1.4 1.3-1.4"/></symbol>
+    <symbol id="i-html" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M8.7 10.2 6.9 12l1.8 1.8M11.3 10.2l1.8 1.8-1.8 1.8"/></symbol>
     <symbol id="i-file" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15"/></symbol>
     <symbol id="i-text" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7.5 9.5h5M7.5 12h5M7.5 14.5h3"/></symbol>
     <symbol id="i-image" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12" rx="1.5"/><circle cx="7" cy="8" r="1.3"/><path d="m3 15 4.5-4.5 3 3 2.5-2.5 4.5 4.5"/></symbol>
@@ -97,17 +99,19 @@
         <button role="tab" data-tab="search" title="모든 문서의 본문에서 찾기 (Ctrl+Shift+F)">검색</button>
       </div>
       <div class="side-filter">
-        <input id="lec-filter" type="search" placeholder="이름이나 제목으로 거르기" spellcheck="false" autocomplete="off">
+        <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
         <button id="lec-btn-titles" class="icon-btn small toggle" title="파일 이름 대신 문서 제목으로 보기 (끄면 파일 이름, 마우스를 올리면 제목)">제목</button>
+        <button id="lec-btn-view" class="icon-btn small toggle" title="폴더 구조 그대로 보기 — 문서와 파일을 한 트리에 (끄면 종류별: 문서 위, 파일 아래)">폴더</button>
       </div>
-      <!-- 문서 트리와 '문서 외 파일' (others.js): 사이의 분리선을 끌어 아래 목록의 높이를 바꾸고, 머리줄을 눌러 접는다 -->
+      <!-- 문서 트리와 '파일' 목록 (others.js): 종류별 보기에서는 사이의 분리선을 끌어 아래 목록의 높이를 바꾸고, 머리줄을 눌러 접는다.
+           폴더 보기에서는 문서 트리·분리선·머리줄을 감추고 '파일' 목록에 문서와 파일을 폴더 구조 그대로 함께 보인다 -->
       <div id="lec-files">
         <nav id="lec-tree" class="side-list" aria-label="문서"></nav>
         <div id="lec-others-split" role="separator" aria-orientation="horizontal" title="끌어서 높이 조절 (두 번 누르면 기본 높이)"></div>
-        <section id="lec-others" aria-label="문서 외 파일">
-          <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="문서 외 파일 목록 펼치기/접기">
-            <span class="caret open" aria-hidden="true"></span><span>문서 외 파일</span><span id="lec-others-count" class="n"></span></button>
-          <div id="lec-others-list" class="side-list" role="tree" aria-label="문서 외 파일"></div>
+        <section id="lec-others" aria-label="파일">
+          <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="파일 목록 펼치기/접기 (문서가 아닌 파일)">
+            <span class="caret open" aria-hidden="true"></span><span>파일</span><span id="lec-others-count" class="n"></span></button>
+          <div id="lec-others-list" class="side-list" role="tree" aria-label="파일"></div>
         </section>
       </div>
       <nav id="lec-recent" class="side-list" aria-label="최근 변경" hidden></nav>

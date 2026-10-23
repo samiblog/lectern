@@ -633,7 +633,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             page.locator('.side-tabs button[data-tab="files"]').click()
 
-            print('[문서 외 파일]')
+            print('[파일 목록]')
             olist = '#lec-others-list'
             orow = lambda path: page.locator(f'{olist} .row[data-path="{path}"]')
             olabels = lambda: page.locator(f'{olist} .row .label').all_inner_texts()
@@ -664,10 +664,19 @@ def run(headed: bool) -> None:
             count = page.inner_text('#lec-others-count')
             check(olabels() == ['code', 'data', 'empty-folder', 'research', 'src', '첨부.pdf'] and count == '7'
                   and boxes[0]['y'] + boxes[0]['height'] <= boxes[1]['y'] + 1 <= boxes[2]['y'] + 1,
-                  f'문서 트리 아래 분리선과 문서 외 파일 — 폴더 먼저·접힌 채로, 문서·숨김·제외 폴더의 파일은 없음 ({olabels()}, {count}개)')
+                  f"문서 트리 아래 분리선과 '파일' 목록 — 폴더 먼저·접힌 채로, 문서·숨김·제외 폴더의 파일은 없음 ({olabels()}, {count}개)")
             orow('data').locator('[data-toggle]').click()
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
             in_data = olabels()[2:4]
+            # 이름 앞의 종류 아이콘: 문서(md·html)와 폴더, 최근 변경, 파일 목록
+            icon_of = lambda sel: page.evaluate(f"document.querySelector('{sel} .ficon use')?.getAttribute('href') || null")
+            icons = [icon_of(sel) for sel in ('#lec-tree .row[data-doc="docs/01-기능-점검.md"]', '#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]',
+                                              '#lec-tree .row.dir[data-dir="docs"]', '#lec-recent .row[data-doc="docs/01-기능-점검.md"]',
+                                              f'{olist} .row[data-path="data/표.csv"]', f'{olist} .row[data-path="data/setup.exe"]',
+                                              f'{olist} .row[data-path="첨부.pdf"]', f'{olist} .row[data-path="data"]')]
+            head = page.inner_text('#lec-others-head')
+            check(icons == ['#i-md', '#i-html', '#i-folder', '#i-md', '#i-table', '#i-app', '#i-text', '#i-folder'] and head.startswith('파일'),
+                  f"파일 이름 앞에 종류 아이콘 — 문서(md·html)·폴더·최근 변경·파일 목록, 머리줄은 '파일' ({icons}, {head!r})")
             csv = orow('data/표.csv')
             csv.click()
             one_click = picked() == 'data/표.csv'
@@ -710,7 +719,7 @@ def run(headed: bool) -> None:
             no_docs = '일치하는 문서가 없습니다' in page.inner_text('#lec-tree')
             page.locator('#lec-filter').press('Escape')
             check(flat == ['표.csv|data'] and no_docs and olabels()[0] == 'code',
-                  f'사이드바 거르기는 문서 외 파일에도 — 거른 파일을 폴더와 함께 평평하게, Esc 로 되돌림 ({flat})')
+                  f'사이드바 거르기는 파일 목록에도 — 거른 파일을 폴더와 함께 평평하게, Esc 로 되돌림 ({flat})')
             later_file = work / '나중-파일.txt'
             later_file.write_text('x', encoding='utf-8')
             appeared = wait_until(page, "!!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')", 8000)
@@ -740,6 +749,41 @@ def run(headed: bool) -> None:
             check(abs(h1 - h0 - 100) <= 4 and saved_h and abs(h2 - h0) <= 2 and config_is('others_height', None),
                   f'분리선을 끌어 높이 조절·저장, 두 번 누르면 기본 높이 ({h0:.0f} → {h1:.0f} → {h2:.0f})')
             shot('05-others')
+            print('[폴더 보기]')
+            page.click('#lec-btn-view')
+            wait_until(page, "document.querySelector('#lec-files').classList.contains('folder-view')")
+            wait_until(page, f"!!document.querySelector('{olist} .row.root')")
+            hidden = page.evaluate("['#lec-tree', '#lec-others-split', '#lec-others-head'].map(s => getComputedStyle(document.querySelector(s)).display)")
+            active_row = lambda: page.evaluate(f"document.querySelector('{olist} .row.active')?.dataset.path ?? null")
+            revealed = active_row()
+            research = orow('research')
+            if research.get_attribute('aria-expanded') != 'true':
+                research.locator('[data-toggle]').click()
+            mixed = [orow('research/images').count(), orow('research/구리-시장-동향.md').count(),
+                     icon_of(f'{olist} .row[data-path="research/구리-시장-동향.md"]')]
+            check(hidden == ['none'] * 3 and revealed == 'docs/01-기능-점검.md' and mixed == [1, 1, '#i-md']
+                  and page.is_visible('#lec-btn-view.on') and config_is('files_view', 'folder'),
+                  f"'폴더' 버튼: 문서 트리를 감추고 한 트리에 문서와 파일을 폴더 구조 그대로, 지금 보는 문서까지 펼침, 설정에 저장 ({hidden}, {revealed}, {mixed})")
+            orow('research/구리-시장-동향.md').click()
+            doc_open = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'research/구리-시장-동향.md'")
+            now_active = active_row()
+            orow('data').locator('[data-toggle]').click()
+            page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
+            body = opens(orow('data/표.csv').dblclick)
+            doc_menu = menu(orow('research/구리-시장-동향.md'))
+            page.keyboard.press('Escape')
+            dir_menu = menu(orow('docs'))
+            page.locator('#lec-menu button', has_text='폴더 개요 보기').click()
+            overview = wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'docs'")
+            check(doc_open and now_active == 'research/구리-시장-동향.md' and body['path'] == 'data/표.csv'
+                  and '@research/구리-시장-동향.md 복사' in doc_menu and '편집기로 열기' in doc_menu and '폴더 개요 보기' in dir_menu and overview,
+                  '폴더 보기: 문서는 한 번 눌러 뷰어에서(강조), 파일은 두 번 눌러 열기, 문서·폴더 우클릭 메뉴(폴더 개요 보기)')
+            shot('05-folder-view')
+            page.click('#lec-btn-view')
+            back_kind = wait_until(page, "!document.querySelector('#lec-files').classList.contains('folder-view')")
+            check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'code'
+                  and config_is('files_view', 'kind'),
+                  '다시 누르면 종류별 보기 (문서 트리 위, 분리선 아래 파일)')
             page.unroute('**/api/open-external', fake_open)
 
             print('[문서 속 원시 HTML]')
@@ -810,9 +854,9 @@ def run(headed: bool) -> None:
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
             labels = page.locator('#lec-tree .row.file').all_inner_texts()
-            check(any('HTML 보고서 예시' in t and 'HTML' in t.replace('HTML 보고서', '') for t in labels)
+            check(page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').locator('use[href="#i-html"]').count() == 1
                   and page.locator('#lec-tree .row.dir', has_text='src').count() == 0,
-                  'html 문서는 트리에 HTML 표시와 함께, src 폴더의 html(앱 소스)은 보이지 않음')
+                  'html 문서는 트리에 html 아이콘과 함께, src 폴더의 html(앱 소스)은 보이지 않음')
             page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').click()
             wait_until(page, f"{frame_js}?.contentDocument?.querySelector('h1')")
             frame = page.frame_locator('#lec-view iframe.lec-html:not(.lec-loading)')

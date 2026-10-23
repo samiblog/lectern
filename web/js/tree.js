@@ -4,16 +4,18 @@
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
+import { fileIcon, folderIcon } from './icons.js';
 import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
 
 const MAX_FILTER_RESULTS = 300;
 let panel = 'files';   // 사이드바 탭: files | recent | search
 
 // 목록에는 파일 이름을 보이고 마우스를 올리면 문서 제목 (사용자 요청, v0.7.1). '제목' 버튼(설정 show_titles)을 켜면 반대로
+// 폴더 보기(others.js)의 문서 행도 같은 글을 쓴다
 const showTitles = () => S.config.show_titles === true;
-const labelOf = (f) => (showTitles() ? (f.title || f.name) : f.name);
+export const labelOf = (f) => (showTitles() ? (f.title || f.name) : f.name);
 /** 마우스를 올리면 보일 글: 목록에 보이지 않는 쪽을 앞에 (파일 이름을 보이면 문서 제목), 그다음 경로 */
-const tipOf = (f) => {
+export const tipOf = (f) => {
   if (!f.title) return f.path;
   return showTitles() ? `${f.path}\n${f.title}` : `${f.title}\n${f.path}`;
 };
@@ -26,20 +28,20 @@ function activeDir() {
   return S.view?.type === 'overview' ? S.view.path : null;
 }
 
-function hasChangedInside(dirPath) {
+export function hasChangedInside(dirPath) {
   const prefix = `${dirPath}/`;
   for (const p of S.changed) if (p.startsWith(prefix)) return true;
   return false;
 }
 
-/** html 문서 표시 (md 와 구분) */
+/** html 문서 표시 (md 와 구분) — 폴더 개요에서. 사이드바 목록은 아이콘으로 구분한다 (icons.js) */
 export const kindBadge = (f) => (f.kind === 'html' ? '<span class="kind" title="HTML 문서">HTML</span>' : '');
 
 function fileRow(f, depth, extra = '') {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
   return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(tipOf(f))}" tabindex="0">`
-    + `<span class="caret-space"></span><span class="label">${esc(labelOf(f))}</span>${kindBadge(f)}${extra}`
+    + `<span class="caret-space"></span>${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${extra}`
     + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
 }
 
@@ -54,7 +56,7 @@ function nodesHtml(nodes, depth) {
     const cls = ['row', 'dir'];
     if (n.path === activeDir()) cls.push('active');
     html += `<div class="${cls.join(' ')}" data-dir="${esc(n.path)}" style="--d:${depth}" title="${esc(n.path)}" tabindex="0">`
-      + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span><span class="label">${esc(n.name)}</span>`
+      + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>`
       + `${!open && hasChangedInside(n.path) ? '<span class="dot" title="안쪽 문서가 바뀜"></span>' : ''}</div>`;
     if (open) html += nodesHtml(n.children, depth + 1);
   }
@@ -94,7 +96,7 @@ function renderRecent() {
     const cls = ['row', 'recent'];
     if (f.path === activeDoc()) cls.push('active');
     return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" title="${esc(tipOf(f))}" tabindex="0">`
-      + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${esc(labelOf(f))}${kindBadge(f)}</span>`
+      + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${fileIcon(f.name, f.kind)}${esc(labelOf(f))}</span>`
       + `${S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
       + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
   }).join('') : '<p class="side-empty">문서가 없습니다</p>';
