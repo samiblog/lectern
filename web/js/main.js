@@ -28,6 +28,7 @@ import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen } from './terminal.js';
+import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
 import { $, basename, toast } from './util.js';
@@ -114,10 +115,24 @@ function bindKeys() {
   document.addEventListener('keydown', (e) => {
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
-    if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도)
+    if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도), Shift 와 함께면 터미널 모음
       e.preventDefault();
-      toggleTerminal();
+      if (e.shiftKey) toggleGather();
+      else if (gatherOn()) leaveToFocused();   // 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널
+      else toggleTerminal();
       return;
+    }
+    // 터미널 모음(gather.js)이 문서 화면을 가리는 동안: 칸 사이 옮기기(Ctrl+Tab)와 탭·폴더·설정 몇 가지만. 칸 안의 키는 셸 것
+    if (gatherOn()) {
+      if (mod && e.key === 'Tab') {
+        e.preventDefault();
+        focusNextTile(e.shiftKey ? -1 : 1);
+        return;
+      }
+      if (e.target.closest?.('#lec-gather')) return;
+      const toTab = mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key);
+      if (!toTab && !(mod && (key === 'o' || e.key === ',')) && e.key !== 'Escape') return;
+      if (toTab) leaveGather();   // 그 탭으로 (아래 selectTabAt)
     }
     // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
     if (inTerminal(e) && !(mod && e.key === 'Tab')) return;
@@ -166,7 +181,7 @@ function bindKeys() {
   });
   // 마우스 뒤로/앞으로 버튼
   window.addEventListener('mouseup', (e) => {
-    if (inTerminal(e)) return;
+    if (inTerminal(e) || gatherOn()) return;
     if (e.button === 3) { e.preventDefault(); back(); }
     if (e.button === 4) { e.preventDefault(); forward(); }
   });
@@ -218,6 +233,7 @@ async function boot() {
   initTabs();
   initWatch();
   initTerminal();
+  initGather();
   bindToolbar();
   bindKeys();
   applyLayout();

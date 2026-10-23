@@ -6,6 +6,9 @@ kernel32 의 CreatePseudoConsole(Windows 10 1809 이상)을 직접 쓴다. pywin
 - 셸은 작업 개체(Job Object, KILL_ON_JOB_CLOSE) 안에서 돈다: 닫거나 이 프로세스가 끝나면 셸에서 띄운 프로그램까지 함께 끝난다.
   일시 정지로 만들어 작업 개체에 넣은 뒤 깨운다 — 넣기 전에 자식을 띄우는 틈이 없게.
 - 부모의 표준 입출력을 물려주지 않는다 (STARTF_USESTDHANDLES + 빈 핸들). 안 그러면 부모의 콘솔·파이프로 출력이 샌다.
+- 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 (SetConsoleCtrlHandler(NULL, FALSE)). 이 표시는 자식에게 물려지는데,
+  Lectern 을 새 프로세스 그룹으로 띄운 프로그램(일부 실행기·자동화 도구)에서 켜진 채로 오면 셸과 거기서 띄운 프로그램이
+  Ctrl+C 로 멈추지 않는다 (점검에서 확인 — ping 이 끝까지 돌았다).
 - read() 는 막혀 기다린다 (읽는 스레드에서 부른다). close() 는 그 스레드가 읽는 동안 불러도 된다 — ClosePseudoConsole 은
   남은 출력을 내보낸 뒤 파이프를 닫고, 그러면 read() 가 b'' 를 돌려준다.
 """
@@ -105,6 +108,7 @@ if AVAILABLE:
     _k.AssignProcessToJobObject.argtypes = [w.HANDLE, w.HANDLE]
     _k.TerminateJobObject.argtypes = [w.HANDLE, w.UINT]
     _k.TerminateProcess.argtypes = [w.HANDLE, w.UINT]
+    _k.SetConsoleCtrlHandler.argtypes = [ctypes.c_void_p, w.BOOL]
 
 
 def _check(ok: object, what: str) -> None:
@@ -169,6 +173,7 @@ class PseudoConsole:
             si.StartupInfo.dwFlags = STARTF_USESTDHANDLES   # 빈 표준 핸들 — 부모의 콘솔·파이프를 물려받지 않게
             si.lpAttributeList = ctypes.cast(attrs, ctypes.c_void_p)
             flags = EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT | CREATE_SUSPENDED
+            _k.SetConsoleCtrlHandler(None, False)   # 'Ctrl+C 무시'를 물려주지 않게 (모듈 설명)
             _check(_k.CreateProcessW(None, ctypes.create_unicode_buffer(cmdline), None, None, False, flags,
                                      _env_block(env), cwd, ctypes.byref(si), ctypes.byref(self._proc)), 'CreateProcess')
         finally:

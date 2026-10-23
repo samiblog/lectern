@@ -86,6 +86,7 @@ function syncTabs(info) {
     disposeTerminal(tab);   // 셸은 서버가 탭을 닫을 때 끝냈다
   }
   renderTabs();
+  emit('tabs');   // 터미널 모음의 칸 (gather.js)
   return added;
 }
 

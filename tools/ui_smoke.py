@@ -1338,7 +1338,7 @@ def run(headed: bool) -> None:
                 worst = Math.min(worst, ratio(st.color, st.backgroundColor === 'rgba(0, 0, 0, 0)' ? bg : st.backgroundColor));
               }
               return { bg, code, panel: getComputedStyle(document.querySelector('#lec-term')).backgroundColor,
-                       light: document.querySelector('#lec-term').classList.contains('term-light'), worst: Math.round(worst * 100) / 100 }; }''')
+                       light: document.documentElement.classList.contains('term-light'), worst: Math.round(worst * 100) / 100 }; }''')
             page.click('#lec-term-body')
             page.keyboard.type('Write-Host 흰글자 -ForegroundColor White; Write-Host 회색 -ForegroundColor DarkGray; $n = 42')
             page.keyboard.press('Enter')
@@ -1400,6 +1400,74 @@ def run(headed: bool) -> None:
             page.click('#lec-term-close')
             gone = term_ui()
             check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'✕ 로 터미널 닫기 ({gone})')
+
+            print('[터미널 모음]')
+            def tile_has(name: str, text: str, ms: int = 20000) -> bool:
+                try:
+                    page.wait_for_function('''([name, t]) => { const tile = [...document.querySelectorAll('.g-tile')]
+                        .find(el => el.querySelector('.g-name').textContent === name);
+                      return !!tile && [...tile.querySelectorAll('.xterm-rows > div')].map(r => r.textContent).join('').includes(t); }''',
+                                           arg=[name, text], timeout=ms)
+                    return True
+                except Exception:
+                    return False
+            g_ui = lambda: page.evaluate('''() => ({ on: document.documentElement.classList.contains('gather-on'), hidden: document.querySelector('#lec-gather').hidden,
+              pressed: document.querySelector('#lec-btn-gather').getAttribute('aria-pressed'), count: document.querySelector('#lec-gather-count').textContent,
+              tiles: [...document.querySelectorAll('.g-tile')].map(t => [t.querySelector('.g-name').textContent, t.querySelector('.g-state').textContent,
+                t.querySelector('.xterm') ? 'xterm' : t.querySelector('.g-start') ? 'start' : '']),
+              cols: getComputedStyle(document.querySelector('#lec-gather')).gridTemplateColumns.split(' ').length,
+              focus: document.activeElement?.closest('.g-tile')?.querySelector('.g-name').textContent || '' })''')
+            page.once('dialog', lambda d: d.accept(str(second)))
+            page.click('#lec-btn-open')
+            n_tabs(2)
+            page.locator('#lec-content').focus()
+            before = g_ui()
+            page.keyboard.press('Control+Shift+Backquote')
+            wait_until(page, "document.documentElement.classList.contains('gather-on') && document.querySelectorAll('.g-tile').length === 2")
+            g1 = g_ui()
+            shot('11-gather')
+            check(before['count'] == '1' and g1['on'] and not g1['hidden'] and g1['pressed'] == 'true' and g1['cols'] == 2
+                  and g1['tiles'] == [['samples', '대기', 'xterm'], ['second', '셸 없음', 'start']] and g1['focus'] == 'second',
+                  f"Ctrl+Shift+` 로 터미널 모음 — 탭마다 칸, 셸이 있으면 그 터미널, 없으면 '터미널 시작' ({before['count']}, {g1})")
+            page.locator('.g-tile', has_text='second').locator('.g-start').click()
+            started2 = tile_has('second', f'PS {second}>')
+            g2 = g_ui()
+            check(started2 and g2['count'] == '2' and g2['focus'] == 'second' and g2['tiles'][1][2] == 'xterm',
+                  f"칸의 '터미널 시작'으로 그 프로젝트 폴더에서 셸을 띄움, 버튼의 셸 수 ({g2})")
+            page.keyboard.press('Control+Tab')
+            to_first = g_ui()['focus']
+            page.keyboard.press('Control+p')
+            no_palette = page.evaluate("document.querySelector('#lec-palette').hidden")
+            page.keyboard.press('Backspace')   # 셸 줄에 들어간 ^P 를 지운다
+            page.keyboard.type('ping -n 20 127.0.0.1')
+            page.keyboard.press('Enter')
+            busy = wait_until(page, "[...document.querySelectorAll('.g-tile .g-state')][0].textContent === '실행 중'", 8000)
+            page.keyboard.press('Control+c')   # 고른 글이 없으면 셸로 — ping 을 멈춘다
+            idle = wait_until(page, "[...document.querySelectorAll('.g-tile .g-state')][0].textContent === '대기'", 8000)
+            check(to_first == 'samples' and no_palette and busy and idle,
+                  f"칸 안에서 Ctrl+Tab 은 다음 칸, 다른 키는 셸로 (Ctrl+P 도), 프로그램이 돌면 칸 머리에 '실행 중' ({to_first}, {busy}, {idle})")
+            page.locator('.g-tile', has_text='second').locator('.g-head').dblclick(position={'x': 150, 'y': 12})
+            solo = page.evaluate("[...document.querySelectorAll('.g-tile')].filter(t => t.offsetWidth).map(t => t.querySelector('.g-name').textContent)")
+            page.locator('.g-tile.solo .g-solo').click()
+            back_grid = page.evaluate("[...document.querySelectorAll('.g-tile')].filter(t => t.offsetWidth).length")
+            check(solo == ['second'] and back_grid == 2, f'칸 머리를 두 번 누르면 그 칸만 크게, 버튼으로 다시 모두 ({solo}, {back_grid})')
+            page.locator('.g-tile', has_text='second').locator('.g-go').click()
+            went = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.querySelector('.lec-tab.active .name').textContent === 'second'")
+            g3 = page.evaluate('''() => ({ panel: !document.querySelector('#lec-term').hidden, title: document.querySelector('#lec-term-title').textContent,
+              boxes: document.querySelectorAll('#lec-term-body .term-box').length, gather: document.querySelector('#lec-gather').hidden,
+              focus: !!document.activeElement?.closest('#lec-term') })''')
+            kept_out = term_has(f'PS {second}>', 3000)
+            check(went and g3['panel'] and g3['title'] == 'PowerShell — second' and g3['boxes'] == 2 and g3['gather'] and g3['focus'] and kept_out,
+                  f"칸의 '이 프로젝트로' — 모음을 닫고 그 프로젝트의 오른쪽 터미널로 (화면은 패널로 돌아옴, 셸은 그대로) ({g3})")
+            page.keyboard.press('Control+Shift+Backquote')
+            again = wait_until(page, "document.documentElement.classList.contains('gather-on')")
+            page.locator('#lec-tablist .lec-tab', has_text='samples').click()
+            left = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.querySelector('.lec-tab.active .name').textContent === 'samples'")
+            check(again and left and h1_has('렌더링 기능 점검'), '프로젝트 탭을 누르면 모음을 닫고 그 프로젝트의 문서 화면으로')
+            tab_el(1).hover()   # 고르지 않은 탭의 × 는 마우스를 올려야 보인다
+            tab_el(1).locator('.tab-close').click()
+            n_tabs(1)
+            page.click('#lec-term-close')
 
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()

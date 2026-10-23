@@ -30,7 +30,7 @@ flowchart LR
     RCV -- "탭으로 열기, 창을 앞으로" --> PW
 ```
 
-- 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38).
+- 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38). 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 — 자식에게 물려지기 때문이다.
 - 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
 - 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
@@ -340,6 +340,12 @@ sequenceDiagram
 - 머리줄: 셸 이름 — 탭 이름, 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 
+### 터미널 모음 (gather.js)
+- 탭 막대 오른쪽 끝 `#lec-btn-gather`(돌고 있는 셸 수 `#lec-gather-count`)·`` Ctrl+Shift+` `` 로 연다. 열면 `html.gather-on`, `#lec-gather`(문서 화면 영역 `#lec-main` 위를 덮는 격자, `--g-cols`·`--g-rows`)에 탭마다 칸(`.g-tile`) 하나 (D40).
+- 칸 몸통: 셸이 있으면 그 탭의 터미널 화면(`tab.term.box`)을 오른쪽 패널에서 옮겨 온다. 없으면 '터미널 시작'(`ensureTerminal(tab, 칸)` — xterm 을 칸에 만들고 셸을 띄운다). 모음을 닫으면 `returnTerminals()` 가 화면을 패널로 되돌리고 `showCurrent` 가 다시 맡는다. 모으는 동안 `terminal.js` 의 `showCurrent`·패널 크기 맞추기는 화면을 건드리지 않는다 (`gathered()`).
+- 칸 머리: 폴더 이름, 상태(2초마다 `/api/term/info` — 실행 중·대기·끝남·셸 없음), 크게/모두 보기(`.solo`), 다시 시작, 이 프로젝트로(`leaveGather({tab, panel:true})` — 그 탭을 고르고 오른쪽 터미널을 연다). 머리를 두 번 누르면 크게.
+- 닫기: 버튼·`` Ctrl+Shift+` ``, 프로젝트 탭 누르기(잡기 단계에서 먼저 닫고 tabs.js 가 그 탭을 고른다), Ctrl+1~9. 탭 목록이 바뀌면(`tabs` 이벤트) 칸을 맞추고, 셸이 생기거나 끝나면(`terms` 이벤트) 상태와 버튼의 수를 고친다.
+
 ### 단축키
 
 | 키 | 동작 |
@@ -350,7 +356,8 @@ sequenceDiagram
 | Ctrl+, | 설정 창 |
 | Ctrl+O | 폴더 열기 (새 탭으로, 이미 열린 폴더면 그 탭) |
 | Ctrl+B | 사이드바 보이기/숨기기 |
-| `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음) |
+| `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음). 터미널 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널 |
+| `` Ctrl+Shift+` `` | 터미널 모음 열기/닫기. 모음 안에서 Ctrl+Tab / Ctrl+Shift+Tab 은 다음 / 이전 칸 |
 | Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 탭에서 뒤로 / 앞으로 |
 | Ctrl+1 ~ 8 / Ctrl+9 | 그 순번의 탭 / 마지막 탭 |
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |

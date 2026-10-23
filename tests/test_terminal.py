@@ -114,6 +114,26 @@ def test_busy_and_close_ends_child_programs(tmp_path):
 
 
 @windows
+def test_ctrl_c_stops_child_program(tmp_path):
+    import ctypes
+    k = ctypes.WinDLL('kernel32')
+    k.SetConsoleCtrlHandler(None, True)   # Lectern 을 띄운 쪽이 새 프로세스 그룹으로 띄운 것처럼 — 'Ctrl+C 무시'가 켜진 채
+    try:
+        s = Session('p1', str(tmp_path), None, 80, 24)
+    finally:
+        k.SetConsoleCtrlHandler(None, False)
+    try:
+        assert read_until(s, '>')
+        s.write('ping -n 60 127.0.0.1\r')
+        assert wait_for(s.busy)
+        s.write('\x03')   # 고른 글이 없을 때의 Ctrl+C
+        assert wait_for(lambda: not s.busy(), 10), 'Ctrl+C 로 셸에서 띄운 프로그램이 멈춘다'
+        assert s.alive   # 셸은 그대로
+    finally:
+        s.close()
+
+
+@windows
 def test_exit_code_and_end(tmp_path):
     s = Session('p1', str(tmp_path), None, 80, 24)
     assert read_until(s, '>')

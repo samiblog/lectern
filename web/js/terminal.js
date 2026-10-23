@@ -8,10 +8,12 @@
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
 // - 터미널을 열면 목차를 감춘다 (본문 폭) — 목차 버튼으로 함께 볼 수 있다 (toc.js).
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
+// - 터미널 모음(gather.js)은 탭마다의 화면(tab.term.box)을 이 패널에서 모음 칸으로 옮겨 보이고, 닫으면 되돌린다 (returnTerminals).
+//   모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
 // - 터미널 안에서는 앱 단축키를 쓰지 않는다 (main.js — Ctrl+` 만 예외). Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단).
 //   Ctrl+V 는 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getJSON, postJSON, saveConfig } from './api.js';
 import { updateTocVisibility } from './toc.js';
 import { $, toast, copyText } from './util.js';
@@ -91,12 +93,11 @@ function currentColors() {
   };
 }
 
-/** 패널과 열린 모든 터미널에 지금 색을 입힌다 (스타일을 바꾸거나 설정을 바꿀 때) */
+/** 패널·모음 칸과 열린 모든 터미널에 지금 색을 입힌다 (스타일을 바꾸거나 설정을 바꿀 때) */
 function applyColors() {
   const { theme, dark } = currentColors();
-  const panel = $('#lec-term');
-  panel.style.setProperty('--term-bg', theme.background);   // 터미널 둘레 여백도 같은 바탕 (app.css)
-  panel.classList.toggle('term-light', !dark);              // 스크롤바 색 (color-scheme)
+  root.style.setProperty('--term-bg', theme.background);   // 터미널 둘레 여백도 같은 바탕 (app.css — 패널과 모음 칸)
+  root.classList.toggle('term-light', !dark);              // 스크롤바 색 (color-scheme)
   for (const tab of S.tabs) if (tab.term) tab.term.xterm.options.theme = theme;
   return theme;
 }
@@ -105,6 +106,8 @@ const FONT = '"Cascadia Mono", "Cascadia Code", Consolas, D2Coding, "NanumGothic
 
 let open = false;
 export const terminalOpen = () => open;
+/** 터미널 모음(gather.js)이 화면들을 가져가 있는지 */
+export const gathered = () => root.classList.contains('gather-on');
 
 // ---- xterm.js 불러오기 (처음 열 때 한 번) -------------------------------------------
 
@@ -141,12 +144,12 @@ function loadLib() {
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-/** 탭의 화면(xterm)을 만든다. 셸은 start() 가 띄운다 */
-function create(tab) {
+/** 탭의 화면(xterm)을 만든다 (parent: 오른쪽 패널 또는 모음 칸). 셸은 start() 가 띄운다 */
+function create(tab, parent = $('#lec-term-body')) {
   const box = document.createElement('div');
   box.className = 'term-box';
   box.hidden = true;
-  $('#lec-term-body').append(box);
+  parent.append(box);
   const xterm = new window.Terminal({
     fontFamily: FONT, fontSize: 13, lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
     allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
@@ -235,6 +238,7 @@ function start(t) {
       if (t.id && t.id !== d.id) t.xterm.write('\r\n');
       Object.assign(t, { id: d.id, next: 0, alive: true, shell: d.shell });
       showTitle();
+      emit('terms');
       pump(t, d.id);
     } catch (e) {
       t.xterm.write(`\r\n\x1b[91m${e.message}\x1b[0m\r\n`);
@@ -266,6 +270,7 @@ async function pump(t, id) {
       t.alive = false;
       const code = d.exit != null ? ` (종료 코드 ${d.exit})` : '';
       t.xterm.write(`\r\n\x1b[90m[셸이 끝났습니다${code}. Enter 를 누르면 다시 시작합니다]\x1b[0m\r\n`);
+      emit('terms');
     }
   }
 }
@@ -277,9 +282,9 @@ function fitNow(t) {
   } catch { /* 크기를 잴 수 없는 순간 */ }
 }
 
-/** 다시 시작: 지금 셸(과 거기서 띄운 프로그램)을 끝내고 새로 */
-async function restart() {
-  const t = S.tab?.term;
+/** 다시 시작: 탭의 셸(과 거기서 띄운 프로그램)을 끝내고 새로 */
+export async function restartTerminal(tab = S.tab) {
+  const t = tab?.term;
   if (!t) return;
   const old = t.id;
   t.id = null;   // 지금 받는 출력(끝났다는 알림 포함)은 버린다 — pump
@@ -301,10 +306,11 @@ function showTitle() {
   $('#lec-term-title').title = S.tab ? S.tab.root : '';
 }
 
-/** 선택된 탭의 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만) */
+/** 선택된 탭의 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 제목만 */
 async function showCurrent({ focus = false } = {}) {
-  for (const tab of S.tabs) if (tab.term) tab.term.box.hidden = tab !== S.tab;
   showTitle();
+  if (gathered()) return;
+  for (const tab of S.tabs) if (tab.term) tab.term.box.hidden = tab !== S.tab;
   if (!open || !S.tab) return;
   try {
     await loadLib();
@@ -355,6 +361,42 @@ export function disposeTerminal(tab) {
   t.xterm.dispose();
   t.box.remove();
   tab.term = null;
+  emit('terms');
+}
+
+// ---- 터미널 모음(gather.js)이 쓰는 것 ----------------------------------------------------
+
+export const fitTerminal = fitNow;
+
+/** 셸이 돌고 있는 탭 수 (탭 막대의 '터미널 모음' 버튼) */
+export const liveTerminals = () => S.tabs.filter((t) => t.term?.alive).length;
+
+/** 탭의 터미널을 parent(모음 칸)에 보이고, 셸이 없으면 띄운다 */
+export async function ensureTerminal(tab, parent) {
+  await loadLib();
+  const t = tab.term || create(tab, parent);
+  if (t.box.parentElement !== parent) parent.append(t.box);
+  t.box.hidden = false;
+  fitNow(t);
+  if (!t.alive && !t.id) await start(t);
+  return t;
+}
+
+/** 셸에서 띄운 프로그램이 도는지. 모르면 null */
+export async function terminalBusy(t) {
+  if (!t?.alive) return false;
+  try {
+    return (await getJSON(`/api/term/info?t=${encodeURIComponent(t.id)}`, TERM_HEADER)).busy;
+  } catch {
+    return null;
+  }
+}
+
+/** 모음 칸에 옮겨 둔 화면들을 오른쪽 패널로 되돌린다 (터미널 모음을 닫을 때) */
+export function returnTerminals() {
+  const body = $('#lec-term-body');
+  for (const tab of S.tabs) if (tab.term && tab.term.box.parentElement !== body) body.append(tab.term.box);
+  showCurrent();
 }
 
 function applyWidth() {
@@ -391,14 +433,14 @@ function bindResizer() {
 export function initTerminal() {
   $('#lec-btn-term').addEventListener('click', () => toggleTerminal());
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
-  $('#lec-term-restart').addEventListener('click', restart);
+  $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   bindResizer();
   applyWidth();
   // 패널 크기가 바뀌면 글자 칸 수를 다시 맞춘다 (셸에도 알린다 — onResize)
   let raf = 0;
   new ResizeObserver(() => {
     cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => fitNow(S.tab?.term));
+    raf = requestAnimationFrame(() => { if (!gathered()) fitNow(S.tab?.term); });
   }).observe($('#lec-term-body'));
   // 다른 탭을 고르면 그 탭의 셸로. 터미널에서 Ctrl+Tab 으로 왔으면 새 셸에 입력이 가게
   on('tab', () => showCurrent({ focus: !!document.activeElement?.closest?.('#lec-term') }));

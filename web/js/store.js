@@ -15,6 +15,8 @@
 //   reveal           문서 속 요소로 가기 직전 (목차·찾기·앵커·바뀐 곳)   (fold.unfoldTo → spotlight)
 //   text-size        글자 크기가 바뀜                                     (textsize → htmldoc)
 //   term-colors      설정 '터미널 색을 스타일에 맞춤'이 바뀜              (settings → terminal)
+//   tabs             열린 탭 목록이 바뀜 (열기·닫기·서버에 맞추기)          (tabs → gather)
+//   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)
 // 팔레트(palette.js)는 이벤트를 듣지 않고 열 때마다 S.files 를 읽는다.
 
 const metaMode = document.querySelector('meta[name="lec-mode"]')?.content;

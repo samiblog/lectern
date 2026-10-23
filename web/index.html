@@ -54,6 +54,8 @@
     <symbol id="i-box" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12" rx="2"/><path d="M6 8.3h8M6 11.7h5"/></symbol>
     <symbol id="i-diagram" viewBox="0 0 20 20"><rect x="2.5" y="2.5" width="6.5" height="5" rx="1"/><rect x="11" y="12.5" width="6.5" height="5" rx="1"/><path d="M5.75 7.5v3.5a1.5 1.5 0 0 0 1.5 1.5H11"/></symbol>
     <symbol id="i-math" viewBox="0 0 20 20"><path d="M15 4.5H5.5l5 5.5-5 5.5H15"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 20 20"><path d="M3.5 8V3.5H8M12 3.5h4.5V8M16.5 12v4.5H12M8 16.5H3.5V12"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 20 20"><rect x="3" y="3" width="6" height="6" rx="1"/><rect x="11" y="3" width="6" height="6" rx="1"/><rect x="3" y="11" width="6" height="6" rx="1"/><rect x="11" y="11" width="6" height="6" rx="1"/></symbol>
     <symbol id="i-archive" viewBox="0 0 20 20"><path d="M5 2.5h10v15H5z"/><path d="M10 2.5v1.8M10 5.8v1.8M10 9.1v1.8"/><rect x="8.6" y="12.2" width="2.8" height="3" rx=".6"/></symbol>
     <symbol id="i-media" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12" rx="1.5"/><path d="m8.5 7.4 4 2.6-4 2.6z"/></symbol>
     <symbol id="i-app" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 7h15M6.5 10l2 1.7-2 1.7M10.5 13.4h3"/></symbol>
@@ -96,6 +98,8 @@
     <div id="lec-tablist" role="tablist"></div>
     <button id="lec-btn-open" class="icon-btn small" title="폴더 열기 — 새 탭으로 (Ctrl+O)" aria-label="폴더 열기"><svg><use href="#i-plus"/></svg></button>
     <button id="lec-btn-recent" class="icon-btn small" title="최근 연 폴더" aria-label="최근 연 폴더"><svg><use href="#i-chevron"/></svg></button>
+    <!-- 터미널 모음 (gather.js, D40): 열린 프로젝트들의 터미널을 한 화면에 -->
+    <button id="lec-btn-gather" class="gather-btn" aria-pressed="false" title="터미널 모음 — 열린 프로젝트들의 터미널을 한 화면에 (Ctrl+Shift+`)"><svg><use href="#i-term"/></svg><span>터미널 모음</span><span id="lec-gather-count" class="n" hidden></span></button>
   </nav>
 
   <div id="lec-main">
@@ -162,6 +166,8 @@
       </div>
       <div id="lec-term-body"></div>
     </section>
+    <!-- 터미널 모음 (gather.js): 문서 화면 위를 덮는 격자. 탭마다 칸 하나 -->
+    <section id="lec-gather" aria-label="터미널 모음" hidden></section>
   </div>
 
   <footer id="lec-status">
