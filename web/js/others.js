@@ -13,6 +13,8 @@
 //   실행·설치 파일과 압축 등은 탐색기에서 선택만 한다 (POST /api/open-external → osutil.open_path — 실행하지 않는다). 폴더는 펼치고 접는다.
 //   ↑·↓·←·→·Home·End 와 글자 입력(그 글자로 시작하는 행)으로 옮겨 다니고, 우클릭·메뉴 키·Shift+F10 에 열기·편집기로 열기·
 //   탐색기에서 보기·경로 복사. 보기 전용이라 이름 바꾸기·지우기·옮기기는 없다.
+// - 코드(목록의 코드, 폴더 보기의 코드 파일)는 한 번 누르거나 Enter 면 본문에 읽기 전용으로 (codeview.js, D43), 두 번 누르면 편집기로.
+//   보고 있는 코드는 목록에서 상위 폴더를 펴고 강조한다.
 // - 사이드바 거르기(#lec-filter)는 이 목록들에도 적용된다: 거른 파일(폴더 보기는 문서도)을 평평하게 보인다.
 
 import { S, emit, on } from './store.js';
@@ -133,7 +135,8 @@ function fileRow(o, v, f, depth, sub = '') {
       + `${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${subHtml(sub)}`
       + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
   }
-  return `<div ${rowAttrs(o, v, f.path, depth, ' file')} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
+  const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
+  return `<div ${rowAttrs(o, v, f.path, depth, ` file${cur}`)} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
     + `<span class="label">${esc(f.name)}</span>${subHtml(sub)}</div>`;
 }
 
@@ -219,17 +222,29 @@ function render() {
   if (!folderView()) renderList('code');
 }
 
-/** 폴더 보기에서 지금 보는 문서(폴더)가 보이게: 상위 폴더를 펴고 그 행까지 스크롤 (문서 트리의 revealCurrent 처럼) */
+/**
+ * 지금 보는 것이 목록에서 보이게: 상위 폴더를 펴고 그 행까지 스크롤 (문서 트리의 revealCurrent 처럼).
+ * 폴더 보기는 문서·폴더·코드, 종류별 보기는 코드 화면일 때 '코드' 목록에서
+ */
 function revealCurrent() {
   const o = state();
-  if (!o || !folderView() || !S.view) return;
-  o.folderOpen ??= new Set(S.open);
+  if (!o || !S.view) return;
+  const code = S.view.type === 'code';
+  if (!folderView() && !code) {
+    render();   // 지금 보는 코드 강조를 지운다
+    return;
+  }
+  const k = folderView() ? 'files' : 'code';
+  if (folderView()) o.folderOpen ??= new Set(S.open);
+  const set = view(o, k).open;
   const parts = S.view.path ? S.view.path.split('/') : [];
-  const upto = S.view.type === 'doc' ? parts.length - 1 : parts.length;
-  for (let i = 1; i <= upto; i++) o.folderOpen.add(parts.slice(0, i).join('/'));
+  const upto = S.view.type === 'overview' ? parts.length : parts.length - 1;
+  for (let i = 1; i <= upto; i++) set.add(parts.slice(0, i).join('/'));
   render();
-  listEl('files').querySelector('.row.active')?.scrollIntoView({ block: 'nearest' });
+  listEl(k).querySelector('.row.active')?.scrollIntoView({ block: 'nearest' });
 }
+
+const isCodeFile = (n) => n?.type === 'file' && !n.doc && isCode(n.name);
 
 // ---- 읽기 ---------------------------------------------------------------------
 
@@ -315,6 +330,12 @@ function activate(k, path) {
   else openExternal(path);
 }
 
+/** Enter: 코드는 읽기 화면(한 번 누르기와 같게), 그 밖은 두 번 누르기와 같게 */
+function enter(k, path) {
+  if (isCodeFile(view(state(), k).index.get(path))) emit('open', { type: 'code', path });
+  else activate(k, path);
+}
+
 async function copy(text) {
   toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다');
 }
@@ -328,8 +349,13 @@ function menuItems(k, n) {
     if (folderView() && S.dirs.has(n.path)) items.push({ label: '폴더 개요 보기', action: () => emit('open', { type: 'overview', path: n.path }) });
     items.push({ label: '탐색기에서 열기', action: () => openExternal(n.path) });
   } else {
-    items.push({ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` },
-      { label: '열기', hint: `${OPEN_HINT[n.open] || ''} — 두 번 누르기·Enter`, action: () => openExternal(n.path) });
+    items.push({ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` });
+    if (isCodeFile(n)) {
+      items.push({ label: '읽기 화면에서 보기', hint: '누르기·Enter', action: () => emit('open', { type: 'code', path: n.path }) },
+        { label: '편집기로 열기', hint: '두 번 누르기', action: () => openExternal(n.path) });
+    } else {
+      items.push({ label: '열기', hint: `${OPEN_HINT[n.open] || ''} — 두 번 누르기·Enter`, action: () => openExternal(n.path) });
+    }
     // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
     if (n.open === 'default') items.push({ label: '편집기로 열기', action: () => openExternal(n.path, undefined, 'editor') });
     items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(n.path) });
@@ -373,7 +399,7 @@ function onKey(e) {
   } else if (e.key === 'ArrowLeft') {
     if (n?.type === 'dir' && v.open.has(path)) toggle(k, path, false);
     else if (n?.parent && rowOf(k, n.parent)) select(k, n.parent);   // 거른 목록에서는 부모가 보이지 않아 그대로
-  } else if (e.key === 'Enter') activate(k, path);
+  } else if (e.key === 'Enter') enter(k, path);
   else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
     const r = cur.getBoundingClientRect();
     openMenu(k, path, r.left + 24, r.bottom);
@@ -477,8 +503,10 @@ function bindList(k) {
       return;
     }
     select(k, path);
-    // 폴더 보기의 문서와 프로젝트 행은 문서 트리처럼 한 번 누르면 연다
-    if (k === 'files' && folderView() && (path === '' || view(state(), k).index.get(path)?.doc)) activate(k, path);
+    // 폴더 보기의 문서와 프로젝트 행은 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
+    const n = view(state(), k).index.get(path);
+    if (k === 'files' && folderView() && (path === '' || n?.doc)) activate(k, path);
+    else if (isCodeFile(n)) emit('open', { type: 'code', path });
   });
   box.addEventListener('dblclick', (e) => {
     const row = e.target.closest('.row');

@@ -120,6 +120,10 @@ function render() {
 /** 지금 보는 항목의 상위 폴더를 펼치고 트리에서 보이게 한다. */
 function revealCurrent() {
   if (!S.view) return;
+  if (S.view.type === 'code') {   // 코드는 '코드' 목록이 보인다 (others.js). 문서 트리의 강조만 지운다
+    render();
+    return;
+  }
   const parts = S.view.path.split('/');
   const upto = S.view.type === 'doc' ? parts.length - 1 : parts.length;
   for (let i = 1; i <= upto; i++) S.open.add(parts.slice(0, i).join('/'));

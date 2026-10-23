@@ -465,6 +465,11 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .toc-list .part .tp-name { flex: none; font-weight: 600; }
 .toc-list .part .tp-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .toc-list .part .tp-name + .tp-label::before { content: '· '; }
+/* 코드 화면의 목차 (toc.js buildOutline): 종류 표시(§ C T ƒ …)와 이름 */
+.code-outline a { display: flex; align-items: baseline; gap: 6px; font-family: var(--ui-mono, Consolas, monospace); font-size: 12px; }
+.code-outline .ok { flex: none; width: 1.1em; text-align: center; color: var(--ui-accent); font-weight: 700; }
+.code-outline .ok-section a { font-family: inherit; font-weight: 700; color: var(--ui-fg); margin-top: 4px; }
+.code-outline .ok-section .ok { color: var(--ui-muted); }
 
 /* ---- 상태줄 ---------------------------------------------------------------- */
 #lec-status {

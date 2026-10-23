@@ -856,8 +856,10 @@ def run(headed: bool) -> None:
                               or page.locator('#lec-code-list .row[data-path="code/example.py"]').dblclick())
             code_items = menu(page.locator('#lec-code-list .row[data-path="code/example.py"]'))
             page.keyboard.press('Escape')
-            check(code_body['path'] == 'code/example.py' and '열기' in code_items and '편집기로' in code_items,
-                  f"'코드' 목록도 탐색기처럼 — 두 번 누르면 열기(편집기), 우클릭 메뉴 ({code_body}, {code_items[:80]!r})")
+            check(code_body['path'] == 'code/example.py' and '읽기 화면에서 보기' in code_items and '편집기로' in code_items,
+                  f"'코드' 목록도 탐색기처럼 — 두 번 누르면 편집기, 우클릭 메뉴 ({code_body}, {code_items[:80]!r})")
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()   # 한 번 누를 때 연 코드 화면에서 문서로
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             tree_h = page.locator('#lec-tree').bounding_box()['height']
             page.click('#lec-others-head')
             wait_until(page, "document.querySelector('#lec-others').classList.contains('closed')")
@@ -998,6 +1000,60 @@ def run(headed: bool) -> None:
                     ['docs/01-기능-점검.md', 'docs/01-기능-점검.md', '']]
             check(links == want and in_pre == 0, f'본문 속 경로 표기는 있는 파일만 링크로 (코드 블록 제외) ({links})')
             page.locator('#lec-view a.path-link', has_text='docs/01-기능-점검.md').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+
+            print('[코드 보기]')
+            cv = lambda: page.evaluate('''() => ({ code: document.querySelector('#lec-view').classList.contains('code-view'),
+              title: document.querySelector('#lec-view .cv-title')?.textContent || '', lines: document.querySelectorAll('#lec-view .cv-line').length,
+              status: document.querySelector('#lec-st-info').textContent, toc: [...document.querySelectorAll('#lec-toc .code-outline a')].map(a => a.textContent),
+              active: document.querySelector('#lec-code-list .row.active')?.dataset.path || '', target: document.querySelector('#lec-view .lec-target')?.dataset.line || '',
+              treeActive: document.querySelector('#lec-tree .row.active')?.dataset.doc || '', title2: document.title })''')
+            page.locator('#lec-tree .row.file[data-doc="docs/95-경로.md"]').click()
+            wait_until(page, "document.querySelectorAll('#lec-view a.path-link').length >= 3")
+            page.locator('#lec-view a.path-link', has_text='code/example.py:13').click()
+            page.wait_for_selector('#lec-view.code-view .cv-line')
+            by_path = wait_until(page, "document.querySelector('#lec-view .lec-target')?.dataset.line === '13'", 3000)
+            c1 = cv()
+            shot('13-code-view')
+            check(by_path and c1['title'] == 'example.py' and c1['lines'] >= 15 and c1['status'].startswith('Python')
+                  and 'ƒmoving_average' in c1['toc'] and c1['active'] == 'code/example.py' and not c1['treeActive'] and c1['title2'].startswith('example.py'),
+                  f"문서 속 코드 경로(`code/example.py:13`)를 누르면 읽기 화면의 그 줄로 — 줄 번호·언어 색, 오른쪽 목차(함수), '코드' 목록에서 강조 ({c1})")
+            page.keyboard.press('Alt+ArrowLeft')
+            back_doc = wait_until(page, "document.querySelector('#lec-view h1')?.textContent === '경로 표기 확인'")
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.locator('#lec-view a.file-link', has_text='example.py').first.click()
+            by_link = wait_until(page, "document.querySelector('#lec-view.code-view .lec-target')?.dataset.line === '13'", 5000)
+            check(back_doc and by_link, '뒤로 가기로 문서에 돌아오고, 문서 속 코드 파일 링크(#L13)도 읽기 화면의 그 줄로')
+            crow = page.locator('#lec-code-list .row[data-path="code/example.py"]')
+            if not crow.count():
+                page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            crow.click()
+            by_click = wait_until(page, "document.querySelector('#lec-view.code-view .cv-title')?.textContent === 'example.py'", 5000)
+            page.locator('#lec-toc .code-outline a', has_text='moving_average').click()
+            toc_go = wait_until(page, "document.querySelector('#lec-view .lec-target')?.dataset.line === '8'", 3000)
+            body = opens(crow.dblclick)
+            check(by_click and toc_go and body['path'] == 'code/example.py',
+                  f"'코드' 목록에서 한 번 누르면 읽기 화면, 목차를 누르면 그 줄로, 두 번 누르면 편집기 ({body})")
+            src = work / 'code' / 'example.py'
+            original = src.read_text(encoding='utf-8')
+            src.write_text(original + '\n\ndef added_later():\n    return 1\n', encoding='utf-8')
+            refreshed = wait_until(page, "[...document.querySelectorAll('#lec-toc .code-outline a')].some(a => a.textContent.includes('added_later'))", 8000)
+            flashed = page.evaluate("document.querySelectorAll('#lec-view .cv-line.lec-changed').length")
+            src.write_text(original, encoding='utf-8')
+            restored = wait_until(page, "![...document.querySelectorAll('#lec-toc .code-outline a')].some(a => a.textContent.includes('added_later'))", 8000)
+            check(refreshed and flashed >= 2 and restored, f'보고 있는 코드가 바뀌면 다시 그리고 바뀐 줄 강조 ({flashed}줄)')
+            page.keyboard.press('Control+f')
+            page.fill('#lec-find-input', 'window')
+            found_code = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)", 3000)
+            page.keyboard.press('Escape')
+            items = menu(page.locator('#lec-view .cv-line[data-line="3"]'))
+            copied = choose('Claude용 위치 복사')
+            check(found_code and '편집기에서 이 줄 열기' in items and '코드 전체 복사' in items and copied == '@code/example.py 3행',
+                  f"코드 화면에서도 Ctrl+F 찾기, 줄 우클릭 메뉴 — Claude용 위치 ({copied!r})")
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[HTML 문서]')

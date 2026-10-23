@@ -4,10 +4,15 @@ import { S, emit, on } from './store.js';
 import { showDoc } from './doc.js';
 import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
+import { showCode } from './codeview.js';
 import { isHtml, toast } from './util.js';
 
-/** 문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js) */
-const render = (pane, path, opts) => (isHtml(path) ? showHtml(pane, path, opts) : showDoc(pane, path, opts));
+/** 화면 종류·문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js, 코드: codeview.js — D43, 폴더 개요: overview.js) */
+function render(pane, t, opts) {
+  if (t.type === 'code') return showCode(pane, t.path, opts);
+  if (t.type === 'overview') return showOverview(pane, t.path, opts);
+  return isHtml(t.path) ? showHtml(pane, t.path, opts) : showDoc(pane, t.path, opts);
+}
 
 const keyOf = (t) => `${t.type}:${t.path || ''}`;
 
@@ -25,9 +30,7 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
   pane.pending += 1;   // 이동 중에는 자동 새로고침이 끼어들지 않게 한다
   let done;
   try {
-    done = next.type === 'doc'
-      ? await render(pane, next.path, { hash: target.hash, scrollTop: top })
-      : await showOverview(pane, next.path, { scrollTop: top });
+    done = await render(pane, next, { hash: target.hash, line: target.line, scrollTop: top });
   } catch (e) {
     console.error(e);
     toast(`화면을 그리지 못했습니다: ${e.message}`, 'error');
@@ -101,8 +104,7 @@ export async function refreshView(pane) {
   pane.stale = false;
   const scrollTop = () => pane.scroller.scrollTop;
   try {
-    if (view.type === 'doc') await render(pane, view.path, { scrollTop });
-    else await showOverview(pane, view.path, { scrollTop });
+    await render(pane, view, { scrollTop });
   } catch (e) {
     console.error(e);
     toast(`다시 그리지 못했습니다: ${e.message}`, 'error');

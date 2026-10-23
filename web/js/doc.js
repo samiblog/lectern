@@ -12,6 +12,7 @@ import { linkPaths } from './pathlink.js';
 import { setStatus } from './status.js';
 import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
+import { isCode } from './icons.js';
 import {
   $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
 } from './util.js';
@@ -200,6 +201,13 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
           } else {
             emit('open', { type: 'doc', path: r.path, hash: r.hash });
           }
+        });
+      } else if (isCode(r.path.split('/').pop())) {
+        // 코드 파일: 읽기 화면의 그 줄로 (#L42) — 편집기는 우클릭 메뉴 (D43)
+        a.classList.add('file-link');
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash) });
         });
       } else {
         a.classList.add('file-link');

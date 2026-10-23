@@ -219,10 +219,11 @@ sequenceDiagram
 - 브라우저 개발 모드에서는 Ctrl+W·Ctrl+Tab·Ctrl+숫자를 브라우저가 먼저 가져간다 (창 모드에서는 된다). 인쇄는 선택된 탭의 문서만.
 
 ### 화면 이동 (nav.js)
+- 화면 종류는 `doc`(md·html 문서)·`overview`(폴더 개요)·`code`(코드 읽기 화면, D43). `navigate({type, path, hash?, line?})` — `line` 은 코드 화면의 그 줄로.
 - `navigate(target, {pane})` 은 그 칸(기본은 선택된 탭의 칸)의 현재 스크롤 위치를 기억하고 새 화면을 그린 뒤 그 칸의 기록에 넣는다. 뒤로/앞으로는 선택된 탭의 기록으로, 기억한 스크롤로 돌아간다. `restorePosition(pane, pos)` 은 탭을 처음 열 때 마지막 문서·위치로 연다 (문서별 위치도 넣어 둔다).
 - `refreshView(pane)` 은 그 칸(없으면 선택된 탭의 칸 — 숨은 탭은 `stale` 로 두었다가 고를 때)을 같은 화면, 같은 스크롤 위치로 다시 그린다. 위치는 렌더러에 함수로 넘겨 바꿔 끼우기 직전에 읽는다 (그리는 동안 사용자가 스크롤하면 그 위치). 사용자의 이동이 진행 중이면 미뤘다가 이동이 끝나면 한 번 한다 (`pending`·`missedRefresh` — 그사이 바뀐 문서를 놓치지 않게).
 - 뒤로/앞으로를 빠르게 여러 번 누르면 아직 그리는 중인 기록 위치(`wanted`)에서 이어 간다. 그리다 오류가 나면 알림(toast)을 띄우고 화면은 그대로 둔다. `pending`·`missedRefresh`·`wanted` 는 칸마다다.
-- 렌더링 함수(`showDoc`·`showHtml`·`showOverview`)는 칸을 첫 인자로 받고, 시작할 때 `++pane.renderId` 를 받아 두고, await 뒤에 값이 바뀌었으면 결과를 버린다 (탭을 닫아도 순번을 올려 버리게 한다). 목차·상태줄·원문·바뀐 곳은 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 그 칸에 남기고, 선택된 칸이면 바로 보인다.
+- 렌더링 함수(`showDoc`·`showHtml`·`showOverview`·`showCode`)는 칸을 첫 인자로 받고, 시작할 때 `++pane.renderId` 를 받아 두고, await 뒤에 값이 바뀌었으면 결과를 버린다 (탭을 닫아도 순번을 올려 버리게 한다). 목차·상태줄·원문·바뀐 곳은 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 그 칸에 남기고, 선택된 칸이면 바로 보인다.
 
 ### 문서 렌더링 순서 (doc.js `showDoc`)
 1. `GET /doc/<탭 id>/<경로>` 로 원문을 받는다 (실패하면 '문서 없음' 화면).
@@ -353,12 +354,18 @@ sequenceDiagram
 - 칸 머리: 폴더 이름, 상태(2초마다 `/api/term/info` — 실행 중·대기·끝남·시작 전), 크게/모두 보기(`.solo`), 다시 시작, 이 프로젝트로(`leaveGather({tab, panel:true})` — 그 탭을 고르고 오른쪽 터미널을 연다). 머리를 두 번 누르면 크게.
 - 닫기: 버튼·`` Ctrl+Shift+` ``, 프로젝트 탭 누르기(잡기 단계에서 먼저 닫고 tabs.js 가 그 탭을 고른다), Ctrl+1~9. 탭 목록이 바뀌면(`tabs` 이벤트) 칸을 맞추고, 셸이 생기거나 끝나면(`terms` 이벤트) 상태와 버튼의 수를 고친다.
 
+### 코드 화면 (codeview.js, outline.js)
+- `showCode(pane, path, {line, scrollTop})`: `GET /doc/<id>/<경로>` 로 글을 받아(4MB 넘거나 NUL 이 있으면 '편집기로 여세요' 안내) highlight.js 로 칠하고(1MB 넘거나 없는 언어면 글자로), 여러 줄에 걸친 `<span>` 을 줄마다 닫고 다시 열어 줄로 나눈다(`splitLines`). `#lec-view.md-body.code-view` 에 머리줄(`.cv-head` — 이름·폴더·언어, 편집기로 열기·전체 복사)과 줄(`.cv-line[data-line]` > `.cv-text`)을 최상위 자식으로 넣는다 — 줄 번호는 `::before`(복사되지 않음), 긴 줄은 `pre-wrap`. 같은 파일을 다시 그리면 `snapshot`·`markChanges` 로 바뀐 줄을 강조한다. 상태줄: 언어·줄 수·크기·수정 시각(Last-Modified).
+- 목차: `outline.js` 의 `outlineOf(path, text)` → `[{line, level, name, kind}]` 를 `setToc(pane, view, outline)` 로 넘기면 `toc.js` 의 `buildOutline` 이 그 줄들을 제목처럼 쓴다 (지금 읽는 위치 표시, 누르면 그 줄을 위로·잠깐 테두리). 확장자 → 언어(highlight.js 이름·보일 이름·규칙 묶음)도 `outline.js` 의 `languageOf`.
+- 자동 새로고침: 2초마다 선택된 칸이 코드 화면이면 `HEAD /doc/…` 의 Last-Modified·Content-Length 를 그릴 때 받은 값(`pane.codeStamp`)과 비교해 다르면 `refresh-view`. 다른 탭을 고르면(`pane`) 바로 한 번 본다.
+- 여는 곳: '코드' 목록·폴더 보기의 코드 파일(한 번 누르기·Enter → `open {type:'code'}`, 두 번 누르기 → 편집기), 경로 표기(`pathlink.js` — 코드면 `line` 과 함께), 문서 속 코드 파일 링크(`doc.js` 의 `bindLink` — `#L42`). 줄 우클릭은 `docmenu.js` 의 `codeMenu`.
+
 ### 단축키
 
 | 키 | 동작 |
 |---|---|
 | Ctrl+P | 빠른 열기 (입력 전에는 최근 수정 순) |
-| Ctrl+F | 문서 화면: 문서 안 찾기 / 개요 화면: 트리 필터로 이동 |
+| Ctrl+F | 문서·코드 화면: 화면 안 찾기 / 개요 화면: 트리 필터로 이동 |
 | Ctrl+Shift+F | 전체 검색 (사이드바 '검색' 탭) |
 | Ctrl+, | 설정 창 |
 | Ctrl+O | 폴더 열기 (새 탭으로, 이미 열린 폴더면 그 탭) |

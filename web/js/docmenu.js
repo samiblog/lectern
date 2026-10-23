@@ -2,6 +2,7 @@
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
 //
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
+// 코드 화면(codeview.js)에서는 줄 메뉴: 이 줄·고른 글 복사, Claude용 위치(@경로 12~20행), 편집기에서 이 줄 열기, 경로 복사, 전체 복사.
 // 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24).
 
 import { S } from './store.js';
@@ -266,8 +267,43 @@ function docItems() {
   return items;
 }
 
+/** 코드 화면의 줄 번호 (요소·글 위치가 든 줄) */
+const lineOf = (node) => Number((node?.nodeType === 1 ? node : node?.parentElement)?.closest?.('.cv-line')?.dataset.line) || 0;
+
+/** 코드 화면의 우클릭 메뉴 */
+function codeMenu(e, view, x, y) {
+  const path = view.dataset.codePath;
+  if (!path || e.target.closest?.('#lec-findbar')) return;
+  e.preventDefault();
+  const row = e.target.closest?.('.cv-line');
+  const line = Number(row?.dataset.line) || 0;
+  const sel = getSelection();
+  const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString() : '';
+  let range = line ? [line, line] : null;
+  if (selected) {
+    const a = lineOf(sel.anchorNode);
+    const b = lineOf(sel.focusNode);
+    if (a && b) range = [Math.min(a, b), Math.max(a, b)];
+  }
+  const items = [{ header: range ? `${path} ${rangeText(range)}` : path }];
+  if (selected) items.push({ label: '선택한 글 복사', hint: describe(selected.trim()), action: () => copyPlain(selected) });
+  if (row && !selected) items.push({ label: '이 줄 복사', hint: describe(row.textContent), action: () => copyPlain(row.textContent) });
+  if (range) {
+    items.push({ label: 'Claude용 위치 복사', hint: `@${path} ${rangeText(range)}`, action: () => copyPlain(`@${path} ${rangeText(range)}`) },
+      { label: '편집기에서 이 줄 열기', hint: `${range[0]}행`, action: () => openExternal(path, range[0]) });
+  }
+  items.push('-', ...pathMenuItems(path, true), '-',
+    { label: '코드 전체 복사', action: () => copyPlain(view.codeText || '', `${path} 전체`) });
+  row?.classList.add('lec-picked');
+  showMenu(x, y, items, () => row?.classList.remove('lec-picked'));
+}
+
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
 function openMenu(e, view, x, y) {
+  if (view.classList?.contains('code-view')) {
+    codeMenu(e, view, x, y);
+    return;
+  }
   doc = S.pane?.source ?? null;   // 보이는 칸은 선택된 탭의 칸뿐이다 (panes.js)
   if (!doc || S.view?.type !== 'doc' || S.view.path !== doc.path) return;   // 문서 화면에서만
   if (e.target.closest?.('#lec-findbar')) return;

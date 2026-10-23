@@ -47,6 +47,29 @@
 .md-body .lec-changed { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-changed 4s ease-in; }
 @media (prefers-reduced-motion: reduce) { .md-body .lec-changed { animation: none; outline-color: var(--ui-fresh, #d99a06); } }
 
+/* 코드 화면 (codeview.js, D43): 줄 번호 + 줄(긴 줄은 접어서). 색은 highlight.js(github / github-dark), 바탕은 스타일의 코드 바탕 */
+.md-body.code-view { max-width: none; padding-top: 0; }
+.code-view .cv-head {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+  margin: 0 0 8px; padding: 14px 0 10px; border-bottom: 1px solid var(--md-border); background: var(--md-bg);
+}
+.code-view .cv-title { font-family: var(--md-mono); font-size: calc(17px * var(--md-scale, 1)); font-weight: 700; color: var(--md-heading); }
+.code-view .cv-sub { color: var(--md-muted); font-size: calc(13px * var(--md-scale, 1)); }
+.code-view .cv-tools { margin-left: auto; display: flex; gap: 6px; }
+.code-view .cv-line {
+  display: grid; grid-template-columns: calc((var(--cv-digits, 3) + 1.5) * 1ch) minmax(0, 1fr); column-gap: 14px;
+  font-family: var(--md-mono); font-size: calc(13.5px * var(--md-scale, 1)); line-height: 1.55; min-height: 1.55em;
+  background: var(--md-code-bg); padding: 0 12px 0 0;
+}
+.code-view .cv-line::before {
+  content: attr(data-line); text-align: right; color: var(--md-muted); opacity: .75; user-select: none;
+  border-right: 1px solid var(--md-border); padding-right: 10px;
+}
+.code-view .cv-text { white-space: pre-wrap; overflow-wrap: anywhere; color: var(--md-fg); tab-size: 4; }
+.code-view .cv-line:first-of-type { padding-top: 0; }
+.code-view .cv-line:hover { background: color-mix(in srgb, var(--md-link) 7%, var(--md-code-bg)); }
+.code-view .cv-line.lec-target { outline-offset: 0; }
+
 /* 목차에서 고른 구성 요소 (toc.js): 그 자리에 잠깐 링크 색 테두리 */
 @keyframes lec-target {
   from { background-color: color-mix(in srgb, var(--md-link) 12%, transparent); outline-color: color-mix(in srgb, var(--md-link) 85%, transparent); }

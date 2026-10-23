@@ -37,13 +37,44 @@ export function clearToc() {
   updateTocVisibility();
 }
 
-/** 칸(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 칸이면 바로 다시 그린다 */
-export function setToc(pane, root) {
+/**
+ * 칸(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 칸이면 바로 다시 그린다.
+ * outline: 코드 화면의 목차 [{line, level, name, kind}] (codeview.js·outline.js) — 있으면 제목 대신 이것으로 (줄은 root 의 .cv-line)
+ */
+export function setToc(pane, root, outline = null) {
   pane.tocRoot = root;
+  pane.tocOutline = outline;
   if (pane === S.pane) showPaneToc(pane);
 }
 
-const showPaneToc = (pane) => (pane.tocRoot ? buildToc(pane.tocRoot) : clearToc());
+const showPaneToc = (pane) => {
+  if (!pane.tocRoot) clearToc();
+  else if (pane.tocOutline) buildOutline(pane.tocRoot, pane.tocOutline);
+  else buildToc(pane.tocRoot);
+};
+
+// 코드 목차의 종류 표시: 구분 주석·영역, 클래스, 형식, 함수, 메서드, 키, 선택자, 제목, 이름표
+const OUTLINE_MARK = { section: '§', class: 'C', type: 'T', function: 'ƒ', method: 'ƒ', key: '·', selector: '#', heading: 'H', label: ':' };
+
+/** 코드 화면의 목차: 지금 읽는 위치도 제목처럼 표시한다 (heads = 그 줄들) */
+function buildOutline(view, items) {
+  const rows = items.map((it) => ({ ...it, el: view.querySelector(`.cv-line[data-line="${it.line}"]`) })).filter((r) => r.el);
+  if (!rows.length) {
+    clearToc();
+    return;
+  }
+  heads = rows.map((r) => r.el);
+  parts = [];
+  const box = $('#lec-toc');
+  box.innerHTML = `<p class="toc-head">목차</p><ul class="toc-list code-outline">${rows.map((r, i) => (
+    `<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${esc(`${r.name} — ${r.line}행`)}">`
+    + `<span class="ok" aria-hidden="true">${OUTLINE_MARK[r.kind] || '·'}</span>${esc(r.name)}</a></li>`
+  )).join('')}</ul>`;
+  links = $$('a[data-i]', box);
+  active = -1;
+  spy();
+  updateTocVisibility();
+}
 
 // ---- 구성 요소 ------------------------------------------------------------------
 
@@ -303,6 +334,14 @@ export function initToc() {
     e.preventDefault();
     const h = heads[+a.dataset.i];
     if (!h) return;
+    if (h.classList.contains('cv-line')) {   // 코드 화면: 그 줄을 위에 두고 잠깐 표시
+      h.scrollIntoView({ block: 'start' });
+      h.classList.remove('lec-target');
+      void h.offsetWidth;
+      h.classList.add('lec-target');
+      setTimeout(() => h.classList.remove('lec-target'), 1800);
+      return;
+    }
     unfoldTo(h);
     h.scrollIntoView({ block: 'start' });
   });

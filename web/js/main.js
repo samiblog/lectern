@@ -29,6 +29,7 @@ import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen } from './terminal.js';
+import { initCodeView } from './codeview.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
@@ -43,6 +44,8 @@ function updateWindowTitle() {
   if (S.view?.type === 'doc') {
     const f = S.fileMap.get(S.view.path);
     title = `${f?.title || basename(S.view.path)} - ${S.name}`;
+  } else if (S.view?.type === 'code') {
+    title = `${basename(S.view.path)} - ${S.name}`;
   }
   native.setTitle(`${title} - Lectern`);
 }
@@ -151,7 +154,7 @@ function bindKeys() {
       openSearch();
     } else if (mod && key === 'f') {
       e.preventDefault();
-      if (S.view?.type === 'doc') openFind();
+      if (S.view?.type === 'doc' || S.view?.type === 'code') openFind();
       else focusFilter();
     } else if (mod && e.key === ',') {
       e.preventDefault();
@@ -234,6 +237,7 @@ async function boot() {
   initPathLinks();
   initStatus();
   initOverview();
+  initCodeView();
   initTree();
   initOthers();   // initTree 다음에 — 탭을 바꿀 때 트리가 그 탭의 거르기 글자를 먼저 되살린다
   initPalette();
