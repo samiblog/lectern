@@ -23,15 +23,16 @@ import { fullPath, labelOf, tipOf, pathMenuItems, hasChangedInside } from './tre
 import { fileIcon, folderIcon, isCode } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus } from './util.js';
+import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
 const MIN_HEIGHT = 64;   // 분리선을 끌어 줄일 수 있는 높이 (머리줄 + 두 줄쯤)
-const OPEN_HINT = { default: '기본 앱으로', editor: '편집기로', reveal: '탐색기에서 선택만 (실행하지 않음)' };
+const OPEN_HINT = { default: t('기본 앱으로'), editor: t('편집기로'), reveal: t('탐색기에서 선택만 (실행하지 않음)') };
 
 // 목록 둘: 파일(폴더 보기에서는 문서·파일·코드를 합친 트리)과 코드
 const LISTS = {
-  files: { el: '#lec-others-list', none: '문서나 코드가 아닌 파일이 없습니다', noHit: '일치하는 파일이 없습니다', visible: 'others_visible' },
-  code: { el: '#lec-code-list', none: '코드 파일이 없습니다', noHit: '일치하는 코드가 없습니다', visible: 'code_visible' },
+  files: { el: '#lec-others-list', none: t('문서나 코드가 아닌 파일이 없습니다'), noHit: t('일치하는 파일이 없습니다'), visible: 'others_visible' },
+  code: { el: '#lec-code-list', none: t('코드 파일이 없습니다'), noHit: t('일치하는 코드가 없습니다'), visible: 'code_visible' },
 };
 // 묶음 셋 (위에서부터). 펼친 첫 묶음이 남은 높이를 갖는다
 const SECTIONS = [
@@ -45,7 +46,7 @@ const keyOf = (el) => el?.closest?.('[data-list]')?.dataset.list || 'files';
 const state = () => S.tab?.others || null;
 const folderView = () => S.config.files_view === 'folder';
 const isOpen = (key) => S.config[key] !== false;
-const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · 수정 ${formatDateTime(f.mtime)}\n${f.path}`;
+const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
 
 /** 목록 k 가 보이는지: 탭이 있고, 사이드바 '파일' 탭이고, (폴더 보기의 파일 목록이거나) 그 묶음이 펼쳐 있음 */
 function shown(k) {
@@ -85,7 +86,7 @@ function pick(nodes, keep) {
 }
 
 // 서버(scanner.natural_key)와 같은 자연 정렬: 숫자 부분은 수로, 나머지는 소문자로 ('2장' < '10장')
-const natKey = (s) => s.split(/(\d+)/).map((t, i) => (i % 2 ? Number(t) : t.toLowerCase()));
+const natKey = (s) => s.split(/(\d+)/).map((w, i) => (i % 2 ? Number(w) : w.toLowerCase()));
 function byName(a, b) {
   const x = natKey(a.name);
   const y = natKey(b.name);
@@ -133,7 +134,7 @@ function fileRow(o, v, f, depth, sub = '') {
     const active = S.view?.type === 'doc' && S.view.path === f.path ? ' active' : '';
     return `<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${esc(tipOf(f))}"><span class="caret-space"></span>`
       + `${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${subHtml(sub)}`
-      + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
+      + `${S.changed.has(f.path) ? `<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`;
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
   return `<div ${rowAttrs(o, v, f.path, depth, ` file${cur}`)} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
@@ -150,7 +151,7 @@ function nodesHtml(o, v, nodes, depth) {
     const open = v.open.has(n.path);
     const folder = v.sel === 'folder';
     const cur = folder && S.view?.type === 'overview' && S.view.path === n.path ? ' active' : '';
-    const dot = folder && !open && hasChangedInside(n.path) ? '<span class="dot" title="안쪽 문서가 바뀜"></span>' : '';
+    const dot = folder && !open && hasChangedInside(n.path) ? `<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : '';
     html += `<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}`)} aria-expanded="${open}" title="${esc(n.path)}/">`
       + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>${dot}</div>`;
     if (open) html += nodesHtml(o, v, n.children, depth + 1);
@@ -161,7 +162,7 @@ function nodesHtml(o, v, nodes, depth) {
 /** 종류별 보기의 파일·코드 목록 */
 function kindHtml(o, k, v, terms) {
   if (terms) {
-    const hits = [...filesIn(v.tree)].filter((f) => terms.every((t) => f.path.toLowerCase().includes(t)));
+    const hits = [...filesIn(v.tree)].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     return hits.length
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
       : `<p class="side-empty">${LISTS[k].noHit}</p>`;
@@ -172,16 +173,16 @@ function kindHtml(o, k, v, terms) {
 /** 폴더 보기: 맨 위 프로젝트 행(누르면 개요) + 문서와 파일을 합친 트리 */
 function folderHtml(o, v, terms) {
   if (terms) {
-    const docs = S.files.filter((f) => terms.every((t) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(t)));
-    const files = [...filesIn(o.data?.tree || [])].filter((f) => terms.every((t) => f.path.toLowerCase().includes(t)));
+    const docs = S.files.filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
+    const files = [...filesIn(o.data?.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     const hits = [...docs.map((f) => ({ ...f, doc: true })), ...files];
     return hits.length
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
-      : '<p class="side-empty">일치하는 문서나 파일이 없습니다</p>';
+      : `<p class="side-empty">${t('일치하는 문서나 파일이 없습니다')}</p>`;
   }
   const root = S.view?.type === 'overview' && !S.view.path ? ' active' : '';
-  return `<div ${rowAttrs(o, v, '', 0, ` dir root${root}`)} title="프로젝트 개요"><span class="label">${esc(S.name)}</span></div>`
-    + (o.all.length ? nodesHtml(o, v, o.all, 0) : '<p class="side-empty">문서나 파일이 없습니다</p>');
+  return `<div ${rowAttrs(o, v, '', 0, ` dir root${root}`)} title="${t('프로젝트 개요')}"><span class="label">${esc(S.name)}</span></div>`
+    + (o.all.length ? nodesHtml(o, v, o.all, 0) : `<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`);
 }
 
 /** 묶음 머리줄의 개수 */
@@ -210,7 +211,7 @@ function renderList(k) {
   const query = $('#lec-filter').value.trim().toLowerCase();
   const terms = query ? query.split(/\s+/) : null;
   let html = folder ? folderHtml(o, v, terms) : kindHtml(o, k, v, terms);
-  if (o.data?.truncated) html += `<p class="side-empty">파일이 많아 ${o.data.limit}개까지만 보입니다</p>`;
+  if (o.data?.truncated) html += `<p class="side-empty">${t('파일이 많아 {n}개까지만 보입니다', { n: o.data.limit })}</p>`;
   keepFocus(box, () => { box.innerHTML = html; });
   // Tab 키로 목록에 들어올 행: 고른 행, 없으면 첫 행
   if (!box.querySelector('.row[tabindex="0"]')) box.querySelector('.row')?.setAttribute('tabindex', '0');
@@ -262,7 +263,7 @@ function load(tab, { fresh = false } = {}) {
       o.error = null;
       for (const k of Object.keys(LISTS)) for (const p of [...o.open[k]]) if (!o.index[k].has(p)) o.open[k].delete(p);
     } catch (e) {
-      if (S.tabs.includes(tab)) o.error = `파일 목록을 읽지 못했습니다 (${e.message}). F5 를 누르면 다시 읽습니다.`;
+      if (S.tabs.includes(tab)) o.error = t('파일 목록을 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: e.message });
     } finally {
       o.loading = null;
     }
@@ -345,7 +346,7 @@ function enter(k, path) {
 }
 
 async function copy(text) {
-  toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다');
+  toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'));
 }
 
 function menuItems(k, n) {
@@ -353,24 +354,24 @@ function menuItems(k, n) {
   const items = [];
   if (n.type === 'dir') {
     items.push({ header: `${n.path}/` },
-      { label: view(state(), k).open.has(n.path) ? '접기' : '펼치기', hint: '두 번 누르기·Enter', action: () => toggle(k, n.path) });
-    if (folderView() && S.dirs.has(n.path)) items.push({ label: '폴더 개요 보기', action: () => emit('open', { type: 'overview', path: n.path }) });
-    items.push({ label: '탐색기에서 열기', action: () => openExternal(n.path) });
+      { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) });
+    if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
+    items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });
   } else {
     items.push({ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` });
     if (isCodeFile(n)) {
-      items.push({ label: '읽기 화면에서 보기', hint: '누르기·Enter', action: () => emit('open', { type: 'code', path: n.path }) },
-        { label: '편집기로 열기', hint: '두 번 누르기', action: () => openExternal(n.path) });
+      items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
+        { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) });
     } else {
-      items.push({ label: '열기', hint: `${OPEN_HINT[n.open] || ''} — 두 번 누르기·Enter`, action: () => openExternal(n.path) });
+      items.push({ label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기·Enter')}`, action: () => openExternal(n.path) });
     }
     // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
-    if (n.open === 'default') items.push({ label: '편집기로 열기', action: () => openExternal(n.path, undefined, 'editor') });
-    items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(n.path) });
+    if (n.open === 'default') items.push({ label: t('편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
+    items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
   }
-  items.push('-', { label: `@${n.path} 복사`, hint: 'Claude Code 프롬프트에 붙여 넣기', action: () => copy(`@${n.path}`) },
-    { label: '전체 경로 복사', action: () => copy(fullPath(n.path)) });
-  if (n.type === 'file') items.push({ label: '파일 이름 복사', action: () => copy(n.name) });
+  items.push('-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`) },
+    { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)) });
+  if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name) });
   return items;
 }
 
@@ -432,7 +433,7 @@ function applyLayout() {
   const folder = folderView();
   $('#lec-files').classList.toggle('folder-view', folder);
   $('#lec-btn-view').classList.toggle('on', folder);
-  listEl('files').setAttribute('aria-label', folder ? '문서와 파일 (폴더 구조)' : '파일');
+  listEl('files').setAttribute('aria-label', folder ? t('문서와 파일 (폴더 구조)') : t('파일'));
   const grow = SECTIONS.find((s) => isOpen(s.visible));   // 펼친 첫 묶음이 남은 높이를 갖는다
   for (const s of SECTIONS) {
     const sec = $(s.el);

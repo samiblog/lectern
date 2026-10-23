@@ -5,6 +5,7 @@ import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
 import { fileIcon } from './icons.js';
 import { $, esc, timeAgo } from './util.js';
+import { t } from './i18n.js';
 
 const MAX_ITEMS = 60;
 const MIN_CODE = 20;   // 맞는 코드가 있으면 문서가 많아도 이만큼은 보인다
@@ -27,7 +28,7 @@ function score(f, terms, query) {
   let s = 0;
   if (title.startsWith(terms[0]) || name.startsWith(terms[0])) s += 4;
   if (title.includes(query) || name.includes(query)) s += 3;
-  if (terms.every((t) => name.includes(t) || title.includes(t))) s += 2;
+  if (terms.every((w) => name.includes(w) || title.includes(w))) s += 2;
   return s;
 }
 
@@ -40,7 +41,7 @@ function update() {
     const match = (list) => list
       .filter((f) => {
         const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
-        return terms.every((t) => hay.includes(t));
+        return terms.every((w) => hay.includes(w));
       })
       .map((f) => ({ f, s: score(f, terms, query) }))
       .sort((a, b) => b.s - a.s || b.f.mtime - a.f.mtime)
@@ -58,7 +59,7 @@ function update() {
 function renderList() {
   const ul = $('#lec-palette-list');
   if (!items.length) {
-    ul.innerHTML = `<li class="empty">${S.root ? '일치하는 문서나 코드가 없습니다' : '먼저 폴더를 여세요'}</li>`;
+    ul.innerHTML = `<li class="empty">${S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요')}</li>`;
     return;
   }
   ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}" aria-selected="${i === selected}">

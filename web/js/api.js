@@ -2,6 +2,7 @@
 
 import { S } from './store.js';
 import { toast } from './util.js';
+import { t } from './i18n.js';
 
 function headers(extra = {}) {
   const h = { ...extra };
@@ -48,15 +49,15 @@ export async function saveConfig(patch) {
   try {
     await postJSON('/api/config', patch);
   } catch (e) {
-    console.warn('설정 저장 실패', e);
+    console.warn('설정 저장 실패', e);   // i18n-ok (개발자 도구에만)
   }
 }
 
 const OPEN_RESULT = {
-  editor: '편집기로 열었습니다',
-  default: '기본 앱으로 열었습니다',
-  reveal: '탐색기에서 파일을 표시했습니다',
-  folder: '폴더를 열었습니다',
+  editor: t('편집기로 열었습니다'),
+  default: t('기본 앱으로 열었습니다'),
+  reveal: t('탐색기에서 파일을 표시했습니다'),
+  folder: t('폴더를 열었습니다'),
 };
 
 /**
@@ -66,9 +67,9 @@ const OPEN_RESULT = {
 export async function openExternal(path, line, how) {
   try {
     const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line, how });
-    toast(OPEN_RESULT[r.action] || '열었습니다');
+    toast(OPEN_RESULT[r.action] || t('열었습니다'));
   } catch (e) {
-    toast(e.status === 404 ? `파일을 찾을 수 없습니다: ${path}` : `열지 못했습니다: ${e.message}`, 'error');
+    toast(e.status === 404 ? t('파일을 찾을 수 없습니다: {path}', { path }) : t('열지 못했습니다: {error}', { error: e.message }), 'error');
   }
 }
 
@@ -77,7 +78,7 @@ export async function revealInExplorer(path, tab = S.tab) {
   try {
     await postJSON('/api/reveal', { p: tab?.id, path });
   } catch (e) {
-    toast(`탐색기에서 열지 못했습니다: ${e.message}`, 'error');
+    toast(t('탐색기에서 열지 못했습니다: {error}', { error: e.message }), 'error');
   }
 }
 
@@ -86,7 +87,7 @@ export const native = {
 
   async chooseFolder() {
     if (native.has('choose_folder')) return window.pywebview.api.choose_folder();
-    const p = window.prompt('열 폴더의 전체 경로를 입력하세요 (브라우저 개발 모드)');
+    const p = window.prompt(t('열 폴더의 전체 경로를 입력하세요 (브라우저 개발 모드)'));
     return p ? p.trim() : null;
   },
 

@@ -2,8 +2,9 @@
 
 import { S, on } from './store.js';
 import { $, formatClock } from './util.js';
+import { t } from './i18n.js';
 
-const WATCH_LABEL = { watchdog: '변경 감시 중', polling: '변경 감시 중 (주기 확인)' };
+const WATCH_LABEL = { watchdog: t('변경 감시 중'), polling: t('변경 감시 중 (주기 확인)') };
 
 function show({ path = '', info = '' }) {
   $('#lec-st-path').textContent = path;
@@ -22,8 +23,8 @@ function renderWatch() {
     el.textContent = '';
     return;
   }
-  const base = WATCH_LABEL[S.watch] || '변경 감시 중';
-  el.textContent = S.lastSync ? `${base}, 마지막 반영 ${formatClock(S.lastSync)}` : base;
+  const base = WATCH_LABEL[S.watch] || t('변경 감시 중');
+  el.textContent = S.lastSync ? `${base}, ${t('마지막 반영 {time}', { time: formatClock(S.lastSync) })}` : base;
 }
 
 export function initStatus() {

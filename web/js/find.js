@@ -8,6 +8,7 @@
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
 import { $, debounce, docRoot, screenRect } from './util.js';
+import { t } from './i18n.js';
 
 const MAX_HITS = 2000;
 let ranges = [];
@@ -86,7 +87,7 @@ function search(keepIndex = false) {
     ranges.push(r);
   }
   if (!ranges.length) {
-    $('#lec-find-count').textContent = '없음';
+    $('#lec-find-count').textContent = t('없음');
     return;
   }
   win.CSS.highlights.set('lec-find', new win.Highlight(...ranges));
@@ -130,9 +131,9 @@ export function pickMatchAt(el) {
 }
 
 /** 찾을 곳을 바꾼다 (사용설명서를 여닫을 때 — null 이면 문서 화면). 찾기 막대도 그곳으로 옮기고 결과는 지운다 */
-export function setFindTarget(t) {
+export function setFindTarget(next) {
   closeFind();
-  target = t;
+  target = next;
   scrollerOf()?.prepend(bar());
 }
 

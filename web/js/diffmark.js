@@ -10,6 +10,7 @@
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
 import { $, screenRect } from './util.js';
+import { t } from './i18n.js';
 
 const FLASH_MS = 4000;
 
@@ -53,8 +54,8 @@ function renderButton() {
   const marked = S.pane?.marks.list || [];
   const btn = $('#lec-st-changes');
   btn.hidden = !marked.length;
-  btn.textContent = `바뀐 곳 ${marked.length}곳 ↓`;
-  btn.title = '자동 새로고침으로 바뀐 곳으로 차례로 이동';
+  btn.textContent = `${t('바뀐 곳 {n}곳', { n: marked.length })} ↓`;
+  btn.title = t('자동 새로고침으로 바뀐 곳으로 차례로 이동');
 }
 
 /**

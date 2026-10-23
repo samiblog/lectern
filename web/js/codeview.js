@@ -13,6 +13,7 @@ import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
 import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
+import { t } from './i18n.js';
 
 const MAX_BYTES = 4 * 1024 * 1024;        // 이보다 크면 보이지 않고 편집기로
 const MAX_HIGHLIGHT = 1024 * 1024;        // 이보다 크면 색 없이 (빨리 보이게)
@@ -49,7 +50,7 @@ function notice(view, path, message) {
   delete view.dataset.docPath;
   view.dataset.codePath = path;
   view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(message)}</p>
-    <p><button type="button" class="primary cv-editor">편집기로 열기</button></p></div>`;
+    <p><button type="button" class="primary cv-editor">${t('편집기로 열기')}</button></p></div>`;
 }
 
 /**
@@ -79,7 +80,7 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   if (id !== pane.renderId) return false;
   pane.codeStamp = stamp;
   if (text == null || text.includes('\u0000')) {
-    notice(view, path, text == null ? `파일이 너무 큽니다 (${formatSize(size)}). 편집기로 여세요.` : '글자로 된 파일이 아닙니다. 편집기로 여세요.');
+    notice(view, path, text == null ? t('파일이 너무 큽니다 ({size}). 편집기로 여세요.', { size: formatSize(size) }) : t('글자로 된 파일이 아닙니다. 편집기로 여세요.'));
     finish(pane, path, null, { path, info: formatSize(size) });
     return true;
   }
@@ -97,14 +98,15 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   view.style.setProperty('--cv-digits', String(String(lines.length).length));
   view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
     + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(lang.name)}</div>`
-    + '<div class="cv-tools"><button type="button" class="text-btn cv-editor" title="편집기로 열기 (코드 목록에서 두 번 누르기)">편집기로 열기</button>'
-    + '<button type="button" class="text-btn cv-copy">전체 복사</button></div></header>'
+    + `<div class="cv-tools"><button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`
+    + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
     + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');
   view.dataset.codePath = path;
   view.codeText = text;
   const when = modified ? new Date(modified) : null;
   finish(pane, path, outlineOf(path, text), {
-    path, info: `${lang.name} · ${lines.length}줄 · ${formatSize(size)}${when && !Number.isNaN(when.getTime()) ? ` · 수정 ${formatDateTime(when.getTime() / 1000)}` : ''}`,
+    path, info: `${lang.name} · ${t('{n}줄', { n: lines.length })} · ${formatSize(size)}`
+      + `${when && !Number.isNaN(when.getTime()) ? ` · ${t('수정 {when}', { when: formatDateTime(when.getTime() / 1000) })}` : ''}`,
   });
   if (top != null) scroller.scrollTop = top;
   else if (line) goToLine(view, line, { flash: true });
@@ -153,7 +155,7 @@ export function initCodeView() {
     const path = view.dataset.codePath || S.view?.path;
     if (e.target.closest('.cv-editor')) openExternal(path);
     else if (e.target.closest('.cv-copy')) {
-      copyText(view.codeText || '').then((ok) => toast(ok ? `복사했습니다: ${basename(path)} 전체` : '복사하지 못했습니다'));
+      copyText(view.codeText || '').then((ok) => toast(ok ? t('복사했습니다: {what}', { what: t('{name} 전체', { name: basename(path) }) }) : t('복사하지 못했습니다')));
     }
   });
   setInterval(check, CHECK_MS);

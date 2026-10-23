@@ -5,12 +5,14 @@ import { S, emit } from './store.js';
 import { saveConfig, postJSON } from './api.js';
 import { fillPicker, grouping } from './theme.js';
 import { $, $$, toast } from './util.js';
+import { t } from './i18n.js';
 
 const box = () => $('#lec-settings');
 
 export function openSettings() {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
   for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
+  for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
   box().hidden = false;
   $('#lec-settings input')?.focus();
 }
@@ -22,6 +24,11 @@ export function closeSettings() {
 }
 
 async function onChange(e) {
+  if (e.target.name === 'language') {   // 화면 언어 (D46): 서버가 index.html 에 넣는 언어가 바뀌므로 다시 불러온다 (열린 탭·터미널 셸은 그대로)
+    await saveConfig({ language: e.target.value });
+    location.reload();
+    return;
+  }
   if (e.target.name === 'theme_groups') {   // 스타일 목록을 묶는 방식만 바뀐다 (고른 스타일은 그대로)
     await saveConfig({ theme_groups: e.target.value });
     fillPicker();
@@ -36,17 +43,17 @@ async function onChange(e) {
 }
 
 const OPENED = {
-  editor: '편집기에서 설정 파일을 열었습니다. 저장하면 반영됩니다',
-  default: '설정 파일을 열었습니다',
-  reveal: '편집기를 찾지 못해 탐색기에서 설정 파일을 보여 줍니다',
+  editor: t('편집기에서 설정 파일을 열었습니다. 저장하면 반영됩니다'),
+  default: t('설정 파일을 열었습니다'),
+  reveal: t('편집기를 찾지 못해 탐색기에서 설정 파일을 보여 줍니다'),
 };
 
 async function openConfigFile() {
   try {
     const r = await postJSON('/api/open-config', {});
-    toast(OPENED[r.action] || `열었습니다: ${r.path}`);
+    toast(OPENED[r.action] || t('열었습니다: {path}', { path: r.path }));
   } catch (e) {
-    toast(`설정 파일을 열지 못했습니다: ${e.message}`, 'error');
+    toast(t('설정 파일을 열지 못했습니다: {error}', { error: e.message }), 'error');
   }
 }
 

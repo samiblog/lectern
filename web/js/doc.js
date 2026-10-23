@@ -16,6 +16,7 @@ import { isCode } from './icons.js';
 import {
   $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
 } from './util.js';
+import { t } from './i18n.js';
 
 const PURIFY = {
   SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
@@ -25,7 +26,7 @@ const PURIFY = {
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|file):|[a-z]:(?:[\\/]|%5c)|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
 
-const ALERTS = { NOTE: '참고', TIP: '팁', IMPORTANT: '중요', WARNING: '경고', CAUTION: '주의' };
+const ALERTS = { NOTE: t('참고'), TIP: t('팁'), IMPORTANT: t('중요'), WARNING: t('경고'), CAUTION: t('주의') };
 
 const MEDIA_TAGS = /^(IMG|SOURCE|VIDEO|AUDIO|TRACK|EMBED|INPUT)$/;
 const SVG_NS = 'http://www.w3.org/2000/svg';
@@ -168,7 +169,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
     case 'anchor':
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+        if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
       });
       break;
     case 'external':
@@ -186,7 +187,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
       }
       break;
     case 'local':
-      a.title = r.path || '프로젝트 루트';
+      a.title = r.path || t('프로젝트 루트');
       if (r.isDir || tab.dirs.has(r.path)) {
         a.addEventListener('click', (e) => {
           e.preventDefault();
@@ -197,7 +198,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         a.addEventListener('click', (e) => {
           e.preventDefault();
           if (r.path === docPath && r.hash) {
-            if (!scrollToAnchor(where(), r.hash)) toast('문서에서 해당 위치를 찾지 못했습니다');
+            if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
           } else {
             emit('open', { type: 'doc', path: r.path, hash: r.hash });
           }
@@ -219,10 +220,10 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
       break;
     default:
       a.classList.add('link-off');
-      a.title = '프로젝트 폴더 밖이거나 열 수 없는 경로';
+      a.title = t('프로젝트 폴더 밖이거나 열 수 없는 경로');
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        toast('프로젝트 폴더 밖의 경로는 열지 않습니다');
+        toast(t('프로젝트 폴더 밖의 경로는 열지 않습니다'));
       });
   }
 }
@@ -267,15 +268,15 @@ function fixImage(img, baseUrl, stamp, tab, zoom = true) {
   }
   const isWebImage = r.kind === 'external' && /^(https?:)?\/\//i.test(r.url);
   if (!isWebImage) {
-    img.replaceWith(imageStandIn('표시할 수 없는 그림', img.alt));
+    img.replaceWith(imageStandIn(t('표시할 수 없는 그림'), img.alt));
     return;
   }
   if (S.config.external_images === false) {
-    img.replaceWith(imageStandIn('인터넷 그림 (설정에서 꺼 둠)', img.alt, r.url));
+    img.replaceWith(imageStandIn(t('인터넷 그림 (설정에서 꺼 둠)'), img.alt, r.url));
     return;
   }
   if (failedImages.has(r.url)) {
-    img.replaceWith(imageStandIn('인터넷 그림을 불러오지 못했습니다', img.alt, r.url));
+    img.replaceWith(imageStandIn(t('인터넷 그림을 불러오지 못했습니다'), img.alt, r.url));
     return;
   }
   // 외부 이미지: 문서 주소가 전달되지 않게 referrer 를 숨기고, 실패·시간 초과면 링크로 바꾼다
@@ -287,7 +288,7 @@ function fixImage(img, baseUrl, stamp, tab, zoom = true) {
     if (settled) return;
     settled = true;
     failedImages.add(r.url);
-    img.replaceWith(imageStandIn('인터넷 그림을 불러오지 못했습니다', img.alt, r.url));
+    img.replaceWith(imageStandIn(t('인터넷 그림을 불러오지 못했습니다'), img.alt, r.url));
   };
   img.addEventListener('load', () => { settled = true; }, { once: true });
   img.addEventListener('error', fail, { once: true });
@@ -386,13 +387,13 @@ function decorateCode(root) {
     pre.replaceWith(box);
     const tools = document.createElement('div');
     tools.className = 'code-tools';
-    tools.innerHTML = `${lang ? `<span class="code-lang">${esc(lang)}</span>` : ''}<button type="button" class="code-copy">복사</button>`;
+    tools.innerHTML = `${lang ? `<span class="code-lang">${esc(lang)}</span>` : ''}<button type="button" class="code-copy">${t('복사')}</button>`;
     box.append(tools, pre);
     tools.querySelector('button').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
       const ok = await copyText(code.textContent);
-      btn.textContent = ok ? '복사됨' : '복사 실패';
-      setTimeout(() => { btn.textContent = '복사'; }, 1400);
+      btn.textContent = ok ? t('복사됨') : t('복사 실패');
+      setTimeout(() => { btn.textContent = t('복사'); }, 1400);
     });
   }
 }
@@ -415,13 +416,13 @@ function frontMatterHtml(raw) {
     else simple = false;
   }
   if (!simple || !entries.length) {
-    return `<details class="front-matter" open><summary>메타데이터</summary><pre>${esc(raw)}</pre></details>`;
+    return `<details class="front-matter" open><summary>${t('메타데이터')}</summary><pre>${esc(raw)}</pre></details>`;
   }
   const rows = entries.map(([k, v]) => {
     const value = v.replace(/^[|>]-?\s*\n?/, '').replace(/^(["'])(.*)\1$/s, '$2');
     return `<tr><th>${esc(k)}</th><td>${esc(value)}</td></tr>`;
   }).join('');
-  return `<details class="front-matter" open><summary>메타데이터</summary><table>${rows}</table></details>`;
+  return `<details class="front-matter" open><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
 }
 
 function enhance(root, docPath, stamp, tab) {
@@ -438,9 +439,9 @@ function enhance(root, docPath, stamp, tab) {
 export function showMissing(view, path, err) {
   view.className = 'md-body';
   const parent = dirname(path);
-  const reason = err?.status === 404 ? '문서가 없거나(삭제·이동) 숨김 경로에 있습니다.' : `문서를 읽지 못했습니다: ${err?.message || ''}`;
+  const reason = err?.status === 404 ? t('문서가 없거나(삭제·이동) 숨김 경로에 있습니다.') : t('문서를 읽지 못했습니다: {error}', { error: err?.message || '' });
   view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(reason)}</p>
-    <p><button type="button" class="primary" data-parent="${esc(parent)}">${parent ? `${esc(parent)} 폴더 개요 보기` : '프로젝트 개요 보기'}</button></p></div>`;
+    <p><button type="button" class="primary" data-parent="${esc(parent)}">${parent ? esc(t('{folder} 폴더 개요 보기', { folder: parent })) : t('프로젝트 개요 보기')}</button></p></div>`;
   view.querySelector('button').addEventListener('click', () => emit('open', { type: 'overview', path: parent }));
 }
 
@@ -500,7 +501,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
 
   if (tab.changed.delete(path)) emit('changed');
   const file = tab.fileMap.get(path);
-  setStatus({ path, info: file ? `수정 ${formatDateTime(file.mtime)}` : '' }, pane);
+  setStatus({ path, info: file ? t('수정 {when}', { when: formatDateTime(file.mtime) }) : '' }, pane);
   emit('rendered', pane);
   return true;
 }

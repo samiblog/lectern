@@ -19,17 +19,18 @@ from typing import Any
 
 from lectern import __version__, instance
 from lectern.config import DEFAULTS, Config
+from lectern.i18n import t
 from lectern.paths import resource_dir
 from lectern.server import create_app
 from lectern.state import AppState, TooManyTabs
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(prog='Lectern', description='Lectern: 프로젝트 문서(Markdown·HTML)를 한눈에 보는 로컬 뷰어')
-    parser.add_argument('folder', nargs='?', help='열 프로젝트 폴더')
-    parser.add_argument('--browser', action='store_true', help='창 없이 서버만 실행 (개발용)')
-    parser.add_argument('--port', type=int, default=0, help='서버 포트 (기본: 자동, --browser 기본 8765)')
-    parser.add_argument('--debug', action='store_true', help='개발자 도구 사용')
+    parser = argparse.ArgumentParser(prog='Lectern', description='Lectern: 프로젝트 문서(Markdown·HTML)를 한눈에 보는 로컬 뷰어')   # i18n-ok (개발용 명령줄)
+    parser.add_argument('folder', nargs='?', help='열 프로젝트 폴더')   # i18n-ok
+    parser.add_argument('--browser', action='store_true', help='창 없이 서버만 실행 (개발용)')   # i18n-ok
+    parser.add_argument('--port', type=int, default=0, help='서버 포트 (기본: 자동, --browser 기본 8765)')   # i18n-ok
+    parser.add_argument('--debug', action='store_true', help='개발자 도구 사용')   # i18n-ok
     parser.add_argument('--version', action='version', version=__version__)
     return parser.parse_args(argv)
 
@@ -64,8 +65,8 @@ def open_folder(state: AppState, folder: str) -> None:
     try:
         state.open(folder)
     except (OSError, NotADirectoryError, TooManyTabs) as exc:
-        print(f'폴더를 열 수 없습니다: {exc}', file=sys.stderr)
-        state.notify(f'폴더를 열 수 없습니다: {exc}')
+        print(t('폴더를 열 수 없습니다: {error}', error=exc), file=sys.stderr)
+        state.notify(t('폴더를 열 수 없습니다: {error}', error=exc))
 
 
 def make_http_server(state: AppState, port: int):
@@ -78,7 +79,7 @@ def make_http_server(state: AppState, port: int):
 def run_browser(state: AppState, port: int) -> None:
     server = make_http_server(state, port or 8765)
     # 출력을 파일·NUL로 돌리면 stdout 은 cp949 라 '—' 같은 글자에서 죽는다 (tools/ui_smoke.py 가 그렇게 띄운다)
-    print(f'Lectern (브라우저 모드): http://127.0.0.1:{server.server_port}/  (종료: Ctrl+C)')
+    print(f'Lectern (브라우저 모드): http://127.0.0.1:{server.server_port}/  (종료: Ctrl+C)')   # i18n-ok
     try:
         server.serve_forever()
     except KeyboardInterrupt:

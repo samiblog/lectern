@@ -4,6 +4,8 @@ Lectern(렉턴, 독서대)은 Claude Code나 Claude가 프로젝트 폴더에 �
 문서를 고치지 않고, 스스로 인터넷에 연결하지 않으며(문서 속 인터넷 그림만 예외, 설정으로 끌 수 있음), 고른 프로젝트 폴더 안만 봅니다.
 Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립트는 돌리지 않습니다.
 
+> **English**: Lectern can show its interface in English — open Settings (Ctrl+,) and choose **Language · English** (by default it follows the Windows display language). Press F1 for the English user guide.
+
 ## 무엇을 하나
 
 - **프로젝트 탭**: 폴더마다 탭 하나. 탭을 누르면 왼쪽 트리와 본문이 그 프로젝트의 것으로 바뀌고, 탭마다 보던 문서와 위치가 그대로 남습니다. 뒤에 있는 탭의 문서가 바뀌면 탭에 점이 붙습니다
@@ -21,6 +23,7 @@ Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립�
 - **경로 자동 링크**: 본문의 `src/app.py:42` 처럼 실제로 있는 파일 경로를 누르면 편집기의 그 줄로 엽니다 (md·html 문서는 뷰어에서)
 - **빠른 이동**: Ctrl+P 빠른 열기(문서와 코드 — 맞는 문서 먼저), Ctrl+F 문서 안 찾기(굵게·코드 같은 서식이 섞여도), 뒤로/앞으로, 트리 우클릭으로 `@경로` 복사(Claude Code 프롬프트용). 다시 열면 마지막에 보던 문서와 위치로 시작합니다
 - **문서 속 절대경로**: `C:\...\chart.png` 처럼 프로젝트 안을 가리키는 절대경로 그림·링크도 열립니다 (프로젝트 밖은 막음)
+- **한국어·English**: 설정 창의 '언어 · Language' 에서 화면 언어를 고릅니다 (기본은 Windows 표시 언어를 따름). 사용설명서와 설치 프로그램도 영어판이 있습니다
 - **사용설명서·단축키**: F1 로 앱 안의 사용설명서(왼쪽 차례, 설명서 안에서 Ctrl+F), 툴바의 **?** 버튼(Ctrl+/)으로 단축키 표를 봅니다
 - **HTML 문서**: Claude가 만든 html 보고서를 트리에 `HTML` 표시와 함께 보입니다. 문서의 스타일은 그대로(스타일이 없으면 Lectern 스타일), 스크립트·인터넷 CSS는 막습니다(스크립트로 그리는 차트는 보이지 않음). `src`·`public`·`web` 같은 앱 소스 폴더의 html 은 문서로 보지 않습니다.
 - 숨김 파일·폴더(`.claude`, `.git` 등), `node_modules` 같은 폴더, 문서가 없는 폴더는 보이지 않습니다.
@@ -145,7 +148,7 @@ python tools\context_menu.py        :: 설치 파일 없이 쓸 때 탐색기 �
 
 ## 설정
 
-툴바의 톱니 버튼(Ctrl+,)으로 설정 창을 엽니다: 스타일 목록 묶기(용도별·분위기별·밝기별), 마지막 위치에서 시작(기본 켜짐), 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, 터미널 색을 스타일에 맞춤. 설정은 `%APPDATA%\Lectern\config.json` 에 저장되고, 설정 창에 없는 항목은 '설정 파일 열기'로 편집기에서 고칩니다 (저장하면 반영되고, 트리에 영향을 주는 제외 폴더는 F5).
+툴바의 톱니 버튼(Ctrl+,)으로 설정 창을 엽니다: 언어 · Language(자동·한국어·English — 자동은 Windows 표시 언어), 스타일 목록 묶기(용도별·분위기별·밝기별), 마지막 위치에서 시작(기본 켜짐), 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, 터미널 색을 스타일에 맞춤. 설정은 `%APPDATA%\Lectern\config.json` 에 저장되고, 설정 창에 없는 항목은 '설정 파일 열기'로 편집기에서 고칩니다 (저장하면 반영되고, 트리에 영향을 주는 제외 폴더는 F5).
 
 ```json
 {
@@ -158,6 +161,7 @@ python tools\context_menu.py        :: 설치 파일 없이 쓸 때 탐색기 �
 
 - `exclude_dirs`: 트리에서 뺄 폴더 이름 추가 (기본: node_modules, \_\_pycache\_\_, venv, env, dist, build, target, site-packages, htmlcov)
 - `html_exclude_dirs`: 이 이름의 폴더 안 html 은 문서로 보지 않습니다 (기본: src, public, static, templates, web, www, frontend, out — 앱 소스의 html 이 섞이지 않게)
+- `language`: 화면 언어 `auto`(기본, Windows 표시 언어)·`ko`·`en`.
 - `editor`: 코드 파일 링크를 열 편집기. 비워 두면 PATH의 `code` 를 씁니다. `-g 파일:줄` 형식을 받는 편집기(VS Code, Cursor)를 가정합니다.
 - `math`: `false` 면 `$` 수식을 렌더링하지 않습니다.
 - `terminal_shell`: 터미널의 셸 실행 파일 전체 경로 (예: PowerShell 7 은 `"C:\\Program Files\\PowerShell\\7\\pwsh.exe"`). 비워 두면 Windows PowerShell 입니다. 바꾼 뒤 터미널의 ↻ 로 다시 시작하면 적용됩니다.

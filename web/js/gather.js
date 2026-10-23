@@ -15,6 +15,7 @@ import {
   ensureTerminal, restartTerminal, fitTerminal, returnTerminals, liveTerminals, terminalBusy, toggleTerminal,
 } from './terminal.js';
 import { $, $$, esc, toast } from './util.js';
+import { t } from './i18n.js';
 
 const POLL_MS = 2000;
 const root = document.documentElement;
@@ -35,19 +36,19 @@ function shapeOf(n) {
 }
 
 const tileOf = (tab) => $$('.g-tile', grid()).find((el) => el.dataset.tab === tab.id);
-const tabOfTile = (el) => S.tabs.find((t) => t.id === el?.closest('.g-tile')?.dataset.tab) || null;
+const tabOfTile = (el) => S.tabs.find((tab) => tab.id === el?.closest('.g-tile')?.dataset.tab) || null;
 
 function makeTile(tab) {
   const tile = document.createElement('section');
   tile.className = 'g-tile';
   tile.dataset.tab = tab.id;
-  tile.setAttribute('aria-label', `${tab.name} 터미널`);
-  tile.innerHTML = `<div class="g-head" title="${esc(tab.root)}\n머리를 두 번 누르면 이 칸만 크게">
+  tile.setAttribute('aria-label', t('{name} 터미널', { name: tab.name }));
+  tile.innerHTML = `<div class="g-head" title="${esc(tab.root)}\n${t('머리를 두 번 누르면 이 칸만 크게')}">
       <svg class="g-icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="g-name">${esc(tab.name)}</span>
       <span class="g-state"></span>
-      <button type="button" class="icon-btn small g-solo" title="이 칸만 크게" aria-label="이 칸만 크게"><svg><use href="#i-expand"/></svg></button>
-      <button type="button" class="icon-btn small g-restart" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)" aria-label="셸 다시 시작"><svg><use href="#i-restart"/></svg></button>
-      <button type="button" class="icon-btn small g-go" title="이 프로젝트로 — 문서와 오른쪽 터미널 (Ctrl+\`)" aria-label="이 프로젝트로"><svg><use href="#i-forward"/></svg></button>
+      <button type="button" class="icon-btn small g-solo" title="${t('이 칸만 크게')}" aria-label="${t('이 칸만 크게')}"><svg><use href="#i-expand"/></svg></button>
+      <button type="button" class="icon-btn small g-restart" title="${t('셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)')}" aria-label="${t('셸 다시 시작')}"><svg><use href="#i-restart"/></svg></button>
+      <button type="button" class="icon-btn small g-go" title="${t('이 프로젝트로 — 문서와 오른쪽 터미널 (Ctrl+`)')}" aria-label="${t('이 프로젝트로')}"><svg><use href="#i-forward"/></svg></button>
     </div><div class="g-body"></div>`;
   return tile;
 }
@@ -55,30 +56,30 @@ function makeTile(tab) {
 /** 칸의 몸통: 셸이 있으면 그 화면, 없으면 '터미널 시작' */
 function fillBody(tab, tile) {
   const body = tile.querySelector('.g-body');
-  const t = tab.term;
-  if (t) {
+  const term = tab.term;
+  if (term) {
     body.querySelector('.g-empty')?.remove();
-    if (t.box.parentElement !== body) body.append(t.box);
-    t.box.hidden = false;
+    if (term.box.parentElement !== body) body.append(term.box);
+    term.box.hidden = false;
   } else if (!body.querySelector('.g-empty')) {
-    body.innerHTML = `<div class="g-empty"><button type="button" class="primary g-start">터미널 시작</button>
+    body.innerHTML = `<div class="g-empty"><button type="button" class="primary g-start">${t('터미널 시작')}</button>
       <small>${esc(tab.root)}</small></div>`;
   }
 }
 
 function setState(tile, tab, busy) {
   const el = tile.querySelector('.g-state');
-  const t = tab.term;
-  const [text, cls] = !t ? ['시작 전', 'none'] : !t.alive ? ['끝남', 'ended'] : busy ? ['실행 중', 'busy'] : ['대기', 'idle'];
+  const term = tab.term;
+  const [text, cls] = !term ? [t('시작 전'), 'none'] : !term.alive ? [t('끝남'), 'ended'] : busy ? [t('실행 중'), 'busy'] : [t('대기'), 'idle'];
   el.textContent = text;
   el.className = `g-state ${cls}`;
-  tile.querySelector('.g-restart').disabled = !t;
+  tile.querySelector('.g-restart').disabled = !term;
 }
 
 /** 탭 목록에 맞춰 칸을 만들고 지우고 순서를 맞춘다. 있는 칸(과 그 안의 화면)은 그대로 둔다 */
 function render() {
   const box = grid();
-  const keep = new Set(S.tabs.map((t) => t.id));
+  const keep = new Set(S.tabs.map((tab) => tab.id));
   for (const el of $$('.g-tile', box)) if (!keep.has(el.dataset.tab)) el.remove();
   box.querySelector('.g-none')?.remove();
   S.tabs.forEach((tab, i) => {
@@ -88,7 +89,7 @@ function render() {
     if (!tile.querySelector('.g-state').textContent || !tab.term?.alive) setState(tile, tab, false);
   });
   if (!S.tabs.length) {
-    box.insertAdjacentHTML('beforeend', '<p class="g-none">열린 프로젝트가 없습니다. 폴더를 열면 그 프로젝트의 터미널이 여기에 생깁니다.</p>');
+    box.insertAdjacentHTML('beforeend', `<p class="g-none">${t('열린 프로젝트가 없습니다. 폴더를 열면 그 프로젝트의 터미널이 여기에 생깁니다.')}</p>`);
   }
   const solo = box.querySelector('.g-tile.solo');
   if (box.classList.contains('solo') && !solo) box.classList.remove('solo');
@@ -111,7 +112,7 @@ function updateButton() {
   count.hidden = !n;
   const btn = $('#lec-btn-gather');
   btn.setAttribute('aria-pressed', String(shown));
-  btn.title = `터미널 모음 — 열린 프로젝트들의 터미널을 한 화면에 (Ctrl+Shift+\`)${n ? `\n셸 ${n}개가 돌고 있습니다` : ''}`;
+  btn.title = `${t('터미널 모음 — 열린 프로젝트들의 터미널을 한 화면에 (Ctrl+Shift+`)')}${n ? `\n${t('셸 {n}개가 돌고 있습니다', { n })}` : ''}`;
 }
 
 async function poll() {
@@ -128,9 +129,9 @@ async function startTile(tab) {
   const body = tile.querySelector('.g-body');
   body.querySelector('.g-empty')?.remove();
   try {
-    const t = await ensureTerminal(tab, body);
+    const term = await ensureTerminal(tab, body);
     setState(tile, tab, false);
-    t.xterm.focus();
+    term.xterm.focus();
   } catch (e) {
     toast(e.message, 'error');
     fillBody(tab, tile);
@@ -144,7 +145,7 @@ function toggleSolo(tile) {
   tile.classList.toggle('solo', solo);
   box.classList.toggle('solo', solo);
   const btn = tile.querySelector('.g-solo');
-  btn.title = solo ? '모두 보기' : '이 칸만 크게';
+  btn.title = solo ? t('모두 보기') : t('이 칸만 크게');
   btn.setAttribute('aria-label', btn.title);
   btn.querySelector('use').setAttribute('href', solo ? '#i-grid' : '#i-expand');
   requestAnimationFrame(fitAll);
@@ -209,7 +210,7 @@ export function initGather() {
     if (!tab) return;
     if (e.target.closest('.g-start')) startTile(tab);
     else if (e.target.closest('.g-solo')) toggleSolo(tileOf(tab));
-    else if (e.target.closest('.g-restart')) restartTerminal(tab).then(() => { const t = tileOf(tab); if (t) setState(t, tab, false); });
+    else if (e.target.closest('.g-restart')) restartTerminal(tab).then(() => { const tile = tileOf(tab); if (tile) setState(tile, tab, false); });
     else if (e.target.closest('.g-go')) leaveGather({ tab, panel: true });
   });
   box.addEventListener('dblclick', (e) => {

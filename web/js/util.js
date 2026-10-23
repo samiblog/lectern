@@ -1,5 +1,7 @@
 // 공용 도우미 함수
 
+import { t } from './i18n.js';
+
 export const $ = (sel, root = document) => root.querySelector(sel);
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
@@ -57,19 +59,21 @@ export function formatSize(n) {
 
 export const formatClock = (d) => `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];   // 영어 날짜 (t 의 mon)
+
 /** 유닉스 초 → '방금', '5분 전', '어제', '10월 3일' */
 export function timeAgo(sec) {
   if (!sec) return '';
   const diff = Date.now() / 1000 - sec;
-  if (diff < 45) return '방금';
-  if (diff < 3600) return `${Math.max(1, Math.round(diff / 60))}분 전`;
+  if (diff < 45) return t('방금');
+  if (diff < 3600) return t('{n}분 전', { n: Math.max(1, Math.round(diff / 60)) });
   const d = new Date(sec * 1000);
   const now = new Date();
   const days = Math.round((startOfDay(now) - startOfDay(d)) / 86400000);
-  if (days === 0) return `${Math.round(diff / 3600)}시간 전`;
-  if (days === 1) return '어제';
-  if (days < 7) return `${days}일 전`;
-  if (d.getFullYear() === now.getFullYear()) return `${d.getMonth() + 1}월 ${d.getDate()}일`;
+  if (days === 0) return t('{n}시간 전', { n: Math.round(diff / 3600) });
+  if (days === 1) return t('어제');
+  if (days < 7) return t('{n}일 전', { n: days });
+  if (d.getFullYear() === now.getFullYear()) return t('{m}월 {d}일', { m: d.getMonth() + 1, d: d.getDate(), mon: MONTHS[d.getMonth()] });
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
@@ -101,12 +105,12 @@ export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
 }
 
 export function debounce(fn, ms) {
-  let t = 0;
+  let timer = 0;
   const call = (...args) => {
-    clearTimeout(t);
-    t = setTimeout(() => fn(...args), ms);
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), ms);
   };
-  call.cancel = () => clearTimeout(t);
+  call.cancel = () => clearTimeout(timer);
   return call;
 }
 

@@ -19,6 +19,8 @@ import sys
 import threading
 from ctypes import wintypes as w
 
+from .i18n import t
+
 AVAILABLE = False
 if sys.platform == 'win32':
     _k = ctypes.WinDLL('kernel32', use_last_error=True)
@@ -114,7 +116,7 @@ if AVAILABLE:
 def _check(ok: object, what: str) -> None:
     if not ok:
         err = ctypes.get_last_error()
-        raise OSError(err, f'{what} 실패: {ctypes.FormatError(err).strip()}')
+        raise OSError(err, t('{what} 실패: {error}', what=what, error=ctypes.FormatError(err).strip()))
 
 
 def _env_block(env: dict[str, str]) -> ctypes.Array:
@@ -132,7 +134,7 @@ class PseudoConsole:
 
     def __init__(self, cmdline: str, cwd: str, env: dict[str, str], cols: int = 80, rows: int = 24):
         if not AVAILABLE:
-            raise OSError('이 Windows 에는 의사 콘솔(ConPTY)이 없습니다 (Windows 10 1809 이상 필요)')
+            raise OSError(t('이 Windows 에는 의사 콘솔(ConPTY)이 없습니다 (Windows 10 1809 이상 필요)'))
         self._lock = threading.Lock()
         self._closed = False
         self._hpc = w.HANDLE()
@@ -144,7 +146,7 @@ class PseudoConsole:
         try:
             hr = _k.CreatePseudoConsole(_size(cols, rows), in_read, out_write, 0, ctypes.byref(self._hpc))
             if hr != 0:
-                raise OSError(hr, f'CreatePseudoConsole 실패 (0x{hr & 0xFFFFFFFF:08X})')
+                raise OSError(hr, t('CreatePseudoConsole 실패 (0x{code})', code=f'{hr & 0xFFFFFFFF:08X}'))
         finally:
             _k.CloseHandle(in_read)      # 의사 콘솔이 들고 있다
             _k.CloseHandle(out_write)

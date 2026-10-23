@@ -17,9 +17,10 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, osutil, terminal
+from . import __version__, i18n, osutil, terminal
 from .config import is_number
 from .docinfo import doc_info, read_text
+from .i18n import t
 from .paths import web_dir
 from .scanner import MAX_OTHER_FILES, doc_kind, is_code, iter_files, resolve_inside
 from .search import MAX_QUERY, search
@@ -90,7 +91,7 @@ def create_app(state: AppState) -> Flask:
     def project_of(pid: Any) -> Project:
         project = state.get(pid)
         if project is None:
-            abort(404, description='열려 있지 않은 프로젝트입니다. 탭이 닫혔을 수 있습니다')
+            abort(404, description=t('열려 있지 않은 프로젝트입니다. 탭이 닫혔을 수 있습니다'))
         return project
 
     def arg_project() -> Project:
@@ -124,7 +125,7 @@ def create_app(state: AppState) -> Flask:
                 abort(403)
         # POST 는 JSON 본문만: 다른 사이트의 폼·단순 요청은 사전 확인(preflight) 없이 올 수 있다 (토큰이 없는 브라우저 모드)
         if request.method == 'POST' and request.path.startswith('/api/') and not request.is_json:
-            abort(415, description='JSON 본문만 받습니다')
+            abort(415, description=t('JSON 본문만 받습니다'))
 
     @app.after_request
     def common_headers(resp: Response) -> Response:
@@ -143,6 +144,7 @@ def create_app(state: AppState) -> Flask:
     def index() -> Response:
         html = (web / 'index.html').read_text(encoding='utf-8')
         html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__).replace('{{TERM}}', state.term_secret)
+        html = html.replace('{{LANG}}', i18n.language())   # 화면 언어 (설정 language, D46) — web/js/i18n.js 가 읽는다
         resp = Response(html, content_type='text/html; charset=utf-8')
         resp.headers['Content-Security-Policy'] = content_security_policy(state.config.get('external_images') is not False)
         resp.headers['Referrer-Policy'] = 'no-referrer'
@@ -225,7 +227,7 @@ def create_app(state: AppState) -> Flask:
         project = arg_project()
         query = request.args.get('q', '')
         if len(query) > MAX_QUERY:
-            abort(400, description=f'검색어는 {MAX_QUERY}자까지입니다')
+            abort(400, description=t('검색어는 {n}자까지입니다', n=MAX_QUERY))
         # docs·code: 찾을 묶음 (없으면 문서만 — 예전 화면과 같게). 코드는 사이드바 '코드' 목록의 파일 (D44)
         want_docs = request.args.get('docs', '1') != '0'
         want_code = request.args.get('code', '0') == '1'
@@ -280,7 +282,7 @@ def create_app(state: AppState) -> Flask:
 
     def term_guard() -> None:
         if not state.terminals.available:
-            abort(501, description='터미널은 Windows 10(1809) 이상에서만 쓸 수 있습니다')
+            abort(501, description=t('터미널은 Windows 10(1809) 이상에서만 쓸 수 있습니다'))
         if request.headers.get('X-Term') != state.term_secret:
             abort(403)
         origin = request.headers.get('Origin')
@@ -290,7 +292,7 @@ def create_app(state: AppState) -> Flask:
     def session_of(sid: Any) -> terminal.Session:
         session = state.terminals.get(sid)
         if session is None:
-            abort(404, description='끝난 터미널입니다')
+            abort(404, description=t('끝난 터미널입니다'))
         return session
 
     def term_size(data: dict[str, Any]) -> tuple[int, int]:
@@ -309,7 +311,7 @@ def create_app(state: AppState) -> Flask:
         try:
             session = state.terminals.open(project.id, str(project.root), state.config.get('terminal_shell'), cols, rows)
         except OSError as exc:
-            return jsonify(error=f'셸을 시작하지 못했습니다 ({exc}). 설정 파일의 terminal_shell 을 확인하세요'), 500
+            return jsonify(error=t('셸을 시작하지 못했습니다 ({error}). 설정 파일의 terminal_shell 을 확인하세요', error=exc)), 500
         return jsonify(id=session.id, shell=terminal.shell_label(session.exe), cwd=str(project.root))
 
     @app.get('/api/term/read')
@@ -329,7 +331,7 @@ def create_app(state: AppState) -> Flask:
         if not isinstance(text, str):
             abort(400)
         if len(text) > 65536:
-            abort(413, description='한 번에 보낼 수 있는 글은 65536자까지입니다')
+            abort(413, description=t('한 번에 보낼 수 있는 글은 65536자까지입니다'))
         session_of(data.get('t')).write(text)
         return jsonify(ok=True)
 

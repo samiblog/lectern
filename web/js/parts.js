@@ -19,6 +19,7 @@ import { sanitizeHtml, prepareParts, loadImage, imageKey } from './doc.js';
 import {
   $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot,
 } from './util.js';
+import { t } from './i18n.js';
 
 const KINDS = Object.keys(PARTS);
 const MAX_SHOWN = 800;     // 목록에 그리는 항목 수 (넘으면 거르기로 좁히라고 알린다)
@@ -104,7 +105,7 @@ function matcher(text) {
 }
 
 function itemRow(file, item, extra = '') {
-  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && `절: ${item.section}`, file.path].filter(Boolean).join('\n');
+  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path].filter(Boolean).join('\n');
   return `<div class="pt-item" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(tip)}">`
     + `<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[item.kind].icon}"/></svg>`
     + `<span class="pt-text"><span class="pt-name">${esc(item.name)}</span>${item.label ? `<span class="pt-label">${esc(item.label)}</span>` : ''}`
@@ -112,8 +113,8 @@ function itemRow(file, item, extra = '') {
 }
 
 function thumb(file, item, others) {
-  const more = others.length ? `<span class="pt-more" title="${esc(`같은 그림을 쓰는 다른 문서:\n${others.join('\n')}`)}">+${others.length}곳</span>` : '';
-  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && `절: ${item.section}`, file.path].filter(Boolean).join('\n');
+  const more = others.length ? `<span class="pt-more" title="${esc(`${t('같은 그림을 쓰는 다른 문서:')}\n${others.join('\n')}`)}">${t('+{n}곳', { n: others.length })}</span>` : '';
+  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path].filter(Boolean).join('\n');
   return `<div class="pt-thumb" tabindex="0" data-doc="${esc(file.path)}" data-kind="figure" data-n="${item.n}" title="${esc(tip)}">`
     + `<div class="pt-pic" data-src="${esc(item.src)}" data-alt="${esc(item.alt)}"></div>`
     + `<span class="pt-cap">${esc(item.label || item.name)}</span>${more}</div>`;
@@ -124,7 +125,7 @@ function render() {
   const list = $('#lec-parts-list');
   if (!tab) {
     $('#lec-parts-kinds').innerHTML = '';
-    $('#lec-parts-info').textContent = '열린 프로젝트가 없습니다';
+    $('#lec-parts-info').textContent = t('열린 프로젝트가 없습니다');
     list.innerHTML = '';
     return;
   }
@@ -132,21 +133,21 @@ function render() {
   // 종류 버튼: 범위 안의 개수
   const counts = Object.fromEntries(KINDS.map((k) => [k, 0]));
   for (const g of groups) for (const it of g.items) counts[it.kind] += 1;
-  const reading = scanning?.tab === tab ? `문서 읽는 중 ${scanning.done}/${scanning.total}` : '';
+  const reading = scanning?.tab === tab ? t('문서 읽는 중 {done}/{total}', { done: scanning.done, total: scanning.total }) : '';
   if (state.autoKind && !reading) {   // 종류를 정하지 않고 열었는데 그 범위에 없으면, 있는 첫 종류로
     if (!counts[state.kind]) state.kind = KINDS.find((k) => counts[k]) || state.kind;
     state.autoKind = false;
   }
   $('#lec-parts-kinds').innerHTML = KINDS.map((k) => `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === state.kind}"`
-    + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].name)}`
+    + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].many)}`
     + `<span class="n">${counts[k]}</span></button>`).join('');
   // 범위
-  $('#lec-parts-scope').textContent = state.scope ? `${state.scope} 폴더` : `${tab.name} 전체`;
-  $('#lec-parts-scope').title = state.scope ? `${state.scope} 폴더와 그 하위 폴더` : '프로젝트 전체';
+  $('#lec-parts-scope').textContent = state.scope ? t('{folder} 폴더', { folder: state.scope }) : t('{name} 전체', { name: tab.name });
+  $('#lec-parts-scope').title = state.scope ? t('{folder} 폴더와 그 하위 폴더', { folder: state.scope }) : t('프로젝트 전체');
   $('#lec-parts-all').hidden = !state.scope;
   const order = $('#lec-parts-order');
-  order.textContent = state.order === 'recent' ? '최근 수정 순' : '트리 순서';
-  order.title = state.order === 'recent' ? '누르면 트리 순서로' : '누르면 최근 수정한 문서부터';
+  order.textContent = state.order === 'recent' ? t('최근 수정 순') : t('트리 순서');
+  order.title = state.order === 'recent' ? t('누르면 트리 순서로') : t('누르면 최근 수정한 문서부터');
   // 목록
   const match = matcher(state.filter);
   const seen = new Map();   // 그림 → 처음 보인 칸의 '다른 문서' 목록 (같은 그림을 한 번만)
@@ -189,13 +190,15 @@ function render() {
   });
   watchThumbs(tab);
   // 알림: 개수, 거른 결과, 읽는 중
-  const name = PARTS[state.kind].name;
+  const kind = PARTS[state.kind];
+  const name = kind.many.toLowerCase();   // 영어는 문장 속 복수형 (한국어는 그대로)
   const total = counts[state.kind];
   let info;
-  if (!total) info = reading || `이 범위에는 ${name}${josa(name, '이', '가')} 없습니다`;
+  if (!total) info = reading || t('이 범위에는 {name}{josa} 없습니다', { name, josa: josa(name, '이', '가') });   // i18n-ok (조사)
   else {
-    info = state.filter ? `거른 결과 ${shown}개 (모두 ${total}개)` : `문서 ${docs}개, ${name} ${total}개`;
-    if (shown >= MAX_SHOWN) info += ` — 처음 ${MAX_SHOWN}개만, 거르기로 좁히세요`;
+    info = state.filter ? t('거른 결과 {shown}개 (모두 {total}개)', { shown, total })
+      : `${t('문서 {n}개', { n: docs })}, ${t('{kind} {n}개', { kind: (total === 1 ? kind.name : kind.many).toLowerCase(), n: total })}`;
+    if (shown >= MAX_SHOWN) info += ` — ${t('처음 {n}개만, 거르기로 좁히세요', { n: MAX_SHOWN })}`;
     if (reading) info += ` · ${reading}`;
   }
   $('#lec-parts-info').textContent = info;

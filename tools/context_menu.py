@@ -16,7 +16,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-LABEL = 'Lectern으로 열기'
+sys.path.insert(0, str(ROOT))
+from lectern.i18n import system_language  # noqa: E402
+
+# 메뉴 이름은 Windows 표시 언어를 따른다 (설치 파일과 같게, D46)
+LABEL = 'Lectern으로 열기' if system_language() == 'ko' else 'Open with Lectern'
 KEYS = {
     r'Software\Classes\Directory\shell\Lectern': '%1',
     r'Software\Classes\Directory\Background\shell\Lectern': '%V',

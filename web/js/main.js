@@ -37,6 +37,7 @@ import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusN
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
 import { $, basename, toast } from './util.js';
+import { t, translatePage } from './i18n.js';
 
 function updateWindowTitle() {
   if (!S.root) {
@@ -99,9 +100,9 @@ async function manualRefresh() {
     await loadTree({ fresh: true, tab });
     refreshOthers();
     await refreshView(tab.pane);
-    toast('다시 불러왔습니다');
+    toast(t('다시 불러왔습니다'));
   } catch (e) {
-    toast(`다시 불러오지 못했습니다: ${e.message}`, 'error');
+    toast(t('다시 불러오지 못했습니다: {error}', { error: e.message }), 'error');
   }
 }
 
@@ -219,13 +220,14 @@ async function waitForBridge() {
   const slow = setTimeout(() => {
     const view = $('#lec-view');
     view.className = 'welcome';
-    view.innerHTML = '<h1>창과 연결하는 중입니다</h1><p>이 화면이 계속되면 Lectern을 닫았다가 다시 실행해 주세요.</p>';
+    view.innerHTML = `<h1>${t('창과 연결하는 중입니다')}</h1><p>${t('이 화면이 계속되면 Lectern을 닫았다가 다시 실행해 주세요.')}</p>`;
   }, 4000);
   await new Promise((resolve) => window.addEventListener('pywebviewready', resolve, { once: true }));
   clearTimeout(slow);
 }
 
 async function boot() {
+  translatePage();   // index.html 의 화면 글자를 설정 언어로 (D46)
   initPanes();   // 시작 화면 칸 — 연결을 기다리는 안내도 여기에
   await waitForBridge();
   try {

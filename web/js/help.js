@@ -8,52 +8,53 @@ import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
 import { setFindTarget } from './find.js';
 import { $, $$, esc, findAnchor } from './util.js';
+import { LANG, t } from './i18n.js';
 
 /** [묶음, [[키, 하는 일]]]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다 */
 export const SHORTCUTS = [
-  ['열기·찾기', [
-    ['Ctrl+P', '문서·코드 빠르게 열기 (이름·제목·경로로)'],
-    ['Ctrl+F', '지금 화면에서 찾기 — 문서·코드·사용설명서 (폴더 개요에서는 트리 거르기)'],
-    ['Ctrl+Shift+F', '모든 문서·코드에서 찾기 (사이드바 \'검색\')'],
-    ['Ctrl+O', '폴더 열기 — 새 탭으로'],
+  [t('열기·찾기'), [
+    ['Ctrl+P', t('문서·코드 빠르게 열기 (이름·제목·경로로)')],
+    ['Ctrl+F', t('지금 화면에서 찾기 — 문서·코드·사용설명서 (폴더 개요에서는 트리 거르기)')],
+    ['Ctrl+Shift+F', t('모든 문서·코드에서 찾기 (사이드바 \'검색\')')],
+    ['Ctrl+O', t('폴더 열기 — 새 탭으로')],
   ]],
-  ['프로젝트 탭', [
-    ['Ctrl+1~8', '그 순번의 탭'],
-    ['Ctrl+9', '마지막 탭'],
-    ['Ctrl+Tab / Ctrl+Shift+Tab', '다음 / 이전 탭 (Ctrl+PageDown / Ctrl+PageUp 도 됨)'],
-    ['Ctrl+W', '탭 닫기 (탭을 마우스 가운데 버튼으로 눌러도)'],
+  [t('프로젝트 탭'), [
+    ['Ctrl+1~8', t('그 순번의 탭')],
+    ['Ctrl+9', t('마지막 탭')],
+    ['Ctrl+Tab / Ctrl+Shift+Tab', t('다음 / 이전 탭 (Ctrl+PageDown / Ctrl+PageUp 도 됨)')],
+    ['Ctrl+W', t('탭 닫기 (탭을 마우스 가운데 버튼으로 눌러도)')],
   ]],
-  ['화면', [
-    ['Alt+← / Alt+→', '뒤로 / 앞으로 (마우스의 뒤로·앞으로 버튼도)'],
-    ['Ctrl+B', '사이드바 보이기·숨기기'],
-    ['F5', '다시 불러오기 (지금 탭의 트리와 화면)'],
-    ['Ctrl+휠', '앱 화면 전체 확대·축소 (문서 글자만은 툴바의 − +)'],
-    ['Esc', '팝업·메뉴·찾기·사용설명서 닫기, 그다음 장 하이라이트 끄기'],
+  [t('화면'), [
+    ['Alt+← / Alt+→', t('뒤로 / 앞으로 (마우스의 뒤로·앞으로 버튼도)')],
+    ['Ctrl+B', t('사이드바 보이기·숨기기')],
+    ['F5', t('다시 불러오기 (지금 탭의 트리와 화면)')],
+    [t('Ctrl+휠'), t('앱 화면 전체 확대·축소 (문서 글자만은 툴바의 − +)')],
+    ['Esc', t('팝업·메뉴·찾기·사용설명서 닫기, 그다음 장 하이라이트 끄기')],
   ]],
-  ['장 하이라이트 (켜져 있을 때)', [
-    ['↑ / ↓', '앞 장 / 다음 장'],
-    ['PageUp / PageDown', '앞 장 / 다음 장'],
+  [t('장 하이라이트 (켜져 있을 때)'), [
+    ['↑ / ↓', t('앞 장 / 다음 장')],
+    ['PageUp / PageDown', t('앞 장 / 다음 장')],
   ]],
-  ['찾기 막대', [
-    ['Enter / Shift+Enter', '다음 / 이전 결과'],
-    ['Esc', '찾기 닫기'],
+  [t('찾기 막대'), [
+    ['Enter / Shift+Enter', t('다음 / 이전 결과')],
+    ['Esc', t('찾기 닫기')],
   ]],
-  ['사이드바 \'파일\'·\'코드\' 목록', [
-    ['↑ / ↓', '위 / 아래 항목'],
-    ['→ / ←', '폴더 펼치기 / 접기'],
-    ['Enter', '열기 (코드는 읽기 화면으로)'],
-    ['글자', '그 글자로 시작하는 항목으로 (같은 글자를 거듭 치면 다음 항목)'],
+  [t('사이드바 \'파일\'·\'코드\' 목록'), [
+    ['↑ / ↓', t('위 / 아래 항목')],
+    ['→ / ←', t('폴더 펼치기 / 접기')],
+    ['Enter', t('열기 (코드는 읽기 화면으로)')],
+    [t('글자'), t('그 글자로 시작하는 항목으로 (같은 글자를 거듭 치면 다음 항목)')],
   ]],
-  ['터미널', [
-    ['Ctrl+`', '오른쪽 터미널 열기·닫기 (닫아도 셸은 계속 돎)'],
-    ['Ctrl+Shift+`', '터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)'],
-    ['Ctrl+C', '고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)'],
-    ['Ctrl+V', '붙여 넣기'],
+  [t('터미널'), [
+    ['Ctrl+`', t('오른쪽 터미널 열기·닫기 (닫아도 셸은 계속 돎)')],
+    ['Ctrl+Shift+`', t('터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)')],
+    ['Ctrl+C', t('고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)')],
+    ['Ctrl+V', t('붙여 넣기')],
   ]],
-  ['도움말·설정', [
-    ['F1', '사용설명서 열기·닫기'],
-    ['Ctrl+/', '단축키 표 열기·닫기'],
-    ['Ctrl+,', '설정 창'],
+  [t('도움말·설정'), [
+    ['F1', t('사용설명서 열기·닫기')],
+    ['Ctrl+/', t('단축키 표 열기·닫기')],
+    ['Ctrl+,', t('설정 창')],
   ]],
 ];
 
@@ -64,7 +65,7 @@ const keysHtml = (keys) => keys.split(' / ').map((combo) => `<span class="combo"
 
 /** 설명서의 '단축키' 장에 넣을 Markdown (묶음마다 표 하나) */
 function shortcutsMarkdown() {
-  return SHORTCUTS.map(([group, rows]) => `### ${group}\n\n| 키 | 하는 일 |\n|---|---|\n`
+  return SHORTCUTS.map(([group, rows]) => `### ${group}\n\n| ${t('키')} | ${t('하는 일')} |\n|---|---|\n`
     + rows.map(([keys, what]) => `| ${keysHtml(keys)} | ${esc(what)} |`).join('\n')).join('\n\n');
 }
 
@@ -101,9 +102,9 @@ let heads = [];       // 장 목록의 제목 (h2·h3)
 export const manualOpen = () => !helpBox().hidden;
 
 async function loadManual() {
-  const r = await fetch('/static/help/manual.md');
+  const r = await fetch(LANG === 'en' ? '/static/help/manual.en.md' : '/static/help/manual.md');   // 영어판 (D46)
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const text = (await r.text()).replace('<!-- 단축키 표 -->', shortcutsMarkdown());
+  const text = (await r.text()).replace('<!-- 단축키 표 -->', shortcutsMarkdown());   // i18n-ok (두 설명서에 같은 자리 표시)
   const { html } = renderMarkdown(text, { math: false });
   view().innerHTML = window.DOMPurify.sanitize(html);
   decorateBlocks(view());
@@ -138,7 +139,7 @@ export async function openManual() {
   scroller().focus({ preventScroll: true });               // 화살표·PageDown 으로 설명서를 넘기게
   loaded ??= loadManual().catch((e) => {
     loaded = null;   // 다음에 다시 시도
-    view().innerHTML = `<p>사용설명서를 읽지 못했습니다 (${esc(e.message)}). Lectern 을 다시 설치하면 고쳐집니다.</p>`;
+    view().innerHTML = `<p>${t('사용설명서를 읽지 못했습니다 ({error}). Lectern 을 다시 설치하면 고쳐집니다.', { error: esc(e.message) })}</p>`;
   });
   await loaded;
 }

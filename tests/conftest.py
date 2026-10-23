@@ -20,6 +20,9 @@ def write(path: Path, text: str = '# 제목\n\n본문\n') -> Path:
 def isolated_config(tmp_path_factory, monkeypatch):
     """테스트가 실제 %APPDATA% 설정을 건드리지 않도록 한다."""
     monkeypatch.setenv('LECTERN_CONFIG_DIR', str(tmp_path_factory.mktemp('config')))
+    # 화면 언어 auto 는 Windows 표시 언어를 따른다 (D46) — 테스트는 PC 의 언어와 상관없이 한국어로
+    from lectern import i18n
+    monkeypatch.setattr(i18n, 'system_language', lambda: 'ko')
 
 
 @pytest.fixture

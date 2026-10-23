@@ -15,6 +15,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
+from .i18n import N_, resolve, t
 from .paths import config_dir
 
 MAX_RECENT = 10
@@ -30,6 +31,7 @@ DEFAULTS: dict[str, Any] = {
     'last_folder': None,     # 마지막으로 연 폴더 (tabs 가 없던 옛 설정이면 이 폴더를 연다)
     'tabs': [],              # 열어 둔 프로젝트 탭 (왼쪽부터). 다음 실행에 되살린다 (서버가 기록)
     'active_tab': 0,         # 선택돼 있던 탭의 순번
+    'language': 'auto',      # 화면 언어: auto(Windows 표시 언어) | ko | en — 설정 창, 바꾸면 화면을 다시 불러온다 (D46)
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
@@ -62,14 +64,15 @@ DEFAULTS: dict[str, Any] = {
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
-CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width'})
-_EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"글자"', list: '["이름", ...] 목록', dict: '{ } 객체'}
+_EXAMPLE = {bool: N_('true 또는 false'), int: N_('숫자'), float: N_('숫자'), str: N_('"글자"'), list: N_('["이름", ...] 목록'),
+            dict: N_('{ } 객체')}
 
 
 def is_number(value: Any) -> bool:
@@ -106,11 +109,11 @@ def _upgrade(data: dict[str, Any]) -> None:
     data['version'] = max(data['version'], CONFIG_VERSION)
 
 
-def _expected(key: str) -> str:
+def _expected(key: str, lang: str) -> str:
     default = DEFAULTS[key]
     kind = (str if key in ('last_folder', 'editor', 'terminal_shell')
             else int if key in ('sidebar_width', 'others_height', 'code_height', 'terminal_width') else type(default))
-    return _EXAMPLE.get(kind, '맞는 형식')
+    return t(_EXAMPLE.get(kind, N_('맞는 형식')), lang)
 
 
 class Config:
@@ -134,19 +137,22 @@ class Config:
         """(설정, 오류). 파일이 없으면 기본값. 읽지 못하면 (None, 이유)."""
         self._disk = self._signature()
         data = copy.deepcopy(DEFAULTS)
+        # 알릴 말의 언어: 읽은 파일의 language. 파일을 읽지 못하면 들고 있던 설정의 것 (처음이면 Windows 표시 언어)
+        lang = resolve(getattr(self, 'data', {}).get('language'))
         try:
             text = self.path.read_text(encoding='utf-8-sig')  # 메모장·PowerShell 5.1 이 붙이는 BOM 허용
         except FileNotFoundError:
             return data, None
         except (OSError, ValueError) as exc:
-            return None, self._error_message(f'파일을 읽을 수 없음 ({exc})')
+            return None, self._error_message(t('파일을 읽을 수 없음 ({error})', lang, error=exc), '', lang)
         try:
             loaded = json.loads(text)
         except json.JSONDecodeError as exc:
-            hint = ' 경로 안의 \\ 는 \\\\ 로 씁니다.' if 'escape' in exc.msg else ''
-            return None, self._error_message(f'{exc.lineno}행 {exc.colno}열: {exc.msg}', hint)
+            hint = t(' 경로 안의 \\ 는 \\\\ 로 씁니다.', lang) if 'escape' in exc.msg else ''
+            return None, self._error_message(t('{line}행 {col}열: {error}', lang, line=exc.lineno, col=exc.colno, error=exc.msg), hint, lang)
         if not isinstance(loaded, dict):
-            return None, self._error_message('맨 바깥이 { } 객체가 아님')
+            return None, self._error_message(t('맨 바깥이 { } 객체가 아님', lang), '', lang)
+        lang = resolve(loaded.get('language'))
         wrong = []
         for key, value in loaded.items():
             if key not in DEFAULTS:
@@ -154,17 +160,17 @@ class Config:
             if value_ok(key, value):
                 data[key] = value
             else:
-                wrong.append(f'{key} 는 {_expected(key)}')
+                wrong.append(t('{key} 는 {expected}', lang, key=key, expected=_expected(key, lang)))
         _upgrade(data)
         if wrong:
             # 맞는 값은 쓰고 틀린 값만 기본값으로. 파일을 고칠 때까지 저장하지 않는다 (손으로 쓴 값을 덮어쓰지 않게, D21)
-            return data, (f'설정 파일의 값 형식이 틀려 그 값은 기본값으로 실행합니다 ({"; ".join(wrong)}). '
-                          f'파일을 고칠 때까지 설정은 저장하지 않습니다: {self.path}')
+            return data, t('설정 파일의 값 형식이 틀려 그 값은 기본값으로 실행합니다 ({wrong}). 파일을 고칠 때까지 설정은 저장하지 않습니다: {path}',
+                           lang, wrong='; '.join(wrong), path=self.path)
         return data, None
 
-    def _error_message(self, detail: str, hint: str = '') -> str:
-        return (f'설정 파일을 읽지 못해 기본 설정으로 실행합니다 ({detail}).{hint} '
-                f'파일을 고칠 때까지 설정은 저장하지 않습니다: {self.path}')
+    def _error_message(self, detail: str, hint: str, lang: str) -> str:
+        return t('설정 파일을 읽지 못해 기본 설정으로 실행합니다 ({detail}).{hint} 파일을 고칠 때까지 설정은 저장하지 않습니다: {path}',
+                 lang, detail=detail, hint=hint, path=self.path)
 
     def _refresh(self) -> None:
         """파일이 밖에서 바뀌었으면 다시 읽는다. 고친 파일이 깨졌으면 들고 있던 값으로 돌고 저장을 멈춘다."""

@@ -3,6 +3,7 @@
 ;
 ; - 현재 사용자 설치, 관리자 권한 불필요: %LOCALAPPDATA%\Programs\Lectern (D25)
 ; - 시작 메뉴 바로가기, 선택: 바탕화면 바로가기, 탐색기 폴더 우클릭 'Lectern으로 열기' (tools\context_menu.py 와 같은 키)
+; - 설치 화면과 우클릭 메뉴 이름은 Windows 표시 언어를 따라 한국어·영어 (D46). 앱 화면 언어는 따로 — 설정 language(기본 auto)
 ; - 제거해도 설정(%APPDATA%\Lectern\config.json)은 지우지 않는다 — 다시 설치하면 최근 폴더·스타일을 이어 쓴다
 ; - 이 파일은 UTF-8(BOM)이어야 한다. BOM이 없으면 ISCC가 한글을 시스템 코드 페이지로 읽는다
 
@@ -18,7 +19,7 @@ AppVersion={#AppVersion}
 AppVerName=Lectern {#AppVersion}
 AppPublisher=Lectern
 VersionInfoVersion={#AppVersion}
-VersionInfoDescription=Lectern 설치
+VersionInfoDescription=Lectern Setup
 DefaultDirName={autopf}\Lectern
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
@@ -35,14 +36,30 @@ WizardStyle=modern
 ; 설치·제거 중에 Lectern이 실행 중이면 닫도록 안내한다
 CloseApplications=yes
 RestartApplications=no
-ShowLanguageDialog=no
+; 한국어·영어 중 Windows 표시 언어에 맞는 것으로. 둘 다 아니면 고르게 한다
+ShowLanguageDialog=auto
 
 [Languages]
 Name: "korean"; MessagesFile: "compiler:Languages\Korean.isl"
+Name: "english"; MessagesFile: "compiler:Default.isl"
+
+[CustomMessages]
+korean.OpenWith=Lectern으로 열기
+english.OpenWith=Open with Lectern
+korean.ContextMenuTask=탐색기 폴더 우클릭에 'Lectern으로 열기' 추가
+english.ContextMenuTask=Add 'Open with Lectern' to the folder right-click menu in Explorer
+korean.DesktopIconTask=바탕화면에 바로가기 만들기
+english.DesktopIconTask=Create a desktop shortcut
+korean.ExtraTasks=추가 작업:
+english.ExtraTasks=Additional tasks:
+korean.AppComment=프로젝트 문서 뷰어 (Markdown·HTML)
+english.AppComment=Project document viewer (Markdown, HTML)
+korean.NoWebView2=이 PC에 Microsoft Edge WebView2 런타임이 없습니다. Lectern 창을 띄우려면 필요합니다.%n%n설치는 계속할 수 있습니다. 설치를 마친 뒤 Microsoft 사이트에서 "WebView2 Runtime"을 받아 설치해 주세요.
+english.NoWebView2=Microsoft Edge WebView2 Runtime is not installed on this PC. Lectern needs it to show its window.%n%nSetup can continue. After it finishes, download "WebView2 Runtime" from the Microsoft website and install it.
 
 [Tasks]
-Name: "contextmenu"; Description: "탐색기 폴더 우클릭에 'Lectern으로 열기' 추가"; GroupDescription: "추가 작업:"
-Name: "desktopicon"; Description: "바탕화면에 바로가기 만들기"; GroupDescription: "추가 작업:"; Flags: unchecked
+Name: "contextmenu"; Description: "{cm:ContextMenuTask}"; GroupDescription: "{cm:ExtraTasks}"
+Name: "desktopicon"; Description: "{cm:DesktopIconTask}"; GroupDescription: "{cm:ExtraTasks}"; Flags: unchecked
 
 [InstallDelete]
 ; 새 버전으로 덮어 설치할 때, 이전 버전에만 있던 파일이 남지 않게 한다
@@ -52,19 +69,19 @@ Type: filesandordirs; Name: "{app}\_internal"
 Source: "..\dist\Lectern\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 
 [Icons]
-Name: "{autoprograms}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "프로젝트 문서 뷰어 (Markdown·HTML)"
-Name: "{autodesktop}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "프로젝트 문서 뷰어 (Markdown·HTML)"; Tasks: desktopicon
+Name: "{autoprograms}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "{cm:AppComment}"
+Name: "{autodesktop}\Lectern"; Filename: "{app}\Lectern.exe"; Comment: "{cm:AppComment}"; Tasks: desktopicon
 
 [Registry]
-Root: HKCU; Subkey: "Software\Classes\Directory\shell\Lectern"; ValueType: string; ValueName: ""; ValueData: "Lectern으로 열기"; Flags: uninsdeletekey; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\shell\Lectern"; ValueType: string; ValueName: ""; ValueData: "{cm:OpenWith}"; Flags: uninsdeletekey; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\Lectern"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\Lectern.exe"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\Directory\shell\Lectern\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Lectern.exe"" ""%1"""; Tasks: contextmenu
-Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\Lectern"; ValueType: string; ValueName: ""; ValueData: "Lectern으로 열기"; Flags: uninsdeletekey; Tasks: contextmenu
+Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\Lectern"; ValueType: string; ValueName: ""; ValueData: "{cm:OpenWith}"; Flags: uninsdeletekey; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\Lectern"; ValueType: string; ValueName: "Icon"; ValueData: "{app}\Lectern.exe"; Tasks: contextmenu
 Root: HKCU; Subkey: "Software\Classes\Directory\Background\shell\Lectern\command"; ValueType: string; ValueName: ""; ValueData: """{app}\Lectern.exe"" ""%V"""; Tasks: contextmenu
 
 [Run]
-Filename: "{app}\Lectern.exe"; Description: "Lectern 실행"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\Lectern.exe"; Description: "{cm:LaunchProgram,Lectern}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 const
@@ -88,7 +105,5 @@ function InitializeSetup(): Boolean;
 begin
   Result := True;
   if not WebView2Installed() then
-    SuppressibleMsgBox('이 PC에 Microsoft Edge WebView2 런타임이 없습니다. Lectern 창을 띄우려면 필요합니다.' + #13#10#13#10 +
-      '설치는 계속할 수 있습니다. 설치를 마친 뒤 Microsoft 사이트에서 "WebView2 Runtime"을 받아 설치해 주세요.',
-      mbInformation, MB_OK, IDOK);
+    SuppressibleMsgBox(CustomMessage('NoWebView2'), mbInformation, MB_OK, IDOK);
 end;

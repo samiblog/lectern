@@ -19,6 +19,7 @@ import { showMenu } from './ui.js';
 import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { $, esc, basename, toast, copyText } from './util.js';
+import { t } from './i18n.js';
 
 let maxTabs = 10;          // 서버의 MAX_TABS (/api/state 의 max_tabs)
 let tabsSeq = -1;          // 화면이 맞춘 서버 탭 목록의 순번
@@ -71,7 +72,7 @@ function syncTabs(info) {
     noticeSeen = n.id;
     toast(n.text, 'error', 8000);
   }
-  const known = new Map(S.tabs.map((t) => [t.id, t]));
+  const known = new Map(S.tabs.map((tb) => [tb.id, tb]));
   const added = [];
   const next = info.projects.map((p) => {
     if (known.has(p.id)) return known.get(p.id);
@@ -79,7 +80,7 @@ function syncTabs(info) {
     added.push(tab);
     return tab;
   });
-  const dropped = S.tabs.filter((t) => !next.includes(t));
+  const dropped = S.tabs.filter((tb) => !next.includes(tb));
   S.tabs = next;
   for (const tab of dropped) {
     if (tab === S.tab) S.tab = null;   // 부르는 쪽이 곧 다른 탭(없으면 시작 화면)을 고른다
@@ -104,7 +105,7 @@ function loadTab(tab) {
   tab.loading ??= (async () => {
     const { pane } = tab;
     // 문서가 수천 개인 폴더는 처음 훑는 데 몇 초 걸린다 (막 만든 파일이 많으면 더). 그동안 빈 화면 대신 알린다
-    const wait = setTimeout(() => { if (!pane.current) showMessage(pane, `${esc(tab.name)} 폴더를 읽고 있습니다…`); }, 400);
+    const wait = setTimeout(() => { if (!pane.current) showMessage(pane, t('{name} 폴더를 읽고 있습니다…', { name: esc(tab.name) })); }, 400);
     try {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
@@ -113,7 +114,7 @@ function loadTab(tab) {
       if (!restored && !pane.current && !pane.pending) await navigate({ type: 'overview', path: '' }, { pane });
       tab.loaded = true;
     } catch (e) {
-      if (S.tabs.includes(tab)) showMessage(pane, `폴더를 읽지 못했습니다 (${esc(e.message)}). F5 를 누르면 다시 불러옵니다.`);
+      if (S.tabs.includes(tab)) showMessage(pane, t('폴더를 읽지 못했습니다 ({error}). F5 를 누르면 다시 불러옵니다.', { error: esc(e.message) }));
     } finally {
       clearTimeout(wait);
       tab.loading = null;
@@ -129,12 +130,11 @@ function showWelcome() {
   const pane = homePane();
   const recent = (S.config.recent || []).slice(0, 8);
   pane.view.className = 'welcome';
-  pane.view.innerHTML = `<h1>프로젝트 폴더를 여세요</h1>
-    <p>폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 폴더마다 탭으로 열려 여러 프로젝트를 오가며 볼 수 있습니다.
-    숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
-    <p class="welcome-acts"><button type="button" class="primary" data-act="open">폴더 열기</button>
-      <button type="button" class="text-btn" data-act="help">사용설명서<kbd>F1</kbd></button></p>
-    ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
+  pane.view.innerHTML = `<h1>${t('프로젝트 폴더를 여세요')}</h1>
+    <p>${t('폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 폴더마다 탭으로 열려 여러 프로젝트를 오가며 볼 수 있습니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.')}</p>
+    <p class="welcome-acts"><button type="button" class="primary" data-act="open">${t('폴더 열기')}</button>
+      <button type="button" class="text-btn" data-act="help">${t('사용설명서')}<kbd>F1</kbd></button></p>
+    ${recent.length ? `<h2>${t('최근 연 폴더')}</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
       <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
   setToc(pane, null);
   setStatus({ path: '', info: '' }, pane);
@@ -179,20 +179,20 @@ export async function openFolder(path) {
   try {
     info = await postJSON('/api/open', { path });
   } catch (e) {
-    toast(`폴더를 열 수 없습니다: ${e.message}`, 'error');
+    toast(t('폴더를 열 수 없습니다: {error}', { error: e.message }), 'error');
     return false;
   }
   try {
     S.config = await getJSON('/api/config');   // 최근 연 폴더 목록
   } catch { /* 최근 폴더 목록만 늦게 바뀐다 */ }
   syncTabs(info);
-  await selectTab(S.tabs.find((t) => t.id === info.opened) || null, { tell: false });
+  await selectTab(S.tabs.find((tb) => tb.id === info.opened) || null, { tell: false });
   return true;
 }
 
 export async function chooseAndOpen() {
   if (S.tabs.length >= maxTabs) {
-    toast(`탭은 ${maxTabs}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요`, 'error');
+    toast(t('탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요', { n: maxTabs }), 'error');
     return;
   }
   const path = await native.chooseFolder();
@@ -210,7 +210,7 @@ export async function closeTab(tab) {
   try {
     info = await postJSON('/api/close', { p: tab.id });
   } catch (e) {
-    toast(`탭을 닫지 못했습니다: ${e.message}`, 'error');
+    toast(t('탭을 닫지 못했습니다: {error}', { error: e.message }), 'error');
     return;
   }
   syncTabs(info);
@@ -220,7 +220,7 @@ export async function closeTab(tab) {
 
 async function closeOthers(keep) {
   await selectTab(keep);
-  for (const tab of S.tabs.filter((t) => t !== keep)) await closeTab(tab);
+  for (const tab of S.tabs.filter((tb) => tb !== keep)) await closeTab(tab);
 }
 
 export const closeCurrentTab = () => (S.tab ? closeTab(S.tab) : undefined);
@@ -243,7 +243,7 @@ export function selectTabAt(n) {
 export async function resyncTabs() {
   const info = await getJSON('/api/state');
   syncTabs(info);
-  const want = S.tabs.find((t) => t.id === info.active) || S.tab || S.tabs[0] || null;
+  const want = S.tabs.find((tb) => tb.id === info.active) || S.tab || S.tabs[0] || null;
   if (want !== S.tab || !want) await selectTab(want, { tell: false });
 }
 
@@ -253,7 +253,7 @@ export async function loadTabs() {
   try {
     info = await getJSON('/api/state');
   } catch (e) {
-    toast(`프로젝트를 불러오지 못했습니다: ${e.message}`, 'error');
+    toast(t('프로젝트를 불러오지 못했습니다: {error}', { error: e.message }), 'error');
     showHome();
     return;
   }
@@ -262,36 +262,36 @@ export async function loadTabs() {
     configErrorShown = true;
     toast(info.config_error, 'error', 15000);
   }
-  await selectTab(S.tabs.find((t) => t.id === info.active) || S.tabs[0] || null, { tell: false });
+  await selectTab(S.tabs.find((tb) => tb.id === info.active) || S.tabs[0] || null, { tell: false });
 }
 
 // ---- 탭 막대 -------------------------------------------------------------------
 
 function renderTabs() {
   const count = new Map();
-  for (const t of S.tabs) count.set(t.name.toLowerCase(), (count.get(t.name.toLowerCase()) || 0) + 1);
-  $('#lec-tablist').innerHTML = S.tabs.map((t, i) => {
-    const active = t === S.tab;
-    const parent = count.get(t.name.toLowerCase()) > 1 ? parentName(t.root) : '';   // 같은 이름의 폴더는 상위 폴더 이름으로 구분
+  for (const tb of S.tabs) count.set(tb.name.toLowerCase(), (count.get(tb.name.toLowerCase()) || 0) + 1);
+  $('#lec-tablist').innerHTML = S.tabs.map((tb, i) => {
+    const active = tb === S.tab;
+    const parent = count.get(tb.name.toLowerCase()) > 1 ? parentName(tb.root) : '';   // 같은 이름의 폴더는 상위 폴더 이름으로 구분
     const key = i < 8 ? `Ctrl+${i + 1}` : i === S.tabs.length - 1 ? 'Ctrl+9' : '';
-    return `<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${esc(t.id)}"
-      title="${esc(t.root)}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(t.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
-      + `${!active && t.changed.size ? '<span class="dot" title="열어 보기 전에 바뀐 문서가 있습니다"></span>' : ''}`
-      + `<button type="button" class="tab-close" title="탭 닫기 (Ctrl+W)" aria-label="${esc(t.name)} 탭 닫기"><svg><use href="#i-close"/></svg></button></div>`;
+    return `<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${esc(tb.id)}"
+      title="${esc(tb.root)}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(tb.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
+      + `${!active && tb.changed.size ? `<span class="dot" title="${t('열어 보기 전에 바뀐 문서가 있습니다')}"></span>` : ''}`
+      + `<button type="button" class="tab-close" title="${t('탭 닫기 (Ctrl+W)')}" aria-label="${esc(t('{name} 탭 닫기', { name: tb.name }))}"><svg><use href="#i-close"/></svg></button></div>`;
   }).join('');
 }
 
-const tabOf = (el) => S.tabs.find((t) => t.id === el?.closest('.lec-tab')?.dataset.id) || null;
+const tabOf = (el) => S.tabs.find((tb) => tb.id === el?.closest('.lec-tab')?.dataset.id) || null;
 
 async function copy(text) {
-  toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다');
+  toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'));
 }
 
 function tabMenu(tab) {
-  const items = [{ header: tab.root }, { label: '탭 닫기', hint: tab === S.tab ? 'Ctrl+W' : '', action: () => closeTab(tab) }];
-  if (S.tabs.length > 1) items.push({ label: '다른 탭 모두 닫기', action: () => closeOthers(tab) });
-  items.push('-', { label: '전체 경로 복사', action: () => copy(tab.root) },
-    { label: '탐색기에서 보기', action: () => revealInExplorer('', tab) });
+  const items = [{ header: tab.root }, { label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+W' : '', action: () => closeTab(tab) }];
+  if (S.tabs.length > 1) items.push({ label: t('다른 탭 모두 닫기'), action: () => closeOthers(tab) });
+  items.push('-', { label: t('전체 경로 복사'), action: () => copy(tab.root) },
+    { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) });
   return items;
 }
 
@@ -300,10 +300,10 @@ function recentMenu(e) {
   const r = e.currentTarget.getBoundingClientRect();
   const items = recent.length
     ? recent.map((p) => ({
-      label: folderName(p), hint: S.tabs.some((t) => samePath(t.root, p)) ? `${p} (열린 탭)` : p, action: () => openFolder(p),
+      label: folderName(p), hint: S.tabs.some((tb) => samePath(tb.root, p)) ? t('{path} (열린 탭)', { path: p }) : p, action: () => openFolder(p),
     }))
-    : [{ label: '최근 연 폴더가 없습니다', action: () => {} }];
-  items.push('-', { label: '다른 폴더 열기…', hint: 'Ctrl+O', action: chooseAndOpen });
+    : [{ label: t('최근 연 폴더가 없습니다'), action: () => {} }];
+  items.push('-', { label: t('다른 폴더 열기…'), hint: 'Ctrl+O', action: chooseAndOpen });
   showMenu(r.left, r.bottom + 4, items);
 }
 

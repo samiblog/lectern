@@ -191,6 +191,7 @@ Claude 가 만든 html 보고서는 트리에 `HTML` 표시와 함께 나옵니�
 
 | 설정 | 하는 일 |
 |---|---|
+| 언어 · Language | 자동(Windows 표시 언어)·한국어·English. 바꾸면 화면을 다시 불러옴 |
 | 스타일 목록 묶기 | 스타일 목록을 용도별·분위기별·밝기별로 묶음 |
 | 마지막 위치에서 시작 | 폴더를 열면 마지막에 보던 문서와 위치로 |
 | 첫 단계 폴더 펼치기 | 폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둠 |
@@ -202,6 +203,7 @@ Claude 가 만든 html 보고서는 트리에 `HTML` 표시와 함께 나옵니�
 
 | 키 | 하는 일 |
 |---|---|
+| `language` | `auto`·`ko`·`en` |
 | `editor` | 코드 파일을 열 편집기의 전체 경로. 비워 두면 VS Code(`code`) |
 | `exclude_dirs` | 트리에서 뺄 폴더 이름 (예: `["data", "output"]`) |
 | `terminal_shell` | 터미널 셸의 전체 경로 (예: PowerShell 7). 비워 두면 Windows PowerShell |

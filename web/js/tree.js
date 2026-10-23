@@ -6,6 +6,7 @@ import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { $, $$, esc, dirname, timeAgo, copyText, toast, keepFocus } from './util.js';
+import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
 let panel = 'files';   // 사이드바 탭: files | recent | search | parts
@@ -35,14 +36,14 @@ export function hasChangedInside(dirPath) {
 }
 
 /** html 문서 표시 (md 와 구분) — 폴더 개요에서. 사이드바 목록은 아이콘으로 구분한다 (icons.js) */
-export const kindBadge = (f) => (f.kind === 'html' ? '<span class="kind" title="HTML 문서">HTML</span>' : '');
+export const kindBadge = (f) => (f.kind === 'html' ? `<span class="kind" title="${t('HTML 문서')}">HTML</span>` : '');
 
 function fileRow(f, depth, extra = '') {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
   return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(tipOf(f))}" tabindex="0">`
     + `<span class="caret-space"></span>${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${extra}`
-    + `${S.changed.has(f.path) ? '<span class="dot" title="열어 보기 전에 바뀜"></span>' : ''}</div>`;
+    + `${S.changed.has(f.path) ? `<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`;
 }
 
 function nodesHtml(nodes, depth) {
@@ -57,7 +58,7 @@ function nodesHtml(nodes, depth) {
     if (n.path === activeDir()) cls.push('active');
     html += `<div class="${cls.join(' ')}" data-dir="${esc(n.path)}" style="--d:${depth}" title="${esc(n.path)}" tabindex="0">`
       + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>`
-      + `${!open && hasChangedInside(n.path) ? '<span class="dot" title="안쪽 문서가 바뀜"></span>' : ''}</div>`;
+      + `${!open && hasChangedInside(n.path) ? `<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`;
     if (open) html += nodesHtml(n.children, depth + 1);
   }
   return html;
@@ -75,16 +76,16 @@ function renderTree() {
     const terms = query.split(/\s+/);
     const hits = S.files.filter((f) => {
       const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
-      return terms.every((t) => hay.includes(t));
+      return terms.every((w) => hay.includes(w));
     });
     box.innerHTML = hits.length
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(f, 0, dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : '')).join('')
-      : '<p class="side-empty">일치하는 문서가 없습니다</p>';
+      : `<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`;
   } else {
     const rootCls = ['row', 'dir', 'root'];
     if (activeDir() === '') rootCls.push('active');
-    box.innerHTML = `<div class="${rootCls.join(' ')}" data-dir="" title="프로젝트 개요" tabindex="0"><span class="label">${esc(S.name)}</span></div>`
-      + (S.tree.length ? nodesHtml(S.tree, 0) : '<p class="side-empty">문서(Markdown·HTML)가 없습니다</p>');
+    box.innerHTML = `<div class="${rootCls.join(' ')}" data-dir="" title="${t('프로젝트 개요')}" tabindex="0"><span class="label">${esc(S.name)}</span></div>`
+      + (S.tree.length ? nodesHtml(S.tree, 0) : `<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
 }
@@ -99,7 +100,7 @@ function renderRecent() {
       + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${fileIcon(f.name, f.kind)}${esc(labelOf(f))}</span>`
       + `${S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
       + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
-  }).join('') : '<p class="side-empty">문서가 없습니다</p>';
+  }).join('') : `<p class="side-empty">${t('문서가 없습니다')}</p>`;
 }
 
 function renderCount() {
@@ -184,20 +185,20 @@ export function fullPath(path) {
 }
 
 async function copy(text) {
-  toast(await copyText(text) ? `복사했습니다: ${text}` : '복사하지 못했습니다', '');
+  toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'), '');
 }
 
 /** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사, 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
   const items = [];
-  if (path) items.push({ label: `@${path} 복사`, hint: 'Claude Code 프롬프트에 붙여 넣기', action: () => copy(`@${path}`) });
-  items.push({ label: '전체 경로 복사', action: () => copy(fullPath(path)) });
+  if (path) items.push({ label: t('@{path} 복사', { path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`) });
+  items.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)) });
   items.push('-');
-  if (isDoc) items.push({ label: '편집기로 열기', action: () => openExternal(path) });
-  items.push({ label: '탐색기에서 보기', action: () => revealInExplorer(path) });
+  if (isDoc) items.push({ label: t('편집기로 열기'), action: () => openExternal(path) });
+  items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(path) });
   if (!isDoc && S.dirs.has(path)) {   // 문서가 있는 폴더 — 모아 보기 (parts.js)
-    items.push('-', { label: path ? '이 폴더의 표·그림 등 모아 보기' : '프로젝트의 표·그림 등 모아 보기',
-      hint: "사이드바 '모아 보기' 탭", action: () => emit('parts', { path }) });
+    items.push('-', { label: path ? t('이 폴더의 표·그림 등 모아 보기') : t('프로젝트의 표·그림 등 모아 보기'),
+      hint: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path }) });
   }
   return items;
 }

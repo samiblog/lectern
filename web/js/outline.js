@@ -3,25 +3,27 @@
 // 단계는 들여쓰기로 정한다 (더 들여 쓴 정의는 앞 정의의 아래). 결과: [{line(1부터), level(0~3), name, kind}]
 // kind: section(구분 주석·영역) · class · type · function · method · key · selector · heading · label
 
+import { t } from './i18n.js';
+
 // 확장자 → [highlight.js 언어, 보일 이름, 규칙 묶음]. highlight.js 에 없는 언어는 색 없이 글자로 (codeview.js)
 const LANGS = {
   py: ['python', 'Python', 'python'], pyw: ['python', 'Python', 'python'],
   js: ['javascript', 'JavaScript', 'js'], mjs: ['javascript', 'JavaScript', 'js'], cjs: ['javascript', 'JavaScript', 'js'],
   jsx: ['javascript', 'JavaScript (JSX)', 'js'], ts: ['typescript', 'TypeScript', 'js'], tsx: ['typescript', 'TypeScript (TSX)', 'js'],
-  json: ['json', 'JSON', 'json'], jsonc: ['json', 'JSON', 'json'], ipynb: ['json', 'Jupyter 노트북 (JSON)', 'json'],
+  json: ['json', 'JSON', 'json'], jsonc: ['json', 'JSON', 'json'], ipynb: ['json', t('Jupyter 노트북 (JSON)'), 'json'],
   yaml: ['yaml', 'YAML', 'yaml'], yml: ['yaml', 'YAML', 'yaml'],
-  toml: ['ini', 'TOML', 'ini'], ini: ['ini', 'INI', 'ini'], cfg: ['ini', '설정', 'ini'], conf: ['ini', '설정', 'ini'], env: ['bash', '환경 변수', 'env'],
+  toml: ['ini', 'TOML', 'ini'], ini: ['ini', 'INI', 'ini'], cfg: ['ini', t('설정 파일'), 'ini'], conf: ['ini', t('설정 파일'), 'ini'], env: ['bash', t('환경 변수'), 'env'],
   css: ['css', 'CSS', 'css'], scss: ['scss', 'SCSS', 'css'], less: ['less', 'Less', 'css'],
   htm: ['xml', 'HTML', 'html'], html: ['xml', 'HTML', 'html'], xml: ['xml', 'XML', 'none'], xsl: ['xml', 'XSL', 'none'],
   vue: ['xml', 'Vue', 'html'], svelte: ['xml', 'Svelte', 'html'],
-  sh: ['bash', '셸 스크립트', 'shell'], bash: ['bash', 'Bash', 'shell'], zsh: ['bash', 'Zsh', 'shell'],
-  bat: ['dos', '배치 파일', 'batch'], cmd: ['dos', '배치 파일', 'batch'],
-  ps1: ['powershell', 'PowerShell', 'powershell'], psm1: ['powershell', 'PowerShell 모듈', 'powershell'],
-  c: ['c', 'C', 'cfamily'], h: ['c', 'C 헤더', 'cfamily'], cc: ['cpp', 'C++', 'cfamily'], cpp: ['cpp', 'C++', 'cfamily'], hpp: ['cpp', 'C++ 헤더', 'cfamily'],
+  sh: ['bash', t('셸 스크립트'), 'shell'], bash: ['bash', 'Bash', 'shell'], zsh: ['bash', 'Zsh', 'shell'],
+  bat: ['dos', t('배치 파일'), 'batch'], cmd: ['dos', t('배치 파일'), 'batch'],
+  ps1: ['powershell', 'PowerShell', 'powershell'], psm1: ['powershell', t('PowerShell 모듈'), 'powershell'],
+  c: ['c', 'C', 'cfamily'], h: ['c', t('C 헤더'), 'cfamily'], cc: ['cpp', 'C++', 'cfamily'], cpp: ['cpp', 'C++', 'cfamily'], hpp: ['cpp', t('C++ 헤더'), 'cfamily'],
   cs: ['csharp', 'C#', 'java'], java: ['java', 'Java', 'java'], kt: ['kotlin', 'Kotlin', 'java'], swift: ['swift', 'Swift', 'java'],
   dart: ['dart', 'Dart', 'java'], go: ['go', 'Go', 'go'], rs: ['rust', 'Rust', 'rust'], rb: ['ruby', 'Ruby', 'ruby'],
   php: ['php', 'PHP', 'php'], sql: ['sql', 'SQL', 'sql'], r: ['r', 'R', 'r'], lua: ['lua', 'Lua', 'lua'], pl: ['perl', 'Perl', 'perl'],
-  gradle: ['groovy', 'Gradle', 'java'], lock: ['plaintext', '잠금 파일', 'none'],
+  gradle: ['groovy', 'Gradle', 'java'], lock: ['plaintext', t('잠금 파일'), 'none'],
 };
 
 /** 파일 경로의 언어: {hljs, name, family} */

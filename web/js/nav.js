@@ -6,15 +6,16 @@ import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
 import { showCode } from './codeview.js';
 import { isHtml, toast } from './util.js';
+import { t } from './i18n.js';
 
 /** 화면 종류·문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js, 코드: codeview.js — D43, 폴더 개요: overview.js) */
-function render(pane, t, opts) {
-  if (t.type === 'code') return showCode(pane, t.path, opts);
-  if (t.type === 'overview') return showOverview(pane, t.path, opts);
-  return isHtml(t.path) ? showHtml(pane, t.path, opts) : showDoc(pane, t.path, opts);
+function render(pane, target, opts) {
+  if (target.type === 'code') return showCode(pane, target.path, opts);
+  if (target.type === 'overview') return showOverview(pane, target.path, opts);
+  return isHtml(target.path) ? showHtml(pane, target.path, opts) : showDoc(pane, target.path, opts);
 }
 
-const keyOf = (t) => `${t.type}:${t.path || ''}`;
+const keyOf = (target) => `${target.type}:${target.path || ''}`;
 
 /**
  * 화면 이동. 성공하면 true.
@@ -33,7 +34,7 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
     done = await render(pane, next, { hash: target.hash, line: target.line, scrollTop: top });
   } catch (e) {
     console.error(e);
-    toast(`화면을 그리지 못했습니다: ${e.message}`, 'error');
+    toast(t('화면을 그리지 못했습니다: {error}', { error: e.message }), 'error');
     done = false;
   } finally {
     pane.pending -= 1;
@@ -107,11 +108,11 @@ export async function refreshView(pane) {
     await render(pane, view, { scrollTop });
   } catch (e) {
     console.error(e);
-    toast(`다시 그리지 못했습니다: ${e.message}`, 'error');
+    toast(t('다시 그리지 못했습니다: {error}', { error: e.message }), 'error');
   }
 }
 
 export function initNav() {
-  on('open', (t) => navigate(t));
+  on('open', (target) => navigate(target));
   on('refresh-view', (pane) => refreshView(pane));
 }

@@ -13,6 +13,7 @@ import { unfoldTo } from './fold.js';
 import { flashBlock } from './diffmark.js';
 import { fileIcon } from './icons.js';
 import { $, esc, debounce, dirname, basename, isHtml, keepFocus } from './util.js';
+import { t } from './i18n.js';
 
 let query = '';     // 결과가 화면에 있는 검색어
 let shown = null;   // 화면의 결과 (/api/search 의 답) — 탭을 바꿀 때 그 탭에 남긴다
@@ -55,16 +56,16 @@ function render(d) {
   shown = d;
   const docs = d.docs ?? d.results.length;
   const code = d.code ?? 0;
-  const found = [docs && `문서 ${docs}개`, code && `코드 ${code}개`].filter(Boolean).join('·');
+  const found = [docs && t('문서 {n}개', { n: docs }), code && t('코드 {n}개', { n: code })].filter(Boolean).join('·');
   $('#lec-search-info').textContent = d.results.length
-    ? `${found}, ${d.total}곳${d.truncated ? ' (많아서 일부만 보입니다)' : ''}`
-    : '찾은 곳이 없습니다';
+    ? `${found}, ${t('{n}곳', { n: d.total })}${d.truncated ? t(' (많아서 일부만 보입니다)') : ''}`
+    : t('찾은 곳이 없습니다');
   const box = $('#lec-search-results');
   let html = '';
   let codeHead = false;
   for (const r of d.results) {
     const isCode = r.kind === 'code';
-    if (isCode && !codeHead && docs) html += '<p class="sr-group">코드</p>';   // 문서 결과 아래에 '코드' 묶음
+    if (isCode && !codeHead && docs) html += `<p class="sr-group">${t('코드')}</p>`;   // 문서 결과 아래에 '코드' 묶음
     codeHead ||= isCode;
     const name = r.title || basename(r.path);
     const kind = isCode ? ' data-kind="code"' : '';
@@ -72,7 +73,7 @@ function render(d) {
       + `<span class="label">${highlight(name, d.query)}</span>${dirname(r.path) ? `<span class="sub">${esc(dirname(r.path))}</span>` : ''}</div>`;
     html += r.hits.map((h) => `<div class="sr-hit" data-doc="${esc(r.path)}"${kind} data-line="${h.line}" tabindex="0">`
       + `<span class="ln">${h.line}</span><span class="tx">${highlight(h.text, d.query)}</span></div>`).join('');
-    if (r.more) html += `<div class="sr-more">이 ${isCode ? '파일' : '문서'}에 더 있습니다</div>`;
+    if (r.more) html += `<div class="sr-more">${isCode ? t('이 파일에 더 있습니다') : t('이 문서에 더 있습니다')}</div>`;
   }
   keepFocus(box, () => { box.innerHTML = html; });
 }
@@ -87,17 +88,17 @@ async function run(again = false) {
     return;
   }
   if (!wantDocs() && !wantCode()) {
-    clear('찾을 곳(문서·코드)을 고르세요');
+    clear(t('찾을 곳(문서·코드)을 고르세요'));
     return;
   }
   query = q;
-  $('#lec-search-info').textContent = '찾는 중…';
+  $('#lec-search-info').textContent = t('찾는 중…');
   let d;
   try {
     d = await getJSON(`/api/search?p=${encodeURIComponent(tab.id)}&q=${encodeURIComponent(q)}`
       + `&docs=${wantDocs() ? 1 : 0}&code=${wantCode() ? 1 : 0}`);
   } catch (e) {
-    if (q === query && tab === S.tab) $('#lec-search-info').textContent = `찾지 못했습니다: ${e.message}`;
+    if (q === query && tab === S.tab) $('#lec-search-info').textContent = t('찾지 못했습니다: {error}', { error: e.message });
     return;
   }
   if (q === query && tab === S.tab) render(d);   // 늦게 온 결과(다른 검색어·다른 탭)는 버린다
@@ -168,7 +169,7 @@ export function initSearch() {
   const later = debounce(run, 250);
   input().addEventListener('input', () => {
     // 앞 검색어의 결과를 바로 지운다 — 남아 있으면 Enter·클릭이 옛 결과를 연다
-    clear(input().value.trim() ? '찾는 중…' : '');
+    clear(input().value.trim() ? t('찾는 중…') : '');
     later();
   });
   input().addEventListener('keydown', async (e) => {
@@ -202,9 +203,9 @@ export function initSearch() {
   // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다
   const again = debounce(() => run(true), 250);
   on('tree', () => { if (input().value.trim() && !$('#lec-search').hidden) again(); });
-  on('tab', (t) => {
+  on('tab', (tab) => {
     later.cancel();
     again.cancel();
-    onTab(t);
+    onTab(tab);
   });
 }

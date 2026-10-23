@@ -3,6 +3,7 @@
 import { esc } from './util.js';
 import { mermaidTheme } from './theme.js';
 import { openLightbox } from './ui.js';
+import { t } from './i18n.js';
 
 let loading = null;
 
@@ -14,7 +15,7 @@ function ensureMermaid() {
   if (loaded()) return Promise.resolve(loaded());
   if (!loading) {
     loading = new Promise((resolve, reject) => {
-      const fail = () => { loading = null; reject(new Error('mermaid 로드 실패')); };
+      const fail = () => { loading = null; reject(new Error(t('mermaid 로드 실패'))); };
       const s = document.createElement('script');
       s.src = '/static/vendor/mermaid/mermaid.min.js';
       s.onload = () => (loaded() ? resolve(loaded()) : fail());
@@ -43,7 +44,7 @@ export async function renderMermaid(root) {
   try {
     mermaid = await ensureMermaid();
   } catch {
-    nodes.forEach((n) => showSource(n, '다이어그램 라이브러리를 불러오지 못해 원문을 표시합니다'));
+    nodes.forEach((n) => showSource(n, t('다이어그램 라이브러리를 불러오지 못해 원문을 표시합니다')));
     return;
   }
 
@@ -63,11 +64,11 @@ export async function renderMermaid(root) {
   for (const n of nodes) {
     const svg = n.querySelector('svg');
     if (!svg) {
-      showSource(n, 'Mermaid 문법 오류가 있어 원문을 표시합니다');
+      showSource(n, t('Mermaid 문법 오류가 있어 원문을 표시합니다'));
       continue;
     }
     n.classList.add('mermaid-ok');
-    n.title = '누르면 크게 봅니다';
+    n.title = t('누르면 크게 봅니다');
     n.addEventListener('click', () => openLightbox(svg.cloneNode(true)));
   }
 }

@@ -8,6 +8,7 @@ import { S, on } from './store.js';
 import { saveConfig } from './api.js';
 import { unfoldTo } from './fold.js';
 import { $, $$, esc, screenRect } from './util.js';
+import { t } from './i18n.js';
 
 let heads = [];   // 목차의 제목들 (지금 읽는 위치 표시는 제목만)
 let links = [];   // heads 와 같은 순서의 목차 링크
@@ -66,8 +67,8 @@ function buildOutline(view, items) {
   heads = rows.map((r) => r.el);
   parts = [];
   const box = $('#lec-toc');
-  box.innerHTML = `<p class="toc-head">목차</p><ul class="toc-list code-outline">${rows.map((r, i) => (
-    `<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${esc(`${r.name} — ${r.line}행`)}">`
+  box.innerHTML = `<p class="toc-head">${t('목차')}</p><ul class="toc-list code-outline">${rows.map((r, i) => (
+    `<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${esc(`${r.name} — ${t('{a}행', { a: r.line })}`)}">`
     + `<span class="ok" aria-hidden="true">${OUTLINE_MARK[r.kind] || '·'}</span>${esc(r.name)}</a></li>`
   )).join('')}</ul>`;
   links = $$('a[data-i]', box);
@@ -78,14 +79,14 @@ function buildOutline(view, items) {
 
 // ---- 구성 요소 ------------------------------------------------------------------
 
-// 종류: 이름(머리 버튼·번호), 아이콘(index.html 의 기호). 머리 버튼은 이 순서 (모아 보기 parts.js 도 이 표를 쓴다)
+// 종류: 이름(번호 — '표 3'), 여럿일 때 이름(머리 버튼 — 영어 복수형), 아이콘(index.html 의 기호). 머리 버튼은 이 순서 (모아 보기 parts.js 도 이 표를 쓴다)
 export const PARTS = {
-  table: { name: '표', icon: 'i-table' },
-  figure: { name: '그림', icon: 'i-image' },
-  box: { name: '박스글', icon: 'i-box' },
-  diagram: { name: '다이어그램', icon: 'i-diagram' },
-  code: { name: '코드', icon: 'i-code' },
-  math: { name: '수식', icon: 'i-math' },
+  table: { name: t('표'), many: t('표', { n: 2 }), icon: 'i-table' },
+  figure: { name: t('그림'), many: t('그림', { n: 2 }), icon: 'i-image' },
+  box: { name: t('박스글'), many: t('박스글', { n: 2 }), icon: 'i-box' },
+  diagram: { name: t('다이어그램'), many: t('다이어그램', { n: 2 }), icon: 'i-diagram' },
+  code: { name: t('코드'), many: t('코드', { n: 2 }), icon: 'i-code' },
+  math: { name: t('수식'), many: t('수식', { n: 2 }), icon: 'i-math' },
 };
 // md(doc.js 가 꾸민 것)와 html 문서의 후보. 박스글은 인용·콜아웃과 html 의 aside·callout 류
 const BOXES = 'blockquote, aside, [role="note"], .callout, .admonition';
@@ -116,7 +117,7 @@ function partKind(el) {
 }
 
 const squeeze = (s) => String(s ?? '').replace(/\s+/g, ' ').trim();
-const clip = (s, n = 44) => { const t = squeeze(s); return t.length > n ? `${t.slice(0, n - 1)}…` : t; };
+const clip = (s, n = 44) => { const text = squeeze(s); return text.length > n ? `${text.slice(0, n - 1)}…` : text; };
 const CAPTION = /^(?:표|그림|table|fig(?:ure)?\.?|tab\.)\s*[\d.-]+\s*[.:)]?\s*/i;
 
 /** 표·그림 바로 앞(뒤)의 짧은 단락이 '표 1. …'처럼 시작하거나 통째로 굵게·기울여 쓴 글이면 그것을 이름으로 본다 */
@@ -134,7 +135,7 @@ function tableLabel(table) {
   const cols = Math.max(0, ...[...table.rows].map((r) => r.cells.length));
   const name = squeeze(table.caption?.textContent) || captionNear(table.closest('.table-wrap') || table)
     || [...(table.tHead?.rows[0] || table.rows[0])?.cells || []].slice(0, 3).map((c) => squeeze(c.textContent)).filter(Boolean).join('·');
-  return [clip(name, 32), `${rows}행 ${cols}열`].filter(Boolean).join(' · ');
+  return [clip(name, 32), t('{rows}행 {cols}열', { rows, cols })].filter(Boolean).join(' · ');
 }
 
 function figureLabel(el) {
@@ -150,13 +151,13 @@ function figureLabel(el) {
 function boxLabel(el) {
   const title = squeeze(el.querySelector(':scope > .alert-title')?.textContent);
   const text = [...el.children].filter((c) => !c.classList.contains('alert-title')).map((c) => c.textContent).join(' ') || el.textContent;
-  return { name: title || (el.tagName === 'BLOCKQUOTE' ? '인용' : '박스글'), label: clip(text, 40) };
+  return { name: title || (el.tagName === 'BLOCKQUOTE' ? t('인용') : t('박스글')), label: clip(text, 40) };
 }
 
 const DIAGRAMS = {
-  flowchart: '흐름도', graph: '흐름도', sequenceDiagram: '시퀀스', classDiagram: '클래스', stateDiagram: '상태', 'stateDiagram-v2': '상태',
-  erDiagram: 'ER', gantt: '간트', pie: '원그래프', mindmap: '마인드맵', timeline: '타임라인', journey: '여정', gitGraph: 'Git',
-  quadrantChart: '사분면', 'xychart-beta': '차트', 'sankey-beta': '흐름량', 'block-beta': '블록', requirementDiagram: '요구사항',
+  flowchart: t('흐름도'), graph: t('흐름도'), sequenceDiagram: t('시퀀스'), classDiagram: t('클래스'), stateDiagram: t('상태'), 'stateDiagram-v2': t('상태'),
+  erDiagram: 'ER', gantt: t('간트'), pie: t('원그래프'), mindmap: t('마인드맵'), timeline: t('타임라인'), journey: t('여정'), gitGraph: 'Git',
+  quadrantChart: t('사분면'), 'xychart-beta': t('차트'), 'sankey-beta': t('흐름량'), 'block-beta': t('블록'), requirementDiagram: t('요구사항'),
 };
 
 function diagramLabel(el) {
@@ -247,10 +248,10 @@ function buildToc(view) {
   const kinds = Object.keys(PARTS).filter((k) => counts[k]);
   const buttons = kinds.map((k) => {
     const on = !hidden.has(k);
-    return `<button type="button" data-part="${k}" aria-pressed="${on}" title="${on ? `목차에서 ${esc(PARTS[k].name)} 감추기` : `목차에 ${esc(PARTS[k].name)} 보이기`}">`
-      + `<svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].name)} ${counts[k]}</button>`;
+    return `<button type="button" data-part="${k}" aria-pressed="${on}" title="${esc(on ? t('목차에서 {kind} 감추기', { kind: PARTS[k].many }) : t('목차에 {kind} 보이기', { kind: PARTS[k].many }))}">`
+      + `<svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(counts[k] === 1 ? PARTS[k].name : PARTS[k].many)} ${counts[k]}</button>`;
   }).join('');
-  box.innerHTML = `<p class="toc-head">목차</p>${buttons ? `<div class="toc-parts" role="group" aria-label="목차에 보일 구성 요소">${buttons}</div>` : ''}`
+  box.innerHTML = `<p class="toc-head">${t('목차')}</p>${buttons ? `<div class="toc-parts" role="group" aria-label="${t('목차에 보일 구성 요소')}">${buttons}</div>` : ''}`
     + `<ul class="toc-list">${items}</ul>`;
   links = $$('a[data-i]', box);
   active = -1;

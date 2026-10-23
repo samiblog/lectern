@@ -8,6 +8,7 @@ import { S, emit } from './store.js';
 import { postJSON, openExternal } from './api.js';
 import { isCode } from './icons.js';
 import { isMd, isHtml, dirname, basename } from './util.js';
+import { t } from './i18n.js';
 
 // 경로: (./ ../)* (폴더/)* 이름.확장자, 뒤에 :줄(:칸) 이나 #L줄. 한글 파일 이름을 받고, 뒤에 붙은 조사('에서')는 끝으로 본다
 const PATH = /(?<![A-Za-z0-9_./\\-])((?:\.{1,2}[\\/])*(?:[\p{L}\p{N}_.-]+[\\/])*[\p{L}\p{N}_-][\p{L}\p{N}_.-]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?(?![A-Za-z0-9_\\/-])/gu;
@@ -22,7 +23,7 @@ function link(doc, text, path, line) {
   a.dataset.path = path;
   if (line) a.dataset.line = line;
   a.dataset.lecHref = line ? `${path}:${line}` : path;   // 우클릭 '링크 주소 복사'
-  a.title = line ? `${path} ${line}행` : path;
+  a.title = line ? `${path} ${t('{a}행', { a: line })}` : path;
   a.append(text);
   return a;
 }

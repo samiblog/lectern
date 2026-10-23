@@ -11,6 +11,7 @@
 
 import { S, on } from './store.js';
 import { $ } from './util.js';
+import { t } from './i18n.js';
 
 let active = false;
 let chapters = [];   // [[블록, …], …] — 블록은 #lec-view 의 자식
@@ -73,8 +74,8 @@ function updateButton() {
   btn.classList.toggle('on', active);
   btn.disabled = !usable && !active;
   btn.title = usable || active
-    ? `장 하이라이트 ${active ? '끄기' : '켜기'} — 켜면 ↑·↓·PageUp·PageDown 으로 앞뒤 장 (Esc 로 끄기)`
-    : '장 하이라이트: 제목으로 나뉜 Markdown 문서에서 쓸 수 있습니다';
+    ? `${active ? t('장 하이라이트 끄기') : t('장 하이라이트 켜기')} — ${t('켜면 ↑·↓·PageUp·PageDown 으로 앞뒤 장 (Esc 로 끄기)')}`
+    : t('장 하이라이트: 제목으로 나뉜 Markdown 문서에서 쓸 수 있습니다');
   // 옆의 ∧∨: 하이라이트 중에만, 첫 장·마지막 장에서는 그쪽으로 못 간다
   const lit = active && usable;
   $('#lec-spot-prev').disabled = !lit || current <= 0;
@@ -138,8 +139,8 @@ export function spotlightItems(target) {
   const items = [];
   if (!active || (i >= 0 && i !== current)) {
     items.push({
-      label: i >= 0 ? '이 장 하이라이트' : '장 하이라이트',
-      hint: '나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장',
+      label: i >= 0 ? t('이 장 하이라이트') : t('장 하이라이트'),
+      hint: t('나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장'),
       action: () => {
         active = true;
         current = i >= 0 ? i : chapterAtTop();
@@ -147,7 +148,7 @@ export function spotlightItems(target) {
       },
     });
   }
-  if (active) items.push({ label: '하이라이트 해제', hint: 'Esc', action: () => toggleSpotlight(false) });
+  if (active) items.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => toggleSpotlight(false) });
   return items;
 }
 

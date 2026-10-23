@@ -12,9 +12,10 @@ import threading
 from pathlib import Path
 from typing import Any
 
-from . import __version__
+from . import __version__, i18n
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
+from .i18n import t
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
@@ -107,6 +108,7 @@ class Project:
 class AppState:
     def __init__(self, config: Config, mode: str = 'app'):
         self.config = config
+        i18n.use_setting(lambda: self.config.get('language'))   # 서버 문구의 언어 (D46)
         self.mode = mode                 # 'app' (pywebview 창) | 'browser' (개발용)
         self.token: str | None = None    # pywebview 세션 토큰. None 이면 검사 안 함
         self.projects: dict[str, Project] = {}   # 열린 순서 = 탭 순서
@@ -137,12 +139,12 @@ class AppState:
         """
         path = Path(folder).expanduser().resolve()
         if not path.is_dir():
-            raise NotADirectoryError(f'폴더가 아닙니다: {path}')
+            raise NotADirectoryError(t('폴더가 아닙니다: {path}', path=path))
         with self._lock:
             project = self._find(path)
             if project is None:
                 if len(self.projects) >= MAX_TABS:
-                    raise TooManyTabs(f'탭은 {MAX_TABS}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요')
+                    raise TooManyTabs(t('탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요', n=MAX_TABS))
                 pid = secrets.token_hex(4)
                 while pid in self.projects:
                     pid = secrets.token_hex(4)

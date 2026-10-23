@@ -17,6 +17,7 @@ import { S, on, emit } from './store.js';
 import { getJSON, postJSON, saveConfig } from './api.js';
 import { updateTocVisibility } from './toc.js';
 import { $, toast, copyText } from './util.js';
+import { t } from './i18n.js';
 
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
 const MIN_WIDTH = 280;
@@ -119,7 +120,7 @@ function script(src) {
     const el = document.createElement('script');
     el.src = src;
     el.onload = resolve;
-    el.onerror = () => reject(new Error(`${src} 를 불러오지 못했습니다`));
+    el.onerror = () => reject(new Error(t('{name} 를 불러오지 못했습니다', { name: src })));
     document.head.append(el);
   });
 }
@@ -134,7 +135,7 @@ function loadLib() {
     await script('/static/vendor/xterm/xterm.js');
     await Promise.all([script('/static/vendor/xterm/addon-fit.js'), script('/static/vendor/xterm/addon-unicode11.js')]);
     // 문서 속 id 가 window.<id> 로 잡혀 이름을 가릴 수 있다 — 진짜 라이브러리인지 본다 (mermaid.js 처럼)
-    if (!loaded()) throw new Error('터미널 화면 라이브러리를 불러오지 못했습니다. Lectern 을 다시 실행해 보세요');
+    if (!loaded()) throw new Error(t('터미널 화면 라이브러리를 불러오지 못했습니다. Lectern 을 다시 실행해 보세요'));
   })();
   loading.catch(() => { loading = null; });
   return loading;
@@ -160,47 +161,47 @@ function create(tab, parent = $('#lec-term-body')) {
   xterm.loadAddon(new window.Unicode11Addon.Unicode11Addon());
   xterm.unicode.activeVersion = '11';
   xterm.open(box);
-  const t = { tab, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '' };
+  const term = { tab, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '' };
   xterm.onData((data) => {
-    if (t.alive) send(t, data);
-    else if (!t.starting && data === '\r') start(t);   // 끝난 셸: Enter 로 다시 시작
+    if (term.alive) send(term, data);
+    else if (!term.starting && data === '\r') start(term);   // 끝난 셸: Enter 로 다시 시작
   });
   xterm.onResize(({ cols, rows }) => {
-    if (t.alive) postJSON('/api/term/resize', { t: t.id, cols, rows }, TERM_HEADER).catch(() => {});
+    if (term.alive) postJSON('/api/term/resize', { t: term.id, cols, rows }, TERM_HEADER).catch(() => {});
   });
-  xterm.attachCustomKeyEventHandler((e) => keyFor(t, e));
+  xterm.attachCustomKeyEventHandler((e) => keyFor(term, e));
   box.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (xterm.hasSelection()) copySelection(t);
-    else pasteFromClipboard(t);
+    if (xterm.hasSelection()) copySelection(term);
+    else pasteFromClipboard(term);
   });
-  tab.term = t;
-  return t;
+  tab.term = term;
+  return term;
 }
 
-async function copySelection(t) {
-  const text = t.xterm.getSelection();
-  t.xterm.clearSelection();
-  if (text) toast(await copyText(text) ? '복사했습니다' : '복사하지 못했습니다');
-  t.xterm.focus();   // copyText 가 잠시 다른 칸을 쓸 수 있다
+async function copySelection(term) {
+  const text = term.xterm.getSelection();
+  term.xterm.clearSelection();
+  if (text) toast(await copyText(text) ? t('복사했습니다') : t('복사하지 못했습니다'));
+  term.xterm.focus();   // copyText 가 잠시 다른 칸을 쓸 수 있다
 }
 
-async function pasteFromClipboard(t) {
+async function pasteFromClipboard(term) {
   try {
-    t.xterm.paste(await navigator.clipboard.readText());
+    term.xterm.paste(await navigator.clipboard.readText());
   } catch {
-    toast('붙여 넣지 못했습니다. Ctrl+V 로 붙여 넣으세요');
+    toast(t('붙여 넣지 못했습니다. Ctrl+V 로 붙여 넣으세요'));
   }
 }
 
 /** xterm 이 키를 셸로 보내기 전에. false 면 xterm 이 다루지 않는다 (브라우저 기본 동작이나 앱이 다룬다) */
-function keyFor(t, e) {
+function keyFor(term, e) {
   if (e.type !== 'keydown') return true;
   const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
   if (ctrl && (e.code === 'Backquote' || e.key === 'Tab')) return false;     // 패널 열고 닫기, 다음·이전 탭 (main.js)
-  if (ctrl && e.code === 'KeyC' && (e.shiftKey || t.xterm.hasSelection())) {   // 고른 글 복사 (없으면 Ctrl+C 는 셸로 — 중단)
+  if (ctrl && e.code === 'KeyC' && (e.shiftKey || term.xterm.hasSelection())) {   // 고른 글 복사 (없으면 Ctrl+C 는 셸로 — 중단)
     e.preventDefault();
-    copySelection(t);
+    copySelection(term);
     return false;
   }
   if (ctrl && e.code === 'KeyV') return false;   // 브라우저의 붙여 넣기 → xterm 이 받아 셸로 보낸다
@@ -208,100 +209,100 @@ function keyFor(t, e) {
 }
 
 /** 키 입력을 순서대로 보낸다. 보내는 중에 친 것은 모았다가 이어서 */
-function send(t, data) {
-  t.pending += data;
-  if (!t.sending) flush(t);
+function send(term, data) {
+  term.pending += data;
+  if (!term.sending) flush(term);
 }
 
-async function flush(t) {
-  t.sending = true;
-  while (t.pending && t.alive) {
-    let n = Math.min(SEND_CHUNK, t.pending.length);
-    if (n < t.pending.length && /[\ud800-\udbff]/.test(t.pending[n - 1])) n += 1;   // 대리 문자 쌍을 가르지 않게
-    const chunk = t.pending.slice(0, n);
-    t.pending = t.pending.slice(n);
+async function flush(term) {
+  term.sending = true;
+  while (term.pending && term.alive) {
+    let n = Math.min(SEND_CHUNK, term.pending.length);
+    if (n < term.pending.length && /[\ud800-\udbff]/.test(term.pending[n - 1])) n += 1;   // 대리 문자 쌍을 가르지 않게
+    const chunk = term.pending.slice(0, n);
+    term.pending = term.pending.slice(n);
     try {
-      await postJSON('/api/term/input', { t: t.id, data: chunk }, TERM_HEADER);
+      await postJSON('/api/term/input', { t: term.id, data: chunk }, TERM_HEADER);
     } catch {
-      t.pending = '';
+      term.pending = '';
     }
   }
-  t.sending = false;
+  term.sending = false;
 }
 
 /** 셸을 띄운다 (끝난 셸이면 새로). 이미 돌고 있는 셸이 서버에 있으면 그것에 붙고, 남은 출력부터 다시 보인다 */
-function start(t) {
-  t.starting ??= (async () => {
+function start(term) {
+  term.starting ??= (async () => {
     try {
-      fitNow(t);
-      const d = await postJSON('/api/term/open', { p: t.tab.id, cols: t.xterm.cols, rows: t.xterm.rows }, TERM_HEADER);
-      if (t.id && t.id !== d.id) t.xterm.write('\r\n');
-      Object.assign(t, { id: d.id, next: 0, alive: true, shell: d.shell });
+      fitNow(term);
+      const d = await postJSON('/api/term/open', { p: term.tab.id, cols: term.xterm.cols, rows: term.xterm.rows }, TERM_HEADER);
+      if (term.id && term.id !== d.id) term.xterm.write('\r\n');
+      Object.assign(term, { id: d.id, next: 0, alive: true, shell: d.shell });
       showTitle();
       emit('terms');
-      pump(t, d.id);
+      pump(term, d.id);
     } catch (e) {
-      t.xterm.write(`\r\n\x1b[91m${e.message}\x1b[0m\r\n`);
+      term.xterm.write(`\r\n\x1b[91m${e.message}\x1b[0m\r\n`);
     } finally {
-      t.starting = null;
+      term.starting = null;
     }
   })();
-  return t.starting;
+  return term.starting;
 }
 
 /** 출력 받기: 긴 폴링을 이어 간다. 셸이 끝나거나 탭이 닫히면 멈춘다 */
-async function pump(t, id) {
-  while (t.id === id && t.alive && S.tabs.includes(t.tab)) {
+async function pump(term, id) {
+  while (term.id === id && term.alive && S.tabs.includes(term.tab)) {
     let d;
     try {
-      d = await getJSON(`/api/term/read?t=${encodeURIComponent(id)}&from=${t.next}`, TERM_HEADER);
+      d = await getJSON(`/api/term/read?t=${encodeURIComponent(id)}&from=${term.next}`, TERM_HEADER);
     } catch (e) {
       if (e.status === 404) {
-        d = { data: '', next: t.next, alive: false, exit: null };
+        d = { data: '', next: term.next, alive: false, exit: null };
       } else {
         await sleep(1000);   // 서버가 잠시 답하지 않음
         continue;
       }
     }
-    if (t.id !== id) return;
-    if (d.data) t.xterm.write(d.data);
-    t.next = d.next;
+    if (term.id !== id) return;
+    if (d.data) term.xterm.write(d.data);
+    term.next = d.next;
     if (!d.alive) {
-      t.alive = false;
-      const code = d.exit != null ? ` (종료 코드 ${d.exit})` : '';
-      t.xterm.write(`\r\n\x1b[90m[셸이 끝났습니다${code}. Enter 를 누르면 다시 시작합니다]\x1b[0m\r\n`);
+      term.alive = false;
+      const code = d.exit != null ? ` (${t('종료 코드 {code}', { code: d.exit })})` : '';
+      term.xterm.write(`\r\n\x1b[90m[${t('셸이 끝났습니다{code}. Enter 를 누르면 다시 시작합니다', { code })}]\x1b[0m\r\n`);
       emit('terms');
     }
   }
 }
 
-function fitNow(t) {
-  if (!t || t.box.hidden || !t.box.clientWidth) return;
+function fitNow(term) {
+  if (!term || term.box.hidden || !term.box.clientWidth) return;
   try {
-    t.fit.fit();
+    term.fit.fit();
   } catch { /* 크기를 잴 수 없는 순간 */ }
 }
 
 /** 다시 시작: 탭의 셸(과 거기서 띄운 프로그램)을 끝내고 새로 */
 export async function restartTerminal(tab = S.tab) {
-  const t = tab?.term;
-  if (!t) return;
-  const old = t.id;
-  t.id = null;   // 지금 받는 출력(끝났다는 알림 포함)은 버린다 — pump
-  if (t.alive) {
-    t.alive = false;
+  const term = tab?.term;
+  if (!term) return;
+  const old = term.id;
+  term.id = null;   // 지금 받는 출력(끝났다는 알림 포함)은 버린다 — pump
+  if (term.alive) {
+    term.alive = false;
     await postJSON('/api/term/close', { t: old }, TERM_HEADER).catch(() => {});
   }
-  t.xterm.reset();
-  await start(t);
-  t.xterm.focus();
+  term.xterm.reset();
+  await start(term);
+  term.xterm.focus();
 }
 
 // ---- 패널 ---------------------------------------------------------------------
 
 function showTitle() {
-  const t = S.tab?.term;
-  const name = S.tab ? `${t?.shell || 'PowerShell'} — ${S.tab.name}` : '터미널 — 열린 프로젝트가 없습니다';
+  const term = S.tab?.term;
+  const name = S.tab ? `${term?.shell || 'PowerShell'} — ${S.tab.name}` : t('터미널 — 열린 프로젝트가 없습니다');
   $('#lec-term-title').textContent = name;
   $('#lec-term-title').title = S.tab ? S.tab.root : '';
 }
@@ -319,11 +320,11 @@ async function showCurrent({ focus = false } = {}) {
     return;
   }
   const tab = S.tab;
-  const t = tab.term || create(tab);
-  t.box.hidden = false;
-  fitNow(t);
-  if (!t.alive && !t.id) await start(t);
-  if (focus && tab === S.tab) t.xterm.focus();
+  const term = tab.term || create(tab);
+  term.box.hidden = false;
+  fitNow(term);
+  if (!term.alive && !term.id) await start(term);
+  if (focus && tab === S.tab) term.xterm.focus();
 }
 
 /** 패널을 열고 닫는다 (버튼·Ctrl+`). 닫아도 셸은 그대로 돈다 */
@@ -342,25 +343,25 @@ export function toggleTerminal(want = !open) {
 
 /** 탭을 닫기 전에: 그 탭의 셸에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */
 export async function confirmCloseTerminal(tab) {
-  const t = tab.term;
-  if (!t?.alive) return true;
+  const term = tab.term;
+  if (!term?.alive) return true;
   try {
-    const info = await getJSON(`/api/term/info?t=${encodeURIComponent(t.id)}`, TERM_HEADER);
+    const info = await getJSON(`/api/term/info?t=${encodeURIComponent(term.id)}`, TERM_HEADER);
     if (!info.busy) return true;
   } catch {
     return true;
   }
-  return window.confirm(`'${tab.name}' 탭의 터미널에서 프로그램이 실행 중입니다. 탭을 닫으면 함께 끝납니다. 닫을까요?`);
+  return window.confirm(t("'{name}' 탭의 터미널에서 프로그램이 실행 중입니다. 탭을 닫으면 함께 끝납니다. 닫을까요?", { name: tab.name }));
 }
 
 /** 닫힌 탭의 화면을 치운다 (셸은 서버가 탭을 닫을 때 끝낸다) */
 export function disposeTerminal(tab) {
-  const t = tab.term;
-  if (!t) return;
-  t.alive = false;
-  t.id = null;
-  t.xterm.dispose();
-  t.box.remove();
+  const term = tab.term;
+  if (!term) return;
+  term.alive = false;
+  term.id = null;
+  term.xterm.dispose();
+  term.box.remove();
   tab.term = null;
   emit('terms');
 }
@@ -370,24 +371,24 @@ export function disposeTerminal(tab) {
 export const fitTerminal = fitNow;
 
 /** 셸이 돌고 있는 탭 수 (탭 막대의 '터미널 모음' 버튼) */
-export const liveTerminals = () => S.tabs.filter((t) => t.term?.alive).length;
+export const liveTerminals = () => S.tabs.filter((tab) => tab.term?.alive).length;
 
 /** 탭의 터미널을 parent(모음 칸)에 보이고, 셸이 없으면 띄운다 */
 export async function ensureTerminal(tab, parent) {
   await loadLib();
-  const t = tab.term || create(tab, parent);
-  if (t.box.parentElement !== parent) parent.append(t.box);
-  t.box.hidden = false;
-  fitNow(t);
-  if (!t.alive && !t.id) await start(t);
-  return t;
+  const term = tab.term || create(tab, parent);
+  if (term.box.parentElement !== parent) parent.append(term.box);
+  term.box.hidden = false;
+  fitNow(term);
+  if (!term.alive && !term.id) await start(term);
+  return term;
 }
 
 /** 셸에서 띄운 프로그램이 도는지. 모르면 null */
-export async function terminalBusy(t) {
-  if (!t?.alive) return false;
+export async function terminalBusy(term) {
+  if (!term?.alive) return false;
   try {
-    return (await getJSON(`/api/term/info?t=${encodeURIComponent(t.id)}`, TERM_HEADER)).busy;
+    return (await getJSON(`/api/term/info?t=${encodeURIComponent(term.id)}`, TERM_HEADER)).busy;
   } catch {
     return null;
   }

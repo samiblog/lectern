@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from .conpty import AVAILABLE, PseudoConsole
+from .i18n import N_, t
 
 MAX_KEEP = 512 * 1024    # 셸마다 들고 있는 최근 출력 (글자)
 MAX_READ = 256 * 1024    # 한 번에 돌려주는 출력 (글자)
@@ -38,13 +39,13 @@ def shell_command(configured: str | None) -> tuple[str, str]:
     return exe, f'"{exe}"{args}'
 
 
-_LABELS = {'powershell': 'PowerShell', 'pwsh': 'PowerShell 7', 'cmd': '명령 프롬프트'}
+_LABELS = {'powershell': 'PowerShell', 'pwsh': 'PowerShell 7', 'cmd': N_('명령 프롬프트')}   # 쓰는 곳에서 t()
 
 
 def shell_label(exe: str) -> str:
     """터미널 머리줄에 보일 셸 이름"""
     stem = Path(exe).stem
-    return _LABELS.get(stem.lower(), stem)
+    return t(_LABELS.get(stem.lower(), stem))
 
 
 class Session:

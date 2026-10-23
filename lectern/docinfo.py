@@ -26,7 +26,7 @@ _RE_FM_KEY = re.compile(r'^(title|name|description|summary)\s*:\s*(.+?)\s*$', re
 _RE_QUOTE = re.compile(r'^(?:>\s?)+')
 _RE_LIST = re.compile(r'^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)')
 _SKIP_PREFIXES = ('|', '<', '---', '***', '___', '===', '![', '[^', '$$')
-_RE_META_LINE = re.compile(r'^[\w가-힣 ./()-]{1,16}\s*[:：]\s*\S.{0,60}$')
+_RE_META_LINE = re.compile(r'^[\w가-힣 ./()-]{1,16}\s*[:：]\s*\S.{0,60}$')   # i18n-ok (문서 내용을 읽는 정규식)
 
 _RE_IMG = re.compile(r'!\[([^\]]*)\]\([^)]*\)')
 _RE_LINK = re.compile(r'\[([^\]]+)\]\([^)]*\)')

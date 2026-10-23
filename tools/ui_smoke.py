@@ -1792,11 +1792,193 @@ def run(headed: bool) -> None:
     check(not errors, '페이지 스크립트 오류 없음' + (f': {errors}' if errors else ''))
 
 
+# 영어 화면 점검 (D46): 영어로만 된 프로젝트를 English 설정으로 열고, 화면 곳곳을 연 뒤 앱 글자에 한글이 남았는지 찾는다.
+# 문서·파일 이름이 모두 영어라서, 남은 한글은 번역하지 않은 앱 문구다 (언어 이름 '한국어' 처럼 translate="no" 안은 빼고).
+EN_SCAN = r"""() => {
+  const HANGUL = /[가-힣]/;
+  const skip = (el) => !el || el.closest('[translate="no"], #lec-term-body, .xterm, script, style');
+  const bad = [];
+  const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (HANGUL.test(n.nodeValue.replaceAll('한국어', '')) && !skip(n.parentElement)) bad.push(n.nodeValue.trim().slice(0, 70));   // 언어 이름은 그대로
+  }
+  for (const el of document.querySelectorAll('[title], [placeholder], [aria-label], [label]')) {
+    if (skip(el)) continue;
+    for (const a of ['title', 'placeholder', 'aria-label', 'label']) {
+      const v = el.getAttribute(a);
+      if (v && HANGUL.test(v)) bad.push(`${a}=${v.slice(0, 70)}`);
+    }
+  }
+  return bad;
+}"""
+
+
+def run_english(headed: bool) -> None:
+    from playwright.sync_api import sync_playwright
+
+    tmp = Path(tempfile.mkdtemp(prefix='lectern-smoke-en-'))
+    work = tmp / 'demo'
+    (work / 'docs').mkdir(parents=True)
+    (work / 'code').mkdir()
+    (work / 'data').mkdir()
+    (work / 'README.md').write_text(
+        '# Demo project\n\nA short overview paragraph about copper prices.\n\n## Prices\n\n| Item | Q1 | Q2 |\n|---|---:|---:|\n'
+        '| Copper | 10 | 12 |\n| Zinc | 7 | 8 |\n\n## Notes\n\n> [!NOTE]\n> Prices are estimates.\n\n```python\nprint("copper")\n```\n\n'
+        'See `code/app.py:2` for the code.\n\n## Summary\n\nCopper goes up.\n', encoding='utf-8')
+    (work / 'docs' / 'guide.md').write_text('# Guide\n\n## Part one\n\nFirst part.\n\n## Part two\n\nSecond part about copper.\n', encoding='utf-8')
+    (work / 'docs' / 'report.html').write_text('<!doctype html><html><head><meta charset="utf-8"><title>Report</title></head>'
+                                               '<body><h1>Report</h1><p>Copper report.</p></body></html>', encoding='utf-8')
+    (work / 'code' / 'app.py').write_text('def main():\n    return "copper"\n\n\nclass Shop:\n    pass\n', encoding='utf-8')
+    (work / 'data' / 'sample.csv').write_text('item,value\ncopper,1\n', encoding='utf-8')
+    cfg = tmp / 'config'
+    cfg.mkdir()
+    (cfg / 'config.json').write_text('{"language": "en"}', encoding='utf-8')
+    port = free_port()
+    env = os.environ | {'LECTERN_CONFIG_DIR': str(cfg)}
+    server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
+                              cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    url = f'http://127.0.0.1:{port}/'
+    errors: list[str] = []
+    found: dict[str, list[str]] = {}
+    try:
+        wait_http(url + 'api/state')
+        with sync_playwright() as p:
+            browser = p.chromium.launch(headless=not headed)
+            context = browser.new_context(viewport={'width': 1440, 'height': 900}, locale='en-US',
+                                          permissions=['clipboard-read', 'clipboard-write'])
+            page = context.new_page()
+            page.on('pageerror', lambda e: errors.append(str(e)))
+            page.route('**/api/open-external', lambda r: r.fulfill(status=200, content_type='application/json', body='{"action":"editor"}'))
+            shot = lambda name: page.screenshot(path=str(SHOTS / f'{name}.png'))
+            scan = lambda where: found.update({where: page.evaluate(EN_SCAN)})
+
+            print('[영어 화면]')
+            page.goto(url)
+            page.wait_for_selector('#lec-tree .row.file')
+            page.wait_for_selector('#lec-view.overview h1')
+            ui = page.evaluate('''() => ({ lang: document.documentElement.lang, open: document.querySelector('#lec-btn-palette span').textContent,
+              tabs: [...document.querySelectorAll('.side-tabs button')].map(b => b.firstChild.textContent.trim()),
+              sub: document.querySelector('.ov-sub').textContent, when: document.querySelector('.ov-files .when')?.textContent })''')
+            shot('en-01-overview')
+            scan('개요')
+            check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Elements']
+                  and ui['sub'] == '3 documents, 1 folder' and ui['when'] == 'just now',
+                  f'설정 language: en 이면 화면이 영어 — 툴바·사이드바 탭·개수(복수형)·날짜 ({ui})')
+            page.locator('#lec-tree .row.file', has_text='README').click()
+            page.wait_for_selector('#lec-view h1:has-text("Demo project")')
+            doc = page.evaluate('''() => ({ alert: document.querySelector('#lec-view .alert-title')?.textContent,
+              copy: document.querySelector('#lec-view .code-copy')?.textContent, toc: document.querySelector('#lec-toc .toc-head')?.textContent,
+              chips: [...document.querySelectorAll('#lec-toc .toc-parts button')].map(b => b.textContent.trim()),
+              status: document.querySelector('#lec-st-info').textContent })''')
+            scan('문서')
+            page.locator('#lec-view p', has_text='overview paragraph').click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            menu = page.locator('#lec-menu').inner_text()
+            scan('본문 우클릭')
+            page.keyboard.press('Escape')
+            check(doc['alert'] == 'Note' and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
+                  and doc['status'].startswith('Modified') and 'Copy location for Claude' in menu and '@README.md line ' in menu,
+                  f'문서: 박스글 이름·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
+            page.click('#lec-btn-spot')
+            spot = page.evaluate("document.querySelector('#lec-btn-spot').title")
+            page.keyboard.press('Escape')
+            page.locator('#lec-tree .row.file', has_text='README').click(button='right')
+            scan('트리 우클릭')
+            page.keyboard.press('Escape')
+            page.locator('.lec-tab').first.click(button='right')
+            scan('탭 우클릭')
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+f')
+            page.keyboard.type('copper')
+            wait_until(page, "/\\d/.test(document.querySelector('#lec-find-count').textContent)")
+            scan('찾기')
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+p')
+            page.fill('#lec-palette-input', 'app')
+            page.wait_for_selector('#lec-palette-list li.code')
+            scan('빠른 열기')
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+Shift+F')
+            page.fill('#lec-search-input', 'copper')
+            wait_until(page, "!!document.querySelector('#lec-search-results .sr-group')", 5000)
+            search = page.evaluate("document.querySelector('#lec-search-info').textContent")
+            scan('검색')
+            page.locator('.side-tabs button[data-tab="parts"]').click()
+            wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length > 0", 8000)
+            parts = page.evaluate("[document.querySelector('#lec-parts-kinds .active')?.textContent, document.querySelector('#lec-parts-info').textContent]")
+            scan('모아 보기')
+            page.locator('.side-tabs button[data-tab="recent"]').click()
+            scan('최근 변경')
+            page.locator('.side-tabs button[data-tab="files"]').click()
+            page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click()
+            page.locator('#lec-code-list .row[data-path="code/app.py"]').click()
+            page.wait_for_selector('#lec-view.code-view .cv-line')
+            code = page.evaluate("[document.querySelector('.cv-editor').textContent, document.querySelector('#lec-st-info').textContent]")
+            scan('코드 화면')
+            page.locator('#lec-code-list .row[data-path="code/app.py"]').click(button='right')
+            scan('코드 우클릭')
+            page.keyboard.press('Escape')
+            check(spot.startswith('Turn off section focus') and search.startswith('3 documents·1 code file, ')
+                  and parts[0].startswith('Tables') and parts[1] == '1 document, 1 table' and code[0] == 'Open in editor',
+                  f'영어 글의 복수형·이름 — 장 하이라이트 설명, 검색 개수, 모아 보기 종류·개수, 코드 화면 ({spot[:40]}, {search}, {parts}, {code})')
+            page.keyboard.press('Control+Comma')
+            lang_radio = page.evaluate("document.querySelector('#lec-settings input[name=\"language\"]:checked')?.value")
+            shot('en-02-settings')
+            scan('설정 창')
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+/')
+            shot('en-03-keys')
+            scan('단축키 표')
+            page.keyboard.press('Escape')
+            page.keyboard.press('F1')
+            page.wait_for_selector('#lec-help-toc a')
+            guide = page.evaluate("[document.querySelector('#lec-help-view h1').textContent, document.querySelectorAll('#lec-help-view table kbd').length]")
+            shot('en-04-guide')
+            scan('사용설명서')
+            page.keyboard.press('Escape')
+            page.click('#lec-btn-gather')
+            page.wait_for_selector('#lec-gather .g-tile')
+            scan('터미널 모음')
+            page.click('#lec-btn-gather')
+            widths = {}
+            for w in (720, 1060):
+                page.set_viewport_size({'width': w, 'height': 800})
+                page.wait_for_timeout(150)
+                widths[w] = page.evaluate('''() => [...document.querySelectorAll('#lec-toolbar, #lec-tabbar, .side-tabs')]
+                  .map(el => el.scrollWidth - el.clientWidth)''')
+            page.set_viewport_size({'width': 1440, 'height': 900})
+            shot('en-05-code')
+            leftover = {k: v for k, v in found.items() if v}
+            check(not leftover, '영어 화면에 남은 한글 없음 — 개요·문서·우클릭·찾기·빠른 열기·검색·모아 보기·코드·설정·단축키·설명서·터미널 모음'
+                  + (f': {leftover}' if leftover else ''))
+            check(lang_radio == 'en' and guide[0] == 'Lectern User Guide' and guide[1] >= 40
+                  and code[0] == 'Open in editor' and code[1].startswith('Python · 6 lines'),
+                  f'설정 창에 English 가 골라져 있고, 영어 사용설명서(단축키 표 포함)·코드 화면 ({lang_radio}, {guide}, {code})')
+            check(all(x <= 0 for v in widths.values() for x in v), f'영어 글자로도 툴바·탭 막대·사이드바 탭이 넘치지 않음 (720·1060px: {widths})')
+            page.keyboard.press('Control+Comma')
+            page.locator('#lec-settings input[name="language"][value="ko"]').check()
+            page.wait_for_function("document.documentElement.lang === 'ko'", timeout=10000)
+            page.wait_for_selector('#lec-tree .row.file')
+            ko = page.evaluate("[document.querySelector('#lec-btn-palette span').textContent, document.querySelector('.side-tabs button').textContent]")
+            saved = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.language)")
+            check(ko == ['문서 열기', '파일'] and saved == 'ko', f'설정 창에서 한국어를 고르면 저장하고 화면을 다시 불러와 한국어로 ({ko}, {saved})')
+            browser.close()
+    finally:
+        server.terminate()
+        try:
+            server.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            server.kill()
+        shutil.rmtree(tmp, ignore_errors=True)
+    check(not errors, '영어 화면 스크립트 오류 없음' + (f': {errors}' if errors else ''))
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--headed', action='store_true', help='브라우저 창을 띄워서 실행')
     args = parser.parse_args()
     run(args.headed)
+    run_english(args.headed)
     print()
     if failures:
         print(f'실패 {len(failures)}건. 캡처: {SHOTS}')

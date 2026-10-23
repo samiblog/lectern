@@ -117,6 +117,7 @@ flowchart LR
 | `last_folder` | `null` | 불가 | 마지막으로 연 폴더. `tabs` 가 없는 옛 설정(v0.6 이하)이면 인자 없이 실행할 때 이 폴더를 연다 |
 | `tabs` | `[]` | 불가 | 열어 둔 프로젝트 탭(왼쪽부터 폴더 경로). 다음 실행에 되살린다. 서버가 탭을 열고 닫고 고를 때 기록. 10개까지 |
 | `active_tab` | `0` | 불가 | 선택돼 있던 탭의 순번 |
+| `language` | `"auto"` | 가능 | 화면 언어: `auto`(Windows 표시 언어 — 한국어면 ko, 아니면 en)·`ko`·`en`. 설정 창 맨 위, 바꾸면 페이지를 다시 불러옴 (D46) |
 | `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`) |
 | `font_scale` | `1.0` | 가능 | 문서 글자 크기 배율 0.8~2 (툴바 − 100% +, 숫자면 정수도 됨) |
 | `theme_groups` | `"use"` | 가능 | 스타일 목록을 묶는 방식: `use`(용도별)·`mood`(분위기별)·`tone`(밝기별) (설정 창, D30) |
@@ -154,8 +155,8 @@ flowchart LR
 
 | 메서드·경로 | 요청 | 응답 / 설명 |
 |---|---|---|
-| `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}`, `{{TERM}}`(터미널 비밀값) 치환) + CSP 헤더 |
-| `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual.md` 포함 — 토큰 없이) |
+| `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}`, `{{TERM}}`(터미널 비밀값), `{{LANG}}`(화면 언어 — `<html lang>`, D46) 치환) + CSP 헤더 |
+| `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual.md`·영어판 `help/manual.en.md` 포함 — 토큰 없이) |
 | `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}]}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤). 이미 닫혔으면 그대로. `/api/state` 와 같은 형식 |
@@ -310,7 +311,7 @@ sequenceDiagram
 - 원문은 `doc.js` 가 그릴 때마다 `setDocSource(pane, path, text)` 로 그 칸에 남기고, 메뉴는 선택된 탭의 칸(보이는 칸은 그것뿐이다)의 원문을 쓴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
 
 ### 설정 창과 마지막 위치 (settings.js, position.js)
-- 툴바 톱니 버튼·Ctrl+, 로 설정 창: 스타일 목록 묶기(라디오 — 용도별·분위기별·밝기별), 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, 터미널 색을 스타일에 맞춤, '설정 파일 열기'(편집기 경로·제외 폴더 등).
+- 툴바 톱니 버튼·Ctrl+, 로 설정 창: 언어 · Language(라디오 — 자동·한국어·English, 고르면 저장하고 `location.reload()`, D46), 스타일 목록 묶기(라디오 — 용도별·분위기별·밝기별), 마지막 위치에서 시작, 첫 단계 폴더 펼치기, 수식 표시, 인터넷 그림 표시, 터미널 색을 스타일에 맞춤, '설정 파일 열기'(편집기 경로·제외 폴더 등).
 - `position.js` 는 화면 이동·그리기(`rendered`)와 스크롤이 멈추고 1.5초 뒤 탭마다 `POST /api/position {p, path, scroll}` 으로 보는 문서와 위치를 보낸다 (탭마다 같은 값이면 보내지 않음 — 숨은 탭은 바뀌지 않으니 보내지 않는다. 폴더 개요와 지워진 문서는 빼고). 탭을 닫기 전에도 보낸다. 탭을 처음 고를 때 `tabs.js` 가 `/api/state` 의 `position` 으로 그 문서와 위치를 연다 (`nav.restorePosition`). 문서가 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
@@ -361,6 +362,14 @@ sequenceDiagram
 - 목차: `outline.js` 의 `outlineOf(path, text)` → `[{line, level, name, kind}]` 를 `setToc(pane, view, outline)` 로 넘기면 `toc.js` 의 `buildOutline` 이 그 줄들을 제목처럼 쓴다 (지금 읽는 위치 표시, 누르면 그 줄을 위로·잠깐 테두리). 확장자 → 언어(highlight.js 이름·보일 이름·규칙 묶음)도 `outline.js` 의 `languageOf`.
 - 자동 새로고침: 2초마다 선택된 칸이 코드 화면이면 `HEAD /doc/…` 의 Last-Modified·Content-Length 를 그릴 때 받은 값(`pane.codeStamp`)과 비교해 다르면 `refresh-view`. 다른 탭을 고르면(`pane`) 바로 한 번 본다.
 - 여는 곳: '코드' 목록·폴더 보기의 코드 파일(한 번 누르기·Enter → `open {type:'code'}`, 두 번 누르기 → 편집기), 경로 표기(`pathlink.js` — 코드면 `line` 과 함께), 문서 속 코드 파일 링크(`doc.js` 의 `bindLink` — `#L42`). 줄 우클릭은 `docmenu.js` 의 `codeMenu`.
+
+### 화면 언어 (i18n.js, lectern/i18n.py — D46)
+- 서버가 설정 `language` 로 언어를 정해(`i18n.language()` — auto 는 `system_language()`) `index.html` 의 `<html lang="{{LANG}}">` 에 넣는다. `i18n.js` 의 `LANG` 은 그 값이다 (페이지마다 고정 — 언어를 바꾸면 다시 불러온다).
+- 문구는 한국어 문장이 열쇠: `t(ko, values)` → 영어면 `lang/en.js` 의 값, 아니면 그대로. `{이름}` 자리에 값을 끼우고, 값이 `[하나, 여럿]` 이면 `values.n` 으로 고른다. `boot()` 가 맨 먼저 `translatePage()` 로 index.html 의 글자 마디와 `title`·`placeholder`·`aria-label` 을 바꾼다 (`translate="no"` 안은 그대로).
+- 서버 문구는 `lectern/i18n.py` 의 `t(ko, lang=None, **values)` 와 `EN`. `AppState` 가 `use_setting()` 으로 설정을 읽는 함수를 건다. 설정 파일 오류처럼 설정을 읽기 전의 문구는 `lang` 을 넘긴다.
+- 날짜: `util.timeAgo` 가 `t('{n}분 전', { n })`·`t('{m}월 {d}일', { m, d, mon })`(영어는 달 이름 `mon`). 구성 요소 이름은 `PARTS[k].name`(하나 — '표 3')과 `.many`(여럿 — 머리 버튼·문장 속).
+- 사용설명서는 `LANG` 에 따라 `help/manual.md`·`help/manual.en.md`.
+- `tests/test_i18n.py` 가 JS(문자열·템플릿을 읽는 간단한 읽개)·index.html·Python(ast)의 한국어가 `t()`·`N_()` 로 감싸였는지와 사전의 빠진·안 쓰는 항목을 본다.
 
 ### 사용설명서와 단축키 표 (help.js)
 - 설명서(F1, D45): `#lec-help` 가 `#lec-main` 위를 덮는다 (z-index 31 — 터미널 모음 30 위). 처음 열 때 `GET /static/help/manual.md` 를 받아 `<!-- 단축키 표 -->` 자리에 `SHORTCUTS` 로 만든 표를 넣고, `renderMarkdown`(수식 없이) → DOMPurify → `decorateBlocks`(박스글·표·코드 블록)로 `#lec-help-view.md-body` 에 그린다. 왼쪽 `#lec-help-toc` 는 h2·h3 (스크롤에 맞춰 `.active`). 링크는 `#…` 만 설명서 안에서 따라가고 나머지는 막는다.
