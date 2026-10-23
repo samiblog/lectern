@@ -1454,10 +1454,15 @@ def run(headed: bool) -> None:
             tab_el(0).locator('.tab-close').click()
             welcome = wait_until(page, "!!document.querySelector('#lec-view.welcome h1') && !document.querySelector('#lec-tree .row')")
             title = page.title()
+            page.click('#lec-view.welcome button[data-act="help"]')   # 폴더를 열기 전에도 사용설명서
+            welcome_help = wait_until(page, "!document.querySelector('#lec-help').hidden && document.querySelectorAll('#lec-help-toc a').length > 10")
+            page.keyboard.press('F1')
+            welcome_help = welcome_help and wait_until(page, "document.querySelector('#lec-help').hidden")
             page.locator('#lec-view.welcome button[data-path]', has_text=str(work)).click()   # 최근 연 폴더에서 다시 열기
             reopened = n_tabs(1) and h1_has('렌더링 기능 점검') and tree_root() == 'samples'
-            check(middle and welcome and title == 'Lectern' and reopened,
-                  f'탭을 가운데 버튼으로도 닫고, 모두 닫으면 시작 화면(트리 비움), 최근 연 폴더로 다시 열기 ({middle}, {welcome}, {title!r}, {reopened})')
+            check(middle and welcome and title == 'Lectern' and welcome_help and reopened,
+                  f"탭을 가운데 버튼으로도 닫고, 모두 닫으면 시작 화면(트리 비움, '사용설명서' 버튼), 최근 연 폴더로 다시 열기"
+                  f' ({middle}, {welcome}, {title!r}, {welcome_help}, {reopened})')
 
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)
@@ -1687,6 +1692,61 @@ def run(headed: bool) -> None:
             tab_el(1).locator('.tab-close').click()
             n_tabs(1)
             page.click('#lec-term-close')
+
+            print('[사용설명서와 단축키]')
+            keys = page.locator('#lec-keys')
+            manual = page.locator('#lec-help')
+            page.click('#lec-btn-help')
+            groups = page.evaluate("[...document.querySelectorAll('#lec-keys .keys-group h3')].map(h => h.textContent)")
+            caps = page.evaluate("[...document.querySelectorAll('#lec-keys th')].map(th => th.textContent.replace(/\\s/g, ''))")
+            by_button = keys.is_visible()
+            shot('07b-keys')
+            page.keyboard.press('Escape')
+            esc_closed = not keys.is_visible()
+            page.keyboard.press('Control+/')
+            by_key = keys.is_visible()
+            page.keyboard.press('Control+/')
+            check(by_button and esc_closed and by_key and not keys.is_visible() and len(groups) >= 8
+                  and {'Ctrl+P', 'Ctrl+Shift+F', 'F1', 'Ctrl+/', 'Ctrl+`'} <= set(caps),
+                  f"툴바 '?' 버튼·Ctrl+/ 로 단축키 표, Esc·Ctrl+/ 로 닫힘 ({len(groups)}묶음, {len(caps)}줄)")
+            page.click('#lec-btn-help')
+            page.click('#lec-keys-manual')
+            page.wait_for_selector('#lec-help-toc a')
+            info = page.evaluate('''() => ({ toc: [...document.querySelectorAll('#lec-help-toc a')].map(a => a.textContent),
+              keys: !document.querySelector('#lec-keys').hidden, kbd: document.querySelectorAll('#lec-help-view table kbd').length,
+              alert: !!document.querySelector('#lec-help-view .alert'), ver: document.querySelector('#lec-help-ver').textContent,
+              focus: document.activeElement.id, covers: (() => { const h = document.querySelector('#lec-help').getBoundingClientRect(),
+                s = document.querySelector('#lec-sidebar').getBoundingClientRect(); return h.left <= s.left && h.width > s.width * 2; })() })''')
+            shot('07c-manual')
+            check(manual.is_visible() and not info['keys'] and len(info['toc']) >= 20 and {'단축키', '터미널', '코드 읽기'} <= set(info['toc'])
+                  and info['kbd'] >= 40 and info['alert'] and info['ver'] and info['focus'] == 'lec-help-scroll' and info['covers'],
+                  f"단축키 표의 '사용설명서 열기' → 사이드바·문서 위를 덮는 설명서, 차례·박스글·단축키 장 ({len(info['toc'])}개, kbd {info['kbd']})")
+            page.locator('#lec-help-toc a', has_text='터미널 모음').click()
+            jumped = wait_until(page, '''(() => { const h = [...document.querySelectorAll('#lec-help-view h3')].find(h => h.textContent === '터미널 모음');
+              const t = h.getBoundingClientRect().top - document.querySelector('#lec-help-scroll').getBoundingClientRect().top; return t >= 0 && t < 40; })()''')
+            active = wait_until(page, "document.querySelector('#lec-help-toc a.active')?.textContent === '터미널 모음'")
+            check(jumped and active, '설명서 차례를 누르면 그 장으로, 읽는 곳이 차례에 표시됨')
+            page.keyboard.press('Control+f')
+            page.keyboard.type('Claude용 위치')
+            found = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)")
+            where = page.evaluate("document.querySelector('#lec-findbar').parentElement.id")
+            page.keyboard.press('Escape')   # 찾기를 닫고
+            still = manual.is_visible()
+            page.keyboard.press('Escape')   # 설명서를 닫는다
+            back_bar = page.evaluate("document.querySelector('#lec-findbar').parentElement.id")
+            check(found and where == 'lec-help-scroll' and still and not manual.is_visible() and back_bar == 'lec-content',
+                  f'설명서 안에서 Ctrl+F (찾기 막대가 설명서로 갔다가 문서로 돌아옴), Esc 는 찾기 → 설명서 차례로 닫음 ({where} → {back_bar})')
+            page.keyboard.press('F1')
+            f1 = wait_until(page, "!document.querySelector('#lec-help').hidden")
+            page.keyboard.press('Control+p')
+            page.fill('#lec-palette-input', '우선순위')
+            page.keyboard.press('Enter')
+            to_doc = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('우선순위') && document.querySelector('#lec-help').hidden")
+            page.keyboard.press('F1')
+            again = wait_until(page, "!document.querySelector('#lec-help').hidden")
+            page.locator('.lec-tab.active').click()
+            by_tab = wait_until(page, "document.querySelector('#lec-help').hidden")
+            check(f1 and to_doc and again and by_tab, 'F1 로 설명서, 문서를 열거나(Ctrl+P) 프로젝트 탭을 누르면 닫힘')
 
             print('[인쇄]')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()

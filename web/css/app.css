@@ -575,6 +575,41 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 #lec-toast.error { background: var(--ui-danger); color: #fff; white-space: normal; }
 
+/* ---- 사용설명서 (help.js) — 사이드바와 문서 화면 위를 덮는다 (터미널 모음 위). 본문은 문서 스타일(.md-body) ---- */
+#lec-help { position: absolute; inset: 0; z-index: 31; display: flex; background: var(--ui-bg); }
+.help-nav {
+  width: var(--side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
+  border-right: 1px solid var(--ui-border); background: var(--ui-bg);
+}
+.help-title { display: flex; align-items: center; gap: 7px; flex: none; height: 44px; padding: 0 8px 0 14px; font-weight: 700; }
+.help-title .help-icon { width: 18px; height: 18px; flex: none; fill: none; stroke: var(--ui-accent); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.help-ver { flex: 1; color: var(--ui-faint); font-size: 12px; font-weight: 400; }
+#lec-help-toc { flex: 1; min-height: 0; overflow: auto; list-style: none; margin: 0; padding: 4px 8px 16px; }
+#lec-help-toc a {
+  display: block; padding: 5px 10px; border-radius: 6px; color: var(--ui-fg); text-decoration: none; font-size: 13.5px; line-height: 1.35;
+}
+#lec-help-toc .sub a { padding: 3px 10px 3px 24px; color: var(--ui-muted); font-size: 12.5px; }
+#lec-help-toc a:hover { background: var(--ui-hover); }
+#lec-help-toc a.active { background: var(--ui-active-bg); color: var(--ui-active-fg); font-weight: 600; }
+.help-nav-foot { flex: none; padding: 10px 12px; border-top: 1px solid var(--ui-border); }
+.help-nav-foot .text-btn, .welcome-acts .text-btn, .keys-box .dialog-foot .text-btn { height: 32px; }
+#lec-help-scroll { flex: 1; min-width: 0; }
+.text-btn kbd { margin-left: 2px; }
+@media (max-width: 760px) { .help-nav { width: 200px; } }
+
+/* 단축키 표 (help.js) — 묶음을 두 단으로. 단은 높이를 제한하면 옆으로 넘치므로 바깥 상자가 세로로 스크롤한다 */
+.keys-box { width: min(940px, 94vw); margin-top: 5vh; }
+.keys-scroll { max-height: 72vh; overflow: auto; padding-right: 4px; }
+.keys-list { columns: 2 360px; column-gap: 28px; }
+.keys-group { break-inside: avoid; margin: 0 0 14px; }
+.keys-group h3 { margin: 0 0 4px; font-size: 12.5px; color: var(--ui-muted); }
+.keys-group table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.keys-group th { width: 140px; padding: 4px 12px 4px 0; text-align: left; font-weight: 400; vertical-align: top; color: var(--ui-faint); line-height: 1.9; }
+.combo { white-space: nowrap; }
+.keys-group td { padding: 4px 0; line-height: 1.45; vertical-align: top; }
+.keys-group tr + tr > * { border-top: 1px solid var(--ui-border); }
+.keys-group kbd { color: var(--ui-fg); }
+
 /* ---- 버튼 (본문 영역) ----------------------------------------------------- */
 button.primary {
   height: 34px; padding: 0 16px; border: 0; border-radius: 6px;
@@ -587,6 +622,7 @@ button.primary:hover { filter: brightness(1.08); }
 .welcome { max-width: 620px; margin: 0 auto; padding: 14vh 40px 60px; }
 .welcome h1 { font-size: 24px; margin: 0 0 10px; }
 .welcome > p { color: var(--ui-muted); line-height: 1.7; }
+.welcome-acts { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
 .welcome h2 { font-size: 13px; color: var(--ui-muted); margin: 36px 0 8px; }
 .welcome ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--ui-border); }
 .welcome li button {

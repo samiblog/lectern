@@ -132,6 +132,15 @@ def test_fixed_types_win_over_windows_registry(state, pid, monkeypatch):
     assert fetch(c, f'/doc/{pid}/docs/img.svg').mimetype == 'image/svg+xml'
 
 
+def test_manual_is_served(state):
+    # 사용설명서(F1, D45)는 앱 UI 처럼 /static 에서 — 창 모드에서도 토큰 없이 (help.js 의 fetch 는 X-Token 을 붙이지 않는다)
+    state.token = 'secret'
+    r = create_app(state).test_client().get('/static/help/manual.md')
+    text = r.get_data(as_text=True)
+    assert r.status_code == 200 and text.startswith('# Lectern 사용설명서')
+    assert '<!-- 단축키 표 -->' in text   # help.js 가 이 자리에 단축키 표(SHORTCUTS)를 넣는다
+
+
 def test_token_required_when_set(state, pid):
     state.token = 'secret'
     c = create_app(state).test_client()

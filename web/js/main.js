@@ -24,6 +24,9 @@ import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded,
 } from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
+import {
+  initHelp, toggleManual, closeManual, manualOpen, toggleShortcuts, closeShortcuts,
+} from './help.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
@@ -118,7 +121,7 @@ function bindToolbar() {
 // 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
 const SPOT_KEYS = { ArrowUp: -1, ArrowDown: 1, PageUp: -1, PageDown: 1 };
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
-  || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden;
+  || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 
 function bindKeys() {
@@ -127,13 +130,16 @@ function bindKeys() {
     const key = e.key.toLowerCase();
     if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도), Shift 와 함께면 터미널 모음
       e.preventDefault();
+      closeManual();   // 사용설명서가 덮고 있으면 걷고
       if (e.shiftKey) toggleGather();
       else if (gatherOn()) leaveToFocused();   // 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널
       else toggleTerminal();
       return;
     }
-    // 터미널 모음(gather.js)이 문서 화면을 가리는 동안: 칸 사이 옮기기(Ctrl+Tab)와 탭·폴더·설정 몇 가지만. 칸 안의 키는 셸 것
-    if (gatherOn()) {
+    const helpKey = e.key === 'F1' || (mod && (e.key === '/' || e.code === 'Slash'));   // 사용설명서·단축키 표 (help.js)
+    // 터미널 모음(gather.js)이 문서 화면을 가리는 동안: 칸 사이 옮기기(Ctrl+Tab)와 탭·폴더·설정·도움말 몇 가지만. 칸 안의 키는 셸 것.
+    // 사용설명서가 모음 위를 덮고 있으면 보통 때처럼
+    if (gatherOn() && !manualOpen()) {
       if (mod && e.key === 'Tab') {
         e.preventDefault();
         focusNextTile(e.shiftKey ? -1 : 1);
@@ -141,7 +147,7 @@ function bindKeys() {
       }
       if (e.target.closest?.('#lec-gather')) return;
       const toTab = mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key);
-      if (!toTab && !(mod && (key === 'o' || e.key === ',')) && e.key !== 'Escape') return;
+      if (!toTab && !helpKey && !(mod && (key === 'o' || e.key === ',')) && e.key !== 'Escape') return;
       if (toTab) leaveGather();   // 그 탭으로 (아래 selectTabAt)
     }
     // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
@@ -154,7 +160,7 @@ function bindKeys() {
       openSearch();
     } else if (mod && key === 'f') {
       e.preventDefault();
-      if (S.view?.type === 'doc' || S.view?.type === 'code') openFind();
+      if (manualOpen() || S.view?.type === 'doc' || S.view?.type === 'code') openFind();   // 사용설명서를 연 동안은 설명서 안을
       else focusFilter();
     } else if (mod && e.key === ',') {
       e.preventDefault();
@@ -182,11 +188,18 @@ function bindKeys() {
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
+    } else if (e.key === 'F1') {
+      e.preventDefault();
+      toggleManual();
+    } else if (helpKey) {   // Ctrl+/
+      e.preventDefault();
+      toggleShortcuts();
     } else if (SPOT_KEYS[e.key] && !mod && !e.altKey && !e.shiftKey && spotlightOn() && !typing(e)) {
       e.preventDefault();
       moveSpotlight(SPOT_KEYS[e.key]);
     } else if (e.key === 'Escape') {
-      if (closePalette() || closeSettings() || hideMenu() || closeLightbox() || closeFind() || stopSpotlight()) e.preventDefault();
+      if (closePalette() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
+        || stopSpotlight()) e.preventDefault();
     }
   });
   // 마우스 뒤로/앞으로 버튼
@@ -232,6 +245,7 @@ async function boot() {
   initSearch();
   initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다
   initSettings();
+  initHelp();
   initPosition();
   initResize();
   initPathLinks();

@@ -132,7 +132,8 @@ function showWelcome() {
   pane.view.innerHTML = `<h1>프로젝트 폴더를 여세요</h1>
     <p>폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 폴더마다 탭으로 열려 여러 프로젝트를 오가며 볼 수 있습니다.
     숨김 파일과 node_modules 같은 폴더는 제외합니다.</p>
-    <p><button type="button" class="primary" data-act="open">폴더 열기</button></p>
+    <p class="welcome-acts"><button type="button" class="primary" data-act="open">폴더 열기</button>
+      <button type="button" class="text-btn" data-act="help">사용설명서<kbd>F1</kbd></button></p>
     ${recent.length ? `<h2>최근 연 폴더</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
       <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
   setToc(pane, null);

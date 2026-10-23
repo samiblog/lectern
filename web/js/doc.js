@@ -397,6 +397,13 @@ function decorateCode(root) {
   }
 }
 
+/** 박스글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
+export function decorateBlocks(root) {
+  decorateAlerts(root);
+  decorateTables(root);
+  decorateCode(root);
+}
+
 function frontMatterHtml(raw) {
   const entries = [];
   let simple = true;

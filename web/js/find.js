@@ -3,6 +3,7 @@
 // pywebview는 디버그 모드가 아니면 WebView2의 기본 찾기(Ctrl+F)를 끈다.
 // 그래서 CSS Custom Highlight API로 직접 구현한다 (DOM을 바꾸지 않아 다시 그리기와 충돌이 없다).
 // html 문서는 iframe 안을 찾는다. 하이라이트는 문서마다 따로라서 iframe 창의 CSS.highlights 에 넣는다 (표시 색은 css/frame.css).
+// 사용설명서(help.js)를 연 동안은 설명서 안을 찾는다 (setFindTarget — 찾기 막대도 설명서로 옮긴다).
 
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
@@ -12,8 +13,11 @@ const MAX_HITS = 2000;
 let ranges = [];
 let current = -1;
 let win = window;   // 하이라이트를 넣은 창 (html 문서면 iframe 의 창)
+let target = null;  // 문서 화면 대신 찾을 곳 {root, scroller} — 사용설명서(help.js)를 연 동안
 
 const bar = () => $('#lec-findbar');
+const rootOf = () => target?.root || docRoot();
+const scrollerOf = () => target?.scroller || $('#lec-content');
 const input = () => $('#lec-find-input');
 const supported = (w) => !!(w.CSS?.highlights && w.Highlight);
 
@@ -67,7 +71,7 @@ function search(keepIndex = false) {
   const prev = current;
   clearMarks();
   const query = input().value;
-  const root = docRoot();
+  const root = rootOf();
   const doc = root.ownerDocument;
   win = doc.defaultView;
   if (!query.trim() || !supported(win)) return;
@@ -95,8 +99,8 @@ function go(index, scroll = true) {
   win.CSS.highlights.set('lec-find-current', new win.Highlight(ranges[current]));
   $('#lec-find-count').textContent = `${current + 1}/${ranges.length}`;
   if (!scroll) return;
-  unfoldTo(ranges[current].startContainer.parentElement);   // 접힌 절 안의 결과는 펴서 보여 준다
-  const content = $('#lec-content');
+  if (!target) unfoldTo(ranges[current].startContainer.parentElement);   // 접힌 절 안의 결과는 펴서 보여 준다
+  const content = scrollerOf();
   const box = content.getBoundingClientRect();
   const rect = screenRect(ranges[current]);
   if (rect.top < box.top + 56 || rect.bottom > box.bottom - 24) {
@@ -125,8 +129,17 @@ export function pickMatchAt(el) {
   if (i >= 0) go(i, false);
 }
 
+/** 찾을 곳을 바꾼다 (사용설명서를 여닫을 때 — null 이면 문서 화면). 찾기 막대도 그곳으로 옮기고 결과는 지운다 */
+export function setFindTarget(t) {
+  closeFind();
+  target = t;
+  scrollerOf()?.prepend(bar());
+}
+
 export function closeFind() {
   if (bar().hidden) return false;
+  // 찾기 칸에 있던 초점은 본문으로 — 숨은 칸에 남으면 다음 Esc·화살표 키가 그 칸으로 간다
+  if (bar().contains(document.activeElement)) scrollerOf()?.focus({ preventScroll: true });
   bar().hidden = true;
   clearMarks();
   return true;
