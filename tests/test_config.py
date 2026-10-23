@@ -201,3 +201,11 @@ def test_toc_hidden_parts_setting(tmp_path):
     cfg.update_client({'toc_hidden_parts': ['code', 'math']})                  # 목차 머리의 종류 버튼
     cfg.update_client({'toc_hidden_parts': 'code'})                            # 형식이 틀리면 버린다
     assert cfg.get('toc_hidden_parts') == ['code', 'math']
+
+
+def test_side_sections_settings(tmp_path):
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('docs_visible') is True and cfg.get('code_visible') is True and cfg.get('code_height') is None
+    cfg.update_client({'docs_visible': False, 'code_visible': False, 'code_height': 180})   # 사이드바 '문서'·'코드' 묶음
+    cfg.update_client({'code_height': 'big'})                                              # 형식이 틀리면 버린다
+    assert cfg.get('docs_visible') is False and cfg.get('code_visible') is False and cfg.get('code_height') == 180

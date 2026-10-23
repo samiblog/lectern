@@ -24,3 +24,9 @@ export function fileIcon(name, docKind) {
 }
 
 export const folderIcon = () => svg('folder');
+
+/** 코드 파일인지 (사이드바 '코드' 목록 — others.js): 아이콘의 코드 종류와 같다 — 소스·스크립트·웹(css·소스 폴더의 html)·설정 */
+export function isCode(name) {
+  const i = name.lastIndexOf('.');
+  return i > 0 && KIND_OF.get(name.slice(i + 1).toLowerCase()) === 'code';
+}

@@ -37,8 +37,11 @@ DEFAULTS: dict[str, Any] = {
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'files_view': 'kind',    # 사이드바 파일 탭을 보는 방법: kind(종류별 — 문서 트리 위, 파일 목록 아래) | folder(폴더 구조 그대로 한 트리)
-    'others_visible': True,  # 종류별 보기에서 아래 '파일' 목록을 펼쳐 둠 (머리줄을 눌러 접기)
-    'others_height': None,   # 종류별 보기의 '파일' 목록 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
+    'docs_visible': True,    # 종류별 보기의 '문서' 묶음을 펼쳐 둠 (머리줄을 눌러 접기)
+    'others_visible': True,  # 종류별 보기의 '파일' 묶음을 펼쳐 둠
+    'others_height': None,   # 종류별 보기의 '파일' 묶음 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
+    'code_visible': True,    # 종류별 보기의 '코드' 묶음을 펼쳐 둠
+    'code_height': None,     # 종류별 보기의 '코드' 묶음 높이(px). None 이면 기본
     'toc_visible': True,
     'toc_hidden_parts': [],  # 목차에서 감춘 구성 요소 종류: table·figure·box·diagram·code·math (목차 머리의 종류 버튼)
     'math': True,            # $...$ 수식 렌더링
@@ -58,11 +61,12 @@ DEFAULTS: dict[str, Any] = {
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'others_visible', 'others_height', 'terminal_width',
+                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
+                         'terminal_width',
                          'terminal_follow_style', 'toc_hidden_parts'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
-NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'terminal_shell', 'terminal_width'})
+NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width'})
 _EXAMPLE = {bool: 'true 또는 false', int: '숫자', float: '숫자', str: '"글자"', list: '["이름", ...] 목록', dict: '{ } 객체'}
 
 
@@ -76,7 +80,7 @@ def value_ok(key: str, value: Any) -> bool:
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
-    if key in ('sidebar_width', 'others_height', 'terminal_width'):
+    if key in ('sidebar_width', 'others_height', 'code_height', 'terminal_width'):
         return is_number(value)
     if key in ('last_folder', 'editor', 'terminal_shell'):
         return isinstance(value, str)
@@ -103,7 +107,7 @@ def _upgrade(data: dict[str, Any]) -> None:
 def _expected(key: str) -> str:
     default = DEFAULTS[key]
     kind = (str if key in ('last_folder', 'editor', 'terminal_shell')
-            else int if key in ('sidebar_width', 'others_height', 'terminal_width') else type(default))
+            else int if key in ('sidebar_width', 'others_height', 'code_height', 'terminal_width') else type(default))
     return _EXAMPLE.get(kind, '맞는 형식')
 
 

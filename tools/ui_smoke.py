@@ -771,14 +771,21 @@ def run(headed: bool) -> None:
                 return req.value.post_data_json
 
             wait_until(page, f"document.querySelectorAll('{olist} .row').length > 0")
-            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-tree', '#lec-others-split', '#lec-others')]
+            wait_until(page, "document.querySelectorAll('#lec-code-list .row').length > 0")
+            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-docs', '#lec-others-split', '#lec-others', '#lec-code-split', '#lec-code')]
             count = page.inner_text('#lec-others-count')
-            check(olabels() == ['code', 'data', 'empty-folder', 'research', 'src', '첨부.pdf'] and count == '7'
-                  and boxes[0]['y'] + boxes[0]['height'] <= boxes[1]['y'] + 1 <= boxes[2]['y'] + 1,
-                  f"문서 트리 아래 분리선과 '파일' 목록 — 폴더 먼저·접힌 채로, 문서·숨김·제외 폴더의 파일은 없음 ({olabels()}, {count}개)")
+            clabels = lambda: page.locator('#lec-code-list .row .label').all_inner_texts()
+            ccount = page.inner_text('#lec-code-count')
+            heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'others', 'code')]
+            docs_n = page.inner_text('#lec-docs-count')
+            check(olabels() == ['data', 'empty-folder', 'research', '첨부.pdf'] and clabels() == ['code', 'src']
+                  and int(count) + int(ccount) == 7 and heads == ['문서', '파일', '코드'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
+                  and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(4)),
+                  f"'문서'·'파일'·'코드' 세 묶음 — 파일은 문서·코드가 아닌 것, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김·제외 폴더는 없음 "
+                  f"({olabels()}, {clabels()}, 파일 {count}·코드 {ccount}·문서 {docs_n})")
             orow('data').locator('[data-toggle]').click()
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
-            in_data = olabels()[2:4]
+            in_data = olabels()[1:3]
             # 이름 앞의 종류 아이콘: 문서(md·html)와 폴더, 최근 변경, 파일 목록
             icon_of = lambda sel: page.evaluate(f"document.querySelector('{sel} .ficon use')?.getAttribute('href') || null")
             icons = [icon_of(sel) for sel in ('#lec-tree .row[data-doc="docs/01-기능-점검.md"]', '#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]',
@@ -819,34 +826,55 @@ def run(headed: bool) -> None:
             down = picked()
             page.keyboard.press('ArrowRight')  # 폴더 → 펼치기
             opened_dir = orow('empty-folder/readme.txt').count() == 1
-            page.keyboard.press('s')           # 그 글자로 시작하는 다음 행
+            page.keyboard.press('r')           # 그 글자로 시작하는 다음 행 (같은 글자를 거듭 치면 그다음 것)
+            page.keyboard.press('r')
             typed = picked()
             check(up == 'data/setup.exe' and body['path'] == 'data/setup.exe' and parent == 'data' and folded_data
-                  and down == 'empty-folder' and opened_dir and typed == 'src',
+                  and down == 'empty-folder' and opened_dir and typed == 'research',
                   f'키보드: ↑↓ 로 고르고 Enter 로 열기, ← 부모·접기, → 펼치기, 글자로 찾아가기 ({up}, {parent}, {down}, {typed})')
             page.fill('#lec-filter', 'csv')
             flat = page.evaluate(f"""[...document.querySelectorAll('{olist} .row')]
                 .map(r => r.querySelector('.label').textContent + '|' + (r.querySelector('.sub')?.textContent || ''))""")
             no_docs = '일치하는 문서가 없습니다' in page.inner_text('#lec-tree')
             page.locator('#lec-filter').press('Escape')
-            check(flat == ['표.csv|data'] and no_docs and olabels()[0] == 'code',
+            check(flat == ['표.csv|data'] and no_docs and olabels()[0] == 'data',
                   f'사이드바 거르기는 파일 목록에도 — 거른 파일을 폴더와 함께 평평하게, Esc 로 되돌림 ({flat})')
             later_file = work / '나중-파일.txt'
+            later_code = work / '나중-코드.py'
             later_file.write_text('x', encoding='utf-8')
-            appeared = wait_until(page, "!!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')", 8000)
-            count_after = page.inner_text('#lec-others-count')
+            later_code.write_text('x = 1', encoding='utf-8')
+            appeared = wait_until(page, "!!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')"
+                                  " && !!document.querySelector('#lec-code-list .row[data-path=\"나중-코드.py\"]')", 8000)
+            counts_after = (page.inner_text('#lec-others-count'), page.inner_text('#lec-code-count'))
             later_file.unlink()
-            gone = wait_until(page, "!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')", 8000)
-            check(appeared and count_after == '8' and gone, f'파일이 생기거나 지워지면 목록에 바로 반영 ({count_after})')
+            later_code.unlink()
+            gone = wait_until(page, "!document.querySelector('#lec-others-list .row[data-path=\"나중-파일.txt\"]')"
+                              " && !document.querySelector('#lec-code-list .row[data-path=\"나중-코드.py\"]')", 8000)
+            check(appeared and counts_after == (str(int(count) + 1), str(int(ccount) + 1)) and gone,
+                  f'파일·코드가 생기거나 지워지면 그 목록에 바로 반영 ({counts_after})')
+            code_body = opens(lambda: page.locator('#lec-code-list .row[data-path="code"]').locator('[data-toggle]').click()
+                              or page.locator('#lec-code-list .row[data-path="code/example.py"]').dblclick())
+            code_items = menu(page.locator('#lec-code-list .row[data-path="code/example.py"]'))
+            page.keyboard.press('Escape')
+            check(code_body['path'] == 'code/example.py' and '열기' in code_items and '편집기로' in code_items,
+                  f"'코드' 목록도 탐색기처럼 — 두 번 누르면 열기(편집기), 우클릭 메뉴 ({code_body}, {code_items[:80]!r})")
             tree_h = page.locator('#lec-tree').bounding_box()['height']
             page.click('#lec-others-head')
-            wait_until(page, "document.querySelector('#lec-files').classList.contains('others-off')")
+            wait_until(page, "document.querySelector('#lec-others').classList.contains('closed')")
             hidden_list = page.evaluate("getComputedStyle(document.querySelector('#lec-others-list')).display") == 'none'
             taller = page.locator('#lec-tree').bounding_box()['height'] > tree_h + 100
             saved_off = config_is('others_visible', False)
             page.click('#lec-others-head')
-            check(hidden_list and taller and saved_off and wait_until(page, "!document.querySelector('#lec-files').classList.contains('others-off')"),
+            check(hidden_list and taller and saved_off and wait_until(page, "!document.querySelector('#lec-others').classList.contains('closed')"),
                   '머리줄을 누르면 접히고 문서 트리가 그만큼 길어짐 (설정에 저장), 다시 누르면 펼침')
+            page.click('#lec-docs-head')
+            docs_closed = wait_until(page, "document.querySelector('#lec-docs').classList.contains('closed') && document.querySelector('#lec-others').classList.contains('grow')")
+            tree_hidden = page.evaluate("getComputedStyle(document.querySelector('#lec-tree')).display") == 'none'
+            saved_docs = config_is('docs_visible', False)
+            page.click('#lec-docs-head')
+            docs_back = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow') && getComputedStyle(document.querySelector('#lec-tree')).display !== 'none'")
+            check(docs_closed and tree_hidden and saved_docs and docs_back,
+                  "'문서' 머리줄로 문서 트리도 접음 — 접으면 아래 '파일'이 남은 높이를 가짐, 다시 누르면 펼침")
             split = page.locator('#lec-others-split').bounding_box()
             h0 = page.locator('#lec-others').bounding_box()['height']
             page.mouse.move(split['x'] + 40, split['y'] + 4)
@@ -857,14 +885,24 @@ def run(headed: bool) -> None:
             saved_h = config_is('others_height', round(h1))
             page.locator('#lec-others-split').dblclick()
             h2 = page.locator('#lec-others').bounding_box()['height']
-            check(abs(h1 - h0 - 100) <= 4 and saved_h and abs(h2 - h0) <= 2 and config_is('others_height', None),
-                  f'분리선을 끌어 높이 조절·저장, 두 번 누르면 기본 높이 ({h0:.0f} → {h1:.0f} → {h2:.0f})')
+            split = page.locator('#lec-code-split').bounding_box()
+            c0 = page.locator('#lec-code').bounding_box()['height']
+            page.mouse.move(split['x'] + 40, split['y'] + 4)
+            page.mouse.down()
+            page.mouse.move(split['x'] + 40, split['y'] - 56, steps=5)
+            page.mouse.up()
+            c1 = page.locator('#lec-code').bounding_box()['height']
+            saved_c = config_is('code_height', round(c1))
+            page.locator('#lec-code-split').dblclick()
+            check(abs(h1 - h0 - 100) <= 4 and saved_h and abs(h2 - h0) <= 2 and config_is('others_height', None)
+                  and abs(c1 - c0 - 60) <= 4 and saved_c and config_is('code_height', None),
+                  f'분리선을 끌어 파일·코드 높이 조절·저장, 두 번 누르면 기본 높이 (파일 {h0:.0f} → {h1:.0f} → {h2:.0f}, 코드 {c0:.0f} → {c1:.0f})')
             shot('05-others')
             print('[폴더 보기]')
             page.click('#lec-btn-view')
             wait_until(page, "document.querySelector('#lec-files').classList.contains('folder-view')")
             wait_until(page, f"!!document.querySelector('{olist} .row.root')")
-            hidden = page.evaluate("['#lec-tree', '#lec-others-split', '#lec-others-head'].map(s => getComputedStyle(document.querySelector(s)).display)")
+            hidden = page.evaluate("['#lec-docs', '#lec-others-split', '#lec-others-head', '#lec-code'].map(s => getComputedStyle(document.querySelector(s)).display)")
             active_row = lambda: page.evaluate(f"document.querySelector('{olist} .row.active')?.dataset.path ?? null")
             revealed = active_row()
             research = orow('research')
@@ -872,7 +910,7 @@ def run(headed: bool) -> None:
                 research.locator('[data-toggle]').click()
             mixed = [orow('research/images').count(), orow('research/구리-시장-동향.md').count(),
                      icon_of(f'{olist} .row[data-path="research/구리-시장-동향.md"]')]
-            check(hidden == ['none'] * 3 and revealed == 'docs/01-기능-점검.md' and mixed == [1, 1, '#i-md']
+            check(hidden == ['none'] * 4 and revealed == 'docs/01-기능-점검.md' and mixed == [1, 1, '#i-md']
                   and page.is_visible('#lec-btn-view.on') and config_is('files_view', 'folder'),
                   f"'폴더' 버튼: 문서 트리를 감추고 한 트리에 문서와 파일을 폴더 구조 그대로, 지금 보는 문서까지 펼침, 설정에 저장 ({hidden}, {revealed}, {mixed})")
             orow('research/구리-시장-동향.md').click()
@@ -892,9 +930,9 @@ def run(headed: bool) -> None:
             shot('05-folder-view')
             page.click('#lec-btn-view')
             back_kind = wait_until(page, "!document.querySelector('#lec-files').classList.contains('folder-view')")
-            check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'code'
+            check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'data' and page.is_visible('#lec-code-head')
                   and config_is('files_view', 'kind'),
-                  '다시 누르면 종류별 보기 (문서 트리 위, 분리선 아래 파일)')
+                  "다시 누르면 종류별 보기 ('문서'·'파일'·'코드' 묶음)")
             page.unroute('**/api/open-external', fake_open)
 
             print('[문서 속 원시 HTML]')
