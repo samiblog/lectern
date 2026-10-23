@@ -43,6 +43,8 @@ DEFAULTS: dict[str, Any] = {
     'code_visible': True,    # 종류별 보기의 '코드' 묶음을 펼쳐 둠
     'code_height': None,     # 종류별 보기의 '코드' 묶음 높이(px). None 이면 기본
     'toc_visible': True,
+    'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
+    'search_code': True,     # 전체 검색에서 코드를 찾음 ('코드' 버튼, D44)
     'toc_hidden_parts': [],  # 목차에서 감춘 구성 요소 종류: table·figure·box·diagram·code·math (목차 머리의 종류 버튼)
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
@@ -63,7 +65,7 @@ DEFAULTS: dict[str, Any] = {
 CLIENT_KEYS = frozenset({'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width',
-                         'terminal_follow_style', 'toc_hidden_parts'})
+                         'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width'})

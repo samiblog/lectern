@@ -112,6 +112,18 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
 
 MAX_OTHER_FILES = 5000   # '문서 외 파일' 목록에 싣는 파일 수. 넘으면 거기서 멈춘다 (소스가 아주 많은 프로젝트)
 
+# 코드 파일: 소스·스크립트·웹(css·소스 폴더의 html)·설정. 사이드바 '코드' 목록·코드 화면(화면은 web/js/icons.js 의 code 종류)과
+# 전체 검색의 '코드'(D44)가 같은 목록을 쓴다 — 두 곳을 함께 고친다 (tests/test_search.py 가 맞춰 본다)
+CODE_EXT = frozenset((
+    'py pyw js mjs cjs ts tsx jsx json jsonc yaml yml toml ini cfg conf env css scss less htm html xml xsl sh bash zsh bat cmd '
+    'ps1 psm1 c h cc cpp hpp cs java kt go rs rb php sql r ipynb vue svelte lua swift dart pl gradle lock'
+).split())
+
+
+def is_code(name: str) -> bool:
+    ext = name.rsplit('.', 1)[-1].lower() if '.' in name.lstrip('.') else ''
+    return ext in CODE_EXT
+
 
 def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
                 html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, limit: int = MAX_OTHER_FILES) -> tuple[list[Node], int, bool]:

@@ -278,6 +278,14 @@ function ensure() {
   if (o && (shown('files') || shown('code')) && (o.stale || !o.data) && !o.loading) load(S.tab);
 }
 
+/** 탭의 파일·코드 목록을 (보이지 않아도) 받아 둔다 — 빠른 열기(palette.js)가 코드를 찾을 때 */
+export function loadOthers(tab) {
+  const o = tab?.others;
+  if (!o) return Promise.resolve(null);
+  if (o.data && !o.stale) return Promise.resolve(o);
+  return (o.loading || load(tab)).then(() => o);
+}
+
 /** F5: 서버에서 새로 훑는다 (감시가 놓친 변경까지) */
 export function refreshOthers() {
   const o = state();

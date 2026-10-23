@@ -498,3 +498,16 @@ def test_term_flow(client, state, project, pid):
             break
         time.sleep(0.1)
     assert not session.alive
+
+
+def test_search_endpoint_code(client, project, pid):
+    write(project / 'src' / 'tool.py', 'def 찾을함수():\n    pass\n')
+    write(project / 'docs' / 'call.md', '# 호출\n\n찾을함수 를 부른다\n')
+    q = quote('찾을함수')
+    default = client.get(f'/api/search?p={pid}&q={q}').get_json()
+    assert [r['kind'] for r in default['results']] == ['doc']                     # 예전처럼 문서만
+    both = client.get(f'/api/search?p={pid}&q={q}&docs=1&code=1').get_json()
+    assert [(r['kind'], r['path']) for r in both['results']] == [('doc', 'docs/call.md'), ('code', 'src/tool.py')]
+    assert both['docs'] == 1 and both['code'] == 1
+    code = client.get(f'/api/search?p={pid}&q={q}&docs=0&code=1').get_json()
+    assert [r['path'] for r in code['results']] == ['src/tool.py'] and code['results'][0]['hits'][0]['line'] == 1

@@ -1,9 +1,20 @@
-// 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서를 찾아 연다
+// 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서와 코드를 찾아 연다 (D44). 맞는 문서 먼저, 그다음 코드 — 코드는 코드 화면으로.
+// 입력 전에는 최근 수정한 문서. 코드 목록은 사이드바 '코드' 목록과 같은 것 (others.js — 아직 받지 않았으면 받아 온다).
 
 import { S, emit } from './store.js';
+import { loadOthers } from './others.js';
+import { fileIcon } from './icons.js';
 import { $, esc, timeAgo } from './util.js';
 
 const MAX_ITEMS = 60;
+const MIN_CODE = 20;   // 맞는 코드가 있으면 문서가 많아도 이만큼은 보인다
+
+function* codeFiles(nodes = []) {
+  for (const n of nodes) {
+    if (n.type === 'file') yield n;
+    else yield* codeFiles(n.children);
+  }
+}
 let items = [];
 let selected = 0;
 
@@ -23,11 +34,10 @@ function score(f, terms, query) {
 function update() {
   const query = input().value.trim().toLowerCase();
   const terms = query.split(/\s+/).filter(Boolean);
-  let list;
   if (!terms.length) {
-    list = [...S.files].sort((a, b) => b.mtime - a.mtime);           // 입력 전: 최근 수정 순
+    items = [...S.files].sort((a, b) => b.mtime - a.mtime).slice(0, MAX_ITEMS);   // 입력 전: 최근 수정한 문서
   } else {
-    list = S.files
+    const match = (list) => list
       .filter((f) => {
         const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
         return terms.every((t) => hay.includes(t));
@@ -35,8 +45,12 @@ function update() {
       .map((f) => ({ f, s: score(f, terms, query) }))
       .sort((a, b) => b.s - a.s || b.f.mtime - a.f.mtime)
       .map((x) => x.f);
+    const docs = match(S.files);
+    const code = match([...codeFiles(S.tab?.others.trees?.code)]).map((f) => ({ ...f, code: true }));
+    const room = MAX_ITEMS - Math.min(code.length, MIN_CODE);
+    const shownDocs = docs.slice(0, room);
+    items = [...shownDocs, ...code.slice(0, MAX_ITEMS - shownDocs.length)];
   }
-  items = list.slice(0, MAX_ITEMS);
   selected = 0;
   renderList();
 }
@@ -44,11 +58,11 @@ function update() {
 function renderList() {
   const ul = $('#lec-palette-list');
   if (!items.length) {
-    ul.innerHTML = `<li class="empty">${S.root ? '일치하는 문서가 없습니다' : '먼저 폴더를 여세요'}</li>`;
+    ul.innerHTML = `<li class="empty">${S.root ? '일치하는 문서나 코드가 없습니다' : '먼저 폴더를 여세요'}</li>`;
     return;
   }
-  ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}" aria-selected="${i === selected}">
-      <span class="t">${esc(f.title || f.name)}</span><span class="when">${esc(timeAgo(f.mtime))}</span>
+  ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}" aria-selected="${i === selected}">
+      <span class="t">${fileIcon(f.name, f.code ? undefined : f.kind)}${esc(f.title || f.name)}</span><span class="when">${esc(timeAgo(f.mtime))}</span>
       <span class="p">${esc(f.path)}</span></li>`).join('');
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
@@ -57,7 +71,7 @@ function choose(i) {
   const f = items[i];
   if (!f) return;
   closePalette();
-  emit('open', { type: 'doc', path: f.path });
+  emit('open', { type: f.code ? 'code' : 'doc', path: f.path });
 }
 
 export function openPalette() {
@@ -65,6 +79,9 @@ export function openPalette() {
   input().value = '';
   update();
   input().focus();
+  // 코드 목록을 아직 받지 않았으면 받아 온 뒤 다시 거른다 (사이드바 '코드'를 열어 보지 않았어도 찾게)
+  const tab = S.tab;
+  if (tab && !tab.others.trees) loadOthers(tab).then(() => { if (tab === S.tab && !box().hidden) update(); });
 }
 
 export function closePalette() {

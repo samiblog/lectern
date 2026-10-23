@@ -141,7 +141,11 @@
       <nav id="lec-recent" class="side-list" aria-label="최근 변경" hidden></nav>
       <div id="lec-search" hidden>
         <div class="side-filter">
-          <input id="lec-search-input" type="search" placeholder="모든 문서의 본문에서 찾기" spellcheck="false" autocomplete="off">
+          <input id="lec-search-input" type="search" placeholder="모든 문서·코드의 본문에서 찾기" spellcheck="false" autocomplete="off">
+        </div>
+        <div class="search-kinds" role="group" aria-label="찾을 곳">
+          <button type="button" id="lec-search-docs" class="icon-btn small toggle" aria-pressed="true" title="문서(Markdown·HTML)에서 찾기">문서</button>
+          <button type="button" id="lec-search-code" class="icon-btn small toggle" aria-pressed="true" title="코드(소스·스크립트·설정)에서 찾기 — 사이드바 '코드' 목록의 파일">코드</button>
         </div>
         <p id="lec-search-info" class="side-info"></p>
         <nav id="lec-search-results" class="side-list" aria-label="검색 결과"></nav>
@@ -209,7 +213,7 @@
 
 <div id="lec-palette" class="overlay" hidden>
   <div class="palette-box" role="dialog" aria-label="문서 빠르게 열기">
-    <input id="lec-palette-input" type="text" placeholder="문서 이름, 제목, 경로" spellcheck="false" autocomplete="off">
+    <input id="lec-palette-input" type="text" placeholder="문서·코드 이름, 제목, 경로" spellcheck="false" autocomplete="off">
     <ul id="lec-palette-list" role="listbox"></ul>
   </div>
 </div>

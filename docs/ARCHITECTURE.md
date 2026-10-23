@@ -126,6 +126,7 @@ flowchart LR
 | `sidebar_width` | `null` | 가능 | 사이드바 폭(px, 200~480). 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 288) |
 | `files_view` | `"kind"` | 가능 | 사이드바 파일 탭을 보는 방법 ('폴더' 버튼): `kind`(종류별 — 문서 트리 위, 분리선 아래 '파일' 목록) · `folder`(폴더 구조 그대로 — 문서와 파일을 한 트리에) (D37) |
 | `docs_visible` / `others_visible` / `code_visible` | `true` | 가능 | 종류별 보기의 '문서'·'파일'·'코드' 묶음을 펼쳐 둠 (머리줄을 눌러 접기, D42) |
+| `search_docs` / `search_code` | `true` | 가능 | 전체 검색에서 찾을 곳 — 검색 칸 아래 '문서'·'코드' 버튼 (D44) |
 | `others_height` / `code_height` | `null` | 가능 | 종류별 보기의 '파일'·'코드' 묶음 높이(px) — 펼친 첫 묶음이 아닐 때. 위 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 30%·26%) |
 | `terminal_width` | `null` | 가능 | 오른쪽 터미널 폭(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(본문 영역의 42%) |
 | `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
@@ -162,7 +163,7 @@ flowchart LR
 | `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(seq)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
 | `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크·제외 폴더 규칙은 트리와 같다. 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
-| `GET /api/search?p=<id>&q=<검색어>` | | 전체 본문 검색. `{query, results:[{path, title, mtime, named, hits:[{line, text}], more}], total, truncated}` (`named`: 제목·파일명에 검색어가 있음 — 먼저 나옴). 검색어가 200자를 넘으면 400 |
+| `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll}` | 그 탭에서 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
@@ -255,8 +256,9 @@ sequenceDiagram
 
 ### 전체 검색 (search.js, lectern/search.py)
 - 사이드바 '검색' 탭(Ctrl+Shift+F). 입력을 250ms 기다렸다가 `GET /api/search?q=` 를 부르고, 늦게 온 결과는 버린다 (Enter 는 기다리지 않고 바로 — 기다리던 검색은 취소). 선택된 탭의 프로젝트에서 찾는다. 문서 목록이 바뀌면(자동 새로고침) 다시 찾고, 검색어와 결과는 탭마다 남겨 두었다가 그 탭을 고르면 되살린다 (다른 탭에서 찾는 중이던 결과는 버린다).
-- 서버는 트리와 같은 `scan()` 결과의 문서만 읽는다 (숨김·제외는 찾지 않음). 대소문자 무시, 글자 그대로. 줄 번호는 markdown-it 과 같게 센다 (`\r\n`·`\r`·`\n` 만 줄바꿈). 제목·경로에 검색어가 든 문서를 먼저, 그다음 최근에 고친 순. 문서당 20줄, 모두 1000줄·200문서까지.
-- 결과 줄을 누르면 문서를 열고, 그 줄이 든 가장 작은 `data-lines` 블록(표의 행까지)으로 가서 깜박이고, 문서 안 찾기(`findText`)로 검색어를 표시한다. 찾기 막대의 '지금 결과'도 그 블록 안의 것으로 둔다 (`pickMatchAt`).
+- 검색 칸 아래 '문서'·'코드' 버튼으로 찾을 곳을 고른다 (설정 `search_docs`·`search_code`, 둘 다 끄면 찾지 않고 고르라고 알림, D44).
+- 서버는 트리와 같은 `scan()` 결과의 문서와, '코드' 목록과 같은 `scan_others()` 결과 중 `is_code` 인 파일을 읽는다 (숨김·제외는 찾지 않음). 대소문자 무시, 글자 그대로 (html 문서는 보이는 글자만, 코드는 파일 그대로). 줄 번호는 markdown-it 과 같게 센다 (`\r\n`·`\r`·`\n` 만 줄바꿈). 문서 먼저, 그다음 코드 — 묶음 안에서는 제목·경로에 검색어가 든 파일을 먼저, 그다음 최근에 고친 순. 파일당 20줄, 묶음마다 1000줄·200파일까지. 2MB 가 넘는 코드는 건너뛴다. 읽은 글은 탭마다 `TextCache` 에 두고 수정 시각·크기가 그대로면 다시 쓴다.
+- 결과 줄을 누르면 문서를 열고, 그 줄이 든 가장 작은 `data-lines` 블록(표의 행까지)으로 가서 깜박이고, 문서 안 찾기(`findText`)로 검색어를 표시한다. 찾기 막대의 '지금 결과'도 그 블록 안의 것으로 둔다 (`pickMatchAt`). 코드 결과(`data-kind="code"`)는 코드 화면의 그 줄로 가서(`navigate({type:'code', line})`) 같은 방법으로 검색어를 표시한다.
 
 ### 바뀐 부분 강조 (diffmark.js)
 - 같은 문서를 다시 그릴 때(자동 새로고침) 바꿔 끼우기 직전의 최상위 블록마다 서명(태그 + 공백을 줄인 글자 + 그림 주소, Mermaid는 원문)을 세어 두고, 새 화면에서 서명이 이전에 없던 블록에 `lec-changed`(약 4초 배경색·테두리)를 준다. 같은 서명이 여럿이면 개수로 맞춘다.
@@ -364,7 +366,7 @@ sequenceDiagram
 
 | 키 | 동작 |
 |---|---|
-| Ctrl+P | 빠른 열기 (입력 전에는 최근 수정 순) |
+| Ctrl+P | 빠른 열기 — 문서와 코드, 맞는 문서 먼저 (입력 전에는 최근 수정한 문서, D44) |
 | Ctrl+F | 문서·코드 화면: 화면 안 찾기 / 개요 화면: 트리 필터로 이동 |
 | Ctrl+Shift+F | 전체 검색 (사이드바 '검색' 탭) |
 | Ctrl+, | 설정 창 |

@@ -16,6 +16,7 @@ from . import __version__
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, scan, scan_others
+from .search import TextCache
 from .terminal import Terminals
 
 
@@ -34,6 +35,7 @@ class Project:
         self._watcher: Watcher | None = None
         # 스캔 결과. 변경 기록(seq)이 그대로면 다시 쓴다 — 문서가 수천 개여도 트리·개요·검색이 폴더를 매번 훑지 않게
         self._scans: dict[tuple, tuple[int, list]] = {}
+        self.texts = TextCache()   # 전체 검색이 읽은 글 (수정 시각·크기가 그대로면 다시 쓴다)
 
     @property
     def name(self) -> str:

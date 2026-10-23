@@ -21,8 +21,8 @@ from . import __version__, osutil, terminal
 from .config import is_number
 from .docinfo import doc_info, read_text
 from .paths import web_dir
-from .scanner import MAX_OTHER_FILES, doc_kind, iter_files, resolve_inside
-from .search import MAX_QUERY, search_docs
+from .scanner import MAX_OTHER_FILES, doc_kind, is_code, iter_files, resolve_inside
+from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
 
 RECENT_IN_OVERVIEW = 6
@@ -226,7 +226,12 @@ def create_app(state: AppState) -> Flask:
         query = request.args.get('q', '')
         if len(query) > MAX_QUERY:
             abort(400, description=f'검색어는 {MAX_QUERY}자까지입니다')
-        return jsonify(search_docs(project.root, list(iter_files(project.scan())), query))
+        # docs·code: 찾을 묶음 (없으면 문서만 — 예전 화면과 같게). 코드는 사이드바 '코드' 목록의 파일 (D44)
+        want_docs = request.args.get('docs', '1') != '0'
+        want_code = request.args.get('code', '0') == '1'
+        docs = list(iter_files(project.scan())) if want_docs else []
+        code = [f for f in iter_files(project.scan_others()[0]) if is_code(f['name'])] if want_code else []
+        return jsonify(search(project.root, docs, code, query, project.texts))
 
     @app.get('/api/changes')
     def api_changes() -> Any:

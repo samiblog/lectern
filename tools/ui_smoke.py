@@ -661,6 +661,14 @@ def run(headed: bool) -> None:
             page.keyboard.press('Enter')
             page.wait_for_selector('#lec-view h1:has-text("우선순위")')
             check(True, 'Ctrl+P 로 문서 열기')
+            page.keyboard.press('Control+p')
+            page.fill('#lec-palette-input', 'example')
+            code_item = wait_until(page, "!!document.querySelector('#lec-palette-list li.code')", 5000)
+            pal = page.evaluate("[...document.querySelectorAll('#lec-palette-list li')].map(li => (li.classList.contains('code') ? 'code:' : 'doc:') + li.querySelector('.p').textContent)")
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            pal_code = wait_until(page, "document.querySelector('#lec-view.code-view .cv-title')?.textContent === 'example.py'", 5000)
+            check(code_item and 'code:code/example.py' in pal and pal_code,
+                  f'Ctrl+P 에 코드도 — 맞는 문서 먼저, 그다음 코드(아이콘), 고르면 코드 화면 ({pal[:5]})')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.keyboard.press('Control+f')
@@ -742,7 +750,44 @@ def run(headed: bool) -> None:
                   f'검색 결과를 누르면 그 문서의 그 줄(표의 행)로 가고 검색어를 표시 ({state})')
             shot('05-search')
             page.keyboard.press('Escape')
+            def cfg_is(key, want):
+                for _ in range(20):
+                    if page.evaluate(f"fetch('/api/config').then(r => r.json()).then(c => c.{key})") == want:
+                        return True
+                    page.wait_for_timeout(100)
+                return False
+
+            sr = lambda: page.evaluate('''() => ({ info: document.querySelector('#lec-search-info').textContent,
+              group: !!document.querySelector('#lec-search-results .sr-group'),
+              docs: [...document.querySelectorAll('#lec-search-results .sr-doc')].map(d => (d.dataset.kind || 'doc') + ':' + d.dataset.doc) })''')
+            page.fill('#lec-search-input', 'moving_average')
+            wait_until(page, "!!document.querySelector('#lec-search-results .sr-doc[data-kind=\"code\"]')", 5000)
+            s1 = sr()
+            check(s1['group'] and s1['docs'][0].startswith('doc:') and 'code:code/example.py' in s1['docs'] and '코드' in s1['info'] and '문서' in s1['info'],
+                  f"전체 검색에 코드도 — 문서 결과 먼저, 그 아래 '코드' 묶음 ({s1})")
+            page.locator('#lec-search-results .sr-hit[data-kind="code"]').first.click()
+            to_code = wait_until(page, "document.querySelector('#lec-view.code-view .lec-target')?.dataset.line === '8'", 5000)
+            code_find = page.evaluate("document.querySelector('#lec-findbar').hidden ? null : document.querySelector('#lec-find-count').textContent")
+            page.keyboard.press('Escape')
+            check(to_code and code_find and code_find.startswith('1/'), f'코드 결과를 누르면 코드 화면의 그 줄로, 검색어 표시 ({code_find})')
+            page.click('#lec-search-docs')
+            only_code = wait_until(page, "[...document.querySelectorAll('#lec-search-results .sr-doc')].every(d => d.dataset.kind === 'code')"
+                                   " && !document.querySelector('#lec-search-results .sr-group')", 5000)
+            saved_docs = cfg_is('search_docs', False)
+            page.click('#lec-search-code')
+            none = wait_until(page, "document.querySelector('#lec-search-info').textContent.includes('고르세요')", 3000)
+            page.click('#lec-search-docs')
+            page.click('#lec-search-code')
+            back_both = wait_until(page, "!!document.querySelector('#lec-search-results .sr-group')", 5000)
+            check(only_code and saved_docs and none and back_both and cfg_is('search_code', True) and cfg_is('search_docs', True),
+                  "'문서'·'코드' 버튼으로 찾을 곳을 고름 (설정에 저장), 둘 다 끄면 고르라고 알림")
+            page.fill('#lec-search-input', '')
             page.locator('.side-tabs button[data-tab="files"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            opened_code = page.locator('#lec-code-list .row[data-path="code"][aria-expanded="true"] [data-toggle]')
+            if opened_code.count():   # 코드 화면이 '코드' 목록에서 펼친 폴더를 접어 둔다 (아래 파일 목록 점검은 접힌 채로 시작)
+                opened_code.click()
 
             print('[파일 목록]')
             olist = '#lec-others-list'
