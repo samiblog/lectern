@@ -21,7 +21,7 @@
 //   term-colors      설정 '터미널 색을 스타일에 맞춤'이 바뀜              (settings → terminal)
 //   term-place       설정 '터미널 자리'가 바뀜                            (settings → terminal, D52)
 //   user-styles      내 스타일 목록이 바뀜 (파일이 생기거나 고쳐짐)        (theme → settings, D53)
-//   edit             편집 모드를 엶 {line?} — 우클릭 메뉴                   (docmenu → editor, D54)
+//   edit             편집 모드를 엶 {line?} — 우클릭 메뉴. 편집 중이면 그 줄로 (docmenu·search → editor, D54·D55)
 //   tabs             열린 탭 목록이 바뀜 (열기·닫기·서버에 맞추기)          (tabs → gather)
 //   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)
 //   term-paste       글(text)을 선택된 탭의 터미널에 붙여 넣음 — 우클릭 메뉴의 터미널 버튼 (ui → terminal, D51)

@@ -559,6 +559,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .lec-editor .CodeMirror-dialog { background: var(--ui-bg); color: var(--ui-fg); border-color: var(--ui-border); font-family: var(--ui-font, sans-serif); }
 .lec-editor .CodeMirror-dialog input { color: inherit; font: inherit; }
 .lec-editor .cm-searching { background: var(--ui-find, #ffe58a); }
+/* 목차·검색에서 간 줄 (editor.js 의 goTo, D55): 읽는 화면의 lec-target 처럼 잠깐 링크 색 바탕 (keyframes 는 base.css) */
+.lec-editor .ed-target { animation: lec-target 1.8s ease-in; }
+@media (prefers-reduced-motion: reduce) { .lec-editor .ed-target { animation: none; background: color-mix(in srgb, var(--md-link, #1f5f9f) 12%, transparent); } }
 /* 어두운 스타일: CodeMirror 의 기본 글자색은 흰 바탕용이라 어두운 바탕에 맞는 색으로 (One Dark 계열) */
 :root[data-ui="dark"] .lec-editor .cm-keyword, :root[data-ui="dark"] .lec-editor .cm-builtin { color: #c678dd; }
 :root[data-ui="dark"] .lec-editor .cm-string, :root[data-ui="dark"] .lec-editor .cm-quote { color: #98c379; }

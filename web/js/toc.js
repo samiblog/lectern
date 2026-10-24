@@ -3,6 +3,7 @@
 // 제목 아래에는 그 절의 구성 요소 — 표·그림·박스글·다이어그램·코드·수식 — 를 문서 순서대로 함께 보인다 (D39).
 // 누르면 그 자리로 가서(접힌 절은 편다) 잠깐 테두리로 표시한다. 목차 머리의 종류 버튼으로 종류마다 보이고 감춘다
 // (설정 toc_hidden_parts — 감춘 종류를 적어 두므로 새 종류는 처음부터 보인다). 번호(표 1, 표 2 …)는 감춘 것과 상관없이 문서 순서다.
+// 편집 모드(D55)에서는 '지금 읽는 위치'가 편집기의 지금 보는 곳을 따르고, 목차를 누르면 편집기가 그 줄로 간다 (editor.js).
 
 import { S, on } from './store.js';
 import { saveConfig } from './api.js';
@@ -15,6 +16,12 @@ let links = [];   // heads 와 같은 순서의 목차 링크
 let parts = [];   // 목차에 보이는 구성 요소 (링크의 data-c 순번)
 let active = -1;
 let raf = 0;
+let editJump = null;   // 편집 중이면 목차·모아 보기에서 고른 곳으로 편집기를 옮기는 함수 (editor.js, D55) — 옮겼으면 true
+
+/** 편집 모드가 목차의 이동을 받는다 (editor.js) */
+export function setEditJump(fn) {
+  editJump = fn;
+}
 
 /** 터미널(terminal.js)을 열면 목차를 감춘다 — 본문 폭이 모자라므로. 그동안 목차 버튼은 목차를 함께 보일지만 바꾼다 */
 const root = document.documentElement;
@@ -260,11 +267,16 @@ function buildToc(view) {
   updateTocVisibility();
 }
 
+/** '지금 읽는 위치'를 다시 정한다 — 편집 모드가 편집기의 지금 보는 곳을 바꿀 때 (editor.js) */
+export const updateTocActive = () => spy();
+
 function spy() {
   raf = 0;
   if (!heads.length) return;
   const content = $('#lec-content');
-  const limit = content.getBoundingClientRect().top + 96;
+  // 편집 중이면 편집기의 지금 보는 곳(커서 등 — 그 자리의 화면 좌표 pane.tocLimit, editor.js)이 든 절. 아니면 화면 위쪽의 절
+  const editing = S.pane?.editor && S.pane.tocLimit != null;
+  const limit = editing ? S.pane.tocLimit + 2 : content.getBoundingClientRect().top + 96;
   let idx = 0;
   const shown = (h) => !h.classList.contains('lec-fold-hidden');   // 접힌 절 안의 제목은 위치가 0이다
   for (let i = 0; i < heads.length; i++) {
@@ -273,7 +285,7 @@ function spy() {
     else break;
   }
   // 문서 끝까지 내려오면 마지막 절들은 위로 올라갈 수 없으므로, 화면에 보이는 마지막 제목을 현재 위치로 본다
-  if (content.scrollTop + content.clientHeight >= content.scrollHeight - 4) {
+  if (!editing && content.scrollTop + content.clientHeight >= content.scrollHeight - 4) {
     const bottom = content.getBoundingClientRect().bottom;
     for (let i = heads.length - 1; i > idx; i--) {
       if (shown(heads[i]) && screenRect(heads[i]).top < bottom) { idx = i; break; }
@@ -286,9 +298,11 @@ function spy() {
   links[idx]?.scrollIntoView({ block: 'nearest' });
 }
 
-/** 구성 요소로 간다: 접힌 절을 펴고, 크면 위를 맞추고 작으면 가운데로, 잠깐 테두리로 표시 (base.css·frame.css 의 lec-target) */
+/** 구성 요소로 간다: 접힌 절을 펴고, 크면 위를 맞추고 작으면 가운데로, 잠깐 테두리로 표시 (base.css·frame.css 의 lec-target).
+ * 편집 중이면 편집기가 그 줄로 간다 (모아 보기도 이것으로 간다) */
 export function goToPart(el) {
   const target = el.closest('.table-wrap') || el;
+  if (editJump?.(target)) return;
   unfoldTo(target);
   const tall = screenRect(target).height > $('#lec-content').clientHeight * 0.7;
   target.scrollIntoView({ block: tall ? 'start' : 'center' });
@@ -335,7 +349,7 @@ export function initToc() {
     if (!a) return;
     e.preventDefault();
     const h = heads[+a.dataset.i];
-    if (!h) return;
+    if (!h || editJump?.(h)) return;   // 편집 중이면 편집기가 그 제목(줄)으로
     if (h.classList.contains('cv-line')) {   // 코드 화면: 그 줄을 위에 두고 잠깐 표시
       h.scrollIntoView({ block: 'start' });
       h.classList.remove('lec-target');

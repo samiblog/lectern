@@ -9,13 +9,18 @@
 //   창을 닫을 때는 서버가 묻는다 — 저장하지 않은 파일 목록을 POST /api/editing 으로 알려 둔다 (app.py).
 // - 여는 곳: 탭 막대 오른쪽 끝의 [편집] 버튼(켜기/끄기 — 목차·터미널 버튼 왼쪽), 상태줄의 '편집', 코드 화면 머리줄의 '편집',
 //   우클릭 메뉴('이 문서 편집'·'여기를 편집' — 'edit' 이벤트 {line}), Ctrl+E.
-//   줄을 주지 않으면 화면 맨 위에 보이던 블록(코드는 줄)의 원문 줄에서 연다.
+// - 위치 잇기 (D55, 계산은 editsync.js): 줄을 주지 않으면 읽던 곳에서 연다. 편집하는 동안 아래의 읽는 화면을 편집기의
+//   '지금 보는 곳'(커서가 화면 안이면 커서, 아니면 화면 맨 위 조금 아래)에 맞춰 두고, 목차의 '지금 읽는 위치'도 그곳으로 한다.
+//   목차·모아 보기·검색에서 이 파일의 곳을 고르면 편집기가 그 줄로 간다. 닫으면 읽는 화면이 편집하던 곳에 있다.
 // - 편집 상자 안의 키는 편집기 것이다 (main.js) — Ctrl+S 저장, Esc 닫기, Ctrl+F 찾기, Ctrl+H 바꾸기, Alt+G 줄로 가기.
 
 import { S, on } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { setLeaveGuard } from './nav.js';
-import { $, esc, toast, formatClock } from './util.js';
+import { setEditJump, updateTocActive } from './toc.js';
+import { unfoldTo } from './fold.js';
+import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
+import { $, esc, toast, formatClock, isHtml } from './util.js';
 import { t } from './i18n.js';
 
 const LIB = '/static/vendor/codemirror';
@@ -84,18 +89,75 @@ async function loadLib(group) {
   for (const name of MODE_FILES[group] || []) await load(`${LIB}/mode/${name}.js`);
 }
 
-// ---- 열기·닫기 ------------------------------------------------------------------
+// ---- 위치 잇기 (D55) -------------------------------------------------------------
 
-/** 화면 맨 위에 보이는 블록(코드는 줄)의 원문 줄 번호 (모르면 0) */
-function visibleLine(pane) {
-  const top = pane.scroller.getBoundingClientRect().top + 4;
-  const sel = pane.current?.type === 'code' ? '.cv-line[data-line]' : '[data-lines]';
-  for (const el of pane.view.querySelectorAll(sel)) {
-    const r = el.getBoundingClientRect();
-    if (r.height && r.bottom > top) return Number(el.dataset.line || el.dataset.lines.split('-')[0]) || 0;
-  }
-  return 0;
+const LEAD = 40;   // 편집기 화면 맨 위에서 이만큼 아래가 '지금 보는 곳' (커서가 화면 밖일 때). 줄로 갈 때도 그 줄을 여기에 둔다
+
+const marksFor = (ed) => (ed.marks ||= marksOf(ed.pane, ed.heads));   // 읽는 화면을 다시 그리면 비운다
+const viewTop = (pane) => pane.view.getBoundingClientRect().top;
+
+/** 편집기에서 지금 보는 곳: 커서가 화면 안이면 커서, 아니면 화면 맨 위 조금 아래. {at: 편집기의 자리, y: 화면 좌표} */
+function editorSpot(ed) {
+  const { cm } = ed;
+  const box = cm.getScrollerElement().getBoundingClientRect();
+  const c = cm.cursorCoords(true, 'window');
+  const y = c.top >= box.top && c.bottom <= box.bottom ? c.top : box.top + LEAD;
+  const n = cm.lineAtHeight(y, 'window');
+  const h = cm.getLineHandle(n)?.height || 1;
+  return { at: n + Math.min(Math.max((y - cm.heightAtLine(n, 'window')) / h, 0), 0.999), y };
 }
+
+/** 아래의 읽는 화면을 편집기의 지금 보는 곳에 맞춘다 — 같은 원문 자리가 같은 높이에 오게. 목차의 '지금 읽는 위치'도 그곳으로 */
+function syncView(ed) {
+  const { pane } = ed;
+  if (pane.editor !== ed) return;
+  const spot = editorSpot(ed);
+  const y = yOfLine(marksFor(ed), toView(ed.log, spot.at), viewTop(pane));
+  pane.tocLimit = spot.y;
+  if (y != null) {
+    const before = pane.scroller.scrollTop;
+    pane.scroller.scrollTop = before + y - spot.y;
+    pane.tocLimit = y - (pane.scroller.scrollTop - before);   // 문서 끝에 닿아 덜 움직였으면 그 자리는 그만큼 아래에 있다
+  }
+  if (pane === S.pane) updateTocActive();
+}
+
+/** 다음 그림 때 한 번 맞춘다 (스크롤·커서가 움직일 때마다 부른다) */
+function follow(ed) {
+  if (!ed.raf) ed.raf = requestAnimationFrame(() => { ed.raf = 0; syncView(ed); });
+}
+
+/** 열 때: 편집기를 읽는 화면에 맞춘다 — 읽던 곳(편집기의 지금 보는 곳과 같은 높이)의 원문 줄이 같은 높이에, 커서는 그 줄 머리에 */
+function matchView(ed) {
+  const { cm, pane } = ed;
+  const y = cm.getScrollerElement().getBoundingClientRect().top + LEAD;
+  const at = Math.min(lineOfY(marksFor(ed), y, viewTop(pane)), cm.lineCount() - 0.001);
+  const n = Math.floor(at);
+  cm.setCursor({ line: n, ch: 0 });
+  const want = y - (at - n) * (cm.getLineHandle(n)?.height || 0);   // 그 줄의 머리가 올 곳
+  cm.scrollTo(null, Math.max(0, cm.getScrollInfo().top + cm.heightAtLine(n, 'window') - want));
+}
+
+/** 목차·모아 보기에서 고른 곳(읽는 화면의 요소)으로 편집기를 옮긴다. 편집 중이 아니면 false — 읽는 화면이 간다 (toc.js) */
+function jumpTo(el) {
+  const ed = S.pane?.editor;
+  if (!ed) return false;
+  const line = lineOfElement(marksFor(ed), el, viewTop(ed.pane));
+  goTo(ed, Math.floor(toEditor(ed.log, line)) + 1, { flash: true });
+  ed.cm.focus();
+  return true;
+}
+
+/** 닫기 전에: 읽는 화면을 편집하던 곳으로 — 접힌 절 안이면 펴고, 장 하이라이트도 그 장으로 (unfoldTo) */
+function settle(ed) {
+  cancelAnimationFrame(ed.raf);
+  ed.raf = 0;
+  const el = markAt(marksFor(ed), toView(ed.log, editorSpot(ed).at));
+  if (el) unfoldTo(el);
+  syncView(ed);
+}
+
+// ---- 열기·닫기 ------------------------------------------------------------------
 
 const dirtyPaths = () => S.panes.filter((p) => p.editor?.dirty).map((p) => `${p.tab.name}: ${p.editor.path}`);
 let reported = '[]';
@@ -142,7 +204,7 @@ function updateButton() {
   btn.disabled = !can && !editing;
 }
 
-/** 편집 모드를 연다. line: 처음 커서를 둘 원문 줄 (0 이면 화면 맨 위에 보이던 블록) */
+/** 편집 모드를 연다. line: 처음 커서를 둘 원문 줄 (1부터 — 읽는 화면의 줄. 0 이면 읽던 곳). 이미 편집 중이면 그 줄로 간다 */
 export async function openEditor(pane = S.pane, { line = 0 } = {}) {
   const view = pane?.current;
   if (!pane?.tab || (view?.type !== 'doc' && view?.type !== 'code')) {
@@ -150,7 +212,7 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
     return;
   }
   if (pane.editor) {
-    if (line) goTo(pane.editor, line);
+    if (line) goTo(pane.editor, Math.floor(toEditor(pane.editor.log, line - 1)) + 1, { flash: true });   // 그사이 늘거나 준 줄만큼 옮겨서
     pane.editor.cm.focus();
     return;
   }
@@ -169,7 +231,7 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
       loadLib(group),
     ]);
     if (pane.current !== view || pane.pending || !S.tabs.includes(tab)) return;   // 그사이 다른 화면으로 갔다 (또는 가는 중)
-    build(pane, path, src, mode, line || visibleLine(pane));
+    build(pane, path, src, mode, line);
   } catch (e) {
     toast(t('편집 모드를 열지 못했습니다: {error}', { error: e.message }), 'error');
   } finally {
@@ -192,7 +254,13 @@ function build(pane, path, src, mode, line) {
   const ext = extOf(path);
   const indent = INDENT4.has(ext) ? 4 : 2;
   const prose = pane.current.type === 'doc';
-  const ed = { pane, tab: pane.tab, path, box, base: { hash: src.hash }, dirty: false, saving: false, saved: false };
+  const ed = {
+    pane, tab: pane.tab, path, box, base: { hash: src.hash }, dirty: false, saving: false, saved: false,
+    // 위치 잇기 (D55): 읽는 화면을 그린 원문 뒤로 늘거나 준 줄(log — 앞에서 버린 것이 dropped 개), 저장한 때의 기록 끝(savedMark),
+    // html 문서의 제목 줄(heads), 읽는 화면의 자리(marks — 다시 그리면 비움)
+    log: [], dropped: 0, savedMark: null, savedHeads: null, marks: null, raf: 0,
+    heads: prose && isHtml(path) ? headLines(src.text) : null,
+  };
   ed.cm = window.CodeMirror(box.querySelector('.ed-body'), {
     value: src.text, mode: mode || 'text/plain', lineNumbers: true, lineWrapping: prose, styleActiveLine: true, matchBrackets: !prose,
     indentUnit: indent, tabSize: 4, indentWithTabs: false, autofocus: true, spellcheck: false,
@@ -207,47 +275,68 @@ function build(pane, path, src, mode, line) {
   });
   ed.clean = ed.cm.changeGeneration(true);
   ed.cm.on('changes', () => setDirty(ed, !ed.cm.isClean(ed.clean)));
+  ed.cm.on('change', (cm, change) => logChange(ed.log, change));
+  ed.cm.on('scroll', () => follow(ed));
+  ed.cm.on('cursorActivity', () => follow(ed));
   box.querySelector('.ed-save').addEventListener('click', () => save(ed));
   box.querySelector('.ed-close').addEventListener('click', () => closeEditor(pane));
   box.querySelector('.ed-find').addEventListener('click', () => ed.cm.execCommand('findPersistent'));
   pane.editor = ed;
   // 크기·글자가 바뀌면 CodeMirror 가 잰 글자 폭·줄 높이를 다시 잰다 (사이드바·터미널·글자 크기·스타일 — 안 그러면 커서 자리가 어긋난다)
-  ed.resize = new ResizeObserver(() => ed.cm.refresh());
+  ed.resize = new ResizeObserver(() => {
+    ed.cm.refresh();
+    follow(ed);
+  });
   ed.resize.observe(box.querySelector('.ed-body'));
   if (src.bom || src.newline === '\r\n') setState(ed, [src.newline === '\r\n' && 'CRLF', src.bom && 'BOM'].filter(Boolean).join(' · '));
   ed.cm.refresh();
   if (line) goTo(ed, line);
+  else matchView(ed);
   ed.cm.focus();
   updateButton();
 }
 
-/** 그 줄(1부터)로 — 화면 맨 위 가까이에 두고 커서를 줄 머리에 */
-function goTo(ed, line) {
-  const at = Math.max(0, Math.min(ed.cm.lineCount() - 1, line - 1));
-  ed.cm.setCursor({ line: at, ch: 0 });
-  ed.cm.scrollTo(null, Math.max(0, ed.cm.heightAtLine(at, 'local') - 40));
+/** 그 줄(1부터)로 — 화면 맨 위 가까이에 두고 커서를 줄 머리에. flash: 잠깐 그 줄을 표시 (목차·검색에서 옴) */
+function goTo(ed, line, { flash = false } = {}) {
+  const { cm } = ed;
+  const at = Math.max(0, Math.min(cm.lineCount() - 1, line - 1));
+  cm.setCursor({ line: at, ch: 0 });
+  cm.scrollTo(null, Math.max(0, cm.heightAtLine(at, 'local') - LEAD));
+  if (!flash) return;
+  const handle = cm.addLineClass(at, 'background', 'ed-target');
+  setTimeout(() => cm.removeLineClass(handle, 'background', 'ed-target'), 1800);
 }
 
-/** 편집을 닫는다. 저장하지 않은 것이 있으면 묻는다 (ask). 닫았으면(또는 편집 중이 아니면) true */
-export function closeEditor(pane = S.pane, { ask = true } = {}) {
+/** 편집을 닫는다. 저장하지 않은 것이 있으면 묻는다 (ask). 닫았으면(또는 편집 중이 아니면) true.
+ * sync: 읽는 화면을 편집하던 곳으로 (탭을 닫을 때는 하지 않는다) */
+export function closeEditor(pane = S.pane, { ask = true, sync = true } = {}) {
   const ed = pane?.editor;
   if (!ed) return true;
   if (ask && ed.dirty && !window.confirm(t('{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?', { path: ed.path }))) {
     ed.cm.focus();
     return false;
   }
+  if (sync) settle(ed);
   ed.resize.disconnect();
   ed.box.remove();
   pane.editor = null;
+  pane.tocLimit = null;
   reportDirty();
   updateButton();
-  if (pane === S.pane) pane.scroller.focus({ preventScroll: true });
+  if (pane === S.pane) {
+    updateTocActive();
+    pane.scroller.focus({ preventScroll: true });
+  }
   return true;
 }
 
 /** 열린 편집기들의 글자 폭·줄 높이를 다시 잰다 (글자 크기·스타일이 바뀜) */
 function refreshEditors() {
-  for (const p of S.panes) p.editor?.cm.refresh();
+  for (const p of S.panes) {
+    if (!p.editor) continue;
+    p.editor.cm.refresh();
+    follow(p.editor);
+  }
 }
 
 export const toggleEditor = () => (S.pane?.editor ? closeEditor(S.pane) : openEditor(S.pane));
@@ -259,14 +348,16 @@ async function save(ed, force = false) {
   ed.saving = true;
   setState(ed, t('저장하는 중…'));
   const gen = ed.cm.changeGeneration();
+  const text = ed.cm.getValue();
+  const mark = ed.dropped + ed.log.length;   // 이 글까지의 줄 기록 — 읽는 화면이 이것을 다시 그리면 그 앞은 버린다
   let conflict = false;
   try {
-    const r = await postJSON('/api/save', {
-      p: ed.tab.id, path: ed.path, text: ed.cm.getValue(), hash: ed.base.hash, force,
-    });
+    const r = await postJSON('/api/save', { p: ed.tab.id, path: ed.path, text, hash: ed.base.hash, force });
     ed.base = r;
     ed.clean = gen;
     ed.saved = true;
+    ed.savedMark = mark;
+    ed.savedHeads = ed.heads && headLines(text);
     const dirty = !ed.cm.isClean(gen);   // 저장하는 동안 더 친 것
     setDirty(ed, dirty);
     setState(ed, dirty ? t('저장하지 않음') : t('저장했습니다 {time}', { time: formatClock(new Date()) }));
@@ -297,11 +388,28 @@ export function confirmCloseEditor(tab) {
 
 /** 닫힌 탭의 편집 상자를 치운다 (tabs.js — 칸과 함께) */
 export function disposeEditor(tab) {
-  if (tab.pane?.editor) closeEditor(tab.pane, { ask: false });
+  if (tab.pane?.editor) closeEditor(tab.pane, { ask: false, sync: false });
+}
+
+/** 읽는 화면을 다시 그렸으면 (저장 뒤 자동 새로고침 등): 저장한 글을 그렸으므로 그때까지의 줄 기록을 버리고 다시 맞춘다 */
+function onRendered(pane) {
+  const ed = pane.editor;
+  if (!ed || pane.current?.path !== ed.path) return;
+  if (ed.savedMark != null) {
+    ed.log.splice(0, ed.savedMark - ed.dropped);
+    ed.dropped = ed.savedMark;
+    if (ed.savedHeads) ed.heads = ed.savedHeads;
+    ed.savedMark = null;
+    ed.savedHeads = null;
+  }
+  ed.marks = null;
+  follow(ed);
 }
 
 export function initEditor() {
   setLeaveGuard((pane) => closeEditor(pane));   // 다른 화면으로 가기 전에 (nav.js)
+  setEditJump(jumpTo);   // 편집 중에 목차·모아 보기에서 고르면 편집기가 그곳으로 (toc.js)
+  on('rendered', onRendered);
   $('#lec-st-edit').addEventListener('click', () => openEditor(S.pane));
   $('#lec-btn-edit').addEventListener('click', () => toggleEditor());   // 탭 막대의 [편집] — 켜기/끄기
   // 코드 화면 머리줄의 '편집' (codeview.js 가 그린다)

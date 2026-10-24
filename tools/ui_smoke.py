@@ -1316,6 +1316,119 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
+            print('[편집 위치 잇기]')   # D55 — 읽는 화면·편집기·목차가 원문의 같은 곳을
+            mapping = page.evaluate("""() => import('/static/js/editsync.js').then((m) => {
+              let bad = 0;   // 무작위 편집 뒤 남은 줄이 제자리로 옮겨지는지
+              for (let trial = 0; trial < 200; trial++) {
+                const orig = Array.from({ length: 30 }, (_, i) => 'L' + i);
+                const lines = orig.slice();
+                const log = [];
+                for (let k = 0; k < 6; k++) {
+                  const from = Math.floor(Math.random() * lines.length);
+                  const to = Math.min(lines.length - 1, from + Math.floor(Math.random() * 4));
+                  const text = Array.from({ length: 1 + Math.floor(Math.random() * 5) }, (_, i) => `n${trial}-${k}-${i}`);
+                  lines.splice(from, to - from + 1, ...text);
+                  m.logChange(log, { from: { line: from }, to: { line: to }, text });
+                }
+                orig.forEach((name, i) => { const j = lines.indexOf(name); if (j >= 0 && m.toEditor(log, i) !== j) bad++; });
+                lines.forEach((name, j) => { const i = orig.indexOf(name); if (i >= 0 && m.toView(log, j) !== i) bad++; });
+              }
+              const heads = m.headLines('<p>\\n<!-- <h2> -->\\n<h1>a</h1><style>x{content:"<h2 "}</style>\\n<H2\\n id=b>b</H2><hr><header>\\n<h3>c</h3>');
+              return { bad, heads };
+            })""")
+            check(mapping['bad'] == 0 and mapping['heads'] == [2, 3, 5],
+                  f"편집기에서 줄이 늘거나 줄어도 읽는 화면의 줄과 이어짐, html 은 원문의 제목 태그 줄 ({mapping})")
+            doc1 = work / 'docs' / '01-기능-점검.md'
+            doc1_orig = doc1.read_bytes()
+            cm = "document.querySelector('.lec-editor .CodeMirror').CodeMirror"
+            head_line = lambda name: int(page.evaluate(
+                f"[...document.querySelectorAll('#lec-view h2, #lec-view h3')].find(h => h.textContent.trim() === '{name}').dataset.lines.split('-')[0]"))
+            cursor_line = lambda: page.evaluate(f"{cm}.getCursor().line + 1")
+            active_toc = lambda: page.evaluate("document.querySelector('#lec-toc a.active')?.textContent.trim() || ''")
+            # 읽던 곳에서 연다
+            page.locator('#lec-toc a[data-i]', has_text='콜아웃').click()
+            page.wait_for_timeout(300)
+            page.click('#lec-btn-edit')
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            page.wait_for_timeout(200)
+            callout = head_line('콜아웃')
+            opened_at = page.evaluate(f"""(() => {{ const cm = {cm}; const r = cm.getScrollerElement().getBoundingClientRect();
+              return [cm.lineAtHeight(r.top + 40, 'window') + 1, cm.getCursor().line + 1]; }})()""")
+            # 커서를 다른 절로 옮기면 목차의 '지금 읽는 위치'가 따라온다
+            link = head_line('링크')
+            page.evaluate(f"(() => {{ const cm = {cm}; cm.setCursor({{ line: {link + 1}, ch: 0 }}); cm.scrollIntoView(null, 120); }})()")
+            follows = wait_until(page, "document.querySelector('#lec-toc a.active')?.textContent.trim() === '링크'", 2000)
+            # 편집 중에 목차를 누르면 편집기가 그 제목의 줄로
+            page.locator('#lec-toc a[data-i]', has_text='표').first.click()
+            page.wait_for_timeout(200)
+            to_table = (cursor_line(), head_line('표'), page.is_visible('.lec-editor'), active_toc())
+            check(callout <= opened_at[0] <= callout + 4 and abs(opened_at[1] - opened_at[0]) <= 1 and follows
+                  and to_table[0] == to_table[1] and to_table[2] and to_table[3] == '표',
+                  f"편집 모드를 읽던 곳(콜아웃 {callout}행)에서 열고, 커서를 옮기면 목차가 따라오고, 목차를 누르면 편집기가 그 줄로 ({opened_at}, {to_table})")
+            # 위에 세 줄을 더한 뒤(저장 전) 목차 — 늘어난 줄만큼 옮겨서. 저장해서 다시 그린 뒤에는 그 화면의 줄 그대로
+            page.evaluate(f"{cm}.replaceRange('하나\\n둘\\n셋\\n', {{ line: 0, ch: 0 }})")
+            figure = head_line('그림')
+            page.locator('#lec-toc a[data-i]', has_text='그림').click()
+            page.wait_for_timeout(200)
+            shifted = cursor_line()
+            page.keyboard.press('Control+s')
+            saved = wait_until(page, "document.querySelector('.lec-editor .ed-state').textContent.startsWith('저장했습니다')", 5000)
+            redrawn = wait_until(page, f"[...document.querySelectorAll('#lec-view h2')].find(h => h.textContent.trim() === '그림')?.dataset.lines.startsWith('{figure + 3}-')", 8000)
+            page.locator('#lec-toc a[data-i]', has_text='코드').click()
+            page.wait_for_timeout(200)
+            after_save = (cursor_line(), head_line('코드'))
+            check(shifted == figure + 3 and saved and redrawn and after_save[0] == after_save[1],
+                  f"편집기에서 줄이 늘면 목차는 늘어난 만큼 옮긴 줄로, 저장해서 다시 그린 뒤에는 새 화면의 줄로 ({shifted}/{figure + 3}, {after_save})")
+            # 검색 결과(편집 중인 파일)를 누르면 편집기가 그 줄로
+            page.click('.side-tabs button[data-tab="search"]')
+            page.fill('#lec-search-input', '인도네시아')
+            wait_until(page, "document.querySelector('#lec-search-results .sr-hit[data-doc=\"docs/01-기능-점검.md\"]')", 5000)
+            hit = page.locator('#lec-search-results .sr-hit[data-doc="docs/01-기능-점검.md"]').first
+            hit_line = int(hit.get_attribute('data-line') or 0)
+            hit.click()
+            page.wait_for_timeout(200)
+            searched = (cursor_line(), hit_line, page.is_visible('.lec-editor'))
+            page.click('.side-tabs button[data-tab="files"]')
+            # 닫으면 읽는 화면이 편집하던 곳(커서의 줄이 같은 높이)에
+            page.locator('#lec-toc a[data-i]', has_text='체크리스트와 각주').click()
+            page.wait_for_timeout(200)
+            cursor_y = page.evaluate(f"{cm}.cursorCoords(true, 'window').top")
+            page.evaluate(f"{cm}.focus()")
+            page.keyboard.press('Escape')
+            closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            page.wait_for_timeout(200)
+            head_y = page.evaluate("[...document.querySelectorAll('#lec-view h2')].find(h => h.textContent.trim() === '체크리스트와 각주').getBoundingClientRect().top")
+            check(searched[0] == searched[1] and searched[2] and closed and abs(head_y - cursor_y) <= 6 and active_toc() == '체크리스트와 각주',
+                  f"검색 결과를 누르면 편집기가 그 줄로, 닫으면 읽는 화면이 편집하던 곳에 (검색 {searched}, 높이 {head_y:.0f}/{cursor_y:.0f})")
+            doc1.write_bytes(doc1_orig)
+            wait_until(page, "!document.querySelector('#lec-view p')?.textContent.startsWith('하나')", 8000)
+            # 코드 화면: 목차(클래스·함수)를 누르면 편집기가 그 줄로. html 문서: 원문의 그 제목 태그로
+            page.locator('#lec-code-list .row[data-path="code/example.py"]').click()
+            page.wait_for_selector('#lec-view .cv-edit')
+            page.click('#lec-btn-edit')
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            page.evaluate(f"(() => {{ const cm = {cm}; cm.setCursor({{ line: cm.lineCount() - 1, ch: 0 }}); }})()")   # 끝에서
+            item = page.locator('#lec-toc a[data-i]').first
+            want_code = int(item.get_attribute('title').rsplit('— ', 1)[1].rstrip('행'))
+            item.click()
+            page.wait_for_timeout(200)
+            code_at = cursor_line()
+            page.click('#lec-btn-edit')
+            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click()
+            wait_until(page, "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')?.contentDocument?.querySelector('h2')")
+            page.click('#lec-btn-edit')
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            page.locator('#lec-toc a[data-i]').nth(1).click()
+            page.wait_for_timeout(200)
+            html_at = page.evaluate(f"(() => {{ const cm = {cm}; return cm.getLine(cm.getCursor().line); }})()")
+            want_html = page.evaluate("document.querySelectorAll('#lec-toc a[data-i]')[1].textContent.trim()")
+            page.click('#lec-btn-edit')
+            html_closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            check(code_at == want_code and want_html in html_at and '<h' in html_at.lower() and html_closed,
+                  f"코드 화면의 목차는 그 줄로 ({code_at}/{want_code}), html 문서의 목차는 원문의 그 제목 태그로 ({html_at.strip()[:60]!r})")
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
             labels = page.locator('#lec-tree .row.file').all_inner_texts()

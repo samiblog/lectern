@@ -6,7 +6,7 @@
 // 코드 결과는 코드 화면(codeview.js)의 그 줄로 간다.
 // 검색어와 결과는 프로젝트 탭마다 남겨 두었다가 그 탭을 고르면 되살린다 (tab.side.search).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getJSON, saveConfig } from './api.js';
 import { navigate } from './nav.js';
 import { switchPanel } from './tree.js';
@@ -169,6 +169,10 @@ function goToLine(line) {
 
 /** 검색 결과로 간다. code: 코드 결과 — 코드 화면의 그 줄로 */
 async function openHit(path, line, code = false) {
+  if (line && S.pane?.editor?.path === path) {   // 편집 중인 파일 — 편집기가 그 줄로 (D55)
+    emit('edit', { line });
+    return;
+  }
   if (code) {
     if (!(await navigate({ type: 'code', path, line }))) return;
     findText(query);
