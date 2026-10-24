@@ -1248,6 +1248,18 @@ def run(headed: bool) -> None:
             ed_state = lambda: page.evaluate("document.querySelector('.lec-editor .ed-state')?.textContent || ''")
             page.locator('#lec-tree .row.file', has_text='후속 과제').click()
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
+            page.click('#lec-btn-edit')   # 탭 막대의 [편집] — 켜기 (목차·터미널 왼쪽)
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            pressed_on = page.get_attribute('#lec-btn-edit', 'aria-pressed') == 'true'
+            page.click('#lec-btn-edit')   # 끄기
+            off = wait_until(page, "!document.querySelector('.lec-editor') && document.querySelector('#lec-btn-edit').getAttribute('aria-pressed') === 'false'", 3000)
+            order = page.evaluate("[...document.querySelectorAll('#lec-tabbar .tabbar-btn')].map(b => b.id)")
+            page.click('#lec-tree .row.root')   # 폴더 개요에서는 누를 수 없다
+            no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
+            page.locator('#lec-tree .row.file', has_text='후속 과제').click()
+            page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
+            check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-toc', 'lec-btn-term'],
+                  f"탭 막대의 [편집] [목차] [터미널] — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
             page.click('#lec-st-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
             in_editor = page.evaluate("!!document.activeElement?.closest('.lec-editor') && document.querySelector('#lec-st-edit').hidden")

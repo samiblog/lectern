@@ -345,7 +345,7 @@ sequenceDiagram
 
 ### 편집 모드 (editor.js, lectern/editing.py — D54)
 - 칸 위를 덮는 편집 상자 `.lec-editor` (`pane.editor` = {cm, path, base(mtime_ns·size), dirty, saving}). CodeMirror 5 는 처음 열 때 `web/vendor/codemirror` 의 css·`codemirror.js`·애드온(dialog·search·searchcursor·jump-to-line·matchbrackets·active-line)·확장자에 맞는 모드(`EXT` → `MODE_FILES`, 쓰는 것 먼저)를 차례로 불러온다 (`window.CodeMirror` 가 진짜 함수인지 본다).
-- 연다: 상태줄 `#lec-st-edit`(문서·코드 화면이고 편집 중이 아닐 때), 코드 화면 머리줄 `.cv-edit`, 우클릭 `edit` 이벤트 {line}('이 문서 편집'·'여기를 편집'), Ctrl+E(`toggleEditor`). 줄이 없으면 화면 맨 위에 보이는 `[data-lines]`(코드는 `.cv-line`)의 줄.
+- 연다: 탭 막대의 `#lec-btn-edit`(켜기/끄기 — 편집 중이면 `aria-pressed`, 문서·코드 화면이 아니면 `disabled`. `[편집] [목차] [터미널]` 순서), 상태줄 `#lec-st-edit`(문서·코드 화면이고 편집 중이 아닐 때), 코드 화면 머리줄 `.cv-edit`, 우클릭 `edit` 이벤트 {line}('이 문서 편집'·'여기를 편집'), Ctrl+E(`toggleEditor`). 줄이 없으면 화면 맨 위에 보이는 `[data-lines]`(코드는 `.cv-line`)의 줄.
 - 저장: Ctrl+S·'저장' → `POST /api/save` (원문의 `hash` 와 함께). 409 면 `confirm` 으로 덮어쓰기(force)를 묻는다. 깨끗한 상태는 CodeMirror 의 `changeGeneration`·`isClean`. 저장하지 않은 것이 생기거나 없어지면 `POST /api/editing` 으로 목록을 알린다 (창을 닫을 때 `app.py` 가 묻는다 — `MessageBoxW`, closing 처리기는 창의 스레드에서 바로 돈다).
 - 닫기: Esc·✕·Ctrl+E — 저장하지 않은 것이 있으면 `confirm`. 다른 화면으로 가기 전에는 `nav.js` 의 leave guard(`setLeaveGuard`)가, 탭을 닫기 전에는 `tabs.js` 가 `confirmCloseEditor` 로 묻는다. 자동 새로고침(`refreshView`)은 편집 상자 아래의 화면만 다시 그린다.
 - 키: 편집 상자 안에서는 `main.js` 가 Ctrl+Tab·Ctrl+1~9·Ctrl+E·Ctrl+P·Ctrl+,·F1·Ctrl+/ 만 받고 나머지는 편집기로 (Ctrl+F 는 편집기의 찾기). Tab 은 빈칸으로 들이기.

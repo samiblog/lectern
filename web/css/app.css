@@ -174,7 +174,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .lec-tab:hover .tab-close, .lec-tab.active .tab-close, .tab-close:focus-visible { visibility: visible; }
 .tab-close:hover { background: var(--ui-hover); color: var(--ui-fg); }
 #lec-tabbar > .icon-btn { align-self: center; flex: none; }
-/* 목차·터미널 버튼 (toc.js·terminal.js): 탭 막대 오른쪽 끝 — 오른쪽 패널을 보이고 감춘다. 보이면 강조색과 밑줄 */
+/* 편집·목차·터미널 버튼 (editor.js·toc.js·terminal.js): 탭 막대 오른쪽 끝 — 편집 모드와 오른쪽 패널을 켜고 끈다. 켜지면 강조색과 밑줄 */
 .tabbar-btn {
   display: flex; align-items: center; gap: 6px; flex: none; margin: 4px 0 0; padding: 0 12px 0 10px;
   border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; background: transparent;
@@ -184,6 +184,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .tabbar-btn:not(.tabbar-btn + .tabbar-btn) { margin-left: auto; }   /* 첫 버튼부터 탭 막대 오른쪽 끝으로 */
 .tabbar-btn:hover { background: var(--ui-hover); color: var(--ui-fg); }
 .tabbar-btn[aria-pressed="true"] { color: var(--ui-accent); border-bottom-color: var(--ui-accent); }
+.tabbar-btn:disabled { opacity: .45; cursor: default; background: transparent; }   /* 편집: 문서·코드 화면이 아님 */
 /* 터미널 모음(gather.js)을 보는 동안 프로젝트 탭은 고르지 않은 모양 */
 .gather-on .lec-tab.active { background: transparent; color: var(--ui-muted); font-weight: 600; border-bottom-color: transparent; }
 .gather-on .lec-tab.active .ficon { color: var(--ui-faint); }

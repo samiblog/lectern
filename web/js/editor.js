@@ -7,7 +7,8 @@
 //   물어서 덮어쓰거나(force) 편집을 이어 간다.
 // - 저장하지 않은 편집이 있으면 다른 화면으로 가기(nav.js 의 leave guard)·편집 닫기·탭 닫기 전에 묻는다.
 //   창을 닫을 때는 서버가 묻는다 — 저장하지 않은 파일 목록을 POST /api/editing 으로 알려 둔다 (app.py).
-// - 여는 곳: 상태줄의 '편집' 버튼, 코드 화면 머리줄의 '편집', 우클릭 메뉴('이 문서 편집'·'여기를 편집' — 'edit' 이벤트 {line}), Ctrl+E.
+// - 여는 곳: 탭 막대 오른쪽 끝의 [편집] 버튼(켜기/끄기 — 목차·터미널 버튼 왼쪽), 상태줄의 '편집', 코드 화면 머리줄의 '편집',
+//   우클릭 메뉴('이 문서 편집'·'여기를 편집' — 'edit' 이벤트 {line}), Ctrl+E.
 //   줄을 주지 않으면 화면 맨 위에 보이던 블록(코드는 줄)의 원문 줄에서 연다.
 // - 편집 상자 안의 키는 편집기 것이다 (main.js) — Ctrl+S 저장, Esc 닫기, Ctrl+F 찾기, Ctrl+H 바꾸기, Alt+G 줄로 가기.
 
@@ -131,10 +132,14 @@ function setDirty(ed, dirty) {
   reportDirty();
 }
 
-/** 상태줄의 '편집' 버튼: 문서·코드 화면이고 편집 중이 아닐 때 */
+/** 편집 버튼들: 탭 막대의 [편집]은 편집 중이면 눌린 모양, 문서·코드 화면이 아니면 누를 수 없음. 상태줄의 '편집'은 편집할 수 있을 때만 */
 function updateButton() {
-  const can = (S.view?.type === 'doc' || S.view?.type === 'code') && !S.pane?.editor;
-  $('#lec-st-edit').hidden = !can;
+  const editing = !!S.pane?.editor;
+  const can = S.view?.type === 'doc' || S.view?.type === 'code';
+  $('#lec-st-edit').hidden = !can || editing;
+  const btn = $('#lec-btn-edit');
+  btn.setAttribute('aria-pressed', String(editing));
+  btn.disabled = !can && !editing;
 }
 
 /** 편집 모드를 연다. line: 처음 커서를 둘 원문 줄 (0 이면 화면 맨 위에 보이던 블록) */
@@ -298,6 +303,7 @@ export function disposeEditor(tab) {
 export function initEditor() {
   setLeaveGuard((pane) => closeEditor(pane));   // 다른 화면으로 가기 전에 (nav.js)
   $('#lec-st-edit').addEventListener('click', () => openEditor(S.pane));
+  $('#lec-btn-edit').addEventListener('click', () => toggleEditor());   // 탭 막대의 [편집] — 켜기/끄기
   // 코드 화면 머리줄의 '편집' (codeview.js 가 그린다)
   $('#lec-panes').addEventListener('click', (e) => { if (e.target.closest('.cv-edit')) openEditor(S.pane); });
   on('edit', ({ line = 0 } = {}) => openEditor(S.pane, { line }));   // 우클릭 메뉴
