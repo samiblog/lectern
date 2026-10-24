@@ -4,6 +4,7 @@ import { S, emit } from './store.js';
 import { getText, openExternal } from './api.js';
 import { renderMarkdown } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
+import { renderCharts } from './charts.js';
 import { setToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { setDocSource } from './docmenu.js';
@@ -377,7 +378,7 @@ function decorateTables(root) {
 
 function decorateCode(root) {
   for (const pre of $$('pre', root)) {
-    if (pre.classList.contains('mermaid') || pre.closest('.front-matter')) continue;
+    if (pre.matches('.mermaid, .lec-chart') || pre.closest('.front-matter')) continue;
     const code = pre.querySelector(':scope > code');
     if (!code) continue;
     code.classList.add('hljs');
@@ -479,6 +480,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   try {
     enhance(stage, path, Date.now(), tab);
     await renderMermaid(stage);
+    await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)
     await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
   } finally {
     stage.remove();

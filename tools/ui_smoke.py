@@ -152,6 +152,8 @@ def run(headed: bool) -> None:
     (work / 'data' / '.secret.txt').write_text('숨김', encoding='utf-8')
     (work / 'node_modules' / 'some-lib' / 'index.js').write_text('x', encoding='utf-8')
     (work / '첨부.pdf').write_bytes(b'%PDF-1.4')
+    # 차트 예제의 CSV(docs/data)는 [차트] 점검 동안만 둔다 — '자료' 목록·거르기 점검은 위의 파일만 센다
+    shutil.rmtree(work / 'docs' / 'data')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
     server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
@@ -339,8 +341,9 @@ def run(headed: bool) -> None:
             page.click('#lec-view .ov-parts button[data-parts="diagram"]')
             read_done()
             p3 = pv()
-            check(p3['scope'] == 'docs 폴더' and p3['active'] == 'diagram' and [i[1] for i in p3['items']] == ['다이어그램 1', '다이어그램 2', '다이어그램 3']
-                  and all(i[0].startswith('docs/') for i in p3['items']),
+            check(p3['scope'] == 'docs 폴더' and p3['active'] == 'diagram'
+                  and [i[1] for i in p3['items'] if i[0] == 'docs/03-다이어그램.md'] == ['다이어그램 1', '다이어그램 2', '다이어그램 3']
+                  and any(i[0] == 'docs/06-차트.md' for i in p3['items']) and all(i[0].startswith('docs/') for i in p3['items']),
                   f"폴더 개요의 '모아 보기' 버튼: 그 폴더(하위 포함)의 그 종류 ({p3['scope']}, {p3['items']})")
             page.click('.side-tabs button[data-tab="files"]')
             page.locator('#lec-tree .row.dir', has_text='plans').first.click(button='right')
@@ -546,7 +549,7 @@ def run(headed: bool) -> None:
             widths = page.evaluate("[...document.querySelectorAll('pre.mermaid svg')].map(s => s.getBoundingClientRect().width)")
             check(len(widths) == 2 and min(widths) > 200, 'Mermaid 그림 2개가 제 크기로 보임')
             check(page.locator('#lec-view h2#mermaid').count() == 1, "'## Mermaid' 제목(id=mermaid)이 있는 문서도 처음 열 때 그림을 그림")
-            check(page.locator('.mermaid-error').count() == 1, '문법 오류 블록은 원문 표시')
+            check(page.locator('#lec-view .diagram-error').count() == 1, '문법 오류 블록은 원문 표시')
             head = menu(page.locator('pre.mermaid svg p').first).split('\n')[0]   # 그림 속 글자(<p>)를 눌러도 다이어그램
             fence = choose('원문 복사')
             check(head == '다이어그램' and fence.startswith('```mermaid') and fence.endswith('```'),
@@ -555,6 +558,64 @@ def run(headed: bool) -> None:
             choose('그림 복사')
             check(clip_types() == ['image/png'], f'다이어그램 우클릭: 그림 복사(PNG) ({clip_types()})')
             shot('03-mermaid')
+
+            print('[차트]')   # D56 — ```vega-lite·```echarts·```dot 를 SVG 로 (charts.js)
+            shutil.copytree(ROOT / 'samples' / 'docs' / 'data', work / 'docs' / 'data')   # 예제가 읽는 CSV (점검 뒤 지운다)
+            page.locator('#lec-tree .row.file[data-doc="docs/06-차트.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("차트와 그래프")')
+            drawn = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 8", 30000)
+            # 문서 폭을 따르는 것(ECharts·width "container")은 목차가 나온 뒤의 폭으로 다시 그린다 — 줄여 보이지 않게
+            fit = wait_until(page, """[...document.querySelectorAll('#lec-view pre.lec-chart.chart-ok[data-chart="echarts"]')]
+              .every(p => Math.abs(parseFloat(p.querySelector('svg').getAttribute('width')) - p.clientWidth) <= 16)""", 5000)
+            charts = page.evaluate("""() => ({
+              kinds: [...document.querySelectorAll('#lec-view pre.lec-chart.chart-ok')].map(p => p.dataset.chart).join(','),
+              err: [...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent),
+              csv: Math.max(0, ...[...document.querySelectorAll('#lec-view pre.lec-chart')[2]?.querySelectorAll('svg path[d]') || []].map(p => p.getAttribute('d').length)),
+              font: getComputedStyle(document.querySelector('#lec-view pre.lec-chart[data-chart="echarts"] svg text')).fontFamily,
+              toc: [...document.querySelectorAll('#lec-toc a[data-c]')].map(a => a.textContent).join(' | ') })""")
+            check(drawn and fit and charts['kinds'] == 'vega-lite,vega-lite,vega-lite,echarts,echarts,echarts,dot,dot'
+                  and len(charts['err']) == 1 and '함수는 쓸 수 없습니다' in charts['err'][0] and charts['csv'] > 200
+                  and 'Segoe UI' in charts['font'] and 'Vega-Lite · 분기별 구리 가격과 거래소 재고' in charts['toc']
+                  and 'Graphviz · Lectern' in charts['toc'] and 'ECharts · 용도별 소비 비중' in charts['toc'],
+                  f"차트: Vega-Lite 3(프로젝트의 CSV 포함)·ECharts 3(따옴표 없는 키도)·Graphviz 2, 문서 폭으로 다시 그림, 함수는 원문과 까닭, 목차에 종류·제목 ({charts['kinds']}, {charts['err']}, {charts['font'][:20]})")
+            head = menu(page.locator('#lec-view pre.lec-chart[data-chart="dot"] svg').first).split('\n')[0]
+            fence = choose('원문 복사')
+            menu(page.locator('#lec-view pre.lec-chart[data-chart="vega-lite"] svg').first)
+            choose('그림 복사')
+            png = clip_types()
+            page.locator('#lec-view pre.lec-chart[data-chart="echarts"]').first.click()
+            big = wait_until(page, "!document.querySelector('#lec-lightbox').hidden && !!document.querySelector('#lec-lightbox svg')", 3000)
+            page.keyboard.press('Escape')
+            check(head == '다이어그램' and fence.startswith('```dot') and png == ['image/png'] and big,
+                  f"차트 우클릭: 원문 복사·그림 복사(PNG), 누르면 크게 ({head!r}, {fence[:8]!r}, {png})")
+            shot('03-charts')
+            # 차트가 인터넷에 닿거나 앱 창을 떠나게 하는 길: 인터넷 데이터, 링크(Vega href·Graphviz URL), 인터넷 그림(ECharts graphic)
+            bad = work / 'docs' / '97-차트-막기.md'
+            bad.write_text('# 차트 막기\n\n```vega-lite\n{"data": {"url": "https://example.com/x.csv"}, "mark": "bar",'
+                           ' "encoding": {"x": {"field": "a", "type": "nominal"}}}\n```\n\n'
+                           '```vega-lite\n{"data": {"url": "data/없는-파일.csv"}, "mark": "bar", "encoding": {"x": {"field": "a", "type": "nominal"}}}\n```\n\n'
+                           '```vega-lite\n{"data": {"values": [{"a": "링크", "b": 1, "u": "https://example.com/"}]}, "mark": "bar",'
+                           ' "encoding": {"x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"}, "href": {"field": "u"}}}\n```\n\n'
+                           '```echarts\n{"graphic": [{"type": "image", "style": {"image": "https://example.com/x.png", "width": 40, "height": 40}}],'
+                           ' "xAxis": {"type": "category", "data": ["a"]}, "yAxis": {}, "series": [{"type": "bar", "data": [1]}]}\n```\n\n'
+                           '```dot\ndigraph { a [URL="https://example.com/", label="링크"]; a -> b; }\n```\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]', timeout=8000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("차트 막기")')
+            wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok, #lec-view .diagram-error').length === 5", 20000)
+            guard = page.evaluate("""() => ({
+              err: [...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent),
+              ok: document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length,
+              links: document.querySelectorAll('#lec-view pre.lec-chart a').length,
+              remote: [...document.querySelectorAll('#lec-view pre.lec-chart image')].map(i => i.getAttribute('href') || i.getAttribute('xlink:href') || '')
+                .filter(h => /^(https?:)?\\/\\//.test(h)).length })""")
+            bad.unlink()
+            shutil.rmtree(work / 'docs' / 'data')
+            check(len(guard['err']) == 2 and '프로젝트 안의 파일만' in guard['err'][0] and '데이터 파일을 읽지 못했습니다' in guard['err'][1]
+                  and guard['ok'] == 3 and not guard['links'] and not guard['remote'],
+                  f"차트는 인터넷 데이터를 읽지 않고(없는 파일도 빈 그림 대신 까닭), 그림 속 링크는 풀고, 인터넷 그림은 지움 ({guard})")
+            page.locator('#lec-tree .row.file', has_text='다이어그램').click()   # 아래 스타일 점검은 Mermaid 문서에서
+            page.wait_for_selector('pre.mermaid svg', timeout=20000)
 
             print('[스타일]')
 
@@ -1291,7 +1352,8 @@ def run(headed: bool) -> None:
             shown = wait_until(page, "document.querySelector('#lec-view').textContent.includes('편집 모드로 더함')", 8000)
             check(in_editor and dirty and cm_find and saved and on_disk.endswith('- [ ] edit 편집 모드로 더함'.encode()) and b'\r\n' not in on_disk
                   and closed and shown,
-                  f"편집 모드: 상태줄 '편집'으로 문서 원문을 고치고(한글 입력), Ctrl+F 는 편집기의 찾기, Ctrl+S 저장(LF 그대로), Esc 로 닫으면 고친 문서가 보임 ({ed_state()})")
+                  f"편집 모드: 상태줄 '편집'으로 문서 원문을 고치고(한글 입력), Ctrl+F 는 편집기의 찾기, Ctrl+S 저장(LF 그대로), Esc 로 닫으면 고친 문서가 보임 "
+                  f"({ed_state()}, {dict(in_editor=in_editor, dirty=dirty, cm_find=cm_find, saved=saved, tail=on_disk[-30:].decode('utf-8', 'replace'), closed=closed, shown=shown)})")
             # 그사이 다른 곳(Claude Code 등)에서 바뀌면 덮어쓰지 않고 묻는다. 저장하지 않은 채 닫으면 묻는다
             page.locator('#lec-view li').last.click(button='right')
             page.locator('#lec-menu button', has_text='여기를 편집').click()

@@ -8,6 +8,7 @@
 import { S, on } from './store.js';
 import { saveConfig } from './api.js';
 import { unfoldTo } from './fold.js';
+import { chartLabel } from './charts.js';
 import { $, $$, esc, screenRect } from './util.js';
 import { t } from './i18n.js';
 
@@ -99,7 +100,7 @@ export const PARTS = {
 // md(doc.js 가 꾸민 것)와 html 문서의 후보. 박스글은 인용·콜아웃과 html 의 aside·callout 류
 const BOXES = 'blockquote, aside, [role="note"], .callout, .admonition';
 // .image-off: 불러오지 못한 그림 자리(doc.js) — 화면 밖에서 센 모아 보기와 번호가 같게 그림으로 센다
-const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, .math-block, .mermaid-error`;
+const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, .math-block, .diagram-error`;
 const HEADS = 'h1[id], h2[id], h3[id], h4[id]';
 
 /** 목차에 넣을 구성 요소면 그 종류, 아니면 null */
@@ -117,9 +118,9 @@ function partKind(el) {
     return 'figure';
   }
   if (el.matches(BOXES)) return el.parentElement?.closest(BOXES) ? null : 'box';   // 박스 안의 박스는 바깥 것만
-  if (el.matches('pre.mermaid, .mermaid-error')) return 'diagram';
+  if (el.matches('pre.mermaid, pre.lec-chart, .diagram-error')) return 'diagram';
   if (el.matches('.code-block')) return 'code';
-  if (tag === 'PRE') return el.closest('.code-block, .mermaid-error, .math-block') ? null : 'code';   // html 문서의 코드
+  if (tag === 'PRE') return el.closest('.code-block, .diagram-error, .math-block') ? null : 'code';   // html 문서의 코드
   if (el.matches('.math-block')) return 'math';
   return null;
 }
@@ -169,10 +170,11 @@ const DIAGRAMS = {
 };
 
 function diagramLabel(el) {
-  const src = el.dataset.source ?? el.querySelector('pre')?.textContent ?? el.textContent;   // mermaid.js 가 원문을 data-source 에 둔다
+  const src = el.dataset.source ?? el.querySelector('pre')?.textContent ?? el.textContent;   // mermaid.js·charts.js 가 원문을 data-source 에 둔다
+  if (el.dataset.chart) return clip(chartLabel(el.dataset.chart, src), 40);   // 차트 (D56): 'Vega-Lite · 제목'
   const body = src.replace(/^\s*---[\s\S]*?---\s*/, '').replace(/^(\s*%%.*\n)+/, '');
   const word = /^\s*([\w-]+)/.exec(body)?.[1] || '';
-  const title = /^\s*title:?\s+(.+)$/m.exec(src)?.[1] || /\["?([^\]"]+)"?\]|\(\(?"?([^)"]+)"?\)|\{"?([^}"]+)"?\}/.exec(body)?.slice(1).find(Boolean);
+  const title = /^\s*title:?\s+"?(.+?)"?\s*$/m.exec(src)?.[1] || /\["?([^\]"]+)"?\]|\(\(?"?([^)"]+)"?\)|\{"?([^}"]+)"?\}/.exec(body)?.slice(1).find(Boolean);
   return [DIAGRAMS[word] || word, clip(title, 30)].filter(Boolean).join(' · ');
 }
 

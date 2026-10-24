@@ -22,6 +22,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 VENDOR = ROOT / 'web' / 'vendor'
+EXTRA_LICENSES = ROOT / 'tools' / 'vendor-licenses'   # 패키지에 라이선스 파일이 없는 것 (@viz-js/viz — 안에 든 Graphviz·Expat 도)
 
 # 검증된 버전 (2026-10 기준). 올릴 때는 docs/TESTING.md 의 화면 점검을 다시 한다.
 PACKAGES: dict[str, str] = {
@@ -37,6 +38,11 @@ PACKAGES: dict[str, str] = {
     '@xterm/addon-fit': '0.10.0',
     '@xterm/addon-unicode11': '0.8.0',  # 한글처럼 두 칸을 차지하는 글자의 폭
     'codemirror': '5.65.21',            # 편집 모드 (D54) — 처음 편집할 때 editor.js 가 불러온다. 6 은 묶는 도구가 있어야 해서 5
+    # 차트·도해 (D56) — 문서에 그 코드 블록이 있을 때 charts.js 가 불러온다
+    'vega': '6.4.0',                    # ```vega
+    'vega-lite': '6.5.0',               # ```vega-lite (vega 위에서)
+    'echarts': '6.1.0',                 # ```echarts
+    '@viz-js/viz': '3.31.0',            # ```dot · ```graphviz — Graphviz 를 WebAssembly 로 (파일 하나에 들어 있다)
 }
 
 # 편집 모드의 언어 (codemirror/mode/<이름>.js). 편집기가 확장자에 맞는 것과 그것이 쓰는 것만 불러온다 (editor.js 의 MODES)
@@ -75,9 +81,14 @@ FILES: list[tuple[str, str, str]] = [
     ('codemirror', 'addon/selection/active-line.js', 'codemirror/addon/active-line.js'),
     ('codemirror', 'addon/mode/simple.js', 'codemirror/addon/simple.js'),   # rust 모드가 쓴다
     *(('codemirror', f'mode/{m}/{m}.js', f'codemirror/mode/{m}.js') for m in CODEMIRROR_MODES),
+    ('vega', 'build/vega.min.js', 'vega/vega.min.js'),
+    ('vega-lite', 'build/vega-lite.min.js', 'vega/vega-lite.min.js'),
+    ('echarts', 'dist/echarts.min.js', 'echarts/echarts.min.js'),
+    ('@viz-js/viz', 'dist/viz-global.js', 'viz/viz-global.js'),
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')
+NOTICE_NAMES = ('NOTICE', 'NOTICE.md', 'NOTICE.txt')   # Apache-2.0 은 NOTICE 도 함께 배포한다 (echarts)
 
 
 def npm_install(workdir: Path, specs: list[str]) -> None:
@@ -125,13 +136,16 @@ def main() -> None:
         for pkg in PACKAGES:
             meta = json.loads((modules / pkg / 'package.json').read_text(encoding='utf-8'))
             versions[pkg] = meta['version']
-            for name in LICENSE_NAMES:
-                lic = modules / pkg / name
-                if lic.is_file():
-                    lic_dir = VENDOR / 'licenses'
-                    lic_dir.mkdir(exist_ok=True)
-                    shutil.copy2(lic, lic_dir / f"{pkg.replace('/', '__')}.txt")
-                    break
+            lic_dir = VENDOR / 'licenses'
+            lic_dir.mkdir(exist_ok=True)
+            for names, suffix in ((LICENSE_NAMES, ''), (NOTICE_NAMES, '.NOTICE')):
+                for name in names:
+                    lic = modules / pkg / name
+                    if lic.is_file():
+                        shutil.copy2(lic, lic_dir / f"{pkg.replace('/', '__')}{suffix}.txt")
+                        break
+        for lic in EXTRA_LICENSES.glob('*.txt'):
+            shutil.copy2(lic, VENDOR / 'licenses' / lic.name)
 
     (VENDOR / 'VERSIONS.json').write_text(json.dumps(versions, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
     print('web/vendor 갱신 완료:')

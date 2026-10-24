@@ -15,7 +15,7 @@ import { t } from './i18n.js';
 const FLASH_MS = 4000;
 
 function signature(el) {
-  const text = el.matches('pre.mermaid') ? (el.dataset.source ?? '') : el.textContent.replace(/\s+/g, ' ').trim();
+  const text = el.matches('pre.mermaid, pre.lec-chart') ? (el.dataset.source ?? '') : el.textContent.replace(/\s+/g, ' ').trim();
   const imgs = [...el.querySelectorAll('img')].map((i) => (i.getAttribute('src') || '').replace(/\?v=\d+$/, ''));
   return `${el.tagName}|${text}|${imgs.join(',')}`;
 }

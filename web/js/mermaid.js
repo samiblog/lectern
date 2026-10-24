@@ -28,7 +28,7 @@ function ensureMermaid() {
 
 function showSource(node, message) {
   const box = document.createElement('div');
-  box.className = 'mermaid-error';
+  box.className = 'diagram-error';
   if (node.dataset.lines) box.dataset.lines = node.dataset.lines;   // 본문 우클릭 메뉴의 원문 복사용
   box.innerHTML = `<p>${esc(message)}</p><pre><code>${esc(node.dataset.source ?? node.textContent)}</code></pre>`;
   node.replaceWith(box);

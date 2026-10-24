@@ -1,8 +1,11 @@
-// Markdown → HTML 변환 (markdown-it + 플러그인 + 수식 + mermaid 코드 블록)
+// Markdown → HTML 변환 (markdown-it + 플러그인 + 수식 + mermaid·차트 코드 블록)
 //
 // vendor 전역: markdownit, markdownItAnchor, markdownitFootnote, markdownitTaskLists, hljs, katex
 
 const instances = new Map();
+
+// 차트 코드 블록의 언어 이름 → 종류 (그리는 것은 charts.js, D56)
+const CHART_LANGS = { 'vega-lite': 'vega-lite', vegalite: 'vega-lite', vega: 'vega', echarts: 'echarts', dot: 'dot', graphviz: 'dot' };
 
 /** GitHub와 같은 규칙의 제목 앵커 (한글 유지). Claude가 쓴 '목차 링크'와 맞추기 위함. */
 export function slugify(text) {
@@ -206,13 +209,13 @@ function create(math) {
   if (math) md.use(mathPlugin);
   md.use(sourceLines);
 
-  // ```mermaid 는 코드 하이라이트 대신 다이어그램 자리표시로
+  // ```mermaid 와 차트(```vega-lite·```vega·```echarts·```dot — charts.js, D56)는 코드 하이라이트 대신 다이어그램 자리표시로
   const fence = md.renderer.rules.fence;
   md.renderer.rules.fence = (tokens, idx, options, env, self) => {
     const lang = tokens[idx].info.trim().split(/\s+/)[0].toLowerCase();
-    if (lang === 'mermaid') {
-      return `<pre class="mermaid"${self.renderAttrs(tokens[idx])}>${md.utils.escapeHtml(tokens[idx].content)}</pre>\n`;
-    }
+    const body = md.utils.escapeHtml(tokens[idx].content);
+    if (lang === 'mermaid') return `<pre class="mermaid"${self.renderAttrs(tokens[idx])}>${body}</pre>\n`;
+    if (CHART_LANGS[lang]) return `<pre class="lec-chart" data-chart="${CHART_LANGS[lang]}"${self.renderAttrs(tokens[idx])}>${body}</pre>\n`;
     return fence(tokens, idx, options, env, self);
   };
   return md;

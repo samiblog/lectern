@@ -13,7 +13,7 @@ import { t } from './i18n.js';
 // 경로: (./ ../)* (폴더/)* 이름.확장자, 뒤에 :줄(:칸) 이나 #L줄. 한글 파일 이름을 받고, 뒤에 붙은 조사('에서')는 끝으로 본다
 const PATH = /(?<![A-Za-z0-9_./\\-])((?:\.{1,2}[\\/])*(?:[\p{L}\p{N}_.-]+[\\/])*[\p{L}\p{N}_-][\p{L}\p{N}_.-]*\.[A-Za-z][A-Za-z0-9]{0,7})(?::(\d+)(?::\d+)?|#L(\d+))?(?![A-Za-z0-9_\\/-])/gu;
 const WHOLE = new RegExp(`^${PATH.source}$`, 'u');
-const SKIP = 'a, pre, .code-block, .katex, .math-inline, .math-display, .math-block, svg, .mermaid-error, .front-matter, script, style';
+const SKIP = 'a, pre, .code-block, .katex, .math-inline, .math-display, .math-block, svg, .diagram-error, .front-matter, script, style';
 const MAX_CANDIDATES = 300;
 
 function link(doc, text, path, line) {

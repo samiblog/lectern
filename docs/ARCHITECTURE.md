@@ -199,7 +199,7 @@ flowchart LR
 
 ## 4. 프런트엔드 (web/)
 
-빌드 단계 없이 `<script type="module">` 로 바로 실행한다. vendor 라이브러리는 `index.html` 에서 일반 스크립트로 먼저 불러온다(전역). Mermaid(약 5MB)만 다이어그램이 있는 문서를 처음 열 때 `mermaid.js` 가 불러온다. 불러오기 전에는 문서 속 id `mermaid` 요소가 `window.mermaid` 로 잡히므로, 전역이 있는지가 아니라 `run` 함수가 있는지로 확인한다.
+빌드 단계 없이 `<script type="module">` 로 바로 실행한다. vendor 라이브러리는 `index.html` 에서 일반 스크립트로 먼저 불러온다(전역). Mermaid(약 5MB)는 다이어그램이 있는 문서를 처음 열 때 `mermaid.js` 가, Vega·Vega-Lite·ECharts·Viz.js(Graphviz)는 그 차트가 있는 문서를 처음 그릴 때 `charts.js` 가 불러온다 (D56). 불러오기 전에는 문서 속 id `mermaid` 요소가 `window.mermaid` 로 잡히므로, 전역이 있는지가 아니라 `run` 함수가 있는지로 확인한다.
 
 ### 상태와 이벤트
 상태는 `store.js` 의 `S` 하나에 모은다. 모듈끼리는 직접 호출 대신 `emit`/`on` 이벤트로 이어서 순환 참조를 피한다. 이벤트 목록은 `store.js` 머리 주석에 있다.
@@ -248,7 +248,7 @@ sequenceDiagram
    - 플러그인: footnote, task-lists(비활성 체크박스), anchor(GitHub식 slug — 한글 유지)
    - 수식: `$…$`, `$$…$$`, `\(…\)`, `\[…\]` → KaTeX. `$` 는 pandoc 규칙(여는 `$` 뒤·닫는 `$` 앞 공백 불가, 닫는 `$` 뒤 숫자 불가, 첫 후보만 확인)이라 `$105에서 $110` 은 수식이 아니다. `\[…\]` 는 줄을 통째로 차지할 때만 수식이라 문장 속 `\[판독 불확실\]`(대괄호를 글자로 쓰는 마크다운 표기)은 글자로 남는다. `\(…\)`·`\[…\]` 안에 한글·한자가 있는데 TeX 명령이 없으면 수식이 아니다 (D12).
    - ```` ```math ````·```` ```latex ````·```` ```tex ```` 코드 블록도 수식으로 (빈 줄로 나뉜 식은 따로). KaTeX 가 못 읽는 블록(LaTeX 문서 원문 등)은 코드 그대로 (D32).
-   - ```` ```mermaid ```` 는 `<pre class="mermaid">` 로.
+   - ```` ```mermaid ```` 는 `<pre class="mermaid">` 로, ```` ```vega-lite ````·```` ```vega ````·```` ```echarts ````·```` ```dot ````(```` ```graphviz ````)는 `<pre class="lec-chart" data-chart="종류">` 로 (`CHART_LANGS`).
    - 코드 하이라이트는 highlight.js (언어가 지정된 블록만).
 3. DOMPurify로 정화 (`SANITIZE_DOM:false`, `style`·`form` 태그 금지). 정화 훅이 `src` 를 `data-src` 로 옮겨 두고, 그림을 부르는 다른 길(`srcset`·`poster`·표의 `background`·SVG `image`·`feImage` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. `document` 의 이름을 가리는 `img` 의 `name` 도 지우고 (D15), SVG 링크의 `xlink:href` 는 `href` 로 옮긴다. frontmatter는 직접 이스케이프한 표로 앞에 붙인다.
 4. 화면 밖 무대(`.lec-stage`, 본문과 같은 폭)에 넣고 후처리:
@@ -257,7 +257,8 @@ sequenceDiagram
    - `/` 로 시작하는 링크는 프로젝트 루트 기준으로 해석한다. 상대경로가 `/doc/<그 탭 id>/` 밖으로 나가면(`../<다른 id>/…` — 다른 탭 프로젝트 포함) 밖으로 본다 (`resolveRef`).
    - 절대경로(`C:\proj\a.md`, `C:/proj/a.md`, `\\server\share\a.md`, `file:///C:/proj/a.md`)는 문서가 든 탭의 프로젝트 안이면 상대경로로 바꾸고(대소문자 무시) 밖이면 막는다 (`absoluteRef`). markdown-it 은 `file:` 링크를 기본으로 글자로 남기고 `\` 를 `%5C` 로 바꾸며, DOMPurify 는 기본 허용 URL 에 없는 `c:`·`file:` 를 지우므로 `validateLink` 와 `ALLOWED_URI_REGEXP` 를 넓혔다.
    - `> [!NOTE]` 등 → 콜아웃, 표 → 가로 스크롤 감싸기 + 숫자 열(70% 이상이 숫자) 오른쪽 정렬, 코드 블록 → 언어 표시 + 복사 버튼.
-   - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다.
+   - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다 (`.diagram-error`).
+   - 차트 (`charts.js` 의 `renderCharts`, D56): 종류마다 라이브러리를 불러와 움직이지 않는 SVG 글자를 만들고(Vega-Lite → Vega `toSVG`, ECharts 서버 그리기 모드 `renderToSVGString`, Viz.js `renderString`), `sanitizeHtml` 로 거른 뒤 그림 속 링크를 풀어 넣는다. 색은 `mermaidTheme()` 의 색표, Graphviz 는 그린 뒤 기본 검정·흰 바탕을 그 색으로. 설정은 `parseSpec`(JSON, 아니면 따옴표 없는 키·작은따옴표·주석·끝 쉼표·`option =` — 함수는 오류). Vega 의 `data.url` 은 `resolveRef` 로 이 탭의 `/doc/<id>/…` 만. ECharts 와 `width: "container"` 인 Vega 는 문서 폭으로 그리고, 폭이 바뀌면(목차가 나옴·사이드바·창 크기) ResizeObserver 로 다시 그린다. 실패하면 원문 + 까닭.
    - 본문 속 경로 표기(`src/app.py:42`, `../code/x.py`, `docs/a.md`)를 모아 `POST /api/exists` 로 한 번에 묻고, 있는 파일이면 `a.path-link` 로 감싼다 (`pathlink.js`). 코드 블록·링크·수식·다이어그램·메타데이터 안은 보지 않고, 문장 속 `코드` 는 내용 전체가 경로일 때만. 누르면 md·html 문서는 뷰어에서, 그 밖은 편집기의 그 줄로.
 5. 무대의 내용을 그 칸의 화면(선택된 탭이면 `#lec-view`)으로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. 탭의 `changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).
@@ -277,7 +278,7 @@ sequenceDiagram
 - 결과 줄을 누르면 문서를 열고, 그 줄이 든 가장 작은 `data-lines` 블록(표의 행까지)으로 가서 깜박이고, 문서 안 찾기(`findText`)로 검색어를 표시한다. 찾기 막대의 '지금 결과'도 그 블록 안의 것으로 둔다 (`pickMatchAt`). 코드 결과(`data-kind="code"`)는 코드 화면의 그 줄로 가서(`navigate({type:'code', line})`) 같은 방법으로 검색어를 표시한다.
 
 ### 바뀐 부분 강조 (diffmark.js)
-- 같은 문서를 다시 그릴 때(자동 새로고침) 바꿔 끼우기 직전의 최상위 블록마다 서명(태그 + 공백을 줄인 글자 + 그림 주소, Mermaid는 원문)을 세어 두고, 새 화면에서 서명이 이전에 없던 블록에 `lec-changed`(약 4초 배경색·테두리)를 준다. 같은 서명이 여럿이면 개수로 맞춘다.
+- 같은 문서를 다시 그릴 때(자동 새로고침) 바꿔 끼우기 직전의 최상위 블록마다 서명(태그 + 공백을 줄인 글자 + 그림 주소, Mermaid·차트는 원문)을 세어 두고, 새 화면에서 서명이 이전에 없던 블록에 `lec-changed`(약 4초 배경색·테두리)를 준다. 같은 서명이 여럿이면 개수로 맞춘다.
 - 처음 열 때, '문서 없음' 화면에서 돌아올 때, 내용이 같은 다시 그리기(스타일 변경, F5)는 강조하지 않는다. 지워진 블록은 알리지 않는다.
 - 불러오지 못한 인터넷 그림은 이번 실행 동안 기억해(`doc.js` 의 `failedImages`, F5 로 잊음) 다시 그릴 때 바로 링크로 둔다 — 아니면 매번 15초를 기다리고, 그 사이 `<img>` 와 옛 링크가 달라 '바뀐 곳'으로 잡힌다.
 - 많이 바뀌어도 멈추지 않게: 깜박임은 한꺼번에 시작하고(화면 배치 한 번), html 의 '바뀐 항목 안의 블록 빼기'는 조상을 따라 올라가며 본다.
@@ -319,7 +320,7 @@ sequenceDiagram
 - 접은 상태는 칸(탭)마다 문서 경로별로 이번 실행 동안만 메모리에 둔다 (자동 새로고침·뒤로 가기·다른 문서·다른 탭에 다녀와도 유지, 탭을 닫으면 잊음). 제목 id로 기억하므로 제목 글자가 바뀌면 그 절은 펴진다. 디스크에는 쓰지 않는다 (D23).
 
 ### 본문 우클릭 메뉴 (docmenu.js)
-- 문서 화면에서 우클릭한 블록(제목·단락·목록 항목·표·그림·코드·다이어그램·수식·인용)에 `lec-picked` 테두리를 그리고 `ui.js` 의 `showMenu` 로 메뉴를 띄운다. 가장 안쪽 블록을 고르되, Mermaid 그림 속 글자와 메타데이터 표의 칸은 통째로 고른다. 메뉴 맨 위 머리말에 종류(예: '표 · 6행 5열')를 적는다.
+- 문서 화면에서 우클릭한 블록(제목·단락·목록 항목·표·그림·코드·다이어그램·수식·인용)에 `lec-picked` 테두리를 그리고 `ui.js` 의 `showMenu` 로 메뉴를 띄운다. 가장 안쪽 블록을 고르되, Mermaid·차트 그림 속 글자와 메타데이터 표의 칸은 통째로 고른다. 메뉴 맨 위 머리말에 종류(예: '표 · 6행 5열')를 적는다.
 - 항목: 텍스트 복사(그림·수식·다이어그램 제외), 원문 복사(`data-lines` 범위의 원문 줄), Claude용 위치 복사(`@docs/a.md 40~52행`), 제목은 절 원문 복사(다음 같은 수준 이상의 제목 앞까지, 문서 끝이면 맨 뒤의 각주 정의는 뺌)와 절 링크 복사(`docs/a.md#id`), 표 복사(탭으로 나눈 글 + 간단한 HTML 표), 그림 복사(같은 출처 그림을 캔버스로 PNG, SVG는 2배), 인터넷 그림은 주소 복사.
 - 2차 항목(v0.3.0): 원문 줄이 있는 블록은 '편집기에서 이 줄 열기'(`/api/open-external` 의 `line`), 다이어그램은 그림 복사(SVG를 viewBox 크기 2배 PNG로, 화면 바탕색을 깔아서), 수식은 LaTeX 복사(`markdown.js` 가 단 `data-tex`), 링크는 주소 복사(`bindLink` 가 단 `data-lec-href` — 인터넷 주소 또는 프로젝트 기준 경로), 제목은 같은 수준 모두 접기·펴기, 메타데이터는 원문 복사.
 - 문서 메뉴의 '인쇄 / PDF로 저장…'은 `window.print()` (html 문서는 iframe 의 `print()` — iframe sandbox 에 `allow-modals` 가 필요). 인쇄 모양은 `base.css` 의 `@media print`: 화면 UI 빼기, 스타일 색을 흰 바탕·검은 글자로 덮기(바탕색은 기본으로 인쇄되지 않음), 접은 절 펴기, 쪼개지 않기, 인터넷 링크 주소 붙이기.

@@ -91,6 +91,7 @@ This is the first screen when a folder opens. It shows recently changed document
 - Tables align number columns to the right, and the header row stays visible as you scroll.
 - Code blocks are colored by language; the 'Copy' button at the top right copies them.
 - Callouts (`> [!NOTE]` and so on), footnotes, checklists, math (`$…$`, `$$…$$`, and math/latex code blocks) and Mermaid diagrams are rendered. Dollar amounts such as `$105` are not turned into math.
+- **Charts**: code blocks whose language is `vega-lite` (data charts), `echarts` (many chart types such as donuts and candlesticks) or `dot`/`graphviz` (structure and dependency graphs) are drawn as pictures. Colors follow the document style; click to enlarge, and use 'Copy image' in the right-click menu to paste a PNG. Settings are JSON and functions are not allowed. Write the data in the document or point to a CSV/JSON file in the project with a relative path (internet addresses are not read). There is no hover or zoom. The Lectern repository has an example document in `samples\docs`.
 - Click an image to enlarge it.
 - Paths in the text that point to real files, such as `src/app.py:42`, become links.
 

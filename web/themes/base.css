@@ -185,11 +185,11 @@
 .md-body .katex { font-size: 1.06em; }
 .md-body .math-error { color: var(--md-alert-caution); }
 
-/* 다이어그램 */
-.md-body pre.mermaid { background: none; border: 0; padding: 6px 0; text-align: center; overflow-x: auto; }
-.md-body pre.mermaid.mermaid-ok { cursor: zoom-in; }
-.md-body pre.mermaid svg { max-width: 100%; height: auto; }
-.md-body .mermaid-error > p { margin: 0 0 .4em; font-size: .88em; color: var(--md-alert-warning); font-weight: 600; }
+/* 다이어그램 — Mermaid 와 차트(```vega-lite·```echarts·```dot — charts.js, D56). 그리지 못하면 .diagram-error (원문과 까닭) */
+.md-body pre.mermaid, .md-body pre.lec-chart { background: none; border: 0; padding: 6px 0; text-align: center; overflow-x: auto; }
+.md-body pre.mermaid.mermaid-ok, .md-body pre.lec-chart.chart-ok { cursor: zoom-in; }
+.md-body pre.mermaid svg, .md-body pre.lec-chart svg { max-width: 100%; height: auto; }
+.md-body .diagram-error > p { margin: 0 0 .4em; font-size: .88em; color: var(--md-alert-warning); font-weight: 600; }
 
 /* 각주 */
 .md-body .footnotes-sep { margin-top: 3em; }

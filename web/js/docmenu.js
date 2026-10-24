@@ -22,12 +22,12 @@ export function setDocSource(pane, path, text = '') {
 }
 
 // 우클릭으로 고르는 블록. 가장 안쪽 것을 고른다 (목록 항목 안의 단락이면 단락, 표의 칸이면 표)
-const BLOCKS = 'img, pre.mermaid, .mermaid-error, .code-block, .math-block, table, h1, h2, h3, h4, h5, h6, li, p, dt, dd, blockquote';
+const BLOCKS = 'img, pre.mermaid, pre.lec-chart, .diagram-error, .code-block, .math-block, table, h1, h2, h3, h4, h5, h6, li, p, dt, dd, blockquote';
 const HEADING = /^H[1-6]$/;
 
 function pickBlock(target, view) {
   // 다이어그램 글자(foreignObject 안의 <p>)나 메타데이터 표의 칸은 따로 고르지 않고 통째로 고른다
-  const el = target.closest('.front-matter, pre.mermaid') || target.closest(BLOCKS);
+  const el = target.closest('.front-matter, pre.mermaid, pre.lec-chart') || target.closest(BLOCKS);
   return el && el !== view && view.contains(el) ? el : null;
 }
 
@@ -147,7 +147,7 @@ function kindOf(el) {
   if (HEADING.test(tag)) return t('제목 ({tag})', { tag });
   if (tag === 'TABLE') return `${t('표')} · ${tableSize(el)}`;
   if (tag === 'IMG') return el.classList.contains('external') ? t('인터넷 그림') : t('그림');
-  if (el.matches('pre.mermaid, .mermaid-error')) return t('다이어그램');
+  if (el.matches('pre.mermaid, pre.lec-chart, .diagram-error')) return t('다이어그램');
   if (el.matches('.code-block')) {
     const lang = el.querySelector('.code-lang')?.textContent;
     return lang ? t('코드 ({lang})', { lang }) : t('코드');
@@ -228,11 +228,11 @@ function blockItems(el, target) {
   } else if (el.matches('.code-block')) {
     const code = el.querySelector('pre').textContent.replace(/\n$/, '');
     items.push({ label: t('코드 복사'), action: () => copyPlain(code), term: code });
-  } else if (el.matches('pre.mermaid')) {
+  } else if (el.matches('pre.mermaid, pre.lec-chart')) {
     if (el.querySelector('svg')) items.push({ label: t('그림 복사'), hint: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyDiagram(el) });
   } else if (el.matches('.math-block')) {
     items.push(texItem(el));
-  } else if (!el.matches('.mermaid-error')) {
+  } else if (!el.matches('.diagram-error')) {
     items.push({ label: HEADING.test(tag) ? t('제목 글자 복사') : t('텍스트 복사'), action: () => copyPlain(el.innerText.trim()), term: el.innerText.trim() });
   }
 
