@@ -158,3 +158,30 @@ def test_failed_save_keeps_the_edited_text_in_the_temp_file(tmp_path, monkeypatc
     kept = [x for x in tmp_path.iterdir() if x.name.startswith('.lectern-')]
     assert err.value.status == 500 and len(kept) == 1 and str(kept[0]) in err.value.message
     assert kept[0].read_bytes() == b'edited\n'   # 고친 내용은 남아 있다
+
+
+def test_new_doc_only_in_existing_visible_folders_with_md_names(tmp_path):
+    """새 문서 (D63): 이미 있는 폴더에 .md 하나 — 숨김·제외 폴더, 밖, 이상한 이름은 안 된다"""
+    root = tmp_path.resolve()
+    (root / 'reports').mkdir()
+    (root / '.claude').mkdir()
+    (root / 'node_modules').mkdir()
+    exclude = frozenset({'node_modules'})
+    assert editing.new_doc_path(root, 'reports/요약.md', exclude) == root / 'reports' / '요약.md'
+    assert editing.new_doc_path(root, '새 문서.md', exclude) == root / '새 문서.md'
+    for rel, status in [('nope/a.md', 404), ('.claude/a.md', 404), ('node_modules/a.md', 400), ('../a.md', 400),
+                        ('reports/a.txt', 400), ('reports/a.html', 400), ('reports/.a.md', 400), ('reports/a?.md', 400),
+                        ('reports/con.md', 400), ('reports/ .md', 400), ('reports//a.md', 400), ('reports/a.md.', 400)]:
+        with pytest.raises(EditError) as err:
+            editing.new_doc_path(root, rel, exclude)
+        assert err.value.status == status, rel
+
+
+def test_create_source_writes_lf_utf8_and_never_overwrites(tmp_path):
+    p = tmp_path / '새.md'
+    r = editing.create_source(p, '# 새 문서\r\n\r\n본문\n')
+    assert p.read_bytes() == '# 새 문서\n\n본문\n'.encode() and r['size'] == len(p.read_bytes())
+    assert save_source(p, '# 고침\n', r['hash'])   # 만든 뒤에는 보통 저장 — 만들 때의 hash 로
+    with pytest.raises(EditError) as err:
+        editing.create_source(p, 'x')
+    assert err.value.status == 409 and p.read_bytes() == b'# \xea\xb3\xa0\xec\xb9\xa8\n'   # 덮어쓰지 않는다

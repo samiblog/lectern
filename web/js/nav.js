@@ -39,7 +39,7 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
   pane.pending += 1;   // 이동 중에는 자동 새로고침이 끼어들지 않게 한다
   let done;
   try {
-    done = await render(pane, next, { hash: target.hash, line: target.line, scrollTop: top });
+    done = await render(pane, next, { hash: target.hash, line: target.line, scrollTop: top, missing: target.missing });
   } catch (e) {
     console.error(e);
     toast(t('화면을 그리지 못했습니다: {error}', { error: e.message }), 'error');

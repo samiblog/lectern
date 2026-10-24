@@ -176,7 +176,8 @@ flowchart LR
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
 | `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, hash, size}` — `text` 는 LF, `hash` 는 원문 바이트의 SHA-256. 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 없음·숨김·밖은 404 |
-| `POST /api/save` | `{p, path, text, hash, force?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` |
+| `POST /api/save` | `{p, path, text, hash, force?, create?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). `create: true` 면 새 Markdown 문서를 만든다 (D63 — `editing.new_doc_path` 가 자리를 보고 `create_source` 가 `xb` 로 씀: 이미 있는 폴더·`.md`·숨김·제외 폴더 아님, 같은 이름이면 409, LF·BOM 없음). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` |
+| `GET /api/new-doc?p=<id>&path=<경로>` | | 그 자리에 새 문서를 만들 수 있는지 (D63 — 넣을 곳 고르기). 읽기만. `{path}`(폴더는 실제 이름) 또는 `{error, status}` — 물음의 답이라 늘 200 |
 | `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
@@ -331,6 +332,7 @@ sequenceDiagram
 - 블록 밖(여백, 문서 아래 빈 곳)은 문서 메뉴: 트리와 같은 경로 항목(`tree.js` 의 `pathMenuItems`) + 모두 접기·펴기.
 - md 문서면 블록·문서 메뉴 끝에 장 하이라이트 항목(`spotlight.js` 의 `spotlightItems`).
 - 글을 고른 채 우클릭하면 맨 위에 '선택한 글 복사'. 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다.
+- 담기 (D63, `basket.js`): md 문서의 블록은 '담기'·'문서에 넣기…'(`takeItems`·`blockTake` — 표·그림·차트·다이어그램·코드는 `toc.js` 의 `partExtent` 로 캡션과 '자료:' 줄까지 한 범위, 이름은 캡션이나 목차의 이름표), 제목은 '이 절 담기'(절 원문 복사와 같은 범위), 고른 글은 '고른 글 담기'(보이는 글 그대로 — `plain`, 담은 곳은 고른 글이 든 블록들의 줄). 맨 앞 설정·html 문서는 없다.
 - 원문은 `doc.js` 가 그릴 때마다 `setDocSource(pane, path, text)` 로 그 칸에 남기고, 메뉴는 선택된 탭의 칸(보이는 칸은 그것뿐이다)의 원문을 쓴다. 클립보드는 `navigator.clipboard.write`(여러 형식)를 쓰고, 안 되면 글만 복사한다.
 
 ### 설정 창과 마지막 위치 (settings.js, position.js)
@@ -338,7 +340,7 @@ sequenceDiagram
 - `position.js` 는 화면 이동·그리기(`rendered`)와 스크롤이 멈추고 1.5초 뒤 탭마다 `POST /api/position {p, path, scroll}` 으로 보는 문서와 위치를 보낸다 (탭마다 같은 값이면 보내지 않음 — 숨은 탭은 바뀌지 않으니 보내지 않는다. 폴더 개요와 지워진 문서는 빼고). 탭을 닫기 전에도 보낸다. 탭을 처음 고를 때 `tabs.js` 가 `/api/state` 의 `position` 으로 그 문서와 위치를 연다 (`nav.restorePosition`). 문서가 없어졌으면 폴더 개요.
 
 ### 사이드바 (tree.js)
-- 선택된 프로젝트 탭의 것을 보인다. 사이드바 탭(파일·최근 변경·검색·모아 보기)·거르기 글자·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (`tab.side`).
+- 선택된 프로젝트 탭의 것을 보인다. 사이드바 탭(파일·최근 변경·검색·모아 보기·담기)·거르기 글자·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (`tab.side`).
 - 파일 탭: 루트 행(프로젝트 개요) + 트리. 행마다 이름 앞에 종류 아이콘 (`icons.js` — md·html 문서는 강조색, 폴더, 최근 변경도. 전에 붙던 'HTML' 글자 표시는 폴더 개요에만 남았다). 문서는 파일 이름으로 보이고 마우스를 올리면 문서 제목과 경로 (D35). '제목' 버튼(설정 `show_titles`)을 켜면 제목으로 보이고 마우스를 올리면 경로와 제목. 최근 변경 목록도 같다. 폴더 이름을 누르면 개요 화면 + 펼침, 화살표는 펼치기/접기만. 처음 열 때 첫 단계 폴더는 펼쳐 둔다 (설정 `expand_first_level`, 기본 켜짐).
 - 필터: 입력하면 트리 대신 일치하는 문서 목록(제목+경로, 공백으로 나눈 모든 단어 포함). Enter는 첫 결과 열기, Esc는 지우기.
 - 최근 변경 탭 (`recent.js`, D50): 위에 '문서'·'코드'·'자료' 버튼(설정 `recent_docs`·`recent_code`·`recent_others`). 켠 종류를 섞어 수정 시각 순 50개 — 문서는 `S.files`, 코드·자료는 `GET /api/others/recent`(`tab.recent` — 이 탭이 보일 때만, `touched`·`others` 이벤트나 F5 뒤에 다시 받는다). 행은 모두 `data-file` 이고 `others.js` 의 `bindFileRows` 가 다룬다 (문서·코드는 한 번 누르면 열고, 자료는 두 번 누르거나 Enter, 우클릭은 '코드'·'자료' 목록과 같은 메뉴).
@@ -355,6 +357,7 @@ sequenceDiagram
 - 저장: Ctrl+S·'저장' → `POST /api/save` (원문의 `hash` 와 함께). 409 면 `confirm` 으로 덮어쓰기(force)를 묻는다. 깨끗한 상태는 CodeMirror 의 `changeGeneration`·`isClean`. 저장하지 않은 것이 생기거나 없어지면 `POST /api/editing` 으로 목록을 알린다 (창을 닫을 때 `app.py` 가 묻는다 — `MessageBoxW`, closing 처리기는 창의 스레드에서 바로 돈다).
 - 닫기: Esc·✕·Ctrl+E — 저장하지 않은 것이 있으면 `confirm`. 다른 화면으로 가기 전에는 `nav.js` 의 leave guard(`setLeaveGuard`)가, 탭을 닫기 전에는 `tabs.js` 가 `confirmCloseEditor` 로 묻는다. 자동 새로고침(`refreshView`)은 편집 상자 아래의 화면만 다시 그린다.
 - 키: 편집 상자 안에서는 `main.js` 가 Ctrl+Tab·Ctrl+1~9·Ctrl+E·Ctrl+P·Ctrl+,·F1·Ctrl+/ 만 받고 나머지는 편집기로 (Ctrl+F 는 편집기의 찾기). Tab 은 빈칸으로 들이기.
+- 담은 조각 넣기 (D63): `insertIntoDoc(path, compute, {create})` — 그 문서로 가서(다른 문서를 편집 중이면 leave guard 가 묻는다) 편집 모드를 열고, `compute(편집기의 글)` 이 준 자리·글(`snippet.js` 의 `placeText`)을 넣고 `markText` 로 `.ed-inserted` 표시(저장하면 지움), 그 줄로 간다. 저장은 사용자가. 새 문서(`create`)는 `navigate({…, missing: true})` 로 읽어 보지 않고 '문서 없음' 화면에 와서 빈 편집기(`ed.create`, `.creating`)를 열고, 처음 저장이 `POST /api/save` 의 `create` — 그 뒤로는 보통 저장, 자동 새로고침이 아래에 그 문서를 그린다. 만들지 않고 닫으면 `back()`. `editingDoc()` 은 커서 자리에 넣을 수 있는 편집 중인 md 문서, 열고 닫을 때 `editor` 이벤트.
 - 색: `.lec-editor .CodeMirror` 가 `--md-bg`·`--md-fg`·`--md-mono`·`--md-scale`, 줄 번호 칸은 `--ui-bg`, 선택은 `--md-link`. 어두운 스타일(`data-ui="dark"`)은 토큰 글자색을 One Dark 계열로.
 
 ### 발표 문서 (slides.js, present.js — D59)
@@ -382,6 +385,13 @@ sequenceDiagram
 - 항목: 아이콘, 종류·번호(박스글은 콜아웃 종류), 짧은 설명, 절(`§`). 캡션이 있으면 캡션(쓴 그대로)이 이름이고 그 아래 '표 3 · 6행 2열'(`describe` 의 `detail` — 표는 크기, 다이어그램·코드는 종류·언어), `.pt-item.has-cap` (D61). 항목에는 원문 줄 범위 `lines`(요소와 캡션 단락의 `data-lines` — md 만)도 둔다. 그림은 작은 그림 격자 — 보일 때(IntersectionObserver) `doc.js` 의 `loadImage` 로 본문과 같은 규칙으로 불러오고, 같은 그림(`imageKey`)은 처음 것 하나에 '+N곳'. 누르거나 Enter: 그 문서를 열고(`navigate`) 그려진 화면에서 `readParts` 로 같은 종류·번호를 찾아 `goToPart`. 문서 머리줄은 그 문서를 연다. 우클릭(`partMenu`, D61): 문서에서 보기, Claude용 위치 복사(`@문서 a~b행 ('캡션')`), 원문 복사(md — 그 줄들을 받아서), 문서 경로 메뉴(`pathMenuItems`) — 복사 항목은 터미널 버튼(D51).
 - 여는 곳: 탭, 폴더 개요의 '모아 보기' 버튼(`data-parts`), 트리·폴더 보기의 폴더·프로젝트 우클릭 (`pathMenuItems`) — 둘 다 `parts` 이벤트 {path, kind}. 종류 없이 열면 그 범위에 있는 첫 종류로. 사이드바가 숨어 있으면 `show-sidebar` 이벤트로 보인다. 종류·범위·거르기·순서·스크롤은 탭마다 (`tab.side.parts`).
 - 파일 종류 (D50): 범위 안의 파일 — 문서는 `tab.files`, 코드·자료는 `others.js` 의 `otherFiles`(`loadOthers` 로 받아 두고, 제외 폴더 안은 빼고) — 을 묶음(문서·코드·자료)마다 `icons.js` 의 `fileType` 으로 나눠 형식 버튼(`data-ftype="묶음:형식"`, 묶음마다 한 줄 `.ft-group`)을 만든다. 고른 형식의 파일을 트리 순서(폴더마다 하위 폴더 먼저) 또는 최근 수정 순으로 800개까지 (`.ft-row[data-file]` — `bindFileRows`). 자료의 그림 파일(`PICTURE_EXT`)은 작은 그림 격자(`.ft-thumb`) — 보일 때 그 파일을 `/doc/<id>/<경로>` 로 불러온다. 파일이 생기거나 지워지면(`others` 이벤트) 다시 그린다. '코드'·'자료' 목록의 폴더 우클릭 '이 폴더의 파일을 종류별로 모아 보기'는 `parts` 이벤트 {path, mode: 'files'}.
+
+### 담기 (basket.js, snippet.js — D63)
+- 조각: `{id, path, lines(원문 줄 범위 — 담은 곳), kind, name, label, text(담는 순간의 원문, 공통 들여쓰기를 걷음), notes(조각이 쓰는 각주의 정의 — snippet.js 의 noteDefs), plain}` — `snippetOf(doc, range, info)`. 담은 것은 `tab.basket`(프로젝트 탭마다, 앱을 끄면 비움).
+- 사이드바 '담기' 탭(`#lec-basket`, 개수는 탭의 `#lec-basket-count`): 행 `.pt-item.bk-item[data-id]` — 이름(캡션·이름표·글), 아래에 종류 · 경로 · 줄. 오른쪽 '넣기'(편집 중일 때 — `editingDoc`)·위로·아래로·빼기, Alt+↑↓·Delete, 누르면 원래 문서의 그 줄이 든 가장 안쪽 블록(`[data-lines]`)으로 `goToPart`. 우클릭 — 문서에서 보기·커서 자리에 넣기·문서에 넣기…·원문 복사(▣ 터미널)·위로·아래로·빼기.
+- 넣을 곳 고르기(`#lec-insert`, `insertSnippets`): 단계 target(편집 중인 곳·새 문서…·md 문서 — 최근 수정 순, 거르기) → place(맨 끝·맨 앞·절 끝 — 넣을 문서의 글은 편집 중이면 편집기의 글, 아니면 `GET /doc/…`, 제목은 `headingsOf`) / new(경로 — `GET /api/new-doc` 으로 묻고 알림은 `#lec-insert-msg`). Esc 는 앞 단계로, 처음 단계에서는 닫기.
+- `perform`: `insertIntoDoc` 의 compute 에서 `placeLine`(맨 끝 — 끝에 모인 각주 정의 앞, 맨 앞 — 맨 앞 설정·`# 문서 제목` 아래, 절 끝 — 다음 같은 수준 이상 제목 앞, 커서 — 커서가 든 블록 끝·코드 블록이면 그 뒤) → `levelAt`(그 절 + 1, 맨 끝·맨 앞은 2) → `buildBody`(조각마다 담은 곳 주석 + `rebase`(상대경로를 넣을 문서 기준으로 — 그림·링크·참조 정의·html src/href·vega(-lite) 의 url, 코드·글 속 코드 밖) + 각주 이름 바꾸기 + `shiftHeadings`) → `placeText`(앞뒤 빈 줄). 새 문서는 `# 파일 이름에서 만든 제목` 아래에 `##` 로.
+- Claude 에 맡기기: 담은 것의 `@경로 a~b행 ('이름')` 을 한 줄 요청 글로 (작성 안내 경로까지) — 메뉴의 복사·▣ 터미널(`term-paste`).
 
 ### 파일 목록 (others.js)
 - 파일 탭을 보는 방법 두 가지 — 거르기 칸 옆 '폴더' 버튼, 설정 `files_view` (D37):

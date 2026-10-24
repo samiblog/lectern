@@ -13,10 +13,12 @@
 //   '지금 보는 곳'(커서가 화면 안이면 커서, 아니면 화면 맨 위 조금 아래)에 맞춰 두고, 목차의 '지금 읽는 위치'도 그곳으로 한다.
 //   목차·모아 보기·검색에서 이 파일의 곳을 고르면 편집기가 그 줄로 간다. 닫으면 읽는 화면이 편집하던 곳에 있다.
 // - 편집 상자 안의 키는 편집기 것이다 (main.js) — Ctrl+S 저장, Esc 닫기, Ctrl+F 찾기, Ctrl+H 바꾸기, Alt+G 줄로 가기.
+// - 담은 조각 넣기 (D63, basket.js): insertIntoDoc 이 그 문서를 편집 모드로 열고 조각을 넣는다 — 넣은 곳은 저장할 때까지 바탕색,
+//   저장은 사용자가 한다. 새 문서는 없는 문서 화면 위에 빈 편집기로 열고(ed.create), 처음 저장할 때 만든다 (POST /api/save create).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
-import { setLeaveGuard } from './nav.js';
+import { setLeaveGuard, navigate, back } from './nav.js';
 import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
@@ -190,7 +192,7 @@ function setDirty(ed, dirty) {
   if (ed.dirty === dirty) return;
   ed.dirty = dirty;
   ed.box.classList.toggle('dirty', dirty);
-  if (dirty) setState(ed, t('저장하지 않음'));
+  if (dirty) setState(ed, ed.create ? t('새 문서 — 저장하면 만듭니다') : t('저장하지 않음'));
   reportDirty();
 }
 
@@ -239,7 +241,7 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
   }
 }
 
-function build(pane, path, src, mode, line) {
+function build(pane, path, src, mode, line, { create = false } = {}) {
   const box = document.createElement('div');
   box.className = 'lec-editor';
   box.setAttribute('role', 'region');
@@ -256,6 +258,7 @@ function build(pane, path, src, mode, line) {
   const prose = pane.current.type === 'doc';
   const ed = {
     pane, tab: pane.tab, path, box, base: { hash: src.hash }, dirty: false, saving: false, saved: false,
+    create, inserted: [],   // 새 문서 — 처음 저장할 때 만든다 (D63), 넣은 조각의 표시 (저장하면 지운다)
     // 위치 잇기 (D55): 읽는 화면을 그린 원문 뒤로 늘거나 준 줄(log — 앞에서 버린 것이 dropped 개), 저장한 때의 기록 끝(savedMark),
     // html 문서의 제목 줄(heads), 읽는 화면의 자리(marks — 다시 그리면 비움)
     log: [], dropped: 0, savedMark: null, savedHeads: null, marks: null, raf: 0,
@@ -263,7 +266,9 @@ function build(pane, path, src, mode, line) {
   };
   ed.cm = window.CodeMirror(box.querySelector('.ed-body'), {
     value: src.text, mode: mode || 'text/plain', lineNumbers: true, lineWrapping: prose, styleActiveLine: true, matchBrackets: !prose,
-    indentUnit: indent, tabSize: 4, indentWithTabs: false, autofocus: true, spellcheck: false,
+    // autofocus 는 쓰지 않는다 — CodeMirror 가 처리기를 달기 전에 입력 칸에 초점을 주고 20ms 뒤에야 받은 것으로 치며 칸을 비워,
+    // 열자마자 친 글자를 잃는다. 아래 build 끝의 cm.focus() 가 처리기를 단 뒤에 준다
+    indentUnit: indent, tabSize: 4, indentWithTabs: false, spellcheck: false,
     extraKeys: {
       'Ctrl-S': () => save(ed),
       Esc: () => closeEditor(pane),
@@ -289,11 +294,16 @@ function build(pane, path, src, mode, line) {
   });
   ed.resize.observe(box.querySelector('.ed-body'));
   if (src.bom || src.newline === '\r\n') setState(ed, [src.newline === '\r\n' && 'CRLF', src.bom && 'BOM'].filter(Boolean).join(' · '));
+  if (create) {
+    setState(ed, t('새 문서 — 저장하면 만듭니다'));
+    box.classList.add('creating');
+  }
   ed.cm.refresh();
   if (line) goTo(ed, line);
   else matchView(ed);
   ed.cm.focus();
   updateButton();
+  emit('editor', pane);
 }
 
 /** 그 줄(1부터)로 — 화면 맨 위 가까이에 두고 커서를 줄 머리에. flash: 잠깐 그 줄을 표시 (목차·검색에서 옴) */
@@ -308,24 +318,27 @@ function goTo(ed, line, { flash = false } = {}) {
 }
 
 /** 편집을 닫는다. 저장하지 않은 것이 있으면 묻는다 (ask). 닫았으면(또는 편집 중이 아니면) true.
- * sync: 읽는 화면을 편집하던 곳으로 (탭을 닫을 때는 하지 않는다) */
-export function closeEditor(pane = S.pane, { ask = true, sync = true } = {}) {
+ * sync: 읽는 화면을 편집하던 곳으로 (탭을 닫을 때는 하지 않는다). leaving: 다른 화면으로 가는 중 (nav 의 leave guard) —
+ * 아니면 만들지 않은 새 문서를 닫을 때 앞 화면으로 돌아간다 */
+export function closeEditor(pane = S.pane, { ask = true, sync = true, leaving = false } = {}) {
   const ed = pane?.editor;
   if (!ed) return true;
   if (ask && ed.dirty && !window.confirm(t('{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?', { path: ed.path }))) {
     ed.cm.focus();
     return false;
   }
-  if (sync) settle(ed);
+  if (sync && !ed.create) settle(ed);   // 만들지 않은 새 문서 — 아래는 '문서 없음' 화면이다
   ed.resize.disconnect();
   ed.box.remove();
   pane.editor = null;
   pane.tocLimit = null;
   reportDirty();
   updateButton();
+  emit('editor', pane);
   if (pane === S.pane) {
     updateTocActive();
     pane.scroller.focus({ preventScroll: true });
+    if (ed.create && sync && !leaving) back();   // 만들지 않은 새 문서의 '문서 없음' 화면에 남지 않게
   }
   return true;
 }
@@ -341,6 +354,57 @@ function refreshEditors() {
 
 export const toggleEditor = () => (S.pane?.editor ? closeEditor(S.pane) : openEditor(S.pane));
 
+// ---- 담은 조각 넣기 (D63) ---------------------------------------------------------
+
+/** 아직 없는 새 문서(path)를 빈 편집기로 연다 — 아래는 '문서 없음' 화면 (navigate 로 그 경로에 와 있다). 처음 저장할 때 만든다 */
+async function openNew(pane, path) {
+  try {
+    await loadLib('markdown');
+    if (pane.current?.path !== path || pane.editor || !S.tabs.includes(pane.tab)) return;
+    build(pane, path, { text: '', hash: null, newline: '\n', bom: false }, 'markdown', 1, { create: true });
+  } catch (e) {
+    toast(t('편집 모드를 열지 못했습니다: {error}', { error: e.message }), 'error');
+  }
+}
+
+/**
+ * 이 탭의 md 문서(path)를 편집 모드로 열고 조각을 넣는다 — 저장은 사용자가 한다. 이미 그 문서를 편집 중이면 그 편집기에.
+ * compute(원문, ed) → {line, ch, text, offset, size}: 넣을 자리와 글, 그 안의 조각 글 자리 (snippet.js 의 placeText).
+ * create: 아직 없는 새 문서 — 빈 편집기로 열고 처음 저장할 때 만든다. 넣었으면 true
+ */
+export async function insertIntoDoc(path, compute, { create = false } = {}) {
+  const pane = S.pane;
+  if (!pane?.tab) return false;
+  if (pane.editor?.path !== path) {
+    const here = !pane.editor && pane.current?.type === 'doc' && pane.current.path === path;
+    // 다른 문서를 편집 중이면 leave guard 가 묻는다. 새 문서는 읽어 보지 않고 '문서 없음' 화면 위에
+    if (!here && !(await navigate({ type: 'doc', path, missing: create }))) return false;
+    if (create) await openNew(pane, path);
+    else await openEditor(pane, { line: 1 });
+  }
+  const ed = pane.editor;
+  if (!ed || ed.path !== path) return false;   // 열지 못했다 (알림은 openEditor 가)
+  const put = compute(ed.cm.getValue(), ed);
+  if (!put) return false;
+  const { cm } = ed;
+  const start = cm.indexFromPos({ line: put.line, ch: put.ch });
+  cm.replaceRange(put.text, { line: put.line, ch: put.ch });
+  const from = cm.posFromIndex(start + put.offset);
+  const to = cm.posFromIndex(start + put.offset + put.size);
+  ed.inserted.push(cm.markText(from, to, { className: 'ed-inserted' }));
+  goTo(ed, from.line + 1, { flash: true });
+  cm.setCursor(to, null, { scroll: false });   // 다음 조각은 그 뒤에 (커서 자리에 넣기)
+  cm.focus();
+  return true;
+}
+
+/** 선택된 칸의 편집 중인 md 문서 (커서 자리에 넣을 수 있는 것) — {path, line(커서 줄, 0부터)} 또는 null */
+export function editingDoc() {
+  const ed = S.pane?.editor;
+  if (!ed || S.pane.current?.type !== 'doc' || isHtml(ed.path)) return null;
+  return { path: ed.path, line: ed.cm.getCursor().line };
+}
+
 // ---- 저장 ----------------------------------------------------------------------
 
 async function save(ed, force = false) {
@@ -352,19 +416,25 @@ async function save(ed, force = false) {
   const mark = ed.dropped + ed.log.length;   // 이 글까지의 줄 기록 — 읽는 화면이 이것을 다시 그리면 그 앞은 버린다
   let conflict = false;
   try {
-    const r = await postJSON('/api/save', { p: ed.tab.id, path: ed.path, text, hash: ed.base.hash, force });
+    const r = await postJSON('/api/save', ed.create ? { p: ed.tab.id, path: ed.path, text, create: true }
+      : { p: ed.tab.id, path: ed.path, text, hash: ed.base.hash, force });
     ed.base = r;
     ed.clean = gen;
     ed.saved = true;
     ed.savedMark = mark;
     ed.savedHeads = ed.heads && headLines(text);
+    if (ed.create) {   // 이제 있는 문서 — 다음 저장부터는 보통 저장 (자동 새로고침이 아래에 그 문서를 그린다)
+      ed.create = false;
+      ed.box.classList.remove('creating');
+    }
+    for (const m of ed.inserted.splice(0)) m.clear();   // 넣은 조각의 표시
     const dirty = !ed.cm.isClean(gen);   // 저장하는 동안 더 친 것
     setDirty(ed, dirty);
     setState(ed, dirty ? t('저장하지 않음') : t('저장했습니다 {time}', { time: formatClock(new Date()) }));
   } catch (e) {
-    conflict = e.status === 409 && !force;
+    conflict = e.status === 409 && !force && !ed.create;
     if (!conflict) {
-      setState(ed, t('저장하지 않음'));
+      setState(ed, ed.create ? t('새 문서 — 저장하면 만듭니다') : t('저장하지 않음'));
       toast(t('저장하지 못했습니다: {error}', { error: e.message }), 'error');
     }
   } finally {
@@ -407,7 +477,7 @@ function onRendered(pane) {
 }
 
 export function initEditor() {
-  setLeaveGuard((pane) => closeEditor(pane));   // 다른 화면으로 가기 전에 (nav.js)
+  setLeaveGuard((pane) => closeEditor(pane, { leaving: true }));   // 다른 화면으로 가기 전에 (nav.js)
   setEditJump(jumpTo);   // 편집 중에 목차·모아 보기에서 고르면 편집기가 그곳으로 (toc.js)
   on('rendered', onRendered);
   $('#lec-st-edit').addEventListener('click', () => openEditor(S.pane));

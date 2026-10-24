@@ -22,7 +22,8 @@ import { navigate } from './nav.js';
 import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
-import { readParts, goToPart, PARTS } from './toc.js';
+import { readParts, goToPart, partExtent, PARTS } from './toc.js';
+import { snippetOf, addSnippets, insertSnippets } from './basket.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, loadImage, imageKey, resolveRef } from './doc.js';
 import { linkPaths } from './pathlink.js';
@@ -52,6 +53,7 @@ const LINK_TYPES = { doc: t('문서'), code: t('코드'), file: t('자료'), dir
 let state = { ...DEFAULT };
 let scanning = null;       // 지금 읽는 중인 {tab, scope, done, total}
 let thumbs = null;         // 그림 칸이 보일 때 그림을 불러오는 IntersectionObserver
+let listed = [];           // 지금 목록에 보이는 구성 요소 [{file, item}] — '보이는 것 모두 담기' (D63)
 
 const panelShown = () => !$('#lec-parts').hidden;
 const inScope = (path, scope) => !scope || path === scope || path.startsWith(`${scope}/`);
@@ -125,7 +127,7 @@ async function readDoc(tab, path) {
   const base = new URL(docUrl(tab, path), location.origin);
   const items = readParts(root, { more: true }).rows.filter((r) => r.kind).map((r) => {
     const item = { kind: r.kind, n: r.n, name: r.name, label: r.label || '', caption: r.caption || '', detail: r.detail || '', section: r.section,
-      lines: linesOf(r.el, r.capEl) };
+      lines: linesOf(r.el, r.capEl), take: linesOf(...partExtent(r.el).els) };   // take: 담을 범위 — 캡션과 '자료:' 줄까지 (D63)
     if (r.kind === 'figure') {
       const img = r.el.tagName === 'IMG' ? r.el : r.el.querySelector('img');
       item.src = img?.getAttribute('data-src') || img?.getAttribute('src') || '';
@@ -134,7 +136,7 @@ async function readDoc(tab, path) {
       item.chart = r.el.dataset.chart;
       item.code = r.el.dataset.source ?? r.el.textContent;   // 화면 밖에서는 그리지 않아 원문 그대로
     } else if (r.kind === 'task') Object.assign(item, { text: r.text, done: r.done });
-    else if (r.kind === 'link') Object.assign(item, linkTarget(r, base, tab));
+    else if (r.kind === 'link') Object.assign(item, linkTarget(r, base, tab), { text: r.text, href: r.href, pathLink: !!r.path });
     else if (r.kind === 'source') Object.assign(item, { text: r.text, note: r.note });
     return item;
   });
@@ -258,6 +260,7 @@ function render() {
   }
   renderBar(tab);
   $('#lec-parts-sub').hidden = true;
+  listed = [];
   if (state.mode === 'files') {
     renderFiles(tab);
     return;
@@ -325,6 +328,7 @@ function render() {
       + `<span class="label">${esc(title)}</span>${dirname(file.path) ? `<span class="sub">${esc(dirname(file.path))}</span>` : ''}</div>`;
     html.push({ head, file, mine, body });
   }
+  listed = html.flatMap(({ file, mine }) => mine.map((item) => ({ file, item })));
   keepFocus(list, () => {
     list.innerHTML = html.map(({ head, file, mine, body }) => {
       if (body?.charts) return `${head}<div class="pt-grid pt-charts">${body.charts.map((it) => chartThumb(file, it)).join('')}</div>`;
@@ -595,7 +599,46 @@ async function copy(text, what) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what }) : t('복사하지 못했습니다'));
 }
 
-/** 구성 요소의 우클릭 메뉴 (D61): 문서에서 보기, Claude용 위치·원문 복사(옆에 터미널 버튼 — D51), 문서 경로 */
+/**
+ * 구성 요소를 담을 조각으로 (D63 — basket.js 의 snippetOf). lines: 그 문서의 원문 줄들 (html 문서는 null).
+ * 링크는 그 링크 하나(경로 표기는 글 그대로), 각주는 그 글을 단락으로, 그 밖은 원문 줄 범위(캡션·'자료:' 줄까지). 담을 수 없으면 null
+ */
+function itemSnippet(path, lines, item) {
+  const doc = { path, lines: lines || [] };
+  const info = { kind: item.kind, name: item.name, label: item.caption || item.text || item.label || '' };
+  if (item.kind === 'link') {
+    if (item.pathLink) return snippetOf(doc, item.take, { ...info, text: item.text, plain: true });
+    return snippetOf(doc, item.take, { ...info, text: `[${(item.text || item.href).replace(/[[\]]/g, '\\$&')}](${item.href})` });
+  }
+  if (item.kind === 'source' && item.note) return snippetOf(doc, item.take, { ...info, text: item.text, plain: true });
+  return lines && item.take ? snippetOf(doc, item.take, info) : null;
+}
+
+/** 지금 목록에 보이는 것 모두 담기: 문서마다 원문을 한 번 읽어 차례대로. html 문서의 것(원문 줄이 없음)은 빼고 알린다 */
+async function takeAll(entries) {
+  const tab = S.tab;
+  const texts = new Map();
+  const snips = [];
+  let skipped = 0;
+  for (const { file, item } of entries) {
+    if (!texts.has(file.path)) {
+      let lines = null;
+      if (!isHtml(file.path)) {
+        try {
+          lines = (await getText(docUrl(tab, file.path))).replace(/^﻿/, '').split(/\r\n?|\n/);
+        } catch { /* 읽는 사이 지워진 문서 */ }
+      }
+      texts.set(file.path, lines);
+    }
+    const snip = itemSnippet(file.path, texts.get(file.path), item);
+    if (snip) snips.push(snip);
+    else skipped += 1;
+  }
+  if (tab !== S.tab) return;
+  addSnippets(snips, skipped ? t('{n}개는 원문이 없어(html 문서) 담지 않았습니다', { n: skipped }) : '');
+}
+
+/** 구성 요소의 우클릭 메뉴 (D61): 문서에서 보기, Claude용 위치·원문 복사(옆에 터미널 버튼 — D51), 담기·문서에 넣기(D63), 문서 경로 */
 async function partMenu(el, x, y) {
   const found = itemOf(el);
   if (!found) return;
@@ -608,13 +651,23 @@ async function partMenu(el, x, y) {
     { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => openItem(el) },
     { label: t('Claude용 위치 복사'), hint: ref, action: () => copy(ref, ref), term: `${ref} ` }];
   if (item.kind === 'link') items.push({ label: t('링크 주소 복사'), hint: item.target, action: () => copy(item.target, item.target), term: item.target });
-  if (range && !isHtml(path)) {
-    let source = '';
+  let lines = null;   // 그 문서의 원문 줄들 (md)
+  if (!isHtml(path)) {
     try {
-      source = (await getText(docUrl(tab, path))).split(/\r?\n/).slice(range[0] - 1, range[1]).join('\n');
+      lines = (await getText(docUrl(tab, path))).replace(/^﻿/, '').split(/\r\n?|\n/);
     } catch { /* 읽는 사이 지워진 문서 — 원문 항목 없이 */ }
     if (tab !== S.tab) return;
-    if (source) items.push({ label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
+  }
+  const source = range && lines ? lines.slice(range[0] - 1, range[1]).join('\n') : '';
+  if (source) items.push({ label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
+  // 담기·문서에 넣기 (D63) — 그 하나, 또는 지금 목록에 보이는 것 모두
+  const snip = itemSnippet(path, lines, item);
+  if (snip) {
+    items.push('-', { label: t('담기'), hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 넣기"), action: () => addSnippets([snip]) },
+      { label: t('문서에 넣기…'), hint: t('다른 문서나 새 문서에 바로'), action: () => insertSnippets([snip]) });
+  }
+  if (listed.length > 1) {
+    items.push({ label: t('보이는 것 모두 담기 ({n}개)', { n: listed.length }), hint: t('지금 목록의 것을 문서 차례대로 — 거르기·단추로 좁힌 그대로'), action: () => takeAll(listed) });
   }
   items.push('-', ...pathMenuItems(path, true));
   el.classList.add('lec-picked');

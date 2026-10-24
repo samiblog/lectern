@@ -118,7 +118,7 @@ function revealCurrent() {
   if (panel === 'files') $(`#lec-tree ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
-/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | parts(모아 보기). focus: 검색이면 입력칸에 초점 */
+/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | parts(모아 보기) | basket(담기 — D63). focus: 검색이면 입력칸에 초점 */
 export function switchPanel(next, { focus = true } = {}) {
   panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
@@ -127,6 +127,7 @@ export function switchPanel(next, { focus = true } = {}) {
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
   $('#lec-parts').hidden = next !== 'parts';     // 모아 보기 (parts.js)
+  $('#lec-basket').hidden = next !== 'basket';   // 담기 (basket.js)
   if (next === 'search' && focus) $('#lec-search-input').focus();
   emit('panel', next);
 }

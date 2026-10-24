@@ -23,6 +23,7 @@ People read this project's documents with **Lectern** (a Windows document viewer
   - To fit the document width, use `"width": "container"` in Vega-Lite, and only `"height"` in ECharts or `layout.height` in Plotly.
 - Write slide decks in Marp format: put `marp: true` in the front matter and separate slides with `---`. Keep one heading and five or six short bullets per slide — anything longer is cut off at the bottom (pictures, diagrams and charts are shrunk to fit). Speaker notes go in `<!-- … -->`; `paginate: true` adds page numbers.
 - Math is `$…$` and `$$…$$`. Dollar amounts such as `$105` stay as they are (a closing `$` after a space is not math).
+- The `<!-- from: path lines a-b -->` comment before a piece a person inserted with Lectern's Clip records its source — do not remove it.
 
 ## This project
 

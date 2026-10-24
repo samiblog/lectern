@@ -2,14 +2,17 @@
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
 //
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
+// md 문서의 블록·절·고른 글은 '담기'·'문서에 넣기…'(basket.js, D63) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
 // 코드 화면(codeview.js)에서는 줄 메뉴: 이 줄·고른 글 복사, Claude용 위치(@경로 12~20행), 편집기에서 이 줄 열기, 경로 복사, 전체 복사.
-// 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24).
+// 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24 — 넣기는 편집 모드에서 사용자가 저장).
 
 import { S, emit } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems } from './spotlight.js';
+import { partExtent } from './toc.js';
+import { snippetOf, addSnippets, insertSnippets } from './basket.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
 import { $, esc, toast, copyText } from './util.js';
@@ -210,6 +213,28 @@ function sourceItems(range, label = t('원문 복사'), note = '') {
   ];
 }
 
+/** 담기·문서에 넣기 (D63): 이 문서의 줄 범위(range)를 조각으로. info: {kind, name, label, text?, plain?} — basket.js 의 snippetOf */
+function takeItems(range, info, labels = [t('담기'), t('문서에 넣기…')]) {
+  const from = doc;
+  const snip = () => snippetOf(from, range, info);
+  return [{ label: labels[0], hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 넣기"), action: () => addSnippets([snip()]) },
+    { label: labels[1], hint: t('다른 문서나 새 문서에 바로'), action: () => insertSnippets([snip()]) }];
+}
+
+/** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
+function blockTake(picked) {
+  // 박스글·인용 안의 단락·목록이면 박스 통째로 ('> [!WARNING]' 머리줄까지 — 안의 단락만 담으면 박스의 종류를 잃는다)
+  let el = picked;
+  for (let box = picked.closest('blockquote'); box; box = box.parentElement?.closest('blockquote')) el = box;
+  const ext = partExtent(el);
+  const spans = ext.els.map(lineRange).filter(Boolean);
+  if (!spans.length) return null;
+  const range = [Math.min(...spans.map((s) => s[0])), Math.max(...spans.map((s) => s[1]))];
+  // 이름: 캡션, 없으면 목차의 이름표(차트 'Vega-Lite · 제목', 표 '머리행 · 3행 2열' 등), 그 밖의 블록은 그 글
+  const label = ext.caption || ext.label || describe(el.innerText.replace(/\s+/g, ' ').trim());
+  return { range, info: { kind: ext.kind || 'block', name: ext.kind === 'chart' ? t('차트') : kindOf(el), label } };
+}
+
 function blockItems(el, target) {
   const items = [{ header: kindOf(el) }];
   const tag = el.tagName;
@@ -243,7 +268,11 @@ function blockItems(el, target) {
       const anchor = `${doc.path}#${el.id}`;
       items.push({ label: t('절 링크 복사'), hint: anchor, action: () => copyPlain(anchor) });
     }
-    if (section) items.push(...sourceItems(section, t('이 절 원문 복사'), ` (${t("'{name}' 절", { name: el.textContent.trim() })})`));
+    if (section) {
+      const name = el.textContent.trim();
+      items.push(...sourceItems(section, t('이 절 원문 복사'), ` (${t("'{name}' 절", { name })})`), '-',
+        ...takeItems(section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name }, [t('이 절 담기'), t('이 절을 문서에 넣기…')]));
+    }
     if (el.classList.contains('lec-fold') || el.parentElement === $('#lec-view')) {
       const level = +tag[1];
       items.push('-', { label: t('같은 수준({tag}) 모두 접기', { tag }), action: () => foldLevel(level, true) },
@@ -252,8 +281,17 @@ function blockItems(el, target) {
   } else {
     const range = el.matches('.front-matter') ? frontMatterRange() : lineRange(el);
     if (range) items.push(...sourceItems(range));
+    const take = range && !el.matches('.front-matter') && blockTake(el);   // 맨 앞 설정은 담지 않는다
+    if (take) items.push('-', ...takeItems(take.range, take.info));
   }
   return items;
+}
+
+/** 고른 글이 든 블록들의 원문 줄 범위 (고른 글 담기의 담은 곳) */
+function selectionRange(sel) {
+  const spans = [sel.anchorNode, sel.focusNode].map((n) => (n?.nodeType === 1 ? n : n?.parentElement)?.closest('[data-lines]'))
+    .filter(Boolean).map(lineRange).filter(Boolean);
+  return spans.length ? [Math.min(...spans.map((s) => s[0])), Math.max(...spans.map((s) => s[1]))] : null;
 }
 
 /** 인쇄 대화상자. html 문서는 그 문서 자체(자기 스타일)를 인쇄한다 — iframe 에 allow-modals 가 있어야 한다 */
@@ -323,7 +361,11 @@ function openMenu(e, view, x, y) {
   if (spot.length) items.push('-', ...spot);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
-  if (selected) items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected), term: selected }, '-');
+  if (selected) {
+    const range = selectionRange(sel);
+    const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서에 넣기…')]) : [];
+    items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected), term: selected }, ...take, '-');
+  }
   // 표는 가로 스크롤 상자가 테두리를 잘라 내므로 상자에 표시한다
   const mark = el?.tagName === 'TABLE' ? el.closest('.table-wrap') || el : el;
   mark?.classList.add('lec-picked');

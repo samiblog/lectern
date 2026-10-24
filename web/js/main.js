@@ -34,6 +34,7 @@ import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
+import { initBasket, closeInsert } from './basket.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
@@ -219,7 +220,7 @@ function bindKeys() {
       e.preventDefault();
       moveSpotlight(SPOT_KEYS[e.key]);
     } else if (e.key === 'Escape') {
-      if (closePalette() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
+      if (closePalette() || closeInsert() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -284,6 +285,7 @@ async function boot() {
   initWatch();
   initTerminal();
   initEditor();
+  initBasket();
   initSlides();
   initPresent();
   initGather();

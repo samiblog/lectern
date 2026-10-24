@@ -25,7 +25,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 |---|---|
 | Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
 | Tab bar | One tab per open project, open folder (+), and the **Contents** and **Terminal** buttons at the right end |
-| Sidebar (left) | The **Files**, **Recent**, **Search** and **Elements** tabs. Drag its edge to resize (double-click to reset) |
+| Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
 | Main area (center) | Documents, folder overviews and the code view |
 | Contents (right) | The current document's headings and elements such as tables and figures. When the terminal is open, it takes this place |
 | Status bar (bottom) | Document path and modified time, the changes button, and the watching status |
@@ -88,6 +88,20 @@ The **Files** tab is split into three groups.
 - Doc info: a button for each key in the documents' front matter (such as `status: review`, `owner: research`, `tags: [a, b]`); documents are grouped by the values of the chosen key (dates newest first). Indented sub-keys appear joined with a dot, such as `author.name`. Documents without that key are under 'No value' at the end. Click a document to open it; right-click to copy its `@path` or put it into the terminal.
 - File types: each group — documents, code and other files — gets a button per format, such as 'PDF 2', 'Excel 3', 'PNG 10', 'PY 12' or 'IPYNB 2', and the files of the chosen format are collected. Excel, PowerPoint, Word and Hangul files count as one format whatever their extension. Image files appear as thumbnails. The 'Tree order' button switches to the most recently changed files first.
 - Right-click a folder in the 'Code' or 'Other files' list and choose **Collect the files in this folder by type** to collect just that folder.
+
+### Clip
+
+Collect pieces of documents and insert them into another document or a new one.
+
+- **To clip**: right-click a heading for **Clip this section** (the heading and everything under it), or a table, figure, chart, diagram, math, code or paragraph for **Clip** — tables, figures and charts take their caption and the 'Source:' line right below with them. With text selected, right-click for **Clip selected text**. In Elements, right-click an item for **Clip**, or **Clip all shown** (the list as filtered — all the tables in the project, for example).
+- Clips pile up in order in the sidebar **Clip** tab (with a count next to it). Reorder them with ↑ and ↓, remove one with ✕, and click one to go to its place in the original document. A clip keeps the text as it was when clipped, even if the document changes later. Each project tab has its own clips, and they are cleared when Lectern closes.
+- **Insert into a document…** (above the clips, or in a right-click menu for just that piece) asks where: where you are editing (at the cursor), **New document…**, or a document → **At the end**, **At the beginning** or **End of section '…'**.
+- That document **opens in edit mode** with the inserted text lightly shaded. Check it and save with **Ctrl+S** — the file does not change until you save.
+- For a **new document**, type its path (it starts as 'New document.md' in the current document's folder). It is created only in a folder that already exists and only if the name is free, and the file appears **when you save**. Its title comes from the file name.
+- When inserting, Lectern rewrites relative paths of pictures, links and chart data for the target document, brings the footnote definitions along (renaming them if the names clash) and fits heading levels to the place (under the section for 'End of section'). Each piece gets a hidden `<!-- from: research/a.md lines 12-19 -->` comment, so Claude Code can tell where it came from.
+- While another document is open in edit mode, **Insert** on an item in the Clip tab puts it right after the block the cursor is in.
+- **Ask Claude** makes a Claude Code request listing the clips' locations (`@doc lines 12-19 ('name')`) and asking for a new document from them — copy it or put it into the terminal with ▣ (Enter is not pressed).
+- Lines in the code view and blocks of HTML documents cannot be clipped (they have no source lines), and clips go only into Markdown documents.
 
 ## Reading documents
 
@@ -178,7 +192,7 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
-- Only UTF-8 text files up to 2 MB can be edited. Lectern does not create, rename or delete files, and does not edit other files (PDF, Excel and so on).
+- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new document for clips (sidebar Clip tab); it does not rename or delete files, and does not edit other files (PDF, Excel and so on).
 
 ## Reading code
 
@@ -220,7 +234,8 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - Right-clicking a heading, paragraph, table or image outlines it and opens a copy menu.
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
 - **Copy location for Claude** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
-- If you right-click with text selected, 'Copy selected text' appears at the top.
+- If you right-click with text selected, 'Copy selected text' and 'Clip selected text' appear at the top.
+- **Clip** and **Insert into a document…** in block and heading menus put that piece into another document or a new one (see Clip above).
 - The **terminal button** to the right of a copy item puts the same text into the terminal (Enter is not pressed). It is there for selected text, the location for Claude, the source, code, `@path`, the full path and so on, including in the right-click menus of the tree and the 'Code' and 'Other files' lists. See 'Terminal' below.
 
 ## Terminal

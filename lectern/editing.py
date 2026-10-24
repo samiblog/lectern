@@ -1,7 +1,8 @@
 """편집 모드 (D54): 문서·코드 파일의 원문을 주고, 고친 것을 저장한다 (GET /api/source, POST /api/save).
 
-보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드 파일만
-(새로 만들기·이름 바꾸기·지우기는 없다). UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
+보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드 파일만.
+새로 만드는 것은 담은 조각을 넣을 새 Markdown 문서 하나뿐이다 (D63 — create_source: 프로젝트 안의 이미 있는 폴더에, 같은 이름이
+있으면 만들지 않는다). 이름 바꾸기·지우기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
 - 원문의 줄바꿈(CRLF/LF)과 BOM 은 저장할 때 그 파일의 것을 되살린다 (편집기는 LF 로만 다룬다). 섞여 있으면 많은 쪽으로.
 - 그사이 다른 곳(Claude Code 등)이 고쳤으면 덮어쓰지 않는다 — 원문을 줄 때의 내용(SHA-256)과 지금 파일의 내용을 맞춰 보고
   다르면 409. 수정 시각·크기만으로는 같은 순간에 같은 크기로 바뀐 것을 놓친다. 화면이 물어서 덮어쓰기로 하면 force.
@@ -21,10 +22,13 @@ from pathlib import Path
 from typing import Any
 
 from .i18n import t
-from .scanner import doc_kind, is_code
+from .scanner import doc_kind, is_code, resolve_inside
 
 MAX_EDIT_BYTES = 2 * 1024 * 1024
 BOM = b'\xef\xbb\xbf'
+# Windows 가 파일 이름에 받지 않는 글자와 이름 (새 문서 — D63)
+BAD_NAME_CHARS = frozenset('<>:"/\\|?*') | frozenset(chr(c) for c in range(32))
+RESERVED_NAMES = frozenset({'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)), *(f'lpt{i}' for i in range(1, 10))})
 
 
 class EditError(Exception):
@@ -156,4 +160,44 @@ def save_source(path: Path, text: str, expect: Any, force: bool = False) -> dict
         raise EditError(500, t('저장하지 못했습니다: {error}. 고친 내용은 {tmp} 에 남겨 두었습니다', error=reason, tmp=str(tmp)))
     else:
         raise EditError(500, t('저장하지 못했습니다: {error}', error=(error.strerror or str(error)) if error else '?'))
+    return {'hash': _digest(data), 'size': len(data)}
+
+
+def new_doc_path(root: Path, rel: str, exclude: frozenset[str]) -> Path:
+    """새 Markdown 문서를 만들 자리 (D63). rel: 프로젝트 기준 경로 ('reports/요약.md'). 이미 있는 폴더에, .md 만,
+    숨김·제외 폴더 안과 Windows 가 받지 않는 이름은 안 된다 — 트리에 보이고 다시 열 수 있는 문서만 만든다. 안 되면 EditError"""
+    parts = rel.replace('\\', '/').strip('/').split('/')
+    name = parts[-1]
+    if any(p in ('', '.', '..') for p in parts):
+        raise EditError(400, t('새 문서의 경로가 올바르지 않습니다'))
+    stem = os.path.splitext(name)[0]
+    if (doc_kind(name) != 'markdown' or not stem.strip() or name.startswith('.') or name[-1] in ' .'
+            or any(c in BAD_NAME_CHARS for c in name) or stem.lower() in RESERVED_NAMES):
+        raise EditError(400, t('새 문서는 .md 로 끝나는 이름이어야 합니다 — 점으로 시작하거나 : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다'))
+    folders = parts[:-1]
+    excluded = next((f for f in folders if f.lower() in exclude), None)
+    if excluded:
+        raise EditError(400, t('제외 폴더({name}) 안에는 만들지 않습니다 — 트리에 보이지 않습니다', name=excluded))
+    folder = resolve_inside(root, '/'.join(folders)) if folders else root
+    # 정션·링크를 거쳐 다른 곳으로 가는 폴더도 막는다 (트리에 없는 폴더)
+    if folder is None or not folder.is_dir() or os.path.normcase(folder) != os.path.normcase(os.path.join(root, *folders)):
+        raise EditError(404, t('폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다'))
+    return folder / name
+
+
+def create_source(path: Path, text: str) -> dict[str, Any]:
+    """새 문서(path — new_doc_path 가 정한 자리)를 만들어 text 를 쓴다 (LF, BOM 없음). 같은 이름이 있으면 409 — 덮어쓰지 않는다. {hash, size}"""
+    body = text.replace('\r\n', '\n').replace('\r', '\n')
+    data = body.encode('utf-8', errors='replace')
+    if len(data) > MAX_EDIT_BYTES:
+        raise EditError(413, t('{n}MB 가 넘는 파일은 편집할 수 없습니다', n=MAX_EDIT_BYTES // (1024 * 1024)))
+    try:
+        with open(path, 'xb') as fh:   # 있으면 실패 (대소문자만 다른 이름도 — Windows)
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except FileExistsError as exc:
+        raise EditError(409, t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요')) from exc
+    except OSError as exc:
+        raise EditError(500, t('새 문서를 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
     return {'hash': _digest(data), 'size': len(data)}

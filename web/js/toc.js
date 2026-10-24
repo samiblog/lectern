@@ -225,6 +225,22 @@ export function captionOf(kind, el) {
   return null;
 }
 
+/**
+ * 구성 요소를 옮길 때 함께 갈 것 (담기 — D63): {kind, caption(글), label(목차의 이름표 — 'Vega-Lite · 제목'),
+ * els: [캡션 단락, 요소, 바로 뒤의 출처 단락('자료: …')] 가운데 있는 것}. 구성 요소가 아니면 {kind: null, caption: '', label: '', els: [el]}
+ */
+export function partExtent(el) {
+  const kind = partKind(el);
+  if (!kind || PARTS[kind].more) return { kind: null, caption: '', label: '', els: [el] };
+  const { label = '' } = describe(kind, el, 0);
+  const cap = captionOf(kind, el);
+  const box = (kind === 'table' && el.closest('.table-wrap')) || (kind === 'figure' && loneHolder(el)) || (kind === 'code' && el.closest('.code-block')) || el;
+  const last = cap && box.compareDocumentPosition(cap.el) & Node.DOCUMENT_POSITION_FOLLOWING ? cap.el : box;   // 아래 캡션이면 그 뒤
+  const next = last.nextElementSibling;
+  const source = next?.tagName === 'P' && SOURCE.test(squeeze(next.textContent)) ? next : null;
+  return { kind, caption: cap?.text || '', label, els: [cap?.el, el, source].filter(Boolean) };
+}
+
 function tableLabel(table, cap) {
   const rows = table.tBodies[0]?.rows.length ?? table.rows.length;
   const cols = Math.max(0, ...[...table.rows].map((r) => r.cells.length));

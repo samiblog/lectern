@@ -48,6 +48,7 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 - Write to-dos as checklists (`- [ ] task`, `- [x]` when done) — Lectern's Elements collects the open ones across the project.
 - Put a table's or figure's source on the line just below it as `Source: organization (year)` — it shows under Elements → Sources. Footnotes (`[^1]`) are collected there too.
 - Give plan, decision and report documents the same front matter keys, such as `status`, `owner`, `updated` (YYYY-MM-DD) and `tags: [a, b]` — Elements → Doc info groups documents by each key's values.
+- When a person inserts pieces of other documents with Lectern's Clip, each piece is preceded by a `<!-- from: path lines a-b -->` comment (in a Korean interface, `<!-- 담은 곳: … -->`). It records the source — keep it when editing (it is not shown on screen), and leave the same kind of comment when asked to bring pieces over.
 
 ### Callouts
 

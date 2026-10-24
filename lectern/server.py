@@ -416,20 +416,39 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/save')
     def api_save() -> Any:
-        """{p, path, text, hash, force} — 고친 글을 저장한다. 지금 파일의 내용이 원문을 줄 때(hash)와 다르면 409 (force 면 덮어씀).
-        없는 파일은 404 (새로 만들지 않는다). {hash, size} — 다음 저장에 쓴다"""
+        """{p, path, text, hash, force, create} — 고친 글을 저장한다. 지금 파일의 내용이 원문을 줄 때(hash)와 다르면 409 (force 면 덮어씀).
+        없는 파일은 404. create 면 새 Markdown 문서를 만든다 (D63 — 이미 있는 폴더에, 같은 이름이 있으면 409). {hash, size} — 다음 저장에 쓴다"""
         data = body()
         rel = data.get('path')
         text = data.get('text')
         if not isinstance(rel, str) or not isinstance(text, str):
             abort(400)
-        target = resolve_inside(project_of(data.get('p')).root, rel)
+        project = project_of(data.get('p'))
+        if data.get('create') is True:
+            try:
+                return jsonify(editing.create_source(editing.new_doc_path(project.root, rel, project.exclude), text))
+            except editing.EditError as exc:
+                return jsonify(error=exc.message), exc.status
+        target = resolve_inside(project.root, rel)
         if target is None:   # 없음·밖·숨김 — 새로 만들지 않는다
             return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
         try:
             return jsonify(editing.save_source(target, text, data.get('hash'), bool(data.get('force'))))
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
+
+    @app.get('/api/new-doc')
+    def api_new_doc() -> Any:
+        """?p=&path= — 그 자리에 새 문서를 만들 수 있는지 (D63 — 넣을 곳을 고를 때, 만드는 것은 저장할 때). 읽기만 한다.
+        {path(프로젝트 기준 — 폴더는 실제 이름)} 또는 {error, status} — 물음에 대한 답이라 늘 200 (화면이 실패한 요청으로 적지 않게)"""
+        project = arg_project()
+        try:
+            target = editing.new_doc_path(project.root, request.args.get('path', ''), project.exclude)
+        except editing.EditError as exc:
+            return jsonify(error=exc.message, status=exc.status)
+        if target.exists():
+            return jsonify(error=t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요'), status=409)
+        return jsonify(path=target.relative_to(project.root).as_posix())
 
     @app.post('/api/editing')
     def api_editing() -> Any:

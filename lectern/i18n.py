@@ -81,6 +81,14 @@ EN: dict[str, str] = {
     '저장하지 못했습니다: {error}. 고친 내용은 {tmp} 에 남겨 두었습니다': 'Could not save: {error}. Your edited text was kept in {tmp}',
     '저장하지 않은 편집이 있습니다:\n{files}\n\n닫으면 이 내용은 사라집니다. 닫을까요?':
         'There are unsaved edits:\n{files}\n\nClosing will discard them. Close anyway?',
+    # editing.py — 새 문서 (D63)
+    '새 문서의 경로가 올바르지 않습니다': 'The path of the new document is not valid.',
+    '새 문서는 .md 로 끝나는 이름이어야 합니다 — 점으로 시작하거나 : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다':
+        'The new document needs a name ending in .md — names starting with a dot or containing characters such as : * ? " < > | cannot be used.',
+    '제외 폴더({name}) 안에는 만들지 않습니다 — 트리에 보이지 않습니다': 'Not created inside an excluded folder ({name}) — it would not show in the tree.',
+    '폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다': 'There is no such folder — a new document is only created in a folder that already exists.',
+    '같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요': 'A file with that name already exists — choose another name.',
+    '새 문서를 만들지 못했습니다: {error}': 'Could not create the new document: {error}',
     # state.py
     '폴더가 아닙니다: {path}': 'Not a folder: {path}',
     '탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요': 'You can open up to {n} tabs. Close a tab you are not using and try again.',

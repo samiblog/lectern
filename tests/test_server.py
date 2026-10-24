@@ -633,6 +633,25 @@ def test_source_and_save_endpoints(client, state, project, pid):
     assert missing.status_code == 404 and '없습니다' in missing.get_json()['error'] and not (project / 'docs' / 'new.md').exists()   # 새로 만들지 않는다
 
 
+def test_new_doc_endpoints(client, project, pid):
+    """새 문서 (D63): 고를 때 확인(GET /api/new-doc — 만들지 않음), 저장할 때 만듦(POST /api/save create)"""
+    assert client.get(f'/api/new-doc?p={pid}&path=docs/모음.md').get_json() == {'path': 'docs/모음.md'}
+    assert not (project / 'docs' / '모음.md').exists()
+    answer = lambda rel: client.get(f'/api/new-doc?p={pid}&path={rel}').get_json().get('status')   # 물음의 답 — 늘 200
+    assert answer('docs/10-a.md') == 409       # 이미 있음
+    assert answer('nope/a.md') == 404          # 없는 폴더
+    assert answer('.claude/a.md') == 404       # 숨김
+    assert answer('docs/a.txt') == 400
+    r = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': '# 모음\n', 'create': True})
+    assert r.status_code == 200 and (project / 'docs' / '모음.md').read_text(encoding='utf-8') == '# 모음\n'
+    again = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': 'x', 'create': True})
+    assert again.status_code == 409 and (project / 'docs' / '모음.md').read_text(encoding='utf-8') == '# 모음\n'
+    ok = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': '# 모음\n더\n', 'hash': r.get_json()['hash']})
+    assert ok.status_code == 200
+    assert client.post('/api/save', json={'p': pid, 'path': '../x.md', 'text': 'x', 'create': True}).status_code == 400
+    assert client.post('/api/save', json={'p': pid, 'path': 'docs/n.md', 'text': 'x', 'create': 'yes'}).status_code == 404   # create 는 true 만
+
+
 def test_editing_reports_unsaved_files(client, state):
     assert state.unsaved == []
     assert client.post('/api/editing', json={'dirty': ['samples: docs/a.md', 3]}).status_code == 200

@@ -2126,6 +2126,62 @@ def run(headed: bool) -> None:
                   and {'author.name', 'author.team', 'status'} <= set(nested_keys) and 'name' not in nested_keys,
                   f"모아 보기: 문서가 없는 폴더로 가는 링크는 '폴더'(깨짐 아님), 문서 정보의 들여 쓴 키는 author.name 처럼, name 은 키로 안 보임 ({meta_links}, {nested_keys})")
 
+            print('[담기]')   # D63 — 우클릭 담기, 담기 탭, 새 문서(다른 폴더 — 그림 경로를 맞춤)에 넣고 저장, 기존 문서 끝에 넣고 버리기
+            page.evaluate("async () => (await import('/static/js/nav.js')).navigate({ type: 'doc', path: 'caps.md' })")
+            page.wait_for_selector('#lec-view img[alt="가"]')
+
+            def take(selector: str) -> None:
+                page.locator(selector).first.click(button='right')
+                page.wait_for_selector('#lec-menu:not([hidden])')
+                page.locator('#lec-menu button[data-i]', has_text='담기').first.click()
+
+            take('#lec-view table')
+            take('#lec-view img[alt="가"]')
+            page.click('.side-tabs button[data-tab="basket"]')
+            bk = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-basket-list .bk-item .pt-name')].map(e => e.textContent),
+              count: document.querySelector('#lec-basket-count').textContent })''')
+            page.click('#lec-basket-insert')
+            page.wait_for_selector('#lec-insert:not([hidden]) #lec-insert-list li.ins-new')
+            page.click('#lec-insert-list li.ins-new')
+            page.fill('#lec-insert-input', 'data/모음')
+            page.keyboard.press('Enter')
+            page.wait_for_selector('.lec-editor.creating .CodeMirror')
+            cm_text = lambda: page.evaluate("document.querySelector('.lec-editor .CodeMirror').CodeMirror.getValue()")
+            new_text = cm_text()
+            new_doc = tables / 'data' / '모음.md'
+            not_yet = not new_doc.exists()
+            shot('24-basket-new-doc')
+            page.keyboard.press('Control+s')
+            wait_until(page, "!document.querySelector('.lec-editor.creating')", 5000)
+            page.keyboard.press('Escape')
+            drawn = wait_until(page, '''(() => { const v = document.querySelector('#lec-view'); const img = v.querySelector('img');
+              return !document.querySelector('.lec-editor') && v.querySelector('h1')?.textContent === '모음' && !!v.querySelector('table')
+                && !!img && img.complete && img.naturalWidth > 0 && !v.innerHTML.includes('담은 곳'); })()''', 10000)
+            check(bk['rows'] == ['〈표 Ⅱ-15〉 철재의 HS코드', '[그림 1] 분기별 가격 범위'] and bk['count'] == '2'
+                  and new_text.startswith('# 모음\n\n<!-- 담은 곳: caps.md 3~7행 -->\n**〈표 Ⅱ-15〉 철재의 HS코드**\n')
+                  and '![가](../img/a.svg)' in new_text and '[그림 1] 분기별 가격 범위' in new_text
+                  and not_yet and new_doc.exists() and new_doc.read_text(encoding='utf-8') == new_text and drawn,
+                  f"담기: 우클릭 담기(캡션까지) → 담기 탭 → 새 문서(data/모음.md — 그림 경로를 맞춤)는 저장할 때 만들고 깨지지 않게 그림 ({bk}, {new_text[:60]!r})")
+            page.click('.side-tabs button[data-tab="basket"]')
+            page.click('#lec-basket-insert')
+            page.fill('#lec-insert-input', 'README')
+            page.wait_for_selector('#lec-insert-list li.ins-doc')
+            page.locator('#lec-insert-list li.ins-doc').first.click()
+            page.wait_for_selector('#lec-insert-list li.ins-place')
+            page.locator('#lec-insert-list li.ins-place', has_text='맨 끝').click()
+            page.wait_for_selector('.lec-editor:not(.creating) .CodeMirror')
+            readme_before = (tables / 'README.md').read_text(encoding='utf-8')
+            readme_text = cm_text()
+            inserted = page.locator('.lec-editor .ed-inserted').count()
+            asked = []
+            page.once('dialog', lambda d: (asked.append(d.message), d.accept()))   # 저장하지 않은 것 — 버리고 닫기
+            page.keyboard.press('Escape')
+            wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            check(readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
+                  and inserted > 0 and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
+                  f'담기: 기존 문서 맨 끝에 넣으면 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({inserted}, {len(asked)})')
+            page.click('.side-tabs button[data-tab="files"]')
+
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)
             page.wait_for_selector('#lec-view h1')
@@ -2289,10 +2345,20 @@ def run(headed: bool) -> None:
             page.keyboard.type('Write-Host 흰글자 -ForegroundColor White; Write-Host 회색 -ForegroundColor DarkGray; $n = 42')
             page.keyboard.press('Enter')
             term_has('회색')
+
+            def settled_colors() -> dict:
+                """스타일을 바꾸면 터미널은 바탕을 먼저 바꾸고 글자는 한 그림 뒤에 다시 그린다 — 그 사이(바탕만 새 색)를 읽지 않게 3초까지 기다린다"""
+                for _ in range(30):
+                    c = term_colors()
+                    if c['worst'] >= 4.45:
+                        return c
+                    page.wait_for_timeout(100)
+                return c
+
             use_theme('default')
-            c_light = term_colors()
+            c_light = settled_colors()
             use_theme('solarized-dark')
-            c_dark = term_colors()
+            c_dark = settled_colors()
             shot('10-terminal-solarized-dark')
             check(c_light['bg'] == c_light['code'] == c_light['panel'] and c_light['light'] and c_light['worst'] >= 4.45
                   and c_dark['bg'] == c_dark['code'] == 'rgb(7, 54, 66)' and not c_dark['light'] and c_dark['worst'] >= 4.45,
@@ -2369,7 +2435,9 @@ def run(headed: bool) -> None:
             page.locator('#lec-content').focus()
             before = g_ui()
             page.keyboard.press('Control+Shift+Backquote')
-            wait_until(page, "document.documentElement.classList.contains('gather-on') && document.querySelectorAll('.g-tile').length === 2")
+            # 칸의 초점은 한 그림 뒤에 간다 (gather.js 의 requestAnimationFrame) — 그것까지 기다린다
+            wait_until(page, "document.documentElement.classList.contains('gather-on') && document.querySelectorAll('.g-tile').length === 2"
+                             " && !!document.activeElement?.closest('.g-tile')")
             g1 = g_ui()
             shot('11-gather')
             check(before['count'] == '1' and g1['on'] and not g1['hidden'] and g1['pressed'] == 'true' and g1['cols'] == 2
@@ -2600,7 +2668,7 @@ def run_english(headed: bool) -> None:
               sub: document.querySelector('.ov-sub').textContent, when: document.querySelector('.ov-files .when')?.textContent })''')
             shot('en-01-overview')
             scan('개요')
-            check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Elements']
+            check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Elements', 'Clip']
                   and ui['sub'] == '3 documents, 1 folder' and ui['when'] == 'just now',
                   f'설정 language: en 이면 화면이 영어 — 툴바·사이드바 탭·개수(복수형)·날짜 ({ui})')
             page.locator('#lec-tree .row.file', has_text='README').click()
