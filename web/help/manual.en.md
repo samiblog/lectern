@@ -112,6 +112,14 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 - The **Style** list has 24 styles; picking one changes the document and the toolbar and sidebar colors together. The ∧ ∨ buttons next to the list step through the styles so you can compare them. 'Auto' follows the Windows dark mode.
 - How the style list is grouped (by use, by mood or by brightness) is chosen in Settings.
 
+### My styles
+
+- You can make styles of your own. Each CSS file is one style; put it in the `%APPDATA%\Lectern\styles` folder and it appears under **My styles** at the bottom of the style list.
+- You do not have to write CSS yourself. Click **Copy request for Claude Code** in Settings, paste it into Claude Code, and add the look you want (for example 'navy headings, a dark navy table header with white text, serif body text'). The request gives the location of the style guide that comes with the app and the folder to save in, so the AI reads the guide and makes the file. The terminal button next to it puts the request straight into the terminal.
+- While that style is selected, changes to its file are applied again within a few seconds — so you can keep asking ('make the headings larger') and see the result right away.
+- **Open style folder** in Settings opens the folder. Deleting a file removes it from the list.
+- Anything that would load fonts or images from the internet is removed by the app; only fonts installed on the PC are used.
+
 ### Section focus
 
 - The **Focus** button in the toolbar keeps the section you are reading sharp and dims the rest.
@@ -207,6 +215,8 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
 | Show web images | Load https images in documents. When off, they show as links |
+| My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
+| Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |
 
 Settings that are not in the window are edited with **Open settings file** in your editor (`%APPDATA%\Lectern\config.json`). Changes apply when you save; settings that affect the tree take effect when you press F5.

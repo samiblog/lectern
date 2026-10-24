@@ -592,6 +592,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* 설정 창: 낮은 창에서도 '닫기'까지 보이게 — 넘치면 상자 안에서 스크롤 */
 #lec-settings .dialog-box { margin-top: 6vh; max-height: 88vh; overflow: auto; }
 .opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 4px; border-radius: 6px; cursor: pointer; }
+/* 설정 창의 '내 스타일' (D53): 설명과 버튼들 */
+.opt-block { margin: 0 0 6px; padding: 8px 4px 10px; border-bottom: 1px solid var(--ui-border); }
+.opt-block .opt-head { display: flex; flex-direction: column; gap: 1px; }
+.opt-block small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+.opt-btns { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }
+.opt-btns .icon-btn { margin-left: -8px; }
 .opt:hover { background: var(--ui-hover); }
 .opt input { margin: 3px 0 0; accent-color: var(--ui-accent); }
 .opt span { display: flex; flex-direction: column; gap: 1px; }

@@ -11,6 +11,7 @@
 <link id="lec-hljs-css" rel="stylesheet" href="/static/vendor/highlight/github.min.css">
 <link rel="stylesheet" href="/static/themes/base.css">
 <link id="lec-theme-css" rel="stylesheet" href="/static/themes/default.css">
+<link id="lec-user-css" rel="stylesheet"><!-- 내 스타일 (D53 — theme.js 가 바탕 스타일 위에 얹는다) -->
 <link rel="stylesheet" href="/static/css/app.css">
 <script src="/static/vendor/markdown-it/markdown-it.min.js"></script>
 <script src="/static/vendor/markdown-it/markdown-it-anchor.min.js"></script>
@@ -269,6 +270,14 @@
       <label><input type="radio" name="theme_groups" value="use"><span>용도별<small>업무·보고 / 읽기·출판 / 개발·기술 / 어두운</small></span></label>
       <label><input type="radio" name="theme_groups" value="mood"><span>분위기별<small>깔끔한 / 따뜻한·종이 / 색이 있는 / 어두운</small></span></label>
       <label><input type="radio" name="theme_groups" value="tone"><span>밝기별<small>밝은 / 종이·책 / 어두운</small></span></label>
+    </div>
+    <div class="opt-block" aria-labelledby="lec-mystyles-title">
+      <span class="opt-head"><b id="lec-mystyles-title">내 스타일</b><small id="lec-mystyles-info">CSS 파일 하나가 스타일 하나입니다. 스타일 폴더에 저장하면 툴바 스타일 목록 맨 아래 '내 스타일'에 나오고, 고치면 바로 반영됩니다</small></span>
+      <div class="opt-btns">
+        <button type="button" id="lec-mystyles-folder" class="text-btn">스타일 폴더 열기</button>
+        <button type="button" id="lec-mystyles-prompt" class="text-btn" title="스타일 설명서의 위치와 저장할 폴더를 적은 요청 글 — Claude Code 에 붙여 넣고 원하는 모양을 이어서 적습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
+      </div>
     </div>
     <label class="opt"><input type="checkbox" data-key="restore_last"><span><b>마지막 위치에서 시작</b><small>폴더를 열면 마지막에 보던 문서와 스크롤 위치로 엽니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>

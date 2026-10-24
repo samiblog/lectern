@@ -9,7 +9,7 @@ import pytest
 from conftest import write
 
 import app as lectern_app
-from lectern import osutil, state as state_module, terminal
+from lectern import osutil, state as state_module, styles, terminal
 from lectern.config import Config
 from lectern.scanner import is_code, iter_files
 from lectern.server import create_app
@@ -568,3 +568,24 @@ def test_search_endpoint_code(client, project, pid):
     assert both['docs'] == 1 and both['code'] == 1
     code = client.get(f'/api/search?p={pid}&q={q}&docs=0&code=1').get_json()
     assert [r['path'] for r in code['results']] == ['src/tool.py'] and code['results'][0]['hits'][0]['line'] == 1
+
+
+# ---- 내 스타일 (D53) ----------------------------------------------------------------
+
+def test_styles_endpoints(client, tmp_path, monkeypatch):
+    folder = tmp_path / 'cfg' / 'styles'
+    monkeypatch.setattr(styles, 'styles_dir', lambda: folder)
+    r = client.get('/api/styles').get_json()
+    assert r['styles'] == [] and r['dir'] == str(folder) and r['guide'].endswith('styles.md') and 'default' in r['builtin']
+    opened = []
+    monkeypatch.setattr(osutil, 'open_default', lambda p: opened.append(p))
+    r = client.post('/api/styles/folder', json={}).get_json()
+    assert folder.is_dir() and opened == [folder] and r['path'] == str(folder)   # 없으면 만들고 탐색기로
+    write(folder / '내 스타일.css', '/* lectern-style\nname: 내 것\n*/\n@import "https://x/y.css";\n:root { --md-bg: #fafafa; }')
+    r = client.get('/api/styles').get_json()
+    assert [(s['id'], s['name']) for s in r['styles']] == [('user:내 스타일', '내 것')]
+    resp = client.get('/userstyle/' + '내 스타일.css')
+    assert resp.status_code == 200 and resp.mimetype == 'text/css' and 'https://' not in resp.get_data(as_text=True)
+    assert resp.headers['Cache-Control'] == 'no-cache'
+    assert client.get('/userstyle/nope.css').status_code == 404
+    assert client.get('/userstyle/..%2Fconfig.json').status_code == 404

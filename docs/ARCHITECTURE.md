@@ -119,7 +119,7 @@ flowchart LR
 | `tabs` | `[]` | 불가 | 열어 둔 프로젝트 탭(왼쪽부터 폴더 경로). 다음 실행에 되살린다. 서버가 탭을 열고 닫고 고를 때 기록. 10개까지 |
 | `active_tab` | `0` | 불가 | 선택돼 있던 탭의 순번 |
 | `language` | `"auto"` | 가능 | 화면 언어: `auto`(Windows 표시 언어 — 한국어면 ko, 아니면 en)·`ko`·`en`. 설정 창 맨 위, 바꾸면 페이지를 다시 불러옴 (D46) |
-| `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`) |
+| `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`, 내 스타일은 `user:<파일 이름>` — D53) |
 | `font_scale` | `1.0` | 가능 | 문서 글자 크기 배율 0.8~2 (툴바 − 100% +, 숫자면 정수도 됨) |
 | `theme_groups` | `"use"` | 가능 | 스타일 목록을 묶는 방식: `use`(용도별)·`mood`(분위기별)·`tone`(밝기별) (설정 창, D30) |
 | `show_titles` | `false` | 가능 | 트리·최근 변경에 파일 이름 대신 문서 제목 (트리의 '제목' 버튼). 기본은 파일 이름이고 마우스를 올리면 제목 |
@@ -174,6 +174,9 @@ flowchart LR
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
+| `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
+| `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
+| `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll}` | 그 탭에서 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
@@ -336,6 +339,12 @@ sequenceDiagram
 - 강조(선택된 행)는 선택된 탭의 문서를 따른다.
 - 파일이 바뀌어 트리·최근 변경·검색 결과를 다시 그려도 키보드 초점은 같은 행에 남는다 (`util.keepFocus`).
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`tabs.js` 의 `loadTab`). 그동안 트리는 비워 둔다.
+
+### 내 스타일 (theme.js, settings.js, lectern/styles.py — D53)
+- 설정 폴더의 `styles\*.css`. 서버(`styles.list_styles`)가 맨 앞 머리 주석 `/* lectern-style … */` 의 `name`·`dark`·`base` 를 읽는다 (없으면 파일 이름·밝음·default/dark, 틀린 `base` 도 그것). id 는 `user:<파일 이름>`.
+- 화면: 시작할 때 `loadUserStyles()` 로 목록을 받은 뒤 스타일을 입힌다 (고른 스타일이 내 것일 수 있으므로). 스타일 목록 맨 아래 '내 스타일' 묶음. 고르면 `#lec-theme-css` 에 바탕 스타일, `#lec-user-css` 에 `/userstyle/<파일>?v=<수정 시각>`, `data-ui` 는 `dark` 로. 다이어그램 색은 CSS 변수에서(`mermaidFromCss`). 스타일 없는 html 문서(iframe)에도 둘 다 넣는다 (`htmldoc.js`), 터미널 색은 두 링크의 `load` 때 다시.
+- 3초마다(창이 보일 때) 목록을 다시 받아 바뀌었으면 목록을 다시 채우고 `user-styles` 이벤트, 보는 스타일이 내 것이면 다시 입히고 `refresh-view` (다이어그램 색).
+- 설정 창 '내 스타일': 스타일 수, '스타일 폴더 열기'(`POST /api/styles/folder`), 'Claude Code용 요청 복사'(설명서·폴더의 전체 경로를 적은 한 줄), 터미널 버튼(`term-paste`, D51).
 
 ### 모아 보기 (parts.js)
 - 맨 위 '문서 속 요소' / '파일 종류'(`#lec-parts-mode`, D50 — `tab.side.parts.mode`). 아래는 문서 속 요소이고, 파일 종류는 이 절 끝에.

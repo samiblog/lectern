@@ -653,6 +653,37 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1')   # 마지막에 보던 문서나 폴더 개요 (마지막 위치 복원)
             check(saved == 'paper' and page.evaluate("document.documentElement.dataset.theme") == 'paper'
                   and page.input_value('#lec-theme') == 'paper', f'고른 스타일은 다음 실행에도 그대로 ({saved})')
+            # 내 스타일 (D53): 설정 폴더의 styles\*.css — 저장하면 목록 맨 아래 '내 스타일'에, 고르면 바탕 스타일 위에, 고치면 바로 다시
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()   # 다시 불러온 뒤 폴더 개요일 수 있다 — 문서에서 본다
+            page.wait_for_selector('#lec-view.md-body h1:has-text("렌더링 기능 점검")')
+            mine = tmp / 'config' / 'styles'
+            mine.mkdir(parents=True, exist_ok=True)
+            css = mine / '점검.css'
+            css.write_text('/* lectern-style\n   name: 점검 스타일\n   base: report\n*/\n'
+                           ':root { --md-heading: rgb(170, 20, 20); }\n.md-body h1 { letter-spacing: 3px; }\n'
+                           'body { background-image: url(https://example.invalid/leak.png); }\n', encoding='utf-8')
+            listed = wait_until(page, "!!document.querySelector('#lec-theme optgroup:last-of-type option[value=\"user:점검\"]')", 8000)
+            group = page.evaluate("document.querySelector('#lec-theme optgroup:last-of-type').label")
+            page.select_option('#lec-theme', 'user:점검')
+            applied = wait_until(page, "getComputedStyle(document.querySelector('#lec-view h1')).color === 'rgb(170, 20, 20)'", 5000)
+            base_css = page.evaluate("document.querySelector('#lec-theme-css').getAttribute('href')")
+            spacing = page.evaluate("getComputedStyle(document.querySelector('#lec-view h1')).letterSpacing")
+            css.write_text(css.read_text(encoding='utf-8').replace('170, 20, 20', '20, 120, 20'), encoding='utf-8')
+            live = wait_until(page, "getComputedStyle(document.querySelector('#lec-view h1')).color === 'rgb(20, 120, 20)'", 8000)
+            page.click('#lec-btn-settings')
+            info = page.inner_text('#lec-mystyles-info')
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.click('#lec-mystyles-prompt')
+            wait_until(page, "document.querySelector('#lec-toast').textContent.includes('복사')")
+            prompt = page.evaluate('navigator.clipboard.readText()')
+            page.click('#lec-settings-close')
+            check(listed and group == '내 스타일' and applied and base_css.endswith('/report.css') and spacing == '3px' and live
+                  and '내 스타일 1개' in info and str(mine) in prompt and 'styles.md' in prompt,
+                  f"내 스타일: 설정 폴더 styles 에 저장하면 목록 맨 아래 '내 스타일'에, 고르면 바탕 스타일(report) 위에, 고치면 바로 다시 입힘, 설정 창의 요청 글 ({group}, {base_css}, {info[:12]})")
+            css.unlink()
+            gone = wait_until(page, "!document.querySelector('#lec-theme option[value=\"user:점검\"]')", 8000)
+            check(gone and page.evaluate("document.documentElement.dataset.theme") == 'default' and not page.evaluate("document.querySelector('#lec-user-css').getAttribute('href')"),
+                  '내 스타일 파일을 지우면 목록에서 빠지고 기본 스타일로')
             use_theme('default')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')

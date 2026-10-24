@@ -1,9 +1,12 @@
 // 문서 스타일. '자동'은 Windows 다크 모드 설정을 따라 기본/다크를 고른다.
 // 고른 스타일은 설정(theme)에 저장되어 다음 실행에도 그대로 열린다.
+// 내 스타일 (D53): 설정 폴더의 styles\*.css (GET /api/styles) — id 'user:<파일 이름>'. 머리 주석이 정한 바탕 스타일(base)의 파일 위에
+// 그 파일(/userstyle/<파일> — 서버가 인터넷 길을 지운 것)을 #lec-user-css 로 얹는다. 목록 맨 아래 '내 스타일' 묶음.
+// 3초마다 목록을 다시 받아, 파일이 생기거나 고쳐지면(Claude Code 가 저장하면) 바로 반영한다.
 
 import { S, emit } from './store.js';
 import { $, esc } from './util.js';
-import { saveConfig } from './api.js';
+import { saveConfig, getJSON } from './api.js';
 import { t } from './i18n.js';
 
 // 스타일 추가: web/themes/<id>.css 를 만들고 여기에 한 줄 추가 (선택 목록은 이 표로 만든다)
@@ -55,38 +58,92 @@ export const grouping = () => (GROUPINGS[S.config.theme_groups] ? S.config.theme
 
 const media = window.matchMedia('(prefers-color-scheme: dark)');
 
+// ---- 내 스타일 (D53) ----------------------------------------------------------------
+const USER_POLL_MS = 3000;
+let userStyles = [];                    // [{id, file, name, dark, base, mtime}]
+let userPlace = { dir: '', guide: '' };   // 스타일 폴더와 만드는 법(설명서) 파일의 전체 경로
+
+/** 내 스타일 목록을 받는다. 받았으면 true */
+export async function loadUserStyles() {
+  try {
+    const d = await getJSON('/api/styles');
+    userStyles = d.styles || [];
+    userPlace = { dir: d.dir || '', guide: d.guide || '' };
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** 설정 창이 쓰는 것: 스타일 폴더·설명서 경로와 스타일 수 */
+export const userStyleInfo = () => ({ ...userPlace, count: userStyles.length });
+
+const userStyle = (id) => userStyles.find((s) => s.id === id);
+const themeOf = (id) => THEMES[id] || userStyle(id);
+
+/** 파일이 생기거나 고쳐졌으면 목록·화면에 반영한다 (보는 중인 내 스타일이면 다시 입히고 다시 그린다 — 다이어그램 색) */
+async function syncUserStyles() {
+  if (document.hidden) return;
+  const before = JSON.stringify(userStyles);
+  if (!(await loadUserStyles()) || JSON.stringify(userStyles) === before) return;
+  fillPicker();
+  emit('user-styles');
+  if ((S.config.theme || '').startsWith('user:')) {
+    applyTheme();
+    emit('refresh-view');
+  }
+}
+
 export function resolvedTheme() {
   const id = S.config.theme || 'auto';
   if (id === 'auto') return media.matches ? 'dark' : 'default';
-  return THEMES[id] ? id : 'default';
+  return themeOf(id) ? id : 'default';
+}
+
+/** 내 스타일의 Mermaid 색: 그 스타일의 CSS 변수에서 (바탕·표 머리·제목·글자·코드 바탕·흐린 글자) */
+function mermaidFromCss(dark) {
+  const css = getComputedStyle(document.documentElement);
+  const v = (name, fallback) => css.getPropertyValue(name).trim() || fallback;
+  const bg = v('--md-bg', dark ? '#1f242b' : '#ffffff');
+  const heading = v('--md-heading', dark ? '#eef2f5' : '#1b3a5c');
+  return mermaidColors(dark, bg, v('--md-th-bg', dark ? '#2a313a' : '#e8eff7'), heading, heading,
+    v('--md-code-bg', dark ? '#333b45' : '#f1f4f8'), bg, v('--md-muted', dark ? '#9aa5b1' : '#5f6b78'), v('--md-fg', dark ? '#d5dbe1' : '#1f2933'));
 }
 
 /** mermaid.initialize 에 넘길 테마 설정 */
 export function mermaidTheme() {
-  const th = THEMES[resolvedTheme()];
-  return { theme: 'base', themeVariables: th.mermaid };
+  const id = resolvedTheme();
+  const th = THEMES[id];
+  return { theme: 'base', themeVariables: th ? th.mermaid : mermaidFromCss(userStyle(id).dark) };
 }
 
 export function applyTheme() {
   const id = resolvedTheme();
-  const th = THEMES[id];
-  $('#lec-theme-css').href = `/static/themes/${id}.css`;
+  const th = themeOf(id);
+  const user = userStyle(id);
+  $('#lec-theme-css').href = `/static/themes/${user ? user.base : id}.css`;
+  const mine = $('#lec-user-css');
+  if (user) mine.href = `/userstyle/${encodeURIComponent(user.file)}?v=${user.mtime}`;
+  else mine.removeAttribute('href');
   $('#lec-hljs-css').href = `/static/vendor/highlight/${th.dark ? 'github-dark' : 'github'}.min.css`;
   document.documentElement.dataset.ui = th.dark ? 'dark' : 'light';
   document.documentElement.dataset.theme = id;
-  $('#lec-theme').value = S.config.theme || 'auto';
+  $('#lec-theme').value = themeOf(S.config.theme) ? S.config.theme : 'auto';
   updateSteps();
 }
 
-/** 스타일 선택 목록을 지금 묶는 방식(설정 theme_groups)으로 채운다. 설정 창에서 방식을 바꾸면 다시 부른다 */
+/** 스타일 선택 목록을 지금 묶는 방식(설정 theme_groups)으로 채운다 (맨 아래 '내 스타일'). 설정 창에서 방식을 바꾸면 다시 부른다 */
 export function fillPicker() {
   const kind = grouping();
   const groups = Object.entries(GROUPINGS[kind].groups).map(([key, label]) => {
     const items = Object.entries(THEMES).filter(([, th]) => groupOf(th, kind) === key);
     return `<optgroup label="${esc(label)}">${items.map(([id, th]) => `<option value="${esc(id)}">${esc(th.name)}</option>`).join('')}</optgroup>`;
   });
-  $('#lec-theme').innerHTML = `<option value="auto">${t('자동 (시스템)')}</option>${groups.join('')}`;
-  $('#lec-theme').value = S.config.theme || 'auto';
+  const mine = userStyles.length
+    ? `<optgroup label="${esc(t('내 스타일'))}">${userStyles.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</optgroup>`
+    : '';
+  $('#lec-theme').innerHTML = `<option value="auto">${t('자동 (시스템)')}</option>${groups.join('')}${mine}`;
+  $('#lec-theme').value = themeOf(S.config.theme) ? S.config.theme : 'auto';
   updateSteps();
 }
 
@@ -121,4 +178,5 @@ export function initTheme() {
     emit('refresh-view');
   });
   applyTheme();
+  setInterval(syncUserStyles, USER_POLL_MS);
 }

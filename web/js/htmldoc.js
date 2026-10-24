@@ -170,6 +170,7 @@ function prepare(frame, path, tab) {
   } else {
     // 스타일이 없는 문서: 지금 고른 Lectern 스타일을 입히고, 바탕과 색 모드도 앱과 맞춘다
     doc.head.append(link(doc, '/static/themes/base.css'), link(doc, $('#lec-theme-css').href));
+    if ($('#lec-user-css').getAttribute('href')) doc.head.append(link(doc, $('#lec-user-css').href));   // 내 스타일 (D53)
     doc.body.classList.add('md-body');
     paintBackdrop(doc, appIsDark() ? 'dark' : 'light');
   }

@@ -518,6 +518,7 @@ export function initTerminal() {
   on('tab', () => showCurrent({ focus: !!document.activeElement?.closest?.('#lec-term') }));
   // 색: 스타일 파일을 바꿔 끼우면(theme.js) 다 불러온 뒤에 CSS 변수를 읽는다. 설정 창에서 '스타일에 맞춤'을 바꿔도
   $('#lec-theme-css').addEventListener('load', applyColors);
+  $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
   on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
   applyColors();

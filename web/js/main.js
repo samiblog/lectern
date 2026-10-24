@@ -2,7 +2,7 @@
 
 import { S, on } from './store.js';
 import { getJSON, saveConfig, native } from './api.js';
-import { initTheme } from './theme.js';
+import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
@@ -237,6 +237,7 @@ async function boot() {
   } catch {
     S.config = {};
   }
+  await loadUserStyles();   // 내 스타일 (D53) — 고른 스타일이 내 것이면 목록이 있어야 입힐 수 있다
   initTheme();
   initUi();
   initToc();

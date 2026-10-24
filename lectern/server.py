@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, i18n, osutil, terminal
+from . import __version__, i18n, osutil, styles, terminal
 from .config import is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -131,7 +131,7 @@ def create_app(state: AppState) -> Flask:
 
     @app.after_request
     def common_headers(resp: Response) -> Response:
-        if request.path.startswith(('/api/', '/doc/')) or request.path == '/':
+        if request.path.startswith(('/api/', '/doc/', '/userstyle/')) or request.path == '/':
             resp.headers['Cache-Control'] = 'no-cache'
         if request.path.startswith('/doc/'):
             # 프로젝트 안의 html·svg 를 주소로 직접 열어도 앱과 같은 출처에서 스크립트가 돌지 않게 한다 (D20).
@@ -394,6 +394,35 @@ def create_app(state: AppState) -> Flask:
         except OSError as exc:
             return jsonify(error=str(exc)), 500
         return jsonify(action=how, path=str(state.config.path))
+
+    # ---- 내 스타일 (D53): 설정 폴더의 styles\*.css ----------------------------------------
+
+    @app.get('/api/styles')
+    def api_styles() -> Any:
+        """내 스타일 목록과 폴더·만드는 법(설명서) 경로 — 화면이 스타일 목록과 설정 창에 쓴다"""
+        guide = web_dir() / 'help' / ('styles.en.md' if i18n.language() == 'en' else 'styles.md')
+        return jsonify(styles=styles.list_styles(), dir=str(styles.styles_dir()), guide=str(guide), builtin=styles.builtin_styles())
+
+    @app.get('/userstyle/<name>')
+    def user_style(name: str) -> Response:
+        """스타일 파일 하나 — 인터넷에서 불러오는 길(@import·url()·image-set())을 지운 것. <link> 가 부르므로 토큰 없이"""
+        text = styles.read_style(name)
+        if text is None:
+            abort(404)
+        resp = Response(text, content_type='text/css; charset=utf-8')
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
+
+    @app.post('/api/styles/folder')
+    def api_styles_folder() -> Any:
+        """스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '스타일 폴더 열기'"""
+        folder = styles.styles_dir()
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            osutil.open_default(folder)
+        except OSError as exc:
+            return jsonify(error=str(exc), path=str(folder)), 500
+        return jsonify(path=str(folder))
 
     @app.post('/api/open-external')
     def api_open_external() -> Any:
