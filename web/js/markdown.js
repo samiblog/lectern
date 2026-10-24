@@ -2,6 +2,8 @@
 //
 // vendor 전역: markdownit, markdownItAnchor, markdownitFootnote, markdownitTaskLists, hljs, katex
 
+import { slideRule } from './slides.js';
+
 const instances = new Map();
 
 // 차트 코드 블록의 언어 이름 → 종류 (그리는 것은 charts.js, D56)
@@ -208,6 +210,7 @@ function create(math) {
     .use(window.markdownItAnchor, { slugify, tabIndex: false });
   if (math) md.use(mathPlugin);
   md.use(sourceLines);
+  md.core.ruler.push('lec_slides', slideRule);   // 발표 문서면 줄(---)마다 슬라이드로 (slides.js, D59 — env.deck 이 있을 때만)
 
   // ```mermaid 와 차트(```vega-lite·```vega·```echarts·```dot — charts.js, D56)는 코드 하이라이트 대신 다이어그램 자리표시로
   const fence = md.renderer.rules.fence;
@@ -228,9 +231,10 @@ export function splitFrontMatter(text) {
   return { frontMatter: m[1], body: text.slice(m[0].length), lineOffset: (m[0].match(/\n/g) || []).length };
 }
 
-export function renderMarkdown(text, { math = true } = {}) {
+/** deck: 발표 문서의 설정 (slides.js 의 readDeck) — 있으면 슬라이드로 감싸 그린다 */
+export function renderMarkdown(text, { math = true, deck = null } = {}) {
   const { frontMatter, body, lineOffset } = splitFrontMatter(text);
   const key = math ? 'math' : 'plain';
   if (!instances.has(key)) instances.set(key, create(math));
-  return { html: instances.get(key).render(body, { lineOffset }), frontMatter };
+  return { html: instances.get(key).render(body, { lineOffset, deck }), frontMatter };
 }

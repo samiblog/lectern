@@ -361,6 +361,6 @@ export function initToc() {
       return;
     }
     unfoldTo(h);
-    h.scrollIntoView({ block: 'start' });
+    (h.closest('.lec-slide-wrap') || h).scrollIntoView({ block: 'start' });   // 발표 문서(D59)면 그 슬라이드째
   });
 }

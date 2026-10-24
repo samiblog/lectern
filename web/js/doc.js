@@ -2,9 +2,10 @@
 
 import { S, emit } from './store.js';
 import { getText, openExternal } from './api.js';
-import { renderMarkdown } from './markdown.js';
+import { renderMarkdown, splitFrontMatter } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { renderCharts } from './charts.js';
+import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides.js';
 import { setToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { setDocSource } from './docmenu.js';
@@ -471,29 +472,40 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   if (id !== pane.renderId) return false;
 
   installPurifyHook();
-  const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
+  // 발표 문서(맨 앞 설정에 marp: true — D59)는 슬라이드로. 상태줄의 '문서로 보기'를 골랐으면 보통 문서처럼
+  const marp = readDeck(splitFrontMatter(text).frontMatter);
+  const deck = marp && slidesWanted(pane, path) ? marp : null;
+  const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck });
+  const viewClass = `md-body${marp ? ' lec-marp' : ''}${deck ? ' lec-deck' : ''}`;
   const stage = document.createElement('article');
-  stage.className = 'md-body lec-stage';
+  stage.className = `${viewClass} lec-stage`;
   stage.style.width = `${content.clientWidth}px`;
-  stage.innerHTML = (frontMatter ? frontMatterHtml(frontMatter) : '') + window.DOMPurify.sanitize(html, PURIFY);
+  if (deck) stage.style.setProperty('--slide-scale', '1');   // 무대에서는 줄이지 않는다 — Mermaid 가 글자 크기를 제대로 잰다
+  stage.innerHTML = (frontMatter && !deck ? frontMatterHtml(frontMatter) : '') + window.DOMPurify.sanitize(html, PURIFY);
   document.body.append(stage);
   try {
     enhance(stage, path, Date.now(), tab);
+    if (deck) prepareDeck(stage, deck);   // 배경 그림·그림 크기·style: CSS
     await renderMermaid(stage);
     await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)
     await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
+    if (deck) fitDeck(stage);   // 넘치는 슬라이드의 그림을 줄인다 (그린 뒤에 잰다)
   } finally {
     stage.remove();
   }
   if (id !== pane.renderId) return false;
 
   // 같은 문서를 다시 그리면(자동 새로고침) 바뀐 블록을 강조하려고 이전 화면을 기록해 둔다
-  const sameDoc = pane.current?.type === 'doc' && pane.current.path === path && !$('.doc-missing', view);
+  // 슬라이드 ↔ 문서로 바꾼 것(D59)은 바뀐 곳이 아니다
+  const sameDoc = pane.current?.type === 'doc' && pane.current.path === path && !$('.doc-missing', view)
+    && view.classList.contains('lec-deck') === !!deck;
   const before = sameDoc ? snapshot(view) : null;
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;   // 함수면 바꿔 끼우기 직전의 위치 (refreshView)
-  view.className = 'md-body';
+  view.className = viewClass;
   view.dataset.docPath = path;   // 장 하이라이트(spotlight.js)·접기(fold.js)가 어느 문서를 그렸는지 본다
   view.replaceChildren(...stage.childNodes);
+  if (deck) showDeck(pane);   // 슬라이드를 칸 폭에 맞춰 줄인다 (스크롤 위치를 정하기 전에 — 높이가 달라진다)
+  else view.style.removeProperty('--slide-scale');
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   setDocSource(pane, path, text);
   setToc(pane, view);

@@ -14,6 +14,7 @@
 import { esc, docUrl } from './util.js';
 import { mermaidTheme } from './theme.js';
 import { openLightbox } from './ui.js';
+import { SLIDE_ZOOM } from './slides.js';
 import { t } from './i18n.js';
 
 const LIB = '/static/vendor';
@@ -467,14 +468,16 @@ async function draw(node, ctx) {
   const kind = node.dataset.chart;
   const src = node.dataset.source;
   const width = node.clientWidth || 640;
+  // 발표 문서의 슬라이드(D59)에서는 좁게 그려 키운다 — 차트 글자가 슬라이드 글자와 어울리게 (slides.js 의 SLIDE_ZOOM)
+  const zoom = node.closest('.lec-slide') ? SLIDE_ZOOM : 1;
   const info = drawn.get(node) || { ctx, seq: 0 };
   const seq = ++info.seq;
   let out;
   try {
-    if (kind === 'echarts') out = await drawECharts(src, width);
-    else if (kind === 'plotly') out = await drawPlotly(src, width);
+    if (kind === 'echarts') out = await drawECharts(src, width / zoom);
+    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom);
     else if (kind === 'dot') out = await drawDot(src);
-    else out = await drawVega(kind, src, width, ctx);
+    else out = await drawVega(kind, src, width / zoom, ctx);
   } catch (e) {
     if (drawn.has(node)) return;
     const why = String(e?.message || e).split('\n')[0];
@@ -494,6 +497,11 @@ async function draw(node, ctx) {
     const w = parseFloat(el.getAttribute('width'));
     const h = parseFloat(el.getAttribute('height'));
     if (w && h) el.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  }
+  if (zoom !== 1) {
+    const w = parseFloat(el.getAttribute('width')) || parseFloat(el.getAttribute('viewBox')?.split(/[\s,]+/)[2]);
+    if (w) el.style.width = `${Math.min(width, w * zoom)}px`;
+    el.style.height = 'auto';
   }
   node.replaceChildren(el);
   if (kind === 'dot') paintGraph(el, colors());   // 글자 폭을 재지 않으므로 붙인 뒤 어디서든

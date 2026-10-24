@@ -203,6 +203,74 @@
 .md-body .doc-missing { padding: 12vh 0; text-align: center; color: var(--md-muted); }
 .md-body .doc-missing h1 { border: 0; font-size: 1.3em; color: var(--md-fg); overflow-wrap: anywhere; }
 
+/* 발표 문서 (slides.js, D59): 슬라이드마다 본문 폭의 틀(16:9·4:3), 안의 슬라이드(1280×720 등)는 --slide-scale 로 줄여 보인다.
+   슬라이드 안의 글자는 스타일의 본문 크기 × 1.8 (px 로 적은 코드·표 글자도 같은 비율 — --md-scale) */
+.md-body.lec-deck { max-width: calc(1060px * var(--md-scale, 1)); }
+.lec-deck .lec-slide-wrap { margin: 0 0 30px; scroll-margin-top: 14px; }
+.lec-deck .lec-slide-frame {
+  position: relative; overflow: hidden; border: 1px solid var(--md-border); border-radius: 6px; background: var(--md-bg);
+  box-shadow: 0 1px 3px rgb(0 0 0 / .08), 0 6px 18px rgb(0 0 0 / .06);
+}
+.lec-deck .lec-slide {
+  position: absolute; left: 0; top: 0; box-sizing: border-box; transform-origin: 0 0; transform: scale(var(--slide-scale, .6));
+  display: flex; flex-direction: column; justify-content: safe center; overflow: hidden;
+  padding: 64px 84px; background-color: var(--md-bg); color: var(--md-fg);
+  --md-scale: 1.8; font-size: calc(var(--md-size) * 1.8); line-height: 1.45;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+.lec-deck .lec-slide > * { flex: none; }
+.lec-deck .lec-slide > :not(.lec-slide-bg, header, footer) { position: relative; z-index: 1; }
+.lec-deck .lec-slide :is(h1, h2, h3, h4, h5, h6) { margin: .45em 0 .4em; }
+.lec-deck .lec-slide p, .lec-deck .lec-slide ul, .lec-deck .lec-slide ol { margin-top: 0; margin-bottom: .6em; }
+.lec-deck .lec-slide .table-wrap { max-height: none; overflow: visible; }
+.lec-deck .lec-slide .code-tools { display: none; }
+.lec-deck .lec-slide img { max-width: 100%; }
+.lec-deck .lec-slide.lead { text-align: center; }
+.lec-deck .lec-slide.lead :is(h1, h2) { border-bottom: 0; }
+.lec-deck .lec-slide.lead :is(ul, ol) { display: inline-block; text-align: left; }
+.lec-deck .lec-slide.invert {
+  background-color: #1f2329; color: #eef0f3;
+  --md-fg: #eef0f3; --md-heading: #ffffff; --md-muted: #b4bac4; --md-link: #8ab4ff; --md-border: #4a505a; --md-code-bg: #2b3038; --md-strong: #ffffff;
+}
+.lec-deck .lec-slide > header, .lec-deck .lec-slide > footer {
+  position: absolute; left: 84px; right: 84px; z-index: 2; font-size: .55em; line-height: 1.4; color: var(--md-muted);
+}
+.lec-deck .lec-slide > header { top: 24px; }
+.lec-deck .lec-slide > footer { bottom: 22px; }
+.lec-deck .lec-slide.lec-paginate::after {
+  content: attr(data-page); position: absolute; right: 34px; bottom: 20px; z-index: 2; font-size: .55em; color: var(--md-muted);
+}
+/* ![bg](…) — 배경 그림 (left·right 면 그쪽에, 본문은 나머지에) */
+.lec-deck .lec-slide-bg { position: absolute; inset: 0; z-index: 0; display: flex; pointer-events: none; }
+.lec-deck .lec-slide-bg.vertical { flex-direction: column; }
+.lec-deck .lec-slide-bg.left { right: auto; width: var(--bg-split, 50%); }
+.lec-deck .lec-slide-bg.right { left: auto; width: var(--bg-split, 50%); }
+.lec-deck .lec-slide-bg > img {
+  flex: 1 1 0; min-width: 0; min-height: 0; width: 100%; height: 100%; max-width: none; margin: auto;
+  border: 0; border-radius: 0; box-shadow: none; background: none;
+}
+.lec-deck .lec-slide.lec-bg-left { padding-left: calc(var(--bg-pad, 640px) + 56px); }
+.lec-deck .lec-slide.lec-bg-right { padding-right: calc(var(--bg-pad, 640px) + 56px); }
+/* 발표자 노트 (지시어가 아닌 HTML 주석) — 틀 아래에. 발표 모드에서는 N */
+.lec-deck .lec-slide-notes {
+  margin: 8px 2px 0; padding: 6px 12px; border-left: 3px solid var(--md-border); color: var(--md-muted);
+  font-size: .86em; line-height: 1.6; white-space: pre-line;
+}
+.lec-deck .lec-slide-notes::before { content: attr(data-label); display: block; font-size: .85em; font-weight: 700; }
+/* 넘침 표시와 '이 장부터 발표' 버튼 (틀의 오른쪽 아래·위) */
+.lec-deck .lec-slide-frame[data-over]::after {
+  content: attr(data-over); position: absolute; right: 8px; bottom: 6px; z-index: 3; padding: 1px 7px; border-radius: 4px;
+  font: 600 11px/1.6 var(--ui-font, sans-serif); color: #ffffff; background: color-mix(in srgb, var(--ui-danger, #b42318) 88%, transparent);
+}
+.lec-deck .lec-slide-wrap:not(.lec-over) .lec-slide-frame::after { display: none; }
+.lec-deck .lec-slide-play {
+  position: absolute; top: 8px; right: 8px; z-index: 3; display: grid; place-items: center; width: 30px; height: 30px; padding: 0;
+  border: 1px solid var(--md-border); border-radius: 50%; background: var(--md-bg); color: var(--md-link); cursor: pointer;
+  opacity: 0; transition: opacity .15s;
+}
+.lec-deck .lec-slide-play svg { width: 14px; height: 14px; fill: currentColor; stroke: currentColor; stroke-width: 1.2; margin-left: 2px; }
+.lec-deck .lec-slide-frame:hover .lec-slide-play, .lec-deck .lec-slide-play:focus-visible { opacity: .95; }
+
 @media (max-width: 760px) {
   .md-body { padding: 24px 20px 80px; }
   .md-body .lec-fold::before { left: -15px; }
@@ -216,10 +284,13 @@
 /* 인쇄·PDF (문서 우클릭 → '인쇄 / PDF로 저장'). 화면 UI는 빼고, 어두운 스타일도 종이에는 흰 바탕·검은 글자로 —
    브라우저는 기본으로 바탕색을 인쇄하지 않으므로 밝은 글자가 흰 종이에 묻힌다 */
 @media print {
-  #lec-toolbar, #lec-tabbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay { display: none !important; }
+  #lec-toolbar, #lec-tabbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay,
+  #lec-present, .mermaidTooltip { display: none !important; }   /* Mermaid 가 body 끝에 붙이는 말풍선 자리 — 빈 쪽이 하나 더 생긴다 */
   .lec-pane:not(.active) { display: none !important; }   /* 선택된 탭의 문서만 */
-  #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block; position: static; height: auto; overflow: visible; border: 0; }
-  body { overflow: visible; background: #fff; }
+  /* app.css 가 뒤에 읽혀 같은 무게의 #lec-app(격자)·.lec-pane(absolute) 규칙이 이기므로 !important — 칸이 absolute 면
+     쪽 나누기(break-before)·쪽 이름(page)이 먹지 않는다 (발표 문서의 한 장에 한 쪽, D59) */
+  #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block !important; position: static !important; height: auto !important; overflow: visible !important; border: 0; }
+  body { overflow: visible !important; background: #fff; }
   :root {
     --md-bg: #ffffff !important; --md-fg: #111111 !important; --md-heading: #000000 !important; --md-muted: #444444 !important;
     --md-link: #0b3d91 !important; --md-border: #bbbbbb !important; --md-code-bg: #f4f4f4 !important; --md-quote-bar: #999999 !important;
@@ -236,5 +307,15 @@
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
   .md-body .lec-changed, .md-body .lec-picked, .md-body .lec-target { outline: none !important; animation: none !important; }
   .md-body.lec-spotlight > * { opacity: 1 !important; }   /* 장 하이라이트 중이어도 모두 인쇄 */
+  /* 발표 문서 (D59): 한 장에 한 쪽 — 쪽 크기는 슬라이드 크기 (@page lec-slide), 줄이지 않고 그대로 */
+  .md-body.lec-deck { max-width: none; padding: 0; }
+  .lec-deck .lec-slide-wrap { margin: 0; page: lec-slide; }
+  .lec-deck .lec-slide-wrap.lec-43 { page: lec-slide-43; }
+  .lec-deck .lec-slide-wrap + .lec-slide-wrap { break-before: page; }
+  .lec-deck .lec-slide-frame { width: var(--slide-w); height: var(--slide-h); aspect-ratio: auto !important; border: 0; border-radius: 0; box-shadow: none; }
+  .lec-deck .lec-slide { transform: none; }
+  .lec-deck .lec-slide-notes, .lec-deck .lec-slide-play, .lec-deck .lec-slide-frame::after { display: none !important; }
 }
+@page lec-slide { size: 1280px 720px; margin: 0; }
+@page lec-slide-43 { size: 960px 720px; margin: 0; }
 .md-body .front-matter tr { background: none !important; }

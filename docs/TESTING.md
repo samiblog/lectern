@@ -88,6 +88,7 @@ python app.py %TEMP%\lec-check
 | 27g | 창 모드에서 `tests\fixture\docs\06-차트.md`(또는 '예제 열기'의 `guide/07-차트.md`)를 열고 스타일을 기본·잡지·다크·Nord 로 바꿔 보기, 사이드바·목차를 감췄다 보이기, 차트 우클릭 '그림 복사' 를 워드·PPT 에 붙이기, 인쇄 미리 보기 | 차트 11개가 그려지고 스타일마다 글자·선이 읽힘 (Graphviz 상자 안에 한글이 들어감). 폭이 바뀌면 차트가 그 폭으로 다시 그려짐(글자가 작아지지 않음). 붙인 그림이 흐리지 않음 (D56) |
 | 27h | 설치한 Lectern 의 시작 화면(탭을 모두 닫음)에서 '예제 열기', 탭 막대 ∨ → '예제 열기', 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 복사·터미널 버튼 | 설치 폴더의 samples 가 README 부터 열림, 모든 문서가 그려짐(07-차트의 오류 예시 하나만), 요청 글에 설치 폴더의 `web\help\writing.md` 경로, 터미널에는 Enter 없이 붙음 (D57) |
 | 27i | (보안 프로그램(DRM)이 있는 PC) 설치한 Lectern 의 터미널에서 `claude` 를 오래 쓰다가 Claude Code 가 아무 입력도 받지 않게 되면 | 10초쯤 뒤 터미널 머리줄 아래 붉은 띠(멈춘 프로그램 이름 — 보통 git.exe)와 ↻ 강조, 다른 탭을 보고 있었으면 알림. 띠의 '다시 시작'으로 새 셸이 뜨고 작업 관리자에 멈춘 git·claude 가 남지 않음, `claude --continue` 로 이어짐 (D58) |
+| 27j | 창 모드(설치본)에서 예제의 `guide/08-발표.md` 와 실제 Marp 덱(예: Claude Code 가 쓴 `PRESENTATION.md`)을 열기, 스타일을 기본·다크로, 상태줄 '발표' → → ← N F Esc, 틀의 ▶, '문서로 보기'↔슬라이드, 우클릭 '인쇄 / PDF로 저장'(Microsoft Print to PDF), 발표 중 터미널의 Claude Code 로 그 덱 고치기 | 슬라이드가 16:9 틀로, 다이어그램·차트 글자가 읽힘, 넘친 장에 '넘침'. 발표는 전체 화면으로 시작해 Esc 로 창이 돌아오고 그 장이 보임. 고치면 발표 중인 장이 다시 그려짐. PDF 는 한 장에 한 쪽(가로) (D59) |
 | 28 | PowerShell 7 이 있으면 설정 파일에 `"terminal_shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"` → 터미널 머리줄의 ↻ | 'PowerShell 7' 셸이 뜸. 없는 경로·이름만 적으면 기본 PowerShell |
 
 ### 패키징 점검

@@ -18,6 +18,7 @@ import argparse
 import functools
 import http.server
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -1911,6 +1912,63 @@ def run(headed: bool) -> None:
             page.click('#lec-aiguide-prompt')
             guide_prompt = page.evaluate('navigator.clipboard.readText()')
             page.click('#lec-settings-close')
+
+            print('[슬라이드]')   # D59 — marp: true 인 발표 문서 (예제의 guide/08-발표.md)
+            page.locator('#lec-tree .row.file[data-doc="guide/08-발표.md"]').click()
+            deck_ok = wait_until(page, '''(() => { const v = document.querySelector('#lec-view');
+              return v.classList.contains('lec-deck') && v.querySelector('pre.mermaid.mermaid-ok') && v.querySelector('pre.lec-chart.chart-ok'); })()''', 30000)
+            page.wait_for_timeout(500)
+            deck = page.evaluate('''() => { const v = document.querySelector('#lec-view'); const q = (s) => v.querySelectorAll(s);
+              const frame = v.querySelector('.lec-slide-frame'), first = v.querySelector('.lec-slide');
+              const btn = (id) => { const b = document.querySelector(id); return b.hidden ? null : b.textContent.trim(); };
+              return { slides: q(':scope > .lec-slide-wrap').length, over: q('.lec-over').length, bg: q('.lec-slide-bg img').length,
+                notes: q('.lec-slide-notes').length, page: q('.lec-paginate')[0]?.dataset.page, fm: q('.front-matter').length,
+                scale: Math.abs(+v.style.getPropertyValue('--slide-scale') - frame.clientWidth / 1280) < 0.01,
+                fit: Math.abs(first.getBoundingClientRect().width - frame.clientWidth) < 2,
+                lead: first.classList.contains('lead'), styled: getComputedStyle(first.querySelector('p')).color,
+                chartText: Math.max(...[...v.querySelectorAll('.lec-chart svg text')].map((e) => e.getBoundingClientRect().height)),
+                toggle: btn('#lec-st-slides'), present: btn('#lec-st-present') }; }''')
+            check(deck_ok and deck['slides'] == 8 and not deck['over'] and deck['bg'] == 1 and deck['notes'] == 2 and deck['page'] == '2'
+                  and not deck['fm'] and deck['scale'] and deck['fit'] and deck['lead'] and deck['styled'] == 'rgb(107, 114, 128)'
+                  and deck['chartText'] >= 7 and deck['toggle'] == '문서로 보기' and deck['present'] == '발표',
+                  f"발표 문서(marp: true)는 16:9 슬라이드 8장 — 다이어그램·차트(키워 그림)·배경 그림·노트·쪽 번호·lead·style: CSS, 상태줄 '문서로 보기'·'발표' ({deck})")
+            shot('20-slides')
+            pr = lambda: page.evaluate('''() => { const b = document.querySelector('#lec-present'); const h = b.querySelector('.pr-deck');
+              return { shown: !b.hidden, count: b.querySelector('.pr-count').textContent, notes: !b.querySelector('.pr-notes').hidden,
+                       fill: h ? Math.max(h.offsetWidth / innerWidth, h.offsetHeight / b.querySelector('.pr-stage').clientHeight) : 0 }; }''')
+            page.locator('#lec-view .lec-slide-frame').nth(1).hover()
+            page.locator('#lec-view .lec-slide-frame').nth(1).locator('.lec-slide-play').click()   # 이 장부터 발표
+            p1 = pr()
+            page.keyboard.press('ArrowRight')
+            page.keyboard.press('Space')
+            page.keyboard.press('n')
+            p2 = pr()
+            shot('20-slides-present')
+            page.keyboard.press('ArrowLeft')
+            page.keyboard.press('End')
+            p3 = pr()
+            page.keyboard.press('Escape')
+            p4 = pr()
+            page.keyboard.press('Shift+F5')
+            p5 = pr()
+            page.keyboard.press('Escape')
+            check(p1['shown'] and p1['count'] == '2 / 8' and p1['fill'] > 0.98 and p2['count'] == '4 / 8' and p2['notes']
+                  and p3['count'] == '8 / 8' and not p4['shown'] and p5['shown'] and p5['count'] == '8 / 8',
+                  f"발표 모드: ▶ 로 그 장부터 창 가득, → Space ← End 로 넘기기, N 노트, Esc 끝내면 그 장으로, Shift+F5 는 보던 장부터 ({p1}, {p2}, {p3}, {p5})")
+            pdf = page.pdf(prefer_css_page_size=True, print_background=True)
+            pages = len(re.findall(rb'/Type\s*/Page[^s]', pdf))
+            boxes = set(re.findall(rb'/MediaBox\s*\[([^\]]+)\]', pdf))
+            page.click('#lec-st-slides')   # 문서로 보기
+            as_doc = wait_until(page, "!document.querySelector('#lec-view').classList.contains('lec-deck')", 10000)
+            doc_state = page.evaluate('''() => ({ fm: !!document.querySelector('#lec-view .front-matter'), hr: document.querySelectorAll('#lec-view > hr').length,
+              changes: !document.querySelector('#lec-st-changes').hidden, toggle: document.querySelector('#lec-st-slides').textContent.trim(),
+              present: !document.querySelector('#lec-st-present').hidden })''')
+            page.click('#lec-st-slides')
+            back_deck = wait_until(page, "document.querySelector('#lec-view').classList.contains('lec-deck')", 10000)
+            check(pages == 8 and boxes == {b'0 0 960 540'} and as_doc and doc_state['fm'] and doc_state['hr'] == 7 and not doc_state['changes']
+                  and doc_state['toggle'] == '슬라이드로 보기' and not doc_state['present'] and back_deck,
+                  f"인쇄·PDF 는 한 장에 한 쪽(1280×720), '문서로 보기'는 보통 문서(바뀐 곳으로 잡지 않음)·다시 슬라이드 ({pages}, {boxes}, {doc_state})")
+
             tab_el(1).locator('.tab-close').click()   # 예제 탭을 닫고 점검 프로젝트로
             back = n_tabs(1) and tree_root() == 'samples'
             check(readme and charts_ok and len(chart_errs) == 1 and '함수는 쓸 수 없습니다' in chart_errs[0] and mermaid_ok and img_ok

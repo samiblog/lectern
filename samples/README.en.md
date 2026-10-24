@@ -14,6 +14,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 5. Right-click a table and choose **Copy location for Claude** — paste it into Claude Code in the terminal (**Ctrl+`**).
 6. Open [Later tasks](plans/10-후속-과제.md), press **Ctrl+E**, add a line, **Ctrl+S**, then **Esc** — edit mode.
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
+8. Open the slide deck [guide/08-발표.md](guide/08-발표.md) (`marp: true`) — it shows as slides; **Present** in the status bar (Shift+F5) shows one slide at a time, and printing gives one slide per page.
 
 ## For AI (Claude Code)
 

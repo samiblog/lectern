@@ -6,7 +6,7 @@
 // - 켜져 있으면 ↑·↓·PageUp·PageDown·버튼 옆 ∧∨ 로 앞뒤 장(키는 main.js 가 부른다), 흐린 곳을 누르면 그 장, Esc·버튼으로 끈다.
 //   목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 그곳의 장으로 옮긴다 (fold.js 의 unfoldTo 가 보내는 'reveal').
 // - 흐리게 하는 것은 CSS 뿐이다 (base.css 의 .lec-spotlight, opacity). 문서 DOM 은 그대로 두고 블록에 lec-lit 만 붙인다.
-// - md 문서만. html 문서(iframe)는 구조가 문서마다 달라 장을 나눌 수 없다.
+// - md 문서만. html 문서(iframe)는 구조가 문서마다 달라 장을 나눌 수 없다. 슬라이드로 보는 발표 문서(D59)는 슬라이드 하나가 한 장.
 // - 선택된 탭의 칸(#lec-view)의 문서에 한다. 다른 탭을 고르면 꺼진다.
 
 import { S, on } from './store.js';
@@ -37,6 +37,11 @@ function chapterLevel(blocks) {
 }
 
 function build() {
+  if (view().classList.contains('lec-deck')) {   // 발표 문서: 슬라이드마다 한 장 (slides.js)
+    chapters = [...view().querySelectorAll(':scope > .lec-slide-wrap')].map((el) => [el]);
+    if (chapters.length < 2) chapters = [];
+    return;
+  }
   const blocks = [...view().children].filter((el) => !el.matches('.footnotes-sep, .footnotes'));
   const lv = chapterLevel(blocks);
   chapters = [];

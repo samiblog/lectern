@@ -18,7 +18,7 @@ flowchart LR
     FS[(프로젝트 폴더들)]
     NEXT[다음 실행<br/>탐색기 우클릭·run.bat]
     PW -- "HTTP: /api/*, /doc/탭id/*, /static/*" --> HTTP
-    PW -- "js_api: 폴더 대화상자, 창 제목" --> PW
+    PW -- "js_api: 폴더 대화상자, 창 제목, 전체 화면" --> PW
     HTTP --> FS
     W --> FS
     W --> LOG
@@ -33,7 +33,7 @@ flowchart LR
 - 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38). 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 — 자식에게 물려지기 때문이다.
 - 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
-- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
+- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
 
 ### 실행 모드
 
@@ -250,6 +250,7 @@ sequenceDiagram
    - ```` ```math ````·```` ```latex ````·```` ```tex ```` 코드 블록도 수식으로 (빈 줄로 나뉜 식은 따로). KaTeX 가 못 읽는 블록(LaTeX 문서 원문 등)은 코드 그대로 (D32).
    - ```` ```mermaid ```` 는 `<pre class="mermaid">` 로, ```` ```vega-lite ````·```` ```vega ````·```` ```echarts ````·```` ```plotly ````·```` ```dot ````(```` ```graphviz ````)는 `<pre class="lec-chart" data-chart="종류">` 로 (`CHART_LANGS`).
    - 코드 하이라이트는 highlight.js (언어가 지정된 블록만).
+   - 발표 문서(맨 앞 설정에 `marp: true` — D59)면 `slides.js` 의 `slideRule`(core 규칙, `env.deck` 이 있을 때만)이 맨 위 수준의 줄(`hr`)마다 토큰을 `.lec-slide-wrap[data-lines] > .lec-slide-frame > section.lec-slide` 로 감싸고, HTML 주석 블록을 Marp 지시어(그 장부터·`_` 는 그 장만)나 발표자 노트(`.lec-slide-notes`)로 바꾼다. 머리 정보 표는 그리지 않는다.
 3. DOMPurify로 정화 (`SANITIZE_DOM:false`, `style`·`form` 태그 금지). 정화 훅이 `src` 를 `data-src` 로 옮겨 두고, 그림을 부르는 다른 길(`srcset`·`poster`·표의 `background`·SVG `image`·`feImage` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. `document` 의 이름을 가리는 `img` 의 `name` 도 지우고 (D15), SVG 링크의 `xlink:href` 는 `href` 로 옮긴다. frontmatter는 직접 이스케이프한 표로 앞에 붙인다.
 4. 화면 밖 무대(`.lec-stage`, 본문과 같은 폭)에 넣고 후처리:
    - 이미지: 상대경로 → `/doc/<탭 id>/<경로>?v=<시각>` (다시 그릴 때 바뀐 그림 반영), 클릭하면 확대. 외부(`http(s)://`) 이미지는 설정 `external_images` 가 켜져 있으면 `referrerpolicy=no-referrer` 로 불러오고, 오류나 15초 안에 받지 못하면 '외부 이미지를 불러오지 못했습니다' 링크로 바꾼다. 꺼져 있으면 처음부터 링크로 둔다. 프로젝트 안을 가리키는 절대경로·`file:` 는 상대경로로 바꿔 보여 주고(`absoluteRef`, 아래), 그 밖의 스킴과 프로젝트 밖 경로는 표시하지 않는다.
@@ -257,8 +258,10 @@ sequenceDiagram
    - `/` 로 시작하는 링크는 프로젝트 루트 기준으로 해석한다. 상대경로가 `/doc/<그 탭 id>/` 밖으로 나가면(`../<다른 id>/…` — 다른 탭 프로젝트 포함) 밖으로 본다 (`resolveRef`).
    - 절대경로(`C:\proj\a.md`, `C:/proj/a.md`, `\\server\share\a.md`, `file:///C:/proj/a.md`)는 문서가 든 탭의 프로젝트 안이면 상대경로로 바꾸고(대소문자 무시) 밖이면 막는다 (`absoluteRef`). markdown-it 은 `file:` 링크를 기본으로 글자로 남기고 `\` 를 `%5C` 로 바꾸며, DOMPurify 는 기본 허용 URL 에 없는 `c:`·`file:` 를 지우므로 `validateLink` 와 `ALLOWED_URI_REGEXP` 를 넓혔다.
    - `> [!NOTE]` 등 → 콜아웃, 표 → 가로 스크롤 감싸기 + 숫자 열(70% 이상이 숫자) 오른쪽 정렬, 코드 블록 → 언어 표시 + 복사 버튼.
+   - 발표 문서: `prepareDeck` — `![bg …]` 그림을 배경 자리(`.lec-slide-bg`)로, `![w:300]` 크기, `style:` CSS 를 `[data-deck]` 범위의 중첩 규칙으로(인터넷 길을 지우고), 틀마다 ▶. 무대는 `--slide-scale: 1` (Mermaid 가 글자를 제대로 재게).
    - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다 (`.diagram-error`).
    - 차트 (`charts.js` 의 `renderCharts`, D56): 종류마다 라이브러리를 불러와 움직이지 않는 SVG 글자를 만들고(Vega-Lite → Vega `toSVG`, ECharts 서버 그리기 모드 `renderToSVGString`, Plotly `toImage({format: 'svg'})`, Viz.js `renderString`), `sanitizeHtml` 로 거른 뒤 그림 속 링크를 풀어 넣는다. 색은 `mermaidTheme()` 의 색표, Graphviz 는 그린 뒤 기본 검정·흰 바탕을 그 색으로. 설정은 `parseSpec`(JSON, 아니면 따옴표 없는 키·작은따옴표·주석·끝 쉼표·`option =` — 함수는 오류). Vega 의 `data.url` 은 `resolveRef` 로 이 탭의 `/doc/<id>/…` 만 (못 읽으면 Vega 는 빈 그림을 그리므로 기록한 오류로 원문 + 까닭). ECharts·Plotly 는 그리기 전에 설정의 그림 주소(data: 아닌 것)를 지우고, Plotly 의 지도 종류는 그리지 않는다. ECharts·Plotly 와 `width: "container"` 인 Vega 는 문서 폭으로 그리고, 폭이 바뀌면(목차가 나옴·사이드바·창 크기) ResizeObserver 로 다시 그린다. 실패하면 원문 + 까닭.
+   - 발표 문서: `fitDeck` — 슬라이드의 Mermaid 를 `SLIDE_ZOOM`(1.7)배까지 키우고(차트는 `charts.js` 가 폭 ÷ 1.7 로 그려 키운다), 넘치는 슬라이드는 그림·다이어그램·차트를 남은 높이에 맞춰 줄인다(`.lec-fit`). 그래도 넘치면 `.lec-over`(틀에 '넘침'). 그림을 늦게 불러오면 그 슬라이드를 다시 맞춘다.
    - 본문 속 경로 표기(`src/app.py:42`, `../code/x.py`, `docs/a.md`)를 모아 `POST /api/exists` 로 한 번에 묻고, 있는 파일이면 `a.path-link` 로 감싼다 (`pathlink.js`). 코드 블록·링크·수식·다이어그램·메타데이터 안은 보지 않고, 문장 속 `코드` 는 내용 전체가 경로일 때만. 누르면 md·html 문서는 뷰어에서, 그 밖은 편집기의 그 줄로.
 5. 무대의 내용을 그 칸의 화면(선택된 탭이면 `#lec-view`)으로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. 탭의 `changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).
@@ -353,6 +356,14 @@ sequenceDiagram
 - 키: 편집 상자 안에서는 `main.js` 가 Ctrl+Tab·Ctrl+1~9·Ctrl+E·Ctrl+P·Ctrl+,·F1·Ctrl+/ 만 받고 나머지는 편집기로 (Ctrl+F 는 편집기의 찾기). Tab 은 빈칸으로 들이기.
 - 색: `.lec-editor .CodeMirror` 가 `--md-bg`·`--md-fg`·`--md-mono`·`--md-scale`, 줄 번호 칸은 `--ui-bg`, 선택은 `--md-link`. 어두운 스타일(`data-ui="dark"`)은 토큰 글자색을 One Dark 계열로.
 
+### 발표 문서 (slides.js, present.js — D59)
+- 알아보기: `doc.js` 가 맨 앞 설정을 `readDeck`(YAML 의 작은 부분 — key: 값, 따옴표, true/false/숫자, `|`·`>` 블록 글)으로 읽어 `marp: true` 면 발표 문서. 상태줄의 '문서로 보기'를 고른 문서(`asDocument` — 탭 id + 경로, 이번 실행 동안)가 아니면 `renderMarkdown(…, {deck})` 으로 슬라이드로 그린다. 칸의 본문은 `md-body lec-marp lec-deck`(문서로 보면 `lec-marp` 만).
+- 크기: 슬라이드는 1280×720(`size: 4:3` 이면 960×720)으로 그리고 `transform: scale(var(--slide-scale))` 로 틀(본문 폭, `aspect-ratio`)에 맞춘다. 배율은 `showDeck` 이 칸 본문의 ResizeObserver 로 정한다. 슬라이드 글자는 본문 크기 × 1.8 (`--md-scale: 1.8` — px 로 적은 코드·표 글자도). 본문 폭은 `calc(1060px * --md-scale)`(툴바의 글자 크기로 슬라이드가 커진다).
+- 지시어: `paginate`(`.lec-paginate::after` 쪽 번호)·`header`·`footer`(`<header>`·`<footer>`, 인라인 Markdown)·`class`(`lead` 가운데, `invert` 어두운 장)·`backgroundColor`·`color`·`backgroundImage`(`url()` 은 `![bg]` 그림으로, 그라데이션은 style)·`backgroundPosition`·`backgroundRepeat`·`backgroundSize`, `headingDivider`, `size`, `style`. 값은 `SAFE_CSS` 로 거른다 (따옴표·세미콜론·url 없음). `theme` 은 읽지 않는다.
+- 다른 기능: 접기는 없다(맨 위 수준에 제목이 없다). 장 하이라이트는 슬라이드 하나가 한 장(`spotlight.js` 의 `build`). 바뀐 곳 강조는 슬라이드 단위(맨 위 자식). 목차의 제목을 누르면 그 슬라이드째로 스크롤. 위치 잇기(D55)는 틀과 블록의 `data-lines` 로 그대로. 슬라이드 ↔ 문서를 바꾸면(`toggleSlides`) 화면 위의 원문 줄을 기억했다가 다시 그린 뒤 같은 줄을 위에 둔다 (`editsync` 의 `lineOfY`·`yOfLine`). 바꾼 것은 바뀐 곳으로 잡지 않는다.
+- 발표 모드(`present.js`): `#lec-present`(z-index 300, 검은 바탕)에 그 슬라이드의 `section` 을 복제해 `.pr-deck.md-body.lec-deck[data-deck]` 안에 넣고 창에 맞춰 줄인다 (style: CSS 가 `[data-deck]` 범위라 그대로 먹는다). 상태줄 '발표'·Shift+F5(화면 위쪽의 슬라이드부터 — `slideAtTop`)·틀의 ▶(그 장부터). 키는 `main.js` 의 keydown 맨 앞에서 `presentKey` 로 — 넘기기·Home·End·N(노트 칸)·F(전체 화면)·Esc, 나머지 키는 삼킨다(F12 만 둔다). 누르면 다음, 휠로 앞뒤, 복제한 링크는 따라가지 않는다(인터넷 주소만 브라우저로). 시작할 때 전체 화면(창 모드 `native.set_fullscreen` → pywebview `toggle_fullscreen`, 브라우저는 Fullscreen API), 끝내면 되돌리고 칸을 그 슬라이드로. 2.5초 움직이지 않으면 커서와 안내 막대를 감춘다. 그 문서가 다시 그려지면 같은 번호를 다시 복제하고, 슬라이드가 아니게 되거나 다른 탭을 고르면 끝낸다.
+- 인쇄: `@page lec-slide { size: 1280px 720px; margin: 0 }`(4:3 은 `lec-slide-43`) 와 `.lec-slide-wrap { page: … }`, 슬라이드 사이 `break-before: page`, 줄이지 않고 그대로. 노트·▶·넘침 표시는 빼고, 슬라이드의 배경색·그림은 `print-color-adjust: exact`. 쪽 나누기가 먹으려면 칸이 보통 흐름이어야 해서 인쇄 규칙의 `#lec-app`·`.lec-pane` 등은 `!important` 로 block·static 이다. Mermaid 가 body 끝에 붙이는 `.mermaidTooltip` 은 인쇄에서 감춘다 (빈 쪽이 생겼다).
+
 ### 내 스타일 (theme.js, settings.js, lectern/styles.py — D53)
 - 설정 폴더의 `styles\*.css`. 서버(`styles.list_styles`)가 맨 앞 머리 주석 `/* lectern-style … */` 의 `name`·`dark`·`base` 를 읽는다 (없으면 파일 이름·밝음·default/dark, 틀린 `base` 도 그것). id 는 `user:<파일 이름>`.
 - 화면: 시작할 때 `loadUserStyles()` 로 목록을 받은 뒤 스타일을 입힌다 (고른 스타일이 내 것일 수 있으므로). 스타일 목록 맨 아래 '내 스타일' 묶음. 고르면 `#lec-theme-css` 에 바탕 스타일, `#lec-user-css` 에 `/userstyle/<파일>?v=<수정 시각>`, `data-ui` 는 `dark` 로. 다이어그램 색은 CSS 변수에서(`mermaidFromCss`). 스타일 없는 html 문서(iframe)에도 둘 다 넣는다 (`htmldoc.js`), 터미널 색은 두 링크의 `load` 때 다시.
@@ -433,6 +444,8 @@ sequenceDiagram
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |
 | Ctrl+W, 탭을 가운데 버튼으로 | 탭 닫기 |
 | F5 | 선택된 탭의 트리와 화면 다시 불러오기 |
+| Shift+F5 | 발표 문서를 슬라이드로 볼 때: 발표 — 지금 보는 슬라이드부터 (D59) |
+| → ← Space·PageDown·↓ / PageUp·↑ · Home·End · N · F · Esc | 발표 중: 다음 / 이전 · 처음·끝 · 발표자 노트 · 전체 화면 · 끝내기 (발표 중의 키는 모두 `present.js` 가 받는다) |
 | ↑ / ↓, PageUp / PageDown | 장 하이라이트 중: 앞 장 / 뒤 장 (입력칸·열린 팝업에서는 원래대로) |
 | Esc | 팝업·메뉴·확대·찾기·사용설명서 닫기, 그다음 장 하이라이트 끄기 |
 | F1 | 사용설명서 열기/닫기 (D45) |

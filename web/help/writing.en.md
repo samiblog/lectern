@@ -109,7 +109,40 @@ Rules:
 }
 ```
 
-## 5. HTML documents
+## 5. Slide decks
+
+Markdown with `marp: true` in the front matter shows as **slides** — it is the [Marp](https://marp.app) format, so the VS Code Marp extension or marp-cli can also turn it into PDF or PPTX. **Present** in the status bar (Shift+F5) shows one slide at a time in the whole window, and printing gives one slide per page. Example: `samples/guide/08-발표.md`.
+
+~~~~md
+---
+marp: true
+paginate: true
+footer: Copper market research
+---
+
+<!-- _class: lead -->
+# Q2 review
+
+---
+
+## Monthly price
+
+```vega-lite
+{ "width": "container", "height": 220, "data": { "url": "../data/월별-가격.csv" }, … }
+```
+
+<!-- Speaker note: start with June being the highest -->
+~~~~
+
+- Separate slides with `---`. The size is 16:9 (1280×720) by default; `size: 4:3` also works.
+- **One heading and five or six short bullets per slide.** Anything longer is cut off at the bottom as in Marp (Lectern marks the slide 'Overflow'). Pictures, diagrams and charts are shrunk to the remaining height; text is not. Keep tables to 4–5 rows.
+- Mermaid, charts, math, code, tables and callouts are written as in any document (Marp itself cannot draw Mermaid or charts; Lectern can). Chart heights around 200–260 — on slides charts are drawn enlarged so their text is bigger.
+- Directives: `paginate`, `header`, `footer`, `class` (`lead` centered, `invert` dark), `backgroundColor`, `color` — in the front matter they apply to every slide, in a comment such as `<!-- class: lead -->` from that slide on, and with `_` as in `<!-- _class: lead -->` to that slide only. `headingDivider: 2` starts a new slide at every `##`.
+- Pictures: `![bg](picture)` background, `![bg right:40%](picture)` on the right with the text on the left (`left`, `contain`, `cover`, `vertical`), `![w:400](picture)` size.
+- An HTML comment `<!-- … -->` that is not a directive is a speaker note (Lectern shows it under the slide, and with N while presenting).
+- CSS in `style: |` applies only to that document's slides (`section`, `h1`, `header`, `footer` and so on). Internet fonts and picture addresses are removed. `theme` (gaia, uncover…) is not read — colors and fonts follow the Lectern style.
+
+## 6. HTML documents
 
 - Their own styles (`<style>`) show as they are. Without styles, Lectern applies its document style.
 - **Scripts do not run.** JavaScript charts (Chart.js, Plotly HTML exports and so on) stay blank. Draw charts as static SVG, or make them with chart code blocks in a Markdown document.
@@ -117,13 +150,13 @@ Rules:
 - `<title>` is the title, `<meta name="description">` the summary, and `h1`–`h4` the contents. An `id` on `h2` makes a section link.
 - Link documents and images with relative paths (`../research/x.md#outlook`) — they open inside Lectern.
 
-## 6. What people hand to the AI
+## 7. What people hand to the AI
 
 - **Location for Claude**: people right-click a block and paste `@research/report.md lines 12-17` into the terminal (in the Korean UI: `@research/report.md 12~17행`). The first part is the file, the rest is the source line range. Read those lines and work on them.
 - From a heading it carries the section name, such as `@research/report.md lines 10-19 (section 'Summary')` — the whole section.
 - From the code view it looks like `@src/report.py lines 14-19`.
 
-## 7. Don't
+## 8. Don't
 
 - Don't put JavaScript charts in HTML reports (they do not show).
 - Don't put functions or internet addresses in chart settings.
@@ -131,6 +164,7 @@ Rules:
 - Don't put HTML for people in app source folders such as `src` or `web`.
 - Don't use several `#` headings in one document or skip heading levels.
 - Don't mix units or notes into table cells (it breaks number alignment).
+- Don't put long text on one slide (the bottom is cut off).
 
 ## Summary for CLAUDE.md
 
@@ -142,5 +176,6 @@ Rules:
 - Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
 - Code locations as `src/x.py:14`; links and images relative to the document.
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
+- Slide decks in Marp format — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
 ```

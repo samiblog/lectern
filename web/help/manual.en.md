@@ -138,6 +138,18 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 
 HTML reports written by Claude appear in the tree marked `HTML`. Their own styles are kept, while scripts and stylesheets from the internet are blocked (so charts drawn by scripts do not appear). HTML files inside app source folders such as `src`, `public` or `web` are not treated as documents.
 
+### Slide decks
+
+Markdown with `marp: true` in the front matter shows as **slides** — the [Marp](https://marp.app) format Claude Code often uses for presentations. To try it, open the samples and the deck in the `guide` folder whose name starts with `08-`.
+
+- Each `---` starts a slide, shown in a 16:9 frame. Mermaid, charts, math, code and tables are drawn as in any document, and colors and fonts follow the current style. Pick a slide in the contents on the right; with section focus on, ↑ and ↓ move one slide at a time.
+- When a slide's content is too long, pictures, diagrams and charts shrink to the remaining height; if it still does not fit, the bottom is cut off and the frame is marked **Overflow**.
+- Speaker notes (HTML comments `<!-- … -->` that are not directives) appear under the slide.
+- **Present** in the status bar (Shift+F5), or the ▶ that appears when you point at a slide, shows one slide at a time in the whole window (full screen). Move with → ← Space, PageDown, PageUp, a click or the wheel; **N** shows speaker notes, **F** toggles full screen and **Esc** ends. When you end, the view returns to that slide.
+- **View as document** in the status bar shows the deck as one ordinary document (press it again for slides).
+- Printing or saving as PDF gives one slide per page (at slide size).
+- Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead` (centered), `invert` (dark slide) and background color, background pictures such as `![bg right:40%](picture)`, and the CSS in `style:`. `theme` (gaia and so on) is not read; slides use the Lectern style.
+
 ### Auto refresh
 
 - While Claude writes a document, changes appear within a second and your reading position stays where it was.
@@ -146,7 +158,7 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 ### Print and PDF
 
-Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer.
+Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer. Slide decks print one slide per page.
 
 ## Edit mode
 

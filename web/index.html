@@ -48,6 +48,9 @@
     <symbol id="i-term-bottom" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="M2.5 11h15"/><path d="M8.6 13.2 10 14.6l1.4-1.4" opacity=".8"/></symbol>
     <symbol id="i-edit" viewBox="0 0 20 20"><path d="M12.6 3.8 16.2 7.4 7.6 16H4v-3.6z"/><path d="m10.8 5.6 3.6 3.6"/></symbol>
     <symbol id="i-restart" viewBox="0 0 20 20"><path d="M15.6 10.6A5.6 5.6 0 1 1 13.9 6M14.4 3.4V6.6H11.2"/></symbol>
+    <!-- 발표 문서 (slides.js·present.js, D59): 슬라이드, 발표 -->
+    <symbol id="i-slides" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="9.5" rx="1.3"/><path d="M10 13.5v3M6.5 16.5h7"/></symbol>
+    <symbol id="i-play" viewBox="0 0 20 20"><path d="M6.5 4.5v11l9-5.5z"/></symbol>
     <!-- 사이드바 목록의 파일 종류 (icons.js). md·html 은 문서 -->
     <symbol id="i-md" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7 14.5v-4.3l1.6 2.1 1.6-2.1v4.3M12.6 10.2v4.3m-1.3-1.4 1.3 1.4 1.3-1.4"/></symbol>
     <symbol id="i-html" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M8.7 10.2 6.9 12l1.8 1.8M11.3 10.2l1.8 1.8-1.8 1.8"/></symbol>
@@ -248,6 +251,8 @@
   <footer id="lec-status">
     <span id="lec-st-path"></span>
     <button id="lec-st-edit" class="st-edit" title="여기서 고치기 — 편집 모드 (Ctrl+E)" hidden><svg aria-hidden="true"><use href="#i-edit"/></svg>편집</button>
+    <button id="lec-st-slides" class="st-edit" hidden><svg aria-hidden="true"><use href="#i-slides"/></svg><span>문서로 보기</span></button>
+    <button id="lec-st-present" class="st-edit" title="발표 — 창 전체에 한 장씩 (Shift+F5)" hidden><svg aria-hidden="true"><use href="#i-play"/></svg>발표</button>
     <span id="lec-st-info"></span>
     <button id="lec-st-changes" class="st-changes" hidden></button>
     <span class="tb-spacer"></span>
@@ -328,6 +333,12 @@
 </div>
 <div id="lec-menu" class="menu" role="menu" hidden></div>
 <div id="lec-lightbox" class="overlay" hidden></div>
+<!-- 발표 모드 (present.js, D59): 창 전체에 슬라이드 한 장 -->
+<div id="lec-present" tabindex="-1" aria-label="발표" hidden>
+  <div class="pr-stage"></div>
+  <div class="pr-notes" hidden></div>
+  <div class="pr-bar"><span class="pr-count"></span><span class="pr-hint">← → 넘기기 · N 노트 · F 전체 화면 · Esc 끝내기</span><button type="button" class="pr-close" title="발표 끝내기 (Esc)" aria-label="발표 끝내기 (Esc)"><svg><use href="#i-close"/></svg></button></div>
+</div>
 <div id="lec-toast" role="status" hidden></div>
 </body>
 </html>

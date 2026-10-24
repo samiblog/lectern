@@ -35,6 +35,8 @@ import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initCodeView } from './codeview.js';
+import { initSlides } from './slides.js';
+import { initPresent, presenting, presentKey, startPresent } from './present.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
@@ -131,6 +133,10 @@ const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 
 function bindKeys() {
   document.addEventListener('keydown', (e) => {
+    if (presenting()) {   // 발표 중(present.js, D59): 키는 모두 발표의 것 — 넘기기·노트·전체 화면·Esc
+      presentKey(e);
+      return;
+    }
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
     if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도), Shift 와 함께면 터미널 모음
@@ -197,6 +203,9 @@ function bindKeys() {
     } else if (e.altKey && e.key === 'ArrowRight') {
       e.preventDefault();
       forward();
+    } else if (e.key === 'F5' && e.shiftKey && !mod) {   // 발표 — 지금 보는 슬라이드부터 (발표 문서를 슬라이드로 볼 때, D59)
+      e.preventDefault();
+      startPresent();
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
@@ -216,7 +225,7 @@ function bindKeys() {
   });
   // 마우스 뒤로/앞으로 버튼
   window.addEventListener('mouseup', (e) => {
-    if (inTerminal(e) || gatherOn()) return;
+    if (inTerminal(e) || gatherOn() || presenting()) return;
     if (e.button === 3) { e.preventDefault(); back(); }
     if (e.button === 4) { e.preventDefault(); forward(); }
   });
@@ -275,6 +284,8 @@ async function boot() {
   initWatch();
   initTerminal();
   initEditor();
+  initSlides();
+  initPresent();
   initGather();
   bindToolbar();
   bindKeys();

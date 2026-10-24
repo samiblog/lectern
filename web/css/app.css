@@ -547,6 +547,26 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .code-view .cv-edit:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
 .code-view .cv-edit svg { width: 13px; height: 13px; stroke-width: 1.5; }
 
+/* ---- 발표 모드 (present.js, D59): 창 전체에 슬라이드 한 장 (검은 바탕, 가운데) ---- */
+#lec-present { position: fixed; inset: 0; z-index: 300; display: flex; flex-direction: column; background: #000000; outline: none; }
+#lec-present .pr-stage { flex: 1; min-height: 0; display: grid; place-items: center; overflow: hidden; }
+#lec-present .pr-deck { position: relative; max-width: none; margin: 0; padding: 0; overflow: hidden; }
+#lec-present .pr-notes {
+  flex: none; max-height: 30vh; overflow: auto; padding: 12px 28px; border-top: 1px solid #333333;
+  background: #16181b; color: #e9eaec; font: 17px/1.6 var(--ui-font, sans-serif); white-space: pre-line;
+}
+#lec-present .pr-notes.empty { color: #8a8f96; }
+#lec-present .pr-bar {
+  position: absolute; top: 8px; right: 10px; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 3px 4px 3px 12px;
+  border-radius: 8px; background: rgb(20 22 26 / .78); color: #d6d8dc; font: 12.5px var(--ui-font, sans-serif); transition: opacity .3s;
+}
+#lec-present .pr-count { font-weight: 700; font-variant-numeric: tabular-nums; }
+#lec-present .pr-hint { color: #9aa0a8; }
+#lec-present .pr-close { display: grid; place-items: center; width: 26px; height: 26px; padding: 0; border: 0; border-radius: 6px; background: none; color: #d6d8dc; cursor: pointer; }
+#lec-present .pr-close:hover { background: rgb(255 255 255 / .12); }
+#lec-present.pr-idle { cursor: none; }
+#lec-present.pr-idle .pr-bar { opacity: 0; }
+
 /* ---- 편집 모드 (editor.js, D54): 칸 위를 덮는 편집 상자 — CodeMirror 5. 색은 문서 스타일(--md-*)에서 ---- */
 .lec-editor { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--md-bg, #fff); }
 .ed-head {
