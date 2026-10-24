@@ -1986,6 +1986,13 @@ def run(headed: bool) -> None:
             (tables / 'data' / 'excel.csv').write_bytes('지역,물동량(천톤),증감률\n부산,1234,3.5%\n인천,987,-1.2%\n'.encode('cp949'))
             (tables / 'data' / 'memo.txt').write_bytes('한글 메모 (CP949)\n두 번째 줄\n'.encode('cp949'))
             (tables / 'data' / 'uni.txt').write_bytes('\ufeff유니코드 텍스트\n'.encode('utf-16-le'))
+            # 캡션 (D61): 굵은 〈표 Ⅱ-15〉, '표 1.', 캡션 없는 표, 아래 캡션이 있는 그림과 없는 그림
+            (tables / 'img').mkdir()
+            for n in ('a', 'b'):
+                shutil.copy(ROOT / 'samples' / 'research' / 'images' / 'price-band.svg', tables / 'img' / f'{n}.svg')
+            (tables / 'caps.md').write_text('# 캡션\n\n**〈표 Ⅱ-15〉 철재의 HS코드**\n\n| HS코드 | 품명 |\n|---|---|\n| 7208 | 열연강판 |\n\n'
+                                            '표 1. 항만별 물동량\n\n| 항만 | 물동량 |\n|---|---|\n| 부산 | 1,234 |\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n'
+                                            '![가](img/a.svg)\n\n[그림 1] 분기별 가격 범위\n\n![나만](img/b.svg)\n', encoding='utf-8')
             page.once('dialog', lambda d: d.accept(str(tables)))
             page.click('#lec-btn-open')
             n_tabs(2)
@@ -2043,6 +2050,32 @@ def run(headed: bool) -> None:
                   and enc['data/memo.txt']['text'] == '한글 메모 (CP949)|두 번째 줄' and '텍스트 · 2줄' in enc['data/memo.txt']['info'] and 'CP949' in enc['data/memo.txt']['info']
                   and enc['data/uni.txt']['text'] == '유니코드 텍스트' and 'UTF-16' in enc['data/uni.txt']['info'] and by_link and to_line,
                   f"엑셀 CSV(CP949)·CP949·UTF-16 txt 도 읽고, 문서 속 csv 링크·`경로:줄`은 표의 그 행으로 ({enc['data/excel.csv']['head']}, {enc['data/memo.txt']['info']}, {by_link}, {to_line})")
+            print('[캡션]')   # D61 — 모아 보기는 캡션을 이름으로, 우클릭은 Claude용 위치·원문 복사와 터미널 버튼
+            page.click('.side-tabs button[data-tab="parts"]')
+            wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && !!document.querySelector('#lec-parts-list .pt-item')", 15000)
+            page.click('#lec-parts-kinds button[data-kind="table"]')
+            cap_rows = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-parts-list :is(.pt-item, .pt-thumb)[data-doc="caps.md"]')]
+              .map(e => [e.querySelector('.pt-name, .pt-cap')?.textContent || '', e.querySelector('.pt-label')?.textContent || ''])''')
+            cap_tables = cap_rows()
+            page.click('#lec-parts-kinds button[data-kind="figure"]')
+            wait_until(page, "!!document.querySelector('#lec-parts-list .pt-thumb')", 5000)
+            cap_figs = [r[0] for r in cap_rows()]
+            page.click('#lec-parts-kinds button[data-kind="table"]')
+            page.locator('#lec-parts-list .pt-item[data-doc="caps.md"]').first.click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden]) .menu-row')
+            cap_menu = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-menu .menu-row')].map(r => r.querySelector('button[data-i] span').textContent),
+              ref: [...document.querySelectorAll('#lec-menu .menu-row')].find(r => r.textContent.includes('Claude용 위치'))?.querySelector('small').textContent,
+              terms: document.querySelectorAll('#lec-menu .menu-term').length })''')
+            shot('22-parts-caption')
+            page.keyboard.press('Escape')
+            page.click('.side-tabs button[data-tab="files"]')
+            check(cap_tables == [['〈표 Ⅱ-15〉 철재의 HS코드', '표 1 · 1행 2열'], ['표 1. 항만별 물동량', '표 2 · 1행 2열'], ['표 3', 'a·b · 1행 2열']]
+                  and cap_figs == ['[그림 1] 분기별 가격 범위', '나만']
+                  and cap_menu['rows'][:2] == ['Claude용 위치 복사', '원문 복사'] and cap_menu['ref'] == "@caps.md 3~7행 ('〈표 Ⅱ-15〉 철재의 HS코드')"
+                  and cap_menu['terms'] >= 2,
+                  f"모아 보기: 캡션(굵은 〈표 Ⅱ-15〉·'표 1.'·그림 아래 [그림 1])이 이름, 없으면 머리행·대체 글. 우클릭은 Claude용 위치(줄·캡션)·원문 복사와 터미널 버튼 "
+                  f"({cap_tables}, {cap_figs}, {cap_menu})")
+
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)
             page.wait_for_selector('#lec-view h1')

@@ -66,7 +66,7 @@ function sectionRange(h) {
   return [head[0], end];
 }
 
-const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
+export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
 const sourceOf = ([a, b]) => doc.lines.slice(a - 1, b).join('\n');
 // Claude Code는 '@경로' 를 파일 전체로 붙인다. 줄 범위 표기(#L40-52)는 문서화되어 있지 않아 글로 적는다 (D24)
 const claudeRef = (range, note = '') => `@${doc.path} ${rangeText(range)}${note}`;

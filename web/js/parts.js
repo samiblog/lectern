@@ -12,15 +12,17 @@
 
 import { S, on, emit } from './store.js';
 import { getText } from './api.js';
+import { rangeText } from './docmenu.js';
+import { showMenu } from './ui.js';
 import { navigate } from './nav.js';
-import { switchPanel, labelOf, tipOf } from './tree.js';
+import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, PARTS } from './toc.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, loadImage, imageKey } from './doc.js';
 import {
-  $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare,
+  $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -39,7 +41,14 @@ const inScope = (path, scope) => !scope || path === scope || path.startsWith(`${
 
 // ---- 읽기 ---------------------------------------------------------------------
 
-/** 문서 하나를 화면 밖에서 읽어 구성 요소 목록으로: [{kind, n, name, label, section, src, alt}] (src·alt 는 그림) */
+/** 요소(와 그 캡션 단락)의 원문 줄 범위 [첫 줄, 끝 줄] — md 의 data-lines (markdown.js). 모르면 null (html 문서) */
+function linesOf(...els) {
+  const spans = els.filter(Boolean).map((el) => (el.closest?.('[data-lines]') || el.querySelector?.('[data-lines]'))?.dataset.lines)
+    .filter(Boolean).map((v) => v.split('-').map(Number));
+  return spans.length ? [Math.min(...spans.map((x) => x[0])), Math.max(...spans.map((x) => x[1] || x[0]))] : null;
+}
+
+/** 문서 하나를 화면 밖에서 읽어 구성 요소 목록으로: [{kind, n, name, label, caption, detail, section, lines, src, alt}] (src·alt 는 그림) */
 async function readDoc(tab, path) {
   const text = await getText(docUrl(tab, path));
   let root;
@@ -52,7 +61,8 @@ async function readDoc(tab, path) {
     prepareParts(root);
   }
   return readParts(root).rows.filter((r) => r.kind).map((r) => {
-    const item = { kind: r.kind, n: r.n, name: r.name, label: r.label, section: r.section };
+    const item = { kind: r.kind, n: r.n, name: r.name, label: r.label, caption: r.caption || '', detail: r.detail || '', section: r.section,
+      lines: linesOf(r.el, r.capEl) };
     if (r.kind === 'figure') {
       const img = r.el.tagName === 'IMG' ? r.el : r.el.querySelector('img');
       item.src = img?.getAttribute('data-src') || img?.getAttribute('src') || '';
@@ -108,20 +118,25 @@ function matcher(text) {
   };
 }
 
+/** 항목의 마우스 설명: 캡션(있으면)·이름·설명·절·문서 */
+const itemTip = (file, item) => [item.caption, `${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path]
+  .filter(Boolean).join('\n');
+
+/** 캡션이 있으면 캡션을 이름으로(그 아래에 '표 3 · 6행 2열'), 없으면 '표 3' 과 설명 (D61) */
 function itemRow(file, item, extra = '') {
-  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path].filter(Boolean).join('\n');
-  return `<div class="pt-item" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(tip)}">`
+  const main = item.caption || item.name;
+  const sub = item.caption ? [item.name, item.detail].filter(Boolean).join(' · ') : item.label;
+  return `<div class="pt-item${item.caption ? ' has-cap' : ''}" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
     + `<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[item.kind].icon}"/></svg>`
-    + `<span class="pt-text"><span class="pt-name">${esc(item.name)}</span>${item.label ? `<span class="pt-label">${esc(item.label)}</span>` : ''}`
+    + `<span class="pt-text"><span class="pt-name">${esc(main)}</span>${sub ? `<span class="pt-label">${esc(sub)}</span>` : ''}`
     + `${item.section ? `<span class="pt-sec">${esc(item.section)}</span>` : ''}</span>${extra}</div>`;
 }
 
 function thumb(file, item, others) {
   const more = others.length ? `<span class="pt-more" title="${esc(`${t('같은 그림을 쓰는 다른 문서:')}\n${others.join('\n')}`)}">${t('+{n}곳', { n: others.length })}</span>` : '';
-  const tip = [`${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path].filter(Boolean).join('\n');
-  return `<div class="pt-thumb" tabindex="0" data-doc="${esc(file.path)}" data-kind="figure" data-n="${item.n}" title="${esc(tip)}">`
+  return `<div class="pt-thumb" tabindex="0" data-doc="${esc(file.path)}" data-kind="figure" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
     + `<div class="pt-pic" data-src="${esc(item.src)}" data-alt="${esc(item.alt)}"></div>`
-    + `<span class="pt-cap">${esc(item.label || item.name)}</span>${more}</div>`;
+    + `<span class="pt-cap">${esc(item.caption || item.label || item.name)}</span>${more}</div>`;
 }
 
 /** 모을 것 버튼과 거르기 칸의 안내 */
@@ -180,7 +195,7 @@ function render() {
   for (const { file, items } of groups) {
     const title = file.title || basename(file.path);
     let mine = items.filter((it) => it.kind === state.kind
-      && match(it.name, it.label, it.section, title, file.path));
+      && match(it.name, it.label, it.caption, it.section, title, file.path));
     if (!mine.length) continue;
     let body;
     if (state.kind === 'figure') {
@@ -367,6 +382,42 @@ async function refresh() {
 // ---- 열기 ---------------------------------------------------------------------
 
 /** 항목으로 간다: 그 문서를 열고, 목차와 같은 규칙으로 센 같은 종류·번호의 것으로 */
+/** 목록의 행(.pt-item·.pt-thumb)이 가리키는 문서와 구성 요소 */
+function itemOf(el) {
+  const path = el.dataset.doc;
+  const item = S.tab?.partsCache?.get(path)?.items.find((it) => it.kind === el.dataset.kind && it.n === Number(el.dataset.n));
+  return item ? { path, item } : null;
+}
+
+async function copy(text, what) {
+  toast(await copyText(text) ? t('복사했습니다: {what}', { what }) : t('복사하지 못했습니다'));
+}
+
+/** 구성 요소의 우클릭 메뉴 (D61): 문서에서 보기, Claude용 위치·원문 복사(옆에 터미널 버튼 — D51), 문서 경로 */
+async function partMenu(el, x, y) {
+  const found = itemOf(el);
+  if (!found) return;
+  const { path, item } = found;
+  const tab = S.tab;
+  const what = item.caption || `${item.name}${item.label ? ` · ${item.label}` : ''}`;
+  const range = item.lines;
+  const ref = `@${path}${range ? ` ${rangeText(range)}` : ''}${item.caption ? ` ('${item.caption}')` : ''}`;
+  const items = [{ header: `${item.name} · ${path}` },
+    { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => openItem(el) },
+    { label: t('Claude용 위치 복사'), hint: ref, action: () => copy(ref, ref), term: `${ref} ` }];
+  if (range && !isHtml(path)) {
+    let source = '';
+    try {
+      source = (await getText(docUrl(tab, path))).split(/\r?\n/).slice(range[0] - 1, range[1]).join('\n');
+    } catch { /* 읽는 사이 지워진 문서 — 원문 항목 없이 */ }
+    if (tab !== S.tab) return;
+    if (source) items.push({ label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
+  }
+  items.push('-', ...pathMenuItems(path, true));
+  el.classList.add('lec-picked');
+  showMenu(x, y, items, () => el.classList.remove('lec-picked'));
+}
+
 async function openItem(el) {
   const path = el.dataset.doc;
   const here = S.view?.type === 'doc' && S.view.path === path;
@@ -456,6 +507,12 @@ export function initParts() {
   });
   list.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.pt-item, .pt-thumb, .pt-doc')) openItem(e.target);
+  });
+  list.addEventListener('contextmenu', (e) => {   // 구성 요소의 우클릭 — 문서 머리줄·파일 행은 각자 (bindFileRows)
+    const el = e.target.closest('.pt-item, .pt-thumb');
+    if (!el) return;
+    e.preventDefault();
+    partMenu(el, e.clientX, e.clientY);
   });
   on('panel', (name) => { if (name === 'parts') refresh(); });
   on('parts', openParts);

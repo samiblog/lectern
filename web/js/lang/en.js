@@ -268,6 +268,7 @@ export default {
 "펼치기": "Expand",
 "두 번 누르기·Enter": "Double-click or Enter",
 "폴더 개요 보기": "Folder overview",
+"문서에서 보기": "Show in document",
 "'{name}' 탭의 터미널에 넣었습니다 — Enter 는 누르지 않았습니다": "Put into the terminal of the '{name}' tab — Enter was not pressed",
 "{n}열": ["{n} column", "{n} columns"],
 "{n}행": ["{n} row", "{n} rows"],

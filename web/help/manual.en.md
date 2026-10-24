@@ -75,7 +75,9 @@ The **Files** tab is split into three groups.
 
 - Choose **In documents** or **File types** at the top.
 - In documents: collects the tables, figures, callouts, diagrams, code and math across the project, by type and by document. Pick a type with the buttons (such as 'Tables 7').
+- When a table, figure or diagram has a **caption**, the caption is shown as its name, with the number and size below (such as 'Table 3 · 6 rows 2 columns'). A caption is a line such as 'Table 1. …', '<Table 2>' or '[Figure 1]' (or the same forms in Korean) directly above a table or below a picture, a short whole-bold line, or `<caption>`/`<figcaption>` in HTML. Without one, tables show their header row and pictures their alt text.
 - Click an item to go to that place in its document; it is outlined briefly.
+- **Right-click** an item for Show in document, **Copy location for Claude** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
 - File types: each group — documents, code and other files — gets a button per format, such as 'PDF 2', 'Excel 3', 'PNG 10', 'PY 12' or 'IPYNB 2', and the files of the chosen format are collected. Excel, PowerPoint, Word and Hangul files count as one format whatever their extension. Image files appear as thumbnails. The 'Tree order' button switches to the most recently changed files first.

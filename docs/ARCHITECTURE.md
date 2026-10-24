@@ -290,7 +290,7 @@ sequenceDiagram
 
 ### 목차 (toc.js)
 - 렌더러가 `setToc(pane, root)` 로 칸마다 목차의 근원(문서 화면, html 문서는 iframe 의 문서)을 남기고, 선택된 칸의 것을 그린다. 제목은 h1~h4 (H1 이 하나면 문서 제목이라 뺀다), 지금 읽는 위치(`spy`)는 제목만 따른다.
-- 제목 아래에 그 절의 구성 요소를 문서 순서로 (D39): 표·그림·박스글·다이어그램·코드·수식 (`partKind`). 링크는 제목 `a[data-i]`, 구성 요소 `a[data-c]`. 구성 요소는 아이콘 + 종류·번호(표 1 …, 박스글은 콜아웃 종류) + 짧은 설명 (`describe`). 누르면 `unfoldTo` 후 그 자리로 가서 `lec-target`(base.css·frame.css)으로 잠깐 테두리.
+- 제목 아래에 그 절의 구성 요소를 문서 순서로 (D39): 표·그림·박스글·다이어그램·코드·수식 (`partKind`). 링크는 제목 `a[data-i]`, 구성 요소 `a[data-c]`. 구성 요소는 아이콘 + 종류·번호(표 1 …, 박스글은 콜아웃 종류) + 짧은 설명 (`describe` — 캡션이 있으면 번호를 뗀 캡션이 먼저, D61). 캡션은 `captionOf(kind, el)`: `<caption>`·`<figcaption>`, 또는 요소 바로 앞·뒤의 짧은 단락이 번호 붙은 캡션(`CAPTION` — `표 1.`·`<표 2>`·`[그림 1]`·`〈표 Ⅱ-15〉`·`표 3-1`·`Table 2:`·`Fig. 3`)이거나 통째로 굵게·기울여 쓴 줄. 표·다이어그램은 위, 그림은 아래가 먼저, 코드는 번호 붙은 것만. 머리 낱말의 종류(`wordKind`)가 다르면 가져가지 않고, 두 요소 사이의 단락은 그림 뒤면 그 그림의 것·표·다이어그램·코드 앞이면 그것의 것(`holderKind`). 누르면 `unfoldTo` 후 그 자리로 가서 `lec-target`(base.css·frame.css)으로 잠깐 테두리.
 - 머리의 종류 버튼(`.toc-parts`)은 그 문서에 있는 종류만 개수와 함께. 누르면 설정 `toc_hidden_parts` 에 넣고 빼며 목차를 다시 그린다.
 - 목차는 제목이 둘 이상이거나 구성 요소가 하나라도 있으면 보인다 (`toc-off`). 터미널을 연 동안은 감춘다 (터미널 절).
 
@@ -375,7 +375,7 @@ sequenceDiagram
 - 맨 위 '문서 속 요소' / '파일 종류'(`#lec-parts-mode`, D50 — `tab.side.parts.mode`). 아래는 문서 속 요소이고, 파일 종류는 이 절 끝에.
 - 사이드바 '모아 보기' 탭(`#lec-parts`): 종류 버튼(표·그림·박스글·다이어그램·코드·수식, 범위 안의 개수), 범위(프로젝트 전체 또는 폴더 — '전체'로 되돌림), 순서(트리 순서 / 최근 수정 순), 거르기(이름·설명·절·문서 제목·경로의 모든 낱말), 문서별 목록 (D41).
 - 세기: 범위 안의 문서(`tab.files`)를 4개씩 `GET /doc/<id>/<경로>` 로 받아 화면 밖에서 그린다 — md 는 `renderMarkdown` → `doc.js` 의 `sanitizeHtml`(본문과 같은 정화, 그림 주소는 data-src) → `template` → `prepareParts`(콜아웃·표·코드 꾸미기), html 은 `DOMParser`. 그다음 `toc.js` 의 `readParts` 로 센다 (목차와 같은 종류·번호·이름·절). 결과는 `tab.partsCache`(경로 → {mtime, items}) — 수정 시각이 같으면 다시 읽지 않는다. 트리를 새로 받으면(`tree` 이벤트) 보이는 동안 바뀐 문서만 다시 읽는다.
-- 항목: 아이콘, 종류·번호(박스글은 콜아웃 종류), 짧은 설명, 절(`§`). 그림은 작은 그림 격자 — 보일 때(IntersectionObserver) `doc.js` 의 `loadImage` 로 본문과 같은 규칙으로 불러오고, 같은 그림(`imageKey`)은 처음 것 하나에 '+N곳'. 누르거나 Enter: 그 문서를 열고(`navigate`) 그려진 화면에서 `readParts` 로 같은 종류·번호를 찾아 `goToPart`. 문서 머리줄은 그 문서를 연다.
+- 항목: 아이콘, 종류·번호(박스글은 콜아웃 종류), 짧은 설명, 절(`§`). 캡션이 있으면 캡션(쓴 그대로)이 이름이고 그 아래 '표 3 · 6행 2열'(`describe` 의 `detail` — 표는 크기, 다이어그램·코드는 종류·언어), `.pt-item.has-cap` (D61). 항목에는 원문 줄 범위 `lines`(요소와 캡션 단락의 `data-lines` — md 만)도 둔다. 그림은 작은 그림 격자 — 보일 때(IntersectionObserver) `doc.js` 의 `loadImage` 로 본문과 같은 규칙으로 불러오고, 같은 그림(`imageKey`)은 처음 것 하나에 '+N곳'. 누르거나 Enter: 그 문서를 열고(`navigate`) 그려진 화면에서 `readParts` 로 같은 종류·번호를 찾아 `goToPart`. 문서 머리줄은 그 문서를 연다. 우클릭(`partMenu`, D61): 문서에서 보기, Claude용 위치 복사(`@문서 a~b행 ('캡션')`), 원문 복사(md — 그 줄들을 받아서), 문서 경로 메뉴(`pathMenuItems`) — 복사 항목은 터미널 버튼(D51).
 - 여는 곳: 탭, 폴더 개요의 '모아 보기' 버튼(`data-parts`), 트리·폴더 보기의 폴더·프로젝트 우클릭 (`pathMenuItems`) — 둘 다 `parts` 이벤트 {path, kind}. 종류 없이 열면 그 범위에 있는 첫 종류로. 사이드바가 숨어 있으면 `show-sidebar` 이벤트로 보인다. 종류·범위·거르기·순서·스크롤은 탭마다 (`tab.side.parts`).
 - 파일 종류 (D50): 범위 안의 파일 — 문서는 `tab.files`, 코드·자료는 `others.js` 의 `otherFiles`(`loadOthers` 로 받아 두고, 제외 폴더 안은 빼고) — 을 묶음(문서·코드·자료)마다 `icons.js` 의 `fileType` 으로 나눠 형식 버튼(`data-ftype="묶음:형식"`, 묶음마다 한 줄 `.ft-group`)을 만든다. 고른 형식의 파일을 트리 순서(폴더마다 하위 폴더 먼저) 또는 최근 수정 순으로 800개까지 (`.ft-row[data-file]` — `bindFileRows`). 자료의 그림 파일(`PICTURE_EXT`)은 작은 그림 격자(`.ft-thumb`) — 보일 때 그 파일을 `/doc/<id>/<경로>` 로 불러온다. 파일이 생기거나 지워지면(`others` 이벤트) 다시 그린다. '코드'·'자료' 목록의 폴더 우클릭 '이 폴더의 파일을 종류별로 모아 보기'는 `parts` 이벤트 {path, mode: 'files'}.
 
