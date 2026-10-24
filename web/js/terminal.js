@@ -7,7 +7,8 @@
 //   예외는 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'(D51)이고, 이것도 Ctrl+V 와 같은 길로 Enter 없이 넣는다 (pasteToTerminal).
 // - 패널을 닫아도 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
-// - 터미널을 열면 목차를 감춘다 (본문 폭) — 목차 버튼으로 함께 볼 수 있다 (toc.js).
+// - 자리는 오른쪽 또는 문서 아래 (D52 — 설정 terminal_position: auto 면 창이 세로로 길 때 아래). 오른쪽이면 목차 자리를 쓰므로
+//   목차를 감춘다 (목차 버튼으로 함께 볼 수 있다 — toc.js). 아래면 #lec-main 이 격자가 되어 문서·목차 아래에 전체 폭으로 놓인다.
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
 // - 터미널 모음(gather.js)은 탭마다의 화면(tab.term.box)을 이 패널에서 모음 칸으로 옮겨 보이고, 닫으면 되돌린다 (returnTerminals).
 //   모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
@@ -23,6 +24,8 @@ import { t } from './i18n.js';
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
 const MIN_WIDTH = 280;
 const DOC_MIN = 360;   // 본문에 남길 폭
+const MIN_HEIGHT = 120;      // 아래 터미널의 높이 (D52)
+const DOC_MIN_HEIGHT = 160;  // 아래 터미널 위에 문서를 남길 높이
 const SEND_CHUNK = 16384;
 const root = document.documentElement;
 
@@ -432,12 +435,37 @@ export function returnTerminals() {
   showCurrent();
 }
 
+// ---- 자리: 오른쪽 / 아래 (D52) ----------------------------------------------------------
+// 설정 terminal_position: auto(창이 세로로 길면 — 높이 ≥ 폭 — 아래, 아니면 오른쪽) | side | bottom. 머리줄 버튼은 side·bottom 을 바꾼다
+
+const portrait = window.matchMedia('(orientation: portrait)');
+const placeSetting = () => (['side', 'bottom'].includes(S.config.terminal_position) ? S.config.terminal_position : 'auto');
+
+/** 터미널을 문서 아래에 두는지 */
+export const terminalBelow = () => placeSetting() === 'bottom' || (placeSetting() === 'auto' && portrait.matches);
+
+function applyPlace() {
+  const below = terminalBelow();
+  root.classList.toggle('term-bottom', below);
+  const handle = $('#lec-term-resizer');
+  handle.setAttribute('aria-orientation', below ? 'horizontal' : 'vertical');
+  handle.title = below ? t('끌어서 터미널 높이 조절 (두 번 누르면 기본 높이)') : t('끌어서 터미널 폭 조절 (두 번 누르면 기본 폭)');
+  const btn = $('#lec-term-place');
+  btn.title = below ? t('터미널을 오른쪽으로') : t('터미널을 아래로');
+  btn.querySelector('use').setAttribute('href', below ? '#i-term-side' : '#i-term-bottom');
+  updateTocVisibility();
+}
+
 function applyWidth() {
   const px = Number(S.config.terminal_width);
   if (px) root.style.setProperty('--term-w', `${Math.round(px)}px`);
   else root.style.removeProperty('--term-w');   // app.css 의 기본 폭
+  const h = Number(S.config.terminal_height);
+  if (h) root.style.setProperty('--term-h', `${Math.round(h)}px`);
+  else root.style.removeProperty('--term-h');   // 기본 높이
 }
 
+/** 경계를 끌어 폭(아래에 두면 높이)을 바꾼다. 두 번 누르면 기본 */
 function bindResizer() {
   const handle = $('#lec-term-resizer');
   handle.addEventListener('pointerdown', (e) => {
@@ -445,20 +473,24 @@ function bindResizer() {
     e.preventDefault();
     handle.setPointerCapture(e.pointerId);
     const main = $('#lec-main').getBoundingClientRect();
-    const widthAt = (ev) => Math.round(Math.max(MIN_WIDTH, Math.min(main.width - DOC_MIN, main.right - ev.clientX)));
-    const move = (ev) => root.style.setProperty('--term-w', `${widthAt(ev)}px`);
+    const below = terminalBelow();
+    const sizeAt = below
+      ? (ev) => Math.round(Math.max(MIN_HEIGHT, Math.min(main.height - DOC_MIN_HEIGHT, main.bottom - ev.clientY)))
+      : (ev) => Math.round(Math.max(MIN_WIDTH, Math.min(main.width - DOC_MIN, main.right - ev.clientX)));
+    const move = (ev) => root.style.setProperty(below ? '--term-h' : '--term-w', `${sizeAt(ev)}px`);
+    const busy = [below ? 'resizing-rows' : 'resizing', 'resizing-term'];
     const up = (ev) => {
       handle.removeEventListener('pointermove', move);
       handle.removeEventListener('pointerup', up);
-      root.classList.remove('resizing', 'resizing-term');
-      if (ev.clientX !== e.clientX) saveConfig({ terminal_width: widthAt(ev) });
+      root.classList.remove(...busy);
+      if (below ? ev.clientY !== e.clientY : ev.clientX !== e.clientX) saveConfig({ [below ? 'terminal_height' : 'terminal_width']: sizeAt(ev) });
     };
-    root.classList.add('resizing', 'resizing-term');
+    root.classList.add(...busy);
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', up);
   });
-  handle.addEventListener('dblclick', () => {
-    saveConfig({ terminal_width: null });
+  handle.addEventListener('dblclick', async () => {
+    await saveConfig({ [terminalBelow() ? 'terminal_height' : 'terminal_width']: null });
     applyWidth();
   });
 }
@@ -466,8 +498,16 @@ function bindResizer() {
 export function initTerminal() {
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
+  // 머리줄 버튼: 오른쪽 ↔ 아래 (설정이 자동이었으면 이제 그 자리로 고정 — 설정 창에서 자동으로 되돌린다)
+  $('#lec-term-place').addEventListener('click', async () => {
+    await saveConfig({ terminal_position: terminalBelow() ? 'side' : 'bottom' });
+    applyPlace();
+  });
+  portrait.addEventListener('change', applyPlace);   // 창 모양이 바뀜 (자동일 때만 자리가 바뀐다)
+  on('term-place', applyPlace);                      // 설정 창
   bindResizer();
   applyWidth();
+  applyPlace();
   // 패널 크기가 바뀌면 글자 칸 수를 다시 맞춘다 (셸에도 알린다 — onResize)
   let raf = 0;
   new ResizeObserver(() => {

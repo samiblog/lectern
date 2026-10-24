@@ -13,6 +13,7 @@ export function openSettings() {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
   for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
+  for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   box().hidden = false;
   $('#lec-settings input')?.focus();
 }
@@ -27,6 +28,11 @@ async function onChange(e) {
   if (e.target.name === 'language') {   // 화면 언어 (D46): 서버가 index.html 에 넣는 언어가 바뀌므로 다시 불러온다 (열린 탭·터미널 셸은 그대로)
     await saveConfig({ language: e.target.value });
     location.reload();
+    return;
+  }
+  if (e.target.name === 'terminal_position') {   // 터미널 자리 (D52 — terminal.js)
+    await saveConfig({ terminal_position: e.target.value });
+    emit('term-place');
     return;
   }
   if (e.target.name === 'theme_groups') {   // 스타일 목록을 묶는 방식만 바뀐다 (고른 스타일은 그대로)

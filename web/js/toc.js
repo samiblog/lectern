@@ -18,7 +18,8 @@ let raf = 0;
 
 /** 터미널(terminal.js)을 열면 목차를 감춘다 — 본문 폭이 모자라므로. 그동안 목차 버튼은 목차를 함께 보일지만 바꾼다 */
 const root = document.documentElement;
-const hiddenByTerminal = () => root.classList.contains('term-on') && !root.classList.contains('toc-with-term');
+// 오른쪽 터미널은 목차 자리를 쓴다 (목차 버튼으로 함께 볼 수 있다 — toc-with-term). 아래에 둔 터미널(D52)은 목차를 가리지 않는다
+const hiddenByTerminal = () => root.classList.contains('term-on') && !root.classList.contains('term-bottom') && !root.classList.contains('toc-with-term');
 
 export function updateTocVisibility() {
   const has = !!$('#lec-toc').firstChild;

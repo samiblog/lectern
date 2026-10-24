@@ -1649,6 +1649,38 @@ def run(headed: bool) -> None:
             reset_w = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_width)")
             check(abs(width1 - width0 - 120) <= 3 and saved_w and abs(saved_w - width1) <= 2 and reset_w is None and abs(width2 - width0) <= 2,
                   f'경계를 끌어 터미널 폭 조절·저장, 두 번 누르면 기본 폭 ({width0:.0f} → {width1:.0f} 저장 {saved_w}, → {width2:.0f})')
+            # 터미널 자리 (D52): 머리줄 버튼으로 아래 ↔ 오른쪽, 아래면 문서·목차 아래 전체 폭에 높이 조절, 자동이면 창 모양을 따른다
+            place = lambda: page.evaluate('''() => { const r = (s) => document.querySelector(s).getBoundingClientRect();
+              const term = r('#lec-term'), panes = r('#lec-panes');
+              return { below: document.documentElement.classList.contains('term-bottom'), under: term.top >= panes.bottom - 1,
+                       wide: term.width > panes.width, h: Math.round(term.height), toc: !document.documentElement.classList.contains('toc-off') }; }''')
+            page.click('#lec-term-place')
+            wait_until(page, "document.documentElement.classList.contains('term-bottom')")
+            p1 = place()
+            saved_pos = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_position)")
+            handle = page.locator('#lec-term-resizer').bounding_box()
+            page.mouse.move(handle['x'] + 200, handle['y'] + 3)
+            page.mouse.down()
+            page.mouse.move(handle['x'] + 200, handle['y'] - 77, steps=4)
+            page.mouse.up()
+            p2 = place()
+            saved_h = page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.terminal_height)")
+            page.dblclick('#lec-term-resizer')
+            page.click('#lec-term-place')
+            wait_until(page, "!document.documentElement.classList.contains('term-bottom')")
+            p3 = place()
+            page.click('#lec-btn-settings')   # 설정 창에서 '자동'으로 되돌린다
+            page.check('#lec-settings input[name="terminal_position"][value="auto"]')
+            auto_saved = wait_until(page, "fetch('/api/config').then(r => r.json()).then(c => c.terminal_position === 'auto')", 3000)
+            page.click('#lec-settings-close')
+            size0 = page.viewport_size
+            page.set_viewport_size({'width': 900, 'height': 1200})   # 세로로 긴 창 — 자동이면 아래
+            auto_below = wait_until(page, "document.documentElement.classList.contains('term-bottom')", 5000)
+            page.set_viewport_size(size0)
+            auto_side = wait_until(page, "!document.documentElement.classList.contains('term-bottom')", 5000) and auto_saved
+            check(p1['below'] and p1['under'] and p1['wide'] and p1['toc'] and saved_pos == 'bottom' and abs(p2['h'] - p1['h'] - 80) <= 3
+                  and saved_h and abs(saved_h - p2['h']) <= 3 and not p3['below'] and not p3['under'] and auto_below and auto_side,
+                  f"터미널 자리: 머리줄 버튼으로 아래(문서·목차 아래 전체 폭, 목차는 그대로)·높이 조절, 다시 오른쪽, 자동이면 세로로 긴 창에서 아래 ({p1}, {p2}, {saved_h})")
             page.click('#lec-term-restart')
             restarted = wait_until(page, '''![...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
               .map(r => r.textContent).join('').includes('lecterm')''') and term_has('PS ', 30000)

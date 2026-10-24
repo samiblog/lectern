@@ -63,6 +63,8 @@ DEFAULTS: dict[str, Any] = {
     'editor': None,          # 코드 파일을 열 편집기 실행 파일 경로 (None이면 PATH의 code)
     'terminal_shell': None,  # 오른쪽 터미널의 셸 실행 파일 전체 경로 (None 이면 Windows PowerShell 5.1, 직접 편집 — 예: pwsh.exe)
     'terminal_width': None,  # 오른쪽 터미널 폭(px). None 이면 기본 (경계를 끌어 바꾸고 두 번 누르면 기본)
+    'terminal_height': None, # 아래 터미널 높이(px). None 이면 기본 (D52)
+    'terminal_position': 'auto',  # 터미널 자리: auto(창이 세로로 길면 아래, 아니면 오른쪽) | side | bottom (설정 창·터미널 머리줄, D52)
     'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
 }
@@ -71,12 +73,13 @@ DEFAULTS: dict[str, Any] = {
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
-                         'terminal_width',
+                         'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
-NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width'})
+NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
+                      'terminal_height'})
 _EXAMPLE = {bool: N_('true 또는 false'), int: N_('숫자'), float: N_('숫자'), str: N_('"글자"'), list: N_('["이름", ...] 목록'),
             dict: N_('{ } 객체')}
 
@@ -91,8 +94,10 @@ def value_ok(key: str, value: Any) -> bool:
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
-    if key in ('sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_width'):
+    if key in ('sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_width', 'terminal_height'):
         return is_number(value)
+    if key == 'terminal_position':
+        return value in ('auto', 'side', 'bottom')
     if key in ('last_folder', 'editor', 'terminal_shell'):
         return isinstance(value, str)
     if isinstance(default, bool):

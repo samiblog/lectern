@@ -43,6 +43,8 @@
     <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
     <symbol id="i-term" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="m6 8 2.6 2.1L6 12.2M10.5 12.5h3.5"/></symbol>
     <symbol id="i-terms" viewBox="0 0 20 20"><rect x="2.5" y="6" width="11.5" height="10" rx="1.5"/><path d="M6 3.5h10a1.5 1.5 0 0 1 1.5 1.5v8M5.5 9.3l2 1.7-2 1.7M9 13h2.5"/></symbol>
+    <symbol id="i-term-side" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="M11.5 3.5v13"/><path d="M13.6 8.6l1.4 1.4-1.4 1.4" opacity=".8"/></symbol>
+    <symbol id="i-term-bottom" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="M2.5 11h15"/><path d="M8.6 13.2 10 14.6l1.4-1.4" opacity=".8"/></symbol>
     <symbol id="i-restart" viewBox="0 0 20 20"><path d="M15.6 10.6A5.6 5.6 0 1 1 13.9 6M14.4 3.4V6.6H11.2"/></symbol>
     <!-- 사이드바 목록의 파일 종류 (icons.js). md·html 은 문서 -->
     <symbol id="i-md" viewBox="0 0 20 20"><path d="M5 2.5h6.5L15 6v11.5H5z"/><path d="M11.5 2.5V6H15M7 14.5v-4.3l1.6 2.1 1.6-2.1v4.3M12.6 10.2v4.3m-1.3-1.4 1.3 1.4 1.3-1.4"/></symbol>
@@ -205,11 +207,13 @@
 
     <div id="lec-toc-resizer" role="separator" aria-orientation="vertical" title="끌어서 목차 폭 조절 (두 번 누르면 기본 폭)"></div>
     <aside id="lec-toc" aria-label="목차"></aside>
-    <!-- 오른쪽 터미널 (terminal.js, D38): 프로젝트 탭마다 셸 하나. 사용자가 열 때만 시작한다. 경계를 끌어 폭 조절 -->
+    <!-- 터미널 (terminal.js, D38): 프로젝트 탭마다 셸 하나. 사용자가 열 때만 시작한다. 경계를 끌어 폭(아래에 두면 높이) 조절.
+         자리는 오른쪽 또는 문서 아래 (D52 — html.term-bottom 이면 #lec-main 이 격자가 된다) -->
     <div id="lec-term-resizer" role="separator" aria-orientation="vertical" title="끌어서 터미널 폭 조절 (두 번 누르면 기본 폭)" hidden></div>
     <section id="lec-term" aria-label="터미널" hidden>
       <div class="term-head">
         <svg class="term-icon" aria-hidden="true"><use href="#i-term"/></svg><span id="lec-term-title">터미널</span>
+        <button type="button" id="lec-term-place" class="icon-btn small" title="터미널을 아래로"><svg><use href="#i-term-bottom"/></svg></button>
         <button type="button" id="lec-term-restart" class="icon-btn small" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)"><svg><use href="#i-restart"/></svg></button>
         <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 닫지 않음"><svg><use href="#i-close"/></svg></button>
       </div>
@@ -270,6 +274,12 @@
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>
+    <div class="opt-choice" role="radiogroup" aria-labelledby="lec-termpos-title">
+      <span class="opt-head"><b id="lec-termpos-title">터미널 자리</b><small>터미널 머리줄의 버튼으로도 바꿉니다 (그러면 자동이 아니게 됩니다)</small></span>
+      <label><input type="radio" name="terminal_position" value="auto"><span>자동<small>창이 세로로 길면 문서 아래, 아니면 오른쪽</small></span></label>
+      <label><input type="radio" name="terminal_position" value="side"><span>오른쪽<small>문서 옆에 나란히</small></span></label>
+      <label><input type="radio" name="terminal_position" value="bottom"><span>아래<small>문서 아래에 위아래로</small></span></label>
+    </div>
     <label class="opt"><input type="checkbox" data-key="terminal_follow_style"><span><b>터미널 색을 스타일에 맞춤</b><small>오른쪽 터미널의 바탕·글자 색을 문서 스타일에 맞춥니다. 끄면 늘 어두운 색입니다</small></span></label>
     <div class="dialog-file">
       <button type="button" id="lec-settings-file" class="text-btn">설정 파일 열기</button>

@@ -187,6 +187,18 @@ def test_terminal_settings(tmp_path):
     assert cfg.get('terminal_shell') == r'C:\Program Files\PowerShell\7\pwsh.exe' and cfg.get('terminal_width') is None
 
 
+def test_terminal_position_settings(tmp_path):
+    # 터미널 자리 (D52): auto | side | bottom, 아래에 둘 때의 높이
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('terminal_position') == 'auto' and cfg.get('terminal_height') is None
+    cfg.update_client({'terminal_position': 'bottom', 'terminal_height': 300})
+    assert cfg.get('terminal_position') == 'bottom' and cfg.get('terminal_height') == 300
+    cfg.update_client({'terminal_position': 'top', 'terminal_height': 'tall'})        # 모르는 값은 받지 않는다
+    assert cfg.get('terminal_position') == 'bottom' and cfg.get('terminal_height') == 300
+    cfg.update_client({'terminal_height': None})
+    assert cfg.get('terminal_height') is None
+
+
 def test_toc_width_setting(tmp_path):
     # 목차 폭 (D47): 경계를 끌면 화면이 저장하고, 두 번 누르면 null(기본 폭). 손으로 틀린 값을 적으면 기본값
     path = tmp_path / 'config.json'

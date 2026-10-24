@@ -32,7 +32,7 @@ import { initPosition } from './position.js';
 import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
-import { initTerminal, toggleTerminal, terminalOpen } from './terminal.js';
+import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initCodeView } from './codeview.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
 import { loadTree } from './project.js';
@@ -79,7 +79,7 @@ async function toggleToc() {
     leaveGather();
     if (S.config.toc_visible !== false && !terminalOpen()) return;
   }
-  if (terminalOpen()) {   // 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
+  if (terminalOpen() && !terminalBelow()) {   // 오른쪽 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
     document.documentElement.classList.toggle('toc-with-term');
     applyLayout();
     return;

@@ -134,6 +134,8 @@ flowchart LR
 | `recent_docs` / `recent_code` / `recent_others` | `true` | 가능 | 최근 변경 탭에 보일 것 — 위의 '문서'·'코드'·'자료' 버튼 (D50) |
 | `others_height` / `code_height` | `null` | 가능 | 종류별 보기의 '자료'·'코드' 묶음 높이(px) — 펼친 첫 묶음이 아닐 때. 위 분리선을 끌어 바꾸고 두 번 누르면 `null`(파일 탭 높이의 30%·26%) |
 | `terminal_width` | `null` | 가능 | 오른쪽 터미널 폭(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(본문 영역의 42%) |
+| `terminal_position` | `"auto"` | 가능 | 터미널 자리: `auto`(창이 세로로 길면 아래)·`side`(오른쪽)·`bottom`(문서 아래) — 설정 창·터미널 머리줄 버튼 (D52) |
+| `terminal_height` | `null` | 가능 | 아래에 둔 터미널 높이(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(40%) |
 | `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
@@ -361,7 +363,8 @@ sequenceDiagram
 - 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
 - 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
-- 머리줄: 셸 이름 — 탭 이름, 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
+- 머리줄: 셸 이름 — 탭 이름, 자리 바꾸기(`#lec-term-place` — 오른쪽 ↔ 아래), 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
+- 자리 (D52): 설정 `terminal_position` — `auto`(창이 세로로 길면 아래 — `matchMedia('(orientation: portrait)')`, 바뀌면 다시)·`side`·`bottom`. 아래면 `html.term-bottom` → `#lec-main` 이 격자(`grid-template-areas`: 위 줄 사이드바·문서·목차, 아래 줄 경계·터미널 — 사이드바를 뺀 전체 폭). 경계는 가로 막대가 되어 높이(`--term-h`, 설정 `terminal_height`)를 바꾼다. 아래 터미널은 목차를 가리지 않는다 (`toc.js` 의 `hiddenByTerminal`, 목차 버튼도 보통처럼 `toc_visible`). 설정 창의 '터미널 자리'는 `term-place` 이벤트.
 - 터미널에 붙여 넣기 (D51): 우클릭 메뉴 항목에 `term`(넣을 글)이 있으면 `ui.js` 가 항목 옆에 터미널 버튼(`.menu-term`)을 달고, 누르면 `term-paste` 이벤트 → `pasteToTerminal`. 패널이 닫혀 있으면 열고 셸을 띄운 뒤, 끝의 줄바꿈을 떼고 `xterm.paste` (Ctrl+V 와 같은 길 — 붙여넣기 모드면 감싸고, 줄바꿈은 CR). 여러 줄인데 `xterm.modes.bracketedPasteMode` 가 꺼져 있으면 `confirm` 으로 묻는다. 넣은 뒤 터미널에 초점.
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 

@@ -248,6 +248,19 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-term-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lec-term-body { flex: 1; min-height: 0; position: relative; color-scheme: dark; }   /* 스크롤바도 바탕에 맞게 */
 .term-light #lec-term-body, .term-light .g-body { color-scheme: light; }
+/* 아래에 둔 터미널 (D52): #lec-main 을 격자로 — 위에 문서·목차, 그 아래 경계와 터미널이 사이드바를 뺀 전체 폭 */
+.term-on.term-bottom #lec-main {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: minmax(0, 1fr) auto minmax(120px, var(--term-h, 40%));
+  grid-template-areas: "side sres panes tres toc" "side sres hres hres hres" "side sres term term term";
+}
+.term-on.term-bottom #lec-sidebar { grid-area: side; }
+.term-on.term-bottom #lec-resizer { grid-area: sres; }
+.term-on.term-bottom #lec-panes { grid-area: panes; }
+.term-on.term-bottom #lec-toc-resizer { grid-area: tres; }
+.term-on.term-bottom #lec-toc { grid-area: toc; }
+.term-on.term-bottom #lec-term-resizer { grid-area: hres; width: auto; height: 7px; margin: -3px 0 -4px; cursor: row-resize; }
+.term-on.term-bottom #lec-term { grid-area: term; min-width: 0; max-width: none; border-left: 0; border-top: 1px solid var(--ui-border); }
 
 /* ---- 터미널 모음 (gather.js) — 문서 화면 위를 덮는 격자. 칸 수는 --g-cols × --g-rows ---- */
 #lec-gather {
