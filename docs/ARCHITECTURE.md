@@ -100,8 +100,8 @@ flowchart LR
 
 ### 터미널 (terminal.py, conpty.py)
 오른쪽 터미널의 셸 (D38). 화면(`terminal.js`)이 열 때만 띄운다.
-- `conpty.PseudoConsole(cmdline, cwd, env, cols, rows)`: Windows 의사 콘솔(ConPTY, `CreatePseudoConsole`)을 ctypes 로 — 파이프 두 개, 의사 콘솔, 작업 개체(`KILL_ON_JOB_CLOSE`). 셸은 `CREATE_SUSPENDED` 로 만들어 작업 개체에 넣고 재개한다. `STARTF_USESTDHANDLES` 와 빈 표준 핸들을 준다 (창 없는 앱의 핸들이 넘어가지 않게). `read()`(막고 기다림, 끝나면 `b''`)·`write`·`resize`·`wait`·`exit_code`·`active_processes()`(작업 개체 안 프로세스 수)·`terminate()`(작업 개체째)·`close()`. Windows 10 1809 미만이면 `AVAILABLE` 이 거짓.
-- `terminal.Session`: 셸 하나. 읽는 스레드가 UTF-8 로 풀어(글자가 나뉘어 와도 이어 붙임) 버퍼에 쌓고(최근 `MAX_KEEP` 512K 글자, 앞부분을 버리면 순번 `_start` 가 는다), 지켜보는 스레드가 셸이 끝나면 종료 코드를 남기고 정리한다. `read(since, timeout)` 은 순번 `since` 다음의 출력을 `MAX_READ`(256K)까지 — 없으면 새 출력·종료·`timeout`(20초)까지 기다린다 (긴 폴링). `since` 가 버린 앞부분이면 남은 맨 앞부터 주고 `reset`. `busy()` 는 작업 개체 안에 셸 말고도 프로세스가 있는지.
+- `conpty.PseudoConsole(cmdline, cwd, env, cols, rows)`: Windows 의사 콘솔(ConPTY, `CreatePseudoConsole`)을 ctypes 로 — 파이프 두 개, 의사 콘솔, 작업 개체(`KILL_ON_JOB_CLOSE`). 셸은 `CREATE_SUSPENDED` 로 만들어 작업 개체에 넣고 재개한다. `STARTF_USESTDHANDLES` 와 빈 표준 핸들을 준다 (창 없는 앱의 핸들이 넘어가지 않게). `read()`(막고 기다림, 끝나면 `b''`)·`write`·`resize`·`wait`·`exit_code`·`active_processes()`(작업 개체 안 프로세스 수)·`stuck_children(min_age)`(시작하다 멈춘 프로그램 — 로더가 돌지 않았고 스레드가 모두 일시 정지, D58)·`terminate()`(작업 개체째)·`close()`. Windows 10 1809 미만이면 `AVAILABLE` 이 거짓.
+- `terminal.Session`: 셸 하나. 읽는 스레드가 UTF-8 로 풀어(글자가 나뉘어 와도 이어 붙임) 버퍼에 쌓고(최근 `MAX_KEEP` 512K 글자, 앞부분을 버리면 순번 `_start` 가 는다), 지켜보는 스레드가 셸이 끝나면 종료 코드를 남기고 정리한다. `read(since, timeout)` 은 순번 `since` 다음의 출력을 `MAX_READ`(256K)까지 — 없으면 새 출력·종료·`timeout`(20초)까지 기다린다 (긴 폴링). `since` 가 버린 앞부분이면 남은 맨 앞부터 주고 `reset`. `busy()` 는 작업 개체 안에 셸 말고도 프로세스가 있는지. 멈춤을 보는 스레드가 busy 일 때만 `STUCK_CHECK`(3초)마다 `stuck_children(STUCK_AFTER — 10초)` 를 불러 `stuck` 에 두고, 바뀌면 기다리는 `read` 를 깨운다 (D58).
 - `terminal.Terminals`(`AppState.terminals`): 프로젝트(탭)마다 셸 하나 — `open` 은 돌고 있는 셸이 있으면 그것을, 끝났으면 새로. 탭을 닫으면(`close_tab`) `close_project`, 앱이 끝나면(`AppState.close`) `close_all`.
 - 셸: 설정 `terminal_shell` 이 실제로 있는 실행 파일의 전체 경로면 그것, 아니면 `%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe` (`-NoLogo`). 이름만으로 띄우지 않는다 (D29). 작업 폴더는 프로젝트 폴더, 환경 변수는 앱이 시작할 때의 값(`_START_ENV`).
 
@@ -188,10 +188,10 @@ flowchart LR
 | `POST /api/exists` | `{p, paths:[...], base}` | 경로 표기 중 프로젝트 안에 있는 파일. 프로젝트 기준, 없으면 `base`(문서 폴더) 기준. `{found:{입력: 프로젝트 기준 경로}}`. 숨김·밖·폴더는 없는 것. 500개까지 |
 | `POST /api/reveal` | `{p, path}` | 탐색기에서 선택 (`path` 가 `''` 면 프로젝트 폴더 — 탭 우클릭). `{action:'reveal'}` |
 | `POST /api/term/open` | `{p, cols?, rows?}` | 탭의 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그 셸). `{id, shell, cwd}` — `shell` 은 머리줄에 보일 이름(`PowerShell` 등). 크기는 1~1000 (아니면 400). 띄우지 못하면 500 |
-| `GET /api/term/read?t=<셸 id>&from=<순번>` | | 긴 폴링: 순번 다음의 출력 `{data, next, reset, alive, exit}`. 없으면 새 출력·종료·20초까지 기다린다. `alive` 가 거짓이면 셸이 끝났고 남은 출력도 다 받은 것 (`exit`: 종료 코드) |
+| `GET /api/term/read?t=<셸 id>&from=<순번>` | | 긴 폴링: 순번 다음의 출력 `{data, next, reset, alive, exit, stuck}`. 없으면 새 출력·종료·`stuck` 이 바뀜·20초까지 기다린다. `stuck`: 시작하다 멈춘 프로그램 `[{pid, name}]` (D58). `alive` 가 거짓이면 셸이 끝났고 남은 출력도 다 받은 것 (`exit`: 종료 코드) |
 | `POST /api/term/input` | `{t, data}` | 사용자가 친 키·붙여 넣은 글을 셸로. 65536자가 넘으면 413 |
 | `POST /api/term/resize` | `{t, cols, rows}` | 셸 화면 크기 |
-| `GET /api/term/info?t=<셸 id>` | | `{alive, busy}` — `busy`: 셸에서 띄운 프로그램이 돎 (탭을 닫기 전에 묻는다) |
+| `GET /api/term/info?t=<셸 id>` | | `{alive, busy, stuck}` — `busy`: 셸에서 띄운 프로그램이 돎 (탭을 닫기 전에 묻는다), `stuck`: read 와 같음 |
 | `POST /api/term/close` | `{t}` | 셸과 셸에서 띄운 프로그램을 끝낸다 (다시 시작). 없는 셸도 `{ok:true}` |
 | `GET /doc/<id>/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin allow-modals`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20) 와 `Referrer-Policy: no-referrer` (html 문서 속 인터넷 그림이 앱 주소를 보내지 않게). 숨김·밖·없음·폴더·열려 있지 않은 id 는 404 |
 
@@ -382,7 +382,7 @@ sequenceDiagram
 ### 터미널 (terminal.js)
 - 탭 막대 오른쪽 끝 '터미널' 버튼(`#lec-btn-term`)·`` Ctrl+` `` 로 본문 오른쪽(목차 자리, `#lec-term`)에 연다. 열면 `html.term-on` — 목차를 감추고(`toc.js` 의 `updateTocVisibility`), 목차 버튼은 `toc-with-term` 으로 목차를 함께 볼지만 바꾼다 (설정은 그대로). 앱을 켤 때마다 닫힌 채다.
 - 처음 열 때 `web/vendor/xterm` 의 css·js 를 불러온다 (`window.Terminal` 이 진짜 함수인지 본다 — 문서 속 id 가 이름을 가릴 수 있다). 탭마다 `tab.term` = {xterm, 상자(`.term-box`), 셸 id, 받은 순번 `next`, alive}. 상자는 `#lec-term-body` 에 겹쳐 두고 선택된 탭의 것만 보인다. 패널이 열려 있을 때 탭을 고르면 그 탭의 셸을 띄운다(`/api/term/open` — 서버에 돌고 있는 셸이 있으면 그것에 붙고 남은 출력부터 다시 보인다).
-- 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
+- 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. `stuck` 이 바뀌면 `tab.term.stuck` 에 두고 머리줄 아래 띠(`#lec-term-stuck`)·↻ 강조, 보이지 않는 터미널이면 알림 한 번, 'terms' 이벤트 (D58). 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
 - 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
 - 머리줄: 셸 이름 — 탭 이름, 자리 바꾸기(`#lec-term-place` — 오른쪽 ↔ 아래), 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
@@ -393,7 +393,7 @@ sequenceDiagram
 ### 터미널 모음 (gather.js)
 - 툴바의 `#lec-btn-gather`(돌고 있는 셸 수 `#lec-gather-count`)·`` Ctrl+Shift+` `` 로 연다. 열면 `html.gather-on`, `#lec-gather`(문서 화면 영역 `#lec-main` 위를 덮는 격자, `--g-cols`·`--g-rows`)에 탭마다 칸(`.g-tile`) 하나 (D40).
 - 칸 몸통: 셸이 있으면 그 탭의 터미널 화면(`tab.term.box`)을 오른쪽 패널에서 옮겨 온다. 없으면 '터미널 시작'(`ensureTerminal(tab, 칸)` — xterm 을 칸에 만들고 셸을 띄운다). 모음을 닫으면 `returnTerminals()` 가 화면을 패널로 되돌리고 `showCurrent` 가 다시 맡는다. 모으는 동안 `terminal.js` 의 `showCurrent`·패널 크기 맞추기는 화면을 건드리지 않는다 (`gathered()`).
-- 칸 머리: 폴더 이름, 상태(2초마다 `/api/term/info` — 실행 중·대기·끝남·시작 전), 크게/모두 보기(`.solo`), 다시 시작, 이 프로젝트로(`leaveGather({tab, panel:true})` — 그 탭을 고르고 오른쪽 터미널을 연다). 머리를 두 번 누르면 크게.
+- 칸 머리: 폴더 이름, 상태(2초마다 `/api/term/info` — 실행 중·대기·끝남·시작 전, `tab.term.stuck` 이면 멈춤), 크게/모두 보기(`.solo`), 다시 시작, 이 프로젝트로(`leaveGather({tab, panel:true})` — 그 탭을 고르고 오른쪽 터미널을 연다). 머리를 두 번 누르면 크게.
 - 닫기: 버튼·`` Ctrl+Shift+` ``, 프로젝트 탭 누르기(잡기 단계에서 먼저 닫고 tabs.js 가 그 탭을 고른다), Ctrl+1~9. 탭 목록이 바뀌면(`tabs` 이벤트) 칸을 맞추고, 셸이 생기거나 끝나면(`terms` 이벤트) 상태와 버튼의 수를 고친다.
 
 ### 코드 화면 (codeview.js, outline.js)

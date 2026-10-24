@@ -344,7 +344,8 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/term/read')
     def api_term_read() -> Any:
-        """from(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝날 때까지 기다린다 (긴 폴링). {data, next, reset, alive, exit}"""
+        """from(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝날 때까지 기다린다 (긴 폴링). {data, next, reset, alive, exit, stuck}
+        stuck: 셸에서 띄웠는데 시작하다 멈춘 프로그램 [{pid, name}] (D58 — 바뀌면 기다림을 끝낸다)"""
         term_guard()
         session = session_of(request.args.get('t'))
         since = request.args.get('from', default=0, type=int)
@@ -372,10 +373,10 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/term/info')
     def api_term_info() -> Any:
-        """{alive, busy} — busy: 셸에서 띄운 프로그램이 돌고 있음 (탭을 닫기 전에 묻는다)"""
+        """{alive, busy, stuck} — busy: 셸에서 띄운 프로그램이 돌고 있음 (탭을 닫기 전에 묻는다), stuck: 시작하다 멈춘 프로그램 (D58)"""
         term_guard()
         session = session_of(request.args.get('t'))
-        return jsonify(alive=session.alive, busy=session.busy())
+        return jsonify(alive=session.alive, busy=session.busy(), stuck=session.stuck)
 
     @app.post('/api/term/close')
     def api_term_close() -> Any:

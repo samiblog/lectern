@@ -12,6 +12,8 @@
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
 // - 터미널 모음(gather.js)은 탭마다의 화면(tab.term.box)을 이 패널에서 모음 칸으로 옮겨 보이고, 닫으면 되돌린다 (returnTerminals).
 //   모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
+// - 셸에서 띄운 프로그램이 시작하다 멈추면(보안 프로그램이 프로세스 생성을 막음 — D58) 머리줄 아래 띠로 알리고 다시 시작을 권한다
+//   (tab.term.stuck — 아래 '시작하다 멈춘 프로그램'). 멈춤이 바뀌어도 'terms' 이벤트.
 // - 터미널 안에서는 앱 단축키를 쓰지 않는다 (main.js — Ctrl+` 만 예외). Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단).
 //   Ctrl+V 는 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
 
@@ -271,6 +273,7 @@ async function pump(term, id) {
     if (term.id !== id) return;
     if (d.data) term.xterm.write(d.data);
     term.next = d.next;
+    setStuck(term, d.alive ? d.stuck || [] : []);
     if (!d.alive) {
       term.alive = false;
       const code = d.exit != null ? ` (${t('종료 코드 {code}', { code: d.exit })})` : '';
@@ -298,8 +301,39 @@ export async function restartTerminal(tab = S.tab) {
     await postJSON('/api/term/close', { t: old }, TERM_HEADER).catch(() => {});
   }
   term.xterm.reset();
+  term.stuck = [];
   await start(term);
   term.xterm.focus();
+}
+
+// ---- 시작하다 멈춘 프로그램 (D58) ----------------------------------------------------
+// 보안 프로그램(DRM 등)이 프로세스 생성을 막으면 셸에서 띄운 프로그램이 시작하지 못한 채 멈추고, 그것을 띄운 프로그램
+// (Claude Code 등)도 함께 멈춘다. 서버가 몇 초 안에 알아채 read 의 stuck 으로 알린다. 멈춘 프로그램은 종료 권한이 깎여 있어
+// 작업 개체째 끝내는 '다시 시작'만 듣는다.
+
+export const stuckMessage = (stuck) => t('셸에서 띄운 프로그램({name})이 시작하다 멈췄습니다. 보안 프로그램(DRM 등)이 프로그램 실행을 막을 때 생깁니다. 다시 시작을 누르면 셸과 멈춘 프로그램을 끝내고 새 셸을 엽니다 — Claude Code 는 claude --continue 로 이어 갑니다.',
+  { name: [...new Set(stuck.map((p) => p.name))].join(', ') });
+
+function setStuck(term, stuck) {
+  const key = (list) => (list || []).map((p) => p.pid).join();
+  if (key(stuck) === key(term.stuck)) return;
+  const was = !!term.stuck?.length;
+  term.stuck = stuck;
+  showStuck();
+  emit('terms');
+  // 보이지 않는 터미널이면 한 번 알린다 (터미널 모음은 칸마다 '멈춤'을 보인다)
+  if (stuck.length && !was && !gathered() && !(open && term.tab === S.tab)) {
+    toast(t("'{name}' 탭의 터미널에서 프로그램이 시작하다 멈췄습니다. 터미널을 열고 다시 시작을 누르세요.", { name: term.tab.name }), 'error', 8000);
+  }
+}
+
+/** 선택된 탭의 셸에 멈춘 프로그램이 있으면 머리줄 아래 띠와 다시 시작 버튼 강조 */
+function showStuck() {
+  const term = S.tab?.term;
+  const stuck = term?.alive ? term.stuck || [] : [];
+  $('#lec-term-stuck').hidden = !stuck.length;
+  $('#lec-term-restart').classList.toggle('attention', stuck.length > 0);
+  if (stuck.length) $('#lec-term-stuck-text').textContent = stuckMessage(stuck);
 }
 
 // ---- 패널 ---------------------------------------------------------------------
@@ -309,6 +343,7 @@ function showTitle() {
   const name = S.tab ? `${term?.shell || 'PowerShell'} — ${S.tab.name}` : t('터미널 — 열린 프로젝트가 없습니다');
   $('#lec-term-title').textContent = name;
   $('#lec-term-title').title = S.tab ? S.tab.root : '';
+  showStuck();
 }
 
 /** 선택된 탭의 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 제목만 */
@@ -498,6 +533,7 @@ function bindResizer() {
 export function initTerminal() {
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
+  $('#lec-term-stuck-restart').addEventListener('click', () => restartTerminal());
   // 머리줄 버튼: 오른쪽 ↔ 아래 (설정이 자동이었으면 이제 그 자리로 고정 — 설정 창에서 자동으로 되돌린다)
   $('#lec-term-place').addEventListener('click', () => {
     saveConfig({ terminal_position: terminalBelow() ? 'side' : 'bottom' });   // S.config 는 바로 바뀐다 — 저장은 뒤에서

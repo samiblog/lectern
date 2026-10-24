@@ -35,12 +35,13 @@ def fake_session(text: str, start: int = 0) -> Session:
     s = Session.__new__(Session)
     s._buf, s._start, s._cond = text, start, threading.Condition()
     s.alive, s.exit_code = True, None
+    s.stuck, s._stuck_ver = [], 0
     return s
 
 
 def test_read_from_position_and_reset(monkeypatch):
     s = fake_session('abcdef', start=100)   # 앞 100글자는 MAX_KEEP 을 넘어 버렸다
-    assert s.read(103, timeout=0) == {'data': 'def', 'next': 106, 'reset': False, 'alive': True, 'exit': None}
+    assert s.read(103, timeout=0) == {'data': 'def', 'next': 106, 'reset': False, 'alive': True, 'exit': None, 'stuck': []}
     r = s.read(0, timeout=0)   # 버린 앞부분부터 달라면 남은 맨 앞부터, reset 을 단다 (화면을 새로 불러온 경우)
     assert r['data'] == 'abcdef' and r['next'] == 106 and r['reset']
     t0 = time.monotonic()
@@ -49,9 +50,9 @@ def test_read_from_position_and_reset(monkeypatch):
     r = s.read(100, timeout=0)
     assert r['data'] == 'abcd' and r['next'] == 104
     s.alive, s.exit_code = False, 3   # 셸이 끝나도 못 받은 출력이 남아 있으면 alive 는 아직 참
-    assert s.read(100, timeout=5) == {'data': 'abcd', 'next': 104, 'reset': False, 'alive': True, 'exit': 3}
-    assert s.read(104, timeout=5) == {'data': 'ef', 'next': 106, 'reset': False, 'alive': False, 'exit': 3}
-    assert s.read(106, timeout=5) == {'data': '', 'next': 106, 'reset': False, 'alive': False, 'exit': 3}
+    assert s.read(100, timeout=5) == {'data': 'abcd', 'next': 104, 'reset': False, 'alive': True, 'exit': 3, 'stuck': []}
+    assert s.read(104, timeout=5) == {'data': 'ef', 'next': 106, 'reset': False, 'alive': False, 'exit': 3, 'stuck': []}
+    assert s.read(106, timeout=5) == {'data': '', 'next': 106, 'reset': False, 'alive': False, 'exit': 3, 'stuck': []}
 
 
 def test_append_keeps_recent_output(monkeypatch):
@@ -131,6 +132,33 @@ def test_ctrl_c_stops_child_program(tmp_path):
         assert s.alive   # 셸은 그대로
     finally:
         s.close()
+
+
+@windows
+def test_stuck_child_is_reported(tmp_path, monkeypatch):
+    """시작하다 멈춘 프로그램 (D58): 보안 프로그램이 프로세스 생성을 막으면 자식이 로더도 돌지 않은 일시 정지로 남는다.
+    같은 모양(일시 정지로 만든 자식)을 셸에서 띄워, stuck 으로 알리고(긴 폴링을 깨움) 다시 시작(작업 개체째)으로 끝나는지"""
+    monkeypatch.setattr(terminal, 'STUCK_AFTER', 0.5)
+    monkeypatch.setattr(terminal, 'STUCK_CHECK', 0.2)
+    cmd = os.path.join(os.environ.get('SystemRoot', r'C:\Windows'), 'System32', 'cmd.exe')
+    script = tmp_path / 'stuck.py'
+    script.write_text(f'import subprocess, time\nsubprocess.Popen([{cmd!r}, "/c", "exit"], creationflags=4)\n'
+                      'print("started", flush=True)\ntime.sleep(60)\n', encoding='utf-8')
+    s = Session('p1', str(tmp_path), None, 80, 24)
+    try:
+        assert read_until(s, '>')
+        assert s.stuck == [] and s.read(s.end, timeout=0.1)['stuck'] == []
+        since = s.end
+        s.write(f"& '{sys.executable}' '{script}'\r")
+        assert read_until(s, 'started')
+        got = s.read(s.end, timeout=10)   # 새 출력이 없어도 stuck 이 바뀌면 돌아온다
+        assert wait_for(lambda: s.stuck, 10)
+        names = [p['name'].lower() for p in s.stuck]
+        assert names == ['cmd.exe'], s.stuck
+        assert s.read(since, timeout=0.1)['stuck'] == s.stuck and 'stuck' in got
+    finally:
+        s.close()   # 다시 시작과 같은 길 — 작업 개체째 끝낸다 (멈춘 자식까지)
+    assert wait_for(lambda: not s.alive)
 
 
 @windows

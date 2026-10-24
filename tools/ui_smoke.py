@@ -2011,6 +2011,29 @@ def run(headed: bool) -> None:
             restarted = wait_until(page, '''![...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
               .map(r => r.textContent).join('').includes('lecterm')''') and term_has('PS ', 30000)
             check(restarted, '다시 시작 버튼: 셸을 새로 띄움 (화면도 비움)')
+            # 시작하다 멈춘 프로그램 (D58): 보안 프로그램(DRM)이 막은 것과 같은 모양 — 셸에서 띄운 프로그램이 일시 정지로 만든 자식.
+            # 서버가 STUCK_AFTER(10초) 뒤에 알아채면 머리줄 아래 띠·다시 시작 강조, 모음 칸에 '멈춤', 띠의 다시 시작으로 풀린다
+            stuck_py = tmp / 'stuck.py'
+            stuck_py.write_text('import os, subprocess, time\n'
+                                'cmd = os.path.join(os.environ["SystemRoot"], "System32", "cmd.exe")\n'
+                                'subprocess.Popen([cmd, "/c", "exit"], creationflags=4)\n'   # CREATE_SUSPENDED
+                                'print("stuck-child", flush=True)\ntime.sleep(120)\n', encoding='utf-8')
+            page.keyboard.type(f"& '{sys.executable}' '{stuck_py}'")
+            page.keyboard.press('Enter')
+            stuck_shown = term_has('stuck-child') and wait_until(page, "!document.querySelector('#lec-term-stuck').hidden", 30000)
+            stuck_ui = page.evaluate('''() => ({ text: document.querySelector('#lec-term-stuck-text').textContent,
+              attention: document.querySelector('#lec-term-restart').classList.contains('attention') })''')
+            shot('10-terminal-stuck')
+            page.click('#lec-btn-gather')
+            g_stuck = wait_until(page, "!!document.querySelector('#lec-gather .g-tile .g-state.stuck')", 5000)
+            page.click('#lec-btn-gather')
+            page.click('#lec-term-stuck-restart')
+            unstuck = (term_has('PS ', 30000) and wait_until(page, "document.querySelector('#lec-term-stuck').hidden", 5000)
+                       and not page.evaluate("document.querySelector('#lec-term-restart').classList.contains('attention')"))
+            check(stuck_shown and 'cmd.exe' in stuck_ui['text'] and 'claude --continue' in stuck_ui['text'] and stuck_ui['attention']
+                  and g_stuck and unstuck,
+                  f"셸에서 띄운 프로그램이 시작하다 멈추면 머리줄 아래 띠와 다시 시작 강조·모음 칸에 '멈춤', 띠의 다시 시작으로 풀림 "
+                  f"({stuck_shown}, {stuck_ui}, {g_stuck}, {unstuck})")
             # 우클릭 메뉴의 '터미널에 붙여 넣기' (D51): 복사 항목 옆 버튼 — Enter 없이, 여러 줄이면 묻는다 (PowerShell 프롬프트)
             doc_path = page.inner_text('#lec-st-path')
             page.locator('#lec-view h1').first.click(button='right')

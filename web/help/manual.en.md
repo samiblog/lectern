@@ -201,11 +201,12 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - **Paste into the terminal**: in a right-click menu, the terminal button next to a copy item puts that text into the current tab's terminal, opening the terminal if needed. Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
 - The terminal colors follow the document style. For an always-dark terminal, turn off 'Match terminal colors to style' in Settings.
 - Closing a tab ends its shell. If a program started from the shell is still running, Lectern asks first. Closing Lectern ends all shells.
+- **Stuck program warning**: if a program started from the shell gets stuck while starting (this happens when security software on a company PC, such as DRM, blocks programs from starting — Claude Code calls git and then stops responding to any input), a red strip appears under the terminal header after about 10 seconds and the ↻ button is highlighted. Ctrl+C does not end such a program, and often neither does Task Manager, so press **Restart** in the strip. It ends the shell and the stuck program and opens a new shell. In Claude Code, run `claude --continue` in the new shell to pick up the conversation. If the terminal belongs to a tab you are not looking at, a notice appears once.
 
 ### All terminals
 
 - The **All terminals** button in the toolbar, or Ctrl+Shift+\`, gathers the terminals of all open projects on one screen in a grid.
-- Each pane's header shows 'Running' or 'Idle', so you can watch Claude Code across several projects at a glance.
+- Each pane's header shows 'Running' or 'Idle', so you can watch Claude Code across several projects at a glance. A pane where a program got stuck while starting shows 'Stuck' in red — press that pane's ↻.
 - Inside a pane, Ctrl+Tab moves to the next pane. Double-click a pane's header to maximize it.
 - A pane's → button goes to that project and opens its right-hand terminal. Clicking a project tab returns to the documents.
 

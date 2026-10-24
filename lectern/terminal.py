@@ -7,6 +7,8 @@
 - 사용자가 화면에서 열 때만 시작한다. 셸로 명령을 보내는 길은 사용자의 키 입력뿐이다 — 문서나 다른 기능에서 보내지 않는다.
 - 셸은 작업 개체 안에서 돈다 (conpty.py): 탭을 닫거나 앱이 끝나면 셸에서 띄운 프로그램까지 함께 끝난다.
 - 셸은 전체 경로로 띄운다 (D29 — 프로젝트 폴더의 같은 이름 프로그램이 대신 실행되지 않게). 설정 terminal_shell 로 바꾼다.
+- 셸에서 띄운 프로그램이 시작하다 멈추면(보안 프로그램이 프로세스 생성을 막음 — D58) 몇 초 안에 알아채 read·info 의 stuck 으로
+  알린다. 화면은 '다시 시작'을 권한다 — 멈춘 프로그램은 종료 권한이 깎여 있어 작업 개체째 끝내야 풀린다.
 """
 from __future__ import annotations
 
@@ -23,6 +25,8 @@ from .i18n import N_, t
 MAX_KEEP = 512 * 1024    # 셸마다 들고 있는 최근 출력 (글자)
 MAX_READ = 256 * 1024    # 한 번에 돌려주는 출력 (글자)
 READ_WAIT = 20.0         # 긴 폴링이 새 출력을 기다리는 시간 (초)
+STUCK_AFTER = 10.0       # 셸에서 띄운 프로그램이 이만큼 지나도록 시작하지 못했으면 멈춘 것으로 본다 (초, D58)
+STUCK_CHECK = 3.0        # 그것을 보는 간격 (초 — 셸에서 프로그램이 돌 때만)
 
 # 앱이 실행 중에 바꾸는 환경 값(osutil 이 넣는 NoDefaultCurrentDirectoryInExePath 등)이 셸로 새지 않게, 처음 값을 쓴다
 _START_ENV = dict(os.environ)
@@ -59,11 +63,14 @@ class Session:
         self.exit_code: int | None = None
         self._buf = ''
         self._start = 0          # _buf 맨 앞 글자의 순번 (앞부분은 MAX_KEEP 을 넘으면 버린다)
+        self.stuck: list[dict[str, Any]] = []   # 시작하다 멈춘 프로그램 [{pid, name}] (D58)
+        self._stuck_ver = 0      # stuck 이 바뀔 때마다 늘린다 — 기다리는 read 를 깨운다
         self._cond = threading.Condition()
         self._pc = PseudoConsole(cmdline, cwd, dict(_START_ENV), cols, rows)
         self._reader = threading.Thread(target=self._read_loop, name=f'lectern-term-read-{self.id}', daemon=True)
         self._reader.start()
         threading.Thread(target=self._watch, name=f'lectern-term-watch-{self.id}', daemon=True).start()
+        threading.Thread(target=self._check_stuck, name=f'lectern-term-stuck-{self.id}', daemon=True).start()
 
     @property
     def end(self) -> int:
@@ -99,16 +106,34 @@ class Session:
             self.alive = False
             self._cond.notify_all()
 
+    def _check_stuck(self) -> None:
+        """셸에서 띄운 프로그램 중 시작하다 멈춘 것을 STUCK_CHECK 초마다 찾는다 (D58). 바뀌면 기다리는 read 를 깨운다"""
+        while True:
+            with self._cond:
+                if self._cond.wait_for(lambda: not self.alive, STUCK_CHECK):
+                    return
+            try:
+                found = self._pc.stuck_children(STUCK_AFTER) if self._pc.active_processes() > 1 else []
+            except OSError:
+                found = []
+            with self._cond:
+                if found != self.stuck:
+                    self.stuck = found
+                    self._stuck_ver += 1
+                    self._cond.notify_all()
+
     def read(self, since: int, timeout: float = READ_WAIT) -> dict[str, Any]:
-        """since(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝나거나 timeout 이 지날 때까지 기다린다.
-        since 가 버린 앞부분이면 남은 맨 앞부터 주고 reset 을 단다."""
+        """since(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝나거나 멈춘 프로그램(stuck)이 바뀌거나 timeout 이
+        지날 때까지 기다린다. since 가 버린 앞부분이면 남은 맨 앞부터 주고 reset 을 단다."""
         with self._cond:
-            self._cond.wait_for(lambda: self.end > since or not self.alive, timeout)
+            ver = self._stuck_ver
+            self._cond.wait_for(lambda: self.end > since or not self.alive or self._stuck_ver != ver, timeout)
             reset = since < self._start
             begin = max(since, self._start) - self._start
             data = self._buf[begin:begin + MAX_READ]
             return {'data': data, 'next': self._start + begin + len(data), 'reset': reset,
-                    'alive': self.alive or self.end > self._start + begin + len(data), 'exit': self.exit_code}
+                    'alive': self.alive or self.end > self._start + begin + len(data), 'exit': self.exit_code,
+                    'stuck': self.stuck}
 
     def write(self, text: str) -> None:
         if self.alive:

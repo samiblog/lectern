@@ -220,6 +220,11 @@
         <button type="button" id="lec-term-restart" class="icon-btn small" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)"><svg><use href="#i-restart"/></svg></button>
         <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 닫지 않음"><svg><use href="#i-close"/></svg></button>
       </div>
+      <!-- 셸에서 띄운 프로그램이 시작하다 멈춤 (D58 — terminal.js 의 showStuck) -->
+      <div id="lec-term-stuck" class="term-stuck" role="alert" hidden>
+        <span id="lec-term-stuck-text"></span>
+        <button type="button" id="lec-term-stuck-restart" class="text-btn">다시 시작</button>
+      </div>
       <div id="lec-term-body"></div>
     </section>
     <!-- 터미널 모음 (gather.js): 문서 화면 위를 덮는 격자. 탭마다 칸 하나 -->

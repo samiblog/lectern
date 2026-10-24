@@ -9,12 +9,15 @@ kernel32 의 CreatePseudoConsole(Windows 10 1809 이상)을 직접 쓴다. pywin
 - 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 (SetConsoleCtrlHandler(NULL, FALSE)). 이 표시는 자식에게 물려지는데,
   Lectern 을 새 프로세스 그룹으로 띄운 프로그램(일부 실행기·자동화 도구)에서 켜진 채로 오면 셸과 거기서 띄운 프로그램이
   Ctrl+C 로 멈추지 않는다 (점검에서 확인 — ping 이 끝까지 돌았다).
+- 셸에서 띄운 프로그램이 시작하다 멈췄는지(보안 프로그램이 프로세스 생성을 막음 — D58) stuck_children() 이 읽기만 해서 찾는다.
+  그런 프로그램은 핸들에서 종료 권한이 깎여 있어 따로 끝낼 수 없고, 작업 개체째 끝내는 것(terminate — 다시 시작)은 된다.
 - read() 는 막혀 기다린다 (읽는 스레드에서 부른다). close() 는 그 스레드가 읽는 동안 불러도 된다 — ClosePseudoConsole 은
   남은 출력을 내보낸 뒤 파이프를 닫고, 그러면 read() 가 b'' 를 돌려준다.
 """
 from __future__ import annotations
 
 import ctypes
+import struct
 import sys
 import threading
 from ctypes import wintypes as w
@@ -33,9 +36,17 @@ STARTF_USESTDHANDLES = 0x00000100
 PROC_THREAD_ATTRIBUTE_PSEUDOCONSOLE = 0x00020016
 JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE = 0x00002000
 JOB_BASIC_ACCOUNTING = 1
+JOB_PROCESS_ID_LIST = 3
 JOB_EXTENDED_LIMIT = 9
 WAIT_OBJECT_0 = 0
 INFINITE = 0xFFFFFFFF
+PROCESS_QUERY_INFORMATION = 0x0400
+PROCESS_VM_READ = 0x0010
+ERROR_MORE_DATA = 234
+ERROR_PARTIAL_COPY = 299
+LIST_MODULES_ALL = 3
+STATUS_INFO_LENGTH_MISMATCH = 0xC0000004
+SYSTEM_PROCESS_INFORMATION = 5
 
 
 class COORD(ctypes.Structure):
@@ -111,6 +122,17 @@ if AVAILABLE:
     _k.TerminateJobObject.argtypes = [w.HANDLE, w.UINT]
     _k.TerminateProcess.argtypes = [w.HANDLE, w.UINT]
     _k.SetConsoleCtrlHandler.argtypes = [ctypes.c_void_p, w.BOOL]
+    # 시작하다 멈춘 프로그램 찾기 (stuck_children — 읽기만)
+    _k.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
+    _k.OpenProcess.restype = w.HANDLE
+    _k.GetProcessTimes.argtypes = [w.HANDLE] + [ctypes.POINTER(w.FILETIME)] * 4
+    _k.GetSystemTimeAsFileTime.argtypes = [ctypes.POINTER(w.FILETIME)]
+    _k.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+    _psapi = ctypes.WinDLL('psapi', use_last_error=True)
+    _psapi.EnumProcessModulesEx.argtypes = [w.HANDLE, ctypes.c_void_p, w.DWORD, ctypes.POINTER(w.DWORD), w.DWORD]
+    _nt = ctypes.WinDLL('ntdll')
+    _nt.NtQuerySystemInformation.argtypes = [ctypes.c_ulong, ctypes.c_void_p, ctypes.c_ulong, ctypes.POINTER(ctypes.c_ulong)]
+    _nt.NtQuerySystemInformation.restype = ctypes.c_long
 
 
 def _check(ok: object, what: str) -> None:
@@ -129,6 +151,60 @@ def _size(cols: int, rows: int) -> COORD:
     return COORD(max(2, min(int(cols), 1000)), max(1, min(int(rows), 500)))
 
 
+def _filetime(ft: w.FILETIME) -> int:
+    return (ft.dwHighDateTime << 32) | ft.dwLowDateTime
+
+
+def _process_state(pid: int) -> tuple[int, str, bool] | None:
+    """(만든 시각 — FILETIME 정수, 실행 파일 이름, 로더가 돌았는지). 열 수 없으면 None.
+    로더가 한 번도 돌지 않은 프로세스(PEB 의 모듈 목록이 아직 없음)는 EnumProcessModulesEx 가 ERROR_PARTIAL_COPY 로 실패한다"""
+    h = _k.OpenProcess(PROCESS_QUERY_INFORMATION | PROCESS_VM_READ, False, pid)
+    if not h:
+        return None
+    try:
+        times = [w.FILETIME() for _ in range(4)]
+        if not _k.GetProcessTimes(h, *(ctypes.byref(x) for x in times)):
+            return None
+        name = ctypes.create_unicode_buffer(520)
+        size = w.DWORD(520)
+        exe = name.value.rsplit('\\', 1)[-1] if _k.QueryFullProcessImageNameW(h, 0, name, ctypes.byref(size)) else ''
+        mods = (ctypes.c_void_p * 1)()
+        need = w.DWORD()
+        ok = _psapi.EnumProcessModulesEx(h, mods, ctypes.sizeof(mods), ctypes.byref(need), LIST_MODULES_ALL)
+        ran = bool(ok) or ctypes.get_last_error() != ERROR_PARTIAL_COPY   # 다른 까닭의 실패는 멈춘 것으로 보지 않는다
+        return _filetime(times[0]), exe, ran
+    finally:
+        _k.CloseHandle(h)
+
+
+def _all_suspended(pids: set[int]) -> set[int]:
+    """pids 중 스레드가 모두 일시 정지(대기 이유 Suspended)인 것 — 시스템의 프로세스·스레드 목록에서 (NtQuerySystemInformation)"""
+    size = 1 << 19
+    while True:
+        buf = ctypes.create_string_buffer(size)
+        got = ctypes.c_ulong()
+        status = _nt.NtQuerySystemInformation(SYSTEM_PROCESS_INFORMATION, buf, size, ctypes.byref(got)) & 0xFFFFFFFF
+        if status == STATUS_INFO_LENGTH_MISMATCH and size < (1 << 26):
+            size = max(size * 2, got.value + 65536)
+            continue
+        if status:
+            return set()
+        break
+    raw, off, found = buf.raw, 0, set()
+    # SYSTEM_PROCESS_INFORMATION(x64): 0 다음 항목까지, 4 스레드 수, 80 프로세스 id, 0x100 부터 SYSTEM_THREAD_INFORMATION(0x50 씩 —
+    # 68 상태, 72 대기 이유). 상태 5 = Waiting, 대기 이유 5 = Suspended
+    while True:
+        nxt, nthreads = struct.unpack_from('<II', raw, off)
+        pid = struct.unpack_from('<Q', raw, off + 80)[0]
+        if pid in pids and nthreads:
+            states = [struct.unpack_from('<II', raw, off + 0x100 + i * 0x50 + 68) for i in range(nthreads)]
+            if all(s == (5, 5) for s in states):
+                found.add(pid)
+        if not nxt:
+            return found
+        off += nxt
+
+
 class PseudoConsole:
     """의사 콘솔 위의 프로세스 하나 (셸). cmdline 의 첫 낱말은 실행 파일의 전체 경로여야 한다."""
 
@@ -139,6 +215,7 @@ class PseudoConsole:
         self._closed = False
         self._hpc = w.HANDLE()
         self._job = None
+        self._loaded: set[int] = set()   # 로더가 돈 것을 본 프로세스 (stuck_children 이 다시 열어 보지 않게)
         self._proc = PROCESS_INFORMATION()
         in_read, self._in, self._out, out_write = w.HANDLE(), w.HANDLE(), w.HANDLE(), w.HANDLE()
         _check(_k.CreatePipe(ctypes.byref(in_read), ctypes.byref(self._in), None, 0), 'CreatePipe')
@@ -232,6 +309,48 @@ class PseudoConsole:
                                                              ctypes.sizeof(info), None):
             return 0
         return int(info.ActiveProcesses)
+
+    def job_pids(self) -> list[int]:
+        """작업 개체 안의 프로세스 id 들 (셸 포함)"""
+        n = 64
+        while True:
+            # JOBOBJECT_BASIC_PROCESS_ID_LIST: DWORD 두 개(맡은 수·목록의 수) 다음에 ULONG_PTR 목록 — 앞의 두 DWORD 가 size_t 한 칸
+            buf = (ctypes.c_size_t * (1 + n))()
+            with self._lock:
+                if self._closed or not self._job:
+                    return []
+                ok = _k.QueryInformationJobObject(self._job, JOB_PROCESS_ID_LIST, buf, ctypes.sizeof(buf), None)
+            if ok:
+                count = buf[0] >> 32
+                return [int(pid) for pid in buf[1:1 + count]]
+            if ctypes.get_last_error() != ERROR_MORE_DATA or n >= 4096:
+                return []
+            n *= 4
+
+    def stuck_children(self, min_age: float) -> list[dict[str, object]]:
+        """시작하다 멈춘 프로그램 [{pid, name}] (D58): 만들어진 지 min_age 초가 넘도록 로더가 한 번도 돌지 않았고(모듈 0개)
+        스레드가 모두 일시 정지인 것. 보안 프로그램(DRM)의 커널 드라이버가 프로세스 생성을 막으면 이렇게 남고, 그것을 띄운
+        프로그램(git 을 띄운 Claude Code 등)은 CreateProcess 안에서 끝없이 기다린다. 읽기만 한다 — 끝내는 것은 다시 시작(작업 개체째)"""
+        pids = self.job_pids()
+        self._loaded &= set(pids)
+        now = w.FILETIME()
+        _k.GetSystemTimeAsFileTime(ctypes.byref(now))
+        candidates: dict[int, str] = {}
+        for pid in pids:
+            if pid in self._loaded or pid == self.pid:
+                continue
+            state = _process_state(pid)
+            if state is None:
+                continue
+            created, exe, ran = state
+            if ran:
+                self._loaded.add(pid)
+            elif (_filetime(now) - created) / 1e7 >= min_age:
+                candidates[pid] = exe
+        if not candidates:
+            return []
+        stuck = _all_suspended(set(candidates))
+        return [{'pid': pid, 'name': candidates[pid]} for pid in sorted(stuck)]
 
     def terminate(self) -> None:
         """셸과 셸에서 띄운 프로그램을 끝낸다 (wait() 가 돌아온다). 정리는 그 뒤 close() 로 — 기다리는 핸들을 닫지 않게"""

@@ -565,7 +565,7 @@ def test_term_flow(client, state, project, pid):
     assert client.post('/api/term/input', json={'t': d['id'], 'data': 'Write-Output ("a" + "b" + "한글")\r'}, headers=h).status_code == 200
     assert 'ab한글' in read_until('ab한글')
     assert client.post('/api/term/resize', json={'t': d['id'], 'cols': 120, 'rows': 40}, headers=h).status_code == 200
-    assert client.get(f'/api/term/info?t={d["id"]}', headers=h).get_json() == {'alive': True, 'busy': False}
+    assert client.get(f'/api/term/info?t={d["id"]}', headers=h).get_json() == {'alive': True, 'busy': False, 'stuck': []}
     session = state.terminals.get(d['id'])
     client.post('/api/close', json={'p': pid})   # 탭을 닫으면 셸도 끝난다
     assert state.terminals.get(d['id']) is None

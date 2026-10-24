@@ -8,11 +8,13 @@
 //   그 프로젝트로 가서 오른쪽 터미널을 연다. 탭을 닫거나 폴더를 새로 열면 모음은 열린 채 칸만 바뀐다.
 // - 칸 안의 키는 셸 것이다. 앱은 Ctrl+Tab(다음 칸)·Ctrl+`·Ctrl+Shift+` 만 받는다 (main.js).
 // - 모아 보는 동안 2초마다 셸에서 프로그램이 도는지(/api/term/info) 보고 칸 머리에 '실행 중'·'대기'·'끝남'·'시작 전'을 보인다.
+//   셸에서 띄운 프로그램이 시작하다 멈췄으면(D58 — tab.term.stuck) '멈춤'과 다시 시작 버튼 강조.
 
 import { S, on } from './store.js';
 import { selectTab } from './tabs.js';
 import {
   ensureTerminal, restartTerminal, fitTerminal, returnTerminals, liveTerminals, terminalBusy, toggleTerminal,
+  stuckMessage,
 } from './terminal.js';
 import { $, $$, esc, toast } from './util.js';
 import { t } from './i18n.js';
@@ -70,10 +72,14 @@ function fillBody(tab, tile) {
 function setState(tile, tab, busy) {
   const el = tile.querySelector('.g-state');
   const term = tab.term;
-  const [text, cls] = !term ? [t('시작 전'), 'none'] : !term.alive ? [t('끝남'), 'ended'] : busy ? [t('실행 중'), 'busy'] : [t('대기'), 'idle'];
+  const [text, cls] = !term ? [t('시작 전'), 'none'] : !term.alive ? [t('끝남'), 'ended'] : term.stuck?.length ? [t('멈춤 — 다시 시작하세요'), 'stuck']
+    : busy ? [t('실행 중'), 'busy'] : [t('대기'), 'idle'];
   el.textContent = text;
   el.className = `g-state ${cls}`;
-  tile.querySelector('.g-restart').disabled = !term;
+  el.title = cls === 'stuck' ? stuckMessage(term.stuck) : '';
+  const restart = tile.querySelector('.g-restart');
+  restart.disabled = !term;
+  restart.classList.toggle('attention', cls === 'stuck');
 }
 
 /** 탭 목록에 맞춰 칸을 만들고 지우고 순서를 맞춘다. 있는 칸(과 그 안의 화면)은 그대로 둔다 */
