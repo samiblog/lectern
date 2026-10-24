@@ -42,28 +42,47 @@ function scalar(value) {
 }
 
 /**
- * key: 값 줄들을 읽는다 (맨 위 단계만 — 발표 문서의 설정, 모아 보기의 문서 정보 D62). 키는 한글도 된다.
- * 값: 따옴표 글, true/false, 숫자, `|`·`>` 블록 글, 목록(`[a, b]` 또는 아래 줄의 `- a`). 읽을 수 없는 줄이 있으면 strict 일 때 null
- * (주석이 지시어인지 노트인지 가를 때)
+ * key: 값 줄들을 읽는다 (발표 문서의 설정, 모아 보기의 문서 정보 D62). 키는 한글도 된다.
+ * 값: 따옴표 글, true/false, 숫자, `|`·`>` 블록 글, 목록(`[a, b]` 또는 아래 줄의 `- a`). 아래에 들여 쓴 `키: 값` 은
+ * 점으로 이은 키로 (`author:` 아래의 `name: 김` → `author.name`). 그 밖의 들여 쓴 줄(목록 항목의 이어진 줄 등)은 건너뛴다.
+ * 읽을 수 없는 줄이 있으면 strict 일 때 null (주석이 지시어인지 노트인지 가를 때)
  */
 export function readYaml(raw, strict = false) {
   const out = {};
-  const lines = String(raw).split(/\r?\n/);
+  let lines = String(raw).split(/\r?\n/);
+  const margin = Math.min(...lines.filter((l) => l.trim()).map((l) => l.match(/^\s*/)[0].length), 99);
+  if (margin && margin < 99) lines = lines.map((l) => l.slice(margin));   // 통째로 들여 쓴 것 (주석 속 지시어)
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim() || /^\s*#/.test(line)) continue;
-    const m = /^([\p{L}_$][\p{L}\p{N}_$.-]*)\s*:(?:\s+(.*)|\s*)$/u.exec(line.trim());
+    const m = /^\s/.test(line) ? null : /^([\p{L}_$][\p{L}\p{N}_$.-]*)\s*:(?:\s+(.*)|\s*)$/u.exec(line.trim());
     if (!m) {
       if (strict) return null;
       continue;
     }
     let value = m[2] ?? '';
     const flow = /^\[(.*)\]$/.exec(value.trim());
+    const next = lines.slice(i + 1).find((l) => l.trim() && !/^\s*#/.test(l)) || '';
+    if (!value.trim() && /^\s+[\p{L}_$][\p{L}\p{N}_$.-]*\s*:/u.test(next)) {   // 아래에 들여 쓴 키: 값 (한 단계 아래 표)
+      const block = [];
+      while (i + 1 < lines.length && (/^\s/.test(lines[i + 1]) || !lines[i + 1].trim())) block.push(lines[++i]);
+      const sub = readYaml(block.join('\n'), strict);
+      if (!sub) return null;
+      for (const [k, v] of Object.entries(sub)) out[`${m[1]}.${k}`] = v;
+      continue;
+    }
     if (flow) {   // [a, b]
       value = flow[1].split(',').map((x) => scalar(x)).filter((x) => x !== '');
     } else if (!value.trim() && /^\s*-\s+/.test(lines[i + 1] || '')) {   // 아래 줄의 - a, - b
       value = [];
-      while (i + 1 < lines.length && /^\s*-\s+/.test(lines[i + 1])) value.push(scalar(lines[++i].replace(/^\s*-\s+/, '')));
+      const indent = (l) => l.match(/^\s*/)[0].length;
+      const at = indent(lines[i + 1]);
+      while (i + 1 < lines.length) {
+        const l = lines[i + 1];
+        if (/^\s*-\s+/.test(l) && indent(l) === at) value.push(scalar(l.replace(/^\s*-\s+/, '')));
+        else if (l.trim() && indent(l) <= at) break;   // 빈 줄·더 들여 쓴 줄(항목의 이어진 줄)은 건너뛴다
+        i += 1;
+      }
     } else if (/^[|>][+-]?\s*$/.test(value.trim())) {   // 블록 글: 아래의 들여 쓴 줄들
       const fold = value.trim()[0] === '>';
       const block = [];

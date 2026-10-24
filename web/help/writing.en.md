@@ -102,6 +102,7 @@ Rules:
 - **Mermaid**: quote non-ASCII axis labels and text (`x-axis ["Jan", "Feb"]`). Use ASCII aliases for participants: `participant U as 사람`.
 - **Graphviz**: the app fits box widths for non-Latin text. Better not to set `fontname`.
 
+~~~~md
 ```vega-lite
 {
   "title": "Monthly average price (USD/t)",
@@ -115,6 +116,7 @@ Rules:
   }
 }
 ```
+~~~~
 
 ## 5. Slide decks
 

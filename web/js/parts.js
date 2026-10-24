@@ -82,17 +82,25 @@ function linkTarget(r, base, tab) {
   return { text, target: r.href, type: 'outside' };
 }
 
-/** 프로젝트 안을 가리키는 링크 가운데 트리에 없는 것이 실제로 있는지 서버에 묻는다 — 없으면 '깨짐'. 묻지 못하면 그대로 둔다 */
+/**
+ * 프로젝트 안을 가리키는 링크 가운데 트리에 없는 것이 실제로 있는지 서버에 묻는다 — 없으면 '깨짐'. 묻지 못하면 그대로 둔다.
+ * 문서가 없는 폴더를 / 없이 가리킨 링크(`[src](src)`)는 폴더로 고친다 (본문에서 누르면 탐색기로 열린다)
+ */
 async function checkLinks(tab, items) {
   const paths = [...new Set(items.map((it) => it.local).filter(Boolean))].slice(0, 500);
   if (!paths.length) return;
   let found;
   try {
-    ({ found } = await postJSON('/api/exists', { p: tab.id, paths, base: '' }));
+    ({ found } = await postJSON('/api/exists', { p: tab.id, paths, base: '', dirs: true }));
   } catch {
     return;
   }
-  for (const it of items) if (it.local) it.broken = !found[it.local];
+  for (const it of items) {
+    if (!it.local) continue;
+    const hit = found[it.local];
+    it.broken = !hit;
+    if (hit?.endsWith('/')) Object.assign(it, { type: 'dir', target: hit });
+  }
 }
 
 /**
@@ -345,7 +353,7 @@ function render() {
 // 그 키가 없는 문서(맨 앞 설정은 있는)는 끝에 '값 없음'. 발표 문서의 Marp 설정과 제목·요약처럼 문서마다 다른 긴 값은 키로 보이지 않는다.
 
 const META_SKIP = new Set(['marp', 'style', 'theme', 'size', 'headingDivider', 'paginate', 'header', 'footer', 'class', 'backgroundColor',
-  'backgroundImage', 'backgroundPosition', 'backgroundRepeat', 'backgroundSize', 'color', 'math', 'title', 'description', 'lang']);
+  'backgroundImage', 'backgroundPosition', 'backgroundRepeat', 'backgroundSize', 'color', 'math', 'title', 'name', 'description', 'lang']);
 const DATE_LIKE = /^\d{4}(?:[-./]\d{1,2}){0,2}/;
 
 const metaValues = (v) => (Array.isArray(v) ? v : [v]).map((x) => String(x ?? '').trim()).filter((x) => x && x.length <= 120);

@@ -2030,6 +2030,9 @@ def run(headed: bool) -> None:
             (tables / 'caps.md').write_text('# 캡션\n\n**〈표 Ⅱ-15〉 철재의 HS코드**\n\n| HS코드 | 품명 |\n|---|---|\n| 7208 | 열연강판 |\n\n'
                                             '표 1. 항만별 물동량\n\n| 항만 | 물동량 |\n|---|---|\n| 부산 | 1,234 |\n\n| a | b |\n|---|---|\n| 1 | 2 |\n\n'
                                             '![가](img/a.svg)\n\n[그림 1] 분기별 가격 범위\n\n![나만](img/b.svg)\n', encoding='utf-8')
+            # 문서 정보의 들여 쓴 키(author.name)와 name 은 키로 안 보임, 문서가 없는 폴더를 / 없이 가리킨 링크는 깨짐이 아님 (D62)
+            (tables / 'meta.md').write_text('---\nname: meta-doc\nauthor:\n  name: 김\n  team: 리서치\nstatus: 진행 중\n---\n\n'
+                                            '# 문서 정보\n\n[자료 폴더](data) · [없는 폴더](nope)\n', encoding='utf-8')
             page.once('dialog', lambda d: d.accept(str(tables)))
             page.click('#lec-btn-open')
             n_tabs(2)
@@ -2105,6 +2108,13 @@ def run(headed: bool) -> None:
               terms: document.querySelectorAll('#lec-menu .menu-term').length })''')
             shot('22-parts-caption')
             page.keyboard.press('Escape')
+            page.click('#lec-parts-kinds button[data-kind="link"]')
+            meta_links = page.evaluate('''() => [...document.querySelectorAll('#lec-parts-list .pt-item[data-doc="meta.md"]')]
+              .map(e => [e.querySelector('.pt-name').textContent, e.querySelector('.pt-label')?.textContent || ''])''')
+            page.click('#lec-parts-mode button[data-mode="meta"]')
+            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-mkey]')", 5000)
+            nested_keys = page.evaluate("[...document.querySelectorAll('#lec-parts-kinds button[data-mkey]')].map(b => b.dataset.mkey)")
+            page.click('#lec-parts-mode button[data-mode="parts"]')
             page.click('.side-tabs button[data-tab="files"]')
             check(cap_tables == [['〈표 Ⅱ-15〉 철재의 HS코드', '표 1 · 1행 2열'], ['표 1. 항만별 물동량', '표 2 · 1행 2열'], ['표 3', 'a·b · 1행 2열']]
                   and cap_figs == ['[그림 1] 분기별 가격 범위', '나만']
@@ -2112,6 +2122,9 @@ def run(headed: bool) -> None:
                   and cap_menu['terms'] >= 2,
                   f"모아 보기: 캡션(굵은 〈표 Ⅱ-15〉·'표 1.'·그림 아래 [그림 1])이 이름, 없으면 머리행·대체 글. 우클릭은 Claude용 위치(줄·캡션)·원문 복사와 터미널 버튼 "
                   f"({cap_tables}, {cap_figs}, {cap_menu})")
+            check(meta_links == [['자료 폴더', '폴더 · data/'], ['없는 폴더', '깨짐자료 · nope']]
+                  and {'author.name', 'author.team', 'status'} <= set(nested_keys) and 'name' not in nested_keys,
+                  f"모아 보기: 문서가 없는 폴더로 가는 링크는 '폴더'(깨짐 아님), 문서 정보의 들여 쓴 키는 author.name 처럼, name 은 키로 안 보임 ({meta_links}, {nested_keys})")
 
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)

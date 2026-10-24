@@ -114,7 +114,8 @@ const CHART_LIBS = new Set(['vega-lite', 'vega', 'echarts', 'plotly']);   // Gra
 
 /** 모아 보기만의 종류 (할 일·링크·출처) — 아니면 null */
 function moreKind(el) {
-  if (el.closest('.front-matter, h1, h2, h3, h4, h5, h6')) return null;
+  // 다이어그램·차트 안(그린 SVG 의 링크, Mermaid 상자 글의 p)은 세지 않는다 — 화면 밖에서는 그리지 않아 원문뿐이라 번호가 어긋난다
+  if (el.closest('.front-matter, h1, h2, h3, h4, h5, h6, svg, pre.mermaid, pre.lec-chart, .diagram-error')) return null;
   const tag = el.tagName;
   if (tag === 'LI') {
     if (el.closest('.footnotes')) return el.parentElement?.closest('li') ? null : 'source';   // 각주

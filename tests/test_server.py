@@ -378,6 +378,9 @@ def test_exists_for_path_links(client, pid):
                                                              '.hidden.md', '../../x.py', 'docs'], 'base': 'docs'}).get_json()
     # 프로젝트 기준, 그다음 문서 폴더 기준. 숨김·밖·폴더는 없는 것으로
     assert r['found'] == {'src/app.py': 'src/app.py', '../src/app.py': 'src/app.py', 'docs/10-a.md': 'docs/10-a.md'}
+    # dirs: 폴더도 (끝에 /) — 모아 보기의 깨진 링크 (D62). 숨김·밖은 여전히 없는 것
+    r = client.post('/api/exists', json={'p': pid, 'paths': ['src', 'docs/', 'src/app.py', '.hidden.md', '..', 'nope'], 'dirs': True}).get_json()
+    assert r['found'] == {'src': 'src/', 'docs/': 'docs/', 'src/app.py': 'src/app.py'}
     assert client.post('/api/exists', json={'p': pid, 'paths': 'x'}).status_code == 400
 
 
