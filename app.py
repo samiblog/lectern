@@ -99,6 +99,20 @@ def window_size(saved: Any) -> tuple[int, int]:
     return max(width, MIN_WINDOW[0]), max(height, MIN_WINDOW[1])
 
 
+def confirm_discard(paths: list[str]) -> bool:
+    """창을 닫을 때 저장하지 않은 편집을 버릴지 묻는다 (예 = 닫음). pywebview 는 closing 처리기를 창의 스레드에서 바로 부르므로
+    (Event(…, True)) 그 스레드의 창들을 막는 Windows 메시지 상자(MB_TASKMODAL)를 띄운다"""
+    if sys.platform != 'win32':
+        return True
+    import ctypes
+
+    files = '\n'.join(f'  {p}' for p in paths[:8]) + ('\n  …' if len(paths) > 8 else '')
+    text = t('저장하지 않은 편집이 있습니다:\n{files}\n\n닫으면 이 내용은 사라집니다. 닫을까요?', files=files)
+    MB_YESNO, MB_ICONWARNING, MB_DEFBUTTON2, MB_TASKMODAL, MB_SETFOREGROUND, IDYES = 0x4, 0x30, 0x100, 0x2000, 0x10000, 6
+    flags = MB_YESNO | MB_ICONWARNING | MB_DEFBUTTON2 | MB_TASKMODAL | MB_SETFOREGROUND
+    return ctypes.windll.user32.MessageBoxW(None, text, 'Lectern', flags) == IDYES
+
+
 def run_window(state: AppState, port: int, debug: bool, receiver: instance.Receiver | None = None) -> None:
     import webview
 
@@ -126,13 +140,17 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
     window.events.maximized += lambda: shown.update(state='maximized')
     window.events.restored += lambda: shown.update(state='normal')
 
-    def on_closing() -> None:
+    def on_closing() -> bool | None:
+        # 편집 모드에서 저장하지 않은 것이 있으면 묻는다 (D54). 아니오면 닫지 않는다
+        if state.unsaved and not confirm_discard(state.unsaved):
+            return False
         if shown['state'] != 'normal':
-            return
+            return None
         try:
             state.config.set_window(window.width, window.height)
         except Exception:  # 창 크기 저장 실패는 무시
             pass
+        return None
 
     window.events.closing += on_closing
 

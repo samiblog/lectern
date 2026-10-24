@@ -22,8 +22,16 @@ const keyOf = (target) => `${target.type}:${target.path || ''}`;
  * index: 뒤로/앞으로처럼 기록 안의 위치로 갈 때, 렌더링이 실제로 끝난 뒤에만 pane.hIndex 를 그 값으로 바꾼다.
  * scrollTop: 이 위치로. 없으면 restoreScroll 일 때 그 문서의 마지막 위치, 아니면 맨 위나 앵커
  */
+let leaveGuard = null;   // 칸에서 다른 화면으로 가기 전에 — 편집 모드(editor.js, D54)가 저장하지 않은 것을 묻는다. false 면 가지 않는다
+
+/** 다른 화면으로 가기 전에 부를 함수 (editor.js) */
+export function setLeaveGuard(fn) {
+  leaveGuard = fn;
+}
+
 export async function navigate(target, { pane = S.pane, push = true, restoreScroll = false, index = null, scrollTop } = {}) {
   if (!pane?.tab) return false;   // 시작 화면 (열린 탭이 없음)
+  if (pane.editor && leaveGuard && !leaveGuard(pane)) return false;   // 편집 중 — 저장하지 않은 것을 버리지 않기로 함
   if (pane.current) pane.scrollPos.set(keyOf(pane.current), pane.scroller.scrollTop);
   if (index == null) pane.wanted = null;
   const next = { type: target.type, path: target.path || '' };

@@ -2,7 +2,7 @@
 
 Lectern is a viewer for people to skim and read the documents that Claude Code or Claude writes into a project folder. It shows Markdown (`.md`) and HTML (`.html`) documents in a readable layout, and shows code in a read-only code view.
 
-- **View only.** Lectern never edits or deletes your documents; the only file it writes is its settings file. The one exception is commands you type yourself in the right-hand terminal.
+- **Made for reading.** Lectern never deletes or creates documents; the only files it writes are its settings file and files you save yourself in **edit mode**. Commands you type yourself in the right-hand terminal are also an exception.
 - **It does not connect to the internet on its own.** Only web images inside documents are loaded, and you can turn that off in Settings.
 - **It only looks inside the folder you open.** Hidden files and folders (`.git`, `.claude` and so on) are not shown. Excluded folders such as `node_modules` and `dist` stay out of the document tree and search, and appear dimmed only in the 'Other files' list.
 
@@ -146,6 +146,17 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer.
 
+## Edit mode
+
+Edit the document (Markdown or HTML) or code you are reading, right where it is.
+
+- To open it: **Edit** in the status bar, **Edit** in the code view header, **Edit this document** or **Edit here** (at that block or line) in the right-click menu, or Ctrl+E. It opens at the source of what was at the top of the screen.
+- It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace and Alt+G to go to a line. Tab indents with spaces.
+- **Ctrl+S** saves. The file's original line endings (CRLF/LF) and BOM are kept. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
+- If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
+- With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
+- Only UTF-8 text files up to 2 MB can be edited. Lectern does not create, rename or delete files, and does not edit other files (PDF, Excel and so on).
+
 ## Reading code
 
 - Click a file once in the 'Code' list (or press Enter) to show it in the main area with line numbers and language colors. It is never edited or run.
@@ -238,7 +249,7 @@ You can bring up this table at any time with the **?** button in the toolbar or 
 
 ## Good to know
 
-- Lectern is view only. The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
+- Lectern changes files only when you save in edit mode. The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
 - The terminal needs Windows 10 (1809) or later. A shell's history is gone once Lectern closes.
 - Document titles in the tree are read from the beginning of each document. If a document starts with a very long frontmatter, its file name is shown instead.
 - Web images that cannot be loaded (blocked on a company network, or taking more than 15 seconds) turn into links.

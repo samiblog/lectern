@@ -522,6 +522,53 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   background: var(--ui-fresh); color: #1c1400; font-size: 11.5px; font-weight: 700;
 }
 .st-changes:hover { filter: brightness(1.08); }
+/* 상태줄의 '편집' (editor.js, D54) */
+.st-edit {
+  display: inline-flex; align-items: center; gap: 4px; flex: none; height: 20px; padding: 0 8px; border: 1px solid var(--ui-border);
+  border-radius: 5px; background: var(--ui-panel); color: var(--ui-fg); font-size: 11.5px; cursor: pointer;
+}
+.st-edit:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
+.st-edit svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+
+/* ---- 편집 모드 (editor.js, D54): 칸 위를 덮는 편집 상자 — CodeMirror 5. 색은 문서 스타일(--md-*)에서 ---- */
+.lec-editor { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--md-bg, #fff); }
+.ed-head {
+  display: flex; align-items: center; gap: 8px; flex: none; height: 38px; padding: 0 8px 0 12px;
+  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-fg); font-size: 12.5px;
+}
+.ed-icon { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ui-accent); stroke-width: 1.5; stroke-linejoin: round; }
+.ed-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
+.ed-state { flex: 1; min-width: 0; color: var(--ui-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.lec-editor.dirty .ed-state { color: var(--ui-accent); font-weight: 600; }
+.ed-head .primary { height: 26px; padding: 0 14px; }
+.ed-body { flex: 1; min-height: 0; position: relative; }
+.lec-editor .CodeMirror {
+  position: absolute; inset: 0; height: auto; background: var(--md-bg, #fff); color: var(--md-fg, #1f2933);
+  font-family: var(--md-mono, monospace); font-size: calc(13.5px * var(--md-scale, 1)); line-height: 1.55;
+}
+.lec-editor .CodeMirror-gutters { background: var(--ui-bg); border-right: 1px solid var(--ui-border); }
+.lec-editor .CodeMirror-lines { padding: 8px 0 40px; }
+.lec-editor .CodeMirror pre.CodeMirror-line, .lec-editor .CodeMirror pre.CodeMirror-line-like { padding: 0 14px; }
+.lec-editor .CodeMirror-linenumber { color: var(--ui-faint); }
+.lec-editor .CodeMirror-cursor { border-left: 2px solid var(--md-fg, #1f2933); }
+.lec-editor .CodeMirror-selected, .lec-editor .CodeMirror-focused .CodeMirror-selected, .lec-editor .CodeMirror-line::selection,
+.lec-editor .CodeMirror-line > span::selection, .lec-editor .CodeMirror-line > span > span::selection { background: color-mix(in srgb, var(--md-link, #1f5f9f) 24%, transparent); }
+.lec-editor .CodeMirror-activeline-background { background: color-mix(in srgb, var(--md-fg, #1f2933) 5%, transparent); }
+.lec-editor .CodeMirror-matchingbracket { color: inherit !important; background: color-mix(in srgb, var(--md-link, #1f5f9f) 25%, transparent); }
+.lec-editor .CodeMirror-dialog { background: var(--ui-bg); color: var(--ui-fg); border-color: var(--ui-border); font-family: var(--ui-font, sans-serif); }
+.lec-editor .CodeMirror-dialog input { color: inherit; font: inherit; }
+.lec-editor .cm-searching { background: var(--ui-find, #ffe58a); }
+/* 어두운 스타일: CodeMirror 의 기본 글자색은 흰 바탕용이라 어두운 바탕에 맞는 색으로 (One Dark 계열) */
+:root[data-ui="dark"] .lec-editor .cm-keyword, :root[data-ui="dark"] .lec-editor .cm-builtin { color: #c678dd; }
+:root[data-ui="dark"] .lec-editor .cm-string, :root[data-ui="dark"] .lec-editor .cm-quote { color: #98c379; }
+:root[data-ui="dark"] .lec-editor .cm-string-2, :root[data-ui="dark"] .lec-editor .cm-link { color: #56b6c2; }
+:root[data-ui="dark"] .lec-editor .cm-number, :root[data-ui="dark"] .lec-editor .cm-atom, :root[data-ui="dark"] .lec-editor .cm-attribute { color: #d19a66; }
+:root[data-ui="dark"] .lec-editor .cm-comment, :root[data-ui="dark"] .lec-editor .cm-meta, :root[data-ui="dark"] .lec-editor .cm-hr { color: #7f848e; }
+:root[data-ui="dark"] .lec-editor .cm-def, :root[data-ui="dark"] .lec-editor .cm-header, :root[data-ui="dark"] .lec-editor .cm-property { color: #61afef; }
+:root[data-ui="dark"] .lec-editor .cm-variable-2, :root[data-ui="dark"] .lec-editor .cm-variable-3, :root[data-ui="dark"] .lec-editor .cm-type,
+:root[data-ui="dark"] .lec-editor .cm-qualifier { color: #e5c07b; }
+:root[data-ui="dark"] .lec-editor .cm-tag, :root[data-ui="dark"] .lec-editor .cm-error { color: #e06c75; }
+:root[data-ui="dark"] .lec-editor .cm-bracket, :root[data-ui="dark"] .lec-editor .cm-operator { color: #abb2bf; }
 
 /* ---- 찾기 ------------------------------------------------------------------ */
 #lec-findbar { position: sticky; top: 0; height: 0; z-index: 20; }

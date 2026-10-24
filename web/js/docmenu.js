@@ -5,7 +5,7 @@
 // 코드 화면(codeview.js)에서는 줄 메뉴: 이 줄·고른 글 복사, Claude용 위치(@경로 12~20행), 편집기에서 이 줄 열기, 경로 복사, 전체 복사.
 // 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24).
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
@@ -198,12 +198,13 @@ function frontMatterRange() {
 const texItem = (node) => ({ label: t('LaTeX 복사'), hint: describe(node.dataset.tex), action: () => copyPlain(node.dataset.tex) });
 const editorItem = (line) => ({ label: t('편집기에서 이 줄 열기'), hint: `${doc.path}:${line}`, action: () => openExternal(doc.path, line) });
 
-/** 원문 줄 범위가 있는 블록의 공통 항목: 원문 복사, Claude용 위치 복사, 편집기에서 이 줄 열기 */
+/** 원문 줄 범위가 있는 블록의 공통 항목: 원문 복사, Claude용 위치 복사, 여기를 편집, 편집기에서 이 줄 열기 */
 function sourceItems(range, label = t('원문 복사'), note = '') {
   const ref = claudeRef(range, note);
   return [
     { label, hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)), term: sourceOf(range) },
     { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
+    { label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },   // 편집 모드 (D54)
     editorItem(range[0]),
   ];
 }
@@ -261,7 +262,7 @@ function printDoc() {
 }
 
 function docItems() {
-  const items = [{ header: doc.path }, ...pathMenuItems(doc.path, true)];
+  const items = [{ header: doc.path }, { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }, '-', ...pathMenuItems(doc.path, true)];
   if (hasFolds()) {
     items.push('-', { label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) });
   }
@@ -293,6 +294,7 @@ function codeMenu(e, view, x, y) {
   if (range) {
     const ref = `@${path} ${rangeText(range)}`;
     items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
+      { label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },
       { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
   }
   items.push('-', ...pathMenuItems(path, true), '-',

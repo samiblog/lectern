@@ -174,6 +174,9 @@ flowchart LR
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
+| `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, mtime_ns, size}` — `text` 는 LF, `mtime_ns` 는 글자(JS 수의 정밀도). 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 숨김·밖은 404 |
+| `POST /api/save` | `{p, path, text, mtime_ns, size, force?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). 그 파일의 CRLF·BOM 을 되살리고, 같은 폴더의 임시 파일에 쓴 뒤 바꿔 끼운다. 수정 시각·크기가 원문을 줄 때와 다르면 409 (`force` 면 덮어씀). `{mtime_ns, size}`. 없는 파일은 404 (새로 만들지 않음) |
+| `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
@@ -340,6 +343,14 @@ sequenceDiagram
 - 파일이 바뀌어 트리·최근 변경·검색 결과를 다시 그려도 키보드 초점은 같은 행에 남는다 (`util.keepFocus`).
 - 폴더를 처음 훑는 데(문서 수천 개) 0.4초가 넘으면 본문에 '폴더를 읽고 있습니다…'를 보인다 (`tabs.js` 의 `loadTab`). 그동안 트리는 비워 둔다.
 
+### 편집 모드 (editor.js, lectern/editing.py — D54)
+- 칸 위를 덮는 편집 상자 `.lec-editor` (`pane.editor` = {cm, path, base(mtime_ns·size), dirty, saving}). CodeMirror 5 는 처음 열 때 `web/vendor/codemirror` 의 css·`codemirror.js`·애드온(dialog·search·searchcursor·jump-to-line·matchbrackets·active-line)·확장자에 맞는 모드(`EXT` → `MODE_FILES`, 쓰는 것 먼저)를 차례로 불러온다 (`window.CodeMirror` 가 진짜 함수인지 본다).
+- 연다: 상태줄 `#lec-st-edit`(문서·코드 화면이고 편집 중이 아닐 때), 코드 화면 머리줄 `.cv-edit`, 우클릭 `edit` 이벤트 {line}('이 문서 편집'·'여기를 편집'), Ctrl+E(`toggleEditor`). 줄이 없으면 화면 맨 위에 보이는 `[data-lines]`(코드는 `.cv-line`)의 줄.
+- 저장: Ctrl+S·'저장' → `POST /api/save` (원문의 `mtime_ns`·`size` 와 함께). 409 면 `confirm` 으로 덮어쓰기(force)를 묻는다. 깨끗한 상태는 CodeMirror 의 `changeGeneration`·`isClean`. 저장하지 않은 것이 생기거나 없어지면 `POST /api/editing` 으로 목록을 알린다 (창을 닫을 때 `app.py` 가 묻는다 — `MessageBoxW`, closing 처리기는 창의 스레드에서 바로 돈다).
+- 닫기: Esc·✕·Ctrl+E — 저장하지 않은 것이 있으면 `confirm`. 다른 화면으로 가기 전에는 `nav.js` 의 leave guard(`setLeaveGuard`)가, 탭을 닫기 전에는 `tabs.js` 가 `confirmCloseEditor` 로 묻는다. 자동 새로고침(`refreshView`)은 편집 상자 아래의 화면만 다시 그린다.
+- 키: 편집 상자 안에서는 `main.js` 가 Ctrl+Tab·Ctrl+1~9·Ctrl+E·Ctrl+P·Ctrl+,·F1·Ctrl+/ 만 받고 나머지는 편집기로 (Ctrl+F 는 편집기의 찾기). Tab 은 빈칸으로 들이기.
+- 색: `.lec-editor .CodeMirror` 가 `--md-bg`·`--md-fg`·`--md-mono`·`--md-scale`, 줄 번호 칸은 `--ui-bg`, 선택은 `--md-link`. 어두운 스타일(`data-ui="dark"`)은 토큰 글자색을 One Dark 계열로.
+
 ### 내 스타일 (theme.js, settings.js, lectern/styles.py — D53)
 - 설정 폴더의 `styles\*.css`. 서버(`styles.list_styles`)가 맨 앞 머리 주석 `/* lectern-style … */` 의 `name`·`dark`·`base` 를 읽는다 (없으면 파일 이름·밝음·default/dark, 틀린 `base` 도 그것). id 는 `user:<파일 이름>`.
 - 화면: 시작할 때 `loadUserStyles()` 로 목록을 받은 뒤 스타일을 입힌다 (고른 스타일이 내 것일 수 있으므로). 스타일 목록 맨 아래 '내 스타일' 묶음. 고르면 `#lec-theme-css` 에 바탕 스타일, `#lec-user-css` 에 `/userstyle/<파일>?v=<수정 시각>`, `data-ui` 는 `dark` 로. 다이어그램 색은 CSS 변수에서(`mermaidFromCss`). 스타일 없는 html 문서(iframe)에도 둘 다 넣는다 (`htmldoc.js`), 터미널 색은 두 링크의 `load` 때 다시.
@@ -424,6 +435,8 @@ sequenceDiagram
 | Esc | 팝업·메뉴·확대·찾기·사용설명서 닫기, 그다음 장 하이라이트 끄기 |
 | F1 | 사용설명서 열기/닫기 (D45) |
 | Ctrl+/ | 단축키 표 열기/닫기 (툴바의 `?` 버튼과 같음) |
+| Ctrl+E | 편집 모드 열기/닫기 — 보고 있는 문서·코드 (D54) |
+| Ctrl+S · Esc · Ctrl+F · Ctrl+H · Alt+G | 편집 모드 안: 저장 · 닫기 · 찾기 · 바꾸기 · 줄로 가기 (편집 상자 안의 키는 편집기 것) |
 | Ctrl+휠 | 확대/축소 (pywebview `zoomable`) |
 
 ### 테마 (theme.js, themes/)

@@ -1239,6 +1239,68 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
+            print('[편집 모드]')   # D54 — CodeMirror 5, 저장은 POST /api/save
+            plan = work / 'plans' / '10-후속-과제.md'
+            original = plan.read_bytes()
+            ed_state = lambda: page.evaluate("document.querySelector('.lec-editor .ed-state')?.textContent || ''")
+            page.locator('#lec-tree .row.file', has_text='후속 과제').click()
+            page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
+            page.click('#lec-st-edit')
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            in_editor = page.evaluate("!!document.activeElement?.closest('.lec-editor') && document.querySelector('#lec-st-edit').hidden")
+            page.keyboard.press('Control+End')
+            page.keyboard.press('Enter')
+            page.keyboard.type('- [ ] edit ')
+            page.keyboard.insert_text('편집 모드로 더함')   # 한글 입력기(IME)가 글자를 넣는 것처럼
+            dirty = page.evaluate("document.querySelector('.lec-editor').classList.contains('dirty')")
+            page.keyboard.press('Control+f')   # 편집 상자 안의 Ctrl+F 는 편집기의 찾기 (앱의 찾기 막대가 아니라)
+            cm_find = wait_until(page, "!!document.querySelector('.lec-editor .CodeMirror-dialog')", 2000) and page.is_hidden('#lec-findbar')
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+s')
+            saved = wait_until(page, "document.querySelector('.lec-editor .ed-state').textContent.startsWith('저장했습니다')", 5000)
+            on_disk = plan.read_bytes()
+            page.keyboard.press('Escape')
+            closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            shown = wait_until(page, "document.querySelector('#lec-view').textContent.includes('편집 모드로 더함')", 8000)
+            check(in_editor and dirty and cm_find and saved and on_disk.endswith('- [ ] edit 편집 모드로 더함'.encode()) and b'\r\n' not in on_disk
+                  and closed and shown,
+                  f"편집 모드: 상태줄 '편집'으로 문서 원문을 고치고(한글 입력), Ctrl+F 는 편집기의 찾기, Ctrl+S 저장(LF 그대로), Esc 로 닫으면 고친 문서가 보임 ({ed_state()})")
+            # 그사이 다른 곳(Claude Code 등)에서 바뀌면 덮어쓰지 않고 묻는다. 저장하지 않은 채 닫으면 묻는다
+            page.locator('#lec-view li').last.click(button='right')
+            page.locator('#lec-menu button', has_text='여기를 편집').click()
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            at_line = page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line + 1")
+            want_line = int(page.evaluate("[...document.querySelectorAll('#lec-view li')].pop().closest('[data-lines]').dataset.lines.split('-')[0]"))
+            plan.write_bytes(plan.read_bytes() + '\n외부에서 더함\n'.encode())
+            page.keyboard.type('x')
+            asked = []
+            page.once('dialog', lambda dlg: (asked.append(dlg.message), dlg.dismiss()))
+            page.keyboard.press('Control+s')
+            wait_until(page, "!document.querySelector('.lec-editor .ed-state').textContent.includes('…')", 3000)
+            page.wait_for_timeout(300)
+            kept = '외부에서 더함' in plan.read_text(encoding='utf-8') and page.evaluate("document.querySelector('.lec-editor').classList.contains('dirty')")
+            asked2 = []
+            page.once('dialog', lambda dlg: (asked2.append(dlg.message), dlg.accept()))
+            page.keyboard.press('Escape')
+            closed2 = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            plan.write_bytes(original)
+            check(at_line == want_line and asked and '바뀌었습니다' in asked[0] and kept and asked2 and '저장하지 않은' in asked2[0] and closed2,
+                  f"우클릭 '여기를 편집'은 그 줄에서, 그사이 다른 곳에서 바뀌면 덮어쓰지 않고 물음, 저장하지 않고 닫으면 물음 ({at_line}/{want_line}, {asked[:1]})")
+            code_dir = page.locator('#lec-code-list .row[data-path="code"]')
+            if code_dir.get_attribute('aria-expanded') != 'true':   # 앞에서 코드 화면을 보며 펼쳐 두었을 수 있다
+                code_dir.locator('[data-toggle]').click()
+            page.locator('#lec-code-list .row[data-path="code/example.py"]').click()
+            page.wait_for_selector('#lec-view .cv-edit')
+            page.click('#lec-content')
+            page.keyboard.press('Control+e')   # Ctrl+E 로 열고 닫기
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            mode = page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getMode().name")
+            page.keyboard.press('Control+e')
+            code_closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
+            check(mode == 'python' and code_closed, f'코드 화면도 Ctrl+E 로 편집 모드 — 언어 색 ({mode})')
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+
             print('[HTML 문서]')
             frame_js = "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')"
             labels = page.locator('#lec-tree .row.file').all_inner_texts()

@@ -36,7 +36,12 @@ PACKAGES: dict[str, str] = {
     '@xterm/xterm': '5.5.0',            # 오른쪽 터미널 (D38) — 처음 열 때 terminal.js 가 불러온다
     '@xterm/addon-fit': '0.10.0',
     '@xterm/addon-unicode11': '0.8.0',  # 한글처럼 두 칸을 차지하는 글자의 폭
+    'codemirror': '5.65.21',            # 편집 모드 (D54) — 처음 편집할 때 editor.js 가 불러온다. 6 은 묶는 도구가 있어야 해서 5
 }
+
+# 편집 모드의 언어 (codemirror/mode/<이름>.js). 편집기가 확장자에 맞는 것과 그것이 쓰는 것만 불러온다 (editor.js 의 MODES)
+CODEMIRROR_MODES = ['markdown', 'xml', 'htmlmixed', 'javascript', 'css', 'python', 'yaml', 'toml', 'properties', 'shell',
+                    'powershell', 'clike', 'go', 'rust', 'ruby', 'php', 'sql', 'r', 'lua', 'swift', 'perl', 'dart', 'groovy']
 
 # (패키지, 패키지 안 원본 경로, vendor 안 대상 경로). 원본이 폴더면 woff2 글꼴만 복사한다.
 FILES: list[tuple[str, str, str]] = [
@@ -59,6 +64,16 @@ FILES: list[tuple[str, str, str]] = [
     ('@xterm/xterm', 'css/xterm.css', 'xterm/xterm.css'),
     ('@xterm/addon-fit', 'lib/addon-fit.js', 'xterm/addon-fit.js'),
     ('@xterm/addon-unicode11', 'lib/addon-unicode11.js', 'xterm/addon-unicode11.js'),
+    ('codemirror', 'lib/codemirror.js', 'codemirror/codemirror.js'),
+    ('codemirror', 'lib/codemirror.css', 'codemirror/codemirror.css'),
+    ('codemirror', 'addon/dialog/dialog.js', 'codemirror/addon/dialog.js'),
+    ('codemirror', 'addon/dialog/dialog.css', 'codemirror/addon/dialog.css'),
+    ('codemirror', 'addon/search/searchcursor.js', 'codemirror/addon/searchcursor.js'),
+    ('codemirror', 'addon/search/search.js', 'codemirror/addon/search.js'),
+    ('codemirror', 'addon/search/jump-to-line.js', 'codemirror/addon/jump-to-line.js'),
+    ('codemirror', 'addon/edit/matchbrackets.js', 'codemirror/addon/matchbrackets.js'),
+    ('codemirror', 'addon/selection/active-line.js', 'codemirror/addon/active-line.js'),
+    *(('codemirror', f'mode/{m}/{m}.js', f'codemirror/mode/{m}.js') for m in CODEMIRROR_MODES),
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')

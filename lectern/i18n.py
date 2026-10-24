@@ -69,6 +69,14 @@ EN: dict[str, str] = {
         'Could not start the shell ({error}). Check terminal_shell in the settings file.',
     '한 번에 보낼 수 있는 글은 65536자까지입니다': 'Up to 65536 characters can be sent at once.',
     '제외 폴더 안이 아닙니다': 'This is not inside an excluded folder.',
+    '문서와 코드 파일만 편집할 수 있습니다': 'Only document and code files can be edited.',
+    '{n}MB 가 넘는 파일은 편집할 수 없습니다': 'Files over {n} MB cannot be edited.',
+    '글 파일이 아니라서 편집할 수 없습니다': 'This is not a text file, so it cannot be edited.',
+    'UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)': 'Files that are not UTF-8 cannot be edited (Lectern only edits UTF-8 text).',
+    '편집하는 동안 다른 곳에서 이 파일이 바뀌었습니다': 'This file was changed elsewhere while you were editing it.',
+    '저장하지 못했습니다: {error}': 'Could not save: {error}',
+    '저장하지 않은 편집이 있습니다:\n{files}\n\n닫으면 이 내용은 사라집니다. 닫을까요?':
+        'There are unsaved edits:\n{files}\n\nClosing will discard them. Close anyway?',
     # state.py
     '폴더가 아닙니다: {path}': 'Not a folder: {path}',
     '탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요': 'You can open up to {n} tabs. Close a tab you are not using and try again.',

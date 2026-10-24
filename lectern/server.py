@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, i18n, osutil, styles, terminal
+from . import __version__, editing, i18n, osutil, styles, terminal
 from .config import is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -394,6 +394,44 @@ def create_app(state: AppState) -> Flask:
         except OSError as exc:
             return jsonify(error=str(exc)), 500
         return jsonify(action=how, path=str(state.config.path))
+
+    # ---- 편집 모드 (D54): 문서·코드 파일을 고쳐 저장 (원칙 1 의 예외 — 사용자가 저장할 때만) ----------------
+
+    @app.get('/api/source')
+    def api_source() -> Any:
+        """?p=&path= — 편집할 원문 {path, text(LF), newline, bom, mtime_ns(글자), size}. 문서·코드·UTF-8·2MB 까지"""
+        project = arg_project()
+        rel = request.args.get('path', '')
+        target = resolve_inside(project.root, rel) if rel else None
+        if target is None or not target.exists():
+            abort(404)
+        try:
+            return jsonify(path=rel, **editing.read_source(target))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/save')
+    def api_save() -> Any:
+        """{p, path, text, mtime_ns, size, force} — 고친 글을 저장한다. 원문을 줄 때와 수정 시각·크기가 다르면 409 (force 면 덮어씀).
+        {mtime_ns, size} — 다음 저장에 쓴다"""
+        data = body()
+        target = path_from_body()
+        text = data.get('text')
+        if not isinstance(text, str):
+            abort(400)
+        try:
+            return jsonify(editing.save_source(target, text, data.get('mtime_ns'), data.get('size'), bool(data.get('force'))))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/editing')
+    def api_editing() -> Any:
+        """{dirty: [경로…]} — 저장하지 않은 편집이 있는 파일. 창을 닫을 때 묻는 데 쓴다 (app.py)"""
+        dirty = body().get('dirty')
+        if not isinstance(dirty, list):
+            abort(400)
+        state.unsaved = [str(p) for p in dirty if isinstance(p, str)][:20]
+        return jsonify(ok=True)
 
     # ---- 내 스타일 (D53): 설정 폴더의 styles\*.css ----------------------------------------
 

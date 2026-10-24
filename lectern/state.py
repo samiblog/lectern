@@ -139,6 +139,7 @@ class AppState:
         self.notices: list[dict[str, Any]] = []   # 화면에 알릴 말 [{id, text}] — 화면이 처음 보는 id 만 한 번 보인다
         # 오른쪽 터미널 (D38): 탭마다 셸. 터미널 API 는 페이지에 실어 주는 실행마다 새 비밀값(X-Term)도 확인한다
         self.terminals = Terminals()
+        self.unsaved: list[str] = []   # 편집 모드에서 저장하지 않은 파일 (D54 — 화면이 알린다, 창을 닫을 때 묻는다)
         self.term_secret = secrets.token_hex(16)
         self._lock = threading.RLock()
 

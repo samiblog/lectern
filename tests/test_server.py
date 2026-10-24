@@ -589,3 +589,29 @@ def test_styles_endpoints(client, tmp_path, monkeypatch):
     assert resp.headers['Cache-Control'] == 'no-cache'
     assert client.get('/userstyle/nope.css').status_code == 404
     assert client.get('/userstyle/..%2Fconfig.json').status_code == 404
+
+
+# ---- 편집 모드 (D54) ----------------------------------------------------------------
+
+def test_source_and_save_endpoints(client, state, project, pid):
+    (project / 'docs' / 'e.md').write_bytes('# 편집\r\n본문\r\n'.encode())
+    r = client.get(f'/api/source?p={pid}&path=docs/e.md').get_json()
+    assert r['text'] == '# 편집\n본문\n' and r['newline'] == '\r\n' and r['path'] == 'docs/e.md'
+    ok = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': '# 편집\n고침\n', 'mtime_ns': r['mtime_ns'], 'size': r['size']})
+    assert ok.status_code == 200 and (project / 'docs' / 'e.md').read_bytes() == '# 편집\r\n고침\r\n'.encode()
+    stale = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': 'x', 'mtime_ns': r['mtime_ns'], 'size': r['size']})
+    assert stale.status_code == 409 and stale.get_json()['error']                       # 그사이 바뀜 (방금 저장한 것)
+    assert client.get(f'/api/source?p={pid}&path=.claude/notes.md').status_code == 404   # 숨김
+    assert client.get(f'/api/source?p={pid}&path=../x.md').status_code == 404
+    assert client.get(f'/api/source?p={pid}&path=docs/img.svg').status_code == 400     # 문서·코드가 아님
+    assert client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': 5}).status_code == 400
+    assert client.post('/api/save', data='x', content_type='text/plain').status_code == 415
+    assert client.post('/api/save', json={'p': pid, 'path': 'docs/new.md', 'text': 'x'}).status_code == 404   # 새로 만들지 않는다
+
+
+def test_editing_reports_unsaved_files(client, state):
+    assert state.unsaved == []
+    assert client.post('/api/editing', json={'dirty': ['samples: docs/a.md', 3]}).status_code == 200
+    assert state.unsaved == ['samples: docs/a.md']
+    client.post('/api/editing', json={'dirty': []})
+    assert state.unsaved == [] and client.post('/api/editing', json={'dirty': 'x'}).status_code == 400

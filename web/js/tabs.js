@@ -18,6 +18,7 @@ import { rememberPosition } from './position.js';
 import { showMenu } from './ui.js';
 import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
+import { confirmCloseEditor } from './editor.js';
 import { $, esc, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -205,6 +206,7 @@ export async function chooseAndOpen() {
 /** 탭을 닫는다 (그 탭의 터미널도 끝난다). 선택된 탭이었으면 그 오른쪽(없으면 왼쪽) 탭을 고른다. 마지막 탭이면 시작 화면 */
 export async function closeTab(tab) {
   if (!S.tabs.includes(tab)) return;
+  if (!confirmCloseEditor(tab)) return;           // 편집 모드에서 저장하지 않은 것이 있으면 묻는다 (D54)
   if (!await confirmCloseTerminal(tab)) return;   // 터미널에서 프로그램이 돌고 있으면 묻는다
   await rememberPosition(tab);   // 스크롤을 멈춘 지 얼마 안 됐어도 마지막 위치를 남긴다 (닫은 뒤에는 서버가 받지 않는다)
   const i = S.tabs.indexOf(tab);
