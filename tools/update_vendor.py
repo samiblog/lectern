@@ -73,6 +73,7 @@ FILES: list[tuple[str, str, str]] = [
     ('codemirror', 'addon/search/jump-to-line.js', 'codemirror/addon/jump-to-line.js'),
     ('codemirror', 'addon/edit/matchbrackets.js', 'codemirror/addon/matchbrackets.js'),
     ('codemirror', 'addon/selection/active-line.js', 'codemirror/addon/active-line.js'),
+    ('codemirror', 'addon/mode/simple.js', 'codemirror/addon/simple.js'),   # rust 모드가 쓴다
     *(('codemirror', f'mode/{m}/{m}.js', f'codemirror/mode/{m}.js') for m in CODEMIRROR_MODES),
 ]
 

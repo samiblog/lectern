@@ -489,8 +489,8 @@ function bindResizer() {
     handle.addEventListener('pointermove', move);
     handle.addEventListener('pointerup', up);
   });
-  handle.addEventListener('dblclick', async () => {
-    await saveConfig({ [terminalBelow() ? 'terminal_height' : 'terminal_width']: null });
+  handle.addEventListener('dblclick', () => {
+    saveConfig({ [terminalBelow() ? 'terminal_height' : 'terminal_width']: null });   // S.config 는 바로 바뀐다 — 저장은 뒤에서
     applyWidth();
   });
 }
@@ -499,8 +499,8 @@ export function initTerminal() {
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   // 머리줄 버튼: 오른쪽 ↔ 아래 (설정이 자동이었으면 이제 그 자리로 고정 — 설정 창에서 자동으로 되돌린다)
-  $('#lec-term-place').addEventListener('click', async () => {
-    await saveConfig({ terminal_position: terminalBelow() ? 'side' : 'bottom' });
+  $('#lec-term-place').addEventListener('click', () => {
+    saveConfig({ terminal_position: terminalBelow() ? 'side' : 'bottom' });   // S.config 는 바로 바뀐다 — 저장은 뒤에서
     applyPlace();
   });
   portrait.addEventListener('change', applyPlace);   // 창 모양이 바뀜 (자동일 때만 자리가 바뀐다)

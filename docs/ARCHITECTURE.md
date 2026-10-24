@@ -155,7 +155,7 @@ flowchart LR
 창 모드에서는 `/api/*` 요청에 `X-Token: <window.pywebview.token>` 헤더가 필요하다. 응답은 JSON, 오류는 `{error: "..."}`.
 프로젝트(탭)를 다루는 요청은 프로젝트 id 를 `p` 로 준다 (GET 은 `?p=`, POST 는 본문). 열려 있지 않은 id(닫힌 탭)는 404.
 `/api/*`, `/doc/*`, `/` 응답에는 `Cache-Control: no-cache` 가 붙는다.
-`/` 응답에는 스크립트(`'self' 'unsafe-eval'` — 앱 파일만, D38)·이미지·연결·글꼴 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20).
+`/` 응답에는 스크립트(`'self' 'unsafe-eval'` — 앱 파일만, D38)·이미지·연결·글꼴·스타일(`'self' 'unsafe-inline'` — 내 스타일이 인터넷의 css 를 부르지 못하게, D53) 출처를 제한하는 CSP와 `Referrer-Policy: no-referrer` 가 붙는다 (D20).
 터미널 API(`/api/term/*`)는 `X-Term: <페이지의 meta lec-term 값>` 헤더가 더 필요하다 (실행마다 새 비밀값, 브라우저 모드에서도). `Origin` 이 오면 같은 출처여야 한다. 아니면 403 (D38).
 `.js`·`.mjs`·`.css`·`.svg`·`.woff2` 의 응답 형식은 서버가 정한다 (`FIXED_TYPES`). Windows의 `mimetypes` 는 레지스트리 값을 따르는데, `.js` 가 `text/plain` 으로 잡힌 PC에서는 브라우저가 모듈 스크립트를 거부해 화면이 비기 때문이다. `img-src` 는 설정 `external_images` 에 따라 바뀌므로, 설정을 바꾸면 페이지를 다시 불러와야 반영된다.
 
@@ -174,8 +174,8 @@ flowchart LR
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
 | `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
-| `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, mtime_ns, size}` — `text` 는 LF, `mtime_ns` 는 글자(JS 수의 정밀도). 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 숨김·밖은 404 |
-| `POST /api/save` | `{p, path, text, mtime_ns, size, force?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). 그 파일의 CRLF·BOM 을 되살리고, 같은 폴더의 임시 파일에 쓴 뒤 바꿔 끼운다. 수정 시각·크기가 원문을 줄 때와 다르면 409 (`force` 면 덮어씀). `{mtime_ns, size}`. 없는 파일은 404 (새로 만들지 않음) |
+| `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, hash, size}` — `text` 는 LF, `hash` 는 원문 바이트의 SHA-256. 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 없음·숨김·밖은 404 |
+| `POST /api/save` | `{p, path, text, hash, force?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` |
 | `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
@@ -346,7 +346,7 @@ sequenceDiagram
 ### 편집 모드 (editor.js, lectern/editing.py — D54)
 - 칸 위를 덮는 편집 상자 `.lec-editor` (`pane.editor` = {cm, path, base(mtime_ns·size), dirty, saving}). CodeMirror 5 는 처음 열 때 `web/vendor/codemirror` 의 css·`codemirror.js`·애드온(dialog·search·searchcursor·jump-to-line·matchbrackets·active-line)·확장자에 맞는 모드(`EXT` → `MODE_FILES`, 쓰는 것 먼저)를 차례로 불러온다 (`window.CodeMirror` 가 진짜 함수인지 본다).
 - 연다: 상태줄 `#lec-st-edit`(문서·코드 화면이고 편집 중이 아닐 때), 코드 화면 머리줄 `.cv-edit`, 우클릭 `edit` 이벤트 {line}('이 문서 편집'·'여기를 편집'), Ctrl+E(`toggleEditor`). 줄이 없으면 화면 맨 위에 보이는 `[data-lines]`(코드는 `.cv-line`)의 줄.
-- 저장: Ctrl+S·'저장' → `POST /api/save` (원문의 `mtime_ns`·`size` 와 함께). 409 면 `confirm` 으로 덮어쓰기(force)를 묻는다. 깨끗한 상태는 CodeMirror 의 `changeGeneration`·`isClean`. 저장하지 않은 것이 생기거나 없어지면 `POST /api/editing` 으로 목록을 알린다 (창을 닫을 때 `app.py` 가 묻는다 — `MessageBoxW`, closing 처리기는 창의 스레드에서 바로 돈다).
+- 저장: Ctrl+S·'저장' → `POST /api/save` (원문의 `hash` 와 함께). 409 면 `confirm` 으로 덮어쓰기(force)를 묻는다. 깨끗한 상태는 CodeMirror 의 `changeGeneration`·`isClean`. 저장하지 않은 것이 생기거나 없어지면 `POST /api/editing` 으로 목록을 알린다 (창을 닫을 때 `app.py` 가 묻는다 — `MessageBoxW`, closing 처리기는 창의 스레드에서 바로 돈다).
 - 닫기: Esc·✕·Ctrl+E — 저장하지 않은 것이 있으면 `confirm`. 다른 화면으로 가기 전에는 `nav.js` 의 leave guard(`setLeaveGuard`)가, 탭을 닫기 전에는 `tabs.js` 가 `confirmCloseEditor` 로 묻는다. 자동 새로고침(`refreshView`)은 편집 상자 아래의 화면만 다시 그린다.
 - 키: 편집 상자 안에서는 `main.js` 가 Ctrl+Tab·Ctrl+1~9·Ctrl+E·Ctrl+P·Ctrl+,·F1·Ctrl+/ 만 받고 나머지는 편집기로 (Ctrl+F 는 편집기의 찾기). Tab 은 빈칸으로 들이기.
 - 색: `.lec-editor .CodeMirror` 가 `--md-bg`·`--md-fg`·`--md-mono`·`--md-scale`, 줄 번호 칸은 `--ui-bg`, 선택은 `--md-link`. 어두운 스타일(`data-ui="dark"`)은 토큰 글자색을 One Dark 계열로.

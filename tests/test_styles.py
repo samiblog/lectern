@@ -1,6 +1,8 @@
 """내 스타일 (D53): 설정 폴더의 styles\\*.css — 목록, 머리 주석, 인터넷 길 지우기, 서버."""
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from conftest import write
@@ -45,11 +47,15 @@ def test_list_styles_only_plain_css_files(tmp_path):
     'body { background: u\\rl(https://tracker.example/p.png); }',
     'body { background-image: image-set("https://x/a.png" 1x); }',
     '@font-face { font-family: X; src: url(https://fonts.example/x.woff2); }',
+    'body { background: \\\\u\\\\r\\\\l(https://bg.example/x.png); }',      # 이스케이프한 역슬래시 뒤에 숨김
+    '@\\\\i\\\\m\\\\p\\\\o\\\\r\\\\t "https://import.example/x.css";',
+    'body { background: \\55 \\52 \\4c (https://x/a.png); }',
 ])
 def test_sanitize_removes_internet_requests(css):
-    out = sanitize_css(css).lower()
-    assert 'https://' not in out.replace('/* @import', '') or '@import' not in out
-    assert 'url(https' not in out and 'url( "//' not in out and 'image-set(' not in out and '@import url' not in out
+    # 브라우저처럼 이스케이프를 모두 푼 뒤에도 인터넷을 부르는 길이 없어야 한다
+    decoded = re.sub(r'\\(?:([0-9a-fA-F]{1,6})\s?|(.))', lambda m: chr(int(m[1], 16)) if m[1] else m[2], sanitize_css(css)).lower()
+    assert not re.search(r'url\(\s*[\'"]?\s*(https?:|//)', decoded) and 'image-set(' not in decoded
+    assert not re.search(r'@import[^;]*(https?:|//)', decoded)
 
 
 def test_sanitize_keeps_data_urls_and_plain_css():

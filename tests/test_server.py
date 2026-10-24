@@ -183,6 +183,7 @@ def test_index_csp_follows_external_images(client):
     # 스크립트는 앱 파일만 — 문서에 끼어든 인라인 스크립트가 터미널 API 에 닿지 않게 (D38). pywebview 때문에 eval 은 둔다 (D14)
     assert csp['script-src'] == "'self' 'unsafe-eval'" and 'default-src' not in csp
     assert 'https:' in csp['img-src'] and csp['connect-src'] == "'self'"
+    assert csp['style-src'] == "'self' 'unsafe-inline'"   # 내 스타일이 인터넷의 css 를 @import 하지 못하게 (D53)
     client.post('/api/config', json={'external_images': False})
     assert 'http' not in csp_of(client)['img-src']
 
@@ -597,16 +598,18 @@ def test_source_and_save_endpoints(client, state, project, pid):
     (project / 'docs' / 'e.md').write_bytes('# 편집\r\n본문\r\n'.encode())
     r = client.get(f'/api/source?p={pid}&path=docs/e.md').get_json()
     assert r['text'] == '# 편집\n본문\n' and r['newline'] == '\r\n' and r['path'] == 'docs/e.md'
-    ok = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': '# 편집\n고침\n', 'mtime_ns': r['mtime_ns'], 'size': r['size']})
+    ok = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': '# 편집\n고침\n', 'hash': r['hash']})
     assert ok.status_code == 200 and (project / 'docs' / 'e.md').read_bytes() == '# 편집\r\n고침\r\n'.encode()
-    stale = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': 'x', 'mtime_ns': r['mtime_ns'], 'size': r['size']})
-    assert stale.status_code == 409 and stale.get_json()['error']                       # 그사이 바뀜 (방금 저장한 것)
+    stale = client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': 'x', 'hash': r['hash']})
+    assert stale.status_code == 409 and stale.get_json()['error']                       # 그사이 바뀜 (방금 저장한 것 — 크기가 같아도)
+    assert ok.get_json()['hash'] != r['hash']
     assert client.get(f'/api/source?p={pid}&path=.claude/notes.md').status_code == 404   # 숨김
     assert client.get(f'/api/source?p={pid}&path=../x.md').status_code == 404
     assert client.get(f'/api/source?p={pid}&path=docs/img.svg').status_code == 400     # 문서·코드가 아님
     assert client.post('/api/save', json={'p': pid, 'path': 'docs/e.md', 'text': 5}).status_code == 400
     assert client.post('/api/save', data='x', content_type='text/plain').status_code == 415
-    assert client.post('/api/save', json={'p': pid, 'path': 'docs/new.md', 'text': 'x'}).status_code == 404   # 새로 만들지 않는다
+    missing = client.post('/api/save', json={'p': pid, 'path': 'docs/new.md', 'text': 'x', 'force': True})
+    assert missing.status_code == 404 and '없습니다' in missing.get_json()['error'] and not (project / 'docs' / 'new.md').exists()   # 새로 만들지 않는다
 
 
 def test_editing_reports_unsaved_files(client, state):
@@ -615,3 +618,6 @@ def test_editing_reports_unsaved_files(client, state):
     assert state.unsaved == ['samples: docs/a.md']
     client.post('/api/editing', json={'dirty': []})
     assert state.unsaved == [] and client.post('/api/editing', json={'dirty': 'x'}).status_code == 400
+    client.post('/api/editing', json={'dirty': ['a.md']})
+    client.get('/')   # 화면을 다시 불러오면 편집 상자도 없다 — 창을 닫을 때 옛 목록으로 묻지 않게
+    assert state.unsaved == []

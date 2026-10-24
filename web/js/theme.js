@@ -90,7 +90,38 @@ async function syncUserStyles() {
   emit('user-styles');
   if ((S.config.theme || '').startsWith('user:')) {
     applyTheme();
+    redrawAfterLoad();
+  }
+}
+
+/** 다시 그린다 — 내 스타일이면 새 css 를 다 불러온 뒤에 (다이어그램 색을 그 CSS 변수에서 읽는다, mermaidFromCss) */
+function redrawAfterLoad() {
+  if (!userStyle(resolvedTheme())) {
     emit('refresh-view');
+    return;
+  }
+  // 주소가 바뀐(아직 불러오는 중인) css 만 기다린다 — setHref 가 단 표시를 load·error 가 지운다
+  const loaded = (link) => new Promise((resolve) => {
+    if (!link.dataset.loading) {
+      resolve();
+      return;
+    }
+    link.addEventListener('load', resolve, { once: true });
+    link.addEventListener('error', resolve, { once: true });
+    setTimeout(resolve, 3000);
+  });
+  Promise.all([loaded($('#lec-theme-css')), loaded($('#lec-user-css'))]).then(() => emit('refresh-view'));
+}
+
+/** 스타일 파일의 주소를 바꾼다 (같으면 그대로). 바뀌면 다 불러올 때까지 data-loading (redrawAfterLoad) */
+function setHref(link, href) {
+  if (link.getAttribute('href') === href) return;
+  if (href) {
+    link.dataset.loading = '1';
+    link.href = href;
+  } else {
+    delete link.dataset.loading;
+    link.removeAttribute('href');
   }
 }
 
@@ -121,10 +152,8 @@ export function applyTheme() {
   const id = resolvedTheme();
   const th = themeOf(id);
   const user = userStyle(id);
-  $('#lec-theme-css').href = `/static/themes/${user ? user.base : id}.css`;
-  const mine = $('#lec-user-css');
-  if (user) mine.href = `/userstyle/${encodeURIComponent(user.file)}?v=${user.mtime}`;
-  else mine.removeAttribute('href');
+  setHref($('#lec-theme-css'), `/static/themes/${user ? user.base : id}.css`);
+  setHref($('#lec-user-css'), user ? `/userstyle/${encodeURIComponent(user.file)}?v=${user.mtime}` : '');
   $('#lec-hljs-css').href = `/static/vendor/highlight/${th.dark ? 'github-dark' : 'github'}.min.css`;
   document.documentElement.dataset.ui = th.dark ? 'dark' : 'light';
   document.documentElement.dataset.theme = id;
@@ -157,7 +186,7 @@ function updateSteps() {
 function choose(value) {
   saveConfig({ theme: value });   // S.config 는 바로 바뀌고 저장은 뒤에서 — 위·아래를 빠르게 눌러도 화면이 바로 따라온다
   applyTheme();
-  emit('refresh-view');   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
+  redrawAfterLoad();   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
 }
 
 /** 목록에서 바로 위(-1)·아래(+1) 스타일로. 지금 묶는 방식의 목록 순서를 따른다 ('자동'이 맨 위) */
@@ -168,6 +197,11 @@ function step(dir) {
 }
 
 export function initTheme() {
+  for (const link of [$('#lec-theme-css'), $('#lec-user-css')]) {
+    const done = () => { delete link.dataset.loading; };
+    link.addEventListener('load', done);
+    link.addEventListener('error', done);
+  }
   fillPicker();
   $('#lec-theme').addEventListener('change', (e) => choose(e.target.value));
   $('#lec-theme-prev').addEventListener('click', () => step(-1));

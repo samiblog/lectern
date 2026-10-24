@@ -3,7 +3,8 @@
 // - 칸(pane) 위를 덮는 편집 상자(.lec-editor, pane.editor)다. 아래의 화면은 그대로 두므로, 저장하면 자동 새로고침이 그 아래를
 //   다시 그리고 닫으면 고친 결과가 보인다. 칸마다 하나라 다른 프로젝트 탭으로 가도 그 탭에 남는다.
 // - 원문은 GET /api/source (줄바꿈은 LF 로, 서버가 저장할 때 그 파일의 CRLF·BOM 을 되살린다), 저장은 POST /api/save.
-//   그사이 다른 곳(Claude Code 등)이 그 파일을 고쳤으면 서버가 409 로 알리고, 물어서 덮어쓰거나(force) 편집을 이어 간다.
+//   그사이 다른 곳(Claude Code 등)이 그 파일을 고쳤으면(원문을 받을 때의 내용 hash 와 다르면) 서버가 409 로 알리고,
+//   물어서 덮어쓰거나(force) 편집을 이어 간다.
 // - 저장하지 않은 편집이 있으면 다른 화면으로 가기(nav.js 의 leave guard)·편집 닫기·탭 닫기 전에 묻는다.
 //   창을 닫을 때는 서버가 묻는다 — 저장하지 않은 파일 목록을 POST /api/editing 으로 알려 둔다 (app.py).
 // - 여는 곳: 상태줄의 '편집' 버튼, 코드 화면 머리줄의 '편집', 우클릭 메뉴('이 문서 편집'·'여기를 편집' — 'edit' 이벤트 {line}), Ctrl+E.
@@ -17,7 +18,7 @@ import { $, esc, toast, formatClock } from './util.js';
 import { t } from './i18n.js';
 
 const LIB = '/static/vendor/codemirror';
-const ADDONS = ['dialog', 'searchcursor', 'search', 'jump-to-line', 'matchbrackets', 'active-line'];
+const ADDONS = ['dialog', 'searchcursor', 'search', 'jump-to-line', 'matchbrackets', 'active-line', 'simple'];   // simple: rust 모드가 쓴다
 
 // CodeMirror 의 언어: 모드 → 불러올 파일 (쓰는 것 먼저 — web/vendor/codemirror/mode, tools/update_vendor.py 의 CODEMIRROR_MODES)
 const WEB = ['xml', 'javascript', 'css', 'htmlmixed'];
@@ -97,13 +98,25 @@ function visibleLine(pane) {
 
 const dirtyPaths = () => S.panes.filter((p) => p.editor?.dirty).map((p) => `${p.tab.name}: ${p.editor.path}`);
 let reported = '[]';
+let sending = Promise.resolve();   // 차례대로 보낸다 (늦게 간 옛 목록이 새 목록을 덮지 않게)
 
-/** 저장하지 않은 파일 목록을 서버에 (창을 닫을 때 묻는 데 — 바뀔 때만) */
+/** 저장하지 않은 파일 목록을 서버에 (창을 닫을 때 묻는 데 — 바뀔 때만. 못 보냈으면 다음에 다시 — initEditor 의 주기) */
 function reportDirty() {
   const now = JSON.stringify(dirtyPaths());
   if (now === reported) return;
   reported = now;
-  postJSON('/api/editing', { dirty: JSON.parse(now) }).catch(() => { reported = ''; });
+  sending = sending.then(() => postJSON('/api/editing', { dirty: JSON.parse(now) })).catch(() => { reported = ''; });
+}
+
+/** 저장하지 않은 편집이 있는지 (화면을 다시 불러오기 전에 — settings.js) */
+export const hasUnsavedEdits = () => dirtyPaths().length > 0;
+let reloading = false;   // 사용자가 버리기로 하고 다시 불러옴 — beforeunload 에서 또 묻지 않는다
+
+/** 화면을 다시 불러와도 되는지: 저장하지 않은 편집이 있으면 묻는다 (언어·인터넷 그림 설정) */
+export function confirmReload() {
+  if (!hasUnsavedEdits()) return true;
+  reloading = window.confirm(t('저장하지 않은 편집이 있습니다:\n{files}\n\n화면을 다시 불러오면 이 내용은 사라집니다. 계속할까요?', { files: dirtyPaths().join('\n') }));
+  return reloading;
 }
 
 function setState(ed, text) {
@@ -137,6 +150,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
     return;
   }
   if (pane.opening) return;   // 여는 중 (두 번 누름)
+  if (pane.pending) {   // 다른 화면을 그리는 중 — 지금 보이는 것은 곧 떠날 화면이다
+    toast(t('화면을 그리는 중입니다. 다 그린 뒤 다시 누르세요'));
+    return;
+  }
   pane.opening = true;
   const { tab } = pane;
   const { path } = view;
@@ -146,7 +163,7 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
       getJSON(`/api/source?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}`),
       loadLib(group),
     ]);
-    if (pane.current !== view || !S.tabs.includes(tab)) return;   // 그사이 다른 화면으로 갔다
+    if (pane.current !== view || pane.pending || !S.tabs.includes(tab)) return;   // 그사이 다른 화면으로 갔다 (또는 가는 중)
     build(pane, path, src, mode, line || visibleLine(pane));
   } catch (e) {
     toast(t('편집 모드를 열지 못했습니다: {error}', { error: e.message }), 'error');
@@ -170,7 +187,7 @@ function build(pane, path, src, mode, line) {
   const ext = extOf(path);
   const indent = INDENT4.has(ext) ? 4 : 2;
   const prose = pane.current.type === 'doc';
-  const ed = { pane, tab: pane.tab, path, box, base: { mtime_ns: src.mtime_ns, size: src.size }, dirty: false, saving: false, saved: false };
+  const ed = { pane, tab: pane.tab, path, box, base: { hash: src.hash }, dirty: false, saving: false, saved: false };
   ed.cm = window.CodeMirror(box.querySelector('.ed-body'), {
     value: src.text, mode: mode || 'text/plain', lineNumbers: true, lineWrapping: prose, styleActiveLine: true, matchBrackets: !prose,
     indentUnit: indent, tabSize: 4, indentWithTabs: false, autofocus: true, spellcheck: false,
@@ -189,6 +206,9 @@ function build(pane, path, src, mode, line) {
   box.querySelector('.ed-close').addEventListener('click', () => closeEditor(pane));
   box.querySelector('.ed-find').addEventListener('click', () => ed.cm.execCommand('findPersistent'));
   pane.editor = ed;
+  // 크기·글자가 바뀌면 CodeMirror 가 잰 글자 폭·줄 높이를 다시 잰다 (사이드바·터미널·글자 크기·스타일 — 안 그러면 커서 자리가 어긋난다)
+  ed.resize = new ResizeObserver(() => ed.cm.refresh());
+  ed.resize.observe(box.querySelector('.ed-body'));
   if (src.bom || src.newline === '\r\n') setState(ed, [src.newline === '\r\n' && 'CRLF', src.bom && 'BOM'].filter(Boolean).join(' · '));
   ed.cm.refresh();
   if (line) goTo(ed, line);
@@ -211,12 +231,18 @@ export function closeEditor(pane = S.pane, { ask = true } = {}) {
     ed.cm.focus();
     return false;
   }
+  ed.resize.disconnect();
   ed.box.remove();
   pane.editor = null;
   reportDirty();
   updateButton();
   if (pane === S.pane) pane.scroller.focus({ preventScroll: true });
   return true;
+}
+
+/** 열린 편집기들의 글자 폭·줄 높이를 다시 잰다 (글자 크기·스타일이 바뀜) */
+function refreshEditors() {
+  for (const p of S.panes) p.editor?.cm.refresh();
 }
 
 export const toggleEditor = () => (S.pane?.editor ? closeEditor(S.pane) : openEditor(S.pane));
@@ -231,13 +257,14 @@ async function save(ed, force = false) {
   let conflict = false;
   try {
     const r = await postJSON('/api/save', {
-      p: ed.tab.id, path: ed.path, text: ed.cm.getValue(), mtime_ns: ed.base.mtime_ns, size: ed.base.size, force,
+      p: ed.tab.id, path: ed.path, text: ed.cm.getValue(), hash: ed.base.hash, force,
     });
     ed.base = r;
     ed.clean = gen;
     ed.saved = true;
-    setDirty(ed, !ed.cm.isClean(gen));
-    setState(ed, t('저장했습니다 {time}', { time: formatClock(new Date()) }));
+    const dirty = !ed.cm.isClean(gen);   // 저장하는 동안 더 친 것
+    setDirty(ed, dirty);
+    setState(ed, dirty ? t('저장하지 않음') : t('저장했습니다 {time}', { time: formatClock(new Date()) }));
   } catch (e) {
     conflict = e.status === 409 && !force;
     if (!conflict) {
@@ -257,9 +284,15 @@ async function save(ed, force = false) {
 
 // ---- 시작 ----------------------------------------------------------------------
 
-/** 탭을 닫기 전에: 그 탭에서 저장하지 않은 편집이 있으면 묻는다. 닫아도 되면 true (편집 상자는 칸과 함께 사라진다) */
+/** 탭을 닫기 전에: 그 탭에서 저장하지 않은 편집이 있으면 묻기만 한다 (치우지 않는다 — 다른 물음에서 취소할 수 있다). 닫아도 되면 true */
 export function confirmCloseEditor(tab) {
-  return closeEditor(tab.pane);
+  const ed = tab.pane?.editor;
+  return !ed?.dirty || window.confirm(t('{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?', { path: ed.path }));
+}
+
+/** 닫힌 탭의 편집 상자를 치운다 (tabs.js — 칸과 함께) */
+export function disposeEditor(tab) {
+  if (tab.pane?.editor) closeEditor(tab.pane, { ask: false });
 }
 
 export function initEditor() {
@@ -270,8 +303,12 @@ export function initEditor() {
   on('edit', ({ line = 0 } = {}) => openEditor(S.pane, { line }));   // 우클릭 메뉴
   on('view', updateButton);
   on('pane', updateButton);
-  // 개발용 브라우저 모드: 다시 불러오기·창 닫기 전에 (창 모드는 서버가 묻는다)
-  window.addEventListener('beforeunload', (e) => { if (dirtyPaths().length) e.preventDefault(); });
+  on('text-size', refreshEditors);
+  $('#lec-theme-css').addEventListener('load', refreshEditors);   // 스타일 (글꼴이 바뀔 수 있다)
+  $('#lec-user-css').addEventListener('load', refreshEditors);
+  setInterval(reportDirty, 5000);   // 못 보낸 목록을 다시
+  // 다시 불러오기·창 닫기 전에 (창 모드에서 창을 닫을 때는 서버가 묻는다). 설정에서 이미 버리기로 했으면 묻지 않는다
+  window.addEventListener('beforeunload', (e) => { if (!reloading && hasUnsavedEdits()) e.preventDefault(); });
   updateButton();
 }
 

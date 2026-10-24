@@ -268,6 +268,8 @@ export default {
 "펼치기": "Expand",
 "두 번 누르기·Enter": "Double-click or Enter",
 "폴더 개요 보기": "Folder overview",
+"저장하지 않은 편집이 있습니다:\n{files}\n\n화면을 다시 불러오면 이 내용은 사라집니다. 계속할까요?": "There are unsaved edits:\n{files}\n\nReloading the window will discard them. Continue?",
+"화면을 그리는 중입니다. 다 그린 뒤 다시 누르세요": "Still drawing the page. Try again when it has finished",
 "{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?": "{path} has unsaved edits. Discard them and close?",
 "문서나 코드를 열면 편집할 수 있습니다": "Open a document or a code file to edit it",
 "보고 있는 문서·코드를 편집 모드로 열기·닫기": "Open or close edit mode for the document or code you are viewing",

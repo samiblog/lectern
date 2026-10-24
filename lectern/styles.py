@@ -10,7 +10,8 @@ Lectern 은 이 파일을 읽기만 한다 (쓰는 것은 사용자나 Claude Co
     */
 
 화면에 내보낼 때는 인터넷에서 무엇을 불러오는 길(@import, data: 가 아닌 url(), image-set())을 지운다 — 로컬 전용 (원칙 2).
-놓친 길은 앱 페이지의 CSP 가 막는다 (style-src·font-src 는 'self', 그림은 설정 external_images).
+CSS 이스케이프로 숨긴 것('\\75 rl(' 등)은 먼저 풀고, 그래도 숨긴 주소가 남으면 그 스타일은 쓰지 않는다 (빈 css).
+앱 페이지의 CSP 도 막는다 (style-src·font-src 는 'self' — @import·글꼴. 그림은 설정 external_images 를 따르므로 거르기가 지킨다).
 """
 from __future__ import annotations
 
@@ -28,9 +29,9 @@ HEAD_BYTES = 8192               # 머리 주석을 찾는 앞부분
 _HEAD = re.compile(r'\A\s*(?:@charset\s+"[^"]*";\s*)?/\*\s*lectern-style\b(.*?)\*/', re.DOTALL | re.IGNORECASE)
 _FIELD = re.compile(r'^\s*\*?\s*([a-z-]+)\s*:\s*(.*?)\s*$', re.IGNORECASE)
 _TRUE = {'yes', 'true', 'on', '1', '예', '네', 'dark', '어두운', '어두움'}   # i18n-ok (머리 주석의 값 — 한국어로 적어도 되게)
-# CSS 이스케이프로 글자를 숨긴 것('\75 rl(' · 'u\rl(' = 'url(')을 먼저 푼다 — 영문자·괄호·붙임표만 (따옴표 등을 풀면 문자열이 깨진다)
-_HEX_ESCAPE = re.compile(r'\\([0-9a-fA-F]{1,6})[ \t\n\r\f]?')
-_CHAR_ESCAPE = re.compile(r'\\([g-zG-Z()-])')
+# CSS 이스케이프로 글자를 숨긴 것('\75 rl(' · 'u\rl(' = 'url(')을 먼저 푼다 — 영문자·괄호·붙임표만 (따옴표 등을 풀면 문자열이 깨진다).
+# 왼쪽부터 한 번에: '\\' 는 그 자체로 한 묶음이라 뒤 글자를 이스케이프로 잘못 읽지 않는다
+_ESCAPE = re.compile(r'\\(?:([0-9a-fA-F]{1,6})[ \t\n\r\f]?|(.))', re.DOTALL)
 _PLAIN = re.compile(r'[A-Za-z()-]')
 _IMPORT = re.compile(r'@import\b[^;]*;?', re.IGNORECASE)
 _URL = re.compile(r'url\(\s*([\'"]?)(.*?)\1\s*\)', re.IGNORECASE | re.DOTALL)
@@ -107,17 +108,27 @@ def list_styles(folder: Path | None = None) -> list[dict[str, Any]]:
 
 
 def _unescape(m: re.Match) -> str:
-    code = int(m.group(1), 16)
-    ch = chr(code) if code < 0x110000 else ''
+    if m.group(1):
+        code = int(m.group(1), 16)
+        ch = chr(code) if code < 0x110000 else ''
+    else:
+        ch = m.group(2) if not re.fullmatch(r'[0-9a-fA-F]', m.group(2)) else ''
     return ch if _PLAIN.fullmatch(ch) else m.group(0)
 
 
-def sanitize_css(text: str) -> str:
-    """인터넷에서 무엇을 불러오는 길을 지운다: @import, data: 가 아닌 url(), image-set()"""
-    text = _HEX_ESCAPE.sub(_unescape, _CHAR_ESCAPE.sub(r'\1', text))
+def _cleaned(text: str) -> str:
     text = _IMPORT.sub('/* @import 은 쓰지 않습니다 (Lectern) */', text)   # i18n-ok (CSS 주석)
     text = _URL.sub(lambda m: m.group(0) if m.group(2).strip().lower().startswith('data:') else 'none', text)
     return _IMAGE_SET.sub('lectern-blocked(', text)
+
+
+def sanitize_css(text: str) -> str:
+    """인터넷에서 무엇을 불러오는 길을 지운다: @import, data: 가 아닌 url(), image-set(). 그래도 숨긴 것이 남으면 빈 css"""
+    text = _cleaned(_ESCAPE.sub(_unescape, text))
+    probe = text.replace('\\', '').lower()   # 이스케이프를 다 지우고 봐도 남은 길이 있으면 (숨기려 한 것)
+    if _cleaned(probe) != probe:
+        return '/* Lectern: 이 스타일은 인터넷 주소를 이스케이프로 숨겨 불러오려 해서 쓰지 않습니다 */\n'   # i18n-ok (CSS 주석)
+    return text
 
 
 def read_style(name: str, folder: Path | None = None) -> str | None:

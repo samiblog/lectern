@@ -152,7 +152,7 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 
 - To open it: **Edit** in the status bar, **Edit** in the code view header, **Edit this document** or **Edit here** (at that block or line) in the right-click menu, or Ctrl+E. It opens at the source of what was at the top of the screen.
 - It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace and Alt+G to go to a line. Tab indents with spaces.
-- **Ctrl+S** saves. The file's original line endings (CRLF/LF) and BOM are kept. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
+- **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
 - Only UTF-8 text files up to 2 MB can be edited. Lectern does not create, rename or delete files, and does not edit other files (PDF, Excel and so on).

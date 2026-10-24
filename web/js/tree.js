@@ -170,8 +170,9 @@ async function copy(text) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'), '');
 }
 
-/** 터미널에 넣을 경로: 공백이 있으면 따옴표로 감싼다 (셸이 한 낱말로 읽게). 끝에 공백 — 이어서 치도록 */
-export const shellWord = (text) => `${/\s/.test(text) ? `"${text}"` : text} `;
+/** 터미널에 넣을 경로: 글자·숫자·경로 기호 말고 다른 것(빈칸·&·$·괄호 등)이 있으면 작은따옴표로 감싼다 — PowerShell 이 한 낱말로 읽고
+ * $·` 를 풀지 않게 (안의 ' 는 '' 로). 끝에 빈칸 — 이어서 치도록 */
+export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? text : `'${text.replace(/'/g, "''")}'`} `;
 
 /** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사(옆에 터미널에 붙여 넣기, D51), 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {

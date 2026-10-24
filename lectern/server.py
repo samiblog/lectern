@@ -45,7 +45,8 @@ FIXED_TYPES = {
 def content_security_policy(external_images: bool) -> str:
     """앱 페이지(/)의 CSP. 문서 HTML은 앱과 같은 출처에서 그려지므로, 정화(doc.js)를 빠져나간 경로의 요청도 브라우저가 막게 한다.
 
-    스타일 지시어는 두지 않는다 (KaTeX·Mermaid 는 인라인 스타일을 쓴다). 스크립트는 앱 자신의 파일만 (D14 → D38).
+    스타일은 앱 자신의 파일과 인라인만 (KaTeX·Mermaid·xterm 은 인라인 스타일을 쓴다) — 내 스타일(D53)이 숨겨서라도 인터넷의 css 를
+    @import 하지 못하게. 스크립트는 앱 자신의 파일만 (D14 → D38).
     """
     img = "'self' data: blob:" + (' http: https:' if external_images else '')
     return '; '.join((
@@ -53,6 +54,7 @@ def content_security_policy(external_images: bool) -> str:
         # pywebview 가 결과를 돌려줄 때 eval 을 쓸 수 있어 'unsafe-eval' 은 둔다 (D14). pywebview 가 넣는 스크립트는 페이지 CSP 를 받지 않는다
         "script-src 'self' 'unsafe-eval'",
         f'img-src {img}',
+        "style-src 'self' 'unsafe-inline'",
         "media-src 'self'",
         "font-src 'self' data:",
         "connect-src 'self'",
@@ -147,6 +149,7 @@ def create_app(state: AppState) -> Flask:
         html = (web / 'index.html').read_text(encoding='utf-8')
         html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__).replace('{{TERM}}', state.term_secret)
         html = html.replace('{{LANG}}', i18n.language())   # 화면 언어 (설정 language, D46) — web/js/i18n.js 가 읽는다
+        state.unsaved = []   # 화면을 다시 불러왔다 — 편집 상자도 없다 (D54, 창을 닫을 때 묻는 목록)
         resp = Response(html, content_type='text/html; charset=utf-8')
         resp.headers['Content-Security-Policy'] = content_security_policy(state.config.get('external_images') is not False)
         resp.headers['Referrer-Policy'] = 'no-referrer'
@@ -399,12 +402,12 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/source')
     def api_source() -> Any:
-        """?p=&path= — 편집할 원문 {path, text(LF), newline, bom, mtime_ns(글자), size}. 문서·코드·UTF-8·2MB 까지"""
+        """?p=&path= — 편집할 원문 {path, text(LF), newline, bom, hash, size}. 문서·코드·UTF-8·2MB 까지"""
         project = arg_project()
         rel = request.args.get('path', '')
         target = resolve_inside(project.root, rel) if rel else None
-        if target is None or not target.exists():
-            abort(404)
+        if target is None:   # 없음·밖·숨김 — 어느 것인지 밝히지 않는다
+            return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
         try:
             return jsonify(path=rel, **editing.read_source(target))
         except editing.EditError as exc:
@@ -412,15 +415,18 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/save')
     def api_save() -> Any:
-        """{p, path, text, mtime_ns, size, force} — 고친 글을 저장한다. 원문을 줄 때와 수정 시각·크기가 다르면 409 (force 면 덮어씀).
-        {mtime_ns, size} — 다음 저장에 쓴다"""
+        """{p, path, text, hash, force} — 고친 글을 저장한다. 지금 파일의 내용이 원문을 줄 때(hash)와 다르면 409 (force 면 덮어씀).
+        없는 파일은 404 (새로 만들지 않는다). {hash, size} — 다음 저장에 쓴다"""
         data = body()
-        target = path_from_body()
+        rel = data.get('path')
         text = data.get('text')
-        if not isinstance(text, str):
+        if not isinstance(rel, str) or not isinstance(text, str):
             abort(400)
+        target = resolve_inside(project_of(data.get('p')).root, rel)
+        if target is None:   # 없음·밖·숨김 — 새로 만들지 않는다
+            return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
         try:
-            return jsonify(editing.save_source(target, text, data.get('mtime_ns'), data.get('size'), bool(data.get('force'))))
+            return jsonify(editing.save_source(target, text, data.get('hash'), bool(data.get('force'))))
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
 

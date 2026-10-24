@@ -4,6 +4,7 @@
 import { S, emit, on } from './store.js';
 import { saveConfig, postJSON } from './api.js';
 import { fillPicker, grouping, userStyleInfo } from './theme.js';
+import { confirmReload } from './editor.js';
 import { $, $$, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -52,6 +53,10 @@ export function closeSettings() {
 
 async function onChange(e) {
   if (e.target.name === 'language') {   // 화면 언어 (D46): 서버가 index.html 에 넣는 언어가 바뀌므로 다시 불러온다 (열린 탭·터미널 셸은 그대로)
+    if (!confirmReload()) {   // 저장하지 않은 편집 (D54)
+      openSettings();   // 고른 것을 되돌린다
+      return;
+    }
     await saveConfig({ language: e.target.value });
     location.reload();
     return;
@@ -68,6 +73,10 @@ async function onChange(e) {
   }
   const key = e.target.dataset.key;
   if (!key) return;
+  if (key === 'external_images' && !confirmReload()) {   // 다시 불러오는 설정 — 저장하지 않은 편집 (D54)
+    e.target.checked = !e.target.checked;
+    return;
+  }
   await saveConfig({ [key]: e.target.checked });
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
