@@ -1203,6 +1203,9 @@ def run(headed: bool) -> None:
                   f"문서 속 코드 경로(`code/example.py:13`)를 누르면 읽기 화면의 그 줄로 — 줄 번호·언어 색, 오른쪽 목차(함수), '코드' 목록에서 강조 ({c1})")
             page.keyboard.press('Alt+ArrowLeft')
             back_doc = wait_until(page, "document.querySelector('#lec-view h1')?.textContent === '경로 표기 확인'")
+            doc_title = page.evaluate('document.title')   # 창 제목: 파일 이름 [문서 제목]
+            check(doc_title == '95-경로.md [경로 표기 확인] - samples - Lectern' and c1['title2'] == 'example.py - samples - Lectern',
+                  f'창 제목은 파일 이름 [문서 제목] - 프로젝트, 코드는 파일 이름 ({doc_title!r})')
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.locator('#lec-view a.file-link', has_text='example.py').first.click()

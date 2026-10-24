@@ -47,9 +47,10 @@ function updateWindowTitle() {
     return;
   }
   let title = S.name;
-  if (S.view?.type === 'doc') {
+  if (S.view?.type === 'doc') {   // 파일 이름 [문서 제목] — 제목이 없거나 파일 이름과 같으면 파일 이름만
     const f = S.fileMap.get(S.view.path);
-    title = `${f?.title || basename(S.view.path)} - ${S.name}`;
+    const name = basename(S.view.path);
+    title = `${f?.title && f.title !== name ? `${name} [${f.title}]` : name} - ${S.name}`;
   } else if (S.view?.type === 'code') {
     title = `${basename(S.view.path)} - ${S.name}`;
   }
