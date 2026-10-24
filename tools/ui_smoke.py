@@ -1201,6 +1201,18 @@ def run(headed: bool) -> None:
             check(by_path and c1['title'] == 'example.py' and c1['lines'] >= 15 and c1['status'].startswith('Python')
                   and 'ƒmoving_average' in c1['toc'] and c1['active'] == 'code/example.py' and not c1['treeActive'] and c1['title2'].startswith('example.py'),
                   f"문서 속 코드 경로(`code/example.py:13`)를 누르면 읽기 화면의 그 줄로 — 줄 번호·언어 색, 오른쪽 목차(함수), '코드' 목록에서 강조 ({c1})")
+            fonts = page.evaluate("""() => {
+              const fam = (el) => el && getComputedStyle(el).fontFamily;
+              const probe = document.createElement('h1');   // 이 스타일의 문서 제목 글꼴
+              probe.style.position = 'absolute';
+              document.querySelector('#lec-view').append(probe);
+              const out = { title: fam(document.querySelector('#lec-view .cv-title')), heading: fam(probe),
+                edit: fam(document.querySelector('#lec-view .cv-edit')), status: fam(document.querySelector('#lec-st-edit')),
+                icon: !!document.querySelector('#lec-view .cv-edit use[href="#i-edit"]') };
+              probe.remove();
+              return out; }""")
+            check(fonts['title'] == fonts['heading'] and fonts['edit'] == fonts['status'] and fonts['icon'],
+                  f"코드 화면의 파일 이름은 문서 제목과 같은 글꼴, '편집' 버튼은 상태줄의 '편집'과 같은 글꼴·연필 ({fonts})")
             page.keyboard.press('Alt+ArrowLeft')
             back_doc = wait_until(page, "document.querySelector('#lec-view h1')?.textContent === '경로 표기 확인'")
             doc_title = page.evaluate('document.title')   # 창 제목: 파일 이름 [문서 제목]

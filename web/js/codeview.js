@@ -98,7 +98,8 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   view.style.setProperty('--cv-digits', String(String(lines.length).length));
   view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
     + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(lang.name)}</div>`
-    + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">${t('편집')}</button>`
+    + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
+    + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>`
     + `<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
     + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');

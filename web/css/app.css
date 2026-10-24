@@ -530,6 +530,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .st-edit:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
 .st-edit svg { width: 13px; height: 13px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linejoin: round; }
+/* 본문 안의 앱 버튼 — 코드 화면 머리줄, 문서가 없을 때의 안내: 본문 글꼴(명조일 수 있다)이 아니라 앱 글꼴로.
+   코드 화면의 '편집'은 상태줄의 '편집'과 같은 모양 (연필, 마우스를 올리면 강조색) */
+.code-view .cv-tools .text-btn, .md-body .doc-missing button { font-family: var(--ui-font); }
+.code-view .cv-tools .text-btn { height: 26px; padding: 0 9px; gap: 4px; font-size: 12.5px; }
+.code-view .cv-edit:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
+.code-view .cv-edit svg { width: 13px; height: 13px; stroke-width: 1.5; }
 
 /* ---- 편집 모드 (editor.js, D54): 칸 위를 덮는 편집 상자 — CodeMirror 5. 색은 문서 스타일(--md-*)에서 ---- */
 .lec-editor { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--md-bg, #fff); }

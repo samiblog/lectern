@@ -53,8 +53,9 @@
   position: sticky; top: 0; z-index: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
   margin: 0 0 8px; padding: 14px 0 10px; border-bottom: 1px solid var(--md-border); background: var(--md-bg);
 }
-.code-view .cv-title { font-family: var(--md-mono); font-size: calc(17px * var(--md-scale, 1)); font-weight: 700; color: var(--md-heading); }
-.code-view .cv-sub { color: var(--md-muted); font-size: calc(13px * var(--md-scale, 1)); }
+/* 파일 이름은 문서 제목처럼 스타일의 제목 글꼴로, 그 옆 정보는 앱 글꼴로 (본문 글꼴이 명조인 스타일에서도 문서 화면과 같게) */
+.code-view .cv-title { font-family: var(--md-heading-font); font-size: 1.3em; font-weight: 700; line-height: 1.25; letter-spacing: -.01em; color: var(--md-heading); }
+.code-view .cv-sub { font-family: var(--ui-font, sans-serif); color: var(--md-muted); font-size: calc(12.5px * var(--md-scale, 1)); }
 .code-view .cv-tools { margin-left: auto; display: flex; gap: 6px; }
 .code-view .cv-line {
   display: grid; grid-template-columns: calc((var(--cv-digits, 3) + 1.5) * 1ch) minmax(0, 1fr); column-gap: 14px;
