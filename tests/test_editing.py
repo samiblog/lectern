@@ -177,6 +177,36 @@ def test_new_doc_only_in_existing_visible_folders_with_md_names(tmp_path):
         assert err.value.status == status, rel
 
 
+def test_rename_file_in_same_folder_only_visible_files_never_overwrites(tmp_path):
+    """이름 바꾸기 (D66): 같은 폴더 안에서 이름만, 보이는 파일만, 같은 이름이 있으면 바꾸지 않는다 (대소문자만은 된다)"""
+    root = tmp_path.resolve()
+    (root / 'docs').mkdir()
+    (root / 'docs' / 'a.md').write_bytes(b'# a\n')
+    (root / 'docs' / 'b.md').write_bytes(b'# b\n')
+    (root / 'data.csv').write_bytes(b'x\n')
+    (root / '.claude').mkdir()
+    (root / '.claude' / 'n.md').write_bytes(b'x')
+    (root / 'node_modules').mkdir()
+    (root / 'node_modules' / 'p.js').write_bytes(b'x')
+    exclude = frozenset({'node_modules'})
+    assert editing.rename_file(root, 'docs/a.md', '요약.md', exclude) == root / 'docs' / '요약.md'
+    assert (root / 'docs' / '요약.md').read_bytes() == b'# a\n' and not (root / 'docs' / 'a.md').exists()
+    assert editing.rename_file(root, 'data.csv', ' 자료.txt ', exclude) == root / '자료.txt'   # 앞뒤 빈칸은 뗀다, 확장자도 바꿀 수 있다
+    assert editing.rename_file(root, 'docs/b.md', 'B.md', exclude).name == 'B.md'   # 대소문자만
+    assert sorted(p.name for p in (root / 'docs').iterdir()) == ['B.md', '요약.md']
+    assert editing.rename_file(root, 'docs/B.md', 'B.md', exclude) == root / 'docs' / 'B.md'   # 그대로면 아무것도 하지 않는다
+    for rel, name, status in [('docs/요약.md', 'B.md', 409), ('docs/요약.md', 'b.MD', 409),   # 이미 있음 (대소문자만 다른 것도)
+                              ('docs/nope.md', 'x.md', 404), ('.claude/n.md', 'x.md', 404), ('node_modules/p.js', 'q.js', 400),
+                              ('../x.md', 'y.md', 400), ('docs', 'd2', 404),   # 폴더는 바꾸지 않는다
+                              ('docs/요약.md', '../x.md', 400), ('docs/요약.md', 'sub/x.md', 400), ('docs/요약.md', '.숨김.md', 400),
+                              ('docs/요약.md', 'a?.md', 400), ('docs/요약.md', 'con.md', 400), ('docs/요약.md', 'a.md.', 400),
+                              ('docs/요약.md', '', 400), ('docs/요약.md', '.md', 400)]:
+        with pytest.raises(EditError) as err:
+            editing.rename_file(root, rel, name, exclude)
+        assert err.value.status == status, (rel, name)
+    assert (root / 'docs' / '요약.md').read_bytes() == b'# a\n' and (root / 'docs' / 'B.md').read_bytes() == b'# b\n'   # 덮어쓰지 않았다
+
+
 def test_create_source_writes_lf_utf8_and_never_overwrites(tmp_path):
     p = tmp_path / '새.md'
     r = editing.create_source(p, '# 새 문서\r\n\r\n본문\n')

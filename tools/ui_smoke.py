@@ -2235,6 +2235,32 @@ def run(headed: bool) -> None:
                   f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {cursor}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')
 
+            print('[이름 바꾸기]')   # D66 — 파일 우클릭 '이름 바꾸기…'·F2: 같은 폴더 안에서 이름만, 보던 문서 탭·담은 조각이 새 이름으로
+            page.locator('#lec-tree .row[data-doc="data/메모.md"]').click()
+            on_doc = lambda path: wait_until(page, f"document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === '{path}'", 10000)
+            on_doc('data/메모.md')
+            page.locator('#lec-tree .row[data-doc="data/메모.md"]').focus()
+            page.keyboard.press('F2')
+            page.wait_for_selector('#lec-rename:not([hidden])')
+            sel = page.evaluate("(() => { const i = document.querySelector('#lec-rename-input'); return [i.value, i.selectionStart, i.selectionEnd]; })()")
+            shot('26-rename')
+            page.keyboard.type('메모-고침')
+            page.keyboard.press('Enter')
+            doc_moved = on_doc('data/메모-고침.md') and wait_until(page, "!!document.querySelector('#lec-tree .row[data-doc=\"data/메모-고침.md\"]')", 10000)
+            disk = (tables / 'data' / '메모-고침.md').exists() and not (tables / 'data' / '메모.md').exists()
+            if not page.locator('#lec-others-list .row[data-path="data/memo.txt"]').count():
+                page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click()
+            page.locator('#lec-others-list .row[data-path="data/memo.txt"]').click(button='right')
+            page.locator('#lec-menu button[data-i]', has_text='이름 바꾸기').click()
+            page.fill('#lec-rename-input', 'uni.txt')   # 같은 이름 — 바꾸지 않고 까닭
+            page.keyboard.press('Enter')
+            dup = wait_until(page, "document.querySelector('#lec-rename-msg').classList.contains('bad') && !document.querySelector('#lec-rename-msg').hidden", 5000)
+            page.fill('#lec-rename-input', 'memo-2.txt')
+            page.keyboard.press('Enter')
+            other_moved = wait_until(page, "document.querySelector('#lec-rename').hidden && !!document.querySelector('#lec-others-list .row[data-path=\"data/memo-2.txt\"]')", 10000)
+            check(sel == ['메모.md', 0, 2] and doc_moved and disk and dup and other_moved and (tables / 'data' / 'memo-2.txt').exists() and (tables / 'data' / 'uni.txt').exists(),
+                  f"이름 바꾸기: 트리에서 F2(확장자 앞까지 골라 둠) → 보던 문서 탭·트리가 새 이름으로, '자료' 목록 우클릭, 같은 이름은 바꾸지 않음 ({sel}, {doc_moved}, {disk}, {dup}, {other_moved})")
+
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)
             page.wait_for_selector('#lec-view h1')

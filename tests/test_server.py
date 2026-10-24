@@ -660,6 +660,21 @@ def test_new_doc_endpoints(client, project, pid):
     assert client.post('/api/save', json={'p': pid, 'path': 'docs/n.md', 'text': 'x', 'create': 'yes'}).status_code == 404   # create 는 true 만
 
 
+def test_rename_endpoint(client, project, pid):
+    """이름 바꾸기 (D66): POST /api/rename — 바뀐 경로를 알려 주고, 안 되면 까닭"""
+    r = client.post('/api/rename', json={'p': pid, 'path': 'docs/10-a.md', 'name': '11-가.md'})
+    assert r.status_code == 200 and r.get_json() == {'path': 'docs/11-가.md'}
+    assert (project / 'docs' / '11-가.md').exists() and not (project / 'docs' / '10-a.md').exists()
+    taken = client.post('/api/rename', json={'p': pid, 'path': 'docs/11-가.md', 'name': '11-가.md'.upper()})
+    assert taken.status_code == 200 and taken.get_json() == {'path': 'docs/11-가.MD'}   # 대소문자만 바꾸기 (확장자 .MD)
+    bad = client.post('/api/rename', json={'p': pid, 'path': 'docs/11-가.md', 'name': '../x.md'})
+    assert bad.status_code == 400 and bad.get_json()['error']
+    assert client.post('/api/rename', json={'p': pid, 'path': '../x.md', 'name': 'y.md'}).status_code == 400
+    assert client.post('/api/rename', json={'p': pid, 'path': 'docs/none.md', 'name': 'y.md'}).status_code == 404
+    assert client.post('/api/rename', json={'p': pid, 'path': 'docs/11-가.md', 'name': 5}).status_code == 400
+    assert client.post('/api/rename', data='x', content_type='text/plain').status_code == 415
+
+
 def test_editing_reports_unsaved_files(client, state):
     assert state.unsaved == []
     assert client.post('/api/editing', json={'dirty': ['samples: docs/a.md', 3]}).status_code == 200

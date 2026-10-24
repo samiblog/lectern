@@ -89,6 +89,15 @@ EN: dict[str, str] = {
     '폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다': 'There is no such folder — a new document is only created in a folder that already exists.',
     '같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요': 'A file with that name already exists — choose another name.',
     '새 문서를 만들지 못했습니다: {error}': 'Could not create the new document: {error}',
+    # editing.py — 이름 바꾸기 (D66)
+    '파일 경로가 올바르지 않습니다': 'The file path is not valid.',
+    '제외 폴더({name}) 안의 파일은 이름을 바꾸지 않습니다': 'Files inside an excluded folder ({name}) are not renamed.',
+    '쓸 수 없는 이름입니다 — 점으로 시작하거나 끝나는 이름, / \\ : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다':
+        'That name cannot be used — names starting or ending with a dot, or containing characters such as / \\ : * ? " < > |, are not allowed.',
+    '같은 이름의 파일이 있습니다 — 다른 이름을 고르세요': 'A file with that name already exists — choose another name.',
+    '다른 프로그램이 이 파일을 쓰고 있어 이름을 바꾸지 못했습니다 — 그 프로그램에서 닫은 뒤 다시 하세요':
+        'Another program is using this file, so it could not be renamed — close it there and try again.',
+    '이름을 바꾸지 못했습니다: {error}': 'Could not rename the file: {error}',
     # state.py
     '폴더가 아닙니다: {path}': 'Not a folder: {path}',
     '탭은 {n}개까지 열 수 있습니다. 안 쓰는 탭을 닫고 다시 여세요': 'You can open up to {n} tabs. Close a tab you are not using and try again.',

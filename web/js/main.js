@@ -35,6 +35,7 @@ import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert, askNewDoc } from './basket.js';
+import { initRename, closeRename } from './rename.js';
 import { initDocTabs, docTabAt, closeDocTab } from './doctabs.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
@@ -232,7 +233,7 @@ function bindKeys() {
       e.preventDefault();
       moveSpotlight(SPOT_KEYS[e.key]);
     } else if (e.key === 'Escape') {
-      if (closePalette() || closeInsert() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
+      if (closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -299,6 +300,7 @@ async function boot() {
   initEditor();
   initDocTabs();
   initBasket();
+  initRename();
   initSlides();
   initPresent();
   initGather();

@@ -178,6 +178,7 @@ flowchart LR
 | `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, hash, size}` — `text` 는 LF, `hash` 는 원문 바이트의 SHA-256. 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 없음·숨김·밖은 404 |
 | `POST /api/save` | `{p, path, text, hash, force?, create?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). `create: true` 면 새 Markdown 문서를 만든다 (D63·D65 — 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 으로. `editing.new_doc_path` 가 자리를 보고 `create_source` 가 `xb` 로 씀: 이미 있는 폴더·`.md`·숨김·제외 폴더 아님, 같은 이름이면 409, LF·BOM 없음 — 답에 만든 경로 `path` 를 더함). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` (create 면 `path` 도 — 폴더는 실제 이름) |
 | `GET /api/new-doc?p=<id>&path=<경로>` | | 그 자리에 새 문서를 만들 수 있는지 (D65 — 경로를 정하면 먼저 묻고, 되면 `POST /api/save` 의 create 로 만든다). 읽기만. `{path}`(폴더는 실제 이름) 또는 `{error, status}` — 물음의 답이라 늘 200 |
+| `POST /api/rename` | `{p, path, name}` | 파일 하나의 이름을 바꾼다 (D66 — `editing.rename_file`: 같은 폴더 안에서 이름만, 프로젝트 안의 보이는 파일만(숨김·제외 폴더 안·링크 아님), 새 이름은 Windows 가 받는 이름이고 점으로 시작하지 않음, 같은 이름이면 409(대소문자만 바꾸기는 됨), 다른 프로그램이 쓰고 있으면 409). `{path}`(바뀐 경로) |
 | `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
@@ -398,6 +399,7 @@ sequenceDiagram
 - 조각: `{id, path, lines(원문 줄 범위 — 담은 곳), kind, name, label, text(담는 순간의 원문, 공통 들여쓰기를 걷음), notes(조각이 쓰는 각주의 정의 — snippet.js 의 noteDefs), plain}` — `snippetOf(doc, range, info)`. 담은 것은 `tab.basket`(프로젝트 탭마다, 앱을 끄면 비움).
 - 사이드바 '담기' 탭(`#lec-basket`, 개수는 탭의 `#lec-basket-count`): 행 `.pt-item.bk-item[data-id]` — 이름(캡션·이름표·글), 아래에 종류 · 경로 · 줄. 오른쪽 '보내기'(편집 중일 때 커서 자리로 — `editingDoc`)·위로·아래로·빼기, Alt+↑↓·Delete, 누르면 원래 문서의 그 줄이 든 가장 안쪽 블록(`[data-lines]`)으로 `goToPart`. 우클릭 — 문서에서 보기·커서 자리로 보내기·문서로 보내기…·원문 복사(▣ 터미널)·위로·아래로·빼기.
 - 보낼 곳 고르기(`#lec-insert`, `sendSnippets` — D65): 단계 target(편집 중인 곳·새 문서…·이 프로젝트의 문서 탭에 열린 md 문서 — `doctabs.openDocs`, 탭 차례, 거르기. 끝에 '먼저 문서 탭으로 여세요' 안내 줄 `li.note`) → place(맨 끝·맨 앞·절 끝 — 받는 문서의 글은 편집 중이면 편집기의 글, 아니면 `GET /doc/…`, 제목은 `headingsOf`) / new(경로 — `newdoc.createDoc` 이 `GET /api/new-doc` 으로 묻고 `POST /api/save` create 로 `# 제목` 을 만든 뒤 맨 끝으로 보낸다, 안 되면 까닭을 `#lec-insert-msg` 에). Esc 는 앞 단계로, 처음 단계에서는 닫기.
+- 이름 바꾸기 (D66, `rename.js`): 파일 행의 우클릭 '이름 바꾸기…'(`tree.renameItem` — 문서는 `docMenuItems`, 코드·자료는 `others.fileMenuItems`, 제외 폴더 안은 빼고)·F2(트리·'코드'·'자료' 목록·`bindFileRows` 의 행) → `rename` 이벤트 → `askRename(path)`: 저장하지 않은 편집이 있으면 알리고 그만, 아니면 `#lec-rename` 창(지금 이름, 확장자 앞까지 고름, 문서는 '링크는 그대로' 알림). Enter → 확장자가 바뀌면 `confirm` → `POST /api/rename` (안 되면 까닭을 `#lec-rename-msg` 에). 바뀌면 담은 조각의 경로, `nav.renamePath`(칸마다 뒤로 기록·스크롤 위치·`deferred` 를 새 대상으로 — 문서·코드, 읽을 수 없는 종류가 되면 그 폴더 개요)가 돌려준 칸들을 `navigate(…, {push: false})` 로 다시 연다 (편집 중이었으면 편집도). 트리·목록은 감시가 다시 그린다.
 - 새로 만들기 (D65, `newdoc.js`·`basket.js` 의 `askNewDoc(dir)`): 보낼 곳 고르기 창을 조각 없이 new 단계로 연다 — 처음 값은 `newDocGuess(dir)`(그 폴더, 없으면 지금 보는 문서·개요의 폴더에 '새 문서.md', 있으면 번호), 파일 이름 부분을 골라 둔다. Enter 면 `createDoc` → `openCreated`(새 문서 탭에서 편집 모드, 커서는 제목 아래). 여는 곳: Ctrl+N(`main.js` — 편집 중에도), 문서 탭 줄의 + 로 연 빠른 열기 맨 위 '새 문서 만들기…'(`palette.js` 의 `newDoc` 항목), 폴더 우클릭 '이 폴더에 새 문서…'(`tree.newDocItem` → `new-doc` 이벤트 — 트리의 폴더·프로젝트 줄, `others.js` 의 폴더·폴더 보기의 프로젝트 줄, 제외 폴더는 빼고). Esc 는 바로 닫기.
 - `perform`: `insertIntoDoc` 의 compute 에서 `placeLine`(맨 끝 — 끝에 모인 각주 정의 앞, 맨 앞 — 맨 앞 설정·`# 문서 제목` 아래, 절 끝 — 다음 같은 수준 이상 제목 앞, 커서 — 커서가 든 블록 끝·코드 블록이면 그 뒤) → `levelAt`(그 절 + 1, 맨 끝·맨 앞은 2) → `buildBody`(조각마다 담은 곳 주석 + `rebase`(상대경로를 넣을 문서 기준으로 — 그림·링크·참조 정의·html src/href·vega(-lite) 의 url, 코드·글 속 코드 밖) + 각주 이름 바꾸기 + `shiftHeadings`) → `placeText`(앞뒤 빈 줄). 새 문서는 `# 파일 이름에서 만든 제목` 아래에 `##` 로.
 - Claude 에 맡기기: 담은 것의 `@경로 a~b행 ('이름')` 을 한 줄 요청 글로 (작성 안내 경로까지) — 메뉴의 복사·▣ 터미널(`term-paste`).
@@ -463,6 +465,7 @@ sequenceDiagram
 | Ctrl+, | 설정 창 |
 | Ctrl+O | 폴더 열기 (새 탭으로, 이미 열린 폴더면 그 탭) |
 | Ctrl+N | 새 문서 만들기 — 경로를 정하면 바로 `# 제목` 으로 만들어 새 문서 탭에서 편집 (편집 중에도, D65) |
+| F2 | 사이드바에서 고른 파일의 이름 바꾸기 (트리·'코드'·'자료' 목록·최근 변경·검색 — 같은 폴더 안에서, D66) |
 | Ctrl+B | 사이드바 보이기/숨기기 |
 | `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음). 터미널 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널 |
 | `` Ctrl+Shift+` `` | 터미널 모음 열기/닫기. 모음 안에서 Ctrl+Tab / Ctrl+Shift+Tab 은 다음 / 이전 칸 |

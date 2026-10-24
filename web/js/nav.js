@@ -85,6 +85,27 @@ export function seedScroll(pane, pos) {
   for (const [path, top] of Object.entries(pos?.scroll || {})) pane.scrollPos.set(keyOf({ type: 'doc', path }), top);
 }
 
+/**
+ * 파일 이름이 바뀜 (D66 — rename.js): 탭(tab)의 칸(문서 탭)마다 뒤로 기록·스크롤 위치·아직 그리지 않은 탭의 from(파일 경로)을
+ * to(새 화면 대상)로 옮긴다. 지금 from 을 보는 칸들 — 부르는 쪽이 그 칸을 다시 연다
+ */
+export function renamePath(tab, from, to) {
+  const showing = [];
+  const same = (v) => v && v.type !== 'overview' && v.path === from;
+  for (const pane of tab.panes) {
+    pane.history = pane.history.map((h) => (same(h) ? { ...to } : h));
+    for (const type of ['doc', 'code']) {
+      const key = keyOf({ type, path: from });
+      if (!pane.scrollPos.has(key)) continue;
+      pane.scrollPos.set(keyOf(to), pane.scrollPos.get(key));
+      pane.scrollPos.delete(key);
+    }
+    if (same(pane.deferred)) pane.deferred = { ...to };
+    if (same(pane.current)) showing.push(pane);
+  }
+  return showing;
+}
+
 function go(step) {
   const pane = S.pane;
   const index = (pane.wanted ?? pane.hIndex) + step;

@@ -2,7 +2,8 @@
 
 보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드 파일만.
 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — create_source: 사용자의 '새로 만들기'·'새 문서로 보내기'에서 경로를 정할 때,
-프로젝트 안의 이미 있는 폴더에, 같은 이름이 있으면 만들지 않는다). 이름 바꾸기·지우기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
+프로젝트 안의 이미 있는 폴더에, 같은 이름이 있으면 만들지 않는다). 파일 이름 바꾸기는 사이드바에서 고른 파일 하나를 같은 폴더 안에서만
+(D66 — rename_file). 지우기·옮기기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
 - 원문의 줄바꿈(CRLF/LF)과 BOM 은 저장할 때 그 파일의 것을 되살린다 (편집기는 LF 로만 다룬다). 섞여 있으면 많은 쪽으로.
 - 그사이 다른 곳(Claude Code 등)이 고쳤으면 덮어쓰지 않는다 — 원문을 줄 때의 내용(SHA-256)과 지금 파일의 내용을 맞춰 보고
   다르면 409. 수정 시각·크기만으로는 같은 순간에 같은 크기로 바뀐 것을 놓친다. 화면이 물어서 덮어쓰기로 하면 force.
@@ -26,7 +27,7 @@ from .scanner import doc_kind, is_code, resolve_inside
 
 MAX_EDIT_BYTES = 2 * 1024 * 1024
 BOM = b'\xef\xbb\xbf'
-# Windows 가 파일 이름에 받지 않는 글자와 이름 (새 문서 — D63)
+# Windows 가 파일 이름에 받지 않는 글자와 이름 (새 문서 — D63, 이름 바꾸기 — D66)
 BAD_NAME_CHARS = frozenset('<>:"/\\|?*') | frozenset(chr(c) for c in range(32))
 RESERVED_NAMES = frozenset({'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)), *(f'lpt{i}' for i in range(1, 10))})
 
@@ -201,3 +202,39 @@ def create_source(path: Path, text: str) -> dict[str, Any]:
     except OSError as exc:
         raise EditError(500, t('새 문서를 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
     return {'hash': _digest(data), 'size': len(data)}
+
+
+def rename_file(root: Path, rel: str, name: str, exclude: frozenset[str]) -> Path:
+    """파일 하나의 이름을 바꾼다 (D66 — 사이드바의 '이름 바꾸기'). 같은 폴더 안에서 이름만 — 옮기지 않는다. 프로젝트 안의 보이는
+    파일만 (숨김·제외 폴더 안·링크는 안 된다), 새 이름은 Windows 가 받는 이름이고 점으로 시작하지 않는다 (트리에서 사라지지 않게).
+    같은 이름이 있으면 바꾸지 않는다 (대소문자만 바꾸는 것은 된다). 바뀐 경로, 안 되면 EditError"""
+    parts = rel.replace('\\', '/').strip('/').split('/')
+    if any(p in ('', '.', '..') for p in parts):
+        raise EditError(400, t('파일 경로가 올바르지 않습니다'))
+    excluded = next((f for f in parts[:-1] if f.lower() in exclude), None)
+    if excluded:
+        raise EditError(400, t('제외 폴더({name}) 안의 파일은 이름을 바꾸지 않습니다', name=excluded))
+    source = resolve_inside(root, '/'.join(parts))
+    # 링크·정션을 거쳐 다른 곳을 가리키는 경로도 막는다 (트리에 없는 파일)
+    if source is None or not source.is_file() or os.path.normcase(source) != os.path.normcase(os.path.join(root, *parts)):
+        raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
+    name = name.strip()
+    stem = os.path.splitext(name)[0]
+    if (not name or not stem.strip() or name.startswith('.') or name[-1] in ' .' or any(c in BAD_NAME_CHARS for c in name)
+            or stem.lower().split('.')[0] in RESERVED_NAMES):
+        raise EditError(400, t('쓸 수 없는 이름입니다 — 점으로 시작하거나 끝나는 이름, / \\ : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다'))
+    target = source.with_name(name)
+    if name == source.name:
+        return source
+    same_file = os.path.normcase(target) == os.path.normcase(source)   # 대소문자만 바꿈 (Windows 에서는 같은 파일)
+    if not same_file and (target.exists() or target.is_symlink()):
+        raise EditError(409, t('같은 이름의 파일이 있습니다 — 다른 이름을 고르세요'))
+    try:
+        os.rename(source, target)   # Windows 는 대상이 있으면 실패한다 — 덮어쓰지 않는다
+    except FileExistsError as exc:
+        raise EditError(409, t('같은 이름의 파일이 있습니다 — 다른 이름을 고르세요')) from exc
+    except PermissionError as exc:
+        raise EditError(409, t('다른 프로그램이 이 파일을 쓰고 있어 이름을 바꾸지 못했습니다 — 그 프로그램에서 닫은 뒤 다시 하세요')) from exc
+    except OSError as exc:
+        raise EditError(500, t('이름을 바꾸지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
+    return target

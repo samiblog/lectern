@@ -299,6 +299,15 @@
     <ul id="lec-insert-list" role="listbox"></ul>
   </div>
 </div>
+<!-- 이름 바꾸기 (rename.js, D66): 사이드바의 파일 하나 — 같은 폴더 안에서 이름만 -->
+<div id="lec-rename" class="overlay" hidden>
+  <div class="palette-box insert-box" role="dialog" aria-labelledby="lec-rename-title">
+    <div id="lec-rename-title" class="insert-title"></div>
+    <input id="lec-rename-input" type="text" spellcheck="false" autocomplete="off" aria-label="새 이름">
+    <p id="lec-rename-msg" class="insert-msg" role="alert" hidden></p>
+    <p class="insert-msg rename-keys">Enter — 바꾸기 · Esc — 그대로 두기</p>
+  </div>
+</div>
 <div id="lec-settings" class="overlay" hidden>
   <div class="dialog-box" role="dialog" aria-labelledby="lec-settings-title">
     <h2 id="lec-settings-title">설정</h2>

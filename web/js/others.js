@@ -24,7 +24,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, newDocItem, hasChangedInside, shellWord } from './tree.js';
+import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, middleClickOpens } from './util.js';
@@ -449,6 +449,7 @@ export function fileMenuItems(n) {
   // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
   if (n.open === 'default') items.push({ label: t('편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
   items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
+  if (!n.excluded) items.push(renameItem(n.path));   // 이름 바꾸기 (D66 — 제외 폴더 안은 하지 않는다)
   return [...items, ...copyItems(n)];
 }
 
@@ -489,11 +490,13 @@ export function bindFileRows(box, fileOf) {
     if (n && !n.kind) openExternal(n.path);
   });
   box.addEventListener('keydown', (e) => {
-    if (e.key !== 'Enter') return;
+    if (e.key !== 'Enter' && e.key !== 'F2') return;
     const n = nodeOf(e);
     if (!n) return;
     e.preventDefault();
-    if (n.kind) emit('open', { type: 'doc', path: n.path });
+    if (e.key === 'F2') {   // 이름 바꾸기 (D66)
+      if (!n.excluded) emit('rename', { path: n.path });
+    } else if (n.kind) emit('open', { type: 'doc', path: n.path });
     else if (isViewFile(n)) emit('open', { type: 'code', path: n.path });
     else openExternal(n.path);
   });
@@ -539,7 +542,9 @@ function onKey(e) {
     if (n?.type === 'dir' && v.open.has(path)) toggle(k, path, false);
     else if (n?.parent && rowOf(k, n.parent)) select(k, n.parent);   // 거른 목록에서는 부모가 보이지 않아 그대로
   } else if (e.key === 'Enter') enter(k, path);
-  else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
+  else if (e.key === 'F2') {   // 이름 바꾸기 (D66) — 파일만, 제외 폴더 안은 하지 않는다
+    if (n && n.type !== 'dir' && !n.excluded && path) emit('rename', { path });
+  } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
     const r = cur.getBoundingClientRect();
     openMenu(k, path, r.left + 24, r.bottom);
   } else if (e.key.length === 1 && e.key !== ' ' && !e.ctrlKey && !e.metaKey && !e.altKey) {

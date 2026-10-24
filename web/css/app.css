@@ -715,11 +715,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-palette-list li.empty, #lec-insert-list li.empty { display: block; color: var(--ui-faint); cursor: default; }
 /* 보낼 곳 고르기 (basket.js, D63·D65): 머리말(무엇을 — 어디에), 입력(거르기·새 문서 경로), 알림, 목록 (끝의 안내 줄은 고를 수 없다) */
 .insert-title { padding: 11px 16px 0; color: var(--ui-muted); font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-#lec-insert-input { width: 100%; height: 44px; border: 0; border-bottom: 1px solid var(--ui-border); padding: 0 16px; font-size: 15px; background: none; outline: none; }
+#lec-insert-input, #lec-rename-input { width: 100%; height: 44px; border: 0; border-bottom: 1px solid var(--ui-border); padding: 0 16px; font-size: 15px; background: none; outline: none; }
 .insert-msg { margin: 0; padding: 8px 16px 0; color: var(--ui-muted); font-size: 12.5px; }
 .insert-msg.bad { color: var(--ui-danger); font-weight: 600; }
 #lec-insert-list .ins-new .t, #lec-insert-list .ins-cursor .t, #lec-insert-list .ins-create .t { color: var(--ui-accent); }
 #lec-insert-list .ins-back .t { color: var(--ui-muted); font-weight: 500; }
+.insert-msg.rename-keys { padding: 6px 16px 12px; color: var(--ui-faint); font-size: 12px; }   /* 이름 바꾸기 (rename.js, D66) */
 #lec-insert-list li.note { display: block; margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--ui-border); border-radius: 0;
   color: var(--ui-faint); font-size: 12px; cursor: default; }
 #lec-palette-list li.new-doc .t { color: var(--ui-accent); }   /* 문서 탭 줄의 + 로 연 빠른 열기의 '새 문서 만들기…' (D65) */

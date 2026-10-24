@@ -459,6 +459,20 @@ def create_app(state: AppState) -> Flask:
             return jsonify(error=t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요'), status=409)
         return jsonify(path=target.relative_to(project.root).as_posix())
 
+    @app.post('/api/rename')
+    def api_rename() -> Any:
+        """{p, path, name} — 파일 하나의 이름을 바꾼다 (D66 — 같은 폴더 안에서 이름만, 같은 이름이 있으면 409). {path(바뀐 경로, 프로젝트 기준)}"""
+        data = body()
+        rel, name = data.get('path'), data.get('name')
+        if not isinstance(rel, str) or not isinstance(name, str):
+            abort(400)
+        project = project_of(data.get('p'))
+        try:
+            target = editing.rename_file(project.root, rel, name, project.exclude)
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        return jsonify(path=target.relative_to(project.root).as_posix())
+
     @app.post('/api/editing')
     def api_editing() -> Any:
         """{dirty: [경로…]} — 저장하지 않은 편집이 있는 파일. 창을 닫을 때 묻는 데 쓴다 (app.py)"""

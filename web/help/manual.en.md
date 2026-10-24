@@ -68,7 +68,11 @@ The **Files** tab is split into three groups.
 - Documents that changed since you last looked get an amber dot.
 - The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
 - **Excluded folders** such as `node_modules`, `dist`, `build`, `venv` and `__pycache__` appear dimmed and collapsed in 'Other files'. They can hold a great many files, so their contents are read when you expand them, and everything inside is listed there whatever its type (code still opens in the code view with one click). Changes inside are not followed automatically — collapse and expand the folder again, or press F5, to read it afresh. They are not counted in the group header or matched by the filter.
-- Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in editor, Show in Explorer. Right-click a folder to collect the elements in just that folder.
+- Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in editor, Show in Explorer, **Rename…**. Right-click a folder to collect the elements in just that folder.
+- **Renaming**: right-click a file in the document tree, Code or Other files list (or in Recent and search results) and choose **Rename…**, or select its row and press **F2**. The current name is selected up to the extension — type the new name and press Enter (Esc leaves it as is). Only the name changes; the file stays in its folder.
+  - If a file with that name exists or the name cannot be used (starting with a dot, containing `\ / : * ? " < > |` and so on), the reason is shown and nothing changes. Changing the extension asks once more.
+  - A document tab showing the file follows the new name (and edit mode reopens if it was on), and so do the back history and clips. A file with unsaved edits must be saved or closed first.
+  - Links to this document from other documents are not changed. Folders and files inside excluded folders are not renamed, and there is no delete or move.
 
 ### Recent
 
@@ -205,7 +209,7 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
-- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document below); it does not rename or delete files, and does not edit other files (PDF, Excel and so on).
+- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document below), and files are renamed from the sidebar (see Files above); it does not delete files, and does not edit other files (PDF, Excel and so on).
 
 ### New document
 

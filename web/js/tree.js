@@ -190,15 +190,19 @@ export function pathMenuItems(path, isDoc) {
   return items;
 }
 
+/** 파일 우클릭의 이름 바꾸기 (D66 — rename.js): 같은 폴더 안에서 이름만. F2 도 (트리·'코드'·'자료' 목록·최근 변경·검색) */
+export const renameItem = (path) => ({ label: t('이름 바꾸기…'), hint: 'F2', action: () => emit('rename', { path }) });
+
 /** 폴더 우클릭의 새로 만들기 (D65): 이 폴더에 새 문서 — 경로를 정하면 바로 만들어 새 탭에서 편집 */
 export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), action: () => emit('new-doc', { dir }) });
 
-/** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
+/** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)·이름 바꾸기(D66)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
 export function docMenuItems(path, type = 'doc') {
   const items = [{ header: path }];
   if (!(S.view?.type === type && S.view.path === path)) {
-    items.push({ label: t('새 탭에서 열기'), hint: t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) }, '-');
+    items.push({ label: t('새 탭에서 열기'), hint: t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) });
   }
+  items.push(renameItem(path), '-');
   return [...items, ...pathMenuItems(path, true)];
 }
 
@@ -223,6 +227,10 @@ export function initTree() {
   tree.addEventListener('contextmenu', onContextMenu);
   tree.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.classList.contains('row')) e.target.click();
+    else if (e.key === 'F2' && e.target.dataset?.doc != null) {   // 이름 바꾸기 (D66)
+      e.preventDefault();
+      emit('rename', { path: e.target.dataset.doc });
+    }
   });
   const filter = $('#lec-filter');
   filter.addEventListener('input', renderTree);
