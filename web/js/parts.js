@@ -23,7 +23,7 @@ import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, partExtent, PARTS } from './toc.js';
-import { snippetOf, addSnippets, insertSnippets } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, loadImage, imageKey, resolveRef } from './doc.js';
 import { linkPaths } from './pathlink.js';
@@ -638,7 +638,7 @@ async function takeAll(entries) {
   addSnippets(snips, skipped ? t('{n}개는 원문이 없어(html 문서) 담지 않았습니다', { n: skipped }) : '');
 }
 
-/** 구성 요소의 우클릭 메뉴 (D61): 문서에서 보기, Claude용 위치·원문 복사(옆에 터미널 버튼 — D51), 담기·문서에 넣기(D63), 문서 경로 */
+/** 구성 요소의 우클릭 메뉴 (D61): 문서에서 보기, Claude용 위치·원문 복사(옆에 터미널 버튼 — D51), 담기·보내기(D63·D65), 문서 경로 */
 async function partMenu(el, x, y) {
   const found = itemOf(el);
   if (!found) return;
@@ -660,11 +660,11 @@ async function partMenu(el, x, y) {
   }
   const source = range && lines ? lines.slice(range[0] - 1, range[1]).join('\n') : '';
   if (source) items.push({ label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
-  // 담기·문서에 넣기 (D63) — 그 하나, 또는 지금 목록에 보이는 것 모두
+  // 담기·보내기 (D63·D65) — 그 하나, 또는 지금 목록에 보이는 것 모두
   const snip = itemSnippet(path, lines, item);
   if (snip) {
-    items.push('-', { label: t('담기'), hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 넣기"), action: () => addSnippets([snip]) },
-      { label: t('문서에 넣기…'), hint: t('다른 문서나 새 문서에 바로'), action: () => insertSnippets([snip]) });
+    items.push('-', { label: t('담기'), hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip]) },
+      { label: t('보내기…'), hint: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip]) });
   }
   if (listed.length > 1) {
     items.push({ label: t('보이는 것 모두 담기 ({n}개)', { n: listed.length }), hint: t('지금 목록의 것을 문서 차례대로 — 거르기·단추로 좁힌 그대로'), action: () => takeAll(listed) });

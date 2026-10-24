@@ -424,7 +424,8 @@ def create_app(state: AppState) -> Flask:
     @app.post('/api/save')
     def api_save() -> Any:
         """{p, path, text, hash, force, create} — 고친 글을 저장한다. 지금 파일의 내용이 원문을 줄 때(hash)와 다르면 409 (force 면 덮어씀).
-        없는 파일은 404. create 면 새 Markdown 문서를 만든다 (D63 — 이미 있는 폴더에, 같은 이름이 있으면 409). {hash, size} — 다음 저장에 쓴다"""
+        없는 파일은 404. {hash, size} — 다음 저장에 쓴다. create 면 새 Markdown 문서를 만든다 (D63·D65 — 새로 만들기·새 문서로 보내기:
+        이미 있는 폴더에, 같은 이름이 있으면 409) — {hash, size, path(프로젝트 기준, 폴더는 실제 이름)}"""
         data = body()
         rel = data.get('path')
         text = data.get('text')
@@ -433,7 +434,8 @@ def create_app(state: AppState) -> Flask:
         project = project_of(data.get('p'))
         if data.get('create') is True:
             try:
-                return jsonify(editing.create_source(editing.new_doc_path(project.root, rel, project.exclude), text))
+                target = editing.new_doc_path(project.root, rel, project.exclude)
+                return jsonify(editing.create_source(target, text) | {'path': target.relative_to(project.root).as_posix()})
             except editing.EditError as exc:
                 return jsonify(error=exc.message), exc.status
         target = resolve_inside(project.root, rel)
@@ -446,8 +448,8 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/new-doc')
     def api_new_doc() -> Any:
-        """?p=&path= — 그 자리에 새 문서를 만들 수 있는지 (D63 — 넣을 곳을 고를 때, 만드는 것은 저장할 때). 읽기만 한다.
-        {path(프로젝트 기준 — 폴더는 실제 이름)} 또는 {error, status} — 물음에 대한 답이라 늘 200 (화면이 실패한 요청으로 적지 않게)"""
+        """?p=&path= — 그 자리에 새 문서를 만들 수 있는지 (D65 — 경로를 정하면 먼저 묻고, 되면 POST /api/save 의 create 로 만든다).
+        읽기만 한다. {path(프로젝트 기준 — 폴더는 실제 이름)} 또는 {error, status} — 물음에 대한 답이라 늘 200 (화면이 실패한 요청으로 적지 않게)"""
         project = arg_project()
         try:
             target = editing.new_doc_path(project.root, request.args.get('path', ''), project.exclude)

@@ -34,7 +34,7 @@ import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
-import { initBasket, closeInsert } from './basket.js';
+import { initBasket, closeInsert, askNewDoc } from './basket.js';
 import { initDocTabs, docTabAt, closeDocTab } from './doctabs.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
@@ -169,13 +169,16 @@ function bindKeys() {
     // 편집 상자 안의 키는 편집기 것이다 (Ctrl+F 찾기·Ctrl+S 저장·Esc 닫기 등 — editor.js). 탭 옮기기·편집 닫기(Ctrl+E)·문서 열기·도움말,
     // 문서 탭(Alt+1~5·Ctrl+F4 — D64)만 앱이
     const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-5]$/.test(e.key)) || (mod && !e.altKey && !e.shiftKey && e.key === 'F4');
-    if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
+    if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || key === 'n' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
     if (mod && !e.shiftKey && !e.altKey && key === 'e') {   // 편집 모드 열고 닫기 (D54)
       e.preventDefault();
       toggleEditor();
       return;
     }
-    if (mod && !e.shiftKey && key === 'p') {
+    if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
+      e.preventDefault();
+      askNewDoc();
+    } else if (mod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       openPalette();
     } else if (mod && e.shiftKey && key === 'f') {

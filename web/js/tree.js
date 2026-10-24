@@ -190,6 +190,9 @@ export function pathMenuItems(path, isDoc) {
   return items;
 }
 
+/** 폴더 우클릭의 새로 만들기 (D65): 이 폴더에 새 문서 — 경로를 정하면 바로 만들어 새 탭에서 편집 */
+export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), action: () => emit('new-doc', { dir }) });
+
 /** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
 export function docMenuItems(path, type = 'doc') {
   const items = [{ header: path }];
@@ -204,7 +207,7 @@ function onContextMenu(e) {
   if (!row) return;
   e.preventDefault();
   if (row.dataset.doc != null) showMenu(e.clientX, e.clientY, docMenuItems(row.dataset.doc));
-  else showMenu(e.clientX, e.clientY, pathMenuItems(row.dataset.dir, false));
+  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 
 export function focusFilter() {

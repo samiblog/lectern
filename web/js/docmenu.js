@@ -2,7 +2,7 @@
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
 //
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
-// md 문서의 블록·절·고른 글은 '담기'·'문서에 넣기…'(basket.js, D63) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
+// md 문서의 블록·절·고른 글은 '담기'·'보내기…'(basket.js, D63·D65) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
 // 코드 화면(codeview.js)에서는 줄 메뉴: 이 줄·고른 글 복사, Claude용 위치(@경로 12~20행), 편집기에서 이 줄 열기, 경로 복사, 전체 복사.
 // 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24 — 넣기는 편집 모드에서 사용자가 저장).
 
@@ -12,7 +12,7 @@ import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems } from './spotlight.js';
 import { partExtent } from './toc.js';
-import { snippetOf, addSnippets, insertSnippets } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
 import { $, esc, toast, copyText } from './util.js';
@@ -213,12 +213,12 @@ function sourceItems(range, label = t('원문 복사'), note = '') {
   ];
 }
 
-/** 담기·문서에 넣기 (D63): 이 문서의 줄 범위(range)를 조각으로. info: {kind, name, label, text?, plain?} — basket.js 의 snippetOf */
-function takeItems(range, info, labels = [t('담기'), t('문서에 넣기…')]) {
+/** 담기·보내기 (D63·D65): 이 문서의 줄 범위(range)를 조각으로. info: {kind, name, label, text?, plain?} — basket.js 의 snippetOf */
+function takeItems(range, info, labels = [t('담기'), t('보내기…')]) {
   const from = doc;
   const snip = () => snippetOf(from, range, info);
-  return [{ label: labels[0], hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 넣기"), action: () => addSnippets([snip()]) },
-    { label: labels[1], hint: t('다른 문서나 새 문서에 바로'), action: () => insertSnippets([snip()]) }];
+  return [{ label: labels[0], hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip()]) },
+    { label: labels[1], hint: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) }];
 }
 
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
@@ -271,7 +271,7 @@ function blockItems(el, target) {
     if (section) {
       const name = el.textContent.trim();
       items.push(...sourceItems(section, t('이 절 원문 복사'), ` (${t("'{name}' 절", { name })})`), '-',
-        ...takeItems(section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name }, [t('이 절 담기'), t('이 절을 문서에 넣기…')]));
+        ...takeItems(section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name }, [t('이 절 담기'), t('이 절 보내기…')]));
     }
     if (el.classList.contains('lec-fold') || el.parentElement === $('#lec-view')) {
       const level = +tag[1];
@@ -363,7 +363,7 @@ function openMenu(e, view, x, y) {
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   if (selected) {
     const range = selectionRange(sel);
-    const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서에 넣기…')]) : [];
+    const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글 보내기…')]) : [];
     items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected), term: selected }, ...take, '-');
   }
   // 표는 가로 스크롤 상자가 테두리를 잘라 내므로 상자에 표시한다

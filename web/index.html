@@ -127,7 +127,7 @@
         <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
         <button role="tab" data-tab="search" title="문서·코드의 본문과 파일 이름에서 찾기 (Ctrl+Shift+F)">검색</button>
         <button role="tab" data-tab="parts" title="문서 속 표·그림·박스글 등이나 파일을 종류마다 모아 보기">모아 보기</button>
-        <button role="tab" data-tab="basket" title="담은 조각 — 문서의 절·표·그림 등을 우클릭해 '담기', 모아서 다른 문서나 새 문서에 넣기">담기<span id="lec-basket-count" class="count" hidden></span></button>
+        <button role="tab" data-tab="basket" title="담은 조각 — 문서의 절·표·그림 등을 우클릭해 '담기', 모아서 열린 문서나 새 문서로 보내기">담기<span id="lec-basket-count" class="count" hidden></span></button>
       </div>
       <div class="side-filter">
         <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
@@ -197,10 +197,10 @@
         <p id="lec-parts-info" class="side-info"></p>
         <nav id="lec-parts-list" class="side-list" aria-label="모아 본 구성 요소"></nav>
       </div>
-      <!-- 담기 (basket.js, D63): 담은 조각을 차례대로 — 문서에 넣기(넣을 곳 고르기 창), Claude 에 맡기기, 편집 중이면 항목의 '넣기'가 커서 자리에 -->
+      <!-- 담기 (basket.js, D63·D65): 담은 조각을 차례대로 — 문서로 보내기(보낼 곳 고르기 창), Claude 에 맡기기, 편집 중이면 항목의 '보내기'가 커서 자리로 -->
       <div id="lec-basket" hidden>
         <div class="basket-bar">
-          <button type="button" id="lec-basket-insert" class="primary small" title="담은 것을 차례대로 다른 문서나 새 문서에 넣기 — 편집 모드로 열고, 저장은 직접">문서에 넣기…</button>
+          <button type="button" id="lec-basket-insert" class="primary small" title="담은 것을 차례대로 열린 문서 탭이나 새 문서로 보내기 — 편집 모드로 열고, 저장은 직접">문서로 보내기…</button>
           <button type="button" id="lec-basket-claude" class="text-btn" title="담은 것의 위치로 새 문서를 만들어 달라는 Claude Code 요청 글 — 복사·터미널">Claude 에 맡기기</button>
           <span class="tb-spacer"></span>
           <button type="button" id="lec-basket-clear" class="text-btn" title="담은 것을 모두 빼기 (문서는 그대로)">비우기</button>
@@ -290,7 +290,7 @@
     <ul id="lec-palette-list" role="listbox"></ul>
   </div>
 </div>
-<!-- 넣을 곳 고르기 (basket.js, D63): 넣을 문서(편집 중인 곳·새 문서·문서들) → 자리(맨 끝·맨 앞·절 끝) / 새 문서의 경로 -->
+<!-- 보낼 곳 고르기 (basket.js, D63·D65): 받을 곳(편집 중인 곳·새 문서·열린 문서 탭) → 자리(맨 끝·맨 앞·절 끝) / 새 문서의 경로 (새로 만들기도) -->
 <div id="lec-insert" class="overlay" hidden>
   <div class="palette-box insert-box" role="dialog" aria-labelledby="lec-insert-title">
     <div id="lec-insert-title" class="insert-title"></div>

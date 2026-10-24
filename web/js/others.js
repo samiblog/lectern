@@ -24,7 +24,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, hasChangedInside, shellWord } from './tree.js';
+import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, newDocItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, middleClickOpens } from './util.js';
@@ -459,6 +459,7 @@ function menuItems(k, n) {
   const items = [{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
     { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) }];
   if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
+  if (!n.excluded) items.push(newDocItem(n.path));   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
   items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
     items.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path: n.path, mode: 'files' }) });
@@ -509,7 +510,7 @@ function openMenu(k, path, x, y) {
   const n = root ? { type: 'dir', path: '', root: true } : view(state(), k).index.get(path);
   if (!n) return;
   select(k, path);
-  showMenu(x, y, n.root ? [{ header: S.root }, ...pathMenuItems('', false)] : menuItems(k, n));
+  showMenu(x, y, n.root ? [{ header: S.root }, newDocItem(''), '-', ...pathMenuItems('', false)] : menuItems(k, n));
 }
 
 // 글자를 치면 그 글자로 시작하는 다음 행으로 (탐색기처럼). 잠깐 사이에 이어 치면 이어진 글자로

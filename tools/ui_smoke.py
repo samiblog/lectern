@@ -2126,7 +2126,7 @@ def run(headed: bool) -> None:
                   and {'author.name', 'author.team', 'status'} <= set(nested_keys) and 'name' not in nested_keys,
                   f"모아 보기: 문서가 없는 폴더로 가는 링크는 '폴더'(깨짐 아님), 문서 정보의 들여 쓴 키는 author.name 처럼, name 은 키로 안 보임 ({meta_links}, {nested_keys})")
 
-            print('[담기]')   # D63 — 우클릭 담기, 담기 탭, 새 문서(다른 폴더 — 그림 경로를 맞춤)에 넣고 저장, 기존 문서 끝에 넣고 버리기
+            print('[담기]')   # D63·D65 — 우클릭 담기, 담기 탭, 보낼 곳은 열린 문서 탭·새 문서, 새 문서(다른 폴더 — 그림 경로를 맞춤)로 보내고 저장, 탭으로 연 문서 끝으로 보내고 버리기
             page.evaluate("async () => (await import('/static/js/nav.js')).navigate({ type: 'doc', path: 'caps.md' })")
             page.wait_for_selector('#lec-view img[alt="가"]')
 
@@ -2142,26 +2142,38 @@ def run(headed: bool) -> None:
               count: document.querySelector('#lec-basket-count').textContent })''')
             page.click('#lec-basket-insert')
             page.wait_for_selector('#lec-insert:not([hidden]) #lec-insert-list li.ins-new')
+            targets = page.evaluate('''() => ({ docs: [...document.querySelectorAll('#lec-insert-list li.ins-doc .p')].map(e => e.textContent),
+              note: !!document.querySelector('#lec-insert-list li.note') })''')   # 받는 곳은 열린 문서 탭과 새 문서뿐 (D65)
             page.click('#lec-insert-list li.ins-new')
             page.fill('#lec-insert-input', 'data/모음')
             page.keyboard.press('Enter')
-            page.wait_for_selector('.lec-editor.creating .CodeMirror')
-            cm_text = lambda: page.evaluate("document.querySelector('.lec-editor .CodeMirror').CodeMirror.getValue()")
-            new_text = cm_text()
             new_doc = tables / 'data' / '모음.md'
-            not_yet = not new_doc.exists()
+            cm_text = lambda: page.evaluate("document.querySelector('.lec-pane.active .lec-editor .CodeMirror').CodeMirror.getValue()")
+            wait_until(page, "!!document.querySelector('.lec-pane.active .lec-editor .CodeMirror')?.CodeMirror.getValue().includes('담은 곳')", 10000)
+            made_first = new_doc.exists() and new_doc.read_text(encoding='utf-8') == '# 모음\n\n'   # 경로를 정할 때 만들고, 보낸 것은 편집기에만
+            new_text = cm_text()
+            new_tab = page.evaluate("document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path")
             shot('24-basket-new-doc')
             page.keyboard.press('Control+s')
-            wait_until(page, "!document.querySelector('.lec-editor.creating')", 5000)
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor.dirty')", 5000)
             page.keyboard.press('Escape')
             drawn = wait_until(page, '''(() => { const v = document.querySelector('#lec-view'); const img = v.querySelector('img');
-              return !document.querySelector('.lec-editor') && v.querySelector('h1')?.textContent === '모음' && !!v.querySelector('table')
+              return !document.querySelector('.lec-pane.active .lec-editor') && v.querySelector('h1')?.textContent === '모음' && !!v.querySelector('table')
                 && !!img && img.complete && img.naturalWidth > 0 && !v.innerHTML.includes('담은 곳'); })()''', 10000)
-            check(bk['rows'] == ['〈표 Ⅱ-15〉 철재의 HS코드', '[그림 1] 분기별 가격 범위'] and bk['count'] == '2'
+            check(bk['rows'] == ['〈표 Ⅱ-15〉 철재의 HS코드', '[그림 1] 분기별 가격 범위'] and bk['count'] == '2' and targets == {'docs': ['caps.md'], 'note': True}
                   and new_text.startswith('# 모음\n\n<!-- 담은 곳: caps.md 3~7행 -->\n**〈표 Ⅱ-15〉 철재의 HS코드**\n')
                   and '![가](../img/a.svg)' in new_text and '[그림 1] 분기별 가격 범위' in new_text
-                  and not_yet and new_doc.exists() and new_doc.read_text(encoding='utf-8') == new_text and drawn,
-                  f"담기: 우클릭 담기(캡션까지) → 담기 탭 → 새 문서(data/모음.md — 그림 경로를 맞춤)는 저장할 때 만들고 깨지지 않게 그림 ({bk}, {new_text[:60]!r})")
+                  and made_first and new_tab == 'data/모음.md' and new_doc.read_text(encoding='utf-8') == new_text and drawn,
+                  f"담기: 우클릭 담기(캡션까지) → 담기 탭 → 보낼 곳은 열린 문서 탭과 새 문서뿐 → 새 문서(data/모음.md)는 경로를 정할 때 만들어 새 문서 탭에서 편집, 그림 경로를 맞춰 저장하면 깨지지 않게 그림 ({bk}, {targets}, {made_first}, {new_tab}, {new_text[:60]!r})")
+            page.click('.side-tabs button[data-tab="basket"]')
+            page.click('#lec-basket-insert')
+            page.fill('#lec-insert-input', 'README')
+            page.wait_for_selector('#lec-insert-list li.empty')
+            not_open = page.locator('#lec-insert-list li.ins-doc').count() == 0 and page.locator('#lec-insert-list li.note').count() == 1
+            page.keyboard.press('Escape')
+            page.click('.side-tabs button[data-tab="files"]')
+            page.locator('#lec-tree .row[data-doc="README.md"]').click(modifiers=['Control'])   # 문서 탭으로 열어야 받는 곳이 된다
+            wait_until(page, "document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === 'README.md'", 10000)
             page.click('.side-tabs button[data-tab="basket"]')
             page.click('#lec-basket-insert')
             page.fill('#lec-insert-input', 'README')
@@ -2169,17 +2181,58 @@ def run(headed: bool) -> None:
             page.locator('#lec-insert-list li.ins-doc').first.click()
             page.wait_for_selector('#lec-insert-list li.ins-place')
             page.locator('#lec-insert-list li.ins-place', has_text='맨 끝').click()
-            page.wait_for_selector('.lec-editor:not(.creating) .CodeMirror')
+            wait_until(page, "document.querySelector('.lec-pane.active .lec-editor')?.dataset.path === 'README.md' || !!document.querySelector('.lec-pane.active .lec-editor .ed-inserted')", 10000)
             readme_before = (tables / 'README.md').read_text(encoding='utf-8')
             readme_text = cm_text()
-            inserted = page.locator('.lec-editor .ed-inserted').count()
+            inserted = page.locator('.lec-pane.active .lec-editor .ed-inserted').count()
             asked = []
             page.once('dialog', lambda d: (asked.append(d.message), d.accept()))   # 저장하지 않은 것 — 버리고 닫기
             page.keyboard.press('Escape')
-            wait_until(page, "!document.querySelector('.lec-editor')", 3000)
-            check(readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            check(not_open and readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
                   and inserted > 0 and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
-                  f'담기: 기존 문서 맨 끝에 넣으면 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({inserted}, {len(asked)})')
+                  f'담기: 문서 탭에 없는 문서는 받는 곳에 없고(안내 줄), 탭으로 열면 맨 끝으로 보내 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({not_open}, {inserted}, {len(asked)})')
+
+            print('[새로 만들기]')   # D65 — 폴더 우클릭·Ctrl+N·문서 탭 줄의 + : 경로를 정하면 바로 '# 제목'으로 만들어 새 문서 탭에서 편집
+            page.click('.side-tabs button[data-tab="files"]')
+            page.wait_for_selector('#lec-tree .row[data-dir="data"]')   # data/모음.md 를 만들어 트리에 나온 폴더
+            page.locator('#lec-tree .row[data-dir="data"]').click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            page.locator('#lec-menu button[data-i]', has_text='이 폴더에 새 문서').click()
+            page.wait_for_selector('#lec-insert:not([hidden])')
+            guess = page.input_value('#lec-insert-input')
+            page.keyboard.type('메모')   # 이름 부분을 골라 두었다 — 바로 고쳐 쓴다
+            page.keyboard.press('Enter')
+            memo = tables / 'data' / '메모.md'
+            on_memo = wait_until(page, '''document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === 'data/메모.md'
+              && !!document.querySelector('.lec-pane.active .lec-editor .CodeMirror')''', 10000)
+            memo_text = memo.read_text(encoding='utf-8') if memo.exists() else None
+            cursor = page.evaluate("document.querySelector('.lec-pane.active .lec-editor .CodeMirror')?.CodeMirror.getCursor().line")
+            focused = page.evaluate("!!document.activeElement?.closest('.lec-pane.active .lec-editor')")
+            in_tree = wait_until(page, "!!document.querySelector('#lec-tree .row[data-doc=\"data/메모.md\"]')", 10000)
+            page.keyboard.press('Escape')   # 고치지 않았으니 묻지 않고 닫힌다
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.keyboard.press('Control+n')
+            page.wait_for_selector('#lec-insert:not([hidden])')
+            ctrl_n = [page.text_content('#lec-insert-title'), page.input_value('#lec-insert-input')]
+            page.keyboard.type('메모')
+            page.keyboard.press('Enter')   # 같은 이름 — 만들지 않고 까닭을 보인다
+            dup = wait_until(page, "!document.querySelector('#lec-insert-msg').hidden && document.querySelector('#lec-insert-msg').classList.contains('bad')", 5000)
+            page.keyboard.press('Escape')
+            closed_pick = wait_until(page, "document.querySelector('#lec-insert').hidden", 2000)
+            page.click('#lec-doctab-new')
+            page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li.new-doc')
+            first_new = page.evaluate("document.querySelector('#lec-palette-list li[data-i]')?.classList.contains('new-doc')")
+            page.click('#lec-palette-list li.new-doc')
+            plus_pick = wait_until(page, "!document.querySelector('#lec-insert').hidden && document.querySelector('#lec-insert-title').textContent === '새 문서 만들기'", 3000)
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+p')
+            page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li[data-i]')
+            plain_palette = page.locator('#lec-palette-list li.new-doc').count() == 0
+            page.keyboard.press('Escape')
+            check(guess == 'data/새 문서.md' and on_memo and memo_text == '# 메모\n\n' and cursor == 2 and focused and in_tree
+                  and ctrl_n == ['새 문서 만들기', 'data/새 문서.md'] and dup and closed_pick and first_new and plus_pick and plain_palette,
+                  f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {cursor}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')
 
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로

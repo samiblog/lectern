@@ -642,7 +642,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .ed-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
 .ed-state { flex: 1; min-width: 0; color: var(--ui-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lec-editor.dirty .ed-state { color: var(--ui-accent); font-weight: 600; }
-.lec-editor.creating .ed-state { color: var(--ui-accent); font-weight: 600; }   /* 새 문서 — 저장하면 만든다 (D63) */
 /* 넣은 조각 (D63 — basket.js): 저장할 때까지 옅은 바탕 */
 .lec-editor .ed-inserted { background: color-mix(in srgb, var(--ui-fresh, #ffd34d) 24%, transparent); }
 .ed-head .primary { height: 26px; padding: 0 14px; }
@@ -714,13 +713,16 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-palette-list .when, #lec-insert-list .when { color: var(--ui-faint); font-size: 12px; }
 #lec-palette-list .p, #lec-insert-list .p { grid-column: 1 / 3; color: var(--ui-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lec-palette-list li.empty, #lec-insert-list li.empty { display: block; color: var(--ui-faint); cursor: default; }
-/* 넣을 곳 고르기 (basket.js, D63): 머리말(무엇을 — 어디에), 입력(거르기·새 문서 경로), 알림, 목록 */
+/* 보낼 곳 고르기 (basket.js, D63·D65): 머리말(무엇을 — 어디에), 입력(거르기·새 문서 경로), 알림, 목록 (끝의 안내 줄은 고를 수 없다) */
 .insert-title { padding: 11px 16px 0; color: var(--ui-muted); font-size: 12px; font-weight: 650; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lec-insert-input { width: 100%; height: 44px; border: 0; border-bottom: 1px solid var(--ui-border); padding: 0 16px; font-size: 15px; background: none; outline: none; }
 .insert-msg { margin: 0; padding: 8px 16px 0; color: var(--ui-muted); font-size: 12.5px; }
 .insert-msg.bad { color: var(--ui-danger); font-weight: 600; }
 #lec-insert-list .ins-new .t, #lec-insert-list .ins-cursor .t, #lec-insert-list .ins-create .t { color: var(--ui-accent); }
 #lec-insert-list .ins-back .t { color: var(--ui-muted); font-weight: 500; }
+#lec-insert-list li.note { display: block; margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--ui-border); border-radius: 0;
+  color: var(--ui-faint); font-size: 12px; cursor: default; }
+#lec-palette-list li.new-doc .t { color: var(--ui-accent); }   /* 문서 탭 줄의 + 로 연 빠른 열기의 '새 문서 만들기…' (D65) */
 
 .menu {
   position: fixed; z-index: 120; min-width: 220px; max-width: 460px; padding: 4px;

@@ -1,9 +1,10 @@
 // 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서와 코드를 찾아 연다 (D44). 맞는 문서 먼저, 그다음 코드 — 코드는 코드 화면으로.
 // 입력 전에는 최근 수정한 문서. 코드 목록은 사이드바 '코드' 목록과 같은 것 (others.js — 아직 받지 않았으면 받아 온다).
-// Ctrl+Enter·Ctrl+누르기·가운데 버튼은 새 문서 탭에서 (D64). 문서 탭 줄의 + 로 열면 Enter 도 새 문서 탭에서.
+// Ctrl+Enter·Ctrl+누르기·가운데 버튼은 새 문서 탭에서 (D64). 문서 탭 줄의 + 로 열면 Enter 도 새 문서 탭에서, 맨 위에 '새 문서 만들기…'(D65).
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
+import { askNewDoc } from './basket.js';
 import { fileIcon } from './icons.js';
 import { $, esc, timeAgo, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
@@ -39,6 +40,7 @@ function update() {
   const terms = query.split(/\s+/).filter(Boolean);
   if (!terms.length) {
     items = [...S.files].sort((a, b) => b.mtime - a.mtime).slice(0, MAX_ITEMS);   // 입력 전: 최근 수정한 문서
+    if (asNewTab && S.tab) items.unshift({ newDoc: true, name: '', path: t('경로를 정하면 바로 만들어 새 탭에서 엽니다 (Ctrl+N)'), title: t('새 문서 만들기…') });
   } else {
     const match = (list) => list
       .filter((f) => {
@@ -64,8 +66,8 @@ function renderList() {
     ul.innerHTML = `<li class="empty">${S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요')}</li>`;
     return;
   }
-  ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}" aria-selected="${i === selected}">
-      <span class="t">${fileIcon(f.name, f.code ? undefined : f.kind)}${esc(f.title || f.name)}</span><span class="when">${esc(timeAgo(f.mtime))}</span>
+  ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}${f.newDoc ? ' new-doc' : ''}" aria-selected="${i === selected}">
+      <span class="t">${f.newDoc ? '<svg class="ficon doc" aria-hidden="true"><use href="#i-plus"/></svg>' : fileIcon(f.name, f.code ? undefined : f.kind)}${esc(f.title || f.name)}</span><span class="when">${f.newDoc ? '' : esc(timeAgo(f.mtime))}</span>
       <span class="p">${esc(f.path)}</span></li>`).join('');
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
@@ -75,7 +77,8 @@ function choose(i, newTab = false) {
   if (!f) return;
   const tab = newTab || asNewTab;
   closePalette();
-  emit('open', { type: f.code ? 'code' : 'doc', path: f.path, newTab: tab });
+  if (f.newDoc) askNewDoc();   // 새로 만들기 (D65)
+  else emit('open', { type: f.code ? 'code' : 'doc', path: f.path, newTab: tab });
 }
 
 /** newTab: 고르면 새 문서 탭에서 (문서 탭 줄의 + — D64) */

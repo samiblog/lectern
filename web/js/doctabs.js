@@ -85,7 +85,7 @@ export async function openInNewTab(target) {
       toast(t('문서 탭은 {n}개까지입니다 — 모두 저장하지 않은 편집이 있어 바꿀 탭이 없습니다. 탭 하나를 닫으세요 (Ctrl+F4)', { n: MAX_DOCS }), 'error', 5000);
       return null;
     }
-    if (pane.editor) closeEditor(pane, { ask: false, sync: false, leaving: true });
+    if (pane.editor) closeEditor(pane, { ask: false, sync: false });
     pane.deferred = null;
     toast(t('문서 탭은 {n}개까지라 가장 오래 안 본 탭에서 열었습니다', { n: MAX_DOCS }));
   }
@@ -126,7 +126,7 @@ export async function openTarget(target) {
 export function closeDocTab(pane = S.pane) {
   const tab = pane?.tab;
   if (!tab || tab.panes.length < 2 || !tab.panes.includes(pane)) return false;
-  if (pane.editor && !closeEditor(pane, { sync: false, leaving: true })) return false;
+  if (pane.editor && !closeEditor(pane, { sync: false })) return false;
   const i = tab.panes.indexOf(pane);
   if (tab.pane === pane) {
     const next = tab.panes[i + 1] || tab.panes[i - 1];   // 오른쪽, 없으면 왼쪽

@@ -43,10 +43,10 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 
 Keep up to 5 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
 
-- A normal click opens in the current tab. To open in a **new tab**, **Ctrl+click** or **middle-click** in the tree, the Code and Other files lists, links and paths in documents, the folder overview, search results or Elements. **Open in new tab** in right-click menus and **+** in the document tab row (the quick open box then opens in a new tab — Ctrl+Enter in quick open does too) work as well.
+- A normal click opens in the current tab. To open in a **new tab**, **Ctrl+click** or **middle-click** in the tree, the Code and Other files lists, links and paths in documents, the folder overview, search results or Elements. **Open in new tab** in right-click menus and **+** in the document tab row (the quick open box then opens in a new tab — Ctrl+Enter in quick open does too) work as well. **New document…** at the top of the **+** box makes a new document and opens it in a new tab (see New document below).
 - Clicking a document that is already open in another tab goes to that tab (a document is not opened twice).
 - When all 5 are in use, the tab you looked at least recently is reused (tabs with unsaved edits are left alone).
-- Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Insert from the Clip tab opens the target in its own tab.
+- Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Send from the Clip tab opens the receiving document in its own tab.
 - To switch, click a tab or press **Alt+1~5**. To close, click its ×, middle-click it or press **Ctrl+F4** (the last tab is not closed). Right-click a tab for Close other document tabs and copying its path.
 - The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them).
 
@@ -94,7 +94,7 @@ The **Files** tab is split into three groups.
   - To-dos, links and sources are not shown in the contents (only here).
 - When a table, figure or diagram has a **caption**, the caption is shown as its name, with the number and size below (such as 'Table 3 · 6 rows 2 columns'). A caption is a line such as 'Table 1. …', '<Table 2>' or '[Figure 1]' (or the same forms in Korean) directly above a table or below a picture, a short whole-bold line, or `<caption>`/`<figcaption>` in HTML. Without one, tables show their header row and pictures their alt text.
 - Click an item to go to that place in its document; it is outlined briefly.
-- **Right-click** an item for Show in document, **Copy location for Claude** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
+- **Right-click** an item for Show in document, **Copy location for Claude** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents), **Clip**, **Send…** and **Clip all shown** (see Clip below) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
 - Doc info: a button for each key in the documents' front matter (such as `status: review`, `owner: research`, `tags: [a, b]`); documents are grouped by the values of the chosen key (dates newest first). Indented sub-keys appear joined with a dot, such as `author.name`. Documents without that key are under 'No value' at the end. Click a document to open it; right-click to copy its `@path` or put it into the terminal.
@@ -103,17 +103,18 @@ The **Files** tab is split into three groups.
 
 ### Clip
 
-Collect pieces of documents and insert them into another document or a new one.
+Collect pieces of documents and send them to a document open in a document tab, or to a new one.
 
 - **To clip**: right-click a heading for **Clip this section** (the heading and everything under it), or a table, figure, chart, diagram, math, code or paragraph for **Clip** — tables, figures and charts take their caption and the 'Source:' line right below with them. With text selected, right-click for **Clip selected text**. In Elements, right-click an item for **Clip**, or **Clip all shown** (the list as filtered — all the tables in the project, for example).
 - Clips pile up in order in the sidebar **Clip** tab (with a count next to it). Reorder them with ↑ and ↓, remove one with ✕, and click one to go to its place in the original document. A clip keeps the text as it was when clipped, even if the document changes later. Each project tab has its own clips, and they are cleared when Lectern closes.
-- **Insert into a document…** (above the clips, or in a right-click menu for just that piece) asks where: where you are editing (at the cursor), **New document…**, or a document → **At the end**, **At the beginning** or **End of section '…'**.
-- That document **opens in edit mode** with the inserted text lightly shaded. Check it and save with **Ctrl+S** — the file does not change until you save.
-- For a **new document**, type its path (it starts as 'New document.md' in the current document's folder). It is created only in a folder that already exists and only if the name is free, and the file appears **when you save**. Its title comes from the file name.
-- When inserting, Lectern rewrites relative paths of pictures, links and chart data for the target document, brings the footnote definitions along (renaming them if the names clash) and fits heading levels to the place (under the section for 'End of section'). Each piece gets a hidden `<!-- from: research/a.md lines 12-19 -->` comment, so Claude Code can tell where it came from.
-- While another document is open in edit mode, **Insert** on an item in the Clip tab puts it right after the block the cursor is in.
+- **Send to a document…** (above the clips — all of them, in order) or **Send…** in a right-click menu (just that piece) asks where: where you are editing (at the cursor), **New document…**, or **a document open in a document tab** → **At the end**, **At the beginning** or **End of section '…'**.
+- Only documents open in document tabs and new documents can receive. To send to another document, open it in a document tab first (Ctrl+click it in the tree — see Document tabs above).
+- That document **opens in edit mode** with the sent text lightly shaded. Check it and save with **Ctrl+S** — the file does not change until you save.
+- For **New document…**, type a path and press Enter: the document is created right away with a title line (see New document below) and the clips go to its end in a new document tab.
+- When sending, Lectern rewrites relative paths of pictures, links and chart data for the receiving document, brings the footnote definitions along (renaming them if the names clash) and fits heading levels to the place (under the section for 'End of section'). Each piece gets a hidden `<!-- from: research/a.md lines 12-19 -->` comment, so Claude Code can tell where it came from.
+- While another document is open in edit mode, **Send** on an item in the Clip tab puts it right after the block the cursor is in.
 - **Ask Claude** makes a Claude Code request listing the clips' locations (`@doc lines 12-19 ('name')`) and asking for a new document from them — copy it or put it into the terminal with ▣ (Enter is not pressed).
-- Lines in the code view and blocks of HTML documents cannot be clipped (they have no source lines), and clips go only into Markdown documents.
+- Lines in the code view and blocks of HTML documents cannot be clipped (they have no source lines), and clips can be sent only to Markdown documents.
 
 ## Reading documents
 
@@ -204,7 +205,15 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
-- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new document for clips (sidebar Clip tab); it does not rename or delete files, and does not edit other files (PDF, Excel and so on).
+- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document below); it does not rename or delete files, and does not edit other files (PDF, Excel and so on).
+
+### New document
+
+- To start: **New document…** at the top of the quick open box that **+** in the document tab row opens, **Ctrl+N** (also while editing), or right-click a folder (or the project row at the top) in the tree, Code or Other files list and choose **New document in this folder…**.
+- Type a path and press Enter — **it is created right away**. It starts as 'New document.md' in that folder (for Ctrl+N and +, the folder of the document you are viewing) with the name part selected, so you can just type over it. `.md` is added if missing.
+- The file starts with one `# Title` line made from its name and opens in edit mode in a new document tab (the cursor below the title). Save with **Ctrl+S** when you have written something.
+- It is created only in a folder that already exists and only if the name is free. If it cannot be created, the reason is shown — fix the path and press Enter again. Esc closes the box.
+- The file stays even if you close it without saving (Lectern never deletes files — delete it in File Explorer if you do not need it).
 
 ## Reading code
 
@@ -247,7 +256,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
 - **Copy location for Claude** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
 - If you right-click with text selected, 'Copy selected text' and 'Clip selected text' appear at the top.
-- **Clip** and **Insert into a document…** in block and heading menus put that piece into another document or a new one (see Clip above).
+- **Clip** and **Send…** in block and heading menus send that piece to a document open in a document tab, or to a new one (see Clip above).
 - The **terminal button** to the right of a copy item puts the same text into the terminal (Enter is not pressed). It is there for selected text, the location for Claude, the source, code, `@path`, the full path and so on, including in the right-click menus of the tree and the 'Code' and 'Other files' lists. See 'Terminal' below.
 
 ## Terminal

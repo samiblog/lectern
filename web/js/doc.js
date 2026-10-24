@@ -452,14 +452,12 @@ export function showMissing(view, path, err) {
  * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
  * - 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
  */
-export async function showDoc(pane, path, { hash = '', scrollTop, missing = false } = {}) {
+export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   const id = ++pane.renderId;
   const { view, scroller: content, tab } = pane;
 
   let text;
   try {
-    // missing: 아직 만들지 않은 새 문서 (D63 — 편집 상자가 위를 덮는다). 읽어 보지 않고 '문서 없음' 화면으로
-    if (missing) throw Object.assign(new Error('missing'), { status: 404 });
     text = await getText(docUrl(tab, path));
   } catch (err) {
     if (id !== pane.renderId) return false;

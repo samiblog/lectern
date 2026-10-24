@@ -650,8 +650,8 @@ def test_new_doc_endpoints(client, project, pid):
     assert answer('nope/a.md') == 404          # 없는 폴더
     assert answer('.claude/a.md') == 404       # 숨김
     assert answer('docs/a.txt') == 400
-    r = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': '# 모음\n', 'create': True})
-    assert r.status_code == 200 and (project / 'docs' / '모음.md').read_text(encoding='utf-8') == '# 모음\n'
+    r = client.post('/api/save', json={'p': pid, 'path': '/docs/모음.md', 'text': '# 모음\n', 'create': True})   # 만든 경로를 알려 준다 (앞의 / 는 뗀다)
+    assert r.status_code == 200 and r.get_json()['path'] == 'docs/모음.md' and (project / 'docs' / '모음.md').read_text(encoding='utf-8') == '# 모음\n'
     again = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': 'x', 'create': True})
     assert again.status_code == 409 and (project / 'docs' / '모음.md').read_text(encoding='utf-8') == '# 모음\n'
     ok = client.post('/api/save', json={'p': pid, 'path': 'docs/모음.md', 'text': '# 모음\n더\n', 'hash': r.get_json()['hash']})
