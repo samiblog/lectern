@@ -88,20 +88,47 @@ function buildOutline(view, items) {
 
 // ---- 구성 요소 ------------------------------------------------------------------
 
-// 종류: 이름(번호 — '표 3'), 여럿일 때 이름(머리 버튼 — 영어 복수형), 아이콘(index.html 의 기호). 머리 버튼은 이 순서 (모아 보기 parts.js 도 이 표를 쓴다)
+// 종류: 이름(번호 — '표 3'), 여럿일 때 이름(머리 버튼 — 영어 복수형), 아이콘(index.html 의 기호). 머리 버튼은 이 순서 (모아 보기 parts.js 도 이 표를 쓴다).
+// more: 모아 보기에서만 (목차에는 넣지 않는다 — 할 일·링크·출처는 많고 절 아래에 늘어놓으면 목차가 붐빈다, D62)
 export const PARTS = {
   table: { name: t('표'), many: t('표', { n: 2 }), icon: 'i-table' },
   figure: { name: t('그림'), many: t('그림', { n: 2 }), icon: 'i-image' },
+  chart: { name: t('차트'), many: t('차트', { n: 2 }), icon: 'i-chart' },
   box: { name: t('박스글'), many: t('박스글', { n: 2 }), icon: 'i-box' },
   diagram: { name: t('다이어그램'), many: t('다이어그램', { n: 2 }), icon: 'i-diagram' },
   code: { name: t('코드'), many: t('코드', { n: 2 }), icon: 'i-code' },
   math: { name: t('수식'), many: t('수식', { n: 2 }), icon: 'i-math' },
+  task: { name: t('할 일'), many: t('할 일', { n: 2 }), icon: 'i-task', more: true },
+  link: { name: t('링크'), many: t('링크', { n: 2 }), icon: 'i-link', more: true },
+  source: { name: t('출처'), many: t('출처', { n: 2 }), icon: 'i-source', more: true },
 };
 // md(doc.js 가 꾸민 것)와 html 문서의 후보. 박스글은 인용·콜아웃과 html 의 aside·callout 류
 const BOXES = 'blockquote, aside, [role="note"], .callout, .admonition';
 // .image-off: 불러오지 못한 그림 자리(doc.js) — 화면 밖에서 센 모아 보기와 번호가 같게 그림으로 센다
 const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, .math-block, .diagram-error`;
+const MORE_CANDIDATES = 'li, a[href], p';   // 할 일·링크·출처 (모아 보기)
 const HEADS = 'h1[id], h2[id], h3[id], h4[id]';
+// 출처 단락: '자료: …', '출처: …', '※ 자료: …', 'Source: …' (표·그림 아래에 흔하다)
+const SOURCE = /^[\s※*·•\-]*[(\[]?\s*(?:자료|출처|원자료|원문|source|sources|data source)\s*[)\]]?\s*[:：]/i;
+const CHART_LIBS = new Set(['vega-lite', 'vega', 'echarts', 'plotly']);   // Graphviz(dot)는 다이어그램
+
+/** 모아 보기만의 종류 (할 일·링크·출처) — 아니면 null */
+function moreKind(el) {
+  if (el.closest('.front-matter, h1, h2, h3, h4, h5, h6')) return null;
+  const tag = el.tagName;
+  if (tag === 'LI') {
+    if (el.closest('.footnotes')) return el.parentElement?.closest('li') ? null : 'source';   // 각주
+    return el.classList.contains('task-list-item') || el.querySelector(':scope > input[type="checkbox"], :scope > p > input[type="checkbox"]') ? 'task' : null;
+  }
+  if (tag === 'A') {
+    const href = el.getAttribute('href') || '';
+    if (el.closest('.footnotes, .footnote-ref') || el.classList.contains('footnote-backref')) return null;
+    if (el.classList.contains('path-link')) return 'link';   // 본문 속 경로 표기 (pathlink.js)
+    return href && !href.startsWith('#') ? 'link' : null;   // 문서 안 앵커는 빼고
+  }
+  if (tag === 'P' && !el.closest('.footnotes, li, td, th') && SOURCE.test(squeeze(el.textContent))) return 'source';
+  return null;
+}
 
 /** 목차에 넣을 구성 요소면 그 종류, 아니면 null */
 function partKind(el) {
@@ -118,7 +145,8 @@ function partKind(el) {
     return 'figure';
   }
   if (el.matches(BOXES)) return el.parentElement?.closest(BOXES) ? null : 'box';   // 박스 안의 박스는 바깥 것만
-  if (el.matches('pre.mermaid, pre.lec-chart, .diagram-error')) return 'diagram';
+  if (el.matches('pre.lec-chart, .diagram-error[data-chart]')) return CHART_LIBS.has(el.dataset.chart) ? 'chart' : 'diagram';   // 차트 (D56·D62)
+  if (el.matches('pre.mermaid, .diagram-error')) return 'diagram';
   if (el.matches('.code-block')) return 'code';
   if (tag === 'PRE') return el.closest('.code-block, .diagram-error, .math-block') ? null : 'code';   // html 문서의 코드
   if (el.matches('.math-block')) return 'math';
@@ -134,7 +162,7 @@ const CAPTION = /^[<[〈《(（【]?\s*(?:표|그림|도표|차트|사진|다이
 const CAPTION_WORD = [[/^[<[〈《(（【]?\s*(?:표|table|tab\.)/i, 'table'], [/^[<[〈《(（【]?\s*(?:코드|예시|listing|code)/i, 'code'],
   [/^[<[〈《(（【]?\s*(?:그림|도표|차트|사진|다이어그램|fig|chart|diagram)/i, 'figure']];
 const wordKind = (text) => (CAPTION.test(text) ? CAPTION_WORD.find(([re]) => re.test(text))?.[1] : null) || null;
-const fits = (word, kind) => !word || word === (kind === 'diagram' ? 'figure' : kind);
+const fits = (word, kind) => !word || word === (kind === 'diagram' || kind === 'chart' ? 'figure' : kind);
 
 /** node 가 구성 요소를 담은 것이면 그 종류 (캡션 단락이 앞뒤 어느 요소의 것인지 가를 때) */
 function holderKind(node) {
@@ -191,7 +219,7 @@ export function captionOf(kind, el) {
     const holder = loneHolder(el);
     return holder ? captionPara(holder, kind, { before: 'numbered', after: 'any', afterFirst: true }) : null;
   }
-  if (kind === 'diagram') return captionPara(el, kind, { before: 'any', after: 'numbered' });
+  if (kind === 'diagram' || kind === 'chart') return captionPara(el, kind, { before: 'any', after: 'numbered' });
   if (kind === 'code') return captionPara(el.closest('.code-block') || el, kind, { before: 'numbered', after: 'numbered' });
   return null;
 }
@@ -237,6 +265,14 @@ function diagramLabel(el, cap) {
   return { label: [DIAGRAMS[word] || word, clip(title, 30)].filter(Boolean).join(' · '), detail: DIAGRAMS[word] || word };
 }
 
+/** 할 일: 그 항목의 글(안의 목록은 빼고)과 했는지 */
+function taskInfo(li) {
+  const box = li.querySelector(':scope > input[type="checkbox"], :scope > p > input[type="checkbox"]');
+  const copy = li.cloneNode(true);
+  for (const sub of copy.querySelectorAll('ul, ol')) sub.remove();
+  return { text: squeeze(copy.textContent), done: !!box && (box.checked || box.hasAttribute('checked')) };
+}
+
 function codeLabel(el, cap) {
   const lang = squeeze(el.querySelector('.code-lang')?.textContent);
   const code = (el.matches('pre') ? el : el.querySelector('pre'))?.textContent || '';
@@ -250,11 +286,24 @@ function codeLabel(el, cap) {
 function describe(kind, el, n) {
   if (kind === 'box') return boxLabel(el);
   const name = `${PARTS[kind].name} ${n}`;
+  // 모아 보기만의 종류: text 가 이름, label 이 그 아래 설명 (parts.js)
+  if (kind === 'task') {
+    const { text, done } = taskInfo(el);
+    return { name, text, done, label: done ? t('한 것') : t('안 한 것') };
+  }
+  if (kind === 'link') {
+    const text = squeeze(el.textContent) || el.getAttribute('href') || '';
+    return { name, text, href: el.classList.contains('path-link') ? el.dataset.lecHref : el.getAttribute('href') || '', path: el.dataset.path || '' };
+  }
+  if (kind === 'source') {
+    const note = el.tagName === 'LI';
+    return { name: note ? `${t('각주')} ${squeeze(el.id).replace(/\D+/g, '') || n}` : name, text: squeeze(el.textContent).replace(/\s*↩︎?\s*$/, ''), note };
+  }
   const cap = captionOf(kind, el);
   const more = { caption: cap?.text || '', capEl: cap?.el || null };
   if (kind === 'table') return { name, ...tableLabel(el, cap), ...more };
   if (kind === 'figure') return { name, label: figureLabel(el, cap), detail: '', ...more };
-  if (kind === 'diagram') return { name, ...diagramLabel(el, cap), ...more };
+  if (kind === 'diagram' || kind === 'chart') return { name, ...diagramLabel(el, cap), ...more };
   if (kind === 'code') return { name, ...codeLabel(el, cap), ...more };
   return { name, label: clip(el.dataset.tex || el.textContent, 36) };   // 수식: TeX 원문 (markdown.js 의 data-tex)
 }
@@ -268,9 +317,9 @@ const INDENT = [10, 22, 34, 44];   // 제목 수준별 왼쪽 여백 (app.css �
 /**
  * 문서(root — 칸의 본문, html 문서의 body, 화면 밖에서 그린 조각)의 제목과 구성 요소를 문서 순서로 읽는다.
  * {listed: 목차에 넣을 제목들, rows: [{head} | {kind, el, n(종류별 번호), name, label, section(바로 앞 제목)}], counts: 종류별 개수}.
- * 모아 보기(parts.js)도 이것으로 세고 이것으로 찾아가므로 목차와 번호·이름이 같다.
+ * 모아 보기(parts.js)도 이것으로 세고 이것으로 찾아가므로 목차와 번호·이름이 같다. more: 모아 보기만의 종류(할 일·링크·출처)도 센다 — 찾아갈 때도 같게.
  */
-export function readParts(root) {
+export function readParts(root, { more = false } = {}) {
   const all = $$(HEADS, root).filter((h) => !h.closest('.front-matter, .footnotes'));
   const h1s = all.filter((h) => h.tagName === 'H1');
   const title = h1s.length === 1 ? h1s[0] : null;   // 문서 제목(H1 하나)은 목차에서 뺀다
@@ -278,13 +327,13 @@ export function readParts(root) {
   const counts = {};
   const rows = [];
   let section = '';
-  for (const el of $$(`h1, h2, h3, h4, ${CANDIDATES}`, root)) {
+  for (const el of $$(`h1, h2, h3, h4, ${CANDIDATES}${more ? `, ${MORE_CANDIDATES}` : ''}`, root)) {
     if (/^H[1-4]$/.test(el.tagName)) {   // id 가 없는 제목(html 문서를 화면 밖에서 읽을 때)도 절 이름으로는 쓴다
       if (el !== title && !el.closest('.front-matter, .footnotes')) section = squeeze(el.textContent);
       if (listed.has(el)) rows.push({ head: el });
       continue;
     }
-    const kind = partKind(el);
+    const kind = partKind(el) || (more ? moreKind(el) : null);
     if (!kind) continue;
     counts[kind] = (counts[kind] || 0) + 1;
     rows.push({ kind, el, n: counts[kind], section, ...describe(kind, el, counts[kind]) });

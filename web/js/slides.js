@@ -41,20 +41,30 @@ function scalar(value) {
   return v.replace(/\s+#\s.*$/, '');   // 끝 주석 (값이 #fff 처럼 # 로 시작하는 것은 색으로 둔다)
 }
 
-/** key: 값 줄들을 읽는다. 읽을 수 없는 줄이 있으면 strict 일 때 null (주석이 지시어인지 노트인지 가를 때) */
-function readYaml(raw, strict = false) {
+/**
+ * key: 값 줄들을 읽는다 (맨 위 단계만 — 발표 문서의 설정, 모아 보기의 문서 정보 D62). 키는 한글도 된다.
+ * 값: 따옴표 글, true/false, 숫자, `|`·`>` 블록 글, 목록(`[a, b]` 또는 아래 줄의 `- a`). 읽을 수 없는 줄이 있으면 strict 일 때 null
+ * (주석이 지시어인지 노트인지 가를 때)
+ */
+export function readYaml(raw, strict = false) {
   const out = {};
   const lines = String(raw).split(/\r?\n/);
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i];
     if (!line.trim() || /^\s*#/.test(line)) continue;
-    const m = /^([A-Za-z_$][\w$.-]*)\s*:(?:\s+(.*)|\s*)$/.exec(line.trim());
+    const m = /^([\p{L}_$][\p{L}\p{N}_$.-]*)\s*:(?:\s+(.*)|\s*)$/u.exec(line.trim());
     if (!m) {
       if (strict) return null;
       continue;
     }
     let value = m[2] ?? '';
-    if (/^[|>][+-]?\s*$/.test(value.trim())) {   // 블록 글: 아래의 들여 쓴 줄들
+    const flow = /^\[(.*)\]$/.exec(value.trim());
+    if (flow) {   // [a, b]
+      value = flow[1].split(',').map((x) => scalar(x)).filter((x) => x !== '');
+    } else if (!value.trim() && /^\s*-\s+/.test(lines[i + 1] || '')) {   // 아래 줄의 - a, - b
+      value = [];
+      while (i + 1 < lines.length && /^\s*-\s+/.test(lines[i + 1])) value.push(scalar(lines[++i].replace(/^\s*-\s+/, '')));
+    } else if (/^[|>][+-]?\s*$/.test(value.trim())) {   // 블록 글: 아래의 들여 쓴 줄들
       const fold = value.trim()[0] === '>';
       const block = [];
       while (i + 1 < lines.length && (/^\s/.test(lines[i + 1]) || !lines[i + 1].trim())) block.push(lines[++i]);

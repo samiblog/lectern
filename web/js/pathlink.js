@@ -53,7 +53,8 @@ export async function linkPaths(root, docPath, tab) {
     }
   }
   const walker = doc.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => (n.parentElement.closest(`${SKIP}, code`) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
+    // 부모 요소가 없는 글(화면 밖 template 조각의 맨 위 — 블록 사이의 빈칸)은 건너뛴다 (모아 보기, D62)
+    acceptNode: (n) => (!n.parentElement || n.parentElement.closest(`${SKIP}, code`) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
   for (let n = walker.nextNode(); n && wanted.size < MAX_CANDIDATES; n = walker.nextNode()) {
     const hits = [...n.nodeValue.matchAll(PATH)];

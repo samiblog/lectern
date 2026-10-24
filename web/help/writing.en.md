@@ -43,6 +43,12 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 - Long tables keep their header row stuck to the top, so there is no need to split them.
 - **Captions**: a line `Table 1. Title` (or a whole-bold line) directly above a table becomes its name in the contents and in Elements. For pictures put `Figure 1. Title` directly below; for diagrams and charts, directly above. `<Table 3>`, `[Figure 2]` and `Table 3-1.` work too (and the Korean 표·그림 forms).
 
+### To-dos, sources and document info
+
+- Write to-dos as checklists (`- [ ] task`, `- [x]` when done) — Lectern's Elements collects the open ones across the project.
+- Put a table's or figure's source on the line just below it as `Source: organization (year)` — it shows under Elements → Sources. Footnotes (`[^1]`) are collected there too.
+- Give plan, decision and report documents the same front matter keys, such as `status`, `owner`, `updated` (YYYY-MM-DD) and `tags: [a, b]` — Elements → Doc info groups documents by each key's values.
+
 ### Callouts
 
 Put the kind on the first line of a quote. There are exactly five.

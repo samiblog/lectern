@@ -9,9 +9,13 @@
 // - 누르면 그 문서를 열고 목차와 같은 방법으로 그 자리로 간다 (접힌 절은 펴고 잠깐 테두리).
 // - 여는 곳: 이 탭, 폴더 개요의 '모아 보기' 버튼, 트리의 폴더 우클릭, '코드'·'자료' 목록의 폴더 우클릭 ('parts' 이벤트 {path, kind, mode}).
 // - 모을 것·종류·범위·거르기·순서·스크롤은 프로젝트 탭마다 남긴다 (tab.side.parts).
+// - 차트·할 일·링크·출처 (D62): 차트는 그림처럼 작은 그림 격자 — 보일 때 화면 밖에서 그 차트를 그려(charts.js) 넣는다.
+//   할 일·링크·출처는 목차에는 없고 여기서만 (readParts 의 more). 종류 아래 작은 단추로 '안 한 것'·'깨진 것'·'각주' 등을 고른다.
+//   링크는 대상(문서·코드·자료·폴더·인터넷)을 가르고, 프로젝트 안의 파일이 없으면 '깨짐' (서버에 묻는다 — /api/exists).
+// - 문서 정보 (D62): 맨 앞 설정(frontmatter)의 키마다 값으로 문서를 묶는다 ('문서 정보' — status·author·date 등).
 
 import { S, on, emit } from './store.js';
-import { getText } from './api.js';
+import { getText, postJSON } from './api.js';
 import { rangeText } from './docmenu.js';
 import { showMenu } from './ui.js';
 import { navigate } from './nav.js';
@@ -20,9 +24,12 @@ import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, PARTS } from './toc.js';
 import { renderMarkdown } from './markdown.js';
-import { sanitizeHtml, prepareParts, loadImage, imageKey } from './doc.js';
+import { sanitizeHtml, prepareParts, loadImage, imageKey, resolveRef } from './doc.js';
+import { linkPaths } from './pathlink.js';
+import { renderCharts } from './charts.js';
+import { readYaml } from './slides.js';
 import {
-  $, $$, esc, docUrl, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText,
+  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -30,8 +37,18 @@ const KINDS = Object.keys(PARTS);
 const MAX_SHOWN = 800;     // 목록에 그리는 항목 수 (넘으면 거르기로 좁히라고 알린다)
 const PARALLEL = 4;        // 문서를 함께 읽는 수
 
-// mode: parts(문서 속 요소) | files(파일 종류, D50). kind: 문서 속 요소의 종류, ftype: 파일 형식 ('묶음:형식' — 'others:pdf')
-const DEFAULT = { mode: 'parts', kind: 'table', ftype: null, scope: '', filter: '', order: 'tree', scroll: 0 };
+// mode: parts(문서 속 요소) | meta(문서 정보, D62) | files(파일 종류, D50). kind: 문서 속 요소의 종류, ftype: 파일 형식 ('묶음:형식' — 'others:pdf'),
+// sub: 종류 아래 단추 (할 일·링크·출처), mkey: 문서 정보의 키
+const DEFAULT = { mode: 'parts', kind: 'table', ftype: null, scope: '', filter: '', order: 'tree', scroll: 0, sub: { task: 'open', link: 'all', source: 'all' }, mkey: null };
+
+// 종류 아래 단추: [키, 이름, 맞는지]
+const SUBS = {
+  task: [['open', t('안 한 것'), (it) => !it.done], ['done', t('한 것'), (it) => it.done], ['all', t('모두'), () => true]],
+  link: [['all', t('모두'), () => true], ['broken', t('깨진 것'), (it) => it.broken], ['web', t('인터넷'), (it) => it.type === 'web' || it.type === 'mail'],
+    ['local', t('프로젝트 안'), (it) => ['doc', 'code', 'file', 'dir'].includes(it.type)]],
+  source: [['all', t('모두'), () => true], ['source', t('출처'), (it) => !it.note], ['note', t('각주'), (it) => it.note]],
+};
+const LINK_TYPES = { doc: t('문서'), code: t('코드'), file: t('자료'), dir: t('폴더'), web: t('인터넷'), mail: t('메일'), outside: t('프로젝트 밖') };
 let state = { ...DEFAULT };
 let scanning = null;       // 지금 읽는 중인 {tab, scope, done, total}
 let thumbs = null;         // 그림 칸이 보일 때 그림을 불러오는 IntersectionObserver
@@ -48,28 +65,73 @@ function linesOf(...els) {
   return spans.length ? [Math.min(...spans.map((x) => x[0])), Math.max(...spans.map((x) => x[1] || x[0]))] : null;
 }
 
-/** 문서 하나를 화면 밖에서 읽어 구성 요소 목록으로: [{kind, n, name, label, caption, detail, section, lines, src, alt}] (src·alt 는 그림) */
+const fileKindOf = (path) => (isMd(path) || isHtml(path) ? 'doc' : isCode(basename(path)) ? 'code' : 'file');
+
+/** 링크의 대상: {text, target(보일 주소), type(doc·code·file·dir·web·mail·outside), local(확인할 프로젝트 안 경로)} */
+function linkTarget(r, base, tab) {
+  const text = r.text;
+  if (r.path) return { text, target: r.href, type: fileKindOf(r.path) };   // 본문 속 경로 표기 — 있는 것만 링크가 된다 (pathlink.js)
+  const ref = resolveRef(r.href, base, tab);
+  if (ref.kind === 'external') return { text, target: ref.url, type: /^mailto:/i.test(ref.url) ? 'mail' : 'web' };
+  if (ref.kind === 'local') {
+    if (ref.isDir || ref.path === '' || tab.dirs.has(ref.path)) return { text, target: `${ref.path}/`, type: 'dir' };
+    let hash = ref.hash || '';
+    try { hash = decodeURIComponent(hash); } catch { /* 그대로 */ }
+    return { text, target: `${ref.path}${hash}`, type: fileKindOf(ref.path), local: tab.fileMap.has(ref.path) ? '' : ref.path };
+  }
+  return { text, target: r.href, type: 'outside' };
+}
+
+/** 프로젝트 안을 가리키는 링크 가운데 트리에 없는 것이 실제로 있는지 서버에 묻는다 — 없으면 '깨짐'. 묻지 못하면 그대로 둔다 */
+async function checkLinks(tab, items) {
+  const paths = [...new Set(items.map((it) => it.local).filter(Boolean))].slice(0, 500);
+  if (!paths.length) return;
+  let found;
+  try {
+    ({ found } = await postJSON('/api/exists', { p: tab.id, paths, base: '' }));
+  } catch {
+    return;
+  }
+  for (const it of items) if (it.local) it.broken = !found[it.local];
+}
+
+/**
+ * 문서 하나를 화면 밖에서 읽어 {items: 구성 요소 [{kind, n, name, label, caption, detail, section, lines, …}], meta: 맨 앞 설정}.
+ * 그림은 src·alt, 차트는 chart(라이브러리)·code(원문), 할 일은 text·done, 링크는 text·target·type·broken, 출처는 text·note
+ */
 async function readDoc(tab, path) {
   const text = await getText(docUrl(tab, path));
   let root;
+  let meta = null;
   if (isHtml(path)) {
     root = new DOMParser().parseFromString(text, 'text/html').body;   // 스크립트는 돌지 않고 그림도 부르지 않는다
   } else {
+    const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
     const tpl = document.createElement('template');   // template 안은 그림을 부르지 않는다 (정화가 src 도 data-src 로 뗀다)
-    tpl.innerHTML = sanitizeHtml(renderMarkdown(text, { math: S.config.math !== false }).html);
+    tpl.innerHTML = sanitizeHtml(html);
     root = tpl.content;
     prepareParts(root);
+    await linkPaths(root, path, tab);   // 본문 속 경로 표기도 본문(doc.js)처럼 링크로 — 링크 번호가 본문과 같게
+    meta = frontMatter ? readYaml(frontMatter) : null;
   }
-  return readParts(root).rows.filter((r) => r.kind).map((r) => {
-    const item = { kind: r.kind, n: r.n, name: r.name, label: r.label, caption: r.caption || '', detail: r.detail || '', section: r.section,
+  const base = new URL(docUrl(tab, path), location.origin);
+  const items = readParts(root, { more: true }).rows.filter((r) => r.kind).map((r) => {
+    const item = { kind: r.kind, n: r.n, name: r.name, label: r.label || '', caption: r.caption || '', detail: r.detail || '', section: r.section,
       lines: linesOf(r.el, r.capEl) };
     if (r.kind === 'figure') {
       const img = r.el.tagName === 'IMG' ? r.el : r.el.querySelector('img');
       item.src = img?.getAttribute('data-src') || img?.getAttribute('src') || '';
       item.alt = img?.getAttribute('alt') || '';
-    }
+    } else if (r.kind === 'chart') {
+      item.chart = r.el.dataset.chart;
+      item.code = r.el.dataset.source ?? r.el.textContent;   // 화면 밖에서는 그리지 않아 원문 그대로
+    } else if (r.kind === 'task') Object.assign(item, { text: r.text, done: r.done });
+    else if (r.kind === 'link') Object.assign(item, linkTarget(r, base, tab));
+    else if (r.kind === 'source') Object.assign(item, { text: r.text, note: r.note });
     return item;
   });
+  await checkLinks(tab, items.filter((it) => it.kind === 'link'));
+  return { items, meta };
 }
 
 /** 범위 안의 문서를 읽는다 (바뀐 것만). 읽는 동안 조금씩 다시 그린다. 다른 탭·범위로 새로 읽기 시작하면 멈춘다 */
@@ -86,13 +148,13 @@ async function scan(tab, scope) {
   const worker = async () => {
     while (next < todo.length && scanning === job) {
       const f = todo[next++];
-      let items;
+      let got;
       try {
-        items = await readDoc(tab, f.path);
+        got = await readDoc(tab, f.path);
       } catch {
-        items = [];   // 읽는 사이 지워진 문서 등 — 다음 변경 때 다시 읽는다
+        got = { items: [], meta: null };   // 읽는 사이 지워진 문서 등 — 다음 변경 때 다시 읽는다
       }
-      tab.partsCache.set(f.path, { mtime: f.mtime, items });
+      tab.partsCache.set(f.path, { mtime: f.mtime, ...got });
       job.done += 1;
       redraw();
     }
@@ -119,17 +181,34 @@ function matcher(text) {
 }
 
 /** 항목의 마우스 설명: 캡션(있으면)·이름·설명·절·문서 */
-const itemTip = (file, item) => [item.caption, `${item.name}${item.label ? ` · ${item.label}` : ''}`, item.section && t('절: {name}', { name: item.section }), file.path]
-  .filter(Boolean).join('\n');
+const itemTip = (file, item) => [item.text, item.caption, `${item.name}${item.label ? ` · ${item.label}` : ''}`, item.target,
+  item.section && t('절: {name}', { name: item.section }), file.path].filter(Boolean).join('\n');
 
-/** 캡션이 있으면 캡션을 이름으로(그 아래에 '표 3 · 6행 2열'), 없으면 '표 3' 과 설명 (D61) */
+/** 행의 이름과 그 아래 설명. 캡션이 있으면 캡션이 이름(그 아래에 '표 3 · 6행 2열' — D61), 할 일·링크·출처는 그 글이 이름 (D62) */
+function itemTexts(item) {
+  if (item.kind === 'task') return { main: item.text || item.name, sub: '' };
+  if (item.kind === 'link') return { main: item.text || item.target, sub: `${LINK_TYPES[item.type] || ''} · ${item.target}` };
+  if (item.kind === 'source') return { main: item.text, sub: item.note ? item.name : t('출처') };
+  if (item.caption) return { main: item.caption, sub: [item.name, item.detail].filter(Boolean).join(' · ') };
+  return { main: item.name, sub: item.label };
+}
+
 function itemRow(file, item, extra = '') {
-  const main = item.caption || item.name;
-  const sub = item.caption ? [item.name, item.detail].filter(Boolean).join(' · ') : item.label;
-  return `<div class="pt-item${item.caption ? ' has-cap' : ''}" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
+  const { main, sub } = itemTexts(item);
+  const long = item.caption || item.text;
+  const cls = `pt-item${long ? ' has-cap' : ''}${item.done ? ' pt-done' : ''}`;
+  const bad = item.broken ? `<span class="pt-bad">${esc(t('깨짐'))}</span>` : '';
+  return `<div class="${cls}" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
     + `<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[item.kind].icon}"/></svg>`
-    + `<span class="pt-text"><span class="pt-name">${esc(main)}</span>${sub ? `<span class="pt-label">${esc(sub)}</span>` : ''}`
+    + `<span class="pt-text"><span class="pt-name">${esc(main)}</span>${sub || bad ? `<span class="pt-label">${bad}${esc(sub)}</span>` : ''}`
     + `${item.section ? `<span class="pt-sec">${esc(item.section)}</span>` : ''}</span>${extra}</div>`;
+}
+
+/** 차트의 작은 그림 칸 — 그림은 보일 때 그린다 (drawChartThumb) */
+function chartThumb(file, item) {
+  return `<div class="pt-thumb pt-chart" tabindex="0" data-doc="${esc(file.path)}" data-kind="chart" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
+    + `<div class="pt-pic" data-chart="${esc(item.chart || '')}"></div>`
+    + `<span class="pt-cap">${esc(item.caption || item.label || item.name)}</span></div>`;
 }
 
 function thumb(file, item, others) {
@@ -146,7 +225,7 @@ function renderMode() {
     b.classList.toggle('active', on);
     b.setAttribute('aria-selected', String(on));
   }
-  $('#lec-parts-filter').placeholder = state.mode === 'files' ? t('이름·경로로 거르기') : t('이름·절·문서로 거르기');
+  $('#lec-parts-filter').placeholder = state.mode === 'files' ? t('이름·경로로 거르기') : state.mode === 'meta' ? t('문서·값으로 거르기') : t('이름·절·문서로 거르기');
 }
 
 /** 범위와 순서 (두 모드가 같이 쓴다) */
@@ -170,8 +249,13 @@ function render() {
     return;
   }
   renderBar(tab);
+  $('#lec-parts-sub').hidden = true;
   if (state.mode === 'files') {
     renderFiles(tab);
+    return;
+  }
+  if (state.mode === 'meta') {
+    renderMeta(tab);
     return;
   }
   const groups = collected(tab);
@@ -186,6 +270,16 @@ function render() {
   $('#lec-parts-kinds').innerHTML = KINDS.map((k) => `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === state.kind}"`
     + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].many)}`
     + `<span class="n">${counts[k]}</span></button>`).join('');
+  // 종류 아래 단추 (할 일·링크·출처 — D62): 범위 안의 그 종류를 단추마다 센다
+  const subs = SUBS[state.kind];
+  const sub = subs?.find(([k]) => k === state.sub[state.kind]) || subs?.[0];
+  if (subs) {
+    const of = (test) => groups.reduce((n, g) => n + g.items.filter((it) => it.kind === state.kind && test(it)).length, 0);
+    $('#lec-parts-sub').innerHTML = subs.map(([k, label, test]) => `<button type="button" data-sub="${k}" aria-pressed="${k === sub[0]}"`
+      + ` class="${k === sub[0] ? 'active' : ''}">${esc(label)}<span class="n">${of(test)}</span></button>`).join('');
+    $('#lec-parts-sub').hidden = false;
+  }
+  const subTest = sub ? sub[2] : () => true;
   // 목록
   const match = matcher(state.filter);
   const seen = new Map();   // 그림 → 처음 보인 칸의 '다른 문서' 목록 (같은 그림을 한 번만)
@@ -194,8 +288,8 @@ function render() {
   const html = [];
   for (const { file, items } of groups) {
     const title = file.title || basename(file.path);
-    let mine = items.filter((it) => it.kind === state.kind
-      && match(it.name, it.label, it.caption, it.section, title, file.path));
+    let mine = items.filter((it) => it.kind === state.kind && subTest(it)
+      && match(it.name, it.label, it.caption, it.text, it.target, it.section, title, file.path));
     if (!mine.length) continue;
     let body;
     if (state.kind === 'figure') {
@@ -213,6 +307,8 @@ function render() {
       });
       if (!mine.length) continue;
       body = { cells };
+    } else if (state.kind === 'chart') {
+      body = { charts: mine };
     }
     if (shown >= MAX_SHOWN) break;   // 같은 그림의 '+N곳'은 여기까지 읽은 문서로 센다
     shown += mine.length;
@@ -222,9 +318,11 @@ function render() {
     html.push({ head, file, mine, body });
   }
   keepFocus(list, () => {
-    list.innerHTML = html.map(({ head, file, mine, body }) => (body
-      ? `${head}<div class="pt-grid">${body.cells.map(([it, others]) => thumb(file, it, others)).join('')}</div>`
-      : head + mine.map((it) => itemRow(file, it)).join(''))).join('');
+    list.innerHTML = html.map(({ head, file, mine, body }) => {
+      if (body?.charts) return `${head}<div class="pt-grid pt-charts">${body.charts.map((it) => chartThumb(file, it)).join('')}</div>`;
+      if (body) return `${head}<div class="pt-grid">${body.cells.map(([it, others]) => thumb(file, it, others)).join('')}</div>`;
+      return head + mine.map((it) => itemRow(file, it)).join('');
+    }).join('');
   });
   watchThumbs(tab);
   // 알림: 개수, 거른 결과, 읽는 중
@@ -234,12 +332,71 @@ function render() {
   let info;
   if (!total) info = reading || t('이 범위에는 {name}{josa} 없습니다', { name, josa: josa(name, '이', '가') });   // i18n-ok (조사)
   else {
-    info = state.filter ? t('거른 결과 {shown}개 (모두 {total}개)', { shown, total })
+    info = state.filter || (sub && sub[0] !== 'all') ? t('거른 결과 {shown}개 (모두 {total}개)', { shown, total })
       : `${t('문서 {n}개', { n: docs })}, ${t('{kind} {n}개', { kind: (total === 1 ? kind.name : kind.many).toLowerCase(), n: total })}`;
     if (shown >= MAX_SHOWN) info += ` — ${t('처음 {n}개만, 거르기로 좁히세요', { n: MAX_SHOWN })}`;
     if (reading) info += ` · ${reading}`;
   }
   $('#lec-parts-info').textContent = info;
+}
+
+// ---- 문서 정보 (D62) ----------------------------------------------------------
+// 맨 앞 설정(frontmatter)의 키마다 값으로 문서를 묶는다. 위 단추는 키(그 키가 있는 문서 수), 목록은 값마다 문서들 —
+// 그 키가 없는 문서(맨 앞 설정은 있는)는 끝에 '값 없음'. 발표 문서의 Marp 설정과 제목·요약처럼 문서마다 다른 긴 값은 키로 보이지 않는다.
+
+const META_SKIP = new Set(['marp', 'style', 'theme', 'size', 'headingDivider', 'paginate', 'header', 'footer', 'class', 'backgroundColor',
+  'backgroundImage', 'backgroundPosition', 'backgroundRepeat', 'backgroundSize', 'color', 'math', 'title', 'description', 'lang']);
+const DATE_LIKE = /^\d{4}(?:[-./]\d{1,2}){0,2}/;
+
+const metaValues = (v) => (Array.isArray(v) ? v : [v]).map((x) => String(x ?? '').trim()).filter((x) => x && x.length <= 120);
+
+function renderMeta(tab) {
+  const docs = tab.files.filter((f) => inScope(f.path, state.scope) && tab.partsCache?.get(f.path)?.meta)
+    .map((f) => ({ file: f, meta: tab.partsCache.get(f.path).meta }))
+    .filter((d) => Object.keys(d.meta).some((k) => !META_SKIP.has(k)));   // 발표 문서의 Marp 설정뿐인 것 등은 빼고
+  if (state.order === 'recent') docs.sort((a, b) => b.file.mtime - a.file.mtime);
+  const counts = new Map();
+  for (const d of docs) {
+    for (const [k, v] of Object.entries(d.meta)) if (!META_SKIP.has(k) && metaValues(v).length) counts.set(k, (counts.get(k) || 0) + 1);
+  }
+  const keys = [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a) || natCompare(a, b));
+  if (!counts.has(state.mkey)) state.mkey = keys[0] || null;
+  $('#lec-parts-kinds').innerHTML = keys.map((k) => `<button type="button" role="tab" data-mkey="${esc(k)}" aria-selected="${k === state.mkey}"`
+    + ` class="${k === state.mkey ? 'active' : ''}">${esc(k)}<span class="n">${counts.get(k)}</span></button>`).join('');
+  const reading = scanning?.tab === tab ? t('문서 읽는 중 {done}/{total}', { done: scanning.done, total: scanning.total }) : '';
+  const list = $('#lec-parts-list');
+  if (!state.mkey) {
+    list.innerHTML = '';
+    $('#lec-parts-info').textContent = reading || t('이 범위의 문서에는 맨 앞 설정(frontmatter)이 없습니다');
+    return;
+  }
+  const match = matcher(state.filter);
+  const byValue = new Map();
+  const none = [];
+  for (const d of docs) {
+    const title = d.file.title || basename(d.file.path);
+    const values = metaValues(d.meta[state.mkey]);
+    if (!values.length) {
+      if (match(title, d.file.path)) none.push(d.file);
+      continue;
+    }
+    for (const v of values) {
+      if (!match(title, d.file.path, v)) continue;
+      if (!byValue.has(v)) byValue.set(v, []);
+      byValue.get(v).push(d.file);
+    }
+  }
+  const values = [...byValue.keys()];
+  const dates = values.length && values.every((v) => DATE_LIKE.test(v));
+  const numbers = values.length && values.every((v) => /^-?\d+(\.\d+)?$/.test(v));
+  values.sort(dates ? (a, b) => natCompare(b, a) : numbers ? (a, b) => a - b : (a, b) => byValue.get(b).length - byValue.get(a).length || natCompare(a, b));
+  const row = (f) => `<div class="pt-doc pt-mdoc" tabindex="0" data-doc="${esc(f.path)}" title="${esc(f.path)}">`
+    + `<span class="label">${esc(f.title || basename(f.path))}</span>${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
+  const group = (label, files, cls = '') => `<div class="pt-val${cls}"><span class="label">${esc(label)}</span><span class="n">${files.length}</span></div>${files.map(row).join('')}`;
+  keepFocus(list, () => {
+    list.innerHTML = values.map((v) => group(v, byValue.get(v))).join('') + (none.length ? group(t('값 없음'), none, ' none') : '');
+  });
+  $('#lec-parts-info').textContent = [`${t('문서 {n}개', { n: docs.length })}, ${t('값 {n}가지', { n: values.length })}`, reading].filter(Boolean).join(' · ');
 }
 
 // ---- 파일 종류 (D50) ----------------------------------------------------------
@@ -346,6 +503,10 @@ function watchThumbs(tab) {
         pic.append(img);
         continue;
       }
+      if (pic.dataset.chart !== undefined) {   // 차트 (D62) — 그려서
+        drawChartThumb(pic, tab);
+        continue;
+      }
       const docPath = pic.closest('.pt-thumb')?.dataset.doc;
       if (!pic.dataset.src || !docPath || tab !== S.tab) continue;
       const img = document.createElement('img');
@@ -357,6 +518,39 @@ function watchThumbs(tab) {
     }
   }, { root: $('#lec-parts-list'), rootMargin: '200px 0px' });
   for (const pic of $$('#lec-parts-list .pt-pic:empty')) thumbs.observe(pic);
+}
+
+let chartQueue = Promise.resolve();   // 차트는 하나씩 그린다 (라이브러리가 무겁다)
+
+/**
+ * 차트의 작은 그림 (D62): 화면 밖 무대(560px)에서 본문과 같은 규칙으로 그려(charts.js — 문서 기준 상대경로의 CSV 도) SVG 를 칸에 넣는다.
+ * 그린 것은 항목에 남겨 두고 스타일이 같으면 다시 쓴다 (스타일을 바꾸면 그 색으로 다시 그린다)
+ */
+function drawChartThumb(pic, tab) {
+  const found = itemOf(pic.closest('.pt-thumb'));
+  if (!found) return;
+  const { path, item } = found;
+  const theme = document.documentElement.dataset.theme || '';
+  if (item.svg && item.svgTheme === theme) {
+    pic.innerHTML = item.svg;
+    return;
+  }
+  chartQueue = chartQueue.then(async () => {
+    if (!pic.isConnected || tab !== S.tab) return;
+    const stage = document.createElement('div');
+    stage.className = 'lec-stage';
+    stage.style.width = '560px';
+    stage.innerHTML = `<pre class="lec-chart" data-chart="${esc(item.chart)}">${esc(item.code || '')}</pre>`;
+    document.body.append(stage);
+    try {
+      await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });
+    } catch { /* 아래에서 알린다 */ } finally {
+      stage.remove();
+    }
+    const svg = stage.querySelector('pre.lec-chart > svg');
+    if (svg) Object.assign(item, { svg: svg.outerHTML, svgTheme: theme });
+    if (pic.isConnected) pic.innerHTML = svg ? item.svg : `<span class="image-off">${esc(t('차트를 그리지 못했습니다'))}</span>`;
+  });
 }
 
 /** 범위의 문서를 (바뀐 것만) 읽고 그린다 */
@@ -399,12 +593,13 @@ async function partMenu(el, x, y) {
   if (!found) return;
   const { path, item } = found;
   const tab = S.tab;
-  const what = item.caption || `${item.name}${item.label ? ` · ${item.label}` : ''}`;
   const range = item.lines;
-  const ref = `@${path}${range ? ` ${rangeText(range)}` : ''}${item.caption ? ` ('${item.caption}')` : ''}`;
+  const note = item.caption || (item.kind === 'task' || item.kind === 'source' ? (item.text.length > 40 ? `${item.text.slice(0, 39)}…` : item.text) : '');
+  const ref = `@${path}${range ? ` ${rangeText(range)}` : ''}${note ? ` ('${note}')` : ''}`;
   const items = [{ header: `${item.name} · ${path}` },
     { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => openItem(el) },
     { label: t('Claude용 위치 복사'), hint: ref, action: () => copy(ref, ref), term: `${ref} ` }];
+  if (item.kind === 'link') items.push({ label: t('링크 주소 복사'), hint: item.target, action: () => copy(item.target, item.target), term: item.target });
   if (range && !isHtml(path)) {
     let source = '';
     try {
@@ -423,7 +618,7 @@ async function openItem(el) {
   const here = S.view?.type === 'doc' && S.view.path === path;
   if (!here && !(await navigate({ type: 'doc', path }))) return;
   if (!el.dataset.kind) return;   // 문서 머리줄
-  const row = readParts(docRoot()).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
+  const row = readParts(docRoot(), { more: true }).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
   if (row) goToPart(row.el);
 }
 
@@ -468,6 +663,15 @@ export function initParts() {
       render();
       return;
     }
+    const m = e.target.closest('button[data-mkey]');   // 문서 정보의 키 (D62)
+    if (m) {
+      if (m.dataset.mkey !== state.mkey) {
+        state.mkey = m.dataset.mkey;
+        $('#lec-parts-list').scrollTop = 0;
+        render();
+      }
+      return;
+    }
     const b = e.target.closest('button[data-kind]');
     if (!b || b.dataset.kind === state.kind) return;
     state.kind = b.dataset.kind;
@@ -508,11 +712,19 @@ export function initParts() {
   list.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.pt-item, .pt-thumb, .pt-doc')) openItem(e.target);
   });
-  list.addEventListener('contextmenu', (e) => {   // 구성 요소의 우클릭 — 문서 머리줄·파일 행은 각자 (bindFileRows)
-    const el = e.target.closest('.pt-item, .pt-thumb');
+  list.addEventListener('contextmenu', (e) => {   // 구성 요소의 우클릭 — 파일 행은 각자 (bindFileRows)
+    const el = e.target.closest('.pt-item, .pt-thumb, .pt-doc');
     if (!el) return;
     e.preventDefault();
-    partMenu(el, e.clientX, e.clientY);
+    if (el.matches('.pt-doc')) showMenu(e.clientX, e.clientY, [{ header: el.dataset.doc }, ...pathMenuItems(el.dataset.doc, true)]);   // 문서 머리줄·문서 정보의 문서
+    else partMenu(el, e.clientX, e.clientY);
+  });
+  $('#lec-parts-sub').addEventListener('click', (e) => {   // 종류 아래 단추 (D62)
+    const b = e.target.closest('button[data-sub]');
+    if (!b) return;
+    state.sub = { ...state.sub, [state.kind]: b.dataset.sub };
+    $('#lec-parts-list').scrollTop = 0;
+    render();
   });
   on('panel', (name) => { if (name === 'parts') refresh(); });
   on('parts', openParts);

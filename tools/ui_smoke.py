@@ -1969,6 +1969,43 @@ def run(headed: bool) -> None:
                   and doc_state['toggle'] == '슬라이드로 보기' and not doc_state['present'] and back_deck,
                   f"인쇄·PDF 는 한 장에 한 쪽(1280×720), '문서로 보기'는 보통 문서(바뀐 곳으로 잡지 않음)·다시 슬라이드 ({pages}, {boxes}, {doc_state})")
 
+            print('[모아 보기 더]')   # D62 — 차트(작은 그림)·할 일·링크·출처, 문서 정보(frontmatter)
+            page.click('.side-tabs button[data-tab="parts"]')
+            wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && document.querySelector('#lec-parts-info').textContent !== ''", 30000)
+            mk = lambda: page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-parts-kinds button')]
+              .map(b => [b.dataset.kind || b.dataset.mkey, +b.querySelector('.n').textContent]))''')
+            more_kinds = mk()
+            page.click('#lec-parts-kinds button[data-kind="chart"]')
+            chart_thumbs = wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-chart .pt-pic svg').length >= 3", 40000)
+            shot('23-parts-charts')
+            page.click('#lec-parts-kinds button[data-kind="task"]')
+            task_sub = page.evaluate("[...document.querySelectorAll('#lec-parts-sub button')].map(b => b.dataset.sub + (b.classList.contains('active') ? '*' : ''))")
+            open_tasks = page.locator('#lec-parts-list .pt-item.pt-done').count() == 0 and page.locator('#lec-parts-list .pt-item').count() > 0
+            page.click('#lec-parts-sub button[data-sub="done"]')
+            done_tasks = page.locator('#lec-parts-list .pt-item').count() == page.locator('#lec-parts-list .pt-item.pt-done').count() > 0
+            page.click('#lec-parts-sub button[data-sub="open"]')
+            page.click('#lec-parts-kinds button[data-kind="link"]')
+            links = page.evaluate('''() => ({ n: document.querySelectorAll('#lec-parts-list .pt-item').length,
+              bad: document.querySelectorAll('#lec-parts-list .pt-bad').length,
+              code: [...document.querySelectorAll('#lec-parts-list .pt-label')].some(l => l.textContent.startsWith('코드 · src/report.py')) })''')
+            page.click('#lec-parts-kinds button[data-kind="source"]')
+            notes = page.evaluate("[...document.querySelectorAll('#lec-parts-list .pt-label')].map(l => l.textContent)")
+            page.click('#lec-parts-mode button[data-mode="meta"]')
+            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-mkey]')", 5000)
+            meta_keys = list(mk())
+            page.click('#lec-parts-kinds button[data-mkey="status"]')
+            meta_rows = page.evaluate("[...document.querySelectorAll('#lec-parts-list .pt-val .label, #lec-parts-list .pt-mdoc .label')].map(e => e.textContent)")
+            shot('23-parts-meta')
+            page.click('#lec-parts-mode button[data-mode="parts"]')
+            page.click('#lec-parts-kinds button[data-kind="table"]')
+            page.click('.side-tabs button[data-tab="files"]')
+            check(all(more_kinds.get(k, 0) > 0 for k in ('chart', 'task', 'link', 'source')) and more_kinds['diagram'] > 0 and chart_thumbs
+                  and task_sub == ['open*', 'done', 'all'] and open_tasks and done_tasks and links['n'] > 10 and links['bad'] == 0 and links['code']
+                  and any(n.startswith('각주') for n in notes) and 'status' in meta_keys and 'tags' in meta_keys
+                  and meta_rows[:2] == ['진행 중', '리서치 자동화 구현 계획'] and '구리 시장 2분기 리뷰' not in meta_rows,
+                  f"모아 보기의 차트(작은 그림)·할 일(안 한 것/한 것)·링크(코드 위치·깨짐 없음)·출처(각주), 문서 정보(frontmatter 키·값) "
+                  f"({more_kinds}, {chart_thumbs}, {task_sub}, {links}, {notes[:2]}, {meta_keys}, {meta_rows[:4]})")
+
             tab_el(1).locator('.tab-close').click()   # 예제 탭을 닫고 점검 프로젝트로
             back = n_tabs(1) and tree_root() == 'samples'
             check(readme and charts_ok and len(chart_errs) == 1 and '함수는 쓸 수 없습니다' in chart_errs[0] and mermaid_ok and img_ok

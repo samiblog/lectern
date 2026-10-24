@@ -73,13 +73,19 @@ The **Files** tab is split into three groups.
 
 ### Elements
 
-- Choose **In documents** or **File types** at the top.
-- In documents: collects the tables, figures, callouts, diagrams, code and math across the project, by type and by document. Pick a type with the buttons (such as 'Tables 7').
+- Choose **In documents**, **Doc info** or **File types** at the top.
+- In documents: collects the tables, figures, charts, callouts, diagrams, code, math, to-dos, links and sources across the project, by type and by document. Pick a type with the buttons (such as 'Tables 7').
+  - **Charts** (Vega-Lite, ECharts, Plotly) are collected as thumbnails, like figures — each is drawn when it scrolls into view. Graphviz and Mermaid are diagrams.
+  - **To-dos** are the checklists in documents (`- [ ]`, `- [x]`). The buttons below choose **Open** (the default), Done or All.
+  - **Links** lists the links in documents and paths such as `src/x.py:42`, with their target (document, code, other file, folder or web). A link whose file does not exist is marked **Broken** in red — the **Broken** button below shows only those.
+  - **Sources** are lines such as 'Source: …' under tables and figures (and their Korean equivalents), plus footnotes.
+  - To-dos, links and sources are not shown in the contents (only here).
 - When a table, figure or diagram has a **caption**, the caption is shown as its name, with the number and size below (such as 'Table 3 · 6 rows 2 columns'). A caption is a line such as 'Table 1. …', '<Table 2>' or '[Figure 1]' (or the same forms in Korean) directly above a table or below a picture, a short whole-bold line, or `<caption>`/`<figcaption>` in HTML. Without one, tables show their header row and pictures their alt text.
 - Click an item to go to that place in its document; it is outlined briefly.
 - **Right-click** an item for Show in document, **Copy location for Claude** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
+- Doc info: a button for each key in the documents' front matter (such as `status: review`, `owner: research`, `tags: [a, b]`); documents are grouped by the values of the chosen key (dates newest first). Documents without that key are under 'No value' at the end. Click a document to open it; right-click to copy its `@path` or put it into the terminal.
 - File types: each group — documents, code and other files — gets a button per format, such as 'PDF 2', 'Excel 3', 'PNG 10', 'PY 12' or 'IPYNB 2', and the files of the chosen format are collected. Excel, PowerPoint, Word and Hangul files count as one format whatever their extension. Image files appear as thumbnails. The 'Tree order' button switches to the most recently changed files first.
 - Right-click a folder in the 'Code' or 'Other files' list and choose **Collect the files in this folder by type** to collect just that folder.
 
