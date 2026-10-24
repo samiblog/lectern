@@ -25,7 +25,7 @@
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { fullPath, labelOf, tipOf, pathMenuItems, hasChangedInside, shellWord } from './tree.js';
-import { fileIcon, folderIcon, isCode } from './icons.js';
+import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare } from './util.js';
 import { t } from './i18n.js';
@@ -284,7 +284,8 @@ function revealCurrent() {
   listEl(k).querySelector('.row.active')?.scrollIntoView({ block: 'nearest' });
 }
 
-const isCodeFile = (n) => n?.type === 'file' && !n.doc && isCode(n.name);
+// 코드 화면에서 보는 파일 — 코드와 csv·tsv·txt·log (D60). 한 번 누르면 Lectern 에서, 두 번 누르면 편집기·기본 앱
+const isViewFile = (n) => n?.type === 'file' && !n.doc && isViewable(n.name);
 
 // ---- 읽기 ---------------------------------------------------------------------
 
@@ -416,9 +417,9 @@ function activate(k, path) {
   else openExternal(path);
 }
 
-/** Enter: 코드는 읽기 화면(한 번 누르기와 같게), 그 밖은 두 번 누르기와 같게 */
+/** Enter: 코드·csv·txt 는 읽기 화면(한 번 누르기와 같게), 그 밖은 두 번 누르기와 같게 */
 function enter(k, path) {
-  if (isCodeFile(view(state(), k).index.get(path))) emit('open', { type: 'code', path });
+  if (isViewFile(view(state(), k).index.get(path))) emit('open', { type: 'code', path });
   else activate(k, path);
 }
 
@@ -437,9 +438,10 @@ function copyItems(n) {
 /** 코드·자료 파일의 우클릭 메뉴 — 이 목록과 다른 탭의 파일 행(bindFileRows)이 함께 쓴다 */
 export function fileMenuItems(n) {
   const items = [{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }];
-  if (isCodeFile(n)) {
+  if (isViewFile(n)) {
     items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
-      { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) });
+      isCode(n.name) ? { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) }
+        : { label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기')}`, action: () => openExternal(n.path) });
   } else {
     items.push({ label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기·Enter')}`, action: () => openExternal(n.path) });
   }
@@ -465,7 +467,8 @@ function menuItems(k, n) {
 
 /**
  * 다른 사이드바 탭의 파일 행 (D50 — 최근 변경, 검색의 이름, 모아 보기의 파일 종류): data-file 이 있는 행을 이 목록처럼 다룬다.
- * 문서는 한 번 누르면 뷰어, 코드는 한 번 누르면 읽기 화면·두 번 누르면 편집기, 자료는 두 번 누르거나 Enter 로 연다 (실행하지 않음).
+ * 문서는 한 번 누르면 뷰어, 코드는 한 번 누르면 읽기 화면·두 번 누르면 편집기, csv·tsv·txt·log 는 한 번 누르면 읽기 화면·두 번 누르면 기본 앱,
+ * 그 밖의 자료는 두 번 누르거나 Enter 로 연다 (실행하지 않음).
  * fileOf(path): 그 행의 파일 노드 (문서는 트리의 노드 — kind 가 있다)
  */
 export function bindFileRows(box, fileOf) {
@@ -476,7 +479,7 @@ export function bindFileRows(box, fileOf) {
   box.addEventListener('click', (e) => {
     const n = nodeOf(e);
     if (n?.kind) emit('open', { type: 'doc', path: n.path });
-    else if (isCodeFile(n)) emit('open', { type: 'code', path: n.path });
+    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path });
   });
   box.addEventListener('dblclick', (e) => {
     const n = nodeOf(e);
@@ -488,7 +491,7 @@ export function bindFileRows(box, fileOf) {
     if (!n) return;
     e.preventDefault();
     if (n.kind) emit('open', { type: 'doc', path: n.path });
-    else if (isCodeFile(n)) emit('open', { type: 'code', path: n.path });
+    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path });
     else openExternal(n.path);
   });
   box.addEventListener('contextmenu', (e) => {
@@ -639,7 +642,7 @@ function bindList(k) {
     // 폴더 보기의 문서와 프로젝트 행은 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
     if (k === 'files' && folderView() && (path === '' || n?.doc)) activate(k, path);
-    else if (isCodeFile(n)) emit('open', { type: 'code', path });
+    else if (isViewFile(n)) emit('open', { type: 'code', path });
   });
   box.addEventListener('dblclick', (e) => {
     const row = e.target.closest('.row');

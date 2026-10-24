@@ -433,6 +433,8 @@ export async function pasteToTerminal(text) {
   }
   term.xterm.paste(text);
   term.xterm.focus();
+  // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 터미널인지도
+  toast(t("'{name}' 탭의 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name }));
 }
 
 // ---- 터미널 모음(gather.js)이 쓰는 것 ----------------------------------------------------

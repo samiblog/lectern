@@ -181,6 +181,19 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - Clicking a path such as `src/app.py:42` or a link to a code file in a document jumps to that line. Go back (Alt+←) to return to the document.
 - Files over 4 MB, or files that are not text, show a note to open them in an editor instead.
 
+### CSV and text files
+
+Click a `csv`, `tsv`, `txt` or `log` file once in the 'Other files' list (also in Recent, Search names and Elements) to view it in Lectern. Double-click opens it in the default app (Excel, Notepad) as before. Links in documents and paths such as `data/x.csv:5` also open in Lectern.
+
+- **Text** (`txt`, `log`) shows like code, with line numbers.
+- **CSV** (`csv`, `tsv`) shows as a table. The separator (comma, semicolon or tab) and the header row are detected; change the header with **First row is the header** in the bar.
+- **Filter**: type in the box under a column header to keep only rows containing that text. `!text` excludes, `=text` matches exactly, and numbers take `>100`, `<=5` or `10..20`. Filters on several columns combine; **Clear filters** resets them.
+- **Sort**: click a column header for ascending → descending → original order.
+- **Stats**: a row above the table shows, per column — count, sum, mean, min, max and median for numbers; count, distinct values and the most common value for text. Filtering recounts them. The **Stats** button in the bar hides the row.
+- Row numbers are the source line numbers. Right-click a row for Copy line (the source line) and Copy location for Claude.
+- CSV files saved by Excel (CP949) and 'Unicode text' (UTF-16) are read too (the encoding shows in the status bar). Edit mode works only on UTF-8 files.
+- Up to 2,000 rows are shown; filter to narrow down larger files (counts and stats use all rows).
+
 ## Links and opening files
 
 | Link target | Opens in |
@@ -210,7 +223,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - Select text with the mouse, then press Ctrl+C or right-click to copy; press Ctrl+V or right-click to paste. With nothing selected, Ctrl+C stops the running command.
 - Drag the edge to resize the terminal (double-click to reset).
 - **Position**: in a wide window the terminal opens to the right of the document; in a tall window (a portrait monitor, a window snapped to half the screen and so on) it opens below the document. When it is below, drag the edge to change its height. The position button in the terminal header switches between right and below and keeps it there; set 'Terminal position' back to 'Auto' in Settings.
-- **Paste into the terminal**: in a right-click menu, the terminal button next to a copy item puts that text into the current tab's terminal, opening the terminal if needed. Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
+- **Paste into the terminal**: in a right-click menu, the **▣ Terminal** button on the right of a copy item puts that text into the current tab's terminal and shows a 'Put into the terminal' notice (clicking the item name only copies). The terminal opens if needed. Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
 - The terminal colors follow the document style. For an always-dark terminal, turn off 'Match terminal colors to style' in Settings.
 - Closing a tab ends its shell. If a program started from the shell is still running, Lectern asks first. Closing Lectern ends all shells.
 - **Stuck program warning**: if a program started from the shell gets stuck while starting (this happens when security software on a company PC, such as DRM, blocks programs from starting — Claude Code calls git and then stops responding to any input), a red strip appears under the terminal header after about 10 seconds and the ↻ button is highlighted. Ctrl+C does not end such a program, and often neither does Task Manager, so press **Restart** in the strip. It ends the shell and the stuck program and opens a new shell. In Claude Code, run `claude --continue` in the new shell to pick up the conversation. If the terminal belongs to a tab you are not looking at, a notice appears once.

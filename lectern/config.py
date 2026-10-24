@@ -66,6 +66,7 @@ DEFAULTS: dict[str, Any] = {
     'terminal_height': None, # 아래 터미널 높이(px). None 이면 기본 (D52)
     'terminal_position': 'auto',  # 터미널 자리: auto(창이 세로로 길면 아래, 아니면 오른쪽) | side | bottom (설정 창·터미널 머리줄, D52)
     'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
+    'csv_stats': True,       # CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
 }
 
@@ -75,7 +76,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'sho
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',

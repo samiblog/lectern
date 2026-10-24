@@ -17,7 +17,7 @@ function menuItemHtml(it, i) {
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
   return `<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${esc(tip)}" aria-label="${esc(tip)}">`
-    + '<svg aria-hidden="true"><use href="#i-term"/></svg></button></div>';
+    + `<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`;
 }
 
 /** items: [{label, hint?, action, term?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.

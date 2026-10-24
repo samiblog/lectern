@@ -4,6 +4,8 @@
 // - 코드 파일의 내용 수정은 서버의 변경 기록에 오지 않는다 (소스를 고칠 때마다 문서 트리를 다시 읽지 않게 — D36).
 //   그래서 보고 있는 동안 2초마다 그 파일의 수정 시각(HEAD /doc/…, Last-Modified)을 보고, 바뀌었으면 다시 그린다.
 // - 실행하지 않는다: 글자로만 보인다 (highlight.js 가 이스케이프한다). 너무 큰 파일·바이너리는 편집기로 열라고 알린다.
+// - 자료 파일도 여기서 본다 (D60): txt·log 는 글자 그대로, csv·tsv 는 표(csvview.js). 이것들은 UTF-8 이 아니면 UTF-16(BOM)·CP949 로 읽는다
+//   (엑셀이 저장한 CSV·유니코드 텍스트 — 보기만, 편집 모드는 UTF-8 만).
 
 import { S, emit, on } from './store.js';
 import { openExternal } from './api.js';
@@ -12,6 +14,8 @@ import { setStatus } from './status.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
+import { isTableFile, renderCsv, initCsv } from './csvview.js';
+import { DATA_VIEW_EXT } from './icons.js';
 import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
 import { t } from './i18n.js';
 
@@ -44,6 +48,21 @@ function highlighted(text, lang) {
   return esc(text);
 }
 
+const isDataFile = (path) => DATA_VIEW_EXT.has(path.split('.').pop().toLowerCase());
+
+/** 받은 바이트를 글로. 자료 파일은 UTF-16(BOM) → UTF-8 → CP949 순서로 — {text, encoding('' 이면 UTF-8)} */
+function decode(buf, path) {
+  const bytes = new Uint8Array(buf);
+  if (!isDataFile(path)) return { text: new TextDecoder('utf-8').decode(bytes), encoding: '' };
+  if (bytes[0] === 0xff && bytes[1] === 0xfe) return { text: new TextDecoder('utf-16le').decode(bytes), encoding: 'UTF-16' };
+  if (bytes[0] === 0xfe && bytes[1] === 0xff) return { text: new TextDecoder('utf-16be').decode(bytes), encoding: 'UTF-16' };
+  try {
+    return { text: new TextDecoder('utf-8', { fatal: true }).decode(bytes), encoding: '' };
+  } catch {
+    return { text: new TextDecoder('euc-kr').decode(bytes), encoding: 'CP949' };   // WHATWG 의 euc-kr 은 CP949(확장 완성형)이다
+  }
+}
+
 /** 보이지 않는 경우(너무 큼·바이너리)의 안내 */
 function notice(view, path, message) {
   view.className = 'md-body code-view';
@@ -64,13 +83,14 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   let stamp;
   let size = 0;
   let modified = null;
+  let encoding = '';
   try {
     const res = await fetch(docUrl(tab, path), { cache: 'no-store' });
     if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
     size = Number(res.headers.get('Content-Length')) || 0;
     modified = res.headers.get('Last-Modified');
     stamp = `${modified}|${size}`;
-    text = size > MAX_BYTES ? null : await res.text();
+    if (size <= MAX_BYTES) ({ text, encoding } = decode(await res.arrayBuffer(), path));
   } catch (err) {
     if (id !== pane.renderId) return false;
     showMissing(view, path, err);
@@ -87,6 +107,7 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
 
   text = text.replace(/\r\n?/g, '\n');
   if (text.endsWith('\n')) text = text.slice(0, -1);
+  if (isTableFile(path)) return showTable(pane, path, { text, size, modified, encoding, top: typeof scrollTop === 'function' ? scrollTop() : scrollTop, line });
   const lang = languageOf(path);
   const lines = splitLines(highlighted(text, lang));
   const same = pane.current?.type === 'code' && pane.current.path === path && view.classList.contains('code-view') && !view.querySelector('.doc-missing');
@@ -100,20 +121,55 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
     + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(lang.name)}</div>`
     + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
     + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>`
-    + `<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`
+    + openButton(path)
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
     + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');
   view.dataset.codePath = path;
   view.codeText = text;
-  const when = modified ? new Date(modified) : null;
   finish(pane, path, outlineOf(path, text), {
-    path, info: `${lang.name} · ${t('{n}줄', { n: lines.length })} · ${formatSize(size)}`
-      + `${when && !Number.isNaN(when.getTime()) ? ` · ${t('수정 {when}', { when: formatDateTime(when.getTime() / 1000) })}` : ''}`,
+    path, info: `${lang.name} · ${t('{n}줄', { n: lines.length })} · ${formatSize(size)}${encoding ? ` · ${encoding}` : ''}${modifiedText(modified)}`,
   });
   if (top != null) scroller.scrollTop = top;
   else if (line) goToLine(view, line, { flash: true });
   else scroller.scrollTop = 0;
   markChanges(view, before, pane);
+  return true;
+}
+
+/** 머리줄의 '편집기로 열기' — 자료 파일(csv·txt 등)은 기본 앱(엑셀·메모장)으로 */
+function openButton(path) {
+  return isDataFile(path)
+    ? `<button type="button" class="text-btn cv-editor" title="${t('기본 앱으로 열기 (자료 목록에서 두 번 누르기)')}">${t('기본 앱으로 열기')}</button>`
+    : `<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`;
+}
+
+function modifiedText(modified) {
+  const when = modified ? new Date(modified) : null;
+  return when && !Number.isNaN(when.getTime()) ? ` · ${t('수정 {when}', { when: formatDateTime(when.getTime() / 1000) })}` : '';
+}
+
+const DELIMS = { ',': t('쉼표'), ';': t('세미콜론'), '\t': t('탭') };
+
+/** csv·tsv: 머리줄 + 표 (csvview.js). 바뀐 곳 강조는 하지 않는다 (표 전체가 한 블록이다) */
+function showTable(pane, path, { text, size, modified, encoding, top, line }) {
+  const { view, scroller, tab } = pane;
+  view.className = 'md-body code-view';
+  delete view.dataset.docPath;
+  view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
+    + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(languageOf(path).name)}</div>`
+    + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
+    + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>${openButton(path)}`
+    + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`;
+  view.dataset.codePath = path;
+  view.codeText = text;
+  const info = renderCsv(view, path, text, `${tab.id}:${path}`);
+  finish(pane, path, null, {
+    path, info: `${languageOf(path).name} · ${t('{n}행', { n: info.rows.toLocaleString() })} · ${t('{n}열', { n: info.cols })}`
+      + ` · ${DELIMS[info.delim] || info.delim} · ${formatSize(size)}${encoding ? ` · ${encoding}` : ''}${modifiedText(modified)}`,
+  });
+  if (top != null) scroller.scrollTop = top;
+  else if (line) goToLine(view, line, { flash: true });
+  else scroller.scrollTop = 0;
   return true;
 }
 
@@ -151,6 +207,7 @@ async function check() {
 }
 
 export function initCodeView() {
+  initCsv($('#lec-panes'));   // 표의 거르기·정렬·통계 (D60)
   $('#lec-panes').addEventListener('click', (e) => {
     const view = e.target.closest('.code-view');
     if (!view) return;

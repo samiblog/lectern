@@ -127,6 +127,7 @@ flowchart LR
 | `toc_hidden_parts` | `[]` | 가능 | 목차에서 감춘 구성 요소 종류 — `table`·`figure`·`box`·`diagram`·`code`·`math` (목차 머리의 종류 버튼, D39) |
 | `sidebar_width` | `null` | 가능 | 사이드바 폭(px, 200~480). 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 288) |
 | `toc_width` | `null` | 가능 | 목차 폭(px, 160~560 — 문서 칸은 360px 이상 남김). 문서와 목차 사이 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 232, D47) |
+| `csv_stats` | `true` | 가능 | CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60) |
 | `files_view` | `"kind"` | 가능 | 사이드바 파일 탭을 보는 방법 ('폴더' 버튼): `kind`(종류별 — 위에서부터 '문서' 트리·'코드'·'자료' 목록) · `folder`(폴더 구조 그대로 — 문서와 파일을 한 트리에) (D37) |
 | `docs_visible` / `others_visible` / `code_visible` | `true` | 가능 | 종류별 보기의 '문서'·'자료'·'코드' 묶음을 펼쳐 둠 (머리줄을 눌러 접기, D42 — '자료'가 others, D48) |
 | `search_docs` / `search_code` | `true` | 가능 | 전체 검색에서 찾을 곳 — 검색 칸 아래 '문서'·'코드' 버튼 (D44) |
@@ -398,7 +399,7 @@ sequenceDiagram
 - 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
 - 머리줄: 셸 이름 — 탭 이름, 자리 바꾸기(`#lec-term-place` — 오른쪽 ↔ 아래), 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
 - 자리 (D52): 설정 `terminal_position` — `auto`(창이 세로로 길면 아래 — `matchMedia('(orientation: portrait)')`, 바뀌면 다시)·`side`·`bottom`. 아래면 `html.term-bottom` → `#lec-main` 이 격자(`grid-template-areas`: 위 줄 사이드바·문서·목차, 아래 줄 경계·터미널 — 사이드바를 뺀 전체 폭). 경계는 가로 막대가 되어 높이(`--term-h`, 설정 `terminal_height`)를 바꾼다. 아래 터미널은 목차를 가리지 않는다 (`toc.js` 의 `hiddenByTerminal`, 목차 버튼도 보통처럼 `toc_visible`). 설정 창의 '터미널 자리'는 `term-place` 이벤트.
-- 터미널에 붙여 넣기 (D51): 우클릭 메뉴 항목에 `term`(넣을 글)이 있으면 `ui.js` 가 항목 옆에 터미널 버튼(`.menu-term`)을 달고, 누르면 `term-paste` 이벤트 → `pasteToTerminal`. 패널이 닫혀 있으면 열고 셸을 띄운 뒤, 끝의 줄바꿈을 떼고 `xterm.paste` (Ctrl+V 와 같은 길 — 붙여넣기 모드면 감싸고, 줄바꿈은 CR). 여러 줄인데 `xterm.modes.bracketedPasteMode` 가 꺼져 있으면 `confirm` 으로 묻는다. 넣은 뒤 터미널에 초점.
+- 터미널에 붙여 넣기 (D51): 우클릭 메뉴 항목에 `term`(넣을 글)이 있으면 `ui.js` 가 항목 옆에 터미널 버튼(`.menu-term` — 아이콘과 '터미널' 글자, 강조색·구분선으로 복사 항목과 나눈다)을 달고, 누르면 `term-paste` 이벤트 → `pasteToTerminal`. 패널이 닫혀 있으면 열고 셸을 띄운 뒤, 끝의 줄바꿈을 떼고 `xterm.paste` (Ctrl+V 와 같은 길 — 붙여넣기 모드면 감싸고, 줄바꿈은 CR). 여러 줄인데 `xterm.modes.bracketedPasteMode` 가 꺼져 있으면 `confirm` 으로 묻는다. 넣은 뒤 터미널에 초점, "'탭' 탭의 터미널에 넣었습니다" 알림.
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 
 ### 터미널 모음 (gather.js)
@@ -412,6 +413,8 @@ sequenceDiagram
 - 목차: `outline.js` 의 `outlineOf(path, text)` → `[{line, level, name, kind}]` 를 `setToc(pane, view, outline)` 로 넘기면 `toc.js` 의 `buildOutline` 이 그 줄들을 제목처럼 쓴다 (지금 읽는 위치 표시, 누르면 그 줄을 위로·잠깐 테두리). 확장자 → 언어(highlight.js 이름·보일 이름·규칙 묶음)도 `outline.js` 의 `languageOf`.
 - 자동 새로고침: 2초마다 선택된 칸이 코드 화면이면 `HEAD /doc/…` 의 Last-Modified·Content-Length 를 그릴 때 받은 값(`pane.codeStamp`)과 비교해 다르면 `refresh-view`. 다른 탭을 고르면(`pane`) 바로 한 번 본다.
 - 여는 곳: '코드' 목록·폴더 보기의 코드 파일(한 번 누르기·Enter → `open {type:'code'}`, 두 번 누르기 → 편집기), 경로 표기(`pathlink.js` — 코드면 `line` 과 함께), 문서 속 코드 파일 링크(`doc.js` 의 `bindLink` — `#L42`). 줄 우클릭은 `docmenu.js` 의 `codeMenu`.
+- 자료 파일 (D60): `icons.js` 의 `isViewable`(코드 + `DATA_VIEW_EXT` — csv·tsv·txt·log)이면 '자료' 목록·`bindFileRows`(최근 변경·검색의 이름·모아 보기)·문서 링크·경로 표기에서도 코드 화면으로 연다 (두 번 누르기는 기본 앱 — 엑셀·메모장). 글은 `arrayBuffer` 로 받아 `decode` — 자료 파일은 UTF-16(BOM) → UTF-8(fatal) → CP949(`TextDecoder('euc-kr')` — WHATWG 의 euc-kr 은 CP949), 코드는 UTF-8. 인코딩은 상태줄에. txt·log 는 코드처럼 줄로(색·목차 없음).
+- CSV (`csvview.js`, D60): csv·tsv 는 `showTable` 이 머리줄 뒤에 `renderCsv` 로 표를 붙인다. 구분자는 tsv 면 탭, 아니면 앞 20줄에서 쉼표·세미콜론·탭 가운데 줄마다 가장 고르게 많은 것. `parseCsv` 는 RFC 4180(따옴표 안 구분자·줄바꿈·`""`)으로 행과 원문 줄 범위를 낸다. 머리행은 어림(`guessHeader` — 첫 줄에 숫자·빈칸이 없고, 아래에 숫자가 70% 넘는 열이 있거나 첫 줄 값이 모두 다르면) — 막대의 '첫 줄은 머리행'으로 바꾼다(없으면 열 이름 A·B…). 숫자 열은 70% 넘게 `numberOf`(본문 표의 숫자 열과 같은 표기 — 1,234·-3.5%·$105·12억). 표: `thead`(머리행 — 누르면 오름 → 내림 → 원래, 거르기 칸 — `matcherOf`: 포함·`!` 빼기·`=` 같음·숫자 `>`·`>=`·`<`·`<=`·`=`·`!=`·`a..b`, 열마다 AND) 는 sticky(`--csv-top` = 머리줄 높이), 통계 줄(`statsOf` — 숫자: 개수·빈칸·합계·평균·최소·최대·중앙값, 글자: 개수·빈칸·고유값·최빈(겹칠 때만), 거른 행으로), 행 `tr.cv-line[data-line][data-end]`(원문 줄 — 우클릭 '이 줄 복사'는 원문 줄, 위치 잇기·찾기·`goToLine` 은 코드 화면처럼). 그리는 행은 2,000개까지. 거르기·정렬·머리행은 탭 id + 경로마다 이번 실행 동안 기억(다시 그려도 그대로), 통계 줄은 설정 `csv_stats`. 바뀐 곳 강조는 하지 않는다.
 
 ### 화면 언어 (i18n.js, lectern/i18n.py — D46)
 - 서버가 설정 `language` 로 언어를 정해(`i18n.language()` — auto 는 `system_language()`) `index.html` 의 `<html lang="{{LANG}}">` 에 넣는다. `i18n.js` 의 `LANG` 은 그 값이다 (페이지마다 고정 — 언어를 바꾸면 다시 불러온다).

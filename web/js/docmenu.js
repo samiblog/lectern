@@ -11,6 +11,7 @@ import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems } from './spotlight.js';
 import { openExternal } from './api.js';
+import { isCode } from './icons.js';
 import { $, esc, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -280,9 +281,12 @@ function codeMenu(e, view, x, y) {
   e.preventDefault();
   const row = e.target.closest?.('.cv-line');
   const line = Number(row?.dataset.line) || 0;
+  const end = Number(row?.dataset.end) || line;   // csv 의 한 행이 여러 줄이면 (따옴표 안 줄바꿈 — csvview.js)
+  // csv 표의 행은 칸을 이은 글이 아니라 원문 줄로
+  const rowText = row?.tagName === 'TR' ? (view.codeText || '').split('\n').slice(line - 1, end).join('\n') : row?.textContent;
   const sel = getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString() : '';
-  let range = line ? [line, line] : null;
+  let range = line ? [line, end] : null;
   if (selected) {
     const a = lineOf(sel.anchorNode);
     const b = lineOf(sel.focusNode);
@@ -290,7 +294,7 @@ function codeMenu(e, view, x, y) {
   }
   const items = [{ header: range ? `${path} ${rangeText(range)}` : path }];
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
-  if (row && !selected) items.push({ label: t('이 줄 복사'), hint: describe(row.textContent), action: () => copyPlain(row.textContent), term: row.textContent.trim() });
+  if (row && !selected) items.push({ label: t('이 줄 복사'), hint: describe(rowText), action: () => copyPlain(rowText), term: rowText.trim() });
   if (range) {
     const ref = `@${path} ${rangeText(range)}`;
     items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
@@ -298,7 +302,7 @@ function codeMenu(e, view, x, y) {
       { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
   }
   items.push('-', ...pathMenuItems(path, true), '-',
-    { label: t('코드 전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });
+    { label: isCode(path) ? t('코드 전체 복사') : t('전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });
   row?.classList.add('lec-picked');
   showMenu(x, y, items, () => row?.classList.remove('lec-picked'));
 }

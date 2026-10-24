@@ -71,6 +71,44 @@
 .code-view .cv-line:hover { background: color-mix(in srgb, var(--md-link) 7%, var(--md-code-bg)); }
 .code-view .cv-line.lec-target { outline-offset: 0; }
 
+/* CSV 표 (csvview.js, D60) — 코드 화면 안. 머리행과 거르기 칸은 머리줄 아래에 붙고(thead sticky), 행 번호 칸은 왼쪽에 붙는다.
+   본문 표의 줄무늬·숫자 열 오른쪽 정렬은 그대로 쓴다 */
+.csv-view .csv-bar {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 6px 14px; margin: 2px 0 10px;
+  font-family: var(--ui-font, sans-serif); font-size: calc(12.5px * var(--md-scale, 1)); color: var(--md-muted);
+}
+.csv-view .csv-count { font-weight: 600; color: var(--md-fg); }
+.csv-view .csv-bar .text-btn { height: 26px; padding: 0 10px; font-family: inherit; font-size: inherit; }
+.csv-view .csv-stats-btn[aria-pressed="true"] { border-color: var(--md-link); color: var(--md-link); }
+.csv-view .csv-headrow { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.csv-view .csv-table { border-collapse: separate; border-spacing: 0; margin: 0 0 28px; font-size: calc(13px * var(--md-scale, 1)); }
+.csv-view .csv-table thead { position: sticky; top: var(--csv-top, 0px); z-index: 3; }
+.csv-view .csv-table thead th { position: static; }
+.csv-view .csv-table th, .csv-view .csv-table td {
+  padding: 4px 10px; white-space: nowrap; max-width: 30em; overflow: hidden; text-overflow: ellipsis;
+  border-right: 1px solid color-mix(in srgb, var(--md-border) 55%, transparent);
+}
+.csv-view .csv-head th[data-col] { cursor: pointer; user-select: none; }
+.csv-view .csv-head th[data-col]:hover { color: var(--md-link); }
+.csv-view .csv-head th[data-sort="asc"]::after { content: " \25B2"; font-size: .72em; color: var(--md-link); }
+.csv-view .csv-head th[data-sort="desc"]::after { content: " \25BC"; font-size: .72em; color: var(--md-link); }
+.csv-view .csv-filter th { padding: 3px 4px; background: var(--md-bg); border-bottom: 1px solid var(--md-border); font-weight: 400; }
+.csv-view .csv-filter input {
+  box-sizing: border-box; width: 100%; min-width: 5.5em; height: 24px; padding: 0 6px;
+  border: 1px solid var(--md-border); border-radius: 4px; background: var(--md-bg); color: var(--md-fg); font: inherit;
+}
+.csv-view .csv-filter input:not(:placeholder-shown) { border-color: var(--md-link); background: color-mix(in srgb, var(--md-link) 9%, var(--md-bg)); }
+.csv-view .csv-rn { position: sticky; left: 0; z-index: 1; background: var(--md-code-bg); color: var(--md-muted); text-align: right; font-size: .9em; user-select: none; }
+.csv-view thead .csv-rn { z-index: 4; }
+.csv-view .csv-stats > * { background: color-mix(in srgb, var(--md-link) 6%, var(--md-bg)); font-size: .88em; }
+.csv-view .csv-stats div { display: flex; justify-content: space-between; gap: 10px; line-height: 1.55; }
+.csv-view .csv-stats span { color: var(--md-muted); }
+.csv-view .csv-stats b { font-weight: 600; color: var(--md-fg); }
+.csv-view .csv-more td { color: var(--md-muted); font-style: italic; }
+.csv-view tr.cv-line { display: table-row; padding: 0; background: none; font-family: inherit; font-size: inherit; line-height: inherit; }
+.csv-view tr.cv-line::before { content: none; }
+.csv-view tr.cv-line:hover { background: color-mix(in srgb, var(--md-link) 7%, transparent); }
+
 /* 목차에서 고른 구성 요소 (toc.js): 그 자리에 잠깐 링크 색 테두리 */
 @keyframes lec-target {
   from { background-color: color-mix(in srgb, var(--md-link) 12%, transparent); outline-color: color-mix(in srgb, var(--md-link) 85%, transparent); }

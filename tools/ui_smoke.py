@@ -1976,6 +1976,77 @@ def run(headed: bool) -> None:
                   f"예제 열기: README 부터, 차트 11개(오류 예시 하나)·다이어그램 8개·그림·코드 위치 링크, 설정 창의 작성 안내 요청 글 "
                   f"({readme}, {chart_errs}, {mermaid_ok}, {img_ok}, {code_links}, {guide_prompt[:40]!r}, {back})")
 
+            print('[CSV]')   # D60 — 자료 목록의 csv·tsv 는 표(거르기·정렬·통계), txt 는 글자로. UTF-8 이 아니면 CP949·UTF-16
+            tables = tmp / 'tables'
+            (tables / 'data').mkdir(parents=True)
+            (tables / 'README.md').write_text('# 표 시험\n\n[월별 가격](data/prices.csv)\n\n`data/prices.csv:5` 를 보세요.\n', encoding='utf-8')
+            price_rows = ['월,품목,가격,비고'] + [f'2025-{m:02d},{"구리" if m % 3 else "니켈"},"{p:,}",{"" if (m - 1) % 4 else "점검"}'
+                                                 for m, p in zip(range(1, 13), [8920, 9180, 9650, 9310, 9540, 9870, 9720, 9460, 9890, 10240, 10010, 10380])]
+            (tables / 'data' / 'prices.csv').write_text('\n'.join(price_rows) + '\n', encoding='utf-8')
+            (tables / 'data' / 'excel.csv').write_bytes('지역,물동량(천톤),증감률\n부산,1234,3.5%\n인천,987,-1.2%\n'.encode('cp949'))
+            (tables / 'data' / 'memo.txt').write_bytes('한글 메모 (CP949)\n두 번째 줄\n'.encode('cp949'))
+            (tables / 'data' / 'uni.txt').write_bytes('\ufeff유니코드 텍스트\n'.encode('utf-16-le'))
+            page.once('dialog', lambda d: d.accept(str(tables)))
+            page.click('#lec-btn-open')
+            n_tabs(2)
+            page.wait_for_selector('#lec-others-list .row[data-path="data"]')
+            page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click()
+            page.locator('#lec-others-list .row[data-path="data/prices.csv"]').click()   # 한 번 누르면 Lectern 에서
+            page.wait_for_selector('#lec-view.csv-view tbody.csv-rows tr.cv-line')
+            csv_state = lambda: page.evaluate("""() => { const v = document.querySelector('#lec-view');
+              return { head: [...v.querySelectorAll('.csv-head th[data-col]')].map(th => th.textContent + (th.classList.contains('num') ? '#' : '')),
+                rows: v.querySelectorAll('tbody.csv-rows tr.cv-line').length, first: [...(v.querySelector('tbody.csv-rows tr.cv-line')?.cells || [])].map(c => c.textContent),
+                count: v.querySelector('.csv-count')?.textContent, info: document.querySelector('#lec-st-info').textContent,
+                stats: [...v.querySelectorAll('.csv-stats td')].map(td => td.innerText.replace(/\\n/g, ' ')), statsShown: !v.querySelector('.csv-stats')?.hidden,
+                text: [...v.querySelectorAll('.cv-line .cv-text')].map(e => e.textContent).join('|') }; }""")
+            c1 = csv_state()
+            shot('21-csv')
+            page.fill('.csv-filter input[data-col="2"]', '>9800')
+            page.fill('.csv-filter input[data-col="1"]', '구리')
+            wait_until(page, "document.querySelector('.csv-count').textContent.includes('중')", 3000)
+            page.click('.csv-head th[data-col="2"]')
+            page.click('.csv-head th[data-col="2"]')   # 두 번 — 내림차순
+            page.wait_for_timeout(200)
+            c2 = csv_state()
+            shot('21-csv-filtered')
+            check(c1['head'] == ['월', '품목', '가격#', '비고'] and c1['rows'] == 12 and c1['count'] == '12행' and 'CSV · 12행 · 4열 · 쉼표' in c1['info']
+                  and '합계116,170' in c1['stats'][2].replace(' ', '') and '중앙값9,685' in c1['stats'][2].replace(' ', '') and '최빈' not in c1['stats'][0]
+                  and c2['count'] == '12행 중 2행' and c2['rows'] == 2 and c2['first'][1:4] == ['2025-10', '구리', '10,240']
+                  and '합계20,250' in c2['stats'][2].replace(' ', ''),
+                  f"csv 는 표 — 머리행 어림·숫자 열·통계 줄(합계·중앙값), 열마다 거르기(>9800·구리)·머리행으로 내림차순, 통계는 거른 행으로 ({c1['head']}, {c1['count']}, {c2['count']}, {c2['first']})")
+            page.locator('#lec-view tbody.csv-rows tr.cv-line').first.click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            row_hint = page.locator('#lec-menu .menu-row', has_text='이 줄 복사').locator('small').inner_text()
+            page.keyboard.press('Escape')
+            page.click('.csv-stats-btn')
+            stats_off = not csv_state()['statsShown'] and page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.csv_stats)") is False
+            page.click('.csv-stats-btn')
+            page.click('.csv-headrow input')   # 첫 줄은 머리행 끄기 → A·B·C·D, 13행
+            c3 = csv_state()
+            page.click('.csv-headrow input')
+            check(row_hint == '2025-10,구리,"10,240",' and stats_off and csv_state()['statsShown'] and c3['head'][:2] == ['A', 'B'] and c3['count'] == '13행',
+                  f"표 행의 우클릭 '이 줄 복사'는 원문 줄, '통계' 버튼(설정에 저장), '첫 줄은 머리행' 끄면 A·B… ({row_hint!r}, {stats_off}, {c3['head']}, {c3['count']})")
+            enc = {}
+            for path in ('data/excel.csv', 'data/memo.txt', 'data/uni.txt'):
+                page.locator(f'#lec-others-list .row[data-path="{path}"]').click()
+                wait_until(page, f"document.querySelector('#lec-view').dataset.codePath === '{path}' && !!document.querySelector('#lec-view .cv-line')", 8000)
+                enc[path] = csv_state()
+            page.locator('#lec-tree .row.file[data-doc="README.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("표 시험")')
+            page.locator('#lec-view a', has_text='월별 가격').click()
+            by_link = wait_until(page, "document.querySelector('#lec-view').dataset.codePath === 'data/prices.csv' && !!document.querySelector('#lec-view .csv-table')", 8000)
+            page.go_back() if False else page.click('#lec-btn-back')
+            page.wait_for_selector('#lec-view h1:has-text("표 시험")')
+            page.locator('#lec-view a.path-link', has_text='data/prices.csv:5').click()
+            to_line = wait_until(page, "!!document.querySelector('#lec-view.csv-view tr.cv-line[data-line=\"5\"].lec-target')", 8000)
+            check(enc['data/excel.csv']['head'] == ['지역', '물동량(천톤)#', '증감률#'] and 'CP949' in enc['data/excel.csv']['info']
+                  and enc['data/memo.txt']['text'] == '한글 메모 (CP949)|두 번째 줄' and '텍스트 · 2줄' in enc['data/memo.txt']['info'] and 'CP949' in enc['data/memo.txt']['info']
+                  and enc['data/uni.txt']['text'] == '유니코드 텍스트' and 'UTF-16' in enc['data/uni.txt']['info'] and by_link and to_line,
+                  f"엑셀 CSV(CP949)·CP949·UTF-16 txt 도 읽고, 문서 속 csv 링크·`경로:줄`은 표의 그 행으로 ({enc['data/excel.csv']['head']}, {enc['data/memo.txt']['info']}, {by_link}, {to_line})")
+            tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
+            n_tabs(1)
+            page.wait_for_selector('#lec-view h1')
+
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)
 
@@ -2100,14 +2171,16 @@ def run(headed: bool) -> None:
             page.locator('#lec-menu .menu-row', has_text='Claude용 위치 복사').locator('.menu-term').click()
             pasted = term_has(f'@{doc_path} ')
             in_term = page.evaluate("!!document.activeElement?.closest('#lec-term')")
+            told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('탭의 터미널에 넣었습니다')", 3000)   # 넣었다는 알림
+            term_label = page.evaluate("document.querySelector('#lec-menu .menu-term')?.textContent.trim() ?? '(메뉴 닫힘)'")
             page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
             asked = []
             page.once('dialog', lambda dlg: (asked.append(dlg.message), dlg.dismiss()))
             page.locator('#lec-view h1').first.click(button='right')
             page.locator('#lec-menu .menu-row', has_text='이 절 원문 복사').locator('.menu-term').click()
             page.wait_for_timeout(300)
-            check(term_btns >= 2 and pasted and in_term and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
-                  f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에, 여러 줄이면 먼저 물음 ({term_btns}, {asked[:1]})")
+            check(term_btns >= 2 and pasted and in_term and told and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
+                  f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
             # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
             term_colors = lambda: page.evaluate('''() => {
               const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number);

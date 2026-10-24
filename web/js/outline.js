@@ -24,6 +24,8 @@ const LANGS = {
   dart: ['dart', 'Dart', 'java'], go: ['go', 'Go', 'go'], rs: ['rust', 'Rust', 'rust'], rb: ['ruby', 'Ruby', 'ruby'],
   php: ['php', 'PHP', 'php'], sql: ['sql', 'SQL', 'sql'], r: ['r', 'R', 'r'], lua: ['lua', 'Lua', 'lua'], pl: ['perl', 'Perl', 'perl'],
   gradle: ['groovy', 'Gradle', 'java'], lock: ['plaintext', t('잠금 파일'), 'none'],
+  // 코드 화면에서 보는 자료 (D60): 글자 파일은 그대로, csv·tsv 는 표 (csvview.js)
+  txt: ['plaintext', t('텍스트'), 'none'], log: ['plaintext', t('로그'), 'none'], csv: ['plaintext', 'CSV', 'none'], tsv: ['plaintext', 'TSV', 'none'],
 };
 
 /** 파일 경로의 언어: {hljs, name, family} */

@@ -142,6 +142,11 @@ footer: Copper market research
 - An HTML comment `<!-- … -->` that is not a directive is a speaker note (Lectern shows it under the slide, and with N while presenting).
 - CSS in `style: |` applies only to that document's slides (`section`, `h1`, `header`, `footer` and so on). Internet fonts and picture addresses are removed. `theme` (gaia, uncover…) is not read — colors and fonts follow the Lectern style.
 
+### Data (CSV and text)
+
+- Keep tabular data as CSV — clicked in Lectern it shows as a table (filter, sort and stats per column), and charts can read it with `data.url`. **Make the first row the header** (column names), put only values in cells and units in the header (`price (USD/t)`). Save as UTF-8 (Excel's CP949 is readable too, but only UTF-8 can be edited).
+- To point at data from a document, use a link (`[monthly prices](../data/월별-가격.csv)`) or a path such as `data/월별-가격.csv:5` — clicking goes to that row of the table.
+
 ## 6. HTML documents
 
 - Their own styles (`<style>`) show as they are. Without styles, Lectern applies its document style.

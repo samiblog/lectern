@@ -14,7 +14,8 @@ const SLOT = /\{(\w+)\}/g;
 
 export function t(ko, values) {
   let text = dict?.[ko] ?? ko;
-  if (Array.isArray(text)) text = values && 'n' in values && values.n !== 1 ? text[1] : text[0];   // 값 n 이 없으면 하나
+  // 값 n 이 없으면 하나. n 은 '1,234' 처럼 자리 쉼표를 넣은 글이어도 된다
+  if (Array.isArray(text)) text = values && 'n' in values && Number(String(values.n).replace(/,/g, '')) !== 1 ? text[1] : text[0];
   return values ? text.replace(SLOT, (m, k) => (k in values ? String(values[k]) : m)) : text;
 }
 

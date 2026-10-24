@@ -33,6 +33,15 @@ export function isCode(name) {
   return i > 0 && KIND_OF.get(name.slice(i + 1).toLowerCase()) === 'code';
 }
 
+// 코드 화면에서 보는 자료 (D60): csv·tsv 는 표, txt·log 는 글자 그대로. '자료' 목록에 남고, 누르면 코드처럼 Lectern 에서 본다
+export const DATA_VIEW_EXT = new Set(['csv', 'tsv', 'txt', 'log']);
+
+/** Lectern 의 코드 화면에서 보는 파일 — 코드 + csv·tsv·txt·log */
+export function isViewable(name) {
+  const i = name.lastIndexOf('.');
+  return isCode(name) || (i > 0 && DATA_VIEW_EXT.has(name.slice(i + 1).toLowerCase()));
+}
+
 // 모아 보기의 '파일 종류' (D50): 확장자 → 형식 이름. 같은 프로그램이 여는 형식은 한 이름으로 (엑셀·파워포인트·워드·한글 등), 나머지는 확장자를 대문자로
 const TYPE_NAMES = [
   [t('엑셀'), 'xls xlsx xlsm xlsb'], [t('파워포인트'), 'ppt pptx pptm'], [t('워드'), 'doc docx docm'], [t('한글'), 'hwp hwpx'],

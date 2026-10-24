@@ -6,7 +6,7 @@
 
 import { S, emit } from './store.js';
 import { postJSON, openExternal } from './api.js';
-import { isCode } from './icons.js';
+import { isViewable } from './icons.js';
 import { isMd, isHtml, dirname, basename } from './util.js';
 import { t } from './i18n.js';
 
@@ -34,7 +34,7 @@ function onClick(e) {
   e.preventDefault();
   const { path, line } = a.dataset;
   if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path });   // 누를 수 있는 것은 선택된 탭의 문서뿐
-  else if (isCode(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined });
+  else if (isViewable(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined });
   else openExternal(path, line ? Number(line) : undefined);
 }
 
