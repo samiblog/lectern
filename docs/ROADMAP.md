@@ -76,6 +76,14 @@
 - [x] 툴바·사이드바·목차·상태줄·메뉴 색이 문서 스타일을 따름 — 12종 모두 (D28)
 - [x] 테스트: pytest 80개, `ui_smoke.py` 79항목 (스타일마다 UI 글자 대비 4.5:1, html 글자 대비)
 
+### v0.29.0 — 예제 프로젝트와 AI 용 작성 안내 (완료)
+사용자 요청 (2026-10-24): samples 를 사용자가 쉽게 이해하고 AI 가 Lectern 을 이해하도록 — 제안 1~4 모두 (D57).
+- [x] 예전 samples(점검용 함정 포함)를 `tests/fixture/` 로 — 화면 점검은 경로만 바꿔 같은 결과
+- [x] 새 samples: 구리 리서치 프로젝트(src·data·research·plans·reports) + `guide/` 둘러보기 7편 + `CLAUDE.md` 본보기 (README·CLAUDE 영어판)
+- [x] AI 용 작성 안내 `web/help/writing.md`(+en), 설정 창 'Claude Code 에 Lectern 알려 주기' (요청 복사·터미널·예제 열기)
+- [x] 설치 파일에 samples, 시작 화면·탭 막대 ∨ 의 '예제 열기' (처음엔 README)
+- [x] 테스트: pytest 192개(예제·안내 경로, 예제에 숨김·제외 폴더 없음), `ui_smoke.py` 210항목('[예제]' — 모든 그림·차트·링크)
+
 ### v0.28.0 — 차트에 Plotly (완료)
 사용자 요청 (2026-10-24): plotly 도 넣기 — 전체판(4.8MB)을 고름 (D56).
 - [x] ```plotly — {data, layout} JSON (Python 의 fig.to_json() 도), SVG 로, 문서 폭, 스타일 색(설정에 template 이 없을 때)

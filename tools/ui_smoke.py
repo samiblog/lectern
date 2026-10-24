@@ -119,7 +119,7 @@ def run(headed: bool) -> None:
 
     tmp = Path(tempfile.mkdtemp(prefix='lectern-smoke-'))
     work = tmp / 'samples'
-    shutil.copytree(ROOT / 'samples', work)
+    shutil.copytree(ROOT / 'tests' / 'fixture', work)   # 점검용 프로젝트 (사용자 예제 samples 와 따로 — D57)
     img_dir = tmp / 'remote'
     img_dir.mkdir()
     img_server, img_port = start_image_server(img_dir)
@@ -560,7 +560,7 @@ def run(headed: bool) -> None:
             shot('03-mermaid')
 
             print('[차트]')   # D56 — ```vega-lite·```echarts·```dot 를 SVG 로 (charts.js)
-            shutil.copytree(ROOT / 'samples' / 'docs' / 'data', work / 'docs' / 'data')   # 예제가 읽는 CSV (점검 뒤 지운다)
+            shutil.copytree(ROOT / 'tests' / 'fixture' / 'docs' / 'data', work / 'docs' / 'data')   # 예제가 읽는 CSV (점검 뒤 지운다)
             page.locator('#lec-tree .row.file[data-doc="docs/06-차트.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("차트와 그래프")')
             drawn = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
@@ -1891,6 +1891,32 @@ def run(headed: bool) -> None:
             check(middle and welcome and title == 'Lectern' and welcome_help and reopened,
                   f"탭을 가운데 버튼으로도 닫고, 모두 닫으면 시작 화면(트리 비움, '사용설명서' 버튼), 최근 연 폴더로 다시 열기"
                   f' ({middle}, {welcome}, {title!r}, {welcome_help}, {reopened})')
+
+            print('[예제]')   # D57 — 사용자·AI 용 예제 프로젝트(설치 폴더의 samples)와 'Claude Code 에 Lectern 알려 주기'
+            page.click('#lec-btn-recent')
+            page.locator('#lec-menu button', has_text='예제 열기').click()
+            readme = n_tabs(2) and h1_has('Lectern 예제')   # 처음 열면 폴더 개요 대신 README
+            page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click()
+            charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
+            chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
+            page.locator('#lec-tree .row.file[data-doc="guide/06-다이어그램.md"]').click()
+            mermaid_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.mermaid.mermaid-ok').length === 8", 30000) \
+                and page.locator('#lec-view .diagram-error').count() == 0
+            page.locator('#lec-tree .row.file[data-doc="guide/04-문서-쓰는-법.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("문서 쓰는 법")')
+            page.locator('#lec-view img').first.scroll_into_view_if_needed()
+            img_ok = wait_until(page, "[...document.querySelectorAll('#lec-view img')].every(i => i.complete && i.naturalWidth > 0)", 5000)
+            code_links = page.locator('#lec-view a.path-link[data-line]').count()
+            page.keyboard.press('Control+,')
+            page.click('#lec-aiguide-prompt')
+            guide_prompt = page.evaluate('navigator.clipboard.readText()')
+            page.click('#lec-settings-close')
+            tab_el(1).locator('.tab-close').click()   # 예제 탭을 닫고 점검 프로젝트로
+            back = n_tabs(1) and tree_root() == 'samples'
+            check(readme and charts_ok and len(chart_errs) == 1 and '함수는 쓸 수 없습니다' in chart_errs[0] and mermaid_ok and img_ok
+                  and code_links >= 2 and 'writing.md' in guide_prompt and 'CLAUDE.md' in guide_prompt and back,
+                  f"예제 열기: README 부터, 차트 11개(오류 예시 하나)·다이어그램 8개·그림·코드 위치 링크, 설정 창의 작성 안내 요청 글 "
+                  f"({readme}, {chart_errs}, {mermaid_ok}, {img_ok}, {code_links}, {guide_prompt[:40]!r}, {back})")
 
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)

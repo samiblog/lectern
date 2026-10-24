@@ -32,7 +32,8 @@ a = Analysis(
     ['app.py'],
     pathex=[],
     binaries=[],
-    datas=[('web', 'web')],          # web/ 전체 (vendor 라이브러리 포함) → _internal\web
+    datas=[('web', 'web'),           # web/ 전체 (vendor 라이브러리 포함) → _internal\web
+           ('samples', 'samples')],  # 예제 프로젝트 (D57 — 시작 화면의 '예제 열기') → _internal\samples
     hiddenimports=[
         # watchdog 는 OS별 감시 모듈을 실행 중에 고르므로 명시해 둔다
         'watchdog.observers.read_directory_changes',

@@ -147,7 +147,7 @@ The document lives inside `.md-body`. **Start every rule with `.md-body`** so th
 ## 7. Check it
 
 1. Pick it from 'My styles' at the bottom of the style list in the toolbar.
-2. Open a document with headings, a table (header row, even rows, number columns), code blocks, inline code, all five callouts, quotes, a checklist, links, math and a diagram. `samples\docs\01-기능-점검.md` in the Lectern repository is a good one.
+2. Open a document with headings, a table (header row, even rows, number columns), code blocks, inline code, all five callouts, quotes, a checklist, links, math and a diagram. `guide/04-문서-쓰는-법.md` in the samples (**Open samples**) is a good one.
 3. Change the text size with − and + in the toolbar (everything should scale).
 4. For a dark style, check that the sidebar, menus and code colors are dark and the terminal text is readable.
 5. To fix something, edit and save the file — it is reapplied at once.

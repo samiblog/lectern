@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import time
+from pathlib import Path
 from urllib.parse import quote
 
 import pytest
@@ -57,6 +58,23 @@ def test_state_without_folder():
     assert info['projects'] == [] and info['active'] is None and info['max_tabs'] == 10
     assert c.get('/api/tree').status_code == 404
     assert c.get('/api/tree?p=nope').status_code == 404
+
+
+def test_samples_and_writing_guide():
+    """예제 프로젝트와 AI 용 작성 안내 (D57): 경로를 알려 주고, 예제를 탭으로 열 수 있다. 예제에는 점검용 함정(숨김·제외 폴더)이 없다"""
+    st = AppState(Config(), mode='browser')
+    c = create_app(st).test_client()
+    info = c.get('/api/state').get_json()
+    samples, guide = Path(info['samples']), Path(info['writing_guide'])
+    assert samples.is_dir() and (samples / 'README.md').is_file() and (samples / 'CLAUDE.md').is_file()
+    assert guide.name in ('writing.md', 'writing.en.md') and guide.is_file()
+    assert (guide.parent / 'writing.md').is_file() and (guide.parent / 'writing.en.md').is_file()
+    opened = c.post('/api/open', json={'path': info['samples']}).get_json()
+    tree = c.get(f"/api/tree?p={opened['opened']}").get_json()['tree']
+    names = {n['name'] for n in tree}
+    assert {'guide', 'research', 'plans', 'reports', 'README.md', 'CLAUDE.md'} <= names
+    assert not any(p.name.startswith('.') or p.name in ('node_modules', '__pycache__') for p in samples.rglob('*'))
+    st.close()
 
 
 def test_state_and_tree(client, project, pid):

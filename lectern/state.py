@@ -16,6 +16,7 @@ from . import __version__, i18n
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
+from .paths import samples_dir, web_dir
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
@@ -258,4 +259,7 @@ class AppState:
             'version': __version__,
             'config_error': self.config.load_error,
             'notices': notices,
+            # 예제 프로젝트(없으면 None)와 AI 용 작성 안내의 경로 — 시작 화면의 '예제 열기', 설정 창의 요청 글 (D57)
+            'samples': str(samples_dir()) if samples_dir().is_dir() else None,
+            'writing_guide': str(web_dir() / 'help' / ('writing.en.md' if i18n.language() == 'en' else 'writing.md')),
         }

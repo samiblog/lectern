@@ -14,7 +14,8 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 ### Opening a folder
 
 - Click **+** in the tab bar (Ctrl+O) and choose a project folder; it opens in a new tab. If the folder is already open, Lectern switches to its tab.
-- The arrow next to **+** lists recent folders.
+- The arrow next to **+** lists recent folders and **Open samples**.
+- **Open samples** (also on the start screen) opens a sample project with a tour of Lectern and how to write documents. It is set up like a research project done with Claude Code, so you can try the tree, code, files, charts and edit mode right away. You can edit it, but reinstalling Lectern restores it.
 - You can also right-click a folder in Explorer and choose **Open with Lectern**. If Lectern is already running, the folder opens as a tab in that window instead of a new window.
 - When you start Lectern again, the tabs you had open come back, each at the document and position you were reading.
 
@@ -91,7 +92,7 @@ This is the first screen when a folder opens. It shows recently changed document
 - Tables align number columns to the right, and the header row stays visible as you scroll.
 - Code blocks are colored by language; the 'Copy' button at the top right copies them.
 - Callouts (`> [!NOTE]` and so on), footnotes, checklists, math (`$…$`, `$$…$$`, and math/latex code blocks) and Mermaid diagrams are rendered. Dollar amounts such as `$105` are not turned into math.
-- **Charts**: code blocks whose language is `vega-lite` (data charts), `echarts` (many chart types such as donuts and candlesticks), `plotly` (analysis charts such as box plots and sunbursts — the output of Python's `fig.to_json()` works too) or `dot`/`graphviz` (structure and dependency graphs) are drawn as pictures. Colors follow the document style; click to enlarge, and use 'Copy image' in the right-click menu to paste a PNG. Settings are JSON and functions are not allowed. Write the data in the document or point to a CSV/JSON file in the project with a relative path (internet addresses are not read). There is no hover or zoom, and Plotly map charts are not drawn because they need map data from the internet. The Lectern repository has an example document in `samples\docs`.
+- **Charts**: code blocks whose language is `vega-lite` (data charts), `echarts` (many chart types such as donuts and candlesticks), `plotly` (analysis charts such as box plots and sunbursts — the output of Python's `fig.to_json()` works too) or `dot`/`graphviz` (structure and dependency graphs) are drawn as pictures. Colors follow the document style; click to enlarge, and use 'Copy image' in the right-click menu to paste a PNG. Settings are JSON and functions are not allowed. Write the data in the document or point to a CSV/JSON file in the project with a relative path (internet addresses are not read). There is no hover or zoom, and Plotly map charts are not drawn because they need map data from the internet. The samples (**Open samples**) have an example of each kind in the chart guide (number 07 in the `guide` folder).
 - Click an image to enlarge it.
 - Paths in the text that point to real files, such as `src/app.py:42`, become links.
 
@@ -215,6 +216,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 3. When Claude creates or edits a document, the change appears within a second, and changed documents you have not opened yet get an amber dot in the tree.
 4. To ask about a document, right-click it in the tree, choose `Copy @path` and paste it into your prompt. For example: `@docs/report.md summarize the conclusion in three lines`
 5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
+6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
 
 ## Settings
 
@@ -228,6 +230,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
 | Show web images | Load https images in documents. When off, they show as links |
+| Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |

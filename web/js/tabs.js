@@ -70,6 +70,8 @@ function makeTab(p) {
 function syncTabs(info) {
   tabsSeq = info.tabs_seq;
   maxTabs = info.max_tabs || maxTabs;
+  S.samples = info.samples ?? null;
+  S.writingGuide = info.writing_guide || '';
   if (info.sep) S.sep = info.sep;
   for (const n of info.notices || []) {
     if (n.id <= noticeSeen) continue;
@@ -138,6 +140,7 @@ function showWelcome() {
   pane.view.innerHTML = `<h1>${t('프로젝트 폴더를 여세요')}</h1>
     <p>${t('폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 폴더마다 탭으로 열려 여러 프로젝트를 오가며 볼 수 있습니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.')}</p>
     <p class="welcome-acts"><button type="button" class="primary" data-act="open">${t('폴더 열기')}</button>
+      ${S.samples ? `<button type="button" class="text-btn" data-act="samples" title="${esc(t('Lectern 둘러보기와 문서 쓰는 법이 든 예제 프로젝트 — {path}', { path: S.samples }))}">${t('예제 열기')}</button>` : ''}
       <button type="button" class="text-btn" data-act="help">${t('사용설명서')}<kbd>F1</kbd></button></p>
     ${recent.length ? `<h2>${t('최근 연 폴더')}</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
       <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
@@ -193,6 +196,17 @@ export async function openFolder(path) {
   syncTabs(info);
   await selectTab(S.tabs.find((tb) => tb.id === info.opened) || null, { tell: false });
   return true;
+}
+
+/** 예제 프로젝트를 탭으로 연다 (D57 — 설치 폴더의 samples. 이미 열려 있으면 그 탭). 처음이면 폴더 개요 대신 README('여기서 시작하세요') */
+export async function openSamples() {
+  if (!S.samples) {
+    toast(t('예제 폴더가 없습니다. Lectern 을 다시 설치하면 생깁니다'), 'error');
+    return false;
+  }
+  const ok = await openFolder(S.samples);
+  if (ok && S.view?.type === 'overview' && !S.view.path && S.fileMap.has('README.md')) await navigate({ type: 'doc', path: 'README.md' });
+  return ok;
 }
 
 export async function chooseAndOpen() {
@@ -311,6 +325,7 @@ function recentMenu(e) {
     }))
     : [{ label: t('최근 연 폴더가 없습니다'), action: () => {} }];
   items.push('-', { label: t('다른 폴더 열기…'), hint: 'Ctrl+O', action: chooseAndOpen });
+  if (S.samples) items.push({ label: t('예제 열기'), hint: t('Lectern 둘러보기·문서 쓰는 법'), action: openSamples });
   showMenu(r.left, r.bottom + 4, items);
 }
 
@@ -352,6 +367,7 @@ export function initTabs() {
     if (!e.target.closest('.welcome')) return;
     const btn = e.target.closest('button');
     if (btn?.dataset.act === 'open') chooseAndOpen();
+    else if (btn?.dataset.act === 'samples') openSamples();
     else if (btn?.dataset.path) openFolder(btn.dataset.path);
   });
   on('changed', renderTabs);   // 숨은 탭의 '바뀜' 점

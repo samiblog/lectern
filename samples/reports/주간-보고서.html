@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>주간 시장 보고서 (6월 4주)</title>
+<meta name="description" content="Claude Code 가 HTML 로 만든 주간 보고서 예제. 자기 스타일 그대로 보이고, 스크립트는 돌지 않는다.">
+<style>
+  body { margin: 0; background: #f5f6f8; color: #1f2933; font-family: "Segoe UI", "Malgun Gothic", sans-serif; line-height: 1.6; }
+  header { background: #1e3a5a; color: #fff; padding: 28px 40px 24px; }
+  header h1 { margin: 0; font-size: 26px; }
+  header p { margin: 6px 0 0; opacity: .85; }
+  main { max-width: 880px; margin: 0 auto; padding: 20px 40px 60px; }
+  .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 18px 0; }
+  .kpi { background: #fff; border: 1px solid #dde3ea; border-radius: 8px; padding: 14px 18px; }
+  .kpi b { display: block; font-size: 24px; }
+  .kpi span { color: #5f6b78; font-size: 13px; }
+  .kpi .up { color: #b42318; } .kpi .down { color: #1d6b3a; }
+  section { background: #fff; border: 1px solid #dde3ea; border-radius: 8px; padding: 18px 24px; margin: 18px 0; }
+  h2 { margin: 0 0 10px; font-size: 19px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { border-bottom: 1px solid #e3e7ec; padding: 6px 10px; text-align: left; }
+  th { background: #eef2f6; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .note { color: #6a5000; background: #fff6d6; border-radius: 6px; padding: 10px 14px; }
+  svg text { font-family: "Segoe UI", "Malgun Gothic", sans-serif; }
+</style>
+</head>
+<body>
+<header>
+  <h1>주간 시장 보고서 — 6월 4주</h1>
+  <p>리서치 자동화가 만든 보고서 · 숫자는 모두 예시</p>
+</header>
+<main>
+  <div class="cards">
+    <div class="kpi"><span>월평균 가격 (USD/t)</span><b>11,220</b><span class="up">▲ 4.3% (전월 대비)</span></div>
+    <div class="kpi"><span>거래소 재고 (천 t)</span><b>241</b><span class="down">▼ 10.1% (전 분기 대비)</span></div>
+    <div class="kpi"><span>2분기 평균 (USD/t)</span><b>11,007</b><span class="up">▲ 3.9% (1분기 대비)</span></div>
+  </div>
+
+  <section>
+    <h2 id="summary">요약</h2>
+    <p>최근 3개월 평균은 그 앞 3개월보다 +3.9% 움직였고, 가격은 톤당 $10,760~$11,220 사이였다. 재고 감소가 이어져 단기적으로는 오름세가 유지될 것으로 본다.</p>
+    <p class="note">이 보고서는 자기 스타일(CSS)을 가지고 있어 그 모양 그대로 보인다. Lectern 은 HTML 의 스크립트를 돌리지 않으므로, 차트는 아래처럼 SVG 로 그려 두거나 Markdown 문서의 차트 코드 블록으로 만든다.</p>
+  </section>
+
+  <section>
+    <h2 id="trend">월평균 가격</h2>
+    <svg viewBox="0 0 640 220" width="100%" role="img" aria-label="1~6월 월평균 가격 막대 차트">
+      <g fill="#5b8ec4">
+        <rect x="40" y="62" width="70" height="128"/><rect x="140" y="80" width="70" height="110"/><rect x="240" y="50" width="70" height="140"/>
+        <rect x="340" y="40" width="70" height="150"/><rect x="440" y="56" width="70" height="134"/><rect x="540" y="30" width="70" height="160"/>
+      </g>
+      <g font-size="12" fill="#1f2933" text-anchor="middle">
+        <text x="75" y="56">10,620</text><text x="175" y="74">10,290</text><text x="275" y="44">10,870</text>
+        <text x="375" y="34">11,040</text><text x="475" y="50">10,760</text><text x="575" y="24">11,220</text>
+        <text x="75" y="208">1월</text><text x="175" y="208">2월</text><text x="275" y="208">3월</text>
+        <text x="375" y="208">4월</text><text x="475" y="208">5월</text><text x="575" y="208">6월</text>
+      </g>
+      <line x1="30" y1="190" x2="620" y2="190" stroke="#8a94a0"/>
+    </svg>
+  </section>
+
+  <section>
+    <h2 id="table">지표</h2>
+    <table>
+      <thead><tr><th>지표</th><th>1분기</th><th>2분기</th><th>변화</th></tr></thead>
+      <tbody>
+        <tr><td>거래소 평균 가격 (USD/t)</td><td class="num">10,593</td><td class="num">11,007</td><td class="num">+3.9%</td></tr>
+        <tr><td>거래소 재고 (천 t)</td><td class="num">268</td><td class="num">241</td><td class="num">-10.1%</td></tr>
+        <tr><td>중국 수입 (만 t)</td><td class="num">141</td><td class="num">149</td><td class="num">+5.7%</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section>
+    <h2 id="links">더 보기</h2>
+    <ul>
+      <li><a href="../research/구리-시장-동향.md">구리 시장 동향 (2분기)</a> — 같은 숫자의 리서치 문서. Lectern 안에서 열린다</li>
+      <li><a href="../research/구리-시장-동향.md#전망">그 문서의 '전망' 절</a> — 절로 바로 간다</li>
+      <li><a href="#summary">이 보고서의 요약</a> — 같은 문서 안</li>
+      <li><a href="https://github.com/samiblog/lectern">Lectern 저장소</a> — 인터넷 주소는 기본 브라우저로 연다</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

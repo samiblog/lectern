@@ -24,20 +24,20 @@ python tools/ui_smoke.py     :: 화면 회귀 점검 (playwright + chromium 필�
 
 터미널은 창 모드(WebView2)에서도 점검했다 (v0.10.0): CSP 아래 pywebview 토큰·js_api, 한글 이름 폴더의 셸, 터미널 안의 Ctrl+Tab, 창을 닫으면 셸과 셸에서 띄운 ping 까지 끝남, 앱을 강제 종료해도 자식이 남지 않음.
 
-`ui_smoke.py` 는 `samples/` 를 임시 폴더에 복사해 브라우저 모드 서버를 띄우고 headless Chromium으로 확인한다. 화면 캡처는 `ui-shots/` 에 저장되니, UI를 고친 뒤 캡처를 직접 열어 보는 것도 점검의 일부다.
+`ui_smoke.py` 는 점검용 프로젝트 `tests/fixture/` 를 임시 폴더에 `samples` 라는 이름으로 복사해 브라우저 모드 서버를 띄우고 headless Chromium으로 확인한다 (사용자·AI 용 예제 `samples/` 는 따로 — D57. '[예제]' 점검이 그 예제를 열어 본다). 화면 캡처는 `ui-shots/` 에 저장되니, UI를 고친 뒤 캡처를 직접 열어 보는 것도 점검의 일부다.
 
 새 기능을 넣을 때:
 - 서버·스캔 쪽은 `tests/` 에 테스트를 추가한다.
-- 화면 쪽은 `samples/` 에 확인용 내용을 넣고 `ui_smoke.py` 에 `check(...)` 를 추가한다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
+- 화면 쪽은 `tests/fixture/` 에 확인용 내용을 넣고 `ui_smoke.py` 에 `check(...)` 를 추가한다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
 
 ## 2. Windows 수동 점검표
 
 자동 테스트로 확인할 수 없는 Windows 고유 동작이다. 릴리스 전, 그리고 관련 코드를 고쳤을 때 수행한다.
-`samples` 폴더를 다른 곳에 복사해서 쓴다 (원본을 바꾸지 않도록).
+점검용 프로젝트 `tests\fixture` 를 다른 곳에 복사해서 쓴다 (원본을 바꾸지 않도록).
 
 ### 준비
 ```bat
-xcopy /E /I samples %TEMP%\lec-check
+xcopy /E /I tests\fixture %TEMP%\lec-check
 attrib +h %TEMP%\lec-check\docs\03-다이어그램.md
 mkdir %TEMP%\lec-target & echo # far > %TEMP%\lec-target\far.md
 mklink /J %TEMP%\lec-check\junction %TEMP%\lec-target
@@ -85,7 +85,8 @@ python app.py %TEMP%\lec-check
 | 27d | 실제 프로젝트의 큰 소스 파일(수천 줄 .py·.ts·.cs 등)과 json·yaml 설정을 '코드' 목록에서 누르기, 목차로 오가기, 터미널의 Claude Code 로 그 파일을 고치게 하기, 문서 속 `파일:줄` 누르기, 어두운 스타일로 바꾸기 | 1~2초 안에 보이고 목차가 클래스·함수로 나옴. 고치면 2초 안에 다시 그려지고 바뀐 줄이 표시됨. 경로를 누르면 그 줄. 어두운 스타일에서도 색이 읽힘 |
 | 27e | 창 모드에서 문서를 열고 상태줄 '편집'(또는 Ctrl+E) → 한글 입력기로 문장 몇 개 치기(조합 중 지우기·고치기 포함), Ctrl+S, Esc. 다시 편집해 몇 글자 친 채 창 닫기 → '아니요', 다시 닫기 → '예'. 터미널의 Claude Code 에 같은 파일을 고치게 한 뒤 편집 모드에서 Ctrl+S | 한글이 조합 중에 깨지거나 두 번 들어가지 않음. 저장하면 아래 문서가 고친 대로 보이고, 줄바꿈(CRLF 파일은 CRLF)이 그대로. 창을 닫을 때 저장하지 않은 편집을 묻고 '아니요'면 그대로 남음. Claude Code 가 고친 뒤 저장하면 덮어쓸지 물음 (D54) |
 | 27f | 실제 프로젝트의 긴 문서(접힌 절·표·그림·Mermaid 가 있는 것)를 반쯤 읽다가 [편집] → 몇 줄 더하고 지우기, 마우스 휠로 멀리 가서 다른 절을 누르기, 목차의 다른 제목 누르기, Ctrl+S 뒤 다시 목차, Esc. html 보고서·큰 코드 파일도 같은 순서로 | 편집기가 읽던 곳에서 열림. 커서를 옮기면 목차의 강조가 그 절로, 목차를 누르면 편집기가 그 제목 줄로(저장 전에 줄을 더해도 어긋나지 않음). 닫으면 문서 화면이 편집하던 곳(접힌 절은 펴짐). 한글을 치는 동안 화면이 버벅이지 않음 (D55) |
-| 27g | 창 모드에서 `samples\docs\06-차트.md` 를 열고 스타일을 기본·잡지·다크·Nord 로 바꿔 보기, 사이드바·목차를 감췄다 보이기, 차트 우클릭 '그림 복사' 를 워드·PPT 에 붙이기, 인쇄 미리 보기 | 차트 11개가 그려지고 스타일마다 글자·선이 읽힘 (Graphviz 상자 안에 한글이 들어감). 폭이 바뀌면 차트가 그 폭으로 다시 그려짐(글자가 작아지지 않음). 붙인 그림이 흐리지 않음 (D56) |
+| 27g | 창 모드에서 `tests\fixture\docs\06-차트.md`(또는 '예제 열기'의 `guide/07-차트.md`)를 열고 스타일을 기본·잡지·다크·Nord 로 바꿔 보기, 사이드바·목차를 감췄다 보이기, 차트 우클릭 '그림 복사' 를 워드·PPT 에 붙이기, 인쇄 미리 보기 | 차트 11개가 그려지고 스타일마다 글자·선이 읽힘 (Graphviz 상자 안에 한글이 들어감). 폭이 바뀌면 차트가 그 폭으로 다시 그려짐(글자가 작아지지 않음). 붙인 그림이 흐리지 않음 (D56) |
+| 27h | 설치한 Lectern 의 시작 화면(탭을 모두 닫음)에서 '예제 열기', 탭 막대 ∨ → '예제 열기', 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 복사·터미널 버튼 | 설치 폴더의 samples 가 README 부터 열림, 모든 문서가 그려짐(07-차트의 오류 예시 하나만), 요청 글에 설치 폴더의 `web\help\writing.md` 경로, 터미널에는 Enter 없이 붙음 (D57) |
 | 28 | PowerShell 7 이 있으면 설정 파일에 `"terminal_shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"` → 터미널 머리줄의 ↻ | 'PowerShell 7' 셸이 뜸. 없는 경로·이름만 적으면 기본 PowerShell |
 
 ### 패키징 점검

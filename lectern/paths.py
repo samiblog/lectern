@@ -23,6 +23,11 @@ def web_dir() -> Path:
     return resource_dir() / 'web'
 
 
+def samples_dir() -> Path:
+    """예제 프로젝트 (D57) — 개발 중에는 저장소의 samples/, 설치하면 _internal\\samples (lectern.spec 의 datas)."""
+    return resource_dir() / 'samples'
+
+
 def config_dir() -> Path:
     """설정 폴더. 테스트에서는 LECTERN_CONFIG_DIR 로 바꿀 수 있다."""
     override = os.environ.get('LECTERN_CONFIG_DIR')

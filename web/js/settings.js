@@ -5,6 +5,7 @@ import { S, emit, on } from './store.js';
 import { saveConfig, postJSON } from './api.js';
 import { fillPicker, grouping, userStyleInfo } from './theme.js';
 import { confirmReload } from './editor.js';
+import { openSamples } from './tabs.js';
 import { $, $$, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -16,8 +17,17 @@ export function openSettings() {
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   renderMyStyles();
+  $('#lec-aiguide-samples').hidden = !S.samples;
   box().hidden = false;
   $('#lec-settings input')?.focus();
+}
+
+// ---- Claude Code 에 Lectern 알려 주기 (D57) ----------------------------------------------
+
+/** Claude Code 에 줄 요청 글: 작성 안내(web/help/writing.md)를 읽고 그 프로젝트의 CLAUDE.md 에 규칙을 정리하게 */
+function guidePrompt() {
+  return t("이 프로젝트의 문서는 사람이 Lectern(문서 뷰어)으로 읽어. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 'CLAUDE.md 에 넣을 요약'을 이 프로젝트에 맞게 다듬어 이 프로젝트의 CLAUDE.md 에 넣어 줘. 앞으로 문서는 그 규칙대로 써.",
+    { guide: S.writingGuide });
 }
 
 // ---- 내 스타일 (D53) --------------------------------------------------------------
@@ -106,6 +116,17 @@ export function initSettings() {
   $('#lec-mystyles-term').addEventListener('click', () => {
     closeSettings();
     emit('term-paste', stylePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-aiguide-prompt').addEventListener('click', async () => {
+    toast(await copyText(guidePrompt()) ? t('요청 글을 복사했습니다 — 작업할 프로젝트의 Claude Code 에 붙여 넣으세요') : t('복사하지 못했습니다'));
+  });
+  $('#lec-aiguide-term').addEventListener('click', () => {
+    closeSettings();
+    emit('term-paste', guidePrompt());   // 지금 탭의 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-aiguide-samples').addEventListener('click', () => {
+    closeSettings();
+    openSamples();
   });
   on('user-styles', () => { if (!box().hidden) renderMyStyles(); });
   $('#lec-settings-ver').textContent = `Lectern ${document.querySelector('meta[name="lec-version"]')?.content || ''}`;
