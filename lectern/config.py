@@ -21,6 +21,7 @@ from .paths import config_dir
 MAX_RECENT = 10
 MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
+MAX_DOC_TABS = 5      # 프로젝트 탭마다 여는 문서 탭 수 (D64 — 화면의 doctabs.js MAX_DOCS 와 같게)
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 
 CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
@@ -250,9 +251,9 @@ class Config:
             return True
         self._update(change)
 
-    def remember_position(self, root: str, doc: str, scroll: int) -> None:
+    def remember_position(self, root: str, doc: str, scroll: int, docs: list[str] | None = None) -> None:
         """프로젝트의 마지막 문서와 스크롤 위치. 문서별 스크롤 위치도 남긴다 (뒤로 가기·다시 열 때).
-        최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
+        docs: 열어 둔 문서 탭들의 문서 (탭 차례, D64 — 없으면 doc 하나). 최근 것이 뒤에 오도록 다시 넣고 오래된 것부터 버린다."""
         def change(data: dict[str, Any]) -> None:
             projects = data.get('projects') if isinstance(data.get('projects'), dict) else {}
             key = os.path.normcase(root)
@@ -260,20 +261,25 @@ class Config:
             scrolls = entry.get('scroll') if isinstance(entry, dict) and isinstance(entry.get('scroll'), dict) else {}
             scrolls.pop(doc, None)
             scrolls[doc] = max(0, int(scroll))
-            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:])}
+            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:]), 'docs': list(docs or [doc])[:MAX_DOC_TABS]}
             data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
         self._update(change)
 
     def position(self, root: str) -> dict[str, Any]:
-        """{doc, scroll:{문서: 위치}}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
-        창을 나누던 때(v0.6)의 기록에 남은 panes·active 는 읽지 않는다 — doc 이 그때 선택된 창의 문서다."""
+        """{doc, scroll:{문서: 위치}, docs:[열어 둔 문서 탭들의 문서]}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
+        창을 나누던 때(v0.6)의 기록에 남은 panes·active 는 읽지 않는다 — doc 이 그때 선택된 창의 문서다.
+        docs 가 없는 옛 기록은 doc 하나 (문서 탭 — D64)."""
         projects = self.get('projects')
         entry = projects.get(os.path.normcase(root)) if isinstance(projects, dict) else None
         if not isinstance(entry, dict):
-            return {'doc': None, 'scroll': {}}
+            return {'doc': None, 'scroll': {}, 'docs': []}
         doc = entry.get('doc') if isinstance(entry.get('doc'), str) else None
         scrolls = entry.get('scroll') if isinstance(entry.get('scroll'), dict) else {}
-        return {'doc': doc, 'scroll': {k: v for k, v in scrolls.items() if is_number(v)}}
+        docs = entry.get('docs') if isinstance(entry.get('docs'), list) else []
+        docs = list(dict.fromkeys(d for d in docs if isinstance(d, str)))[:MAX_DOC_TABS]
+        if doc and doc not in docs:
+            docs = (docs + [doc])[-MAX_DOC_TABS:]
+        return {'doc': doc, 'scroll': {k: v for k, v in scrolls.items() if is_number(v)}, 'docs': docs}
 
     def public(self) -> dict[str, Any]:
         with self._lock:

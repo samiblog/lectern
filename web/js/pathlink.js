@@ -33,8 +33,9 @@ function onClick(e) {
   if (!a) return;
   e.preventDefault();
   const { path, line } = a.dataset;
-  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path });   // 누를 수 있는 것은 선택된 탭의 문서뿐
-  else if (isViewable(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined });
+  const newTab = e.ctrlKey || e.metaKey;   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64 — 가운데 버튼은 doctabs.js 가 Ctrl+누르기로)
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path, newTab });   // 누를 수 있는 것은 선택된 탭의 문서뿐
+  else if (isViewable(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined, newTab });
   else openExternal(path, line ? Number(line) : undefined);
 }
 

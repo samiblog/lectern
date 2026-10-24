@@ -147,7 +147,7 @@ flowchart LR
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
 | `terminal_shell` | `null` | 불가 | 터미널 셸 실행 파일의 전체 경로 (예: `C:\\Program Files\\PowerShell\\7\\pwsh.exe`). `null`·없는 파일·이름만이면 Windows PowerShell 5.1 (D38) |
 | `html_exclude_dirs` | `[]` | 불가 | 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 목록 `src`·`public` 등에 더함, D27) |
-| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}}` — 마지막 문서와 문서별 스크롤 위치. 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서. 창을 나누던 때(v0.6)의 `panes`·`active` 는 읽지 않는다 (`doc` 이 그때 선택된 창의 문서라 그대로 쓴다) |
+| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}, docs:[문서…]}` — 마지막 문서와 문서별 스크롤 위치, 열어 둔 문서 탭들(D64 — 탭 차례, 5개까지, 없던 옛 기록은 doc 하나). 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서. 창을 나누던 때(v0.6)의 `panes`·`active` 는 읽지 않는다 (`doc` 이 그때 선택된 창의 문서라 그대로 쓴다) |
 
 '불가' 키는 `config.json` 을 직접 고쳐야 한다. 웹 페이지가 실행 파일 경로 같은 값을 바꾸지 못하게 하려는 제한이다 (`CLIENT_KEYS`).
 
@@ -183,7 +183,7 @@ flowchart LR
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/config` | | 설정 전체 |
-| `POST /api/position` | `{p, path, scroll}` | 그 탭에서 보는 문서와 스크롤 위치 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값 400 |
+| `POST /api/position` | `{p, path, scroll, docs?}` | 그 탭에서 보는 문서와 스크롤 위치, 열어 둔 문서 탭들의 문서(`docs` — 탭 차례, 5개까지, 없어진 것·밖·숨김은 빼고 기록, D64) 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값·문서 6개 이상 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
 | `POST /api/config` | 부분 객체 | `CLIENT_KEYS` 만 반영, 설정 전체 반환 |
 | `POST /api/open-external` | `{p, path, line?, how?}` | `{action}` — `folder`·`default`·`editor`·`reveal`. `how:'editor'` 면 기본 앱 형식도 편집기로 (`REVEAL_ONLY_EXT` 는 그래도 탐색기에서 선택만) |
@@ -226,15 +226,23 @@ sequenceDiagram
 ### 프로젝트 탭 (tabs.js, panes.js)
 - 폴더 하나가 탭 하나다 (D34). 탭 막대(`#lec-tabbar`, 높이 40px)는 툴바 아래 전체 폭. 프로젝트가 가장 큰 단위라 다른 글자보다 크고 굵다 (14.5px, 폴더 아이콘, 선택된 탭은 강조색 바탕·굵은 밑줄). 탭(폴더 이름 — 같은 이름이 둘 이상이면 상위 폴더 이름도, 마우스를 올리면 전체 경로), `+`(폴더 열기 — 새 탭, Ctrl+O), `▾`(최근 연 폴더). 선택된 탭은 밑줄, 숨은 탭에서 바뀐 문서가 있으면 호박색 점. ×·가운데 버튼·Ctrl+W 로 닫고, 우클릭은 탭 닫기·다른 탭 모두 닫기·전체 경로 복사·탐색기에서 보기. 넘치면 휠로 가로 스크롤.
 - 열린 탭 목록(순서·선택된 탭)은 서버가 들고 있고(`state.py`), 화면은 `/api/state`·`/api/open`·`/api/close` 의 답으로 맞춘다 (`syncTabs`). 다른 실행이 넘긴 폴더로 서버의 탭이 바뀌면 `watch.js` 가 `tabs_seq` 로 알아채고 `resyncTabs` 로 서버가 고른 탭으로 간다. 이미 열린 폴더를 다시 열면 새 탭 대신 그 탭으로 간다.
-- 탭 객체: 프로젝트 id·폴더·이름, 트리 데이터(`tree`·`files`·`fileMap`·`dirs`), 변경됨(`changed`), 펼친 폴더(`open`), 변경 순번(`seq`), 사이드바 상태(`side` — 파일·최근 변경·검색 중 어느 것인지, 거르기 글자, 스크롤 위치, 검색어와 결과), 문서 칸(`pane`). `store.js` 의 `S.root`·`S.name`·`S.tree`·`S.files`·`S.fileMap`·`S.dirs`·`S.changed`·`S.open`·`S.seq`·`S.watch`·`S.lastSync` 는 선택된 탭(`S.tab`)의 값을 읽고 쓰는 접근자다 — 선택된 탭만 다루는 모듈(트리·팔레트·검색·우클릭 메뉴)은 탭을 몰라도 된다. 탭이 없으면 빈 값.
+- 탭 객체: 프로젝트 id·폴더·이름, 트리 데이터(`tree`·`files`·`fileMap`·`dirs`), 변경됨(`changed`), 펼친 폴더(`open`), 변경 순번(`seq`), 사이드바 상태(`side` — 파일·최근 변경·검색 중 어느 것인지, 거르기 글자, 스크롤 위치, 검색어와 결과), 문서 탭들의 칸(`panes` — 탭 차례, 5개까지, D64)과 고른 칸(`pane`). `store.js` 의 `S.root`·`S.name`·`S.tree`·`S.files`·`S.fileMap`·`S.dirs`·`S.changed`·`S.open`·`S.seq`·`S.watch`·`S.lastSync` 는 선택된 탭(`S.tab`)의 값을 읽고 쓰는 접근자다 — 선택된 탭만 다루는 모듈(트리·팔레트·검색·우클릭 메뉴)은 탭을 몰라도 된다. 탭이 없으면 빈 값.
 - 탭을 고르면(`selectTab`) `tab` 이벤트(트리·검색이 앞 탭의 사이드바 상태를 그 탭에 남기고 새 탭 것을 되살린다), 칸 고르기(`pane`·`view` 이벤트 — 목차·상태줄·찾기·바뀐 곳·뒤로 버튼·창 제목이 그 탭 것으로), 서버에 `POST /api/activate`. 그 탭의 스크롤 상자(`tabindex=-1`)에 초점을 줘 PageUp·PageDown 이 그 문서를 스크롤한다. 장 하이라이트는 꺼진다.
 - 탭은 처음 고를 때 트리를 읽고 마지막에 보던 문서와 위치(`restore_last`)나 폴더 개요를 연다 (`loadTab`) — 다음 실행에 탭이 많아도 선택된 탭만 바로 그린다. 0.4초가 넘으면 '폴더를 읽고 있습니다…'. 트리가 보인 뒤 사용자가 먼저 문서를 눌렀으면 개요로 덮지 않는다. 읽지 못하면 안내하고 F5 로 다시 연다.
 - 탭을 닫으면 오른쪽(없으면 왼쪽) 탭으로, 마지막 탭이면 시작 화면(폴더 열기·최근 폴더 — 탭에 속하지 않는 칸 `homePane`). 닫기 전에 그 탭의 마지막 위치를 보낸다.
-- 칸(pane, `panes.js`)은 탭마다 하나: 화면(`view` — 본문 article)·스크롤 상자(`scroller` — `.lec-scroll`)·지금 화면(`current`)·뒤로/앞으로 기록·문서별 스크롤 위치(`scrollPos`)·렌더링 순번(`renderId`)·목차 뿌리·상태줄·원문(우클릭 메뉴)·바뀐 곳이 따로다. 칸은 겹쳐 두고 선택된 탭의 칸만 보인다. 숨은 칸은 `visibility: hidden` — `display:none` 이면 스크롤 위치를 잃고, 숨은 동안 그림·html 문서의 크기를 잴 수 없다. 탭을 오가도 다시 그리지 않으므로 읽던 화면이 그대로다.
+- 칸(pane, `panes.js`)은 문서 탭마다 하나 (D64 — 아래 '문서 탭'): 화면(`view` — 본문 article)·스크롤 상자(`scroller` — `.lec-scroll`)·지금 화면(`current`)·뒤로/앞으로 기록·문서별 스크롤 위치(`scrollPos`)·렌더링 순번(`renderId`)·목차 뿌리·상태줄·원문(우클릭 메뉴)·바뀐 곳이 따로다. 칸은 겹쳐 두고 선택된 탭의 칸만 보인다. 숨은 칸은 `visibility: hidden` — `display:none` 이면 스크롤 위치를 잃고, 숨은 동안 그림·html 문서의 크기를 잴 수 없다. 탭을 오가도 다시 그리지 않으므로 읽던 화면이 그대로다.
 - 선택된 칸의 스크롤 상자·본문에 `#lec-content`·`#lec-view` id 를 옮겨 단다 (D33 에서 만든 방식). 선택된 칸만 다루는 코드(찾기·우클릭 메뉴·검색 결과로 가기·`util.docRoot()`)는 그 id 로 찾고, 모든 칸을 다루는 코드(렌더러·자동 새로고침·글자 크기의 읽던 곳 지키기)는 칸 객체를 쓴다. 렌더러는 프로젝트를 칸의 탭(`pane.tab`)에서 읽는다 — 주소 `/doc/<id>/…`(`util.docUrl`), 절대경로 판정, `fileMap` — 그리는 중에 다른 탭을 골라도 원래 탭에 그린다. 찾기 막대(`#lec-findbar`)도 선택된 칸으로 옮긴다. 문서 화면의 클릭·우클릭은 `#lec-panes` 에서 받는다 (id 가 옮겨 다니므로).
 - 자동 새로고침(`watch.js`)은 한 번의 요청으로 모든 탭을 본다. 선택된 탭은 바로 다시 그리고, 숨은 탭은 트리와 변경됨만 갱신하고 칸에 `stale` 을 달아 그 탭을 고를 때 다시 그린다 (바뀐 곳 강조도 그때 보인다). 아직 고르지 않은 탭은 바뀐 문서만 모은다 (탭의 점). 스타일·수식 설정도 선택된 탭만 바로 다시 그리고 나머지는 고를 때 (`nav.refreshView()`).
 - 접은 절(`fold.js`)과 문서별 스크롤 위치는 칸(탭)마다 기억한다 — 두 프로젝트에 같은 경로(`README.md`)가 있어도 섞이지 않는다.
 - 브라우저 개발 모드에서는 Ctrl+W·Ctrl+Tab·Ctrl+숫자를 브라우저가 먼저 가져간다 (창 모드에서는 된다). 인쇄는 선택된 탭의 문서만.
+
+### 문서 탭 (doctabs.js — D64)
+- 문서 칸 위 한 줄 `#lec-doctabs`(높이 `--doctabs-h`, 프로젝트가 열리면 보이고 `#lec-panes.has-doctabs > .lec-pane` 이 그 아래부터): 문서 탭(`.doc-tab[data-i]` — 아이콘·이름(`tree.js` 의 `labelOf`)·저장하지 않은 편집 ●·×), `#lec-doctab-new`(+ — `openPalette({newTab: true})`). 가운데 버튼·×·Ctrl+F4 로 닫기(하나뿐이면 닫지 않는다), 우클릭은 닫기·다른 탭 모두 닫기·`pathMenuItems`, Alt+1~5 로 고르기 (`main.js` — 편집 상자 안에서도).
+- 여는 곳: `openTarget(target)` — 'open' 이벤트를 받는다 (`nav.js` 는 받지 않는다). 그 문서·코드가 다른 문서 탭에 있으면(`docPaneOf`) 그 탭으로(hash·line 이 있으면 그 탭에서 그리로), `target.newTab` 이면 `openInNewTab`, 아니면 `navigate`. 검색·모아 보기·담기처럼 연 뒤 할 일이 있는 곳은 `openTarget` 을 직접 부른다. `newTab` 은 각 목록의 누르기에서 `util.newTabWanted(e)`(Ctrl·⌘), 가운데 버튼은 `util.middleClickOpens(box, selector)` 가 Ctrl+누르기로 바꿔 보낸다 (트리·'코드'·'자료'·파일 행·검색 결과·모아 보기·빠른 열기·본문의 링크·경로 표기·폴더 개요). 우클릭 '새 탭에서 열기'는 `tree.js` 의 `docMenuItems`(문서 행)·`others.js` 의 `fileMenuItems`(코드·자료 '새 탭에서 보기').
+- `openInNewTab`: 칸을 만들어 지금 탭 오른쪽에 넣거나(5개 미만), 고른 탭 말고 가장 오래 안 본(`pane.used`) 저장하지 않은 편집이 없는 칸을 바꾼다 (그 칸의 편집 상자는 닫는다). 그리는 동안 이름은 `pane.coming`. 그린 뒤 고른다 — 그사이 사용자가 다른 탭을 골랐으면 고르지 않는다.
+- `selectDocTab(pane)`: `tab.pane` 을 바꾸고 `panes.selectPane`(선택된 프로젝트 탭이면), 초점은 편집 상자가 있으면 편집기, 아니면 스크롤 상자. 되살린 탭(`pane.deferred`)은 그때 그리고, 숨은 동안 바뀐 칸(`stale`)은 다시 그린다.
+- 다음 실행: `position.js` 가 `openDocs(tab)`(md·html 문서 탭, 되살리고 아직 그리지 않은 것도)를 `POST /api/position` 의 `docs` 로 보낸다. `tabs.js` 의 `loadTab` 이 마지막 문서를 `tab.pane` 에 그린 뒤 `restoreDocTabs(tab, position)` — 나머지는 `deferred` 와 `nav.seedScroll`(문서별 스크롤)만 두고 고를 때 그린다.
+- 자동 새로고침(`watch.js`)·F5(`main.js`)는 프로젝트 탭의 칸마다 — 보이는 칸은 바로, 숨은 칸은 `stale`. 프로젝트 탭을 닫으면(`tabs.js`) 칸 모두와 편집 상자를 치우고, 닫기 전에 모든 칸의 저장하지 않은 편집을 묻는다 (`editor.confirmCloseEditor`).
 
 ### 화면 이동 (nav.js)
 - 화면 종류는 `doc`(md·html 문서)·`overview`(폴더 개요)·`code`(코드 읽기 화면, D43). `navigate({type, path, hash?, line?})` — `line` 은 코드 화면의 그 줄로.
@@ -460,6 +468,9 @@ sequenceDiagram
 | Ctrl+1 ~ 8 / Ctrl+9 | 그 순번의 탭 / 마지막 탭 |
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |
 | Ctrl+W, 탭을 가운데 버튼으로 | 탭 닫기 |
+| Ctrl+누르기, 가운데 버튼 | 문서를 새 문서 탭에서 열기 — 트리·목록·링크·경로 표기·폴더 개요·검색·모아 보기·빠른 열기(Ctrl+Enter) (D64) |
+| Alt+1 ~ 5 | 그 순번의 문서 탭 (편집 상자 안에서도) |
+| Ctrl+F4, 문서 탭을 가운데 버튼으로 | 문서 탭 닫기 (하나뿐이면 닫지 않음) |
 | F5 | 선택된 탭의 트리와 화면 다시 불러오기 |
 | Shift+F5 | 발표 문서를 슬라이드로 볼 때: 발표 — 지금 보는 슬라이드부터 (D59) |
 | → ← Space·PageDown·↓ / PageUp·↑ · Home·End · N · F · Esc | 발표 중: 다음 / 이전 · 처음·끝 · 발표자 노트 · 전체 화면 · 끝내기 (발표 중의 키는 모두 `present.js` 가 받는다) |

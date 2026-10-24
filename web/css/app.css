@@ -199,9 +199,35 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 /* 문서 칸 (panes.js): 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보인다. 숨은 칸은 자리를 지킨다 (visibility) —
    display:none 이면 스크롤 위치를 잃고, 숨은 동안 그림·html 문서의 크기를 잴 수 없다 */
-#lec-panes { flex: 1; min-width: 0; position: relative; }
+#lec-panes { flex: 1; min-width: 0; position: relative; --doctabs-h: 33px; }
 .lec-pane { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .lec-pane:not(.active) { visibility: hidden; }
+/* 문서 탭 (doctabs.js, D64): 문서 칸 위 한 줄 — 프로젝트를 열면 보이고, 칸은 그 아래부터. 고른 탭은 문서 바탕색으로 아래 문서와 이어진다 */
+#lec-panes.has-doctabs > .lec-pane { top: var(--doctabs-h); }
+#lec-doctabs {
+  position: absolute; top: 0; left: 0; right: 0; height: var(--doctabs-h); display: flex; align-items: stretch; gap: 4px;
+  padding: 0 6px 0 6px; border-bottom: 1px solid var(--ui-border); background: var(--ui-bg);
+}
+#lec-doctab-list { display: flex; align-items: stretch; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+#lec-doctab-list::-webkit-scrollbar { display: none; }
+.doc-tab {
+  position: relative; display: flex; align-items: center; gap: 5px; flex: 0 1 auto; min-width: 86px; max-width: 230px;
+  margin-top: 4px; margin-bottom: -1px; padding: 0 3px 0 9px; border: 1px solid transparent; border-bottom: 0; border-radius: 6px 6px 0 0;
+  color: var(--ui-muted); font-size: 12.5px; font-weight: 600; cursor: pointer; white-space: nowrap; user-select: none;
+}
+.doc-tab:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.doc-tab.active { background: var(--md-bg, #fff); color: var(--ui-fg); border-color: var(--ui-border); }
+.doc-tab .ficon {
+  width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+  color: var(--ui-faint);
+}
+.doc-tab .ficon.doc, .doc-tab.active .ficon { color: var(--ui-accent); }
+.doc-tab:focus-visible { outline-offset: -2px; }
+.doc-tab .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.doc-tab .dirty { flex: none; color: var(--ui-accent); font-size: 10px; line-height: 1; }
+.doc-tab .tab-close { width: 20px; height: 20px; margin-left: 2px; }
+.doc-tab:hover .tab-close, .doc-tab.active .tab-close { visibility: visible; }
+#lec-doctab-new { align-self: center; flex: none; }
 .lec-scroll {
   flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
   container-type: inline-size;   /* 좁은 창에서 본문 여백·찾기 칸을 줄인다 (@container) */

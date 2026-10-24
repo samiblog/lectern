@@ -13,7 +13,7 @@
 import { S, on } from './store.js';
 import { getJSON, getText } from './api.js';
 import { showMenu } from './ui.js';
-import { navigate } from './nav.js';
+import { openTarget } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
 import { rangeText } from './docmenu.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
@@ -119,9 +119,10 @@ function remove(sn) {
   if (next) $(`#lec-basket-list .bk-item[data-id="${next.id}"]`)?.focus();
 }
 
-/** 원래 문서의 그 자리로 (그 줄이 든 가장 안쪽 블록) */
-async function goToSource(sn) {
-  if (!(await navigate({ type: 'doc', path: sn.path }))) return;
+/** 원래 문서의 그 자리로 (그 줄이 든 가장 안쪽 블록). 그 문서가 다른 문서 탭에 열려 있으면 그 탭, 지금 칸에서 편집 중이거나
+ * newTab(Ctrl+누르기)이면 새 문서 탭에서 (D64 — 넣는 문서의 편집을 떠나지 않게) */
+async function goToSource(sn, newTab = false) {
+  if (!(await openTarget({ type: 'doc', path: sn.path, newTab: newTab || !!S.pane?.editor }))) return;
   if (!sn.lines) return;
   let found = null;
   for (const el of S.pane.view.querySelectorAll('[data-lines]')) {
@@ -374,7 +375,7 @@ export function initBasket() {
     else if (e.target.closest('.bk-up')) move(sn, -1);
     else if (e.target.closest('.bk-down')) move(sn, 1);
     else if (e.target.closest('.bk-del')) remove(sn);
-    else goToSource(sn);
+    else goToSource(sn, e.ctrlKey || e.metaKey);
   });
   list.addEventListener('keydown', (e) => {
     const el = e.target.closest?.('.bk-item');

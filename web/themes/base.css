@@ -322,7 +322,7 @@
 /* 인쇄·PDF (문서 우클릭 → '인쇄 / PDF로 저장'). 화면 UI는 빼고, 어두운 스타일도 종이에는 흰 바탕·검은 글자로 —
    브라우저는 기본으로 바탕색을 인쇄하지 않으므로 밝은 글자가 흰 종이에 묻힌다 */
 @media print {
-  #lec-toolbar, #lec-tabbar, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay,
+  #lec-toolbar, #lec-tabbar, #lec-doctabs, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay,
   #lec-present, .mermaidTooltip { display: none !important; }   /* Mermaid 가 body 끝에 붙이는 말풍선 자리 — 빈 쪽이 하나 더 생긴다 */
   .lec-pane:not(.active) { display: none !important; }   /* 선택된 탭의 문서만 */
   /* app.css 가 뒤에 읽혀 같은 무게의 #lec-app(격자)·.lec-pane(absolute) 규칙이 이기므로 !important — 칸이 absolute 면

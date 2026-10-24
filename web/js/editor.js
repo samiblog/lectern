@@ -19,6 +19,7 @@
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { setLeaveGuard, navigate, back } from './nav.js';
+import { docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
@@ -194,6 +195,7 @@ function setDirty(ed, dirty) {
   ed.box.classList.toggle('dirty', dirty);
   if (dirty) setState(ed, ed.create ? t('새 문서 — 저장하면 만듭니다') : t('저장하지 않음'));
   reportDirty();
+  emit('editor', ed.pane);   // 문서 탭의 ● (doctabs.js)
 }
 
 /** 편집 버튼들: 탭 막대의 [편집]은 편집 중이면 눌린 모양, 문서·코드 화면이 아니면 누를 수 없음. 상태줄의 '편집'은 편집할 수 있을 때만 */
@@ -369,18 +371,24 @@ async function openNew(pane, path) {
 
 /**
  * 이 탭의 md 문서(path)를 편집 모드로 열고 조각을 넣는다 — 저장은 사용자가 한다. 이미 그 문서를 편집 중이면 그 편집기에.
+ * 그 문서가 문서 탭에 열려 있으면 그 탭에서, 아니면 새 문서 탭에서 연다 (D64 — 보던 문서는 그 탭에 그대로).
  * compute(원문, ed) → {line, ch, text, offset, size}: 넣을 자리와 글, 그 안의 조각 글 자리 (snippet.js 의 placeText).
  * create: 아직 없는 새 문서 — 빈 편집기로 열고 처음 저장할 때 만든다. 넣었으면 true
  */
 export async function insertIntoDoc(path, compute, { create = false } = {}) {
-  const pane = S.pane;
+  let pane = S.pane;
   if (!pane?.tab) return false;
   if (pane.editor?.path !== path) {
-    const here = !pane.editor && pane.current?.type === 'doc' && pane.current.path === path;
-    // 다른 문서를 편집 중이면 leave guard 가 묻는다. 새 문서는 읽어 보지 않고 '문서 없음' 화면 위에
-    if (!here && !(await navigate({ type: 'doc', path, missing: create }))) return false;
-    if (create) await openNew(pane, path);
-    else await openEditor(pane, { line: 1 });
+    const target = { type: 'doc', path, missing: create };   // 새 문서는 읽어 보지 않고 '문서 없음' 화면 위에
+    const open = docPaneOf(pane.tab, target);
+    if (open) await selectDocTab(open);
+    pane = open || (await openInNewTab(target)) || pane;   // 새 문서 탭을 열 수 없으면(5개 모두 저장하지 않은 편집) 지금 탭에서
+    if (pane.editor?.path !== path) {
+      const here = !pane.editor && pane.current?.type === 'doc' && pane.current.path === path;
+      if (!here && !(await navigate(target, { pane }))) return false;   // 다른 문서를 편집 중이면 leave guard 가 묻는다
+      if (create) await openNew(pane, path);
+      else await openEditor(pane, { line: 1 });
+    }
   }
   const ed = pane.editor;
   if (!ed || ed.path !== path) return false;   // 열지 못했다 (알림은 openEditor 가)
@@ -450,15 +458,15 @@ async function save(ed, force = false) {
 
 // ---- 시작 ----------------------------------------------------------------------
 
-/** 탭을 닫기 전에: 그 탭에서 저장하지 않은 편집이 있으면 묻기만 한다 (치우지 않는다 — 다른 물음에서 취소할 수 있다). 닫아도 되면 true */
+/** 탭을 닫기 전에: 그 탭(문서 탭 모두)에서 저장하지 않은 편집이 있으면 묻기만 한다 (치우지 않는다 — 다른 물음에서 취소할 수 있다). 닫아도 되면 true */
 export function confirmCloseEditor(tab) {
-  const ed = tab.pane?.editor;
-  return !ed?.dirty || window.confirm(t('{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?', { path: ed.path }));
+  const dirty = tab.panes.filter((p) => p.editor?.dirty).map((p) => p.editor.path);
+  return !dirty.length || window.confirm(t('{path} 에 저장하지 않은 편집이 있습니다. 버리고 닫을까요?', { path: dirty.join(', ') }));
 }
 
-/** 닫힌 탭의 편집 상자를 치운다 (tabs.js — 칸과 함께) */
+/** 닫힌 탭의 편집 상자들을 치운다 (tabs.js — 칸과 함께) */
 export function disposeEditor(tab) {
-  if (tab.pane?.editor) closeEditor(tab.pane, { ask: false, sync: false });
+  for (const p of tab.panes) if (p.editor) closeEditor(p, { ask: false, sync: false, leaving: true });
 }
 
 /** 읽는 화면을 다시 그렸으면 (저장 뒤 자동 새로고침 등): 저장한 글을 그렸으므로 그때까지의 줄 기록을 버리고 다시 맞춘다 */

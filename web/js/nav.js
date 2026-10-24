@@ -75,9 +75,14 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
  * 문서별 위치도 넣어 두어 뒤로 가기·다시 열 때 쓴다. 그 문서가 없어졌으면 false (부르는 쪽이 폴더 개요를 연다).
  */
 export async function restorePosition(pane, pos) {
-  for (const [path, top] of Object.entries(pos?.scroll || {})) pane.scrollPos.set(keyOf({ type: 'doc', path }), top);
+  seedScroll(pane, pos);
   if (!pos?.doc || !pane.tab.fileMap.has(pos.doc)) return false;
   return navigate({ type: 'doc', path: pos.doc }, { pane, restoreScroll: true });
+}
+
+/** 서버가 기억한 문서별 스크롤 위치를 칸에 넣어 둔다 (그 문서를 처음 열 때 — 되살린 문서 탭도, D64) */
+export function seedScroll(pane, pos) {
+  for (const [path, top] of Object.entries(pos?.scroll || {})) pane.scrollPos.set(keyOf({ type: 'doc', path }), top);
 }
 
 function go(step) {
@@ -121,6 +126,6 @@ export async function refreshView(pane) {
 }
 
 export function initNav() {
-  on('open', (target) => navigate(target));
+  // 'open' 은 doctabs.js 가 받는다 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로, newTab 이면 새 문서 탭에서)
   on('refresh-view', (pane) => refreshView(pane));
 }

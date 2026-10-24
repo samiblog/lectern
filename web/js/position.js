@@ -5,16 +5,17 @@
 
 import { S, on } from './store.js';
 import { postJSON } from './api.js';
+import { openDocs } from './doctabs.js';
 import { debounce } from './util.js';
 
 const sent = new WeakMap();   // 탭 → 마지막으로 보낸 값
 
-/** 탭의 위치를 바뀌었으면 바로 보낸다. 탭을 닫기 전에도 부른다 (tabs.js) */
+/** 탭의 위치를 바뀌었으면 바로 보낸다 — 고른 문서 탭의 문서와 위치, 열어 둔 문서 탭들(docs — D64). 탭을 닫기 전에도 부른다 (tabs.js) */
 export function rememberPosition(tab) {
   const v = tab.pane.current;
   // 지워졌거나 이름이 바뀐 문서('문서 없음' 화면)는 보내지 않는다 (서버가 404 로 거절한다)
   if (S.config.restore_last === false || v?.type !== 'doc' || !tab.fileMap.has(v.path)) return Promise.resolve();
-  const body = { p: tab.id, path: v.path, scroll: Math.round(tab.pane.scroller.scrollTop) };
+  const body = { p: tab.id, path: v.path, scroll: Math.round(tab.pane.scroller.scrollTop), docs: openDocs(tab) };
   const key = JSON.stringify(body);
   if (sent.get(tab) === key) return Promise.resolve();
   sent.set(tab, key);

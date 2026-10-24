@@ -76,7 +76,9 @@ def test_positions_are_bounded(tmp_path):
     assert len(cfg.get('projects')) == MAX_PROJECTS
     pos = cfg.position(r'C:\P0')                              # 대소문자 무시 (Windows 경로)
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
-    assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}}
+    assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}, 'docs': []}
+    cfg.remember_position(r'C:\p0', 'b.md', 3, ['a.md', 'b.md', 'c.md', 'd.md', 'e.md', 'f.md'])   # 문서 탭은 5개까지 (D64)
+    assert cfg.position(r'C:\p0')['docs'] == ['a.md', 'b.md', 'c.md', 'd.md', 'e.md']
 
 
 def test_old_and_broken_positions(tmp_path):
@@ -88,10 +90,10 @@ def test_old_and_broken_positions(tmp_path):
         os.path.normcase(r'C:\bad'): {'doc': 5, 'scroll': {'y.md': 'z', 'w.md': 2}},
     }}), encoding='utf-8')
     cfg = Config(path)
-    assert cfg.position(r'C:\old') == {'doc': 'b.md', 'scroll': {'a.md': 3, 'b.md': 7}}
-    assert cfg.position(r'C:\bad') == {'doc': None, 'scroll': {'w.md': 2}}   # 손으로 망가뜨린 값은 버린다
+    assert cfg.position(r'C:\old') == {'doc': 'b.md', 'scroll': {'a.md': 3, 'b.md': 7}, 'docs': ['b.md']}   # docs 가 없던 기록은 doc 하나
+    assert cfg.position(r'C:\bad') == {'doc': None, 'scroll': {'w.md': 2}, 'docs': []}   # 손으로 망가뜨린 값은 버린다
     cfg.remember_position(r'C:\old', 'a.md', 30)
-    assert cfg.get('projects')[os.path.normcase(r'C:\old')] == {'doc': 'a.md', 'scroll': {'b.md': 7, 'a.md': 30}}
+    assert cfg.get('projects')[os.path.normcase(r'C:\old')] == {'doc': 'a.md', 'scroll': {'b.md': 7, 'a.md': 30}, 'docs': ['a.md']}
     # 1e400 은 JSON 으로 맞지만 inf 로 읽힌다 — 내보내면 화면이 받는 JSON 이 깨지므로 버린다
     text = json.dumps({'projects': {os.path.normcase(r'C:\big'): {'doc': 'z.md', 'scroll': {'z.md': 1, 'w.md': 5}}}})
     path.write_text(text.replace('"z.md": 1,', '"z.md": 1e400,'), encoding='utf-8')

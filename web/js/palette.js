@@ -1,10 +1,11 @@
 // 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서와 코드를 찾아 연다 (D44). 맞는 문서 먼저, 그다음 코드 — 코드는 코드 화면으로.
 // 입력 전에는 최근 수정한 문서. 코드 목록은 사이드바 '코드' 목록과 같은 것 (others.js — 아직 받지 않았으면 받아 온다).
+// Ctrl+Enter·Ctrl+누르기·가운데 버튼은 새 문서 탭에서 (D64). 문서 탭 줄의 + 로 열면 Enter 도 새 문서 탭에서.
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
 import { fileIcon } from './icons.js';
-import { $, esc, timeAgo } from './util.js';
+import { $, esc, timeAgo, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_ITEMS = 60;
@@ -18,6 +19,7 @@ function* codeFiles(nodes = []) {
 }
 let items = [];
 let selected = 0;
+let asNewTab = false;   // 문서 탭 줄의 + 로 열었다 — 고르면 새 문서 탭에서 (D64)
 
 const box = () => $('#lec-palette');
 const input = () => $('#lec-palette-input');
@@ -68,15 +70,19 @@ function renderList() {
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 
-function choose(i) {
+function choose(i, newTab = false) {
   const f = items[i];
   if (!f) return;
+  const tab = newTab || asNewTab;
   closePalette();
-  emit('open', { type: f.code ? 'code' : 'doc', path: f.path });
+  emit('open', { type: f.code ? 'code' : 'doc', path: f.path, newTab: tab });
 }
 
-export function openPalette() {
+/** newTab: 고르면 새 문서 탭에서 (문서 탭 줄의 + — D64) */
+export function openPalette({ newTab = false } = {}) {
+  asNewTab = newTab;
   box().hidden = false;
+  input().placeholder = newTab ? t('새 탭에 열 문서·코드 — 이름, 제목, 경로') : t('문서·코드 이름, 제목, 경로');
   input().value = '';
   update();
   input().focus();
@@ -101,7 +107,7 @@ export function initPalette() {
       renderList();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      choose(selected);
+      choose(selected, e.ctrlKey || e.metaKey);   // Ctrl+Enter: 새 문서 탭에서
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();   // 문서 전체 Esc 처리(찾기 닫기 등)까지 가지 않게
@@ -110,8 +116,9 @@ export function initPalette() {
   });
   $('#lec-palette-list').addEventListener('click', (e) => {
     const li = e.target.closest('li[data-i]');
-    if (li) choose(+li.dataset.i);
+    if (li) choose(+li.dataset.i, e.ctrlKey || e.metaKey);
   });
+  middleClickOpens($('#lec-palette-list'), 'li[data-i]');
   box().addEventListener('mousedown', (e) => {
     if (e.target === box()) closePalette();
   });

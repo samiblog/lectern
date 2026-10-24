@@ -29,8 +29,7 @@ async function apply(tab, d) {
     return;
   }
   await loadTree({ tab });
-  const { pane } = tab;
-  const view = pane.current;
+  const view = tab.pane.current;
   const shown = tab === S.tab && view?.type === 'doc' ? view.path : null;
   for (const p of d.paths) {
     // 지워졌거나 이름이 바뀐(옛 이름) 경로, 지금 보고 있는 문서는 표시하지 않는다
@@ -40,16 +39,20 @@ async function apply(tab, d) {
   emit('changed');
   emit('synced');
 
-  let affected = false;
-  if (view?.type === 'doc') {
-    affected = d.reset || d.paths.includes(view.path) || !tab.fileMap.has(view.path);
-  } else if (view?.type === 'overview') {
-    const prefix = view.path ? `${view.path}/` : '';
-    affected = d.structure || d.paths.some((p) => p.startsWith(prefix));
+  // 문서 탭(D64)마다: 보이는 칸은 바로 다시 그리고, 숨은 칸은 고를 때 다시 그린다 — 바뀐 곳 강조도 그때 보인다
+  for (const pane of tab.panes) {
+    const v = pane.current;
+    let affected = false;
+    if (v?.type === 'doc') {
+      affected = d.reset || d.paths.includes(v.path) || !tab.fileMap.has(v.path);
+    } else if (v?.type === 'overview') {
+      const prefix = v.path ? `${v.path}/` : '';
+      affected = d.structure || d.paths.some((p) => p.startsWith(prefix));
+    }
+    if (!affected) continue;
+    if (pane === S.pane) emit('refresh-view', pane);
+    else pane.stale = true;
   }
-  if (!affected) return;
-  if (tab === S.tab) emit('refresh-view', pane);
-  else pane.stale = true;   // 고를 때 다시 그린다 — 바뀐 곳 강조도 그때 보인다
 }
 
 async function tick() {

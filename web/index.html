@@ -214,6 +214,11 @@
     <!-- 문서 칸 (panes.js): 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보인다. 여기 있는 칸은 탭이 없을 때의 시작 화면.
          선택된 칸의 스크롤 상자·본문이 #lec-content·#lec-view id 를 갖는다 -->
     <main id="lec-panes">
+      <!-- 문서 탭 (doctabs.js, D64): 이 프로젝트에서 열어 둔 문서들 (5개까지) — 칸은 이 줄 아래부터 -->
+      <nav id="lec-doctabs" aria-label="문서 탭" hidden>
+        <div id="lec-doctab-list" role="tablist"></div>
+        <button type="button" id="lec-doctab-new" class="icon-btn small" aria-label="새 탭에 문서 열기"><svg><use href="#i-plus"/></svg></button>
+      </nav>
       <section class="lec-pane active">
         <div id="lec-content" class="lec-scroll" tabindex="-1">
           <div id="lec-findbar" hidden>

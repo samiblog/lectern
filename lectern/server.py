@@ -18,7 +18,7 @@ from typing import Any
 from flask import Flask, Response, abort, jsonify, request, send_file
 
 from . import __version__, editing, i18n, osutil, styles, terminal
-from .config import is_number
+from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
 from .paths import web_dir
@@ -289,11 +289,12 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/position')
     def api_position() -> Any:
-        """탭(p)에서 보는 문서와 스크롤 위치 {p, path, scroll} (다음에 열 때 되살림). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
+        """탭(p)에서 보는 문서와 스크롤 위치 {p, path, scroll, docs?} (다음에 열 때 되살림). docs: 열어 둔 문서 탭들의 문서 (탭 차례,
+        5개까지 — D64. 없어진 문서는 뺀다). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
         data = body()
         root = project_of(data.get('p')).root
-        rel, scroll = data.get('path'), data.get('scroll', 0)
-        if not isinstance(rel, str):
+        rel, scroll, docs = data.get('path'), data.get('scroll', 0), data.get('docs')
+        if not isinstance(rel, str) or (docs is not None and (not isinstance(docs, list) or len(docs) > MAX_DOC_TABS)):
             abort(400)
         target = resolve_inside(root, rel)
         if target is None or not target.exists():
@@ -301,7 +302,13 @@ def create_app(state: AppState) -> Flask:
         if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
             abort(400)
         if state.config.get('restore_last') is not False:
-            state.config.remember_position(str(root), target.relative_to(root).as_posix(), int(scroll))
+            doc = target.relative_to(root).as_posix()
+            kept = []
+            for d in docs if docs is not None else [doc]:
+                found = resolve_inside(root, d) if isinstance(d, str) and d else None
+                if found is not None and found.is_file():
+                    kept.append(found.relative_to(root).as_posix())
+            state.config.remember_position(str(root), doc, int(scroll), list(dict.fromkeys(kept)) or [doc])
         return jsonify(ok=True)
 
     # ---- 오른쪽 터미널 (D38) ----------------------------------------------------------

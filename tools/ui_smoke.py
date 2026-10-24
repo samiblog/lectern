@@ -2186,6 +2186,46 @@ def run(headed: bool) -> None:
             n_tabs(1)
             page.wait_for_selector('#lec-view h1')
 
+            print('[문서 탭]')   # D64 — Ctrl+누르기·가운데 버튼으로 새 탭, 열린 문서는 그 탭으로, Alt+n·Ctrl+F4, 편집 상자는 탭마다
+            dt = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-doctab-list .doc-tab')]
+              .map(t => (t.classList.contains('active') ? '*' : '') + t.dataset.path)''')   # 이름은 '제목' 버튼에 따라 — 경로로 본다
+            on_tab = lambda path: wait_until(page, f"document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === '{path}'", 10000)
+            plan_doc = work / 'plans' / '구현-계획.md'
+            plan_before = plan_doc.read_bytes()
+            d0 = dt()
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click(modifiers=['Control'])
+            on_tab('docs/02-수식과-달러.md')
+            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click(button='middle')
+            on_tab('plans/구현-계획.md')
+            d1 = dt()
+            shot('25-doctabs')
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click()   # 이미 열린 문서 — 그 탭으로
+            on_tab('docs/02-수식과-달러.md')
+            d2 = dt()
+            page.keyboard.press('Alt+1')
+            alt1 = on_tab(d0[0].lstrip('*')) if d0 else False
+            page.keyboard.press('Alt+3')
+            on_tab('plans/구현-계획.md')
+            page.click('#lec-btn-edit')
+            page.wait_for_selector('.lec-pane.active .lec-editor .CodeMirror')
+            page.keyboard.press('Control+End')
+            page.keyboard.insert_text('문서 탭')
+            dirty_mark = wait_until(page, "!!document.querySelector('#lec-doctab-list .doc-tab.active .dirty')", 3000)
+            page.keyboard.press('Alt+1')
+            other_clean = wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.keyboard.press('Alt+3')
+            back_in_editor = wait_until(page, "!!document.activeElement?.closest('.lec-pane.active .lec-editor.dirty')", 3000)
+            page.once('dialog', lambda d: d.accept())   # 저장하지 않은 편집 — 버리고 닫기
+            page.keyboard.press('Escape')
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.keyboard.press('Control+F4')
+            page.keyboard.press('Control+F4')
+            closed = wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 1", 5000)
+            d3 = dt()
+            check(len(d0) == 1 and d1 == [d0[0].lstrip('*'), 'docs/02-수식과-달러.md', '*plans/구현-계획.md'] and d2[1] == '*docs/02-수식과-달러.md' and len(d2) == 3
+                  and alt1 and dirty_mark and other_clean and back_in_editor and closed and d3 == d0 and plan_doc.read_bytes() == plan_before,
+                  f"문서 탭: Ctrl+누르기·가운데 버튼으로 새 탭(지금 탭 오른쪽), 열린 문서는 그 탭으로, Alt+n, 편집 상자는 탭마다(● — 돌아오면 편집기에 초점), Ctrl+F4 로 닫기 ({d0} → {d1} → {d2} → {d3})")
+
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)
 

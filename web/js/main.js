@@ -35,6 +35,7 @@ import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert } from './basket.js';
+import { initDocTabs, docTabAt, closeDocTab } from './doctabs.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
@@ -106,6 +107,7 @@ async function manualRefresh() {
     await loadTree({ fresh: true, tab });
     refreshOthers();
     refreshRecent();
+    for (const pane of tab.panes) if (pane !== tab.pane && pane.current) pane.stale = true;   // 숨은 문서 탭은 고를 때 (D64)
     await refreshView(tab.pane);
     toast(t('다시 불러왔습니다'));
   } catch (e) {
@@ -164,8 +166,10 @@ function bindKeys() {
     }
     // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
     if (inTerminal(e) && !(mod && e.key === 'Tab')) return;
-    // 편집 상자 안의 키는 편집기 것이다 (Ctrl+F 찾기·Ctrl+S 저장·Esc 닫기 등 — editor.js). 탭 옮기기·편집 닫기(Ctrl+E)·문서 열기·도움말만 앱이
-    if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey) return;
+    // 편집 상자 안의 키는 편집기 것이다 (Ctrl+F 찾기·Ctrl+S 저장·Esc 닫기 등 — editor.js). 탭 옮기기·편집 닫기(Ctrl+E)·문서 열기·도움말,
+    // 문서 탭(Alt+1~5·Ctrl+F4 — D64)만 앱이
+    const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-5]$/.test(e.key)) || (mod && !e.altKey && !e.shiftKey && e.key === 'F4');
+    if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
     if (mod && !e.shiftKey && !e.altKey && key === 'e') {   // 편집 모드 열고 닫기 (D54)
       e.preventDefault();
       toggleEditor();
@@ -198,6 +202,11 @@ function bindKeys() {
       cycleTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
     } else if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {   // Ctrl+1~8: 그 탭, Ctrl+9: 마지막 탭
       if (selectTabAt(Number(e.key))) e.preventDefault();
+    } else if (e.altKey && !mod && !e.shiftKey && /^[1-5]$/.test(e.key)) {   // Alt+1~5: 그 순번의 문서 탭 (D64)
+      if (docTabAt(Number(e.key))) e.preventDefault();
+    } else if (mod && e.key === 'F4') {   // 문서 탭 닫기 (D64 — 프로젝트 탭은 Ctrl+W)
+      e.preventDefault();
+      closeDocTab();
     } else if (e.altKey && e.key === 'ArrowLeft') {
       e.preventDefault();
       back();
@@ -285,6 +294,7 @@ async function boot() {
   initWatch();
   initTerminal();
   initEditor();
+  initDocTabs();
   initBasket();
   initSlides();
   initPresent();

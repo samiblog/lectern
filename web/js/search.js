@@ -8,7 +8,7 @@
 
 import { S, on, emit } from './store.js';
 import { getJSON, saveConfig } from './api.js';
-import { navigate } from './nav.js';
+import { openTarget } from './doctabs.js';
 import { switchPanel } from './tree.js';
 import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
@@ -16,7 +16,7 @@ import { flashBlock } from './diffmark.js';
 import { fileIcon, isCode } from './icons.js';
 import { labelOf } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
-import { $, esc, debounce, dirname, basename, isHtml, keepFocus } from './util.js';
+import { $, esc, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_NAMES = 100;   // 이름이 맞는 파일을 보이는 수
@@ -167,21 +167,21 @@ function goToLine(line) {
   return best;
 }
 
-/** 검색 결과로 간다. code: 코드 결과 — 코드 화면의 그 줄로 */
-async function openHit(path, line, code = false) {
+/** 검색 결과로 간다. code: 코드 결과 — 코드 화면의 그 줄로. newTab: 새 문서 탭에서 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로) */
+async function openHit(path, line, code = false, newTab = false) {
   if (line && S.pane?.editor?.path === path) {   // 편집 중인 파일 — 편집기가 그 줄로 (D55)
     emit('edit', { line });
     return;
   }
   if (code) {
-    if (!(await navigate({ type: 'code', path, line }))) return;
+    if (!(await openTarget({ type: 'code', path, line, newTab }))) return;
     findText(query);
     const row = line ? $(`#lec-view .cv-line[data-line="${line}"]`) : null;
     if (row) pickMatchAt(row);
     return;
   }
   const here = S.view?.type === 'doc' && S.view.path === path;
-  if (!here && !(await navigate({ type: 'doc', path }))) return;
+  if (!here && !(await openTarget({ type: 'doc', path, newTab }))) return;
   if (isHtml(path)) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
@@ -237,8 +237,9 @@ export function initSearch() {
   });
   $('#lec-search-results').addEventListener('click', (e) => {
     const row = e.target.closest('[data-doc]');
-    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0, row.dataset.kind === 'code');
+    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0, row.dataset.kind === 'code', e.ctrlKey || e.metaKey);
   });
+  middleClickOpens($('#lec-search-results'), '[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
   $('#lec-search-results').addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.sr-hit')) e.target.click();
   });

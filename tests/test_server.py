@@ -323,12 +323,20 @@ def test_position_is_remembered(client, project, pid):
     post = lambda body: client.post('/api/position', json={'p': pid} | body)   # noqa: E731
     assert post({'path': 'docs/10-a.md', 'scroll': 420}).get_json() == {'ok': True}
     pos = client.get('/api/state').get_json()['projects'][0]['position']
-    assert pos == {'doc': 'docs/10-a.md', 'scroll': {'docs/10-a.md': 420}}
+    assert pos == {'doc': 'docs/10-a.md', 'scroll': {'docs/10-a.md': 420}, 'docs': ['docs/10-a.md']}
     assert post({'path': '../x.md', 'scroll': 1}).status_code == 404
     bad = [{'path': 'docs', 'scroll': 1}, {'path': 'README.md', 'scroll': -1}, {'path': 'README.md', 'scroll': '1'},
            {'panes': [{'path': 'README.md', 'scroll': 5}], 'active': 0}]   # 창을 나누던 때(v0.6)의 형식
     assert [post(b).status_code for b in bad] == [400] * len(bad)
     assert client.post('/api/position', json={'path': 'README.md', 'scroll': 1}).status_code == 404   # 프로젝트 id 없이는
+    # 문서 탭 (D64): 열어 둔 문서들을 탭 차례로 — 없어진 문서·밖·숨김은 빼고, 5개까지
+    assert post({'path': 'README.md', 'scroll': 7, 'docs': ['docs/10-a.md', 'README.md', 'gone.md', '../x.md', '.claude/notes.md']}).status_code == 200
+    pos = client.get('/api/state').get_json()['projects'][0]['position']
+    assert pos['doc'] == 'README.md' and pos['docs'] == ['docs/10-a.md', 'README.md']
+    assert post({'path': 'README.md', 'scroll': 7, 'docs': ['README.md'] * 6}).status_code == 400
+    assert post({'path': 'README.md', 'scroll': 7, 'docs': 'README.md'}).status_code == 400
+    post({'path': 'docs/10-a.md', 'scroll': 1})   # docs 없이 — 그 문서 하나
+    assert client.get('/api/state').get_json()['projects'][0]['position']['docs'] == ['docs/10-a.md']
     client.post('/api/config', json={'restore_last': False})
     post({'path': 'README.md', 'scroll': 5})
     assert client.get('/api/state').get_json()['projects'][0]['position']['doc'] == 'docs/10-a.md'   # 꺼 두면 기록하지 않음

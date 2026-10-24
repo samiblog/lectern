@@ -6,7 +6,7 @@ import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, $$, esc, dirname, copyText, toast, keepFocus } from './util.js';
+import { $, $$, esc, dirname, copyText, toast, keepFocus, newTabWanted, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -148,7 +148,7 @@ function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
   if (row.dataset.doc != null) {
-    emit('open', { type: 'doc', path: row.dataset.doc });
+    emit('open', { type: 'doc', path: row.dataset.doc, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
     return;
   }
   const dir = row.dataset.dir;
@@ -190,12 +190,21 @@ export function pathMenuItems(path, isDoc) {
   return items;
 }
 
+/** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
+export function docMenuItems(path, type = 'doc') {
+  const items = [{ header: path }];
+  if (!(S.view?.type === type && S.view.path === path)) {
+    items.push({ label: t('새 탭에서 열기'), hint: t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) }, '-');
+  }
+  return [...items, ...pathMenuItems(path, true)];
+}
+
 function onContextMenu(e) {
   const row = e.target.closest('.row');
   if (!row) return;
   e.preventDefault();
-  const isDoc = row.dataset.doc != null;
-  showMenu(e.clientX, e.clientY, pathMenuItems(isDoc ? row.dataset.doc : row.dataset.dir, isDoc));
+  if (row.dataset.doc != null) showMenu(e.clientX, e.clientY, docMenuItems(row.dataset.doc));
+  else showMenu(e.clientX, e.clientY, pathMenuItems(row.dataset.dir, false));
 }
 
 export function focusFilter() {
@@ -207,6 +216,7 @@ export function focusFilter() {
 export function initTree() {
   const tree = $('#lec-tree');
   tree.addEventListener('click', onRowClick);
+  middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
   tree.addEventListener('contextmenu', onContextMenu);
   tree.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.classList.contains('row')) e.target.click();

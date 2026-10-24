@@ -113,6 +113,20 @@ export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
   toastTimer = setTimeout(() => { el.hidden = true; }, ms);
 }
 
+/** 새 문서 탭에서 열지 (D64): Ctrl(⌘)+누르기, 가운데 버튼 (middleClickOpens 가 Ctrl+누르기로 바꿔 보낸다) */
+export const newTabWanted = (e) => !!(e && (e.ctrlKey || e.metaKey));
+
+/** box 안의 selector 를 가운데 버튼으로 누르면 Ctrl+누르기처럼 — 새 문서 탭에서 연다 (D64). 가운데 버튼의 자동 스크롤 대신 */
+export function middleClickOpens(box, selector) {
+  box.addEventListener('mousedown', (e) => { if (e.button === 1 && e.target.closest?.(selector)) e.preventDefault(); });
+  box.addEventListener('auxclick', (e) => {
+    const el = e.button === 1 && e.target.closest?.(selector);
+    if (!el || !box.contains(el)) return;
+    e.preventDefault();
+    e.target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true, clientX: e.clientX, clientY: e.clientY }));
+  });
+}
+
 export function debounce(fn, ms) {
   let timer = 0;
   const call = (...args) => {

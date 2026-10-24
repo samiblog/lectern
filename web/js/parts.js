@@ -18,7 +18,7 @@ import { S, on, emit } from './store.js';
 import { getText, postJSON } from './api.js';
 import { rangeText } from './docmenu.js';
 import { showMenu } from './ui.js';
-import { navigate } from './nav.js';
+import { openTarget } from './doctabs.js';
 import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
@@ -30,7 +30,7 @@ import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { readYaml } from './slides.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText,
+  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -674,10 +674,11 @@ async function partMenu(el, x, y) {
   showMenu(x, y, items, () => el.classList.remove('lec-picked'));
 }
 
-async function openItem(el) {
+/** 항목·문서 머리줄로 간다. newTab: 새 문서 탭에서 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로) */
+async function openItem(el, newTab = false) {
   const path = el.dataset.doc;
   const here = S.view?.type === 'doc' && S.view.path === path;
-  if (!here && !(await navigate({ type: 'doc', path }))) return;
+  if (!here && !(await openTarget({ type: 'doc', path, newTab }))) return;
   if (!el.dataset.kind) return;   // 문서 머리줄
   const row = readParts(docRoot(), { more: true }).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
   if (row) goToPart(row.el);
@@ -768,8 +769,9 @@ export function initParts() {
   bindFileRows(list, (path) => fileRows.get(path));   // 파일 종류의 행 (D50)
   list.addEventListener('click', (e) => {
     const el = e.target.closest('.pt-item, .pt-thumb, .pt-doc');
-    if (el) openItem(el);
+    if (el) openItem(el, e.ctrlKey || e.metaKey);
   });
+  middleClickOpens(list, '.pt-item, .pt-thumb, .pt-doc');   // 가운데 버튼: 새 문서 탭 (D64)
   list.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && e.target.matches('.pt-item, .pt-thumb, .pt-doc')) openItem(e.target);
   });

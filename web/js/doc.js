@@ -16,7 +16,7 @@ import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import { isViewable } from './icons.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname,
+  $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -199,10 +199,10 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          if (r.path === docPath && r.hash) {
+          if (r.path === docPath && r.hash && !newTabWanted(e)) {
             if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
           } else {
-            emit('open', { type: 'doc', path: r.path, hash: r.hash });
+            emit('open', { type: 'doc', path: r.path, hash: r.hash, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
           }
         });
       } else if (isViewable(r.path.split('/').pop())) {
@@ -210,7 +210,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         a.classList.add('file-link');
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash) });
+          emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash), newTab: newTabWanted(e) });
         });
       } else {
         a.classList.add('file-link');

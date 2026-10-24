@@ -25,6 +25,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 |---|---|
 | Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
 | Tab bar | One tab per open project, open folder (+), and the **Contents** and **Terminal** buttons at the right end |
+| Document tab row | Just above the document — the documents open in this project (up to 5), open a document in a new tab (+) |
 | Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
 | Main area (center) | Documents, folder overviews and the code view |
 | Contents (right) | The current document's headings and elements such as tables and figures. When the terminal is open, it takes this place |
@@ -37,6 +38,17 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 - Folders with the same name also show their parent folder's name.
 - To close a tab, click its ×, middle-click it, or press Ctrl+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer.
 - To move between tabs: Ctrl+1~8 (tab by position), Ctrl+9 (last tab), Ctrl+Tab / Ctrl+Shift+Tab (next / previous tab).
+
+## Document tabs
+
+Keep up to 5 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
+
+- A normal click opens in the current tab. To open in a **new tab**, **Ctrl+click** or **middle-click** in the tree, the Code and Other files lists, links and paths in documents, the folder overview, search results or Elements. **Open in new tab** in right-click menus and **+** in the document tab row (the quick open box then opens in a new tab — Ctrl+Enter in quick open does too) work as well.
+- Clicking a document that is already open in another tab goes to that tab (a document is not opened twice).
+- When all 5 are in use, the tab you looked at least recently is reused (tabs with unsaved edits are left alone).
+- Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Insert from the Clip tab opens the target in its own tab.
+- To switch, click a tab or press **Alt+1~5**. To close, click its ×, middle-click it or press **Ctrl+F4** (the last tab is not closed). Right-click a tab for Close other document tabs and copying its path.
+- The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them).
 
 ## Sidebar
 

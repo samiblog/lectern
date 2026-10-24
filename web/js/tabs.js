@@ -3,14 +3,14 @@
 // - 열린 탭(순서·선택된 탭)은 서버가 들고 있다 (state.py). 화면은 /api/state·/api/open·/api/close 의 답으로 맞춘다 (syncTabs).
 //   다른 실행(탐색기 우클릭 등)이 넘긴 폴더로 서버의 탭 목록이 바뀌면 watch.js 가 tabs_seq 로 알아채고 resyncTabs 를 부른다.
 // - 탭마다 트리 데이터·변경됨·펼친 폴더·사이드바 상태(side)와 문서 칸(panes.js)이 따로다. store.js 의 S.root·S.tree 등은
-//   선택된 탭의 값을 읽고 쓰는 접근자다.
+//   선택된 탭의 값을 읽고 쓰는 접근자다. 문서 칸은 문서 탭(doctabs.js, D64)마다 하나 — tab.panes(5개까지), 고른 것이 tab.pane.
 // - 탭은 처음 고를 때 트리를 읽고 마지막에 보던 문서(설정 restore_last)나 폴더 개요를 연다 — 탭이 많아도 시작이 느려지지 않게.
 // - 고르지 않은 탭의 칸은 자리를 지킨 채 숨는다. 숨은 동안 바뀐 화면(pane.stale)은 그 탭을 고를 때 다시 그린다.
 
 import { S, emit, on } from './store.js';
 import { getJSON, postJSON, native, revealInExplorer } from './api.js';
 import { createPane, removePane, selectPane, homePane } from './panes.js';
-import { navigate, refreshView, restorePosition } from './nav.js';
+import { navigate, restorePosition } from './nav.js';
 import { loadTree } from './project.js';
 import { setToc } from './toc.js';
 import { setStatus } from './status.js';
@@ -19,6 +19,7 @@ import { showMenu } from './ui.js';
 import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { confirmCloseEditor, disposeEditor } from './editor.js';
+import { restoreDocTabs, selectDocTab } from './doctabs.js';
 import { $, esc, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -62,7 +63,8 @@ function makeTab(p) {
       selected: { files: null, code: null, folder: null }, scroll: { files: 0, code: 0 },
     },
   };
-  tab.pane = createPane(tab);
+  tab.pane = createPane(tab);   // 고른 문서 탭의 칸 (doctabs.js — D64)
+  tab.panes = [tab.pane];        // 문서 탭들의 칸, 탭 차례
   return tab;
 }
 
@@ -91,7 +93,7 @@ function syncTabs(info) {
   for (const tab of dropped) {
     if (tab === S.tab) S.tab = null;   // 부르는 쪽이 곧 다른 탭(없으면 시작 화면)을 고른다
     disposeEditor(tab);   // 편집 상자 (저장하지 않은 것은 닫기 전에 물었다)
-    removePane(tab.pane);
+    for (const pane of tab.panes) removePane(pane);
     disposeTerminal(tab);   // 셸은 서버가 탭을 닫을 때 끝냈다
   }
   renderTabs();
@@ -116,9 +118,11 @@ function loadTab(tab) {
     try {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
-      const restored = S.config.restore_last !== false && await restorePosition(pane, tab.position);
+      const restore = S.config.restore_last !== false;
+      const restored = restore && await restorePosition(pane, tab.position);
       // 트리가 보인 뒤 사용자가 이미 다른 문서를 눌렀으면(그리는 중 포함) 개요로 덮지 않는다
       if (!restored && !pane.current && !pane.pending) await navigate({ type: 'overview', path: '' }, { pane });
+      if (restore && tab.panes.length === 1) restoreDocTabs(tab, tab.position);   // 열어 두었던 다른 문서 탭 (고를 때 그린다)
       tab.loaded = true;
     } catch (e) {
       if (S.tabs.includes(tab)) showMessage(pane, t('폴더를 읽지 못했습니다 ({error}). F5 를 누르면 다시 불러옵니다.', { error: esc(e.message) }));
@@ -174,11 +178,13 @@ export async function selectTab(tab, { tell = true } = {}) {
     selectPane(tab.pane);
     renderTabs();
     $('#lec-tablist .lec-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    tab.pane.scroller.focus({ preventScroll: true });   // PageUp·PageDown·방향키가 이 탭의 문서를 스크롤하게
+    // 편집 중이면 편집기에 (Ctrl+S 가 저장하게), 아니면 PageUp·PageDown·방향키가 이 탭의 문서를 스크롤하게
+    if (tab.pane.editor) tab.pane.editor.cm.focus();
+    else tab.pane.scroller.focus({ preventScroll: true });
     if (tell) postJSON('/api/activate', { p: tab.id }).catch(() => {});
   }
   if (!tab.loaded) await loadTab(tab);
-  else if (tab.pane.stale) await refreshView(tab.pane);
+  else if (tab.pane.stale || tab.pane.deferred) await selectDocTab(tab.pane);   // 숨은 동안 바뀐 화면, 되살리고 아직 그리지 않은 문서 탭
 }
 
 /** 폴더를 탭으로 연다. 이미 열린 폴더면 그 탭으로 간다 (서버가 정한다) */
