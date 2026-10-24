@@ -79,7 +79,7 @@
 | 그림 | `.md-body img`, 불러오지 못한 그림 자리 `.image-off` |
 | 수식 | 블록 `.md-body .math-block`(안에 `.katex-display`), 문장 속 `.katex` |
 | 다이어그램 | `.md-body pre.mermaid` (그린 뒤 `.mermaid-ok`, 안에 `svg`) |
-| 차트 (Vega-Lite·ECharts·Graphviz) | `.md-body pre.lec-chart` (`data-chart` 가 `vega-lite`·`vega`·`echarts`·`dot`, 그린 뒤 `.chart-ok`, 안에 `svg`). 차트의 색은 CSS 가 아니라 다이어그램과 같은 스타일 색표에서 정해집니다 |
+| 차트 (Vega-Lite·ECharts·Plotly·Graphviz) | `.md-body pre.lec-chart` (`data-chart` 가 `vega-lite`·`vega`·`echarts`·`plotly`·`dot`, 그린 뒤 `.chart-ok`, 안에 `svg`). 차트의 색은 CSS 가 아니라 다이어그램과 같은 스타일 색표에서 정해집니다 |
 | 그리지 못한 다이어그램·차트 | `.md-body .diagram-error` (까닭 `p` 와 원문 `pre`) |
 | 메타데이터 | `.md-body .front-matter` (`details` — `summary`, `table`) |
 | 각주 | `.md-body .footnotes-sep`, `.footnotes`, `.footnote-ref` |

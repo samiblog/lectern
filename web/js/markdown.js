@@ -5,7 +5,7 @@
 const instances = new Map();
 
 // 차트 코드 블록의 언어 이름 → 종류 (그리는 것은 charts.js, D56)
-const CHART_LANGS = { 'vega-lite': 'vega-lite', vegalite: 'vega-lite', vega: 'vega', echarts: 'echarts', dot: 'dot', graphviz: 'dot' };
+const CHART_LANGS = { 'vega-lite': 'vega-lite', vegalite: 'vega-lite', vega: 'vega', echarts: 'echarts', plotly: 'plotly', dot: 'dot', graphviz: 'dot' };
 
 /** GitHub와 같은 규칙의 제목 앵커 (한글 유지). Claude가 쓴 '목차 링크'와 맞추기 위함. */
 export function slugify(text) {

@@ -563,9 +563,9 @@ def run(headed: bool) -> None:
             shutil.copytree(ROOT / 'samples' / 'docs' / 'data', work / 'docs' / 'data')   # 예제가 읽는 CSV (점검 뒤 지운다)
             page.locator('#lec-tree .row.file[data-doc="docs/06-차트.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("차트와 그래프")')
-            drawn = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 8", 30000)
-            # 문서 폭을 따르는 것(ECharts·width "container")은 목차가 나온 뒤의 폭으로 다시 그린다 — 줄여 보이지 않게
-            fit = wait_until(page, """[...document.querySelectorAll('#lec-view pre.lec-chart.chart-ok[data-chart="echarts"]')]
+            drawn = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
+            # 문서 폭을 따르는 것(ECharts·Plotly·width "container")은 목차가 나온 뒤의 폭으로 다시 그린다 — 줄여 보이지 않게
+            fit = wait_until(page, """[...document.querySelectorAll('#lec-view pre.lec-chart.chart-ok[data-chart="echarts"], #lec-view pre.lec-chart.chart-ok[data-chart="plotly"]')]
               .every(p => Math.abs(parseFloat(p.querySelector('svg').getAttribute('width')) - p.clientWidth) <= 16)""", 5000)
             charts = page.evaluate("""() => ({
               kinds: [...document.querySelectorAll('#lec-view pre.lec-chart.chart-ok')].map(p => p.dataset.chart).join(','),
@@ -573,11 +573,11 @@ def run(headed: bool) -> None:
               csv: Math.max(0, ...[...document.querySelectorAll('#lec-view pre.lec-chart')[2]?.querySelectorAll('svg path[d]') || []].map(p => p.getAttribute('d').length)),
               font: getComputedStyle(document.querySelector('#lec-view pre.lec-chart[data-chart="echarts"] svg text')).fontFamily,
               toc: [...document.querySelectorAll('#lec-toc a[data-c]')].map(a => a.textContent).join(' | ') })""")
-            check(drawn and fit and charts['kinds'] == 'vega-lite,vega-lite,vega-lite,echarts,echarts,echarts,dot,dot'
+            check(drawn and fit and charts['kinds'] == 'vega-lite,vega-lite,vega-lite,echarts,echarts,echarts,plotly,plotly,plotly,dot,dot'
                   and len(charts['err']) == 1 and '함수는 쓸 수 없습니다' in charts['err'][0] and charts['csv'] > 200
                   and 'Segoe UI' in charts['font'] and 'Vega-Lite · 분기별 구리 가격과 거래소 재고' in charts['toc']
-                  and 'Graphviz · Lectern' in charts['toc'] and 'ECharts · 용도별 소비 비중' in charts['toc'],
-                  f"차트: Vega-Lite 3(프로젝트의 CSV 포함)·ECharts 3(따옴표 없는 키도)·Graphviz 2, 문서 폭으로 다시 그림, 함수는 원문과 까닭, 목차에 종류·제목 ({charts['kinds']}, {charts['err']}, {charts['font'][:20]})")
+                  and 'Graphviz · Lectern' in charts['toc'] and 'ECharts · 용도별 소비 비중' in charts['toc'] and 'Plotly · 월별 생산과 가동률' in charts['toc'],
+                  f"차트: Vega-Lite 3(프로젝트의 CSV 포함)·ECharts 3(따옴표 없는 키도)·Plotly 3·Graphviz 2, 문서 폭으로 다시 그림, 함수는 원문과 까닭, 목차에 종류·제목 ({charts['kinds']}, {charts['err']}, {charts['font'][:20]})")
             head = menu(page.locator('#lec-view pre.lec-chart[data-chart="dot"] svg').first).split('\n')[0]
             fence = choose('원문 복사')
             menu(page.locator('#lec-view pre.lec-chart[data-chart="vega-lite"] svg').first)
@@ -598,11 +598,15 @@ def run(headed: bool) -> None:
                            ' "encoding": {"x": {"field": "a", "type": "nominal"}, "y": {"field": "b", "type": "quantitative"}, "href": {"field": "u"}}}\n```\n\n'
                            '```echarts\n{"graphic": [{"type": "image", "style": {"image": "https://example.com/x.png", "width": 40, "height": 40}}],'
                            ' "xAxis": {"type": "category", "data": ["a"]}, "yAxis": {}, "series": [{"type": "bar", "data": [1]}]}\n```\n\n'
-                           '```dot\ndigraph { a [URL="https://example.com/", label="링크"]; a -> b; }\n```\n', encoding='utf-8')
+                           '```dot\ndigraph { a [URL="https://example.com/", label="링크"]; a -> b; }\n```\n\n'
+                           '```plotly\n{"data": [{"type": "bar", "x": ["a"], "y": [1]}], "layout": {"images": [{"source": "https://example.com/plotly.png",'
+                           ' "x": 0, "y": 1, "sizex": 0.3, "sizey": 0.3, "xref": "paper", "yref": "paper"}],'
+                           ' "annotations": [{"text": "<a href=\\"https://example.com/\\">링크</a>", "x": 0, "y": 1, "xref": "paper", "yref": "paper", "showarrow": false}]}}\n```\n\n'
+                           '```plotly\n{"data": [{"type": "scattergeo", "lon": [127], "lat": [37]}]}\n```\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]', timeout=8000)
             page.locator('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("차트 막기")')
-            wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok, #lec-view .diagram-error').length === 5", 20000)
+            wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok, #lec-view .diagram-error').length === 7", 30000)
             guard = page.evaluate("""() => ({
               err: [...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent),
               ok: document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length,
@@ -611,9 +615,10 @@ def run(headed: bool) -> None:
                 .filter(h => /^(https?:)?\\/\\//.test(h)).length })""")
             bad.unlink()
             shutil.rmtree(work / 'docs' / 'data')
-            check(len(guard['err']) == 2 and '프로젝트 안의 파일만' in guard['err'][0] and '데이터 파일을 읽지 못했습니다' in guard['err'][1]
-                  and guard['ok'] == 3 and not guard['links'] and not guard['remote'],
-                  f"차트는 인터넷 데이터를 읽지 않고(없는 파일도 빈 그림 대신 까닭), 그림 속 링크는 풀고, 인터넷 그림은 지움 ({guard})")
+            asked = [u for u, _ in outside if 'example.com' in u]   # 그리는 동안에도 인터넷에 닿지 않아야 한다 (Plotly 는 배경 그림을 불러온다)
+            check(len(guard['err']) == 3 and '프로젝트 안의 파일만' in guard['err'][0] and '데이터 파일을 읽지 못했습니다' in guard['err'][1]
+                  and '지도 차트' in guard['err'][2] and guard['ok'] == 4 and not guard['links'] and not guard['remote'] and not asked,
+                  f"차트는 인터넷 데이터를 읽지 않고(없는 파일도 빈 그림 대신 까닭, Plotly 지도는 그리지 않음), 그림 속 링크는 풀고, 인터넷 그림은 부르지도 넣지도 않음 ({guard}, {asked})")
             page.locator('#lec-tree .row.file', has_text='다이어그램').click()   # 아래 스타일 점검은 Mermaid 문서에서
             page.wait_for_selector('pre.mermaid svg', timeout=20000)
 

@@ -22,7 +22,7 @@ Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립�
 - **코드 읽기 화면**: '코드' 목록에서 코드 파일을 누르면 본문 자리에 줄 번호와 언어 색으로 보이고, 오른쪽 목차에 클래스·함수가 나옵니다 (고치거나 실행하지 않음)
 - **모아 보기**: 사이드바 '모아 보기' 탭에서 프로젝트(또는 고른 폴더)의 표·그림·박스글·다이어그램·코드·수식을 종류마다 문서별로 모아 봅니다. 누르면 그 문서의 그 자리로 갑니다. '파일 종류'로 바꾸면 엑셀·PDF·그림·py·ipynb 같은 형식별로 파일을 모아 봅니다
 - **전체 검색**: 사이드바 '검색' 탭(Ctrl+Shift+F)에서 모든 문서와 코드의 본문을 찾고, 결과를 누르면 그 줄로 갑니다. 맨 위에는 이름이 맞는 파일(자료도)이 나옵니다. 검색 칸 아래 '문서'·'코드'·'자료' 버튼으로 찾을 곳을 고릅니다
-- **읽기 좋은 본문**: 숫자 열이 정렬된 표, 코드 하이라이트·복사, 박스글(콜아웃), 각주, 수식(`$105` 같은 달러 표기는 그대로), Mermaid 다이어그램, 차트(Vega-Lite·ECharts·Graphviz — `vega-lite`·`echarts`·`dot` 코드 블록), 이미지(프로젝트 안 그림과 인터넷 그림, 클릭하면 확대), 표·그림·박스글까지 담은 목차, 제목을 눌러 절 접기·펴기, 글자 크기 −·+, 한 장만 또렷하게 보는 장 하이라이트
+- **읽기 좋은 본문**: 숫자 열이 정렬된 표, 코드 하이라이트·복사, 박스글(콜아웃), 각주, 수식(`$105` 같은 달러 표기는 그대로), Mermaid 다이어그램, 차트(Vega-Lite·ECharts·Plotly·Graphviz — `vega-lite`·`echarts`·`plotly`·`dot` 코드 블록), 이미지(프로젝트 안 그림과 인터넷 그림, 클릭하면 확대), 표·그림·박스글까지 담은 목차, 제목을 눌러 절 접기·펴기, 글자 크기 −·+, 한 장만 또렷하게 보는 장 하이라이트
 - **스타일 24종**: 업무·보고(기본, 보고서, 사내 문서, 컨설팅, 노션풍, 고대비), 읽기·출판(종이·세피아, 책, 논문, 신문, 잡지, 원고·타자기), 개발·기술(GitHub, 문서 사이트, Solarized 라이트, Gruvbox 라이트), 어두운(다크, GitHub 다크, Nord, Solarized 다크, Dracula, One Dark, 밤 종이, 먹·완전 검정). 목록은 용도별·분위기별·밝기별 중 고른 방식으로 묶입니다(설정 창). 고른 스타일은 다음 실행에도 그대로이고, '자동'은 Windows 다크 모드를 따름
 - **터미널**: 툴바 버튼(`` Ctrl+` ``)으로 오른쪽에 PowerShell 을 엽니다. 프로젝트 탭마다 셸 하나가 그 프로젝트 폴더에서 시작해, 문서를 보며 옆에서 Claude Code 를 돌릴 수 있습니다
 - **터미널 모음**: 툴바의 '터미널 모음' 버튼(`` Ctrl+Shift+` ``)으로 열린 프로젝트들의 터미널을 한 화면에 격자로 모아 봅니다. 칸 머리에 프로그램이 '실행 중'인지 보여, 여러 프로젝트에서 돌린 Claude Code 를 한눈에 볼 수 있습니다
@@ -216,4 +216,4 @@ python tools\ui_smoke.py     :: playwright 필요: pip install playwright && pyt
 
 Lectern 은 [MIT 라이선스](LICENSE)입니다. 누구나 무료로 쓰고, 고치고, 배포할 수 있습니다 (저작권 표시를 남겨 주세요). 있는 그대로 제공되며, 사용으로 생긴 문제에 대해 보증이나 책임을 지지 않습니다.
 
-설치 파일에는 Python, pywebview, Flask, watchdog, markdown-it, Mermaid, Vega, ECharts, Graphviz(Viz.js), KaTeX, highlight.js, DOMPurify, xterm.js 등 오픈소스 소프트웨어가 들어 있습니다. 각각의 저작권 표시와 라이선스 전문은 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 에 있습니다. `web/vendor/` 의 라이브러리 원문 라이선스는 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.
+설치 파일에는 Python, pywebview, Flask, watchdog, markdown-it, Mermaid, Vega, ECharts, Plotly, Graphviz(Viz.js), KaTeX, highlight.js, DOMPurify, xterm.js 등 오픈소스 소프트웨어가 들어 있습니다. 각각의 저작권 표시와 라이선스 전문은 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 에 있습니다. `web/vendor/` 의 라이브러리 원문 라이선스는 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.

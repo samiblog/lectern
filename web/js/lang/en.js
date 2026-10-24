@@ -268,6 +268,8 @@ export default {
 "펼치기": "Expand",
 "두 번 누르기·Enter": "Double-click or Enter",
 "폴더 개요 보기": "Folder overview",
+"Plotly 설정은 data(그래프 목록)와 layout 을 가진 JSON 입니다": "Plotly settings are JSON with data (a list of traces) and layout",
+"지도 차트({type})는 인터넷의 지도 자료가 있어야 해서 그리지 않습니다": "Map charts ({type}) need map data from the internet, so they are not drawn",
 "데이터 파일을 읽지 못했습니다 — 경로를 확인하세요: {url}": "Could not read the data file — check the path: {url}",
 "{kind} 그림을 그리지 못해 원문을 표시합니다: {error}": "Could not draw the {kind} chart, so the source is shown: {error}",
 "데이터는 이 프로젝트 안의 파일만 읽습니다 — 문서 기준 상대경로로 적으세요: {url}": "Data can only be read from files in this project — write a path relative to the document: {url}",

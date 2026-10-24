@@ -43,6 +43,7 @@ PACKAGES: dict[str, str] = {
     'vega-lite': '6.5.0',               # ```vega-lite (vega 위에서)
     'echarts': '6.1.0',                 # ```echarts
     '@viz-js/viz': '3.31.0',            # ```dot · ```graphviz — Graphviz 를 WebAssembly 로 (파일 하나에 들어 있다)
+    'plotly.js-dist-min': '4.1.2',      # ```plotly — 전체판 (사용자가 고름 — 나눈 판보다 크지만 모든 종류)
 }
 
 # 편집 모드의 언어 (codemirror/mode/<이름>.js). 편집기가 확장자에 맞는 것과 그것이 쓰는 것만 불러온다 (editor.js 의 MODES)
@@ -85,6 +86,7 @@ FILES: list[tuple[str, str, str]] = [
     ('vega-lite', 'build/vega-lite.min.js', 'vega/vega-lite.min.js'),
     ('echarts', 'dist/echarts.min.js', 'echarts/echarts.min.js'),
     ('@viz-js/viz', 'dist/viz-global.js', 'viz/viz-global.js'),
+    ('plotly.js-dist-min', 'plotly.min.js', 'plotly/plotly.min.js'),
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')

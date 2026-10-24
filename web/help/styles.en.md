@@ -79,7 +79,7 @@ The document lives inside `.md-body`. **Start every rule with `.md-body`** so th
 | Images | `.md-body img`; an image that failed to load is `.image-off` |
 | Math | Blocks `.md-body .math-block` (with `.katex-display` inside), inline `.katex` |
 | Diagrams | `.md-body pre.mermaid` (`.mermaid-ok` once drawn, with an `svg` inside) |
-| Charts (Vega-Lite, ECharts, Graphviz) | `.md-body pre.lec-chart` (`data-chart` is `vega-lite`, `vega`, `echarts` or `dot`; `.chart-ok` once drawn, with an `svg` inside). Chart colors come from the same style palette as diagrams, not from CSS |
+| Charts (Vega-Lite, ECharts, Plotly, Graphviz) | `.md-body pre.lec-chart` (`data-chart` is `vega-lite`, `vega`, `echarts`, `plotly` or `dot`; `.chart-ok` once drawn, with an `svg` inside). Chart colors come from the same style palette as diagrams, not from CSS |
 | Diagrams or charts that could not be drawn | `.md-body .diagram-error` (a `p` with the reason and a `pre` with the source) |
 | Metadata | `.md-body .front-matter` (`details` — `summary`, `table`) |
 | Footnotes | `.md-body .footnotes-sep`, `.footnotes`, `.footnote-ref` |

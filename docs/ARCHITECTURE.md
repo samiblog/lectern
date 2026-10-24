@@ -199,7 +199,7 @@ flowchart LR
 
 ## 4. 프런트엔드 (web/)
 
-빌드 단계 없이 `<script type="module">` 로 바로 실행한다. vendor 라이브러리는 `index.html` 에서 일반 스크립트로 먼저 불러온다(전역). Mermaid(약 5MB)는 다이어그램이 있는 문서를 처음 열 때 `mermaid.js` 가, Vega·Vega-Lite·ECharts·Viz.js(Graphviz)는 그 차트가 있는 문서를 처음 그릴 때 `charts.js` 가 불러온다 (D56). 불러오기 전에는 문서 속 id `mermaid` 요소가 `window.mermaid` 로 잡히므로, 전역이 있는지가 아니라 `run` 함수가 있는지로 확인한다.
+빌드 단계 없이 `<script type="module">` 로 바로 실행한다. vendor 라이브러리는 `index.html` 에서 일반 스크립트로 먼저 불러온다(전역). Mermaid(약 5MB)는 다이어그램이 있는 문서를 처음 열 때 `mermaid.js` 가, Vega·Vega-Lite·ECharts·Plotly·Viz.js(Graphviz)는 그 차트가 있는 문서를 처음 그릴 때 `charts.js` 가 불러온다 (D56). 불러오기 전에는 문서 속 id `mermaid` 요소가 `window.mermaid` 로 잡히므로, 전역이 있는지가 아니라 `run` 함수가 있는지로 확인한다.
 
 ### 상태와 이벤트
 상태는 `store.js` 의 `S` 하나에 모은다. 모듈끼리는 직접 호출 대신 `emit`/`on` 이벤트로 이어서 순환 참조를 피한다. 이벤트 목록은 `store.js` 머리 주석에 있다.
@@ -248,7 +248,7 @@ sequenceDiagram
    - 플러그인: footnote, task-lists(비활성 체크박스), anchor(GitHub식 slug — 한글 유지)
    - 수식: `$…$`, `$$…$$`, `\(…\)`, `\[…\]` → KaTeX. `$` 는 pandoc 규칙(여는 `$` 뒤·닫는 `$` 앞 공백 불가, 닫는 `$` 뒤 숫자 불가, 첫 후보만 확인)이라 `$105에서 $110` 은 수식이 아니다. `\[…\]` 는 줄을 통째로 차지할 때만 수식이라 문장 속 `\[판독 불확실\]`(대괄호를 글자로 쓰는 마크다운 표기)은 글자로 남는다. `\(…\)`·`\[…\]` 안에 한글·한자가 있는데 TeX 명령이 없으면 수식이 아니다 (D12).
    - ```` ```math ````·```` ```latex ````·```` ```tex ```` 코드 블록도 수식으로 (빈 줄로 나뉜 식은 따로). KaTeX 가 못 읽는 블록(LaTeX 문서 원문 등)은 코드 그대로 (D32).
-   - ```` ```mermaid ```` 는 `<pre class="mermaid">` 로, ```` ```vega-lite ````·```` ```vega ````·```` ```echarts ````·```` ```dot ````(```` ```graphviz ````)는 `<pre class="lec-chart" data-chart="종류">` 로 (`CHART_LANGS`).
+   - ```` ```mermaid ```` 는 `<pre class="mermaid">` 로, ```` ```vega-lite ````·```` ```vega ````·```` ```echarts ````·```` ```plotly ````·```` ```dot ````(```` ```graphviz ````)는 `<pre class="lec-chart" data-chart="종류">` 로 (`CHART_LANGS`).
    - 코드 하이라이트는 highlight.js (언어가 지정된 블록만).
 3. DOMPurify로 정화 (`SANITIZE_DOM:false`, `style`·`form` 태그 금지). 정화 훅이 `src` 를 `data-src` 로 옮겨 두고, 그림을 부르는 다른 길(`srcset`·`poster`·표의 `background`·SVG `image`·`feImage` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. `document` 의 이름을 가리는 `img` 의 `name` 도 지우고 (D15), SVG 링크의 `xlink:href` 는 `href` 로 옮긴다. frontmatter는 직접 이스케이프한 표로 앞에 붙인다.
 4. 화면 밖 무대(`.lec-stage`, 본문과 같은 폭)에 넣고 후처리:
@@ -258,7 +258,7 @@ sequenceDiagram
    - 절대경로(`C:\proj\a.md`, `C:/proj/a.md`, `\\server\share\a.md`, `file:///C:/proj/a.md`)는 문서가 든 탭의 프로젝트 안이면 상대경로로 바꾸고(대소문자 무시) 밖이면 막는다 (`absoluteRef`). markdown-it 은 `file:` 링크를 기본으로 글자로 남기고 `\` 를 `%5C` 로 바꾸며, DOMPurify 는 기본 허용 URL 에 없는 `c:`·`file:` 를 지우므로 `validateLink` 와 `ALLOWED_URI_REGEXP` 를 넓혔다.
    - `> [!NOTE]` 등 → 콜아웃, 표 → 가로 스크롤 감싸기 + 숫자 열(70% 이상이 숫자) 오른쪽 정렬, 코드 블록 → 언어 표시 + 복사 버튼.
    - Mermaid 실행. 실패한 블록은 원문 + 안내로 바꾼다 (`.diagram-error`).
-   - 차트 (`charts.js` 의 `renderCharts`, D56): 종류마다 라이브러리를 불러와 움직이지 않는 SVG 글자를 만들고(Vega-Lite → Vega `toSVG`, ECharts 서버 그리기 모드 `renderToSVGString`, Viz.js `renderString`), `sanitizeHtml` 로 거른 뒤 그림 속 링크를 풀어 넣는다. 색은 `mermaidTheme()` 의 색표, Graphviz 는 그린 뒤 기본 검정·흰 바탕을 그 색으로. 설정은 `parseSpec`(JSON, 아니면 따옴표 없는 키·작은따옴표·주석·끝 쉼표·`option =` — 함수는 오류). Vega 의 `data.url` 은 `resolveRef` 로 이 탭의 `/doc/<id>/…` 만. ECharts 와 `width: "container"` 인 Vega 는 문서 폭으로 그리고, 폭이 바뀌면(목차가 나옴·사이드바·창 크기) ResizeObserver 로 다시 그린다. 실패하면 원문 + 까닭.
+   - 차트 (`charts.js` 의 `renderCharts`, D56): 종류마다 라이브러리를 불러와 움직이지 않는 SVG 글자를 만들고(Vega-Lite → Vega `toSVG`, ECharts 서버 그리기 모드 `renderToSVGString`, Plotly `toImage({format: 'svg'})`, Viz.js `renderString`), `sanitizeHtml` 로 거른 뒤 그림 속 링크를 풀어 넣는다. 색은 `mermaidTheme()` 의 색표, Graphviz 는 그린 뒤 기본 검정·흰 바탕을 그 색으로. 설정은 `parseSpec`(JSON, 아니면 따옴표 없는 키·작은따옴표·주석·끝 쉼표·`option =` — 함수는 오류). Vega 의 `data.url` 은 `resolveRef` 로 이 탭의 `/doc/<id>/…` 만 (못 읽으면 Vega 는 빈 그림을 그리므로 기록한 오류로 원문 + 까닭). ECharts·Plotly 는 그리기 전에 설정의 그림 주소(data: 아닌 것)를 지우고, Plotly 의 지도 종류는 그리지 않는다. ECharts·Plotly 와 `width: "container"` 인 Vega 는 문서 폭으로 그리고, 폭이 바뀌면(목차가 나옴·사이드바·창 크기) ResizeObserver 로 다시 그린다. 실패하면 원문 + 까닭.
    - 본문 속 경로 표기(`src/app.py:42`, `../code/x.py`, `docs/a.md`)를 모아 `POST /api/exists` 로 한 번에 묻고, 있는 파일이면 `a.path-link` 로 감싼다 (`pathlink.js`). 코드 블록·링크·수식·다이어그램·메타데이터 안은 보지 않고, 문장 속 `코드` 는 내용 전체가 경로일 때만. 누르면 md·html 문서는 뷰어에서, 그 밖은 편집기의 그 줄로.
 5. 무대의 내용을 그 칸의 화면(선택된 탭이면 `#lec-view`)으로 옮기고, 이 문서에서 접어 두었던 절을 다시 접고(`setupFolds`), 목차를 만든 뒤 스크롤 위치를 정한다 (유지 / 앵커 / 맨 위).
 6. 탭의 `changed` 에서 이 문서를 지우고 상태줄을 갱신, `emit('rendered')` (찾기가 열려 있으면 다시 검색).

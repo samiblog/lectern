@@ -50,7 +50,8 @@ Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라�
 | Vega-Lite 6.5.0 | BSD-3-Clause |
 | Apache ECharts 6.1.0 | Apache-2.0 (NOTICE 포함) — 안에 든 zrender 6.1.0 은 BSD-3-Clause |
 | Viz.js 3.31.0 (@viz-js/viz) | MIT — 안에 든 Graphviz 는 EPL-2.0, Expat 은 MIT |
-| d3 (Vega·Mermaid·ECharts 안에 든 모듈·코드) | ISC |
+| Plotly.js 4.1.2 (plotly.js-dist-min) | MIT — 안에 든 MapLibre GL 은 BSD-3-Clause, buffer·ieee754·object-assign·polybooljs 등은 MIT (plotly.min.js 끝의 주석) |
+| d3 (Vega·Mermaid·ECharts·Plotly 안에 든 모듈·코드) | ISC |
 
 ---
 
@@ -2845,4 +2846,30 @@ IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
 CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+```
+
+### Plotly.js
+
+```
+MIT License
+
+Copyright (c) 2016-2024 Plotly Technologies Inc.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 ```

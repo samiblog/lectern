@@ -76,6 +76,13 @@
 - [x] 툴바·사이드바·목차·상태줄·메뉴 색이 문서 스타일을 따름 — 12종 모두 (D28)
 - [x] 테스트: pytest 80개, `ui_smoke.py` 79항목 (스타일마다 UI 글자 대비 4.5:1, html 글자 대비)
 
+### v0.28.0 — 차트에 Plotly (완료)
+사용자 요청 (2026-10-24): plotly 도 넣기 — 전체판(4.8MB)을 고름 (D56).
+- [x] ```plotly — {data, layout} JSON (Python 의 fig.to_json() 도), SVG 로, 문서 폭, 스타일 색(설정에 template 이 없을 때)
+- [x] 지도 종류는 그리지 않고 까닭, 배경 그림은 data: 만 — ECharts 도 그리기 전에 그림 주소를 지움 (그리는 동안 불러오므로)
+- [x] 예제에 Plotly 3개 (선과 막대·상자 그림·선버스트)
+- [x] 테스트: pytest 191개, `ui_smoke.py` 209항목 (차트 점검에 Plotly, 인터넷에 닿지 않음)
+
 ### v0.27.0 — 차트: Vega-Lite·ECharts·Graphviz (완료)
 사용자 요청 (2026-10-24): Mermaid 이외의 도해·차트 라이브러리 — 추천 1·2·3 (Vega-Lite, Graphviz, ECharts)과 예제 문서 (D56).
 - [x] 코드 블록 ```vega-lite·```vega·```echarts·```dot(```graphviz) 를 그림으로 — 처음 쓸 때 라이브러리를 불러옴, 움직이지 않는 SVG

@@ -1,6 +1,6 @@
-// 차트·도해 (D56): ```vega-lite·```vega·```echarts·```dot(```graphviz) 코드 블록을 그림(SVG)으로 — Mermaid(mermaid.js)와 같은 자리.
+// 차트·도해 (D56): ```vega-lite·```vega·```echarts·```plotly·```dot(```graphviz) 코드 블록을 그림(SVG)으로 — Mermaid(mermaid.js)와 같은 자리.
 //
-// - 라이브러리는 그 블록이 있는 문서를 처음 그릴 때 불러온다 (web/vendor 의 vega·echarts·viz). 전역(vega·vegaLite·echarts·Viz)은
+// - 라이브러리는 그 블록이 있는 문서를 처음 그릴 때 불러온다 (web/vendor 의 vega·echarts·plotly·viz). 전역(vega·vegaLite·echarts·Plotly·Viz)은
 //   문서 속 id 가 가릴 수 있으므로 진짜 라이브러리인지 본다 (mermaid.js 처럼).
 // - 모두 움직이지 않는 SVG 로 그린다 — 인쇄·우클릭 복사(PNG)·눌러서 크게 보기가 Mermaid 와 같다. 마우스를 올려 값 보기·확대 같은
 //   움직임은 없다. 그린 SVG 는 문서처럼 DOMPurify 로 거른다 (doc.js 의 sanitizeHtml — 인터넷 그림을 부르는 길), 링크는 푼다.
@@ -8,6 +8,7 @@
 // - 설정은 JSON. ECharts 예제처럼 따옴표 없는 키·작은따옴표·주석·끝 쉼표·'option =' 도 읽는다 (parseSpec). 함수는 안 된다 —
 //   문서가 스크립트를 돌리지 않는 것과 같은 까닭 (D27).
 // - 데이터는 문서 안에 적는다. Vega(-Lite) 의 data.url 은 이 프로젝트 안의 파일(문서 기준 상대경로)만 — 인터넷 주소는 막는다.
+//   Plotly 의 지도(인터넷의 지도 자료가 있어야 한다)는 그리지 않고, 배경 그림은 data: 주소만 둔다.
 // - 그리지 못하면 Mermaid 처럼 원문과 까닭을 보인다 (.diagram-error).
 
 import { esc, docUrl } from './util.js';
@@ -22,7 +23,7 @@ const FONT = '"Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif';   // mer
 const DOT_FONT = 'Verdana';
 
 // 종류 (markdown.js 의 CHART_LANGS 가 코드 블록의 언어 이름으로 정해 pre.lec-chart 의 data-chart 에 단다)
-export const CHART_NAMES = { 'vega-lite': 'Vega-Lite', vega: 'Vega', echarts: 'ECharts', dot: 'Graphviz' };
+export const CHART_NAMES = { 'vega-lite': 'Vega-Lite', vega: 'Vega', echarts: 'ECharts', dot: 'Graphviz', plotly: 'Plotly' };
 
 // ---- 라이브러리 ------------------------------------------------------------------
 
@@ -57,6 +58,7 @@ const LIBS = {
   'vega-lite': () => library(['vega/vega.min.js', 'vega/vega-lite.min.js'], () => typeof window.vegaLite?.compile === 'function' && window.vegaLite),
   echarts: () => library(['echarts/echarts.min.js'], () => typeof window.echarts?.init === 'function' && window.echarts),
   dot: () => library(['viz/viz-global.js'], () => typeof window.Viz?.instance === 'function' && window.Viz),
+  plotly: () => library(['plotly/plotly.min.js'], () => typeof window.Plotly?.toImage === 'function' && window.Plotly),
 };
 
 let viz = null;   // Graphviz (WebAssembly) — 한 번 만들어 둔다
@@ -197,7 +199,8 @@ export function chartLabel(kind, src) {
   } else {
     try {
       const spec = parseSpec(src);
-      const tt = Array.isArray(spec?.title) ? spec.title[0] : spec?.title;
+      const raw = kind === 'plotly' ? spec?.layout?.title : spec?.title;   // Plotly 는 layout.title
+      const tt = Array.isArray(raw) ? raw[0] : raw;
       title = typeof tt === 'string' ? tt : (typeof tt?.text === 'string' ? tt.text : '');
     } catch { /* 이름만 */ }
   }
@@ -247,6 +250,19 @@ function echartsTheme(c) {
 }
 
 let paint = null;   // 색 글자를 읽는 캔버스
+
+/** Plotly 의 기본 모양 (설정에 layout.template 가 없을 때만 — Python 의 fig.to_json() 처럼 자기 template 이 있으면 그것) */
+function plotlyTemplate(c) {
+  const axis = { gridcolor: fade(c.line, 0.22), linecolor: c.line, zerolinecolor: fade(c.line, 0.45), tickcolor: c.line, tickfont: { color: c.line } };
+  const clear = 'rgba(0,0,0,0)';
+  return {
+    layout: {
+      font: { family: FONT.replace(/"/g, "'"), color: c.text, size: 12 }, title: { font: { size: 15 } },
+      paper_bgcolor: clear, plot_bgcolor: clear, xaxis: axis, yaxis: axis, legend: { font: { color: c.text } },
+      polar: { bgcolor: clear, angularaxis: axis, radialaxis: axis }, ternary: { bgcolor: clear, aaxis: axis, baxis: axis, caxis: axis },
+    },
+  };
+}
 
 /** 색 글자(이름·#hex·rgb) → [r, g, b] (모르면 null) */
 function rgbOf(color) {
@@ -349,6 +365,23 @@ async function drawVega(kind, src, width, ctx) {
   }
 }
 
+/**
+ * ECharts 설정에서 그림 주소를 지운다 — 그리는 동안 ECharts 가 그림을 불러오므로 (graphic 의 image, 배경·무늬의 image,
+ * 'image://주소' 기호). data: 주소만 둔다. 글자 단계까지 내려가며 본다
+ */
+function dropImages(node, depth = 0) {
+  if (!node || typeof node !== 'object' || depth > 40) return;
+  for (const key of Object.keys(node)) {
+    const v = node[key];
+    if (typeof v === 'string') {
+      if (key === 'image' && !/^data:/i.test(v)) delete node[key];
+      else if (/^image:\/\//i.test(v) && !/^image:\/\/data:/i.test(v)) node[key] = 'emptyCircle';
+    } else {
+      dropImages(v, depth + 1);
+    }
+  }
+}
+
 async function drawECharts(src, width) {
   const option = parseSpec(src);
   if (!option || typeof option !== 'object' || Array.isArray(option)) throw new SpecError(t('설정을 읽지 못했습니다 — JSON 형식을 확인하세요 (블록 {line}행)', { line: 1 }));
@@ -358,6 +391,7 @@ async function drawECharts(src, width) {
   const w = fluid ? width : option.width;
   delete option.height;
   delete option.width;
+  dropImages(option);
   const echarts = await LIBS.echarts();
   const chart = echarts.init(null, echartsTheme(colors()), { renderer: 'svg', ssr: true, width: Math.max(200, w), height: Math.max(120, height) });
   try {
@@ -366,6 +400,29 @@ async function drawECharts(src, width) {
   } finally {
     chart.dispose();
   }
+}
+
+// 인터넷의 지도 자료(나라 경계·지도 타일)가 있어야 하는 Plotly 종류 — 받지 않으므로 그리지 않는다
+const PLOTLY_MAPS = /^(scattergeo|choropleth|scattermapbox|choroplethmapbox|densitymapbox|scattermap|choroplethmap|densitymap)$/;
+
+async function drawPlotly(src, width) {
+  let fig = parseSpec(src);
+  if (Array.isArray(fig)) fig = { data: fig };   // 그래프 목록만 적어도 된다
+  if (!fig || typeof fig !== 'object' || !Array.isArray(fig.data)) throw new SpecError(t('Plotly 설정은 data(그래프 목록)와 layout 을 가진 JSON 입니다'));
+  const map = fig.data.find((tr) => PLOTLY_MAPS.test(String(tr?.type)));
+  if (map) throw new SpecError(t('지도 차트({type})는 인터넷의 지도 자료가 있어야 해서 그리지 않습니다', { type: map.type }));
+  const layout = fig.layout && typeof fig.layout === 'object' ? fig.layout : {};
+  // 그리는 동안 Plotly 가 그림을 불러오므로 미리 지운다 — 배경 그림(layout.images)·image 종류의 주소는 data: 만
+  if (Array.isArray(layout.images)) layout.images = layout.images.filter((im) => /^data:/i.test(String(im?.source || '')));
+  for (const tr of fig.data) if (tr?.type === 'image' && tr.source && !/^data:/i.test(String(tr.source))) delete tr.source;
+  if (!layout.template) layout.template = plotlyTemplate(colors());
+  // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400
+  const fluid = !Number.isFinite(layout.width);
+  const w = fluid ? width : layout.width;
+  const h = Number.isFinite(layout.height) ? layout.height : 400;
+  const Plotly = await LIBS.plotly();
+  const url = await Plotly.toImage({ data: fig.data, layout }, { format: 'svg', width: Math.max(200, w), height: Math.max(120, h) });
+  return { svg: decodeURIComponent(url.slice(url.indexOf(',') + 1)), fluid };
 }
 
 async function drawDot(src) {
@@ -415,6 +472,7 @@ async function draw(node, ctx) {
   let out;
   try {
     if (kind === 'echarts') out = await drawECharts(src, width);
+    else if (kind === 'plotly') out = await drawPlotly(src, width);
     else if (kind === 'dot') out = await drawDot(src);
     else out = await drawVega(kind, src, width, ctx);
   } catch (e) {
