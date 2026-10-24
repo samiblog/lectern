@@ -24,6 +24,7 @@
 //   edit             편집 모드를 엶 {line?} — 우클릭 메뉴. 편집 중이면 그 줄로 (docmenu·search → editor, D54·D55)
 //   editor           칸(pane)의 편집 상자가 열리거나 닫힘                 (editor → basket — 커서 자리로 보내기, D63)
 //   new-doc          새로 만들기 {dir} — 폴더 우클릭 '이 폴더에 새 문서…'   (tree·others → basket, D65)
+//   doctabs          탭(tab)의 문서 탭을 닫음 — 다음 실행에 되살릴 목록     (doctabs → position, D64)
 //   rename           이름 바꾸기 {path} — 파일 우클릭 '이름 바꾸기…'·F2       (tree·others → rename, D66)
 //   tabs             열린 탭 목록이 바뀜 (열기·닫기·서버에 맞추기)          (tabs → gather)
 //   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)

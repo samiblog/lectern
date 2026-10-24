@@ -431,7 +431,10 @@ export function initBasket() {
   });
   box().addEventListener('mousedown', (e) => { if (e.target === box()) closePick(); });
   on('panel', (name) => { if (name === 'basket') render(); });
-  on('tab', render);
+  on('tab', () => {
+    closePick();   // 보낼 곳·새 문서 경로는 앞 탭의 것 (Ctrl+Tab 은 이 창에서도 탭을 바꾼다)
+    render();
+  });
   on('editor', render);   // 편집을 열고 닫으면 항목의 '보내기'
   on('new-doc', ({ dir }) => askNewDoc(dir));   // 폴더 우클릭 '이 폴더에 새 문서…' (tree·others)
   render();

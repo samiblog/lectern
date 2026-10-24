@@ -9,15 +9,16 @@
 // - 다음 실행: position.js 가 열어 둔 문서 탭(md·html 문서)을 서버에 알리고(docs), 탭을 처음 열 때 되살린다 (restoreDocTabs) —
 //   고른 탭만 그리고 나머지는 고를 때 그린다 (pane.deferred).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { createPane, removePane, selectPane } from './panes.js';
 import { navigate, refreshView, seedScroll } from './nav.js';
+import { goToPart } from './toc.js';
 import { closeEditor } from './editor.js';
 import { labelOf, tipOf, pathMenuItems } from './tree.js';
 import { openPalette } from './palette.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, esc, basename, toast, middleClickOpens } from './util.js';
+import { $, esc, basename, toast, middleClickOpens, findAnchor } from './util.js';
 import { t } from './i18n.js';
 
 export const MAX_DOCS = 5;   // 서버 config.MAX_DOC_TABS 와 같게
@@ -53,6 +54,20 @@ export async function selectDocTab(pane) {
   }
 }
 
+/**
+ * 그 파일을 편집 중인 탭(pane — 고른 뒤)에서 줄(line)·앵커(hash)로 간다 — 다시 그리지 않고 편집기가 그곳으로 (D55).
+ * 다시 그리면(navigate) 편집 상자를 떠나는 것이라 편집을 닫거나 버릴지 묻게 된다
+ */
+function goInEditor(pane, target) {
+  if (target.line) emit('edit', { line: target.line });
+  else if (target.hash) {
+    const frame = pane.view.querySelector('iframe.lec-html');
+    const el = findAnchor(frame?.contentDocument?.body || pane.view, target.hash);
+    if (el) goToPart(el);
+  }
+  return true;
+}
+
 /** 칸을 문서 탭에서 뺀다 (그 자리의 화면도 없앤다) */
 function dropPane(pane) {
   const { tab } = pane;
@@ -70,7 +85,10 @@ export async function openInNewTab(target) {
   const open = docPaneOf(tab, target);
   if (open) {
     await selectDocTab(open);
-    if (target.hash || target.line) await navigate(target, { pane: open });
+    if (target.hash || target.line) {
+      if (open.editor) goInEditor(open, target);
+      else await navigate(target, { pane: open });
+    }
     return open;
   }
   let pane;
@@ -113,9 +131,11 @@ export async function openTarget(target) {
   const tab = S.tab;
   if (tab && (target.type === 'doc' || target.type === 'code')) {
     const open = docPaneOf(tab, target);
-    if (open && open !== S.pane) {
-      await selectDocTab(open);
-      return target.hash || target.line ? navigate(target, { pane: open }) : true;
+    // 다른 문서 탭에 열려 있으면 그 탭으로. 지금 탭에서 편집 중인 그 파일이면 떠나지 않는다 (담기의 '문서에서 보기' 등)
+    if (open && (open !== S.pane || open.editor)) {
+      if (open !== S.pane) await selectDocTab(open);
+      if (!target.hash && !target.line) return true;
+      return open.editor ? goInEditor(open, target) : navigate(target, { pane: open });
     }
     if (target.newTab && !open) return !!(await openInNewTab(target));
   }
@@ -128,6 +148,7 @@ export function closeDocTab(pane = S.pane) {
   if (!tab || tab.panes.length < 2 || !tab.panes.includes(pane)) return false;
   if (pane.editor && !closeEditor(pane, { sync: false })) return false;
   const i = tab.panes.indexOf(pane);
+  emit('doctabs', tab);   // 다음 실행에 되살릴 문서 탭 목록 (position.js — 고르지 않은 탭을 닫으면 view 이벤트가 없다)
   if (tab.pane === pane) {
     const next = tab.panes[i + 1] || tab.panes[i - 1];   // 오른쪽, 없으면 왼쪽
     tab.pane = next;

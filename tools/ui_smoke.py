@@ -2304,6 +2304,36 @@ def run(headed: bool) -> None:
             check(len(d0) == 1 and d1 == [d0[0].lstrip('*'), 'docs/02-수식과-달러.md', '*plans/구현-계획.md'] and d2[1] == '*docs/02-수식과-달러.md' and len(d2) == 3
                   and alt1 and dirty_mark and other_clean and back_in_editor and closed and d3 == d0 and plan_doc.read_bytes() == plan_before,
                   f"문서 탭: Ctrl+누르기·가운데 버튼으로 새 탭(지금 탭 오른쪽), 열린 문서는 그 탭으로, Alt+n, 편집 상자는 탭마다(● — 돌아오면 편집기에 초점), Ctrl+F4 로 닫기 ({d0} → {d1} → {d2} → {d3})")
+            # 문서 탭 우클릭은 탭 메뉴 (본문 메뉴가 덮지 않게 — 문서 탭 줄은 #lec-panes 안), 다른 탭에서 편집 중인 파일의 줄로 가면
+            # 그 탭의 편집기가 그 줄로 (다시 그리며 편집을 닫거나 버릴지 묻지 않게)
+            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click(modifiers=['Control'])
+            on_tab('plans/구현-계획.md')
+            page.locator('#lec-doctab-list .doc-tab').first.click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            tab_menu = page.evaluate("[...document.querySelectorAll('#lec-menu button[data-i]')].map(b => b.textContent)")
+            page.keyboard.press('Escape')
+            page.click('#lec-btn-edit')
+            page.wait_for_selector('.lec-pane.active .lec-editor .CodeMirror')
+            page.keyboard.press('Control+Home')
+            page.keyboard.insert_text('고침 ')
+            page.keyboard.press('Alt+1')
+            on_tab(d0[0].lstrip('*'))
+            asked = []
+            page.once('dialog', lambda d: (asked.append(d.message), d.dismiss()))
+            page.evaluate("import('/static/js/store.js').then(m => m.emit('open', { type: 'doc', path: 'plans/구현-계획.md', line: 5 }))")
+            on_tab('plans/구현-계획.md')
+            page.wait_for_timeout(300)
+            kept = page.evaluate('''(() => { const ed = document.querySelector('.lec-pane.active .lec-editor.dirty .CodeMirror')?.CodeMirror;
+              return ed ? [ed.getValue().startsWith('고침 '), ed.getCursor().line + 1] : null; })()''')
+            page.evaluate("document.querySelector('.lec-pane.active .lec-editor .CodeMirror').CodeMirror.undo()")
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor.dirty')", 3000)
+            page.keyboard.press('Escape')
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.keyboard.press('Control+F4')
+            wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 1", 5000)
+            check(any('다른 문서 탭 모두 닫기' in m for m in tab_menu) and not any('인쇄' in m for m in tab_menu) and kept == [True, 5] and not asked
+                  and plan_doc.read_bytes() == plan_before,
+                  f"문서 탭 우클릭은 탭 메뉴, 다른 탭에서 편집 중인 파일의 줄로 가면 묻지 않고 그 편집기가 그 줄로 ({tab_menu[:2]}, {kept}, {asked})")
 
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)

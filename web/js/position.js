@@ -12,10 +12,12 @@ const sent = new WeakMap();   // 탭 → 마지막으로 보낸 값
 
 /** 탭의 위치를 바뀌었으면 바로 보낸다 — 고른 문서 탭의 문서와 위치, 열어 둔 문서 탭들(docs — D64). 탭을 닫기 전에도 부른다 (tabs.js) */
 export function rememberPosition(tab) {
-  const v = tab.pane.current;
+  // 고른 문서 탭이 문서가 아니면(코드·폴더 개요) 가장 최근에 본 문서 탭의 것 — 문서 탭 목록은 그래도 남게
+  const isDoc = (p) => p.current?.type === 'doc' && tab.fileMap.has(p.current.path);
+  const pane = isDoc(tab.pane) ? tab.pane : tab.panes.filter(isDoc).sort((a, b) => (b.used || 0) - (a.used || 0))[0];
   // 지워졌거나 이름이 바뀐 문서('문서 없음' 화면)는 보내지 않는다 (서버가 404 로 거절한다)
-  if (S.config.restore_last === false || v?.type !== 'doc' || !tab.fileMap.has(v.path)) return Promise.resolve();
-  const body = { p: tab.id, path: v.path, scroll: Math.round(tab.pane.scroller.scrollTop), docs: openDocs(tab) };
+  if (S.config.restore_last === false || !pane) return Promise.resolve();
+  const body = { p: tab.id, path: pane.current.path, scroll: Math.round(pane.scroller.scrollTop), docs: openDocs(tab) };
   const key = JSON.stringify(body);
   if (sent.get(tab) === key) return Promise.resolve();
   sent.set(tab, key);
@@ -27,6 +29,7 @@ export function initPosition() {
   const later = debounce(() => S.tabs.forEach(rememberPosition), 1500);
   on('view', later);
   on('rendered', later);
+  on('doctabs', later);   // 고르지 않은 문서 탭을 닫음 (doctabs.js)
   // 스크롤은 거품처럼 올라오지 않으므로 잡기 단계에서 듣는다
   document.addEventListener('scroll', (e) => { if (e.target.classList?.contains('lec-scroll')) later(); }, { capture: true, passive: true });
 }

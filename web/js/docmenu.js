@@ -373,7 +373,8 @@ function openMenu(e, view, x, y) {
 }
 
 function onContextMenu(e) {
-  if (e.target.closest?.('.lec-editor')) return;   // 편집 모드 (D54) — 아래의 숨은 화면이 아니라 편집기 것
+  // 편집 모드 (D54) — 아래의 숨은 화면이 아니라 편집기 것. 문서 탭 줄(D64)은 #lec-panes 안에 있지만 자기 메뉴가 있다
+  if (e.target.closest?.('.lec-editor, #lec-doctabs')) return;
   openMenu(e, $('#lec-view'), e.clientX, e.clientY);
 }
 
