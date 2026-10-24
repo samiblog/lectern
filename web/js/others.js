@@ -24,7 +24,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, pathMenuItems, hasChangedInside } from './tree.js';
+import { fullPath, labelOf, tipOf, pathMenuItems, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare } from './util.js';
@@ -428,9 +428,9 @@ async function copy(text) {
 
 /** 경로 복사 항목 (메뉴 끝) */
 function copyItems(n) {
-  const items = ['-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`) },
-    { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)) }];
-  if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name) });
+  const items = ['-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
+    { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)), term: shellWord(fullPath(n.path)) }];
+  if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name), term: shellWord(n.name) });
   return items;
 }
 

@@ -362,6 +362,7 @@ sequenceDiagram
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
 - 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
 - 머리줄: 셸 이름 — 탭 이름, 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.
+- 터미널에 붙여 넣기 (D51): 우클릭 메뉴 항목에 `term`(넣을 글)이 있으면 `ui.js` 가 항목 옆에 터미널 버튼(`.menu-term`)을 달고, 누르면 `term-paste` 이벤트 → `pasteToTerminal`. 패널이 닫혀 있으면 열고 셸을 띄운 뒤, 끝의 줄바꿈을 떼고 `xterm.paste` (Ctrl+V 와 같은 길 — 붙여넣기 모드면 감싸고, 줄바꿈은 CR). 여러 줄인데 `xterm.modes.bracketedPasteMode` 가 꺼져 있으면 `confirm` 으로 묻는다. 넣은 뒤 터미널에 초점.
 - 탭을 닫을 때(`tabs.js` 의 `closeTab`) `confirmCloseTerminal` 이 `/api/term/info` 의 `busy` 를 보고 묻는다. 닫힌 탭의 화면은 `disposeTerminal` 이 치운다 (셸은 서버가 탭을 닫으며 끝낸다).
 
 ### 터미널 모음 (gather.js)
@@ -438,7 +439,7 @@ sequenceDiagram
 | 한 탭의 문서가 다른 탭 프로젝트의 파일을 부름 (`../<다른 id>/x.png`) | 프로젝트 id 는 실행마다 새로 만드는 무작위 값이라 문서가 알 수 없다. md 의 링크·그림은 `resolveRef` 가 `/doc/<그 탭 id>/` 밖을 막는다. 서버는 id 마다 그 폴더 안만 내준다 (D34) |
 | 다른 프로그램이 파이프로 Lectern 을 조작 | 파이프는 기본 보안이라 다른 사용자는 쓰지 못한다. JSON 만 받고(pickle 쓰지 않음), 하는 일은 폴더를 탭으로 열고 창을 앞으로 가져오는 것뿐 (보기 전용) |
 | 문서 속 스크립트 | md: DOMPurify, `style`·`form` 금지, `javascript:` 등 위험한 스킴 차단 (`file:`·드라이브 경로는 `absoluteRef` 가 프로젝트 안만 상대경로로 열고 밖은 막음). html: `allow-scripts` 없는 iframe sandbox + 문서용 CSP (D27) |
-| 웹 페이지·문서가 터미널로 명령을 보냄 | 셸에 글자를 보내는 API 는 사용자의 키 입력(`/api/term/input`) 하나. 터미널 API 는 페이지에 실린 실행마다 새 비밀값(`X-Term`)과 같은 출처(`Origin`)를 요구하고, 다른 사이트는 페이지를 읽을 수 없어 값을 모른다. 문서 속 스크립트는 DOMPurify·스크립트 없는 iframe 에 더해 `/` 의 CSP `script-src 'self'` 가 막는다 (D38) |
+| 웹 페이지·문서가 터미널로 명령을 보냄 | 셸에 글자를 보내는 API 는 사용자의 키 입력(`/api/term/input`) 하나 — 우클릭 메뉴의 '터미널에 붙여 넣기'(D51)도 사용자가 고를 때만 같은 길로, Enter 없이 (여러 줄은 묻는다). 터미널 API 는 페이지에 실린 실행마다 새 비밀값(`X-Term`)과 같은 출처(`Origin`)를 요구하고, 다른 사이트는 페이지를 읽을 수 없어 값을 모른다. 문서 속 스크립트는 DOMPurify·스크립트 없는 iframe 에 더해 `/` 의 CSP `script-src 'self'` 가 막는다 (D38) |
 | 터미널을 닫아도 셸에서 띄운 프로그램이 남음 | 셸은 작업 개체(`KILL_ON_JOB_CLOSE`) 안에서 돈다 — 탭을 닫거나 다시 시작하거나 앱이 끝나면(강제 종료 포함) 함께 끝난다. 탭을 닫기 전에 실행 중이면 묻는다 |
 | 프로젝트 폴더의 `powershell.exe` 가 셸 대신 실행됨 | 셸은 전체 경로로 띄우고, 설정 `terminal_shell` 은 실제로 있는 전체 경로일 때만, 화면에서는 바꿀 수 없다 |
 | 링크 클릭으로 코드 실행 | `osutil.open_path` 의 확장자 화이트리스트, 편집기 인자 문자 검사 |

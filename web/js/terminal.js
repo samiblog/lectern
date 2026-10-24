@@ -3,7 +3,8 @@
 // 키 입력은 POST /api/term/input, 출력은 긴 폴링 GET /api/term/read (from: 받은 곳까지). 터미널 API 는 페이지에 실린
 // 실행마다 새 비밀값(meta lec-term → X-Term 헤더)을 함께 보낸다.
 //
-// - 사용자가 버튼·Ctrl+` 로 열 때만 시작한다 (앱을 켤 때마다 닫힌 채). 셸로 명령을 보내는 길은 사용자의 키 입력뿐이다.
+// - 사용자가 버튼·Ctrl+` 로 열 때만 시작한다 (앱을 켤 때마다 닫힌 채). 셸로 명령을 보내는 길은 사용자의 키 입력뿐이다 —
+//   예외는 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'(D51)이고, 이것도 Ctrl+V 와 같은 길로 Enter 없이 넣는다 (pasteToTerminal).
 // - 패널을 닫아도 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
 // - 터미널을 열면 목차를 감춘다 (본문 폭) — 목차 버튼으로 함께 볼 수 있다 (toc.js).
@@ -366,6 +367,36 @@ export function disposeTerminal(tab) {
   emit('terms');
 }
 
+/**
+ * 글을 선택된 탭의 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
+ * 사용자의 Ctrl+V 와 같은 길이다 (xterm 의 paste → onData → POST /api/term/input). 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다.
+ * 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기 모드(bracketed paste — Claude Code 등)를
+ * 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다 (Windows Terminal 처럼).
+ */
+export async function pasteToTerminal(text) {
+  const tab = S.tab;
+  text = String(text ?? '').replace(/[\r\n]+$/, '');
+  if (!tab || !text) return;
+  if (!gathered()) {
+    if (!open) toggleTerminal(true);
+    await showCurrent();
+  }
+  const term = tab.term;
+  if (!term || tab !== S.tab) return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다), 또는 그사이 다른 탭
+  if (term.starting) await term.starting;
+  if (!term.alive) {
+    toast(t('터미널 셸이 끝나 있습니다. 터미널에서 Enter 를 누르면 다시 시작합니다'), 'error');
+    return;
+  }
+  const lines = text.split(/\r\n|\r|\n/).length;
+  if (lines > 1 && !term.xterm.modes.bracketedPasteMode
+    && !window.confirm(t('{n}줄을 터미널에 붙여 넣습니다. 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있습니다. 붙여 넣을까요?', { n: lines }))) {
+    return;
+  }
+  term.xterm.paste(text);
+  term.xterm.focus();
+}
+
 // ---- 터미널 모음(gather.js)이 쓰는 것 ----------------------------------------------------
 
 export const fitTerminal = fitNow;
@@ -448,5 +479,6 @@ export function initTerminal() {
   // 색: 스타일 파일을 바꿔 끼우면(theme.js) 다 불러온 뒤에 CSS 변수를 읽는다. 설정 창에서 '스타일에 맞춤'을 바꿔도
   $('#lec-theme-css').addEventListener('load', applyColors);
   on('term-colors', applyColors);
+  on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
   applyColors();
 }

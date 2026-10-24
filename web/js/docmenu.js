@@ -202,8 +202,8 @@ const editorItem = (line) => ({ label: t('편집기에서 이 줄 열기'), hint
 function sourceItems(range, label = t('원문 복사'), note = '') {
   const ref = claudeRef(range, note);
   return [
-    { label, hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)) },
-    { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref) },
+    { label, hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)), term: sourceOf(range) },
+    { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
     editorItem(range[0]),
   ];
 }
@@ -215,7 +215,7 @@ function blockItems(el, target) {
   const math = target.closest('[data-tex]');
   if (math && math !== el && el.contains(math)) items.push(texItem(math));
   const link = target.closest('a[data-lec-href]');
-  if (link) items.push({ label: t('링크 주소 복사'), hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref) });
+  if (link) items.push({ label: t('링크 주소 복사'), hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref), term: `${link.dataset.lecHref} ` });
   if (tag === 'IMG') {
     if (el.classList.contains('external')) items.push({ label: t('그림 주소 복사'), hint: el.src, action: () => copyPlain(el.src) });
     else items.push({ label: t('그림 복사'), hint: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyImage(el) });
@@ -225,13 +225,14 @@ function blockItems(el, target) {
       action: () => { const data = tableData(el); copyParts({ 'text/plain': data.tsv, 'text/html': data.html }, `${t('표')} ${tableSize(el)}`); },
     });
   } else if (el.matches('.code-block')) {
-    items.push({ label: t('코드 복사'), action: () => copyPlain(el.querySelector('pre').textContent.replace(/\n$/, '')) });
+    const code = el.querySelector('pre').textContent.replace(/\n$/, '');
+    items.push({ label: t('코드 복사'), action: () => copyPlain(code), term: code });
   } else if (el.matches('pre.mermaid')) {
     if (el.querySelector('svg')) items.push({ label: t('그림 복사'), hint: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyDiagram(el) });
   } else if (el.matches('.math-block')) {
     items.push(texItem(el));
   } else if (!el.matches('.mermaid-error')) {
-    items.push({ label: HEADING.test(tag) ? t('제목 글자 복사') : t('텍스트 복사'), action: () => copyPlain(el.innerText.trim()) });
+    items.push({ label: HEADING.test(tag) ? t('제목 글자 복사') : t('텍스트 복사'), action: () => copyPlain(el.innerText.trim()), term: el.innerText.trim() });
   }
 
   if (HEADING.test(tag)) {
@@ -287,10 +288,11 @@ function codeMenu(e, view, x, y) {
     if (a && b) range = [Math.min(a, b), Math.max(a, b)];
   }
   const items = [{ header: range ? `${path} ${rangeText(range)}` : path }];
-  if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected) });
-  if (row && !selected) items.push({ label: t('이 줄 복사'), hint: describe(row.textContent), action: () => copyPlain(row.textContent) });
+  if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
+  if (row && !selected) items.push({ label: t('이 줄 복사'), hint: describe(row.textContent), action: () => copyPlain(row.textContent), term: row.textContent.trim() });
   if (range) {
-    items.push({ label: t('Claude용 위치 복사'), hint: `@${path} ${rangeText(range)}`, action: () => copyPlain(`@${path} ${rangeText(range)}`) },
+    const ref = `@${path} ${rangeText(range)}`;
+    items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
       { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
   }
   items.push('-', ...pathMenuItems(path, true), '-',
@@ -315,7 +317,7 @@ function openMenu(e, view, x, y) {
   if (spot.length) items.push('-', ...spot);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
-  if (selected) items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) }, '-');
+  if (selected) items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected), term: selected }, '-');
   // 표는 가로 스크롤 상자가 테두리를 잘라 내므로 상자에 표시한다
   const mark = el?.tagName === 'TABLE' ? el.closest('.table-wrap') || el : el;
   mark?.classList.add('lec-picked');

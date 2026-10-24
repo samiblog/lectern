@@ -1,6 +1,8 @@
 // 팝업 메뉴, 확대 보기(라이트박스)
 
+import { emit } from './store.js';
 import { $, esc } from './util.js';
+import { t } from './i18n.js';
 
 // ---- 팝업 메뉴 -------------------------------------------------------------
 
@@ -10,10 +12,16 @@ let onMenuClose = null;
 function menuItemHtml(it, i) {
   if (it === '-') return '<div class="menu-sep" role="separator"></div>';
   if (it.header) return `<div class="menu-head">${esc(it.header)}</div>`;
-  return `<button role="menuitem" data-i="${i}"><span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
+  const main = `<button role="menuitem" data-i="${i}"><span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
+  if (!it.term) return main;
+  // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
+  const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
+  return `<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${esc(tip)}" aria-label="${esc(tip)}">`
+    + '<svg aria-hidden="true"><use href="#i-term"/></svg></button></div>';
 }
 
-/** items: [{label, hint?, action}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때 */
+/** items: [{label, hint?, action, term?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.
+ * term: 그 항목 옆에 '터미널에 붙여 넣기' 버튼을 달고 누르면 이 글을 터미널에 넣는다 (복사하는 글과 같은 것 — 경로는 끝에 공백) */
 export function showMenu(x, y, items, onClose = null) {
   const menu = $('#lec-menu');
   hideMenu();
@@ -66,6 +74,13 @@ export function closeLightbox() {
 export function initUi() {
   const menu = $('#lec-menu');
   menu.addEventListener('click', (e) => {
+    const term = e.target.closest('button[data-term]');
+    if (term) {
+      const item = menuItems[+term.dataset.term];
+      hideMenu();
+      if (item?.term) emit('term-paste', item.term);
+      return;
+    }
     const btn = e.target.closest('button[data-i]');
     if (!btn) return;
     const item = menuItems[+btn.dataset.i];

@@ -1653,6 +1653,22 @@ def run(headed: bool) -> None:
             restarted = wait_until(page, '''![...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')]
               .map(r => r.textContent).join('').includes('lecterm')''') and term_has('PS ', 30000)
             check(restarted, '다시 시작 버튼: 셸을 새로 띄움 (화면도 비움)')
+            # 우클릭 메뉴의 '터미널에 붙여 넣기' (D51): 복사 항목 옆 버튼 — Enter 없이, 여러 줄이면 묻는다 (PowerShell 프롬프트)
+            doc_path = page.inner_text('#lec-st-path')
+            page.locator('#lec-view h1').first.click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            term_btns = page.locator('#lec-menu .menu-term').count()
+            page.locator('#lec-menu .menu-row', has_text='Claude용 위치 복사').locator('.menu-term').click()
+            pasted = term_has(f'@{doc_path} ')
+            in_term = page.evaluate("!!document.activeElement?.closest('#lec-term')")
+            page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
+            asked = []
+            page.once('dialog', lambda dlg: (asked.append(dlg.message), dlg.dismiss()))
+            page.locator('#lec-view h1').first.click(button='right')
+            page.locator('#lec-menu .menu-row', has_text='이 절 원문 복사').locator('.menu-term').click()
+            page.wait_for_timeout(300)
+            check(term_btns >= 2 and pasted and in_term and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
+                  f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에, 여러 줄이면 먼저 물음 ({term_btns}, {asked[:1]})")
             # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
             term_colors = lambda: page.evaluate('''() => {
               const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number);

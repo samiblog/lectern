@@ -170,11 +170,14 @@ async function copy(text) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'), '');
 }
 
-/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사, 편집기로 열기, 탐색기에서 보기 */
+/** 터미널에 넣을 경로: 공백이 있으면 따옴표로 감싼다 (셸이 한 낱말로 읽게). 끝에 공백 — 이어서 치도록 */
+export const shellWord = (text) => `${/\s/.test(text) ? `"${text}"` : text} `;
+
+/** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사(옆에 터미널에 붙여 넣기, D51), 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
   const items = [];
-  if (path) items.push({ label: t('@{path} 복사', { path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`) });
-  items.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)) });
+  if (path) items.push({ label: t('@{path} 복사', { path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`), term: `@${path} ` });
+  items.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)), term: shellWord(fullPath(path)) });
   items.push('-');
   if (isDoc) items.push({ label: t('편집기로 열기'), action: () => openExternal(path) });
   items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(path) });

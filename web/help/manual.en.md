@@ -166,6 +166,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
 - **Copy location for Claude** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
 - If you right-click with text selected, 'Copy selected text' appears at the top.
+- The **terminal button** to the right of a copy item puts the same text into the terminal (Enter is not pressed). It is there for selected text, the location for Claude, the source, code, `@path`, the full path and so on, including in the right-click menus of the tree and the 'Code' and 'Other files' lists. See 'Terminal' below.
 
 ## Terminal
 
@@ -174,6 +175,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - Keys typed in the terminal go to the shell. Use app shortcuts such as Ctrl+P, Ctrl+F or F1 after clicking the main area (Ctrl+Tab moves to the next tab even inside the terminal).
 - Select text with the mouse, then press Ctrl+C or right-click to copy; press Ctrl+V or right-click to paste. With nothing selected, Ctrl+C stops the running command.
 - Drag the edge to resize the terminal (double-click to reset).
+- **Paste into the terminal**: in a right-click menu, the terminal button next to a copy item puts that text into the current tab's terminal, opening the terminal if needed. Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
 - The terminal colors follow the document style. For an always-dark terminal, turn off 'Match terminal colors to style' in Settings.
 - Closing a tab ends its shell. If a program started from the shell is still running, Lectern asks first. Closing Lectern ends all shells.
 
