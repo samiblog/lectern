@@ -6,7 +6,7 @@ import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, $$, esc, dirname, copyText, toast, keepFocus, newTabWanted, middleClickOpens } from './util.js';
+import { $, $$, esc, dirname, copyText, toast, keepFocus, openHow, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -148,7 +148,7 @@ function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
   if (row.dataset.doc != null) {
-    emit('open', { type: 'doc', path: row.dataset.doc, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
+    emit('open', { type: 'doc', path: row.dataset.doc, ...openHow(e) });   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
     return;
   }
   const dir = row.dataset.dir;
@@ -200,7 +200,7 @@ export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), a
 export function docMenuItems(path, type = 'doc') {
   const items = [{ header: path }];
   if (!(S.view?.type === type && S.view.path === path)) {
-    items.push({ label: t('새 탭에서 열기'), hint: t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) });
+    items.push({ label: t('새 탭에서 열기'), hint: type === 'doc' ? t('Ctrl+누르기·두 번 누르기·가운데 버튼') : t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) });
   }
   items.push(renameItem(path), '-');
   return [...items, ...pathMenuItems(path, true)];

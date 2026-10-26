@@ -11,7 +11,7 @@ from conftest import write
 
 import app as lectern_app
 from lectern import osutil, state as state_module, styles, terminal
-from lectern.config import Config
+from lectern.config import MAX_DOC_TABS, Config
 from lectern.scanner import is_code, iter_files
 from lectern.server import create_app
 from lectern.state import AppState
@@ -329,11 +329,12 @@ def test_position_is_remembered(client, project, pid):
            {'panes': [{'path': 'README.md', 'scroll': 5}], 'active': 0}]   # 창을 나누던 때(v0.6)의 형식
     assert [post(b).status_code for b in bad] == [400] * len(bad)
     assert client.post('/api/position', json={'path': 'README.md', 'scroll': 1}).status_code == 404   # 프로젝트 id 없이는
-    # 문서 탭 (D64): 열어 둔 문서들을 탭 차례로 — 없어진 문서·밖·숨김은 빼고, 5개까지
+    # 문서 탭 (D64·D67): 열어 둔 문서들을 탭 차례로 — 없어진 문서·밖·숨김은 빼고, 20개까지
     assert post({'path': 'README.md', 'scroll': 7, 'docs': ['docs/10-a.md', 'README.md', 'gone.md', '../x.md', '.claude/notes.md']}).status_code == 200
     pos = client.get('/api/state').get_json()['projects'][0]['position']
     assert pos['doc'] == 'README.md' and pos['docs'] == ['docs/10-a.md', 'README.md']
-    assert post({'path': 'README.md', 'scroll': 7, 'docs': ['README.md'] * 6}).status_code == 400
+    assert post({'path': 'README.md', 'scroll': 7, 'docs': ['README.md'] * MAX_DOC_TABS}).status_code == 200
+    assert post({'path': 'README.md', 'scroll': 7, 'docs': ['README.md'] * (MAX_DOC_TABS + 1)}).status_code == 400
     assert post({'path': 'README.md', 'scroll': 7, 'docs': 'README.md'}).status_code == 400
     post({'path': 'docs/10-a.md', 'scroll': 1})   # docs 없이 — 그 문서 하나
     assert client.get('/api/state').get_json()['projects'][0]['position']['docs'] == ['docs/10-a.md']

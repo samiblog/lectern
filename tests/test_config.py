@@ -66,7 +66,7 @@ def test_saving_resumes_after_file_is_fixed(tmp_path):
 
 
 def test_positions_are_bounded(tmp_path):
-    from lectern.config import MAX_POSITIONS, MAX_PROJECTS
+    from lectern.config import MAX_DOC_TABS, MAX_POSITIONS, MAX_PROJECTS
 
     cfg = Config(tmp_path / 'config.json')
     for i in range(MAX_PROJECTS + 3):
@@ -77,8 +77,9 @@ def test_positions_are_bounded(tmp_path):
     pos = cfg.position(r'C:\P0')                              # 대소문자 무시 (Windows 경로)
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
     assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}, 'docs': []}
-    cfg.remember_position(r'C:\p0', 'b.md', 3, ['a.md', 'b.md', 'c.md', 'd.md', 'e.md', 'f.md'])   # 문서 탭은 5개까지 (D64)
-    assert cfg.position(r'C:\p0')['docs'] == ['a.md', 'b.md', 'c.md', 'd.md', 'e.md']
+    docs = [f'd{i}.md' for i in range(MAX_DOC_TABS + 1)]
+    cfg.remember_position(r'C:\p0', 'd1.md', 3, docs)   # 문서 탭은 20개까지 (D64·D67)
+    assert MAX_DOC_TABS == 20 and cfg.position(r'C:\p0')['docs'] == docs[:MAX_DOC_TABS]
 
 
 def test_old_and_broken_positions(tmp_path):

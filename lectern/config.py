@@ -21,7 +21,7 @@ from .paths import config_dir
 MAX_RECENT = 10
 MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
-MAX_DOC_TABS = 5      # 프로젝트 탭마다 여는 문서 탭 수 (D64 — 화면의 doctabs.js MAX_DOCS 와 같게)
+MAX_DOC_TABS = 20     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67 — 화면의 doctabs.js MAX_DOCS 와 같게)
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 
 CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다

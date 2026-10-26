@@ -15,6 +15,12 @@ const foldsOf = (root) => {
 };
 let lastToggled = null;    // 두 번 눌러 낱말을 고를 때 첫 번째 누름의 접기를 되돌리기 위해
 
+/** 칸(from)의 접은 절 기억을 새 칸(to)에도 — 두 번 누르기로 앞 화면을 새 칸에 되살릴 때 (doctabs.js 의 splitOff, D67) */
+export function copyFolds(from, to) {
+  const saved = folds.get(from.view);
+  if (saved) folds.set(to.view, new Map([...saved].map(([path, keys]) => [path, new Set(keys)])));
+}
+
 const view = () => $('#lec-view');
 const levelOf = (el) => (/^H[1-6]$/.test(el.tagName) ? +el.tagName[1] : 0);
 const isBreak = (el) => el.matches('.footnotes-sep, .footnotes');   // 각주는 마지막 절에 속하지 않는다

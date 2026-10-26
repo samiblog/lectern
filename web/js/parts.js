@@ -30,7 +30,7 @@ import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { readYaml } from './slides.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens,
+  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -674,11 +674,14 @@ async function partMenu(el, x, y) {
   showMenu(x, y, items, () => el.classList.remove('lec-picked'));
 }
 
-/** 항목·문서 머리줄로 간다. newTab: 새 문서 탭에서 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로) */
-async function openItem(el, newTab = false) {
+/**
+ * 항목·문서 머리줄로 간다. how: 열 곳 (util.openHow — Ctrl+누르기는 새 문서 탭, 두 번 누르기는 첫 누르기가 연 것을 새 문서 탭으로 —
+ * D64·D67. 다른 문서 탭에 열려 있으면 그 탭으로)
+ */
+async function openItem(el, how = {}) {
   const path = el.dataset.doc;
   const here = S.view?.type === 'doc' && S.view.path === path;
-  if (!here && !(await openTarget({ type: 'doc', path, newTab }))) return;
+  if ((!here || how.twice) && !(await openTarget({ type: 'doc', path, ...how }))) return;
   if (!el.dataset.kind) return;   // 문서 머리줄
   const row = readParts(docRoot(), { more: true }).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
   if (row) goToPart(row.el);
@@ -769,7 +772,7 @@ export function initParts() {
   bindFileRows(list, (path) => fileRows.get(path));   // 파일 종류의 행 (D50)
   list.addEventListener('click', (e) => {
     const el = e.target.closest('.pt-item, .pt-thumb, .pt-doc');
-    if (el) openItem(el, e.ctrlKey || e.metaKey);
+    if (el) openItem(el, openHow(e));
   });
   middleClickOpens(list, '.pt-item, .pt-thumb, .pt-doc');   // 가운데 버튼: 새 문서 탭 (D64)
   list.addEventListener('keydown', (e) => {

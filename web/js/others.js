@@ -4,7 +4,7 @@
 //   (docs_visible·others_visible·code_visible), 펼친 첫 묶음이 남은 높이를 갖고 나머지는 위 분리선을 끌어 높이를 정한다
 //   (others_height·code_height, 두 번 누르면 기본).
 // - 폴더(folder): 묶음 머리줄·문서 트리·코드 목록·분리선을 감추고 '자료' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 함께 보인다.
-//   문서 행은 문서 트리처럼 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조), 파일 행은 탐색기처럼.
+//   문서 행은 문서 트리처럼 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조 — 두 번 누르면 새 문서 탭, D67), 파일 행은 탐색기처럼.
 //
 // - 문서가 아닌 파일은 서버가 문서 트리와 따로 훑는다 (GET /api/others). 목록이 보일 때만 읽고, 파일이 생기거나 지워지면
 //   (watch.js 의 'others') 다시 읽는다. 받은 트리를 화면이 파일·코드로 나눈다. 폴더 보기는 이것과 탭의 문서 트리(S.tree)를 합친다.
@@ -27,7 +27,7 @@ import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
-import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, middleClickOpens } from './util.js';
+import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, openHow, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -404,8 +404,9 @@ function toggle(k, path, open) {
   select(k, path);
 }
 
-/** 두 번 누르기·Enter: 파일은 열고(문서는 뷰어에서) 폴더는 펼치거나 접는다. 폴더 보기의 프로젝트 행은 개요. newTab: 문서는 새 문서 탭에서 (D64) */
-function activate(k, path, newTab = false) {
+/** 두 번 누르기·Enter: 파일은 열고(문서는 뷰어에서) 폴더는 펼치거나 접는다. 폴더 보기의 프로젝트 행은 개요.
+ * how: 문서를 열 곳 (util.openHow — Ctrl+누르기·두 번 누르기면 새 문서 탭, D64·D67) */
+function activate(k, path, how = {}) {
   if (path === '' && k === 'files' && folderView()) {
     emit('open', { type: 'overview', path: '' });
     return;
@@ -413,7 +414,7 @@ function activate(k, path, newTab = false) {
   const n = view(state(), k).index.get(path);
   if (!n) return;
   if (n.type === 'dir') toggle(k, path);
-  else if (n.doc) emit('open', { type: 'doc', path, newTab });
+  else if (n.doc) emit('open', { type: 'doc', path, ...how });
   else openExternal(path);
 }
 
@@ -470,7 +471,7 @@ function menuItems(k, n) {
 
 /**
  * 다른 사이드바 탭의 파일 행 (D50 — 최근 변경, 검색의 이름, 모아 보기의 파일 종류): data-file 이 있는 행을 이 목록처럼 다룬다.
- * 문서는 한 번 누르면 뷰어, 코드는 한 번 누르면 읽기 화면·두 번 누르면 편집기, csv·tsv·txt·log 는 한 번 누르면 읽기 화면·두 번 누르면 기본 앱,
+ * 문서는 한 번 누르면 뷰어(두 번 누르면 새 문서 탭 — D67), 코드는 한 번 누르면 읽기 화면·두 번 누르면 편집기, csv·tsv·txt·log 는 한 번 누르면 읽기 화면·두 번 누르면 기본 앱,
  * 그 밖의 자료는 두 번 누르거나 Enter 로 연다 (실행하지 않음).
  * fileOf(path): 그 행의 파일 노드 (문서는 트리의 노드 — kind 가 있다)
  */
@@ -481,7 +482,7 @@ export function bindFileRows(box, fileOf) {
   };
   box.addEventListener('click', (e) => {
     const n = nodeOf(e);
-    if (n?.kind) emit('open', { type: 'doc', path: n.path, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
+    if (n?.kind) emit('open', { type: 'doc', path: n.path, ...openHow(e) });   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
     else if (isViewFile(n)) emit('open', { type: 'code', path: n.path, newTab: newTabWanted(e) });
   });
   middleClickOpens(box, '[data-file]');
@@ -649,7 +650,7 @@ function bindList(k) {
     select(k, path);
     // 폴더 보기의 문서와 프로젝트 행은 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
-    if (k === 'files' && folderView() && (path === '' || n?.doc)) activate(k, path, newTabWanted(e));   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
+    if (k === 'files' && folderView() && (path === '' || n?.doc)) activate(k, path, openHow(e));   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
     else if (isViewFile(n)) emit('open', { type: 'code', path, newTab: newTabWanted(e) });
   });
   middleClickOpens(box, '.row');

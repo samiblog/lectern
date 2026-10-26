@@ -3,7 +3,7 @@
 // - 열린 탭(순서·선택된 탭)은 서버가 들고 있다 (state.py). 화면은 /api/state·/api/open·/api/close 의 답으로 맞춘다 (syncTabs).
 //   다른 실행(탐색기 우클릭 등)이 넘긴 폴더로 서버의 탭 목록이 바뀌면 watch.js 가 tabs_seq 로 알아채고 resyncTabs 를 부른다.
 // - 탭마다 트리 데이터·변경됨·펼친 폴더·사이드바 상태(side)와 문서 칸(panes.js)이 따로다. store.js 의 S.root·S.tree 등은
-//   선택된 탭의 값을 읽고 쓰는 접근자다. 문서 칸은 문서 탭(doctabs.js, D64)마다 하나 — tab.panes(5개까지), 고른 것이 tab.pane.
+//   선택된 탭의 값을 읽고 쓰는 접근자다. 문서 칸은 문서 탭(doctabs.js, D64)마다 하나 — tab.panes(20개까지 — D67), 고른 것이 tab.pane.
 // - 탭은 처음 고를 때 트리를 읽고 마지막에 보던 문서(설정 restore_last)나 폴더 개요를 연다 — 탭이 많아도 시작이 느려지지 않게.
 // - 고르지 않은 탭의 칸은 자리를 지킨 채 숨는다. 숨은 동안 바뀐 화면(pane.stale)은 그 탭을 고를 때 다시 그린다.
 

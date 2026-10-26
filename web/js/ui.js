@@ -12,7 +12,8 @@ let onMenuClose = null;
 function menuItemHtml(it, i) {
   if (it === '-') return '<div class="menu-sep" role="separator"></div>';
   if (it.header) return `<div class="menu-head">${esc(it.header)}</div>`;
-  const main = `<button role="menuitem" data-i="${i}"><span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
+  const attrs = `${it.icon ? ' class="with-icon"' : ''}${it.current ? ' aria-current="true"' : ''}`;
+  const main = `<button role="menuitem" data-i="${i}"${attrs}>${it.icon || ''}<span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
   if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
@@ -20,7 +21,8 @@ function menuItemHtml(it, i) {
     + `<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`;
 }
 
-/** items: [{label, hint?, action, term?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.
+/** items: [{label, hint?, action, term?, icon?, current?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.
+ * icon: 앞에 둘 아이콘 HTML (icons.js — 한 줄에 아이콘·이름·흐린 hint), current: 지금 고른 것 (강조 — 열린 문서 탭 목록, D67)
  * term: 그 항목 옆에 '터미널에 붙여 넣기' 버튼을 달고 누르면 이 글을 터미널에 넣는다 (복사하는 글과 같은 것 — 경로는 끝에 공백) */
 export function showMenu(x, y, items, onClose = null) {
   const menu = $('#lec-menu');

@@ -2319,9 +2319,11 @@ def run(headed: bool) -> None:
             page.keyboard.press('Alt+1')
             on_tab(d0[0].lstrip('*'))
             asked = []
-            page.once('dialog', lambda d: (asked.append(d.message), d.dismiss()))
+            on_dialog = lambda d: (asked.append(d.message), d.dismiss())
+            page.once('dialog', on_dialog)
             page.evaluate("import('/static/js/store.js').then(m => m.emit('open', { type: 'doc', path: 'plans/구현-계획.md', line: 5 }))")
             on_tab('plans/구현-계획.md')
+            page.remove_listener('dialog', on_dialog)   # 묻지 않았으면 남은 것을 거둔다 — 뒤의 점검에서 같은 창을 두 번 닫으려 하지 않게
             page.wait_for_timeout(300)
             kept = page.evaluate('''(() => { const ed = document.querySelector('.lec-pane.active .lec-editor.dirty .CodeMirror')?.CodeMirror;
               return ed ? [ed.getValue().startsWith('고침 '), ed.getCursor().line + 1] : null; })()''')
@@ -2334,6 +2336,39 @@ def run(headed: bool) -> None:
             check(any('다른 문서 탭 모두 닫기' in m for m in tab_menu) and not any('인쇄' in m for m in tab_menu) and kept == [True, 5] and not asked
                   and plan_doc.read_bytes() == plan_before,
                   f"문서 탭 우클릭은 탭 메뉴, 다른 탭에서 편집 중인 파일의 줄로 가면 묻지 않고 그 편집기가 그 줄로 ({tab_menu[:2]}, {kept}, {asked})")
+            # D67 — 사이드바 목록에서 두 번 누르면 새 탭 (지금 탭은 보던 문서로 돌아옴, 새 탭은 뒤로 기록 없음), 오른쪽 끝 ∨ 의 열린 문서 탭 목록, Alt+9
+            base = d0[0].lstrip('*')
+            panes_of = lambda: page.evaluate('''import('/static/js/store.js').then(({ S }) =>
+              S.tab.panes.map(p => [p.current?.path ?? null, p.history.length, p === S.pane]))''')
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').dblclick()
+            on_tab('docs/02-수식과-달러.md')
+            wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 2", 5000)
+            for _ in range(100):   # 왼쪽 탭(앞 화면)은 숨은 채 다시 그린다
+                twice_panes = panes_of()
+                if twice_panes[0][0] == base:
+                    break
+                page.wait_for_timeout(100)
+            twice = dt()
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').dblclick()   # 이미 열린 문서 — 그 탭 그대로
+            page.wait_for_timeout(400)
+            again = dt()
+            page.click('#lec-doctab-all')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            badge = page.text_content('#lec-doctab-all .n')
+            listed = page.evaluate('''[...document.querySelectorAll('#lec-menu button[data-i]')]
+              .map(b => (b.getAttribute('aria-current') ? '*' : '') + (b.querySelector('small')?.textContent || b.textContent))''')
+            shot('25b-doctab-list')
+            page.locator('#lec-menu button[data-i]').first.click()
+            picked = on_tab(base)
+            page.keyboard.press('Alt+9')
+            alt9 = on_tab('docs/02-수식과-달러.md')
+            page.keyboard.press('Control+F4')
+            wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 1", 5000)
+            on_tab(base)
+            check(twice == [base, '*docs/02-수식과-달러.md'] and twice_panes[0][0] == base and twice_panes[1][1:] == [1, True] and again == twice
+                  and badge == '2' and len(listed) == 3 and listed[0].startswith(base) and listed[1].startswith('*docs/02-수식과-달러.md')
+                  and listed[2] == '다른 문서 탭 모두 닫기' and picked and alt9,
+                  f"문서 탭: 트리에서 두 번 누르면 새 탭(지금 탭은 보던 문서로, 새 탭은 뒤로 기록 없음 — 열린 문서는 그 탭 그대로), 오른쪽 끝 [2 ∨] 의 열린 문서 탭 목록에서 고르기, Alt+9 마지막 탭 ({twice}, {twice_panes}, {again}, {badge}, {listed})")
 
             print('[터미널]')
             page.wait_for_selector('#lec-toc .toc-list a')   # 목차가 있는 문서 (터미널을 열면 감춘다)

@@ -168,8 +168,8 @@ function bindKeys() {
     // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
     if (inTerminal(e) && !(mod && e.key === 'Tab')) return;
     // 편집 상자 안의 키는 편집기 것이다 (Ctrl+F 찾기·Ctrl+S 저장·Esc 닫기 등 — editor.js). 탭 옮기기·편집 닫기(Ctrl+E)·문서 열기·도움말,
-    // 문서 탭(Alt+1~5·Ctrl+F4 — D64)만 앱이
-    const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-5]$/.test(e.key)) || (mod && !e.altKey && !e.shiftKey && e.key === 'F4');
+    // 문서 탭(Alt+1~9·Ctrl+F4 — D64·D67)만 앱이
+    const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) || (mod && !e.altKey && !e.shiftKey && e.key === 'F4');
     if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || key === 'n' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
     if (mod && !e.shiftKey && !e.altKey && key === 'e') {   // 편집 모드 열고 닫기 (D54)
       e.preventDefault();
@@ -206,7 +206,7 @@ function bindKeys() {
       cycleTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
     } else if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {   // Ctrl+1~8: 그 탭, Ctrl+9: 마지막 탭
       if (selectTabAt(Number(e.key))) e.preventDefault();
-    } else if (e.altKey && !mod && !e.shiftKey && /^[1-5]$/.test(e.key)) {   // Alt+1~5: 그 순번의 문서 탭 (D64)
+    } else if (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {   // Alt+1~8: 그 순번의 문서 탭, Alt+9: 마지막 문서 탭 (D64·D67)
       if (docTabAt(Number(e.key))) e.preventDefault();
     } else if (mod && e.key === 'F4') {   // 문서 탭 닫기 (D64 — 프로젝트 탭은 Ctrl+W)
       e.preventDefault();

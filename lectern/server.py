@@ -290,7 +290,7 @@ def create_app(state: AppState) -> Flask:
     @app.post('/api/position')
     def api_position() -> Any:
         """탭(p)에서 보는 문서와 스크롤 위치 {p, path, scroll, docs?} (다음에 열 때 되살림). docs: 열어 둔 문서 탭들의 문서 (탭 차례,
-        5개까지 — D64. 없어진 문서는 뺀다). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
+        20개까지 — D64·D67. 없어진 문서는 뺀다). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
         data = body()
         root = project_of(data.get('p')).root
         rel, scroll, docs = data.get('path'), data.get('scroll', 0), data.get('docs')
