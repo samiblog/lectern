@@ -9,6 +9,8 @@ import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initSpotlight, spotlightOn, moveSpotlight, stopSpotlight } from './spotlight.js';
 import { initTextSize } from './textsize.js';
+import { initDocWidth } from './docwidth.js';
+import { initTableFit } from './tablefit.js';
 import { initDocMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
@@ -277,6 +279,8 @@ async function boot() {
   initFold();
   initSpotlight();
   initTextSize();
+  initDocWidth();
+  initTableFit();
   initDocMenu();
   initChangeMarks();
   initSearch();

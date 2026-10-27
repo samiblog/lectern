@@ -46,12 +46,12 @@ def test_outside_edits_are_kept(tmp_path):
     cfg = Config(path)
     cfg.update_client({'theme': 'dark'})
     edited = json.loads(path.read_text(encoding='utf-8'))
-    edited['editor'] = 'C:\Tools\Code\code.cmd'          # 실행 중에 사용자가 편집기로 고침
+    edited['editor'] = r'C:\Tools\Code\code.cmd'          # 실행 중에 사용자가 편집기로 고침
     path.write_text(json.dumps(edited, ensure_ascii=False, indent=4), encoding='utf-8')
-    assert cfg.get('editor') == 'C:\Tools\Code\code.cmd'  # 바로 반영
+    assert cfg.get('editor') == r'C:\Tools\Code\code.cmd'  # 바로 반영
     cfg.update_client({'math': False})
     saved = json.loads(path.read_text(encoding='utf-8'))
-    assert saved['editor'] == 'C:\Tools\Code\code.cmd' and saved['theme'] == 'dark' and saved['math'] is False
+    assert saved['editor'] == r'C:\Tools\Code\code.cmd' and saved['theme'] == 'dark' and saved['math'] is False
 
 
 def test_saving_resumes_after_file_is_fixed(tmp_path):
@@ -143,6 +143,9 @@ def test_font_scale_accepts_whole_numbers(tmp_path):
     c.update_client({'font_scale': 1.35})
     c.update_client({'font_scale': 'big'})                        # 형식이 틀리면 버린다
     assert c.get('font_scale') == 1.35
+    c.update_client({'doc_width': 1.5})                          # 문서 폭 (D68) — 화면에서 바꿀 수 있는 키
+    c.update_client({'doc_width': 'wide'})
+    assert c.get('doc_width') == 1.5
 
 def test_tree_shows_file_names_from_version_2(tmp_path):
     from lectern.config import CONFIG_VERSION

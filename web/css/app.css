@@ -92,6 +92,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   background: var(--ui-panel); color: var(--ui-muted); font-size: 12px; font-variant-numeric: tabular-nums;
 }
 .size-label:hover { color: var(--ui-fg); }
+.doc-width .size-label { min-width: 62px; white-space: nowrap; }   /* '폭 100%'·'폭 가득' (docwidth.js, D68) */
 
 /* 장 하이라이트 버튼과 앞뒤 장 버튼: [▭][∧][∨] */
 .spot-pick { display: flex; align-items: stretch; height: 30px; }

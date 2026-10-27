@@ -14,6 +14,7 @@ import { setDocSource, frameContextMenu } from './docmenu.js';
 import { hideMenu } from './ui.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { textScale, mdScale } from './textsize.js';
+import { docWidth } from './docwidth.js';
 import { $, docUrl, formatDateTime } from './util.js';
 import { t } from './i18n.js';
 
@@ -144,20 +145,27 @@ function paintBackdrop(doc, scheme) {
   root.dataset.lecBackdrop = scheme;
 }
 
-/** 툴바의 글자 크기: 스타일 없는 문서는 Lectern 스타일의 --md-scale, 스타일 있는 문서는 문서 전체 zoom (높이는 fitHeight 가 다시 맞춘다) */
+/** 툴바의 글자 크기: 스타일 없는 문서는 Lectern 스타일의 --md-scale, 스타일 있는 문서는 문서 전체 zoom (높이는 fitHeight 가 다시 맞춘다).
+ * 툴바의 문서 폭(D68)은 스타일 없는 문서만 — 스타일 있는 문서는 자기 폭 그대로 */
 function applyScale(frame) {
   const doc = frame.contentDocument;
   if (!doc) return;
   const s = textScale();
   if (frame.classList.contains('own-style')) doc.documentElement.style.zoom = s === 1 ? '' : String(s);
-  else doc.documentElement.style.setProperty('--md-scale', String(mdScale()));
+  else {
+    doc.documentElement.style.setProperty('--md-scale', String(mdScale()));
+    doc.documentElement.style.setProperty('--md-wide', String(docWidth()));
+  }
 }
-on('text-size', () => {
+on('text-size', () => scaleAll());
+on('doc-width', () => scaleAll());
+
+function scaleAll() {
   for (const pane of S.panes) {
     const frame = frameIn(pane.view);
     if (frame) applyScale(frame);
   }
-});
+}
 
 function prepare(frame, path, tab) {
   const doc = frame.contentDocument;

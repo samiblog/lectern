@@ -2261,6 +2261,48 @@ def run(headed: bool) -> None:
             check(sel == ['메모.md', 0, 2] and doc_moved and disk and dup and other_moved and (tables / 'data' / 'memo-2.txt').exists() and (tables / 'data' / 'uni.txt').exists(),
                   f"이름 바꾸기: 트리에서 F2(확장자 앞까지 골라 둠) → 보던 문서 탭·트리가 새 이름으로, '자료' 목록 우클릭, 같은 이름은 바꾸지 않음 ({sel}, {doc_moved}, {disk}, {dup}, {other_moved})")
 
+            print('[문서 폭·표 첫 열]')   # D68 — 툴바의 문서 폭(100% 가 스타일 폭, 끝은 '가득'), 첫 열이 여러 줄로 감긴 표는 첫 열을 넓힘
+            # 둘째 열은 한 칸만 아주 길어 폭을 다 가져가고, 첫 열은 고르게 중간 길이 — 짧은 둘째 칸 옆의 첫 칸이 행을 높인다
+            long_cell = ('공급 충격은 가격에 바로 반영되므로 소식이 나오면 그날 안에 추정치를 고친다. 추정 근거는 출처와 함께 남기고, '
+                         '같은 소식이 여러 곳에서 다르게 나오면 가장 이른 원문을 기준으로 삼는다. 숫자를 바꾸면 리서치 문서의 표와 보고서의 숫자를 함께 맞춘다.')
+            rows = [('정련 구리 재고 집계, 월말 대조, 기준일 맞추기', '기준일이 거래소마다 다르다', '② 수급팀, 자료 정리'),
+                    ('광산 차질 소식 모으기, 영향 추정, 보고서 반영', long_cell, '② 리서치, ③ 최종본 수정'),
+                    ('전력망 투자 계획 검토, 각국 발표 다시 보기', '수요 전망의 바탕이다', '①, 리서치(자료함)'),
+                    ('가격 전망 모형 계수 갱신, 오차 점검, 결과 기록', '모형은 사람이 고친다', '①, ③ 최종본 구성'),
+                    ('보고서 문체·표기 통일, 단위 확인, 출처 줄 정리', '지침은 팀이 정한다', '② 문체 지침(공통)·형식·길이')]
+            (tables / 'wide.md').write_text(
+                '# 폭 시험\n\n## 할 일 표\n\n| 할 일 | 까닭 | 하는 곳 |\n|---|---|---|\n' + ''.join(f'| {a} | {b} | {c} |\n' for a, b, c in rows)
+                + '\n## 보통 표\n\n| 이름 | 설명 |\n|---|---|\n| a | 짧은 설명 |\n'
+                '| b | 아주 긴 설명이 들어가는 칸입니다. 이 칸은 내용이 길어서 여러 줄로 감기는 것이 자연스럽습니다. 첫 열은 짧습니다. |\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row[data-doc="wide.md"]', timeout=10000)
+            page.locator('#lec-tree .row[data-doc="wide.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("폭 시험")')
+            tables_state = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-view .table-wrap > table')].map(t => {
+              const lh = parseFloat(getComputedStyle(t.querySelector('td')).lineHeight);
+              const lines = (c) => { const r = document.createRange(); r.selectNodeContents(c); return Math.round(r.getBoundingClientRect().height / lh); };
+              // 첫 열 때문에 높은 행 (첫 칸이 3줄 이상이고 다른 칸들보다 많음), 머리행 첫 칸의 줄 수
+              const tall = [...t.rows].slice(1).filter(r => lines(r.cells[0]) >= 3 && lines(r.cells[0]) > Math.max(...[...r.cells].slice(1).map(lines))).length;
+              return [t.classList.contains('lec-wide1'), tall, lines(t.rows[0].cells[0])]; })''')
+            fit = tables_state()
+            width = lambda: page.evaluate("[parseFloat(getComputedStyle(document.querySelector('#lec-view')).maxWidth), document.querySelector('#lec-width-reset').textContent]")
+            w0 = width()
+            page.click('#lec-width-wider')
+            w1 = width()
+            stored = page.evaluate("import('/static/js/store.js').then(m => m.S.config.doc_width)")
+            while not page.evaluate("document.querySelector('#lec-width-wider').disabled"):
+                page.click('#lec-width-wider')
+            full = width() + [page.evaluate("Math.round(document.querySelector('#lec-view').getBoundingClientRect().width) === document.querySelector('#lec-content').clientWidth")]
+            shot('27-doc-width-full')
+            page.click('#lec-width-reset')
+            page.click('#lec-width-narrower')
+            w2 = width()
+            page.click('#lec-width-reset')
+            w3 = width()
+            check(fit[0][:2] == [True, 0] and fit[1] == [False, 0, 1]
+                  and w0[1] == '폭 100%' and abs(w1[0] - w0[0] * 1.15) < 1 and w1[1] == '폭 115%' and stored == 1.15
+                  and full[1] == '폭 가득' and full[2] and abs(w2[0] - w0[0] * 0.9) < 1 and w2[1] == '폭 90%' and w3 == w0,
+                  f"문서 폭: 넓게(115%·설정에 저장)·'가득'은 칸 폭 전체·좁게·누르면 100%, 첫 열 때문에 높은 행이 있는 표만 첫 열을 넓혀 없앰, 머리행 '이름'은 끊지 않음 ({fit}, {w0} → {w1} → {full[1:]} → {w2})")
+
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)
             page.wait_for_selector('#lec-view h1')

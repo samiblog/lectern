@@ -28,8 +28,8 @@ function render() {
   $('#lec-text-bigger').disabled = s >= STEPS[STEPS.length - 1];
 }
 
-/** 읽던 곳이 화면에서 움직이지 않게: 칸마다(숨은 탭 포함) 바꾸기 전 화면 위쪽 블록의 위치를 기억했다가 맞춘다 (md 문서) */
-function keepPlace(change) {
+/** 읽던 곳이 화면에서 움직이지 않게: 칸마다(숨은 탭 포함) 바꾸기 전 화면 위쪽 블록의 위치를 기억했다가 맞춘다 (md 문서 — 문서 폭도 쓴다) */
+export function keepPlace(change) {
   const spots = S.panes.map((pane) => {
     const top = pane.scroller.getBoundingClientRect().top;
     const anchor = [...pane.view.children].find((el) => el.getBoundingClientRect().bottom > top);

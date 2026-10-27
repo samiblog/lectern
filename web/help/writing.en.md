@@ -41,6 +41,7 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 - Put only values in cells and units in the header: `| Price (USD/t) |`.
 - Columns that read as numbers are right-aligned automatically. Cells that read as numbers: `1,234`, `-3.5%`, `+3.2%p`, `$105`, `1.2x`, `30bp`, and `-` for empty.
 - Long tables keep their header row stuck to the top, so there is no need to split them.
+- Keep the first column (item, category) short — Lectern widens it when it wraps onto more lines than the others, but a short label reads best. Put explanations in the columns to the right.
 - **Captions**: a line `Table 1. Title` (or a whole-bold line) directly above a table becomes its name in the contents and in Elements. For pictures put `Figure 1. Title` directly below; for diagrams and charts, directly above. `<Table 3>`, `[Figure 2]` and `Table 3-1.` work too (and the Korean 표·그림 forms).
 
 ### To-dos, sources and document info

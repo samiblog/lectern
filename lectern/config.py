@@ -35,6 +35,7 @@ DEFAULTS: dict[str, Any] = {
     'language': 'auto',      # 화면 언어: auto(Windows 표시 언어) | ko | en — 설정 창, 바꾸면 화면을 다시 불러온다 (D46)
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
+    'doc_width': 1.0,        # md 문서 본문의 폭 배율 (툴바의 문서 폭 버튼, 0.8~2, 10 = 가득 — D68)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
     'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
@@ -73,7 +74,7 @@ DEFAULTS: dict[str, Any] = {
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
-CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'doc_width', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',

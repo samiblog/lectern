@@ -121,6 +121,7 @@ flowchart LR
 | `language` | `"auto"` | 가능 | 화면 언어: `auto`(Windows 표시 언어 — 한국어면 ko, 아니면 en)·`ko`·`en`. 설정 창 맨 위, 바꾸면 페이지를 다시 불러옴 (D46) |
 | `theme` | `"auto"` | 가능 | `auto` 또는 스타일 id (`theme.js` 의 `THEMES`, 내 스타일은 `user:<파일 이름>` — D53) |
 | `font_scale` | `1.0` | 가능 | 문서 글자 크기 배율 0.8~2 (툴바 − 100% +, 숫자면 정수도 됨) |
+| `doc_width` | `1.0` | 가능 | md 문서 본문의 폭 배율 0.8~2, 10 = 가득 (툴바의 문서 폭 — D68) |
 | `theme_groups` | `"use"` | 가능 | 스타일 목록을 묶는 방식: `use`(용도별)·`mood`(분위기별)·`tone`(밝기별) (설정 창, D30) |
 | `show_titles` | `false` | 가능 | 트리·최근 변경에 파일 이름 대신 문서 제목 (트리의 '제목' 버튼). 기본은 파일 이름이고 마우스를 올리면 제목 |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
@@ -318,6 +319,14 @@ sequenceDiagram
 - 툴바의 − 100% + 로 문서 글자 배율을 0.8·0.9·1·1.1·1.2·1.35·1.5·1.7·2 단계로 바꾼다. 가운데를 누르면 1. 설정 `font_scale` 에 저장한다.
 - `:root` 의 CSS 변수 `--md-scale` 을 툴바 배율 × 1.1(`BASE` — 툴바의 100% 가 예전 110%, D47)로 바꾸고, `base.css` 가 본문 글자 크기와 단 폭(`--md-width`)에 함께 곱한다 (줄 길이가 그대로). 코드·메타데이터처럼 px 로 정한 글자도 곱한다. 앱 UI·그림·다이어그램은 그대로.
 - 바꿀 때 화면 위쪽 블록의 위치를 맞춰 읽던 곳이 움직이지 않게 한다. html 문서는 `text-size` 이벤트로 스타일 없는 문서는 iframe 안의 `--md-scale`(`mdScale()` — 기준을 곱한 값), 스타일 있는 문서는 iframe 문서의 `zoom`(툴바 배율 그대로) (틀 높이는 fitHeight 가 따라간다).
+
+### 문서 폭 (docwidth.js — D68)
+- 툴바의 [좁게][폭 100%][넓게](`#lec-width-narrower`·`#lec-width-reset`·`#lec-width-wider`)로 md 본문 폭 배율을 0.8·0.9·1·1.15·1.3·1.5·1.75·2·10(가득) 단계로. 가운데를 누르면 1. 설정 `doc_width` 에 저장한다.
+- `:root` 의 `--md-wide` 를 바꾸고 `base.css` 의 `.md-body` max-width(`--md-width` × `--md-scale` × `--md-wide`)가 따른다 — 글자는 그대로, 줄 길이가 바뀐다. 코드 화면(`max-width: none`)·발표 문서(`.lec-deck` 의 폭)는 그대로. 스타일 없는 html 은 `doc-width` 이벤트로 iframe 안의 `--md-wide`(htmldoc.js 의 `applyScale`), 스타일 있는 html 은 그대로. 바꿀 때 `textsize.keepPlace` 로 읽던 곳을 맞춘다.
+
+### 표 첫 열 넓히기 (tablefit.js — D68)
+- `fitTables(view)`: doc.js 가 문서를 칸에 바꿔 끼운 뒤(접기 다음, 스크롤 위치를 정하기 전) 부른다. `.table-wrap > table` 마다(맨 앞 설정의 표·발표 문서·코드 화면 제외) `fitTable`, 표 상자를 ResizeObserver 로 지켜본다 (폭이 맞출 때와 2px 넘게 다르면 150ms 뒤 다시 — 창·사이드바·목차·문서 폭, 접힌 절을 펼 때). 다시 그리면 앞 상자들은 그만 본다. 글자 크기(`text-size`)가 바뀌면 모든 칸의 표를 다시.
+- `fitTable`: 앞의 것을 걷고(`lec-wide1`·`--lec-col1`·`lec-pin`) 머리행·첫 열의 낱말을 끊지 않게 `lec-words`(`overflow-wrap: break-word` — 본문의 `anywhere` 는 칸의 최소 폭을 한 글자로 만든다)를 단다 — 그 때문에 표가 옆으로 넘치면(`.table-wrap` 의 scrollWidth > clientWidth) 뗀다. 그다음 첫 열 때문에 높은 행(`tallRows` — 첫 칸 글이 2.6줄 이상이고 다른 칸보다 0.9줄 넘게 많음)을 센다. 있으면 첫 행 칸의 안쪽 폭을 재고, 가장 넓은 열(첫 열 빼고)이 아닌 열은 그 폭에 묶고(`lec-pin`), 첫 열을 1.25·1.5·1.75·2·2.5·3배(표 폭의 45%까지)로 대어 보며 표 높이와 `tallRows` 를 잰다. 표가 반 줄 넘게 낮아지거나 높아지지 않으면서 그런 행이 준 폭 가운데 가장 낮고(반 줄 차이까지 같게 봄) 그런 행이 가장 적은, 그중 좁은 폭 (표가 넘치는 폭에서 그만 대어 본다). 없으면 모두 걷는다. CSS 는 `base.css` 의 `table.lec-words th, table.lec-words td:first-child { overflow-wrap: break-word }`·`table.lec-wide1 > * > tr > :first-child { min-width: var(--lec-col1) }`·`table.lec-wide1 .lec-pin { min-width: var(--lec-pin) }`.
 
 ### 장 하이라이트 (spotlight.js)
 - 툴바 버튼으로 켜면 한 장(맨 위 수준 절 — H1 이 하나뿐이면 그것은 문서 제목이고 그 아래 수준, 보통 H2 절)만 그대로 두고 나머지 최상위 블록을 `opacity .16` 으로 흐린다 (`base.css` 의 `.lec-spotlight`/`.lec-lit`, 0.2초 전환). 첫 장 앞의 제목·머리말도 한 장(메타데이터 표가 있으면 함께), 각주는 어느 장에도 들지 않는다. 인쇄할 때는 모두 보인다.

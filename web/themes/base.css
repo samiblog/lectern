@@ -1,7 +1,8 @@
 /* 문서 본문 공통 규칙. 색·글꼴·폭은 변수로 두고 각 테마 파일(default/report/dark)이 값을 정한다. */
 
 .md-body {
-  max-width: calc(var(--md-width) * var(--md-scale, 1));   /* --md-scale: 툴바의 글자 크기 (textsize.js). 단 폭도 같이 — 줄 길이가 그대로이게 */
+  /* --md-scale: 툴바의 글자 크기 (textsize.js). 단 폭도 같이 — 줄 길이가 그대로이게. --md-wide: 툴바의 문서 폭 (docwidth.js, D68 — 줄 길이를 바꾼다) */
+  max-width: calc(var(--md-width) * var(--md-scale, 1) * var(--md-wide, 1));
   margin: 0 auto;
   padding: 38px 52px 120px;
   font-family: var(--md-font);
@@ -204,6 +205,12 @@
 .md-body tbody tr:nth-child(even) { background: var(--md-stripe); }
 .md-body tbody tr:last-child > * { border-bottom: 0; }
 .md-body th.num, .md-body td.num { text-align: right; white-space: nowrap; }
+/* 머리행·첫 열은 낱말 가운데서 끊지 않는다 — 본문의 overflow-wrap: anywhere 는 칸의 최소 폭을 한 글자로 만들어 좁은 첫 열의
+   '이름'이 '이/름'으로 끊겼다. 띄어쓰기에서는 그대로 감긴다. 그 때문에 표가 옆으로 넘치면 tablefit.js 가 이 class 를 뗀다 (D68) */
+.md-body table.lec-words th, .md-body table.lec-words td:first-child { overflow-wrap: break-word; }
+/* 첫 열이 여러 줄로 감겨 행이 높으면 넓힌다 (tablefit.js, D68 — 폭은 화면에서 재어 정한다) */
+.md-body table.lec-wide1 > * > tr > :first-child { min-width: var(--lec-col1); }
+.md-body table.lec-wide1 .lec-pin { min-width: var(--lec-pin); }   /* 넓힐 폭을 가장 넓은 열에서만 가져오게 나머지 열은 그 폭 그대로 */
 
 /* frontmatter */
 .md-body .front-matter {

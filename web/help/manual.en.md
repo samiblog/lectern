@@ -150,6 +150,9 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 ### Text size and style
 
 - The − / + buttons in the toolbar set the document text size from 80% to 200% (100% is already set slightly large for comfortable reading). Click '100%' in the middle to reset. To zoom the whole app, use Ctrl+Wheel.
+- The **document width** buttons next to them (narrower · Width 100% · wider) set how wide the body of a Markdown document is, from 80% to 200%, and finally **Full width** (the whole document pane). The text size stays the same; lines just get longer or shorter. Click the middle to reset; the width you pick is kept for next time. If the window is narrow and the pane is narrower than the document, it only widens up to the pane. Code views, slide decks and HTML documents with their own style are not affected.
+- In tables, the header row and the leftmost column are not broken in the middle of a word (they wrap at spaces; if a long word would make the table overflow sideways, that table breaks words as before).
+- When **the leftmost column of a table wraps onto more lines than the other columns** and makes rows tall, Lectern widens that column automatically. The extra width is taken only from the widest column, and nothing changes if widening would make the table taller. It is fitted again when you change the window or sidebar width, the text size or the document width (the file is not changed).
 - The **Style** list has 24 styles; picking one changes the document and the toolbar and sidebar colors together. The ∧ ∨ buttons next to the list step through the styles so you can compare them. 'Auto' follows the Windows dark mode.
 - How the style list is grouped (by use, by mood or by brightness) is chosen in Settings.
 

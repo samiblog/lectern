@@ -40,6 +40,8 @@
     <symbol id="i-down" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
     <symbol id="i-minus" viewBox="0 0 20 20"><path d="M5 10h10"/></symbol>
     <symbol id="i-plus" viewBox="0 0 20 20"><path d="M5 10h10M10 5v10"/></symbol>
+    <symbol id="i-narrow" viewBox="0 0 20 20"><path d="M2.5 10h5M5.2 7.5 7.7 10l-2.5 2.5M17.5 10h-5M14.8 7.5 12.3 10l2.5 2.5"/><path d="M10 4.5v11" opacity=".55"/></symbol>
+    <symbol id="i-wide" viewBox="0 0 20 20"><path d="M2.5 4.5v11M17.5 4.5v11" opacity=".55"/><path d="M5.5 10h9M7.8 7.5 5.3 10l2.5 2.5M12.2 7.5l2.5 2.5-2.5 2.5"/></symbol>
     <symbol id="i-spot" viewBox="0 0 20 20"><path d="M4 3.5h12M4 16.5h12" opacity=".45"/><rect x="2.5" y="7" width="15" height="6" rx="1.5"/><path d="M5.5 10h9"/></symbol>
     <symbol id="i-close" viewBox="0 0 20 20"><path d="m5.5 5.5 9 9m0-9-9 9"/></symbol>
     <symbol id="i-term" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.8"/><path d="m6 8 2.6 2.1L6 12.2M10.5 12.5h3.5"/></symbol>
@@ -90,6 +92,12 @@
       <button id="lec-text-smaller" class="icon-btn step" title="글자 작게" aria-label="글자 작게"><svg><use href="#i-minus"/></svg></button>
       <button id="lec-text-reset" class="size-label" title="글자 크기 (누르면 100%로)">100%</button>
       <button id="lec-text-bigger" class="icon-btn step" title="글자 크게" aria-label="글자 크게"><svg><use href="#i-plus"/></svg></button>
+    </div>
+    <!-- 문서 폭 (docwidth.js, D68): md 문서 본문의 단 폭 — 스타일이 정한 폭이 100%, 끝은 '가득' -->
+    <div class="text-size doc-width" role="group" aria-label="문서 폭">
+      <button id="lec-width-narrower" class="icon-btn step" title="문서 폭 좁게" aria-label="문서 폭 좁게"><svg><use href="#i-narrow"/></svg></button>
+      <button id="lec-width-reset" class="size-label" title="문서 폭 — md 문서 본문의 좌우 폭 (누르면 기본 폭으로)">폭 100%</button>
+      <button id="lec-width-wider" class="icon-btn step" title="문서 폭 넓게" aria-label="문서 폭 넓게"><svg><use href="#i-wide"/></svg></button>
     </div>
     <div class="theme-pick">
       <label for="lec-theme" class="pick-label">스타일</label>

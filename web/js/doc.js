@@ -8,6 +8,7 @@ import { renderCharts } from './charts.js';
 import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides.js';
 import { setToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
+import { fitTables } from './tablefit.js';
 import { setDocSource } from './docmenu.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { linkPaths } from './pathlink.js';
@@ -507,6 +508,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   if (deck) showDeck(pane);   // 슬라이드를 칸 폭에 맞춰 줄인다 (스크롤 위치를 정하기 전에 — 높이가 달라진다)
   else view.style.removeProperty('--slide-scale');
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
+  fitTables(view);          // 첫 열이 여러 줄로 감긴 표는 첫 열을 넓힌다 (D68 — 칸에 들어간 뒤의 폭으로 잰다)
   setDocSource(pane, path, text);
   setToc(pane, view);
   if (top != null) content.scrollTop = top;
