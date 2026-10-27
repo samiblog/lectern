@@ -589,7 +589,9 @@ async function pasteInto(term, text) {
 }
 
 /**
- * 글을 선택된 탭의 고른 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
+ * 글을 선택된 탭의 맨 앞 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
+ * 터미널이 여럿이면 가장 작은 번호(보통 처음 연 1번 — Claude Code 를 돌리는 곳)에 넣고 그 터미널을 골라 보인다.
+ * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
  */
@@ -601,8 +603,9 @@ export async function pasteToTerminal(text) {
     if (!open) toggleTerminal(true);
     await showCurrent();
   }
-  const term = tab.term;
+  const term = termsOf(tab)[0];
   if (!term || tab !== S.tab) return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다), 또는 그사이 다른 탭
+  if (term !== tab.term) selectTerminal(tab, term);   // 넣는 터미널을 보인다 (셸이 없으면 띄운다)
   if (!(await pasteInto(term, text))) return;
   // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 몇 번 터미널인지도
   toast(t("'{name}' 탭의 {n}번 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name, n: term.n + 1 }));

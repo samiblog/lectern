@@ -2640,7 +2640,7 @@ def run(headed: bool) -> None:
             gone = term_ui()
             check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'✕ 로 터미널 닫기 ({gone})')
 
-            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 닫기, 빈 번호부터, 붙여 넣기는 고른 터미널에
+            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 닫기, 빈 번호부터, 붙여 넣기는 맨 앞 터미널에
             term_tabs = lambda: page.evaluate("[...document.querySelectorAll('#lec-term-tabs .term-tab')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent.trim())")
             page.keyboard.press('Control+Backquote')
             term_has('PS ', 20000)
@@ -2665,12 +2665,15 @@ def run(headed: bool) -> None:
             page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 5", timeout=15000)
             reused = page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n")
             shot('28-terminals')
-            # 우클릭 메뉴의 '터미널에 붙여 넣기'는 고른 터미널(2번)에
+            # 우클릭 메뉴의 '터미널에 붙여 넣기'는 2번을 골라 두어도 맨 앞(1번) 터미널에 — 1번으로 바꿔 보인다 (Claude Code 를 돌리는 곳)
             page.locator('#lec-term-tabs .term-tab[data-n="1"]').click()
             term_has('둘째 터미널', 5000)
             page.evaluate("import('/static/js/store.js').then(m => m.emit('term-paste', 'Write-Output 붙여넣기확인'))")
             pasted = term_has('Write-Output 붙여넣기확인', 5000)
-            told2 = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('2번 터미널에 넣었습니다')", 3000)
+            told2 = (wait_until(page, "document.querySelector('#lec-toast').textContent.includes('1번 터미널에 넣었습니다')", 3000)
+                     and page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n") == '0'
+                     and not term_has('둘째 터미널', 300))
+            page.keyboard.press('Control+c')   # 1번 프롬프트에 넣은 글을 지운다 (다음 점검이 1번을 쓴다)
             # 서버의 셸 목록도 화면과 같게 (닫은 3번은 끝났다 — 새 3번이 다시 떴다)
             served = page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
               const secret = document.querySelector('meta[name="lec-term"]').content;
@@ -2687,7 +2690,7 @@ def run(headed: bool) -> None:
             page.click('#lec-term-close')
             check(two == ['1PowerShell', '*2PowerShell'] and in_second and first_clean and full and reused == '2' and pasted and told2
                   and served == [0, 1, 2, 3, 4] and one and quoted == ['docs/a.md ', "'it''s ‘‘q’’ ‚‚r‛‛ $x.md' "],
-                  f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 고른 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
+                  f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 맨 앞(1번) 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
 
             print('[터미널 모음]')
             def tile_has(name: str, text: str, ms: int = 20000) -> bool:
