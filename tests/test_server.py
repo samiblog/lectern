@@ -527,7 +527,7 @@ def test_term_api_needs_secret_and_same_origin(client, state, pid, monkeypatch):
     ok = {'X-Term': state.term_secret}
     calls = [
         lambda h: client.post('/api/term/open', json={'p': pid}, headers=h),
-        lambda h: client.get('/api/term/read?t=x&from=0', headers=h),
+        lambda h: client.post('/api/term/read', json={'want': {'x': 0}}, headers=h),
         lambda h: client.post('/api/term/input', json={'t': 'x', 'data': 'dir\r'}, headers=h),
         lambda h: client.post('/api/term/resize', json={'t': 'x', 'cols': 80, 'rows': 24}, headers=h),
         lambda h: client.get('/api/term/info?t=x', headers=h),
@@ -537,10 +537,13 @@ def test_term_api_needs_secret_and_same_origin(client, state, pid, monkeypatch):
         assert call({}).status_code == 403                                   # 비밀값 없이
         assert call({'X-Term': 'wrong'}).status_code == 403
         assert call({**ok, 'Origin': 'http://evil.example'}).status_code == 403   # 다른 사이트의 요청
-    # 비밀값이 맞으면 통과 — 없는 셸은 404
-    for call in calls[1:5]:
+    # 비밀값이 맞으면 통과 — 없는 셸은 404 (출력 읽기는 그 셸이 null)
+    for call in calls[2:5]:
         assert call(ok).status_code == 404
-    assert calls[1]({**ok, 'Origin': 'http://localhost'}).status_code == 404   # 같은 출처의 Origin 은 된다
+    assert calls[2]({**ok, 'Origin': 'http://localhost'}).status_code == 404   # 같은 출처의 Origin 은 된다
+    assert calls[1](ok).get_json() == {'terms': {'x': None}}
+    for want in (None, {}, {'x': -1}, {'x': True}, {'x': '0'}, ['x'], {f's{i}': 0 for i in range(257)}):
+        assert client.post('/api/term/read', json={'want': want}, headers=ok).status_code == 400
     assert client.post('/api/term/close', json={'t': 'x'}, headers=ok).get_json() == {'ok': True}
     # 입력 크기·형식, 화면 크기
     assert client.post('/api/term/input', json={'t': 'x', 'data': 'a' * 65537}, headers=ok).status_code == 413
@@ -562,12 +565,20 @@ def test_term_flow(client, state, project, pid):
     h = {'X-Term': state.term_secret}
     d = client.post('/api/term/open', json={'p': pid, 'cols': 100, 'rows': 30}, headers=h).get_json()
     assert d['shell'] == 'PowerShell' and d['cwd'] == str(project)
-    assert client.post('/api/term/open', json={'p': pid}, headers=h).get_json()['id'] == d['id']   # 탭마다 하나
+    assert client.post('/api/term/open', json={'p': pid}, headers=h).get_json()['id'] == d['id']   # 번호마다 하나
+    assert d['n'] == 0 and client.post('/api/term/open', json={'p': pid, 'n': 5}, headers=h).status_code == 400   # 5개까지 (D69)
+    assert client.post('/api/term/open', json={'p': pid, 'n': True}, headers=h).status_code == 400
+    d2 = client.post('/api/term/open', json={'p': pid, 'n': 1}, headers=h).get_json()
+    assert d2['id'] != d['id'] and d2['n'] == 1
+    listed = client.get(f'/api/term/list?p={pid}', headers=h).get_json()['terms']
+    assert [(x['id'], x['n']) for x in listed] == [(d['id'], 0), (d2['id'], 1)]
+    assert client.get(f'/api/term/list?p={pid}').status_code == 403   # 비밀값 없이는 안 된다
+    client.post('/api/term/close', json={'t': d2['id']}, headers=h)
 
     def read_until(want: str) -> str:
         out, pos = '', 0
         for _ in range(40):
-            r = client.get(f'/api/term/read?t={d["id"]}&from={pos}', headers=h).get_json()
+            r = client.post('/api/term/read', json={'want': {d['id']: pos}}, headers=h).get_json()['terms'][d['id']]
             out, pos = out + r['data'], r['next']
             if want in out or not r['alive']:
                 break

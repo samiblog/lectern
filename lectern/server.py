@@ -338,25 +338,38 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/term/open')
     def api_term_open() -> Any:
-        """탭(p)의 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그것). {id, shell, cwd}"""
+        """탭(p)의 n 번 터미널(0 부터, MAX_SLOTS 개까지 — D69) 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그것). {id, n, shell, cwd}"""
         term_guard()
         data = body()
         project = project_of(data.get('p'))
         cols, rows = term_size(data)
+        slot = data.get('n', 0)
+        if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < terminal.MAX_SLOTS:
+            abort(400)
         try:
-            session = state.terminals.open(project.id, str(project.root), state.config.get('terminal_shell'), cols, rows)
+            session = state.terminals.open(project.id, str(project.root), state.config.get('terminal_shell'), cols, rows, slot)
         except OSError as exc:
             return jsonify(error=t('셸을 시작하지 못했습니다 ({error}). 설정 파일의 terminal_shell 을 확인하세요', error=exc)), 500
-        return jsonify(id=session.id, shell=terminal.shell_label(session.exe), cwd=str(project.root))
+        return jsonify(id=session.id, n=session.slot, shell=terminal.shell_label(session.exe), cwd=str(project.root))
 
-    @app.get('/api/term/read')
-    def api_term_read() -> Any:
-        """from(받은 곳) 다음의 출력. 없으면 새 출력이 생기거나 셸이 끝날 때까지 기다린다 (긴 폴링). {data, next, reset, alive, exit, stuck}
-        stuck: 셸에서 띄웠는데 시작하다 멈춘 프로그램 [{pid, name}] (D58 — 바뀌면 기다림을 끝낸다)"""
+    @app.get('/api/term/list')
+    def api_term_list() -> Any:
+        """?p= — 그 탭의 돌고 있는 셸들 {terms: [{id, n, shell}]} (D69 — 화면을 다시 불러온 뒤 터미널 탭을 되살린다)"""
         term_guard()
-        session = session_of(request.args.get('t'))
-        since = request.args.get('from', default=0, type=int)
-        return jsonify(session.read(max(0, since), terminal.READ_WAIT))
+        project = arg_project()
+        return jsonify(terms=[{'id': s.id, 'n': s.slot, 'shell': terminal.shell_label(s.exe)} for s in state.terminals.of_project(project.id)])
+
+    @app.post('/api/term/read')
+    def api_term_read() -> Any:
+        """{want: {셸 id: from(받은 곳)}} — 셸들의 출력을 긴 폴링 하나로 (D69 — 브라우저는 한 주소에 연결을 6개까지만 연다).
+        하나라도 새 출력이 생기거나 셸이 끝나거나 멈춘 프로그램이 바뀔 때까지 기다린다.
+        {terms: {셸 id: {data, next, reset, alive, exit, stuck} 또는 null(없는 셸)}} — stuck: 시작하다 멈춘 프로그램 [{pid, name}] (D58)"""
+        term_guard()
+        want = body().get('want')
+        if not isinstance(want, dict) or not 0 < len(want) <= 256 or not all(
+                isinstance(k, str) and isinstance(v, int) and not isinstance(v, bool) and v >= 0 for k, v in want.items()):
+            abort(400)
+        return jsonify(terms=state.terminals.read_many(want, terminal.READ_WAIT))
 
     @app.post('/api/term/input')
     def api_term_input() -> Any:

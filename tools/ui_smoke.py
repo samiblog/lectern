@@ -36,6 +36,7 @@ SHOTS = ROOT / 'ui-shots'
 failures: list[str] = []
 
 
+
 def check(cond: bool, message: str) -> None:
     print(('  ok   ' if cond else '  FAIL ') + message)
     if not cond:
@@ -2426,7 +2427,7 @@ def run(headed: bool) -> None:
 
             term_ui = lambda: page.evaluate('''() => { const h = document.documentElement; return {
               on: h.classList.contains('term-on'), toc: !h.classList.contains('toc-off'), hidden: document.querySelector('#lec-term').hidden,
-              btn: document.querySelector('#lec-btn-term').classList.contains('on'), title: document.querySelector('#lec-term-title').textContent,
+              btn: document.querySelector('#lec-btn-term').classList.contains('on'), title: (document.querySelector('#lec-term-tabs .term-tab.on')?.textContent.replace(/^\\d+/, '') || '') + ' — ' + document.querySelector('#lec-term-title').textContent,
               focus: !!document.activeElement?.closest('#lec-term'), boxes: document.querySelectorAll('#lec-term .term-box').length }; }''')
             page.click('#lec-btn-term')
             started = term_has('PS ', 30000)
@@ -2536,7 +2537,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-menu .menu-row', has_text='Claude용 위치 복사').locator('.menu-term').click()
             pasted = term_has(f'@{doc_path} ')
             in_term = page.evaluate("!!document.activeElement?.closest('#lec-term')")
-            told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('탭의 터미널에 넣었습니다')", 3000)   # 넣었다는 알림
+            told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('번 터미널에 넣었습니다')", 3000)   # 넣었다는 알림
             term_label = page.evaluate("document.querySelector('#lec-menu .menu-term')?.textContent.trim() ?? '(메뉴 닫힘)'")
             page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
             asked = []
@@ -2548,7 +2549,7 @@ def run(headed: bool) -> None:
                   f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
             # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
             term_colors = lambda: page.evaluate('''() => {
-              const lum = (c) => { const m = c.match(/[\d.]+/g).map(Number);
+              const lum = (c) => { const m = c.match(/[\\d.]+/g).map(Number);
                 const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
                 return 0.2126 * f(m[0]) + 0.7152 * f(m[1]) + 0.0722 * f(m[2]); };
               const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p); return (x + 0.05) / (y + 0.05); };
@@ -2608,7 +2609,7 @@ def run(headed: bool) -> None:
                   f"설정 창 '터미널 색을 스타일에 맞춤'을 끄면 늘 어둡게, 켜면 다시 스타일 색 ({c_fixed['bg']}, 저장 {saved_off}, {back_style['bg']})")
             term_status = page.evaluate('''async () => {
               const secret = document.querySelector('meta[name="lec-term"]').content;
-              const get = (h) => fetch('/api/term/read?t=nope&from=0', { headers: h }).then(r => r.status);
+              const get = (h) => fetch('/api/term/info?t=nope', { headers: h }).then(r => r.status);
               return [await get({}), await get({ 'X-Term': 'wrong' }), await get({ 'X-Term': secret })]; }''')
             check(term_status == [403, 403, 404], f'터미널 API 는 페이지의 비밀값(X-Term) 없이는 403 ({term_status})')
             page.once('dialog', lambda d: d.accept(str(second)))
@@ -2631,13 +2632,62 @@ def run(headed: bool) -> None:
             kept_tab = len(asked) == 1 and n_tabs(2)
             page.once('dialog', lambda d: (asked.append(d.message), d.accept()))
             tab_el(1).locator('.tab-close').click()
-            closed_tab = n_tabs(1) and wait_until(page, "document.querySelector('#lec-term-title').textContent === 'PowerShell — samples'")
+            closed_tab = n_tabs(1) and wait_until(page, "(document.querySelector('#lec-term-tabs .term-tab.on')?.textContent.replace(/^\\d+/, '') || '') + ' — ' + document.querySelector('#lec-term-title').textContent === 'PowerShell — samples'")
             check(pinging and kept_tab and closed_tab and len(asked) == 2 and '실행 중' in asked[0]
                   and page.evaluate("document.querySelectorAll('#lec-term .term-box').length") == 1 and term_has('PS ', 3000),
                   f'터미널에서 프로그램이 돌면 탭을 닫기 전에 묻고, 닫으면 그 셸도 끝 — 남은 탭의 셸로 ({asked[:1]})')
             page.click('#lec-term-close')
             gone = term_ui()
             check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'✕ 로 터미널 닫기 ({gone})')
+
+            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 닫기, 빈 번호부터, 붙여 넣기는 고른 터미널에
+            term_tabs = lambda: page.evaluate("[...document.querySelectorAll('#lec-term-tabs .term-tab')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent.trim())")
+            page.keyboard.press('Control+Backquote')
+            term_has('PS ', 20000)
+            page.click('#lec-term-new')
+            page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 2")
+            two = term_tabs()
+            term_has('PS ', 20000)
+            page.keyboard.type('Write-Output ("둘" + "째 터미널")')
+            page.keyboard.press('Enter')
+            in_second = term_has('둘째 터미널')
+            page.locator('#lec-term-tabs .term-tab').first.click()
+            first_clean = wait_until(page, "!/둘째 터미널/.test([...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')].map(r => r.textContent).join(''))", 3000)
+            # 5개까지 — 다 차면 + 가 꺼진다
+            for _ in range(3):
+                page.click('#lec-term-new')
+            page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 5", timeout=15000)
+            full = page.evaluate("document.querySelector('#lec-term-new').disabled")
+            # 가운데(3번)를 닫으면 + 는 그 빈 번호로
+            page.locator('#lec-term-tabs .term-tab[data-n="2"] [data-close]').click()
+            page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 4", timeout=5000)
+            page.click('#lec-term-new')
+            page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 5", timeout=15000)
+            reused = page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n")
+            shot('28-terminals')
+            # 우클릭 메뉴의 '터미널에 붙여 넣기'는 고른 터미널(2번)에
+            page.locator('#lec-term-tabs .term-tab[data-n="1"]').click()
+            term_has('둘째 터미널', 5000)
+            page.evaluate("import('/static/js/store.js').then(m => m.emit('term-paste', 'Write-Output 붙여넣기확인'))")
+            pasted = term_has('Write-Output 붙여넣기확인', 5000)
+            told2 = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('2번 터미널에 넣었습니다')", 3000)
+            # 서버의 셸 목록도 화면과 같게 (닫은 3번은 끝났다 — 새 3번이 다시 떴다)
+            served = page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
+              const secret = document.querySelector('meta[name="lec-term"]').content;
+              const r = await fetch('/api/term/list?p=' + encodeURIComponent(S.tab.id), { headers: { 'X-Term': secret } });
+              return (await r.json()).terms.map(x => x.n); }''')
+            # 터미널에 넣는 경로의 따옴표 — PowerShell 은 ‘ ’ ‚ ‛ 도 작은따옴표로 읽는다 (모두 겹쳐 써야 문자열이 끝나지 않는다)
+            quoted = page.evaluate('''import('/static/js/tree.js').then(m => [m.shellWord('docs/a.md'), m.shellWord("it's ‘q’ ‚r‛ $x.md")])''')
+            # 2~5번을 닫고 1번만 남긴다 (다음 점검이 터미널 하나를 본다)
+            for n in ('4', '3', '2', '1'):
+                tab_btn = page.locator(f'#lec-term-tabs .term-tab[data-n="{n}"] [data-close]')
+                if tab_btn.count():
+                    tab_btn.click()
+            one = wait_until(page, "document.querySelectorAll('#lec-term-tabs .term-tab').length === 1", 8000)
+            page.click('#lec-term-close')
+            check(two == ['1PowerShell', '*2PowerShell'] and in_second and first_clean and full and reused == '2' and pasted and told2
+                  and served == [0, 1, 2, 3, 4] and one and quoted == ['docs/a.md ', "'it''s ‘‘q’’ ‚‚r‛‛ $x.md' "],
+                  f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 고른 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
 
             print('[터미널 모음]')
             def tile_has(name: str, text: str, ms: int = 20000) -> bool:
@@ -2693,7 +2743,7 @@ def run(headed: bool) -> None:
             check(solo == ['second'] and back_grid == 2, f'칸 머리를 두 번 누르면 그 칸만 크게, 버튼으로 다시 모두 ({solo}, {back_grid})')
             page.locator('.g-tile', has_text='second').locator('.g-go').click()
             went = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.querySelector('.lec-tab.active .name').textContent === 'second'")
-            g3 = page.evaluate('''() => ({ panel: !document.querySelector('#lec-term').hidden, title: document.querySelector('#lec-term-title').textContent,
+            g3 = page.evaluate('''() => ({ panel: !document.querySelector('#lec-term').hidden, title: (document.querySelector('#lec-term-tabs .term-tab.on')?.textContent.replace(/^\\d+/, '') || '') + ' — ' + document.querySelector('#lec-term-title').textContent,
               boxes: document.querySelectorAll('#lec-term-body .term-box').length, gather: document.querySelector('#lec-gather').hidden,
               focus: !!document.activeElement?.closest('#lec-term') })''')
             kept_out = term_has(f'PS {second}>', 3000)
@@ -2710,7 +2760,7 @@ def run(headed: bool) -> None:
             page.click('#lec-btn-term')
             by_term_btn = wait_until(page, '''!document.documentElement.classList.contains('gather-on') && !document.querySelector('#lec-term').hidden
               && document.querySelector('#lec-btn-term').getAttribute('aria-pressed') === 'true'
-              && document.querySelector('#lec-term-title').textContent === 'PowerShell — samples' ''')
+              && (document.querySelector('#lec-term-tabs .term-tab.on')?.textContent.replace(/^\\d+/, '') || '') + ' — ' + document.querySelector('#lec-term-title').textContent === 'PowerShell — samples' ''')
             check(place['term'] and place['gather'] and by_term_btn,
                   f"터미널 버튼은 탭 막대 끝, 터미널 모음 버튼은 툴바 — 모음에서 터미널 버튼을 누르면 모음을 닫고 이 프로젝트의 터미널 ({place}, {by_term_btn})")
             page.keyboard.press('Control+Shift+Backquote')

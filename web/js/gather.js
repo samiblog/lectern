@@ -1,6 +1,7 @@
 // 터미널 모음 (D40): 열린 프로젝트들의 터미널을 한 화면에 격자로 모아 보인다. 툴바의 '터미널 모음' 버튼·Ctrl+Shift+`.
 //
-// - 탭 하나에 칸 하나 (탭 순서). 셸이 있는 탭은 그 터미널 화면(tab.term.box)을 오른쪽 패널에서 이 칸으로 옮겨 보이고,
+// - 탭 하나에 칸 하나 (탭 순서). 터미널이 여럿인 탭(D69)은 칸 머리의 번호로 고른 터미널을 보인다.
+//   셸이 있는 탭은 그 터미널 화면(tab.term.box)을 오른쪽 패널에서 이 칸으로 옮겨 보이고,
 //   셸이 없는 탭은 '터미널 시작' 버튼만 둔다 — 쓰지 않는 프로젝트까지 셸을 한꺼번에 띄우지 않는다. 닫으면 화면을 패널로 되돌린다
 //   (셸은 그대로). 칸 크기에 맞춰 셸의 글자 칸 수도 바뀐다 (터미널 프로그램은 다시 그린다).
 // - 격자: 1 = 하나, 2 = 좌우, 3~4 = 2×2, 5~6 = 3×2, 7~9 = 3×3, 10 = 4×3. 칸 머리를 두 번 누르거나 '크게'로 그 칸만 크게.
@@ -14,7 +15,7 @@ import { S, on } from './store.js';
 import { selectTab } from './tabs.js';
 import {
   ensureTerminal, restartTerminal, fitTerminal, returnTerminals, liveTerminals, terminalBusy, toggleTerminal,
-  stuckMessage,
+  stuckMessage, termsOf, termLabel, selectTerminal,
 } from './terminal.js';
 import { $, $$, esc, toast } from './util.js';
 import { t } from './i18n.js';
@@ -47,6 +48,7 @@ function makeTile(tab) {
   tile.setAttribute('aria-label', t('{name} 터미널', { name: tab.name }));
   tile.innerHTML = `<div class="g-head" title="${esc(tab.root)}\n${t('머리를 두 번 누르면 이 칸만 크게')}">
       <svg class="g-icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="g-name">${esc(tab.name)}</span>
+      <span class="g-terms" role="tablist" aria-label="${t('터미널')}"></span>
       <span class="g-state"></span>
       <button type="button" class="icon-btn small g-solo" title="${t('이 칸만 크게')}" aria-label="${t('이 칸만 크게')}"><svg><use href="#i-expand"/></svg></button>
       <button type="button" class="icon-btn small g-restart" title="${t('셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)')}" aria-label="${t('셸 다시 시작')}"><svg><use href="#i-restart"/></svg></button>
@@ -55,12 +57,22 @@ function makeTile(tab) {
   return tile;
 }
 
-/** 칸의 몸통: 셸이 있으면 그 화면, 없으면 '터미널 시작' */
+/** 칸 머리의 터미널 번호 (터미널이 여럿일 때만 — 누르면 그 터미널을 이 칸에) */
+function renderNums(tab, tile) {
+  const terms = termsOf(tab);
+  tile.querySelector('.g-terms').innerHTML = terms.length < 2 ? '' : terms.map((term) => `<button type="button" role="tab"`
+    + ` class="g-term${term === tab.term ? ' on' : ''}" data-n="${term.n}" aria-selected="${term === tab.term}"`
+    + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">${term.n + 1}</button>`).join('');
+}
+
+/** 칸의 몸통: 셸이 있으면 고른 터미널의 화면, 없으면 '터미널 시작' */
 function fillBody(tab, tile) {
   const body = tile.querySelector('.g-body');
   const term = tab.term;
+  renderNums(tab, tile);
   if (term) {
     body.querySelector('.g-empty')?.remove();
+    for (const other of termsOf(tab)) if (other !== term && other.box.parentElement === body) other.box.hidden = true;
     if (term.box.parentElement !== body) body.append(term.box);
     term.box.hidden = false;
   } else if (!body.querySelector('.g-empty')) {
@@ -214,7 +226,14 @@ export function initGather() {
   box.addEventListener('click', (e) => {
     const tab = tabOfTile(e.target);
     if (!tab) return;
-    if (e.target.closest('.g-start')) startTile(tab);
+    const num = e.target.closest('.g-term');
+    if (num) {   // 터미널 번호 (D69): 그 터미널을 이 칸에 — 화면을 바꿔 끼우고 셸이 없으면 띄운다
+      const term = termsOf(tab).find((x) => String(x.n) === num.dataset.n);
+      if (term) {
+        selectTerminal(tab, term);
+        startTile(tab);
+      }
+    } else if (e.target.closest('.g-start')) startTile(tab);
     else if (e.target.closest('.g-solo')) toggleSolo(tileOf(tab));
     else if (e.target.closest('.g-restart')) restartTerminal(tab).then(() => { const tile = tileOf(tab); if (tile) setState(tile, tab, false); });
     else if (e.target.closest('.g-go')) leaveGather({ tab, panel: true });
@@ -234,7 +253,10 @@ export function initGather() {
     if (!shown) return;
     for (const tab of S.tabs) {
       const tile = tileOf(tab);
-      if (tile) setState(tile, tab, tile.querySelector('.g-state').classList.contains('busy'));
+      if (!tile) continue;
+      if (tab.term) fillBody(tab, tile);   // 터미널이 생기거나 닫히거나 다른 번호를 골랐다 (D69)
+      else renderNums(tab, tile);
+      setState(tile, tab, tile.querySelector('.g-state').classList.contains('busy'));
     }
   });
   updateButton();

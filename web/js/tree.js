@@ -173,7 +173,9 @@ async function copy(text) {
 
 /** 터미널에 넣을 경로: 글자·숫자·경로 기호 말고 다른 것(빈칸·&·$·괄호 등)이 있으면 작은따옴표로 감싼다 — PowerShell 이 한 낱말로 읽고
  * $·` 를 풀지 않게 (안의 ' 는 '' 로). 끝에 빈칸 — 이어서 치도록 */
-export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? text : `'${text.replace(/'/g, "''")}'`} `;
+// PowerShell 은 ' 말고도 ‘ ’ ‚ ‛ 를 작은따옴표로 읽는다 — 이름에 그런 글자가 있어도 문자열을 끝내지 못하게 모두 겹쳐 쓴다
+export const psQuote = (text) => `'${String(text).replace(/['\u2018\u2019\u201a\u201b]/g, (c) => c + c)}'`;
+export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? text : psQuote(text)} `;
 
 /** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사(옆에 터미널에 붙여 넣기, D51), 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {

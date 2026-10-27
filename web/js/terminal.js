@@ -1,8 +1,11 @@
 // 오른쪽 터미널 (D38): 프로젝트 탭마다 셸(기본 Windows PowerShell 5.1)을 그 프로젝트 폴더에서 띄워 보인다.
 // 화면은 xterm.js (web/vendor/xterm — 처음 열 때 불러온다), 셸은 서버의 Windows 의사 콘솔 (lectern/terminal.py·conpty.py).
-// 키 입력은 POST /api/term/input, 출력은 긴 폴링 GET /api/term/read (from: 받은 곳까지). 터미널 API 는 페이지에 실린
+// 키 입력은 POST /api/term/input, 출력은 모든 셸을 긴 폴링 하나로 POST /api/term/read (readAll). 터미널 API 는 페이지에 실린
 // 실행마다 새 비밀값(meta lec-term → X-Term 헤더)을 함께 보낸다.
 //
+// - 한 프로젝트에 터미널을 MAX_TERMS 개까지 (D69 — 하나는 Claude Code, 다른 것은 다른 일에). 머리줄의 터미널 탭
+//   [1 PowerShell][2 PowerShell][+] 로 고르고 더하고 × 로 그 셸만 끝낸다. 탭마다 tab.terms(번호 차례)와 고른 것 tab.term.
+//   서버는 번호(n — 0 부터)마다 셸 하나 (POST /api/term/open 의 n). 화면을 다시 불러오면 돌고 있는 셸들을 되살린다 (GET /api/term/list).
 // - 사용자가 버튼·Ctrl+` 로 열 때만 시작한다 (앱을 켤 때마다 닫힌 채). 셸로 명령을 보내는 길은 사용자의 키 입력뿐이다 —
 //   예외는 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'(D51)이고, 이것도 Ctrl+V 와 같은 길로 Enter 없이 넣는다 (pasteToTerminal).
 // - 패널을 닫아도 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
@@ -10,20 +13,21 @@
 // - 자리는 오른쪽 또는 문서 아래 (D52 — 설정 terminal_position: auto 면 창이 세로로 길 때 아래). 오른쪽이면 목차 자리를 쓰므로
 //   목차를 감춘다 (목차 버튼으로 함께 볼 수 있다 — toc.js). 아래면 #lec-main 이 격자가 되어 문서·목차 아래에 전체 폭으로 놓인다.
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
-// - 터미널 모음(gather.js)은 탭마다의 화면(tab.term.box)을 이 패널에서 모음 칸으로 옮겨 보이고, 닫으면 되돌린다 (returnTerminals).
-//   모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
+// - 터미널 모음(gather.js)은 탭마다 고른 터미널의 화면(tab.term.box)을 이 패널에서 모음 칸으로 옮겨 보이고, 닫으면 되돌린다
+//   (returnTerminals). 모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
 // - 셸에서 띄운 프로그램이 시작하다 멈추면(보안 프로그램이 프로세스 생성을 막음 — D58) 머리줄 아래 띠로 알리고 다시 시작을 권한다
-//   (tab.term.stuck — 아래 '시작하다 멈춘 프로그램'). 멈춤이 바뀌어도 'terms' 이벤트.
+//   (term.stuck — 아래 '시작하다 멈춘 프로그램'). 멈춤이 바뀌어도 'terms' 이벤트.
 // - 터미널 안에서는 앱 단축키를 쓰지 않는다 (main.js — Ctrl+` 만 예외). Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단).
 //   Ctrl+V 는 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
 
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON, saveConfig } from './api.js';
 import { updateTocVisibility } from './toc.js';
-import { $, toast, copyText } from './util.js';
+import { $, esc, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
+export const MAX_TERMS = 5;   // 프로젝트마다 터미널 수 (서버 terminal.MAX_SLOTS — D69)
 const MIN_WIDTH = 280;
 const DOC_MIN = 360;   // 본문에 남길 폭
 const MIN_HEIGHT = 120;      // 아래 터미널의 높이 (D52)
@@ -105,7 +109,7 @@ function applyColors() {
   const { theme, dark } = currentColors();
   root.style.setProperty('--term-bg', theme.background);   // 터미널 둘레 여백도 같은 바탕 (app.css — 패널과 모음 칸)
   root.classList.toggle('term-light', !dark);              // 스크롤바 색 (color-scheme)
-  for (const tab of S.tabs) if (tab.term) tab.term.xterm.options.theme = theme;
+  for (const tab of S.tabs) for (const term of termsOf(tab)) term.xterm.options.theme = theme;
   return theme;
 }
 // PC 에 있는 글꼴만 (D26): 고정폭 영문 → 한글 고정폭 → 맑은 고딕
@@ -115,6 +119,8 @@ let open = false;
 export const terminalOpen = () => open;
 /** 터미널 모음(gather.js)이 화면들을 가져가 있는지 */
 export const gathered = () => root.classList.contains('gather-on');
+/** 탭의 터미널들 (번호 차례) */
+export const termsOf = (tab) => tab?.terms || [];
 
 // ---- xterm.js 불러오기 (처음 열 때 한 번) -------------------------------------------
 
@@ -147,12 +153,12 @@ function loadLib() {
   return loading;
 }
 
-// ---- 셸 하나 (탭마다 tab.term) -------------------------------------------------------
+// ---- 셸 하나 (탭의 tab.terms 하나 — 번호 n) -------------------------------------------
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-/** 탭의 화면(xterm)을 만든다 (parent: 오른쪽 패널 또는 모음 칸). 셸은 start() 가 띄운다 */
-function create(tab, parent = $('#lec-term-body')) {
+/** 탭의 n 번 터미널 화면(xterm)을 만들어 tab.terms 에 넣는다 (parent: 오른쪽 패널 또는 모음 칸). 셸은 start() 가 띄운다 */
+function create(tab, n = 0, parent = $('#lec-term-body')) {
   const box = document.createElement('div');
   box.className = 'term-box';
   box.hidden = true;
@@ -167,7 +173,10 @@ function create(tab, parent = $('#lec-term-body')) {
   xterm.loadAddon(new window.Unicode11Addon.Unicode11Addon());
   xterm.unicode.activeVersion = '11';
   xterm.open(box);
-  const term = { tab, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '' };
+  const term = {
+    tab, n, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '',
+    stuck: [],
+  };
   xterm.onData((data) => {
     if (term.alive) send(term, data);
     else if (!term.starting && data === '\r') start(term);   // 끝난 셸: Enter 로 다시 시작
@@ -181,7 +190,8 @@ function create(tab, parent = $('#lec-term-body')) {
     if (xterm.hasSelection()) copySelection(term);
     else pasteFromClipboard(term);
   });
-  tab.term = term;
+  tab.terms = [...termsOf(tab), term].sort((a, b) => a.n - b.n);
+  tab.term ||= term;
   return term;
 }
 
@@ -240,11 +250,21 @@ async function flush(term) {
 function start(term) {
   term.starting ??= (async () => {
     try {
+      await term.tab.closing?.get(term.n);   // 이 번호의 셸을 막 닫았다 — 서버가 끝낸 뒤에 연다 (먼저 열면 아직 도는 옛 셸에 붙는다)
       fitNow(term);
-      const d = await postJSON('/api/term/open', { p: term.tab.id, cols: term.xterm.cols, rows: term.xterm.rows }, TERM_HEADER);
+      const { cols, rows } = term.xterm;
+      const d = await postJSON('/api/term/open', { p: term.tab.id, n: term.n, cols, rows }, TERM_HEADER);
+      if (!termsOf(term.tab).includes(term)) {   // 셸이 뜨는 동안 × 로 닫았다 — 서버에 생긴 셸을 끝낸다 (남으면 다음 + 가 그 셸에 붙는다)
+        await postJSON('/api/term/close', { t: d.id }, TERM_HEADER).catch(() => {});
+        return;
+      }
       if (term.id && term.id !== d.id) term.xterm.write('\r\n');
       Object.assign(term, { id: d.id, next: 0, alive: true, shell: d.shell });
-      showTitle();
+      // 숨은 채 만들어 기본 크기(80×24)로 열었거나 그사이 화면에 맞춰 크기가 바뀌었으면 셸에도 (그동안의 onResize 는 버려졌다)
+      if (term.xterm.cols !== cols || term.xterm.rows !== rows) {
+        postJSON('/api/term/resize', { t: d.id, cols: term.xterm.cols, rows: term.xterm.rows }, TERM_HEADER).catch(() => {});
+      }
+      renderHead();
       emit('terms');
       pump(term, d.id);
     } catch (e) {
@@ -256,30 +276,58 @@ function start(term) {
   return term.starting;
 }
 
-/** 출력 받기: 긴 폴링을 이어 간다. 셸이 끝나거나 탭이 닫히면 멈춘다 */
-async function pump(term, id) {
-  while (term.id === id && term.alive && S.tabs.includes(term.tab)) {
-    let d;
-    try {
-      d = await getJSON(`/api/term/read?t=${encodeURIComponent(id)}&from=${term.next}`, TERM_HEADER);
-    } catch (e) {
-      if (e.status === 404) {
-        d = { data: '', next: term.next, alive: false, exit: null };
-      } else {
-        await sleep(1000);   // 서버가 잠시 답하지 않음
+// ---- 출력 받기 ---------------------------------------------------------------------
+// 모든 탭의 모든 셸 출력을 긴 폴링 하나로 받는다 (POST /api/term/read 의 want — D69). 브라우저는 한 주소에 연결을 6개까지만
+// 열어서, 셸마다 긴 폴링을 걸면 터미널이 여럿일 때 키 입력·문서 요청이 그 뒤에서 기다렸다. 셸이 새로 붙으면 기다리던 읽기를
+// 그만두고 그 셸을 넣어 다시 건다.
+
+const reading = new Map();   // 셸 id → term
+let readOn = false;
+let readAbort = null;
+
+const stillReading = (term, id) => term.id === id && term.alive && S.tabs.includes(term.tab) && termsOf(term.tab).includes(term);
+
+/** 셸의 출력을 받기 시작한다. 셸이 끝나거나 탭·터미널이 닫히면 뺀다 */
+function pump(term, id) {
+  reading.set(id, term);
+  if (readOn) readAbort?.abort();
+  else readAll();
+}
+
+async function readAll() {
+  readOn = true;
+  try {
+    for (;;) {
+      for (const [id, term] of reading) if (!stillReading(term, id)) reading.delete(id);
+      if (!reading.size) return;
+      const want = Object.fromEntries([...reading].map(([id, term]) => [id, term.next]));
+      readAbort = new AbortController();
+      let d;
+      try {
+        d = await postJSON('/api/term/read', { want }, TERM_HEADER, { signal: readAbort.signal });
+      } catch (e) {
+        if (e.name !== 'AbortError') await sleep(1000);   // 서버가 잠시 답하지 않음 (AbortError: 새 셸이 붙었다)
         continue;
       }
+      for (const [id, r] of Object.entries(d.terms || {})) {
+        const term = reading.get(id);
+        if (term?.id === id) received(term, r || { data: '', next: term.next, alive: false, exit: null });   // null: 서버에 없는 셸
+      }
     }
-    if (term.id !== id) return;
-    if (d.data) term.xterm.write(d.data);
-    term.next = d.next;
-    setStuck(term, d.alive ? d.stuck || [] : []);
-    if (!d.alive) {
-      term.alive = false;
-      const code = d.exit != null ? ` (${t('종료 코드 {code}', { code: d.exit })})` : '';
-      term.xterm.write(`\r\n\x1b[90m[${t('셸이 끝났습니다{code}. Enter 를 누르면 다시 시작합니다', { code })}]\x1b[0m\r\n`);
-      emit('terms');
-    }
+  } finally {
+    readOn = false;
+  }
+}
+
+function received(term, d) {
+  if (d.data) term.xterm.write(d.data);
+  term.next = d.next;
+  setStuck(term, d.alive ? d.stuck || [] : []);
+  if (!d.alive) {
+    term.alive = false;
+    const code = d.exit != null ? ` (${t('종료 코드 {code}', { code: d.exit })})` : '';
+    term.xterm.write(`\r\n\x1b[90m[${t('셸이 끝났습니다{code}. Enter 를 누르면 다시 시작합니다', { code })}]\x1b[0m\r\n`);
+    emit('terms');
   }
 }
 
@@ -290,7 +338,7 @@ function fitNow(term) {
   } catch { /* 크기를 잴 수 없는 순간 */ }
 }
 
-/** 다시 시작: 탭의 셸(과 거기서 띄운 프로그램)을 끝내고 새로 */
+/** 다시 시작: 탭의 고른 터미널(과 거기서 띄운 프로그램)을 끝내고 새로 */
 export async function restartTerminal(tab = S.tab) {
   const term = tab?.term;
   if (!term) return;
@@ -319,15 +367,52 @@ function setStuck(term, stuck) {
   if (key(stuck) === key(term.stuck)) return;
   const was = !!term.stuck?.length;
   term.stuck = stuck;
-  showStuck();
+  renderHead();
   emit('terms');
   // 보이지 않는 터미널이면 한 번 알린다 (터미널 모음은 칸마다 '멈춤'을 보인다)
-  if (stuck.length && !was && !gathered() && !(open && term.tab === S.tab)) {
-    toast(t("'{name}' 탭의 터미널에서 프로그램이 시작하다 멈췄습니다. 터미널을 열고 다시 시작을 누르세요.", { name: term.tab.name }), 'error', 8000);
+  if (stuck.length && !was && !gathered() && !(open && term.tab === S.tab && term.tab.term === term)) {
+    toast(t("'{name}' 탭의 {n}번 터미널에서 프로그램이 시작하다 멈췄습니다. 터미널을 열고 다시 시작을 누르세요.", { name: term.tab.name, n: term.n + 1 }), 'error', 8000);
   }
 }
 
-/** 선택된 탭의 셸에 멈춘 프로그램이 있으면 머리줄 아래 띠와 다시 시작 버튼 강조 */
+// ---- 패널 ---------------------------------------------------------------------
+
+/** 터미널 탭의 이름: 셸 이름 */
+export const termLabel = (term) => term.shell || 'PowerShell';
+
+/** 머리줄: 터미널 탭들([1 PowerShell][2 PowerShell] — 여럿이면 ×), [+], 프로젝트 이름, 멈춤 띠 */
+function renderHead() {
+  const tab = S.tab;
+  const terms = termsOf(tab);
+  const box = $('#lec-term-tabs');
+  box.innerHTML = terms.map((term) => {
+    const on = term === tab.term;
+    const state = !term.alive ? ' ended' : term.stuck?.length ? ' stuck' : '';
+    const close = terms.length > 1
+      ? `<span class="term-tab-close" role="button" data-close="${term.n}" title="${esc(t('이 터미널 닫기 — 셸과 거기서 띄운 프로그램을 끝냄'))}"><svg aria-hidden="true"><use href="#i-close"/></svg></span>` : '';
+    return `<button type="button" role="tab" class="term-tab${on ? ' on' : ''}${state}" data-n="${term.n}" aria-selected="${on}"`
+      + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">`
+      + `<span class="n">${term.n + 1}</span><span class="name">${esc(termLabel(term))}</span>${close}</button>`;
+  }).join('');
+  // 그래도 넘치면(좁은 패널) 고른 탭이 보이게 탭 줄을 민다
+  const cur = box.querySelector('.term-tab.on');
+  if (cur) {
+    const a = box.getBoundingClientRect();
+    const b = cur.getBoundingClientRect();
+    if (b.left < a.left) box.scrollLeft -= a.left - b.left;
+    else if (b.right > a.right) box.scrollLeft += b.right - a.right;
+  }
+  const add = $('#lec-term-new');
+  add.disabled = !tab || terms.length >= MAX_TERMS;
+  add.title = terms.length >= MAX_TERMS ? t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS })
+    : t('새 터미널 — 이 프로젝트 폴더에서 (프로젝트마다 {n}개까지)', { n: MAX_TERMS });
+  const title = $('#lec-term-title');
+  title.textContent = tab ? tab.name : t('터미널 — 열린 프로젝트가 없습니다');
+  title.title = tab ? tab.root : '';
+  showStuck();
+}
+
+/** 선택된 탭의 고른 셸에 멈춘 프로그램이 있으면 머리줄 아래 띠와 다시 시작 버튼 강조 */
 function showStuck() {
   const term = S.tab?.term;
   const stuck = term?.alive ? term.stuck || [] : [];
@@ -336,21 +421,30 @@ function showStuck() {
   if (stuck.length) $('#lec-term-stuck-text').textContent = stuckMessage(stuck);
 }
 
-// ---- 패널 ---------------------------------------------------------------------
-
-function showTitle() {
-  const term = S.tab?.term;
-  const name = S.tab ? `${term?.shell || 'PowerShell'} — ${S.tab.name}` : t('터미널 — 열린 프로젝트가 없습니다');
-  $('#lec-term-title').textContent = name;
-  $('#lec-term-title').title = S.tab ? S.tab.root : '';
-  showStuck();
+/**
+ * 탭의 터미널들을 되살린다: 서버에 돌고 있는 셸(화면을 다시 불러옴)이 있으면 그것들에, 없으면 1번을 새로. parent: 화면을 둘 곳.
+ * 한 번에 하나만 (패널을 보이는 길과 새 터미널·모음 칸을 만드는 길이 함께 부를 수 있다 — 같은 약속을 기다린다).
+ * 되살린 셸은 모두 붙어 출력을 받는다 (고른 것만 붙이면 다른 길이 그사이 다른 터미널을 고를 때 1번이 붙지 않은 채 남았다)
+ */
+function restoreTerms(tab, parent) {
+  tab.restoring ??= (async () => {
+    let listed = [];
+    try {
+      listed = (await getJSON(`/api/term/list?p=${encodeURIComponent(tab.id)}`, TERM_HEADER)).terms || [];
+    } catch { /* 처음 여는 셸로 */ }
+    if (!S.tabs.includes(tab) || termsOf(tab).length) return;   // 그사이 탭을 닫았거나 다른 길로 만들었다
+    if (!listed.length) listed = [{ n: 0 }];
+    for (const { n } of listed) create(tab, n, parent);
+    for (const term of termsOf(tab)) start(term);
+  })().finally(() => { tab.restoring = null; });
+  return tab.restoring;
 }
 
-/** 선택된 탭의 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 제목만 */
+/** 선택된 탭의 고른 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 머리줄만 */
 async function showCurrent({ focus = false } = {}) {
-  showTitle();
+  renderHead();
   if (gathered()) return;
-  for (const tab of S.tabs) if (tab.term) tab.term.box.hidden = tab !== S.tab;
+  for (const tab of S.tabs) for (const term of termsOf(tab)) term.box.hidden = !(tab === S.tab && term === tab.term);
   if (!open || !S.tab) return;
   try {
     await loadLib();
@@ -359,11 +453,86 @@ async function showCurrent({ focus = false } = {}) {
     return;
   }
   const tab = S.tab;
-  const term = tab.term || create(tab);
-  term.box.hidden = false;
+  if (!termsOf(tab).length) await restoreTerms(tab);
+  if (tab !== S.tab || !tab.term) return;
+  renderHead();
+  const term = tab.term;
+  for (const other of termsOf(tab)) other.box.hidden = other !== term;
   fitNow(term);
   if (!term.alive && !term.id) await start(term);
   if (focus && tab === S.tab) term.xterm.focus();
+}
+
+/** 탭의 터미널 하나를 고른다 (머리줄의 터미널 탭, 터미널 모음 칸의 번호) */
+export function selectTerminal(tab, term) {
+  if (!termsOf(tab).includes(term)) return;
+  tab.term = term;
+  if (tab === S.tab) renderHead();
+  emit('terms');
+  if (gathered()) return;   // 모음이 화면을 옮긴다 ('terms')
+  for (const other of termsOf(tab)) other.box.hidden = !(tab === S.tab && other === term);
+  if (tab === S.tab && open) {
+    fitNow(term);
+    if (!term.alive && !term.id) start(term);
+    term.xterm.focus();
+  }
+}
+
+/** 새 터미널 (머리줄의 +): 빈 번호 가운데 가장 작은 것으로 만들어 고르고 셸을 띄운다. 만든 터미널 (못 만들면 null) */
+export async function newTerminal(tab = S.tab) {
+  if (!tab) return null;
+  if (termsOf(tab).length >= MAX_TERMS) {
+    toast(t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS }), 'error');
+    return null;
+  }
+  if (!gathered() && !open) toggleTerminal(true);
+  try {
+    await loadLib();
+  } catch (e) {
+    toast(e.message, 'error');
+    return null;
+  }
+  if (!termsOf(tab).length) await restoreTerms(tab);   // 처음 여는 탭 — 1번부터 (되살린 셸이 있으면 그것들 다음)
+  const used = new Set(termsOf(tab).map((x) => x.n));
+  let n = 0;
+  while (used.has(n)) n += 1;
+  if (n >= MAX_TERMS) {   // 되살리고 보니 다 찼다
+    toast(t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS }), 'error');
+    return null;
+  }
+  const term = create(tab, n);
+  selectTerminal(tab, term);
+  await start(term);
+  if (tab === S.tab && !gathered()) term.xterm.focus();
+  return term;
+}
+
+/** 터미널 하나를 닫는다 (머리줄의 ×): 셸에서 프로그램이 돌고 있으면 묻고, 셸과 그 프로그램을 끝낸다 */
+export async function closeTerminal(term) {
+  const tab = term?.tab;
+  if (!tab || !termsOf(tab).includes(term)) return false;
+  if (await terminalBusy(term) && !window.confirm(t('{n}번 터미널에서 프로그램이 실행 중입니다. 닫으면 함께 끝납니다. 닫을까요?', { n: term.n + 1 }))) return false;
+  const i = termsOf(tab).indexOf(term);
+  // 셸을 끝낸다 (뜨는 중이면 start 가 뜬 뒤에). 같은 번호로 곧 + 하면 start 가 이것을 기다린다
+  const done = term.starting || (term.alive ? postJSON('/api/term/close', { t: term.id }, TERM_HEADER).catch(() => {}) : null);
+  if (done) {
+    const closing = (tab.closing ??= new Map());
+    closing.set(term.n, done);
+    done.finally(() => { if (closing.get(term.n) === done) closing.delete(term.n); });
+  }
+  term.alive = false;
+  term.id = null;
+  term.xterm.dispose();
+  term.box.remove();
+  tab.terms = termsOf(tab).filter((x) => x !== term);
+  if (tab.term === term) tab.term = tab.terms[Math.min(i, tab.terms.length - 1)] || null;
+  if (tab.term) selectTerminal(tab, tab.term);
+  else {
+    if (tab === S.tab && open) toggleTerminal(false);   // 마지막 터미널 — 다음에 열면 1번을 새로
+    renderHead();
+    emit('terms');
+  }
+  return true;
 }
 
 /** 패널을 열고 닫는다 (버튼·Ctrl+`). 닫아도 셸은 그대로 돈다 */
@@ -380,36 +549,49 @@ export function toggleTerminal(want = !open) {
   else if (document.activeElement?.closest?.('#lec-term')) $('#lec-content')?.focus({ preventScroll: true });
 }
 
-/** 탭을 닫기 전에: 그 탭의 셸에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */
+/** 탭을 닫기 전에: 그 탭의 셸들에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */
 export async function confirmCloseTerminal(tab) {
-  const term = tab.term;
-  if (!term?.alive) return true;
-  try {
-    const info = await getJSON(`/api/term/info?t=${encodeURIComponent(term.id)}`, TERM_HEADER);
-    if (!info.busy) return true;
-  } catch {
-    return true;
-  }
-  return window.confirm(t("'{name}' 탭의 터미널에서 프로그램이 실행 중입니다. 탭을 닫으면 함께 끝납니다. 닫을까요?", { name: tab.name }));
+  const busy = [];
+  for (const term of termsOf(tab)) if (await terminalBusy(term)) busy.push(term.n + 1);
+  if (!busy.length) return true;
+  return window.confirm(t("'{name}' 탭의 터미널({list}번)에서 프로그램이 실행 중입니다. 탭을 닫으면 함께 끝납니다. 닫을까요?",
+    { name: tab.name, list: busy.join(', ') }));
 }
 
-/** 닫힌 탭의 화면을 치운다 (셸은 서버가 탭을 닫을 때 끝낸다) */
+/** 닫힌 탭의 화면들을 치운다 (셸은 서버가 탭을 닫을 때 끝낸다) */
 export function disposeTerminal(tab) {
-  const term = tab.term;
-  if (!term) return;
-  term.alive = false;
-  term.id = null;
-  term.xterm.dispose();
-  term.box.remove();
+  for (const term of termsOf(tab)) {
+    term.alive = false;
+    term.id = null;
+    term.xterm.dispose();
+    term.box.remove();
+  }
+  tab.terms = [];
   tab.term = null;
   emit('terms');
 }
 
+/** 고른 터미널에 글을 넣는다 — 사용자의 Ctrl+V 와 같은 길 (xterm 의 paste → onData → POST /api/term/input). Enter 는 누르지 않는다 */
+async function pasteInto(term, text) {
+  if (term.starting) await term.starting;
+  if (!term.alive) {
+    toast(t('터미널 셸이 끝나 있습니다. 터미널에서 Enter 를 누르면 다시 시작합니다'), 'error');
+    return false;
+  }
+  const lines = text.split(/\r\n|\r|\n/).length;
+  if (lines > 1 && !term.xterm.modes.bracketedPasteMode
+    && !window.confirm(t('{n}줄을 터미널에 붙여 넣습니다. 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있습니다. 붙여 넣을까요?', { n: lines }))) {
+    return false;
+  }
+  term.xterm.paste(text);
+  term.xterm.focus();
+  return true;
+}
+
 /**
- * 글을 선택된 탭의 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
- * 사용자의 Ctrl+V 와 같은 길이다 (xterm 의 paste → onData → POST /api/term/input). 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다.
- * 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기 모드(bracketed paste — Claude Code 등)를
- * 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다 (Windows Terminal 처럼).
+ * 글을 선택된 탭의 고른 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
+ * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
+ * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
  */
 export async function pasteToTerminal(text) {
   const tab = S.tab;
@@ -421,33 +603,23 @@ export async function pasteToTerminal(text) {
   }
   const term = tab.term;
   if (!term || tab !== S.tab) return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다), 또는 그사이 다른 탭
-  if (term.starting) await term.starting;
-  if (!term.alive) {
-    toast(t('터미널 셸이 끝나 있습니다. 터미널에서 Enter 를 누르면 다시 시작합니다'), 'error');
-    return;
-  }
-  const lines = text.split(/\r\n|\r|\n/).length;
-  if (lines > 1 && !term.xterm.modes.bracketedPasteMode
-    && !window.confirm(t('{n}줄을 터미널에 붙여 넣습니다. 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있습니다. 붙여 넣을까요?', { n: lines }))) {
-    return;
-  }
-  term.xterm.paste(text);
-  term.xterm.focus();
-  // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 터미널인지도
-  toast(t("'{name}' 탭의 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name }));
+  if (!(await pasteInto(term, text))) return;
+  // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 몇 번 터미널인지도
+  toast(t("'{name}' 탭의 {n}번 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name, n: term.n + 1 }));
 }
 
 // ---- 터미널 모음(gather.js)이 쓰는 것 ----------------------------------------------------
 
 export const fitTerminal = fitNow;
 
-/** 셸이 돌고 있는 탭 수 (탭 막대의 '터미널 모음' 버튼) */
-export const liveTerminals = () => S.tabs.filter((tab) => tab.term?.alive).length;
+/** 돌고 있는 셸 수 — 모든 탭의 모든 터미널 (툴바 '터미널 모음' 버튼의 숫자) */
+export const liveTerminals = () => S.tabs.reduce((n, tab) => n + termsOf(tab).filter((term) => term.alive).length, 0);
 
-/** 탭의 터미널을 parent(모음 칸)에 보이고, 셸이 없으면 띄운다 */
+/** 탭의 고른 터미널을 parent(모음 칸)에 보이고, 셸이 없으면 띄운다 (터미널이 하나도 없으면 되살리거나 1번을 만든다) */
 export async function ensureTerminal(tab, parent) {
   await loadLib();
-  const term = tab.term || create(tab, parent);
+  if (!termsOf(tab).length) await restoreTerms(tab, parent);
+  const term = tab.term;
   if (term.box.parentElement !== parent) parent.append(term.box);
   term.box.hidden = false;
   fitNow(term);
@@ -468,7 +640,7 @@ export async function terminalBusy(term) {
 /** 모음 칸에 옮겨 둔 화면들을 오른쪽 패널로 되돌린다 (터미널 모음을 닫을 때) */
 export function returnTerminals() {
   const body = $('#lec-term-body');
-  for (const tab of S.tabs) if (tab.term && tab.term.box.parentElement !== body) body.append(tab.term.box);
+  for (const tab of S.tabs) for (const term of termsOf(tab)) if (term.box.parentElement !== body) body.append(term.box);
   showCurrent();
 }
 
@@ -536,6 +708,21 @@ export function initTerminal() {
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   $('#lec-term-stuck-restart').addEventListener('click', () => restartTerminal());
+  $('#lec-term-new').addEventListener('click', () => newTerminal());
+  // 터미널 탭: 누르면 고르기, × 는 그 터미널 닫기, 가운데 버튼도 닫기
+  const tabs = $('#lec-term-tabs');
+  const termAt = (el) => termsOf(S.tab).find((term) => String(term.n) === el?.closest('.term-tab')?.dataset.n) || null;
+  tabs.addEventListener('click', (e) => {
+    const term = termAt(e.target);
+    if (!term) return;
+    if (e.target.closest('[data-close]')) closeTerminal(term);
+    else selectTerminal(S.tab, term);
+  });
+  tabs.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
+  tabs.addEventListener('auxclick', (e) => {
+    const term = e.button === 1 && termsOf(S.tab).length > 1 && termAt(e.target);
+    if (term) closeTerminal(term);
+  });
   // 머리줄 버튼: 오른쪽 ↔ 아래 (설정이 자동이었으면 이제 그 자리로 고정 — 설정 창에서 자동으로 되돌린다)
   $('#lec-term-place').addEventListener('click', () => {
     saveConfig({ terminal_position: terminalBelow() ? 'side' : 'bottom' });   // S.config 는 바로 바뀐다 — 저장은 뒤에서
@@ -544,6 +731,9 @@ export function initTerminal() {
   portrait.addEventListener('change', applyPlace);   // 창 모양이 바뀜 (자동일 때만 자리가 바뀐다)
   on('term-place', applyPlace);                      // 설정 창
   bindResizer();
+  // 머리줄 오른쪽의 프로젝트 이름: 터미널 탭이 많아 자리가 거의 없으면 글자 조각 대신 감춘다 (자리는 그대로 — 크기가 돌지 않게)
+  const title = $('#lec-term-title');
+  new ResizeObserver(() => { title.style.visibility = title.clientWidth < 40 ? 'hidden' : ''; }).observe(title);
   applyWidth();
   applyPlace();
   // 패널 크기가 바뀌면 글자 칸 수를 다시 맞춘다 (셸에도 알린다 — onResize)
@@ -560,4 +750,5 @@ export function initTerminal() {
   on('term-colors', applyColors);
   on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
   applyColors();
+  renderHead();
 }

@@ -29,11 +29,13 @@ export async function getJSON(path, extra = {}) {
   return (await check(res)).json();
 }
 
-export async function postJSON(path, body, extra = {}) {
+/** signal: 기다리는 요청을 그만둘 때 (터미널 출력의 긴 폴링 — terminal.js) */
+export async function postJSON(path, body, extra = {}, { signal } = {}) {
   const res = await fetch(path, {
     method: 'POST',
     headers: headers({ ...extra, 'Content-Type': 'application/json' }),
     body: JSON.stringify(body ?? {}),
+    signal,
   });
   return (await check(res)).json();
 }

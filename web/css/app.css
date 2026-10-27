@@ -271,8 +271,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 
 /* ---- 오른쪽 터미널 (terminal.js) -------------------------------------------------- */
 /* 터미널 바탕은 terminal.js 가 지금 스타일의 코드 블록 바탕(설정에서 끄면 늘 어둡게)으로 --term-bg 에 준다. 머리줄은 앱 UI 색 */
+/* container: 안의 글(터미널 탭 줄)이 패널 폭을 밀지 않게, 좁은 패널의 탭 모양은 @container term 으로 */
 #lec-term {
-  flex: 0 0 var(--term-w, 42%); min-width: 280px; max-width: calc(100% - 360px); display: flex; flex-direction: column;
+  flex: 0 0 var(--term-w, 42%); min-width: 280px; max-width: calc(100% - 360px); display: flex; flex-direction: column; container: term / inline-size;
   border-left: 1px solid var(--ui-border); background: var(--term-bg, #1e1f22);
 }
 .term-head {
@@ -280,7 +281,34 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-fg); font-size: 12.5px; font-weight: 600;
 }
 .term-head .term-icon { width: 16px; height: 16px; flex: none; fill: none; stroke: var(--ui-accent); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
-#lec-term-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lec-term-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-faint); font-weight: 500; text-align: right; padding-right: 4px; }
+/* 한 프로젝트의 터미널들 (terminal.js, D69): [1 PowerShell][2 PowerShell] [+] */
+#lec-term-tabs { display: flex; gap: 2px; min-width: 0; overflow-x: auto; scrollbar-width: none; }
+/* 자리가 모자라면 고르지 않은 탭의 이름부터 줄인다 (번호·× 는 남김) */
+.term-tab {
+  display: inline-flex; align-items: center; gap: 5px; flex: 0 1 auto; min-width: 50px; height: 24px; padding: 0 5px 0 4px; overflow: hidden;
+  border: 1px solid transparent; border-radius: 5px; background: none; color: var(--ui-muted); font-size: 12px; font-weight: 500; white-space: nowrap;
+}
+.term-tab.on { flex: none; }
+.term-tab .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.term-tab:hover { color: var(--ui-fg); background: var(--ui-hover); }
+.term-tab.on { color: var(--ui-fg); background: var(--ui-active-bg); border-color: var(--ui-border); font-weight: 650; }
+.term-tab .n {
+  flex: none; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 3px; background: var(--ui-border); color: var(--ui-fg);
+  font-size: 10.5px; line-height: 15px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.term-tab.on .n { background: var(--ui-accent); color: #fff; }
+:root[data-ui="dark"] .term-tab.on .n { color: #0f1a26; }
+/* 좁은 패널: 고르지 않은 탭의 × 는 마우스를 올릴 때만 (가운데 버튼으로도 닫힌다) — 번호는 늘 보이게 */
+@container term (max-width: 480px) {
+  .term-tab:not(.on) { min-width: 26px; }
+  .term-tab:not(.on):not(:hover) .term-tab-close { display: none; }
+}
+.term-tab.ended { opacity: .6; }
+.term-tab.stuck .n { background: var(--ui-danger); color: #fff; }
+.term-tab-close { flex: none; display: inline-flex; align-items: center; justify-content: center; width: 16px; height: 16px; border-radius: 3px; color: var(--ui-faint); }
+.term-tab-close:hover { color: var(--ui-fg); background: var(--ui-hover); }
+.term-tab-close svg { width: 10px; height: 10px; fill: none; stroke: currentColor; stroke-width: 2; }
 /* 셸에서 띄운 프로그램이 시작하다 멈춤 (D58) — 머리줄 아래 띠, 다시 시작 버튼 강조 */
 .term-stuck {
   display: flex; align-items: center; gap: 10px; flex: none; padding: 7px 8px 7px 10px; border-bottom: 1px solid var(--ui-border);
@@ -945,6 +973,15 @@ button.primary:hover { filter: brightness(1.08); }
 /* html 문서 (htmldoc.js): iframe 높이를 문서에 맞추고 창의 스크롤 상자(.lec-scroll)가 스크롤한다 */
 iframe.lec-html { display: block; width: 100%; height: 480px; border: 0; background: transparent; }
 iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: hidden; }
+
+/* 터미널 모음 칸 머리의 터미널 번호 (gather.js, D69) */
+.g-terms { display: inline-flex; gap: 2px; }
+.g-term {
+  min-width: 18px; height: 18px; padding: 0 4px; border: 1px solid var(--ui-border); border-radius: 4px; background: none;
+  color: var(--ui-muted); font-size: 11px; line-height: 16px; font-variant-numeric: tabular-nums;
+}
+.g-term.on { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; font-weight: 650; }
+:root[data-ui="dark"] .g-term.on { color: #0f1a26; }
 
 /* 렌더링용 무대 (화면 밖에서 먼저 그리기) */
 .lec-stage { position: absolute !important; left: -20000px !important; top: 0; visibility: hidden; pointer-events: none; }

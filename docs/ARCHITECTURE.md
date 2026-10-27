@@ -191,8 +191,9 @@ flowchart LR
 | `POST /api/open-external` | `{p, path, line?, how?}` | `{action}` — `folder`·`default`·`editor`·`reveal`. `how:'editor'` 면 기본 앱 형식도 편집기로 (`REVEAL_ONLY_EXT` 는 그래도 탐색기에서 선택만) |
 | `POST /api/exists` | `{p, paths:[...], base, dirs?}` | 경로 표기 중 프로젝트 안에 있는 파일. 프로젝트 기준, 없으면 `base`(문서 폴더) 기준. `{found:{입력: 프로젝트 기준 경로}}`. 숨김·밖은 없는 것, 폴더는 `dirs: true` 일 때만 있는 것(끝에 `/` — 모아 보기의 깨진 링크, D62). 500개까지 |
 | `POST /api/reveal` | `{p, path}` | 탐색기에서 선택 (`path` 가 `''` 면 프로젝트 폴더 — 탭 우클릭). `{action:'reveal'}` |
-| `POST /api/term/open` | `{p, cols?, rows?}` | 탭의 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그 셸). `{id, shell, cwd}` — `shell` 은 머리줄에 보일 이름(`PowerShell` 등). 크기는 1~1000 (아니면 400). 띄우지 못하면 500 |
-| `GET /api/term/read?t=<셸 id>&from=<순번>` | | 긴 폴링: 순번 다음의 출력 `{data, next, reset, alive, exit, stuck}`. 없으면 새 출력·종료·`stuck` 이 바뀜·20초까지 기다린다. `stuck`: 시작하다 멈춘 프로그램 `[{pid, name}]` (D58). `alive` 가 거짓이면 셸이 끝났고 남은 출력도 다 받은 것 (`exit`: 종료 코드) |
+| `POST /api/term/open` | `{p, n?, cols?, rows?}` | 탭의 n 번 터미널(0 부터, `terminal.MAX_SLOTS` 5개까지 — 아니면 400, D69) 셸을 그 프로젝트 폴더에서 띄운다 (이미 돌고 있으면 그 셸). `{id, n, shell, cwd}` — `shell` 은 터미널 탭에 보일 이름(`PowerShell` 등). 크기는 1~1000 (아니면 400). 띄우지 못하면 500 |
+| `GET /api/term/list?p=<id>` | | 그 탭의 돌고 있는 셸들 `{terms: [{id, n, shell}]}` (번호 차례 — 화면을 다시 불러온 뒤 터미널 탭을 되살린다, D69) |
+| `POST /api/term/read` | `{want: {셸 id: 순번}}` | 긴 폴링 하나로 셸들의 출력 (D69 — 브라우저는 한 주소에 연결을 6개까지만 연다): `{terms: {셸 id: {data, next, reset, alive, exit, stuck} 또는 null}}`. 하나라도 새 출력·종료·`stuck` 이 바뀜·20초까지 기다리고, 그때 요청한 모든 셸의 것을 준다. null 은 없는(닫아 치운) 셸. `stuck`: 시작하다 멈춘 프로그램 `[{pid, name}]` (D58). `alive` 가 거짓이면 셸이 끝났고 남은 출력도 다 받은 것 (`exit`: 종료 코드). want 는 1~256개 |
 | `POST /api/term/input` | `{t, data}` | 사용자가 친 키·붙여 넣은 글을 셸로. 65536자가 넘으면 413 |
 | `POST /api/term/resize` | `{t, cols, rows}` | 셸 화면 크기 |
 | `GET /api/term/info?t=<셸 id>` | | `{alive, busy, stuck}` — `busy`: 셸에서 띄운 프로그램이 돎 (탭을 닫기 전에 묻는다), `stuck`: read 와 같음 |
@@ -426,10 +427,14 @@ sequenceDiagram
 - 우클릭(메뉴 키·Shift+F10): 머리말에 이름·크기·수정 시각, 열기(어떻게 열리는지 함께), 편집기로 열기(기본 앱 형식만), 탐색기에서 보기, `@경로`·전체 경로·파일 이름 복사. 폴더는 펼치기/접기·탐색기에서 열기·경로 복사. 이름 바꾸기·지우기·옮기기는 없다 (보기 전용).
 - 사이드바 거르기는 이 목록에도 적용된다: 경로에 모든 단어가 든 파일을 평평하게(폴더를 옆에) 300개까지.
 
+### 터미널 여러 개 (terminal.js — D69)
+- 탭마다 `tab.terms`(번호 n 차례)와 고른 것 `tab.term`. 머리줄 `#lec-term-tabs` 의 `.term-tab[data-n]`(번호·셸 이름, 여럿이면 `[data-close]` ×)·`#lec-term-new`(+, `MAX_TERMS` 5개까지)·`#lec-term-title`(프로젝트 이름 — 40px 아래면 감춤). 탭 줄은 자리가 모자라면 고르지 않은 탭의 이름부터 줄이고(`.name` 말줄임), `@container term (max-width: 480px)` 이면 그 탭들의 × 는 마우스를 올릴 때만 (`#lec-term` 이 `container: term / inline-size` — 탭 줄이 패널 폭을 밀지 않는다). `newTerminal`(빈 번호 가운데 가장 작은 것 → `create(tab, n)` → `selectTerminal` → `start` — `POST /api/term/open` 의 `n`), `selectTerminal(tab, term)`(화면 바꿔 보이기, 'terms' 이벤트 — 모음은 그 칸에 바꿔 끼운다), `closeTerminal(term)`(돌고 있으면 묻고 `/api/term/close`, 마지막이면 패널을 닫는다).
+- 처음 보일 때·새 터미널·모음 칸을 채울 때 터미널이 없으면 `restoreTerms`(탭마다 한 약속 `tab.restoring` — 여러 길이 함께 불러도 한 번) 가 `GET /api/term/list` 로 돌고 있는 셸들을 되살리고(모두 붙어 앞의 출력부터 받는다) 없으면 1번을 새로. 셸이 뜨는 동안 × 로 닫힌 터미널은 `start` 가 뜬 뒤에 서버 셸을 끝낸다. 닫기 전에 묻기(`confirmCloseTerminal` — 돌고 있는 번호들)·치우기·색은 탭의 모든 터미널에.
+
 ### 터미널 (terminal.js)
 - 탭 막대 오른쪽 끝 '터미널' 버튼(`#lec-btn-term`)·`` Ctrl+` `` 로 본문 오른쪽(목차 자리, `#lec-term`)에 연다. 열면 `html.term-on` — 목차를 감추고(`toc.js` 의 `updateTocVisibility`), 목차 버튼은 `toc-with-term` 으로 목차를 함께 볼지만 바꾼다 (설정은 그대로). 앱을 켤 때마다 닫힌 채다.
 - 처음 열 때 `web/vendor/xterm` 의 css·js 를 불러온다 (`window.Terminal` 이 진짜 함수인지 본다 — 문서 속 id 가 이름을 가릴 수 있다). 탭마다 `tab.term` = {xterm, 상자(`.term-box`), 셸 id, 받은 순번 `next`, alive}. 상자는 `#lec-term-body` 에 겹쳐 두고 선택된 탭의 것만 보인다. 패널이 열려 있을 때 탭을 고르면 그 탭의 셸을 띄운다(`/api/term/open` — 서버에 돌고 있는 셸이 있으면 그것에 붙고 남은 출력부터 다시 보인다).
-- 출력: `pump` 가 `/api/term/read` 를 이어서 부른다 (긴 폴링). 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. `stuck` 이 바뀌면 `tab.term.stuck` 에 두고 머리줄 아래 띠(`#lec-term-stuck`)·↻ 강조, 보이지 않는 터미널이면 알림 한 번, 'terms' 이벤트 (D58). 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
+- 출력: 모든 탭의 모든 셸을 긴 폴링 하나로 — `pump(term, id)` 가 셸을 `reading` 에 넣고 `readAll` 이 `POST /api/term/read` 의 want(셸마다 받은 순번)로 이어서 부른다. 셸이 새로 붙으면 기다리던 요청을 `AbortController` 로 그만두고 그 셸을 넣어 다시 건다 (D69). 셸이 뜰 때 보낸 크기와 그사이 화면에 맞춘 크기가 다르면 `start` 가 `/api/term/resize` 를 한 번 더 보낸다. 셸이 끝나면 '[셸이 끝났습니다 … Enter 를 누르면 다시 시작합니다]'. `stuck` 이 바뀌면 `tab.term.stuck` 에 두고 머리줄 아래 띠(`#lec-term-stuck`)·↻ 강조, 보이지 않는 터미널이면 알림 한 번, 'terms' 이벤트 (D58). 키 입력: xterm 의 `onData` 를 모아 순서대로 `/api/term/input` 으로 (16K 씩, 대리 문자 쌍을 가르지 않게). 크기: `ResizeObserver` → fit 애드온 → `onResize` → `/api/term/resize`.
 - 키: `keyFor`(xterm 의 사용자 키 처리)가 `` Ctrl+` ``·Ctrl+Tab 은 앱으로 넘기고, 고른 글이 있을 때의 Ctrl+C·Ctrl+Shift+C 는 복사, Ctrl+V 는 브라우저의 붙여 넣기로(xterm 이 받아 셸로). 나머지는 셸로 간다 — `main.js` 의 keydown 도 `#lec-term` 안에서는 이 둘만 다룬다. 우클릭은 고른 글이 있으면 복사, 없으면 클립보드 붙여 넣기.
 - 색: 설정 `terminal_follow_style`(기본 켜짐)이면 지금 스타일에서 — 바탕 `--md-code-bg`, 글자 `--md-fg`, 커서·선택 `--md-link`. ANSI 16색은 `PALETTES` (이름이 같은 터미널 색표가 있는 스타일은 그것, 나머지는 `data-ui` 에 따라 밝은/어두운 기본). `minimumContrastRatio: 4.5` 로 바탕에 묻히는 글자 색을 xterm 이 고친다. 스타일 파일(`#lec-theme-css`)의 `load` 와 설정 창의 `term-colors` 이벤트 때 열린 모든 터미널에 다시 입히고, 패널 바탕(`--term-bg`)과 스크롤바(`term-light` → `color-scheme`)도 맞춘다. 끄면 늘 어두운 색(`DARK` — Windows Terminal 의 Campbell).
 - 머리줄: 셸 이름 — 탭 이름, 자리 바꾸기(`#lec-term-place` — 오른쪽 ↔ 아래), 다시 시작(지금 셸과 거기서 띄운 프로그램을 끝내고 새로), 닫기(패널만 — 셸은 돈다). 경계(`#lec-term-resizer`)를 끌어 폭(`--term-w`, 설정 `terminal_width`), 두 번 누르면 기본.

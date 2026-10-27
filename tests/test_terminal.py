@@ -30,6 +30,24 @@ def test_shell_label():
     assert shell_label(r'D:\tools\nu.exe') == 'nu'
 
 
+def test_read_many_one_wait_for_all():
+    """셸 여럿을 긴 폴링 하나로 (D69): 하나라도 새 출력이면 모두의 것을, 없는 셸은 None, 다른 셸의 출력이 기다림을 깨운다"""
+    terms = Terminals()
+    a, b = fake_session('abc', 100), fake_session('xy', 0)
+    terms._sessions = {'a': a, 'b': b}
+    got = terms.read_many({'a': 101, 'b': 2, 'gone': 0}, timeout=5)
+    assert got['a']['data'] == 'bc' and got['b']['data'] == '' and got['b']['next'] == 2 and got['gone'] is None
+    t0 = time.monotonic()
+    assert terms.read_many({'a': 103, 'b': 2}, timeout=0.2) == {'a': a.take(103), 'b': b.take(2)} and time.monotonic() - t0 >= 0.15
+    threading.Timer(0.2, lambda: b._append('z')).start()
+    t0 = time.monotonic()
+    got = terms.read_many({'a': 103, 'b': 2}, timeout=10)
+    assert got['b']['data'] == 'z' and got['b']['next'] == 3 and got['a']['data'] == '' and time.monotonic() - t0 < 5
+    with b._cond:   # 멈춘 프로그램이 바뀌어도 깨운다 (D58)
+        b.stuck, b._stuck_ver = [{'pid': 1, 'name': 'git.exe'}], 1
+    assert terms.read_many({'a': 103, 'b': 3}, timeout=0)['b']['stuck'] == [{'pid': 1, 'name': 'git.exe'}]
+
+
 def fake_session(text: str, start: int = 0) -> Session:
     """의사 콘솔 없이 출력 버퍼만 있는 셸 (read 의 순번 계산 확인용)"""
     s = Session.__new__(Session)
@@ -171,6 +189,27 @@ def test_exit_code_and_end(tmp_path):
     assert r['alive'] is False and r['exit'] == 3
     s.write('dir\r')   # 끝난 셸에 보내도 오류 없이 버린다
     s.resize(100, 40)
+
+
+@windows
+def test_terminals_one_shell_per_slot(tmp_path):
+    """한 프로젝트에 터미널 여러 개 (D69): 번호마다 셸 하나, of_project 는 번호 차례, 프로젝트를 닫으면 모두 끝난다"""
+    a = tmp_path / 'a'
+    a.mkdir()
+    terms = Terminals()
+    try:
+        s0 = terms.open('pa', str(a), None, 80, 24)
+        s2 = terms.open('pa', str(a), None, 80, 24, slot=2)
+        assert s2 is not s0 and s2.slot == 2 and terms.open('pa', str(a), None, 80, 24, slot=2) is s2
+        assert [s.slot for s in terms.of_project('pa')] == [0, 2] and terms.of_project('pb') == []
+        terms.close(s2.id)
+        assert wait_for(lambda: not s2.alive) and [s.slot for s in terms.of_project('pa')] == [0]
+        s2b = terms.open('pa', str(a), None, 80, 24, slot=2)
+        assert s2b is not s2 and s2b.alive
+        terms.close_project('pa')
+        assert wait_for(lambda: not s0.alive and not s2b.alive) and terms.of_project('pa') == []
+    finally:
+        terms.close_all()
 
 
 @windows
