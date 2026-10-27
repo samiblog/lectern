@@ -69,7 +69,7 @@ assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → le
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
 tools/                  update_vendor.py, ui_smoke.py, context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
-docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING, images/(README 화면)
+docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다
 ```
