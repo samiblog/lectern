@@ -8,7 +8,7 @@ import { postJSON } from './api.js';
 import { navigate, renamePath } from './nav.js';
 import { closeEditor, openEditor } from './editor.js';
 import { isViewable } from './icons.js';
-import { $, toast, basename, dirname, isMd, isHtml } from './util.js';
+import { $, toast, basename, dirname, isMd, isHtml, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 let asked = null;   // {tab, path} — 이름을 묻고 있는 파일
@@ -28,7 +28,7 @@ function setMsg(text, bad = false) {
 /** 선택된 탭의 파일(path — 프로젝트 기준)의 새 이름을 묻는다 */
 export function askRename(path) {
   const tab = S.tab;
-  if (!tab || !path) return;
+  if (!tab || !path || blockedReadOnly(tab)) return;
   if (dirtyIn(tab, path)) {
     toast(t('{name} 에 저장하지 않은 편집이 있습니다 — 저장하거나 편집을 닫은 뒤 이름을 바꾸세요', { name: basename(path) }), 'error', 5000);
     return;

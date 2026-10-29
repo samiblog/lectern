@@ -427,6 +427,11 @@ sequenceDiagram
 - 우클릭(메뉴 키·Shift+F10): 머리말에 이름·크기·수정 시각, 열기(어떻게 열리는지 함께), 편집기로 열기(기본 앱 형식만), 탐색기에서 보기, `@경로`·전체 경로·파일 이름 복사. 폴더는 펼치기/접기·탐색기에서 열기·경로 복사. 이름 바꾸기·지우기·옮기기는 없다 (보기 전용).
 - 사이드바 거르기는 이 목록에도 적용된다: 경로에 모든 단어가 든 파일을 평평하게(폴더를 옆에) 300개까지.
 
+### 보기만 하는 프로젝트 (D71)
+- `paths.protected_dirs()` — 설치본은 프로그램 폴더(Lectern.exe 가 있는 곳, 예제 `_internal\samples` 를 품음), 개발 중에는 `samples` 만. `paths.is_protected(path)` 는 이미 resolve 한 경로를 `normcase` 글자로 견준다.
+- 그 안을 프로젝트로 열면 `Project.readonly` → 탭 정보의 `readonly` → 화면의 `tab.readonly`. 서버: `/api/term/open` 403, `editing` 의 원문 주기·저장·새 문서·이름 바꾸기는 대상 파일이 그 안이면 403 (프로젝트가 위 폴더여도).
+- 화면: `util.blockedReadOnly(tab)` 가 편집(`openEditor`)·새 문서(`askNewDoc`)·보내기(`sendSnippets`)·이름 바꾸기(`askRename`)·새 터미널(`newTerminal`)·터미널에 붙여 넣기(`pasteToTerminal`) 앞에서 까닭을 알리고 멈춘다. 터미널 패널은 셸 대신 `#lec-term-locked`(안내와 '탐색기에서 이 폴더 보기'), 머리줄의 + ·↻ 는 꺼짐. 터미널 모음 칸은 '보기만'과 안내 (`ensureTerminal` 은 그 탭이면 오류).
+
 ### 터미널 여러 개 (terminal.js — D69)
 - 탭마다 `tab.terms`(번호 n 차례)와 고른 것 `tab.term`. 머리줄 `#lec-term-tabs` 의 `.term-tab[data-n]`(번호·셸 이름, `[data-close]` × — 하나뿐이어도)·`#lec-term-new`(+, `MAX_TERMS` 5개까지)·`#lec-term-title`(프로젝트 이름 — 40px 아래면 감춤). 탭 줄은 자리가 모자라면 고르지 않은 탭의 이름부터 줄이고(`.name` 말줄임), `@container term (max-width: 480px)` 이면 그 탭들의 × 는 마우스를 올릴 때만 (`#lec-term` 이 `container: term / inline-size` — 탭 줄이 패널 폭을 밀지 않는다). `newTerminal`(빈 번호 가운데 가장 작은 것 → `create(tab, n)` → `selectTerminal` → `start` — `POST /api/term/open` 의 `n`), `selectTerminal(tab, term)`(화면 바꿔 보이기, 'terms' 이벤트 — 모음은 그 칸에 바꿔 끼운다), `closeTerminal(term)`(× ·가운데 버튼 — 돌고 있으면 묻고 `/api/term/close`, 마지막이면 패널을 감추고 알린다. 머리줄 오른쪽 `#lec-term-close` 는 패널 감추기뿐).
 - 처음 보일 때·새 터미널·모음 칸을 채울 때 터미널이 없으면 `restoreTerms`(탭마다 한 약속 `tab.restoring` — 여러 길이 함께 불러도 한 번) 가 `GET /api/term/list` 로 돌고 있는 셸들을 되살리고(모두 붙어 앞의 출력부터 받는다) 없으면 1번을 새로. 셸이 뜨는 동안 × 로 닫힌 터미널은 `start` 가 뜬 뒤에 서버 셸을 끝낸다. 닫기 전에 묻기(`confirmCloseTerminal` — 돌고 있는 번호들)·치우기·색은 탭의 모든 터미널에.

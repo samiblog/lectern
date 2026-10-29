@@ -15,7 +15,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 
 - Click **+** in the tab bar (Ctrl+O) and choose a project folder; it opens in a new tab. If the folder is already open, Lectern switches to its tab.
 - The arrow next to **+** lists recent folders and **Open samples**.
-- **Open samples** (also on the start screen) opens a sample project with a tour of Lectern and how to write documents. It is set up like a research project done with Claude Code, so you can try the tree, code, files, charts and edit mode right away. You can edit it, but reinstalling Lectern restores it.
+- **Open samples** (also on the start screen) opens a sample project with a tour of Lectern and how to write documents. It is set up like a research project done with Claude Code, so you can try the tree, code, files and charts right away. The samples live inside Lectern's program folder, so they are **view-only** — their tab has no terminal, edit mode, new documents or renaming (so that no commands run and no files change next to the program files). To try editing or Claude Code with them, copy the samples folder elsewhere (for example to Documents) and open the copy — 'Show this folder in Explorer' in the terminal area finds the folder.
 - You can also right-click a folder in Explorer and choose **Open with Lectern**. If Lectern is already running, the folder opens as a tab in that window instead of a new window.
 - When you start Lectern again, the tabs you had open come back, each at the document and position you were reading.
 

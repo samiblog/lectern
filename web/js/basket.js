@@ -20,7 +20,7 @@ import { rangeText } from './docmenu.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
 import { newDocGuess, cleanPath, createDoc, openCreated } from './newdoc.js';
-import { $, esc, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus } from './util.js';
+import { $, esc, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 let seq = 0;
@@ -169,7 +169,7 @@ const input = () => $('#lec-insert-input');
 
 /** 조각들을 보낼 곳을 고르는 창을 연다 */
 export function sendSnippets(snips) {
-  if (!snips.length || !S.tab) return;
+  if (!snips.length || !S.tab || blockedReadOnly(S.tab)) return;   // 받는 곳이 모두 이 프로젝트 안 (D71)
   Object.assign(pick, { snips, step: 'target', doc: null });
   box().hidden = false;
   showStep();
@@ -181,6 +181,7 @@ export function askNewDoc(dir = null) {
     toast(t('먼저 폴더를 여세요'));
     return;
   }
+  if (blockedReadOnly(S.tab)) return;
   Object.assign(pick, { snips: [], step: 'new', doc: null });
   box().hidden = false;
   showStep(newDocGuess(dir));

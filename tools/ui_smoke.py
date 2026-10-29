@@ -1898,6 +1898,29 @@ def run(headed: bool) -> None:
             page.click('#lec-btn-recent')
             page.locator('#lec-menu button', has_text='예제 열기').click()
             readme = n_tabs(2) and h1_has('Lectern 예제')   # 처음 열면 폴더 개요 대신 README
+            # 예제는 Lectern 프로그램 폴더 안이라 보기만 (D71) — 터미널 대신 안내, 편집·새 문서·이름 바꾸기는 열지 않고 까닭을 알림, 서버도 막음
+            ro = page.evaluate("import('/static/js/store.js').then(m => [m.S.tab.readonly, m.S.tabs.map(x => x.readonly)])")
+            page.keyboard.press('Control+Backquote')
+            locked = wait_until(page, "!document.querySelector('#lec-term').hidden && !document.querySelector('#lec-term-locked').hidden"
+                                      " && !document.querySelector('#lec-term-body .term-box:not([hidden])') && document.querySelector('#lec-term-new').disabled", 5000)
+            shot('30-samples-readonly')
+            page.keyboard.press('Control+Backquote')
+            page.locator('#lec-content').focus()
+            page.keyboard.press('Control+e')
+            no_edit = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000) and not page.locator('.lec-editor').count()
+            page.keyboard.press('Control+n')
+            no_new = page.evaluate("document.querySelector('#lec-insert').hidden")
+            page.evaluate("import('/static/js/store.js').then(m => m.emit('rename', { path: 'README.md' }))")
+            no_rename = page.evaluate("document.querySelector('#lec-rename').hidden")
+            st_edit = page.evaluate("document.querySelector('#lec-st-edit').hidden")
+            refused = page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
+              const secret = document.querySelector('meta[name="lec-term"]').content;
+              const open = await fetch('/api/term/open', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Term': secret }, body: JSON.stringify({ p: S.tab.id }) });
+              const list = await (await fetch('/api/term/list?p=' + encodeURIComponent(S.tab.id), { headers: { 'X-Term': secret } })).json();
+              const src = await fetch('/api/source?p=' + encodeURIComponent(S.tab.id) + '&path=README.md');
+              return [open.status, list.terms.length, src.status]; }''')
+            check(ro == [True, [False, True]] and locked and no_edit and no_new and no_rename and st_edit and refused == [403, 0, 403],
+                  f"예제(프로그램 폴더 안)는 보기만 — 터미널 자리에 안내, 편집·새 문서·이름 바꾸기는 열지 않음, 서버도 403 ({ro}, {locked}, {no_edit}, {no_new}, {no_rename}, {refused})")
             page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click()
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")

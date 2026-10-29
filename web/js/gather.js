@@ -65,12 +65,17 @@ function renderNums(tab, tile) {
     + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">${term.n + 1}</button>`).join('');
 }
 
-/** 칸의 몸통: 셸이 있으면 고른 터미널의 화면, 없으면 '터미널 시작' */
+/** 칸의 몸통: 셸이 있으면 고른 터미널의 화면, 없으면 '터미널 시작' (보기만 하는 프로젝트는 안내만 — D71) */
 function fillBody(tab, tile) {
   const body = tile.querySelector('.g-body');
   const term = tab.term;
   renderNums(tab, tile);
-  if (term) {
+  if (tab.readonly) {
+    if (!body.querySelector('.g-empty')) {
+      body.innerHTML = `<div class="g-empty"><p>${esc(t('보기만 하는 프로젝트입니다 — Lectern 프로그램 폴더 안이라 터미널을 열지 않습니다'))}</p>
+        <small>${esc(tab.root)}</small></div>`;
+    }
+  } else if (term) {
     body.querySelector('.g-empty')?.remove();
     for (const other of termsOf(tab)) if (other !== term && other.box.parentElement === body) other.box.hidden = true;
     if (term.box.parentElement !== body) body.append(term.box);
@@ -84,7 +89,7 @@ function fillBody(tab, tile) {
 function setState(tile, tab, busy) {
   const el = tile.querySelector('.g-state');
   const term = tab.term;
-  const [text, cls] = !term ? [t('시작 전'), 'none'] : !term.alive ? [t('끝남'), 'ended'] : term.stuck?.length ? [t('멈춤 — 다시 시작하세요'), 'stuck']
+  const [text, cls] = tab.readonly ? [t('보기만'), 'none'] : !term ? [t('시작 전'), 'none'] : !term.alive ? [t('끝남'), 'ended'] : term.stuck?.length ? [t('멈춤 — 다시 시작하세요'), 'stuck']
     : busy ? [t('실행 중'), 'busy'] : [t('대기'), 'idle'];
   el.textContent = text;
   el.className = `g-state ${cls}`;
@@ -143,7 +148,7 @@ async function poll() {
 
 async function startTile(tab) {
   const tile = tileOf(tab);
-  if (!tile) return;
+  if (!tile || tab.readonly) return;
   const body = tile.querySelector('.g-body');
   body.querySelector('.g-empty')?.remove();
   try {

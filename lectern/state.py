@@ -16,7 +16,7 @@ from . import __version__, i18n
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
-from .paths import samples_dir, web_dir
+from .paths import is_protected, samples_dir, web_dir
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
@@ -39,6 +39,8 @@ class Project:
         self._scans: dict[tuple, tuple[int, list]] = {}
         self._others_at = 0        # 마지막 문서 외 파일 스캔을 시작할 때의 변경 순번 (그 뒤로 내용이 바뀐 파일은 recent_others 가 다시 본다)
         self.texts = TextCache()   # 전체 검색이 읽은 글 (수정 시각·크기가 그대로면 다시 쓴다)
+        # 보기만 하는 프로젝트 (D71 — Lectern 프로그램 폴더 안: 예제 등). 터미널을 열지 않고 파일을 고치지 않는다
+        self.readonly = is_protected(root)
 
     @property
     def name(self) -> str:
@@ -123,6 +125,7 @@ class Project:
             'name': self.name,
             'seq': self.log.seq,
             'watch': self.watch_backend,
+            'readonly': self.readonly,
             'position': self.config.position(str(self.root)),   # 마지막 문서와 스크롤 위치
         }
 

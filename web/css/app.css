@@ -365,6 +365,14 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .g-empty small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .g-none { grid-column: 1 / -1; align-self: center; justify-self: center; color: var(--ui-muted); }
 .term-box { position: absolute; inset: 6px 2px 4px 8px; }
+/* 보기만 하는 프로젝트(D71 — Lectern 프로그램 폴더 안)의 터미널 자리: 셸 대신 안내 */
+.term-locked {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px;
+  background: var(--ui-bg); color: var(--ui-muted); text-align: center; line-height: 1.6;
+}
+.term-locked p { margin: 0; max-width: 34em; }
+.term-locked strong { color: var(--ui-fg); }
+.g-empty p { margin: 0; max-width: 30em; }
 #lec-term-resizer { flex: none; width: 7px; margin: 0 -3px 0 -4px; position: relative; z-index: 5; cursor: col-resize; }
 #lec-term-resizer:hover, .resizing-term #lec-term-resizer { background: color-mix(in srgb, var(--ui-accent) 35%, transparent); }
 

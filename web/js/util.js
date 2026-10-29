@@ -104,6 +104,16 @@ export async function copyText(text) {
 }
 
 let toastTimer = 0;
+/**
+ * 보기만 하는 프로젝트(D71 — Lectern 프로그램 폴더 안: 설치된 예제 등)면 알리고 true. 터미널·편집·새 문서·이름 바꾸기·보내기 앞에서 부른다
+ * (서버도 막는다 — 여기는 까닭을 먼저 알리려는 것)
+ */
+export function blockedReadOnly(tab) {
+  if (!tab?.readonly) return false;
+  toast(t('이 프로젝트는 Lectern 프로그램 폴더 안에 있어 보기만 합니다 — 고치거나 터미널을 쓰려면 폴더를 다른 곳에 복사해 여세요'), 'error', 6000);
+  return true;
+}
+
 export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
   const el = $('#lec-toast');
   el.textContent = message;

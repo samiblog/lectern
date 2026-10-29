@@ -46,6 +46,7 @@ const samePath = (a, b) => a.replace(/\\/g, '/').toLowerCase() === b.replace(/\\
 function makeTab(p) {
   const tab = {
     id: p.id, root: p.root, name: p.name, watch: p.watch, seq: p.seq,
+    readonly: !!p.readonly,   // 보기만 (D71 — Lectern 프로그램 폴더 안: 예제 등) — 터미널·편집·새 문서·이름 바꾸기 없음
     position: p.position,   // 열 때 서버가 알려 준 마지막 문서와 스크롤 위치 (처음 고를 때 쓴다)
     tree: [], files: [], fileMap: new Map(), dirs: new Set(), changed: new Set(), open: new Set(), lastSync: null,
     treeLoaded: false,      // 트리를 받았는지 (project.js)
@@ -302,7 +303,7 @@ function renderTabs() {
     const parent = count.get(tb.name.toLowerCase()) > 1 ? parentName(tb.root) : '';   // 같은 이름의 폴더는 상위 폴더 이름으로 구분
     const key = i < 8 ? `Ctrl+${i + 1}` : i === S.tabs.length - 1 ? 'Ctrl+9' : '';
     return `<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${esc(tb.id)}"
-      title="${esc(tb.root)}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(tb.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
+      title="${esc(tb.root)}${tb.readonly ? `\n${esc(t('보기만 — Lectern 프로그램 폴더 안이라 터미널·편집이 없습니다'))}` : ''}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(tb.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
       + `${!active && tb.changed.size ? `<span class="dot" title="${t('열어 보기 전에 바뀐 문서가 있습니다')}"></span>` : ''}`
       + `<button type="button" class="tab-close" title="${t('탭 닫기 (Ctrl+W)')}" aria-label="${esc(t('{name} 탭 닫기', { name: tb.name }))}"><svg><use href="#i-close"/></svg></button></div>`;
   }).join('');

@@ -17,13 +17,15 @@
 //   (returnTerminals). 모으는 동안(gathered) 이 패널은 화면을 옮기거나 감추지 않는다. 셸이 생기거나 끝나면 'terms' 이벤트.
 // - 셸에서 띄운 프로그램이 시작하다 멈추면(보안 프로그램이 프로세스 생성을 막음 — D58) 머리줄 아래 띠로 알리고 다시 시작을 권한다
 //   (term.stuck — 아래 '시작하다 멈춘 프로그램'). 멈춤이 바뀌어도 'terms' 이벤트.
+// - 보기만 하는 프로젝트(tab.readonly — D71: Lectern 프로그램 폴더 안, 설치된 예제 등)는 셸을 띄우지 않고 패널에 안내만 보인다
+//   (#lec-term-locked). 서버의 /api/term/open 도 403.
 // - 터미널 안에서는 앱 단축키를 쓰지 않는다 (main.js — Ctrl+` 만 예외). Ctrl+C 는 고른 글이 있으면 복사, 없으면 셸로(중단).
 //   Ctrl+V 는 붙여 넣기. 우클릭은 Windows 콘솔처럼 고른 글이 있으면 복사, 없으면 붙여 넣기.
 
 import { S, on, emit } from './store.js';
-import { getJSON, postJSON, saveConfig } from './api.js';
+import { getJSON, postJSON, saveConfig, revealInExplorer } from './api.js';
 import { updateTocVisibility } from './toc.js';
-import { $, esc, toast, copyText } from './util.js';
+import { $, esc, toast, copyText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
@@ -402,9 +404,11 @@ function renderHead() {
     else if (b.right > a.right) box.scrollLeft += b.right - a.right;
   }
   const add = $('#lec-term-new');
-  add.disabled = !tab || terms.length >= MAX_TERMS;
-  add.title = terms.length >= MAX_TERMS ? t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS })
-    : t('새 터미널 — 이 프로젝트 폴더에서 (프로젝트마다 {n}개까지)', { n: MAX_TERMS });
+  add.disabled = !tab || tab.readonly || terms.length >= MAX_TERMS;
+  add.title = tab?.readonly ? t('이 프로젝트에서는 터미널을 열지 않습니다 — Lectern 프로그램 폴더 안')
+    : terms.length >= MAX_TERMS ? t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS })
+      : t('새 터미널 — 이 프로젝트 폴더에서 (프로젝트마다 {n}개까지)', { n: MAX_TERMS });
+  $('#lec-term-restart').disabled = !!tab?.readonly;
   const title = $('#lec-term-title');
   title.textContent = tab ? tab.name : t('터미널 — 열린 프로젝트가 없습니다');
   title.title = tab ? tab.root : '';
@@ -444,7 +448,8 @@ async function showCurrent({ focus = false } = {}) {
   renderHead();
   if (gathered()) return;
   for (const tab of S.tabs) for (const term of termsOf(tab)) term.box.hidden = !(tab === S.tab && term === tab.term);
-  if (!open || !S.tab) return;
+  $('#lec-term-locked').hidden = !S.tab?.readonly;
+  if (!open || !S.tab || S.tab.readonly) return;   // 보기만 하는 프로젝트 (D71) — 셸 대신 안내
   try {
     await loadLib();
   } catch (e) {
@@ -479,7 +484,7 @@ export function selectTerminal(tab, term) {
 
 /** 새 터미널 (머리줄의 +): 빈 번호 가운데 가장 작은 것으로 만들어 고르고 셸을 띄운다. 만든 터미널 (못 만들면 null) */
 export async function newTerminal(tab = S.tab) {
-  if (!tab) return null;
+  if (!tab || blockedReadOnly(tab)) return null;
   if (termsOf(tab).length >= MAX_TERMS) {
     toast(t('터미널은 프로젝트마다 {n}개까지입니다', { n: MAX_TERMS }), 'error');
     return null;
@@ -600,7 +605,7 @@ async function pasteInto(term, text) {
 export async function pasteToTerminal(text) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
-  if (!tab || !text) return;
+  if (!tab || !text || blockedReadOnly(tab)) return;
   if (!gathered()) {
     if (!open) toggleTerminal(true);
     await showCurrent();
@@ -622,6 +627,7 @@ export const liveTerminals = () => S.tabs.reduce((n, tab) => n + termsOf(tab).fi
 
 /** 탭의 고른 터미널을 parent(모음 칸)에 보이고, 셸이 없으면 띄운다 (터미널이 하나도 없으면 되살리거나 1번을 만든다) */
 export async function ensureTerminal(tab, parent) {
+  if (tab.readonly) throw new Error(t('이 프로젝트에서는 터미널을 열지 않습니다 — Lectern 프로그램 폴더 안'));   // D71
   await loadLib();
   if (!termsOf(tab).length) await restoreTerms(tab, parent);
   const term = tab.term;
@@ -737,6 +743,16 @@ export function initTerminal() {
   on('term-place', applyPlace);                      // 설정 창
   bindResizer();
   // 머리줄 오른쪽의 프로젝트 이름: 터미널 탭이 많아 자리가 거의 없으면 글자 조각 대신 감춘다 (자리는 그대로 — 크기가 돌지 않게)
+  // 보기만 하는 프로젝트(D71)를 고르면 셸 자리에 이 안내 (showCurrent)
+  const locked = document.createElement('div');
+  locked.id = 'lec-term-locked';
+  locked.className = 'term-locked';
+  locked.hidden = true;
+  locked.innerHTML = `<p><strong>${esc(t('이 프로젝트에서는 터미널을 열지 않습니다'))}</strong></p>`
+    + `<p>${esc(t('Lectern 프로그램 폴더 안에 있는 프로젝트(설치된 예제 등)는 보기만 합니다 — 터미널·편집·새 문서·이름 바꾸기가 없습니다. 예제로 Claude Code 를 써 보려면 이 폴더를 다른 곳(문서 폴더 등)에 복사해 그 복사본을 여세요.'))}</p>`
+    + `<button type="button" class="text-btn">${esc(t('탐색기에서 이 폴더 보기'))}</button>`;
+  locked.querySelector('button').addEventListener('click', () => revealInExplorer('', S.tab));
+  $('#lec-term-body').append(locked);
   const title = $('#lec-term-title');
   new ResizeObserver(() => { title.style.visibility = title.clientWidth < 40 ? 'hidden' : ''; }).observe(title);
   applyWidth();

@@ -22,6 +22,7 @@ import time
 from pathlib import Path
 from typing import Any
 
+from . import paths
 from .i18n import t
 from .scanner import doc_kind, is_code, resolve_inside
 
@@ -44,7 +45,14 @@ def can_edit(name: str) -> bool:
     return bool(doc_kind(name)) or is_code(name)
 
 
+def _protect(path: Path) -> None:
+    """Lectern 프로그램 폴더 안(예제 등)의 파일은 고치지 않는다 (D71 — 다시 설치하면 덮이고, 앱 파일이 바로 옆에 있다)"""
+    if paths.is_protected(path):
+        raise EditError(403, t('Lectern 프로그램 폴더 안의 파일은 고치지 않습니다 — 고쳐 보려면 그 폴더를 다른 곳에 복사해 여세요'))
+
+
 def _check(path: Path) -> os.stat_result:
+    _protect(path)
     if not path.exists():
         raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
     if not path.is_file() or not can_edit(path.name):
@@ -183,11 +191,13 @@ def new_doc_path(root: Path, rel: str, exclude: frozenset[str]) -> Path:
     # 정션·링크를 거쳐 다른 곳으로 가는 폴더도 막는다 (트리에 없는 폴더)
     if folder is None or not folder.is_dir() or os.path.normcase(folder) != os.path.normcase(os.path.join(root, *folders)):
         raise EditError(404, t('폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다'))
+    _protect(folder)
     return folder / name
 
 
 def create_source(path: Path, text: str) -> dict[str, Any]:
     """새 문서(path — new_doc_path 가 정한 자리)를 만들어 text 를 쓴다 (LF, BOM 없음). 같은 이름이 있으면 409 — 덮어쓰지 않는다. {hash, size}"""
+    _protect(path)
     body = text.replace('\r\n', '\n').replace('\r', '\n')
     data = body.encode('utf-8', errors='replace')
     if len(data) > MAX_EDIT_BYTES:
@@ -218,6 +228,7 @@ def rename_file(root: Path, rel: str, name: str, exclude: frozenset[str]) -> Pat
     # 링크·정션을 거쳐 다른 곳을 가리키는 경로도 막는다 (트리에 없는 파일)
     if source is None or not source.is_file() or os.path.normcase(source) != os.path.normcase(os.path.join(root, *parts)):
         raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
+    _protect(source)
     name = name.strip()
     stem = os.path.splitext(name)[0]
     if (not name or not stem.strip() or name.startswith('.') or name[-1] in ' .' or any(c in BAD_NAME_CHARS for c in name)

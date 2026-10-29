@@ -23,7 +23,7 @@ import { docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
-import { $, esc, toast, formatClock, isHtml } from './util.js';
+import { $, esc, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 const LIB = '/static/vendor/codemirror';
@@ -202,7 +202,7 @@ function setDirty(ed, dirty) {
 function updateButton() {
   const editing = !!S.pane?.editor;
   const can = S.view?.type === 'doc' || S.view?.type === 'code';
-  $('#lec-st-edit').hidden = !can || editing;
+  $('#lec-st-edit').hidden = !can || editing || !!S.tab?.readonly;   // 보기만 하는 프로젝트 (D71) — 탭 막대의 [편집]은 눌러서 까닭을 알린다
   const btn = $('#lec-btn-edit');
   btn.setAttribute('aria-pressed', String(editing));
   btn.disabled = !can && !editing;
@@ -215,6 +215,7 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
     toast(t('문서나 코드를 열면 편집할 수 있습니다'));
     return;
   }
+  if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
   if (pane.editor) {
     if (line) goTo(pane.editor, Math.floor(toEditor(pane.editor.log, line - 1)) + 1, { flash: true });   // 그사이 늘거나 준 줄만큼 옮겨서
     pane.editor.cm.focus();

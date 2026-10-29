@@ -67,6 +67,10 @@ EN: dict[str, str] = {
     '끝난 터미널입니다': 'This terminal has ended.',
     '셸을 시작하지 못했습니다 ({error}). 설정 파일의 terminal_shell 을 확인하세요':
         'Could not start the shell ({error}). Check terminal_shell in the settings file.',
+    'Lectern 프로그램 폴더 안에서는 터미널을 열지 않습니다 — 그 폴더를 다른 곳에 복사해 여세요':
+        'Lectern does not open a terminal inside its program folder — copy that folder elsewhere and open the copy.',
+    'Lectern 프로그램 폴더 안의 파일은 고치지 않습니다 — 고쳐 보려면 그 폴더를 다른 곳에 복사해 여세요':
+        'Lectern does not change files inside its program folder — to try editing, copy that folder elsewhere and open the copy.',
     '한 번에 보낼 수 있는 글은 65536자까지입니다': 'Up to 65536 characters can be sent at once.',
     '제외 폴더 안이 아닙니다': 'This is not inside an excluded folder.',
     '문서와 코드 파일만 편집할 수 있습니다': 'Only document and code files can be edited.',

@@ -346,6 +346,8 @@ def create_app(state: AppState) -> Flask:
         slot = data.get('n', 0)
         if not isinstance(slot, int) or isinstance(slot, bool) or not 0 <= slot < terminal.MAX_SLOTS:
             abort(400)
+        if project.readonly:   # Lectern 프로그램 폴더 안 (예제 등 — D71)
+            return jsonify(error=t('Lectern 프로그램 폴더 안에서는 터미널을 열지 않습니다 — 그 폴더를 다른 곳에 복사해 여세요')), 403
         try:
             session = state.terminals.open(project.id, str(project.root), state.config.get('terminal_shell'), cols, rows, slot)
         except OSError as exc:

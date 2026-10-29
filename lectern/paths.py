@@ -28,6 +28,29 @@ def samples_dir() -> Path:
     return resource_dir() / 'samples'
 
 
+def program_dir() -> Path | None:
+    """설치된 Lectern 의 프로그램 폴더 (PyInstaller 로 묶었을 때 Lectern.exe 가 있는 곳). 개발 중이면 None"""
+    return Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else None
+
+
+def protected_dirs() -> list[Path]:
+    """보기만 하는 폴더 (D71): 설치본은 프로그램 폴더 전체(예제 _internal\\samples 를 품는다), 개발 중에는 예제 samples 만.
+    그 안을 프로젝트로 열면 터미널을 열지 않고, 그 안의 파일은 편집·새 문서·이름 바꾸기로 고치지 않는다"""
+    base = program_dir()
+    return [base] if base else [samples_dir().resolve()]
+
+
+def is_protected(path: Path) -> bool:
+    """path(이미 resolve 한 절대경로 — 프로젝트 폴더나 resolve_inside 가 준 경로)가 보기만 하는 폴더이거나 그 안인지.
+    글자로만 견준다 (여기서 resolve 하지 않는다 — D29)"""
+    target = os.path.normcase(str(path))
+    for base in protected_dirs():
+        top = os.path.normcase(str(base)).rstrip('\\/')
+        if target == top or target.startswith(top + os.sep):
+            return True
+    return False
+
+
 def config_dir() -> Path:
     """설정 폴더. 테스트에서는 LECTERN_CONFIG_DIR 로 바꿀 수 있다."""
     override = os.environ.get('LECTERN_CONFIG_DIR')

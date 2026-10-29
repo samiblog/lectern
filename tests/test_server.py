@@ -10,7 +10,7 @@ import pytest
 from conftest import write
 
 import app as lectern_app
-from lectern import osutil, state as state_module, styles, terminal
+from lectern import osutil, paths, state as state_module, styles, terminal
 from lectern.config import MAX_DOC_TABS, Config
 from lectern.scanner import is_code, iter_files
 from lectern.server import create_app
@@ -685,6 +685,43 @@ def test_rename_endpoint(client, project, pid):
     assert client.post('/api/rename', json={'p': pid, 'path': 'docs/none.md', 'name': 'y.md'}).status_code == 404
     assert client.post('/api/rename', json={'p': pid, 'path': 'docs/11-가.md', 'name': 5}).status_code == 400
     assert client.post('/api/rename', data='x', content_type='text/plain').status_code == 415
+
+
+def test_program_folder_is_view_only(tmp_path, monkeypatch):
+    """Lectern 프로그램 폴더 안(설치된 예제 등 — D71)은 보기만: 그 안을 프로젝트로 열면 터미널을 열지 않고,
+    그 안의 파일은 편집·새 문서·이름 바꾸기로 고치지 않는다 (위 폴더를 프로젝트로 열어도)"""
+    prog = tmp_path / 'prog'
+    sample = prog / 'samples'
+    write(sample / 'README.md', '# 예제\n')
+    write(sample / 'guide' / 'a.md', '# 가\n')
+    monkeypatch.setattr(paths, 'protected_dirs', lambda: [prog.resolve()])
+    st = AppState(Config(), mode='browser')
+    try:
+        pid = st.open(sample.resolve()).id
+        c = create_app(st).test_client()
+        assert st.get(pid).info()['readonly'] is True
+        term = c.post('/api/term/open', json={'p': pid}, headers={'X-Term': st.term_secret})
+        assert term.status_code == 403 and '터미널' in term.get_json()['error'] and not st.terminals.of_project(pid)
+        src = c.get(f'/api/source?p={pid}&path=README.md')
+        assert src.status_code == 403 and '프로그램 폴더' in src.get_json()['error']
+        assert c.post('/api/save', json={'p': pid, 'path': 'README.md', 'text': 'x', 'hash': 'h', 'force': True}).status_code == 403
+        assert c.get(f'/api/new-doc?p={pid}&path=guide/b.md').get_json()['status'] == 403
+        assert c.post('/api/save', json={'p': pid, 'path': 'guide/b.md', 'text': '# b\n', 'create': True}).status_code == 403
+        assert c.post('/api/rename', json={'p': pid, 'path': 'guide/a.md', 'name': 'c.md'}).status_code == 403
+        assert (sample / 'README.md').read_text(encoding='utf-8') == '# 예제\n'
+        assert sorted(x.name for x in (sample / 'guide').iterdir()) == ['a.md']
+        # 위 폴더를 프로젝트로 열면 그 프로젝트는 보통이지만, 프로그램 폴더 안의 파일은 여전히 고치지 않는다
+        up = st.open(tmp_path.resolve()).id
+        assert st.get(up).info()['readonly'] is False
+        assert c.post('/api/save', json={'p': up, 'path': 'prog/samples/README.md', 'text': 'x', 'hash': 'h', 'force': True}).status_code == 403
+        assert c.post('/api/rename', json={'p': up, 'path': 'prog/samples/guide/a.md', 'name': 'c.md'}).status_code == 403
+        assert c.get(f'/api/new-doc?p={up}&path=prog/samples/b.md').get_json()['status'] == 403
+        assert c.get(f'/api/new-doc?p={up}&path=b.md').get_json() == {'path': 'b.md'}   # 프로그램 폴더 밖은 그대로
+    finally:
+        st.close()
+    # 프로그램 폴더 이름으로 시작하는 옆 폴더('prog2')는 안이 아니다
+    assert paths.is_protected(prog.resolve()) and paths.is_protected((sample / 'README.md').resolve())
+    assert not paths.is_protected((tmp_path / 'prog2').resolve()) and not paths.is_protected(tmp_path.resolve())
 
 
 def test_editing_reports_unsaved_files(client, state):
