@@ -4,11 +4,11 @@
 // 실행마다 새 비밀값(meta lec-term → X-Term 헤더)을 함께 보낸다.
 //
 // - 한 프로젝트에 터미널을 MAX_TERMS 개까지 (D69 — 하나는 Claude Code, 다른 것은 다른 일에). 머리줄의 터미널 탭
-//   [1 PowerShell][2 PowerShell][+] 로 고르고 더하고 × 로 그 셸만 끝낸다. 탭마다 tab.terms(번호 차례)와 고른 것 tab.term.
+//   [1 PowerShell][2 PowerShell][+] 로 고르고 더하고 × 로 그 셸을 끝낸다 (하나뿐이어도). 탭마다 tab.terms(번호 차례)와 고른 것 tab.term.
 //   서버는 번호(n — 0 부터)마다 셸 하나 (POST /api/term/open 의 n). 화면을 다시 불러오면 돌고 있는 셸들을 되살린다 (GET /api/term/list).
 // - 사용자가 버튼·Ctrl+` 로 열 때만 시작한다 (앱을 켤 때마다 닫힌 채). 셸로 명령을 보내는 길은 사용자의 키 입력뿐이다 —
 //   예외는 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'(D51)이고, 이것도 Ctrl+V 와 같은 길로 Enter 없이 넣는다 (pasteToTerminal).
-// - 패널을 닫아도 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
+// - 패널을 감춰도(머리줄 오른쪽 ×·Ctrl+`) 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
 // - 자리는 오른쪽 또는 문서 아래 (D52 — 설정 terminal_position: auto 면 창이 세로로 길 때 아래). 오른쪽이면 목차 자리를 쓰므로
 //   목차를 감춘다 (목차 버튼으로 함께 볼 수 있다 — toc.js). 아래면 #lec-main 이 격자가 되어 문서·목차 아래에 전체 폭으로 놓인다.
@@ -380,7 +380,7 @@ function setStuck(term, stuck) {
 /** 터미널 탭의 이름: 셸 이름 */
 export const termLabel = (term) => term.shell || 'PowerShell';
 
-/** 머리줄: 터미널 탭들([1 PowerShell][2 PowerShell] — 여럿이면 ×), [+], 프로젝트 이름, 멈춤 띠 */
+/** 머리줄: 터미널 탭들([1 PowerShell ×][2 PowerShell ×] — × 는 하나뿐이어도), [+], 프로젝트 이름, 멈춤 띠 */
 function renderHead() {
   const tab = S.tab;
   const terms = termsOf(tab);
@@ -388,8 +388,7 @@ function renderHead() {
   box.innerHTML = terms.map((term) => {
     const on = term === tab.term;
     const state = !term.alive ? ' ended' : term.stuck?.length ? ' stuck' : '';
-    const close = terms.length > 1
-      ? `<span class="term-tab-close" role="button" data-close="${term.n}" title="${esc(t('이 터미널 닫기 — 셸과 거기서 띄운 프로그램을 끝냄'))}"><svg aria-hidden="true"><use href="#i-close"/></svg></span>` : '';
+    const close = `<span class="term-tab-close" role="button" data-close="${term.n}" title="${esc(t('이 터미널 끝내기 — 셸과 거기서 띄운 프로그램을 끝냄'))}"><svg aria-hidden="true"><use href="#i-close"/></svg></span>`;
     return `<button type="button" role="tab" class="term-tab${on ? ' on' : ''}${state}" data-n="${term.n}" aria-selected="${on}"`
       + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">`
       + `<span class="n">${term.n + 1}</span><span class="name">${esc(termLabel(term))}</span>${close}</button>`;
@@ -507,11 +506,12 @@ export async function newTerminal(tab = S.tab) {
   return term;
 }
 
-/** 터미널 하나를 닫는다 (머리줄의 ×): 셸에서 프로그램이 돌고 있으면 묻고, 셸과 그 프로그램을 끝낸다 */
+/** 터미널 하나를 끝낸다 (터미널 탭의 ×·가운데 버튼 — 하나뿐이어도): 셸에서 프로그램이 돌고 있으면 묻고, 셸과 그 프로그램을 끝낸다 */
 export async function closeTerminal(term) {
   const tab = term?.tab;
   if (!tab || !termsOf(tab).includes(term)) return false;
-  if (await terminalBusy(term) && !window.confirm(t('{n}번 터미널에서 프로그램이 실행 중입니다. 닫으면 함께 끝납니다. 닫을까요?', { n: term.n + 1 }))) return false;
+  if (await terminalBusy(term) && !window.confirm(t('{n}번 터미널에서 프로그램이 실행 중입니다. 터미널을 끝내면 그 프로그램도 끝납니다. 끝낼까요?', { n: term.n + 1 }))) return false;
+  if (!termsOf(tab).includes(term)) return false;   // 묻는 사이 다른 길로 끝냈다 (× 를 두 번 누름 등)
   const i = termsOf(tab).indexOf(term);
   // 셸을 끝낸다 (뜨는 중이면 start 가 뜬 뒤에). 같은 번호로 곧 + 하면 start 가 이것을 기다린다
   const done = term.starting || (term.alive ? postJSON('/api/term/close', { t: term.id }, TERM_HEADER).catch(() => {}) : null);
@@ -528,9 +528,11 @@ export async function closeTerminal(term) {
   if (tab.term === term) tab.term = tab.terms[Math.min(i, tab.terms.length - 1)] || null;
   if (tab.term) selectTerminal(tab, tab.term);
   else {
-    if (tab === S.tab && open) toggleTerminal(false);   // 마지막 터미널 — 다음에 열면 1번을 새로
+    // 마지막 터미널 — 패널을 감춘다. 머리줄 오른쪽 ×(감추기)와 같아 보이니 셸이 끝났다고 알린다. 다음에 열면 1번을 새로
+    if (tab === S.tab && open) toggleTerminal(false);
     renderHead();
     emit('terms');
+    toast(t('{n}번 터미널을 끝냈습니다 — 다시 열면 새 셸로 시작합니다', { n: term.n + 1 }));
   }
   return true;
 }
@@ -712,7 +714,7 @@ export function initTerminal() {
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   $('#lec-term-stuck-restart').addEventListener('click', () => restartTerminal());
   $('#lec-term-new').addEventListener('click', () => newTerminal());
-  // 터미널 탭: 누르면 고르기, × 는 그 터미널 닫기, 가운데 버튼도 닫기
+  // 터미널 탭: 누르면 고르기, × 는 그 터미널 끝내기 (하나뿐이어도), 가운데 버튼도
   const tabs = $('#lec-term-tabs');
   const termAt = (el) => termsOf(S.tab).find((term) => String(term.n) === el?.closest('.term-tab')?.dataset.n) || null;
   tabs.addEventListener('click', (e) => {
@@ -723,7 +725,7 @@ export function initTerminal() {
   });
   tabs.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
   tabs.addEventListener('auxclick', (e) => {
-    const term = e.button === 1 && termsOf(S.tab).length > 1 && termAt(e.target);
+    const term = e.button === 1 && termAt(e.target);
     if (term) closeTerminal(term);
   });
   // 머리줄 버튼: 오른쪽 ↔ 아래 (설정이 자동이었으면 이제 그 자리로 고정 — 설정 창에서 자동으로 되돌린다)

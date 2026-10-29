@@ -252,13 +252,13 @@
     <section id="lec-term" aria-label="터미널" hidden>
       <div class="term-head">
         <svg class="term-icon" aria-hidden="true"><use href="#i-term"/></svg>
-        <!-- 한 프로젝트의 터미널들 (terminal.js, D69): [1 PowerShell][2 PowerShell] — 여럿이면 × 로 그 셸만 끝낸다, + 로 더한다 -->
+        <!-- 한 프로젝트의 터미널들 (terminal.js, D69): [1 PowerShell ×][2 PowerShell ×] — × 로 그 셸을 끝낸다 (하나뿐이어도), + 로 더한다 -->
         <div id="lec-term-tabs" role="tablist" aria-label="터미널"></div>
         <button type="button" id="lec-term-new" class="icon-btn small" title="새 터미널 — 이 프로젝트 폴더에서" aria-label="새 터미널"><svg><use href="#i-plus"/></svg></button>
         <span id="lec-term-title">터미널</span>
         <button type="button" id="lec-term-place" class="icon-btn small" title="터미널을 아래로"><svg><use href="#i-term-bottom"/></svg></button>
         <button type="button" id="lec-term-restart" class="icon-btn small" title="셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)"><svg><use href="#i-restart"/></svg></button>
-        <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 닫기 (Ctrl+`) — 셸은 닫지 않음"><svg><use href="#i-close"/></svg></button>
+        <button type="button" id="lec-term-close" class="icon-btn small" title="터미널 감추기 (Ctrl+`) — 셸은 그대로 돎. 끝내려면 터미널 탭의 ×"><svg><use href="#i-close"/></svg></button>
       </div>
       <!-- 셸에서 띄운 프로그램이 시작하다 멈춤 (D58 — terminal.js 의 showStuck) -->
       <div id="lec-term-stuck" class="term-stuck" role="alert" hidden>

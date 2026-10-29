@@ -2638,9 +2638,9 @@ def run(headed: bool) -> None:
                   f'터미널에서 프로그램이 돌면 탭을 닫기 전에 묻고, 닫으면 그 셸도 끝 — 남은 탭의 셸로 ({asked[:1]})')
             page.click('#lec-term-close')
             gone = term_ui()
-            check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'✕ 로 터미널 닫기 ({gone})')
+            check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'머리줄 오른쪽 ✕ 로 터미널 감추기 ({gone})')
 
-            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 닫기, 빈 번호부터, 붙여 넣기는 맨 앞 터미널에
+            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 끝내기(하나뿐이어도), 빈 번호부터, 붙여 넣기는 맨 앞 터미널에
             term_tabs = lambda: page.evaluate("[...document.querySelectorAll('#lec-term-tabs .term-tab')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent.trim())")
             page.keyboard.press('Control+Backquote')
             term_has('PS ', 20000)
@@ -2675,10 +2675,11 @@ def run(headed: bool) -> None:
                      and not term_has('둘째 터미널', 300))
             page.keyboard.press('Control+c')   # 1번 프롬프트에 넣은 글을 지운다 (다음 점검이 1번을 쓴다)
             # 서버의 셸 목록도 화면과 같게 (닫은 3번은 끝났다 — 새 3번이 다시 떴다)
-            served = page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
+            served_terms = lambda: page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
               const secret = document.querySelector('meta[name="lec-term"]').content;
               const r = await fetch('/api/term/list?p=' + encodeURIComponent(S.tab.id), { headers: { 'X-Term': secret } });
               return (await r.json()).terms.map(x => x.n); }''')
+            served = served_terms()
             # 터미널에 넣는 경로의 따옴표 — PowerShell 은 ‘ ’ ‚ ‛ 도 작은따옴표로 읽는다 (모두 겹쳐 써야 문자열이 끝나지 않는다)
             quoted = page.evaluate('''import('/static/js/tree.js').then(m => [m.shellWord('docs/a.md'), m.shellWord("it's ‘q’ ‚r‛ $x.md")])''')
             # 2~5번을 닫고 1번만 남긴다 (다음 점검이 터미널 하나를 본다)
@@ -2691,6 +2692,27 @@ def run(headed: bool) -> None:
             check(two == ['1PowerShell', '*2PowerShell'] and in_second and first_clean and full and reused == '2' and pasted and told2
                   and served == [0, 1, 2, 3, 4] and one and quoted == ['docs/a.md ', "'it''s ‘‘q’’ ‚‚r‛‛ $x.md' "],
                   f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 맨 앞(1번) 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
+            # 하나 남은 터미널도 × 로 끝낸다 (v0.40.2) — 패널이 감춰지고 알림, 서버 셸이 없어짐, 다시 열면 새 셸로 1번
+            page.keyboard.press('Control+Backquote')
+            term_has('PS ', 20000)
+            lone_x = page.evaluate("document.querySelectorAll('#lec-term-tabs .term-tab [data-close]').length")
+            old_id = page.evaluate("import('/static/js/store.js').then(m => m.S.tab.term.id)")
+            page.locator('#lec-term-tabs .term-tab [data-close]').click()
+            ended = wait_until(page, "document.querySelector('#lec-term').hidden && !document.querySelector('#lec-term-tabs .term-tab')"
+                                     " && document.querySelector('#lec-toast').textContent.includes('1번 터미널을 끝냈습니다')", 5000)
+            left_shells = served_terms()
+            for _ in range(20):
+                if not left_shells:
+                    break
+                time.sleep(0.25)
+                left_shells = served_terms()
+            page.keyboard.press('Control+Backquote')
+            fresh = term_has('PS ', 20000)
+            renewed = page.evaluate("import('/static/js/store.js').then(m => [m.S.tab.terms.length, m.S.tab.term.n, m.S.tab.term.id !== " + repr(old_id) + "])")
+            old_screen = term_has('붙여넣기확인', 300)
+            page.click('#lec-term-close')
+            check(lone_x == 1 and ended and left_shells == [] and fresh and renewed == [1, 0, True] and not old_screen,
+                  f"하나 남은 터미널에도 ×, 누르면 셸을 끝내고 패널을 감춤·알림, 다시 열면 새 셸로 1번 ({lone_x}, {ended}, {left_shells}, {renewed}, {old_screen})")
 
             print('[터미널 모음]')
             def tile_has(name: str, text: str, ms: int = 20000) -> bool:

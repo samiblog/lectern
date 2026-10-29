@@ -269,8 +269,9 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 ## Terminal
 
 - The **Terminal** button at the right end of the tab bar, or Ctrl+\`, opens a terminal to the right of the main area. Windows PowerShell starts in the current tab's project folder, and each tab has its own shell.
-- **Several terminals**: **+** in the terminal header opens another terminal for the same project (up to 5 per project — for example terminal 1 for Claude Code and terminal 2 for other commands). Click [1 PowerShell] [2 PowerShell] in the header to switch; with more than one, the × on a terminal tab (or a middle-click) closes just that terminal, ending its shell and the programs started from it. In a narrow panel, the other tabs get shorter names and their × appears when you point at them. Reloading the window keeps the running terminals.
-- Closing the terminal leaves the shell running, so reopening it continues where you left off. The ↻ button in its header restarts the shell.
+- **Several terminals**: **+** in the terminal header opens another terminal for the same project (up to 5 per project — for example terminal 1 for Claude Code and terminal 2 for other commands). Click [1 PowerShell] [2 PowerShell] in the header to switch. Reloading the window keeps the running terminals.
+- **Ending a terminal**: when you no longer need a terminal, click the × on its tab (or middle-click the tab). This ends its shell and the programs started from it, asking first if a program is running. It works even when there is only one terminal; ending the last one hides the panel, and opening it again starts a new shell as terminal 1. In a narrow panel, the other tabs get shorter names and their × appears when you point at them.
+- The × at the right end of the header (or Ctrl+\`) only hides the panel — the shell keeps running, so reopening it continues where you left off. The ↻ button in its header restarts the shell.
 - Keys typed in the terminal go to the shell. Use app shortcuts such as Ctrl+P, Ctrl+F or F1 after clicking the main area (Ctrl+Tab moves to the next tab even inside the terminal).
 - Select text with the mouse, then press Ctrl+C or right-click to copy; press Ctrl+V or right-click to paste. With nothing selected, Ctrl+C stops the running command.
 - Drag the edge to resize the terminal (double-click to reset).
