@@ -118,10 +118,23 @@
 .md-body .lec-target { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-target 1.8s ease-in; }
 @media (prefers-reduced-motion: reduce) { .md-body .lec-target { animation: none; outline-color: var(--md-link); } }
 
-/* 장 하이라이트 (spotlight.js): 고른 장(lec-lit)만 그대로, 나머지 글자·선·그림은 바탕색 쪽으로 흐리게 */
-.md-body.lec-spotlight > * { transition: opacity .2s; }
-.md-body.lec-spotlight > :not(.lec-lit) { opacity: .16; }
-@media (prefers-reduced-motion: reduce) { .md-body.lec-spotlight > * { transition: none; } }
+/* 하이라이트 (spotlight.js, D74 — 장 하이라이트·Alt+끌기): 하이라이트한 곳만 그대로, 그 밖은 회색 바탕에 흐린 글자·선·그림.
+   칸의 스크롤 상자에 겹친 덮개가 하이라이트한 곳(--spot-top ~ --spot-bottom)의 위·아래를 덮는다 */
+.lec-spot {
+  position: absolute; left: 0; top: 0; width: 100%; height: 0; z-index: 5; pointer-events: none;   /* 표 머리행(1) 위, 편집 상자(6)·찾기 막대 아래 */
+  /* 바탕보다 조금 어두운 회색을 반투명하게 — 그 밖의 바탕은 회색이 되고 글자·선·그림은 흐려진다 */
+  --spot-shade: color-mix(in srgb, color-mix(in srgb, var(--md-fg) 11%, var(--md-bg)) 80%, transparent);
+}
+:root[data-ui="dark"] .lec-spot { --spot-shade: color-mix(in srgb, color-mix(in srgb, #000000 42%, var(--md-bg)) 80%, transparent); }
+.lec-spot .spot-shade { position: absolute; left: 0; right: 0; background: var(--spot-shade); transition: top .2s, height .2s; }
+.lec-spot .spot-above { top: 0; height: var(--spot-top, 0px); }
+.lec-spot .spot-below { top: var(--spot-bottom, 0px); height: calc(var(--spot-end, 0px) - var(--spot-bottom, 0px)); }
+.lec-spot .spot-bar {   /* 하이라이트한 곳의 왼쪽 막대 (본문 왼쪽 여백에) */
+  position: absolute; left: var(--spot-bar, 8px); width: 3px; border-radius: 2px; background: var(--md-link);
+  top: calc(var(--spot-top, 0px) + 4px); height: max(0px, calc(var(--spot-bottom, 0px) - var(--spot-top, 0px) - 8px)); transition: top .2s, height .2s;
+}
+.lec-spot.dragging .spot-shade, .lec-spot.dragging .spot-bar { transition: none; }   /* Alt+끌기 중에는 바로 따라오게 */
+@media (prefers-reduced-motion: reduce) { .lec-spot .spot-shade, .lec-spot .spot-bar { transition: none; } }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }
@@ -350,7 +363,7 @@
   .md-body thead th { position: static; }
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
   .md-body .lec-changed, .md-body .lec-picked, .md-body .lec-target { outline: none !important; animation: none !important; }
-  .md-body.lec-spotlight > * { opacity: 1 !important; }   /* 장 하이라이트 중이어도 모두 인쇄 */
+  .lec-spot { display: none !important; }   /* 하이라이트 중이어도 모두 그대로 인쇄 */
   /* 발표 문서 (D59): 한 장에 한 쪽 — 쪽 크기는 슬라이드 크기 (@page lec-slide), 줄이지 않고 그대로 */
   .md-body.lec-deck { max-width: none; padding: 0; }
   .lec-deck .lec-slide-wrap { margin: 0; page: lec-slide; }

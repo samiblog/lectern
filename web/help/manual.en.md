@@ -174,12 +174,14 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 - **Open style folder** in Settings opens the folder. Deleting a file removes it from the list.
 - Anything that would load fonts or images from the internet is removed by the app; only fonts installed on the PC are used.
 
-### Section focus
+### Focus
 
-- The **Focus** button in the toolbar keeps the section you are reading sharp and dims the rest.
-- ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there.
-- Press Esc or click the button again to turn it off. You can also right-click the text and choose 'Focus this section' or 'Clear focus'.
-- It works in Markdown documents.
+The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. It works in Markdown documents.
+
+- **Section focus**: the **Focus** button in the toolbar keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there.
+- **Alt+drag**: **hold Alt and drag** over the text to focus only the blocks you drag over — paragraphs, list items, headings and table rows. Code blocks go by line. Alt+click focuses a single block. Dragging to the top or bottom edge scrolls. Click a dimmed area to clear it.
+- **Right-click**: right-clicking inside the focused part opens a selection box — **Send to Claude** (puts the location of that range, `@path lines 12-20`, into Claude Code in the terminal without pressing Enter), copy location for Claude, copy source, Clip, Send to a document, **Menu for this block…** (the usual menu you get outside the focus) and Clear focus.
+- Press Esc or click the button again to turn it off. You can also right-click the text and choose 'Focus this section'.
 
 ### Find in document
 

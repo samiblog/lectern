@@ -389,9 +389,14 @@ def run(headed: bool) -> None:
             arrows_off = page.is_disabled('#lec-spot-prev') and page.is_disabled('#lec-spot-next')   # 하이라이트 전에는 꺼져 있다
             page.click('#lec-btn-spot')
             first = lit()
-            faded_js = """(() => { const b = [...document.querySelectorAll('#lec-view > :not(.lec-lit)')].find(e => e.querySelector('img'));
-              return b ? getComputedStyle(b).opacity : null; })()"""
-            wait_until(page, f"{faded_js} === '0.16'")   # 흐려지는 데 0.2초 (transition)
+            # 하이라이트 밖은 덮개(.lec-spot — 위·아래 반투명 회색)가 덮는다 (D74): 다른 장의 그림 블록이 덮개 안, 덮개 색은 바탕과 다름
+            faded_js = """(() => { const box = document.querySelector('#lec-content > .lec-spot');
+              const b = [...document.querySelectorAll('#lec-view > :not(.lec-lit)')].find(e => e.querySelector('img'));
+              if (!box || box.hidden || !b) return null;
+              const r = b.getBoundingClientRect(), inside = (sel) => { const s = box.querySelector(sel).getBoundingClientRect(); return r.top >= s.top - 1 && r.bottom <= s.bottom + 1; };
+              const shade = getComputedStyle(box.querySelector('.spot-shade')).backgroundColor;
+              return (inside('.spot-above') || inside('.spot-below')) && shade !== getComputedStyle(document.querySelector('#lec-content')).backgroundColor ? 'shaded' : 'no'; })()"""
+            wait_until(page, f"{faded_js} === 'shaded'", 3000)   # 덮개가 옮겨 가는 데 0.2초 (transition)
             faded_img = page.evaluate(faded_js)
             page.keyboard.press('ArrowDown')
             down1 = lit()
@@ -401,8 +406,8 @@ def run(headed: bool) -> None:
             up1 = lit()
             page.wait_for_timeout(300)   # 흐려지고 밝아지는 데 0.2초 — 캡처용
             shot('03-spotlight')
-            check(first == ['렌더링-기능-점검'] and down1 == ['표'] and down2 == ['체크리스트와-각주'] and up1 == ['표'] and faded_img == '0.16',
-                  f'장 하이라이트: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장의 그림도 흐림 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
+            check(first == ['렌더링-기능-점검'] and down1 == ['표'] and down2 == ['체크리스트와-각주'] and up1 == ['표'] and faded_img == 'shaded',
+                  f'장 하이라이트: 첫 장(제목·머리말)부터, ↓·PageDown·PageUp 으로 앞뒤 장, 다른 장(그림 포함)은 회색 덮개 아래 ({first} → {down1} → {down2} → {up1}, 흐린 그림 {faded_img})')
             page.click('#lec-spot-next')
             btn_next = lit()
             page.click('#lec-spot-prev')
@@ -474,6 +479,34 @@ def run(headed: bool) -> None:
             check('이 장 하이라이트' in items_off and by_menu == ['콜아웃'] and '하이라이트 해제' in items_on
                   and '이 장 하이라이트' not in items_on and off_by_menu,
                   f'본문 우클릭 메뉴로 그 장 하이라이트 / 하이라이트 해제 ({by_menu})')
+            # Alt+끌기 (D74): 표의 '구리' 행에서 '니켈' 행까지 → 그 행들(원문 11~13행)만 하이라이트, 글은 고르지 않음.
+            # 우클릭은 선택 상자 — 맨 위 'Claude 로 보내기'(맨 앞 터미널에 넣기), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
+            row_at = lambda text: page.evaluate(f"""(() => {{ const tr = [...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('{text}'));
+              const b = tr.getBoundingClientRect(); return [b.left + 30, b.top + b.height / 2]; }})()""")
+            page.evaluate("[...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('알루미늄')).scrollIntoView({ block: 'center' })")
+            a = row_at('구리')
+            b = row_at('니켈')
+            page.keyboard.down('Alt')
+            page.mouse.move(*a)
+            page.mouse.down()
+            page.mouse.move(*b, steps=6)
+            page.mouse.up()
+            page.keyboard.up('Alt')
+            band = page.evaluate("""(() => { const box = document.querySelector('#lec-content > .lec-spot'); if (!box || box.hidden) return null;
+              const y = (sel) => Math.round(box.querySelector(sel).getBoundingClientRect()[sel === '.spot-above' ? 'bottom' : 'top']);
+              const rows = [...document.querySelectorAll('#lec-view tr')].map(r => [r.textContent.trim().split(/\\s+/)[0], r.getBoundingClientRect()]);
+              const lit = rows.filter(([, r]) => r.top >= y('.spot-above') - 1 && r.bottom <= y('.spot-below') + 1).map(([n]) => n);
+              return { lit, on: document.querySelector('#lec-btn-spot').classList.contains('on'), sel: getSelection().toString() }; })()""")
+            alt_menu = menu(page.locator('#lec-view tr', has_text='알루미늄'))
+            alt_first = page.evaluate("[...document.querySelectorAll('#lec-menu .menu-head, #lec-menu button[data-i] > span')].slice(0, 3).map(e => e.textContent)")
+            no_term_btn = page.locator('#lec-menu .menu-term').count() == 0
+            page.keyboard.press('Escape')
+            page.mouse.click(a[0], a[1] - 260 if a[1] > 400 else a[1] + 320)   # 흐린 곳을 누르면 끈다
+            cleared = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && document.querySelector('#lec-content > .lec-spot')?.hidden !== false")
+            check(band and band['lit'] == ['구리', '알루미늄', '니켈'] and band['on'] and not band['sel']
+                  and alt_first == ['하이라이트한 곳 · 11~13행', 'Claude 로 보내기', 'Claude용 위치 복사'] and '@docs/01-기능-점검.md 11~13행' in alt_menu
+                  and '이 블록의 메뉴…' in alt_menu and '하이라이트 해제' in alt_menu and no_term_btn and cleared,
+                  f"Alt+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude 로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
             para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
             head = menu(para).split('\n')[0]
             picked = page.locator('#lec-view .lec-picked').count()
@@ -3101,7 +3134,7 @@ def run_english(headed: bool) -> None:
             page.locator('#lec-code-list .row[data-path="code/app.py"]').click(button='right')
             scan('코드 우클릭')
             page.keyboard.press('Escape')
-            check(spot.startswith('Turn off section focus') and search.startswith('3 documents·1 code file, ')
+            check(spot.startswith('Turn off focus') and search.startswith('3 documents·1 code file, ')
                   and parts[0].startswith('Tables') and parts[1] == '1 document, 1 table' and code[0] == 'Open in editor',
                   f'영어 글의 복수형·이름 — 장 하이라이트 설명, 검색 개수, 모아 보기 종류·개수, 코드 화면 ({spot[:40]}, {search}, {parts}, {code})')
             page.keyboard.press('Control+Comma')

@@ -1,5 +1,6 @@
 // 문서 본문 우클릭 메뉴: 우클릭한 블록(제목·단락·목록 항목·표·그림·코드·다이어그램·수식)에 테두리를 그리고 복사 메뉴를 띄운다.
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
+// 하이라이트한 곳(장 하이라이트·Alt+끌기 — spotlight.js) 안이면 그 범위의 선택 상자: Claude 로 보내기, 위치·원문 복사, 담기 … (litMenu, D74).
 //
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
 // md 문서의 블록·절·고른 글은 '담기'·'보내기…'(basket.js, D63·D65) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
@@ -10,7 +11,7 @@ import { S, emit } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems } from './spotlight.js';
+import { spotlightItems, litAt, stopSpotlight } from './spotlight.js';
 import { partExtent } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { openExternal } from './api.js';
@@ -221,6 +222,36 @@ function takeItems(range, info, labels = [t('담기'), t('보내기…')]) {
     { label: labels[1], hint: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) }];
 }
 
+/**
+ * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, Alt+끌기의 블록들) 안에서 우클릭하면 나오는 선택 상자 (D74).
+ * 맨 위 'Claude 로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
+ * 그 밖에 위치·원문 복사, 담기·문서로 보내기, 그 블록의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄 — 장은 그 블록들의 처음부터 끝까지.
+ * 하이라이트로 할 일이 늘면 이 상자에 더한다. blockMenu: 우클릭한 블록의 보통 메뉴를 띄우는 함수 (없으면 null)
+ */
+function litMenu(hl, selected, blockMenu) {
+  let range = hl.lines;
+  if (hl.blocks) {
+    const spans = hl.blocks.map(lineRange).filter(Boolean);
+    range = spans.length ? [Math.min(...spans.map((s) => s[0])), Math.max(...spans.map((s) => s[1]))] : null;
+  }
+  if (!range) return null;
+  range = [range[0], Math.min(range[1], doc.lines.length)];
+  const ref = claudeRef(range);
+  const text = sourceOf(range);
+  const name = t('하이라이트한 곳');
+  const items = [{ header: `${name} · ${rangeText(range)}` },
+    { label: t('Claude 로 보내기'), hint: `${ref} — ${t('터미널에 (Enter 는 누르지 않음)')}`, action: () => emit('term-paste', `${ref} `) },
+    '-',
+    { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref) },
+    { label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(text) },
+    ...takeItems(range, { kind: hl.blocks ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]),
+    '-'];
+  if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) });
+  if (blockMenu) items.push({ label: t('이 블록의 메뉴…'), hint: t('표·그림·코드 복사 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 이 상자를 닫은 뒤에 부른다
+  items.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
+  return items;
+}
+
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
 function blockTake(picked) {
   // 박스글·인용 안의 단락·목록이면 박스 통째로 ('> [!WARNING]' 머리줄까지 — 안의 단락만 담으면 박스의 종류를 잃는다)
@@ -356,11 +387,24 @@ function openMenu(e, view, x, y) {
   if (e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
   const el = pickBlock(e.target, view);
+  const sel = view.ownerDocument.getSelection();
+  const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
+  // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74 — md 문서만). '이 블록의 메뉴…' 로 아래의 보통 메뉴
+  const hl = view === $('#lec-view') ? litAt(e.clientY) : null;
+  const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y));
+  if (lit) {
+    showMenu(x, y, lit);
+    return;
+  }
+  blockMenu(e, view, el, selected, x, y);
+}
+
+/** 우클릭한 블록(없으면 문서)의 보통 메뉴 — 고른 글이 있으면 맨 위에 그 글 */
+function blockMenu(e, view, el, selected, x, y) {
   const items = el ? blockItems(el, e.target) : docItems();
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
   if (spot.length) items.push('-', ...spot);
   const sel = view.ownerDocument.getSelection();
-  const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   if (selected) {
     const range = selectionRange(sel);
     const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글 보내기…')]) : [];
