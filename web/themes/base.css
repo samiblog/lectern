@@ -153,12 +153,11 @@
 .md-body blockquote { margin-left: 0; padding: .15em 1.05em; border-left: 3px solid var(--md-quote-bar); color: var(--md-muted); }
 .md-body blockquote > :last-child { margin-bottom: 0; }
 
-/* 콜아웃 > [!NOTE] 등 */
+/* 콜아웃 > [!NOTE] 등 — 제목 줄 없이 종류의 색 막대·옅은 바탕만 (D72) */
 .md-body blockquote.alert {
   color: var(--md-fg); border-left: 4px solid var(--alert); border-radius: 0 7px 7px 0;
   background: color-mix(in srgb, var(--alert) 7%, transparent); padding: .65em 1.1em;
 }
-.md-body .alert-title { margin: 0 0 .3em !important; font-weight: 700; font-size: .9em; color: var(--alert); }
 .md-body .alert-note { --alert: var(--md-alert-note); }
 .md-body .alert-tip { --alert: var(--md-alert-tip); }
 .md-body .alert-important { --alert: var(--md-alert-important); }
@@ -331,7 +330,7 @@
 @media print {
   #lec-toolbar, #lec-tabbar, #lec-doctabs, #lec-sidebar, #lec-resizer, #lec-toc, #lec-term, #lec-term-resizer, #lec-status, #lec-findbar, #lec-menu, #lec-toast, .overlay,
   #lec-present, .mermaidTooltip { display: none !important; }   /* Mermaid 가 body 끝에 붙이는 말풍선 자리 — 빈 쪽이 하나 더 생긴다 */
-  .lec-pane:not(.active) { display: none !important; }   /* 선택된 탭의 문서만 */
+  .lec-pane:not(.active), .sp-head { display: none !important; }   /* 선택된 탭의 문서만 (모두 펼치기 중이어도 — 칸 머리 없이, D73) */
   /* app.css 가 뒤에 읽혀 같은 무게의 #lec-app(격자)·.lec-pane(absolute) 규칙이 이기므로 !important — 칸이 absolute 면
      쪽 나누기(break-before)·쪽 이름(page)이 먹지 않는다 (발표 문서의 한 장에 한 쪽, D59) */
   #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block !important; position: static !important; height: auto !important; overflow: visible !important; border: 0; }

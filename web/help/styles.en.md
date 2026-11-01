@@ -51,7 +51,7 @@ Most of the look comes from CSS variables on `:root`. Changing only the variable
 | `--md-th-fg` | Table header row text (white-ish when the header is dark — defaults to the heading color) |
 | `--md-th-rule` | Thick line under the table header row |
 | `--md-stripe` | Background of even table rows |
-| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | Bar, title and light background of callouts (`> [!NOTE]` and so on) |
+| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | Bar and light background of callouts (`> [!NOTE]` and so on) |
 | `--md-font` | Body font |
 | `--md-heading-font` | Heading font |
 | `--md-mono` | Code font |
@@ -72,7 +72,7 @@ The document lives inside `.md-body`. **Start every rule with `.md-body`** so th
 | Links | `.md-body a` (web links `a.ext` — with a ↗ mark, project files `a.file-link`, paths in the text `a.path-link`, links that cannot open `a.link-off`) |
 | Bold, emphasis, highlight | `.md-body strong`, `em`, `mark`, `kbd` |
 | Quotes | `.md-body blockquote` (callouts are `blockquote.alert` — below) |
-| Callouts | `.md-body blockquote.alert.alert-note` (`-tip`, `-important`, `-warning`, `-caution`), with the title line `.alert-title`. Their color is the box's `--alert` variable |
+| Callouts | `.md-body blockquote.alert.alert-note` (`-tip`, `-important`, `-warning`, `-caution`). There is no title line — the kind shows only as a color. Their color is the box's `--alert` variable |
 | Code blocks | `.md-body .code-block` > `.code-tools` (language `.code-lang`, copy button `.code-copy`) + `pre` > `code.hljs` |
 | Inline code | `.md-body :not(pre) > code` |
 | Tables | `.md-body .table-wrap` (border and scroll box) > `table` > `thead th`, `tbody td`. Number columns are `th.num` / `td.num` (right-aligned) |

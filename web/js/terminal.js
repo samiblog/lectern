@@ -542,8 +542,9 @@ export async function closeTerminal(term) {
   return true;
 }
 
-/** 패널을 열고 닫는다 (버튼·Ctrl+`). 닫아도 셸은 그대로 돈다 */
-export function toggleTerminal(want = !open) {
+/** 패널을 열고 닫는다 (버튼·Ctrl+`). 닫아도 셸은 그대로 돈다. focus: 열면서 셸에 입력이 가게 (모두 펼치기는 문서 칸에 남긴다 — D73) */
+export function toggleTerminal(want = !open, { focus = true } = {}) {
+  const was = open;
   open = want;
   root.classList.toggle('term-on', open);
   if (!open) root.classList.remove('toc-with-term');
@@ -552,8 +553,9 @@ export function toggleTerminal(want = !open) {
   $('#lec-btn-term').classList.toggle('on', open);
   $('#lec-btn-term').setAttribute('aria-pressed', String(open));
   updateTocVisibility();
-  if (open) showCurrent({ focus: true });
+  if (open) showCurrent({ focus });
   else if (document.activeElement?.closest?.('#lec-term')) $('#lec-content')?.focus({ preventScroll: true });
+  if (open !== was) emit('term-panel', open);
 }
 
 /** 탭을 닫기 전에: 그 탭의 셸들에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */

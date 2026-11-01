@@ -29,8 +29,6 @@ const PURIFY = {
   ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|file):|[a-z]:(?:[\\/]|%5c)|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
 };
 
-const ALERTS = { NOTE: t('참고'), TIP: t('팁'), IMPORTANT: t('중요'), WARNING: t('경고'), CAUTION: t('주의') };
-
 const MEDIA_TAGS = /^(IMG|SOURCE|VIDEO|AUDIO|TRACK|EMBED|INPUT)$/;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_IMAGE_TAGS = /^(image|feImage)$/;
@@ -326,6 +324,7 @@ export function imageKey(src, docPath, tab) {
   return r.kind === 'local' ? r.path : r.kind === 'external' ? r.url : `${docPath}#${src}`;
 }
 
+/** 박스글 `> [!NOTE]` 등: 머리줄의 표시를 떼고 종류의 색 상자로 — 제목 줄('참고'·'팁' 등)은 붙이지 않는다 (종류는 색으로만, D72) */
 function decorateAlerts(root) {
   for (const bq of $$('blockquote', root)) {
     const p = bq.firstElementChild;
@@ -339,10 +338,6 @@ function decorateAlerts(root) {
     if (p.firstChild?.nodeName === 'BR') p.firstChild.remove();
     if (!p.textContent.trim() && !p.querySelector('img')) p.remove();
     bq.classList.add('alert', `alert-${kind.toLowerCase()}`);
-    const title = document.createElement('p');
-    title.className = 'alert-title';
-    title.textContent = ALERTS[kind];
-    bq.prepend(title);
   }
 }
 

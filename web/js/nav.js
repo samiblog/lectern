@@ -5,6 +5,7 @@ import { showDoc } from './doc.js';
 import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
 import { showCode } from './codeview.js';
+import { paneShown } from './panes.js';
 import { isHtml, toast } from './util.js';
 import { t } from './i18n.js';
 
@@ -121,13 +122,14 @@ export const forward = () => go(1);
 
 /**
  * 칸의 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경).
- * pane 이 없으면 모든 탭: 선택된 탭은 바로, 숨은 탭은 표시만 해 두고 그 탭을 고를 때 그린다 (tabs.js — 보이지 않는 탭을 모두 그리지 않게).
- * 위치는 시작할 때가 아니라 바꿔 끼우기 직전에 읽는다 — 그리는 동안 사용자가 스크롤해도 되돌리지 않게.
+ * pane 이 없으면 모든 탭: 보이는 칸(선택된 칸, 모두 펼치기 중이면 펼친 칸들 — D73)은 바로, 숨은 칸은 표시만 해 두고 그 탭을 고를 때 그린다
+ * (tabs.js — 보이지 않는 탭을 모두 그리지 않게). 위치는 시작할 때가 아니라 바꿔 끼우기 직전에 읽는다 — 그리는 동안 사용자가 스크롤해도 되돌리지 않게.
  */
 export async function refreshView(pane) {
   if (!pane) {
-    for (const p of S.panes) if (p !== S.pane && p.current) p.stale = true;
-    if (S.pane) await refreshView(S.pane);
+    const shown = S.panes.filter(paneShown);
+    for (const p of S.panes) if (!shown.includes(p) && p.current) p.stale = true;
+    await Promise.all(shown.map((p) => refreshView(p)));
     return;
   }
   const view = pane.current;

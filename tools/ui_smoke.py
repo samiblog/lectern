@@ -270,13 +270,13 @@ def run(headed: bool) -> None:
                     under.setdefault(head, []).append(f'{r[1]} · {r[2]}' if r[2] else r[1])
             check(under.get('표') == ['표 1 · 품목·1분기·2분기 · 6행 5열']
                   and [x.split(' · ')[1] for x in under.get('코드', [])] == ['python', 'powershell', 'json']
-                  and [x.split(' · ')[0] for x in under.get('콜아웃', [])] == ['참고', '팁', '중요', '경고', '인용']
+                  and [x.split(' · ')[0] for x in under.get('콜아웃', [])] == ['박스글', '박스글', '박스글', '박스글', '인용']   # 박스글은 종류 이름 없이 (D72)
                   and under.get('그림') == ['그림 1 · 분기별 가격 범위']
                   and toc_buttons() == ['표 1', '그림 1', '박스글 5', '코드 3'],
                   f'목차의 제목 아래에 그 절의 표·코드·박스글·그림이 문서 순서로, 머리에 종류 버튼 ({under}, {toc_buttons()})')
             shot('02-toc-parts')
             sec('콜아웃').click()   # 접힌 절 안의 박스글로 가면 편다
-            page.locator('#lec-toc li.part-box a', has_text='경고').click()
+            page.locator('#lec-toc li.part-box a', has_text='프로젝트 폴더 밖').click()   # [!WARNING] 박스글
             warn = page.locator('#lec-view blockquote.alert-warning')
             went = wait_until(page, '''(() => { const el = document.querySelector('#lec-view blockquote.alert-warning');
               const r = el.getBoundingClientRect(), c = document.querySelector('#lec-content').getBoundingClientRect();
@@ -323,12 +323,12 @@ def run(headed: bool) -> None:
                   f"사이드바 '모아 보기' 탭: 프로젝트의 표를 문서별로 (이름·크기·절), 종류마다 개수 ({p1['kinds']}, {mine})")
             page.click('#lec-parts-kinds button[data-kind="box"]')
             boxes = [i[1] for i in pv()['items'] if i[0] == 'docs/01-기능-점검.md']
-            page.fill('#lec-parts-filter', '경고 프로젝트')
+            page.fill('#lec-parts-filter', '박스글 프로젝트 폴더 밖')
             wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length === 1")
             filtered = pv()['items']
             page.press('#lec-parts-filter', 'Enter')
             went = wait_until(page, "document.querySelector('#lec-view blockquote.alert-warning')?.classList.contains('lec-target')", 5000)
-            check(boxes == ['참고', '팁', '중요', '경고', '인용'] and len(filtered) == 1 and filtered[0][1] == '경고' and went,
+            check(boxes == ['박스글', '박스글', '박스글', '박스글', '인용'] and len(filtered) == 1 and filtered[0][1] == '박스글' and went,
                   f'박스글 모아 보기, 거르기, Enter 로 그 문서의 그 자리로 (목차와 같은 번호로 찾아감) ({boxes}, {filtered})')
             page.fill('#lec-parts-filter', '')
             page.click('#lec-parts-kinds button[data-kind="figure"]')
@@ -2737,6 +2737,53 @@ def run(headed: bool) -> None:
             check(lone_x == 1 and ended and left_shells == [] and fresh and renewed == [1, 0, True] and not old_screen,
                   f"하나 남은 터미널에도 ×, 누르면 셸을 끝내고 패널을 감춤·알림, 다시 열면 새 셸로 1번 ({lone_x}, {ended}, {left_shells}, {renewed}, {old_screen})")
 
+            print('[모두 펼치기]')   # D73 — 문서 탭 줄 ▦: 문서 탭들과 터미널(오른쪽 아래)을 창 전체 격자로, 칸 누르기, 고르지 않은 칸도 자동 새로고침, 끄면 원래대로
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click(modifiers=['Control'])
+            on_tab('docs/02-수식과-달러.md')
+            page.locator('#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]').click(modifiers=['Control'])
+            on_tab('docs/04-HTML-보고서.html')
+            page.click('#lec-doctab-spread')
+            spread_term = term_has('PS ', 20000)
+            cells_ok = wait_until(page, """[...document.querySelectorAll('.lec-pane.sp-cell')].length === 3
+              && [...document.querySelectorAll('.lec-pane.sp-cell')].every(el => el.querySelector('.lec-scroll > article').children.length > 0)""", 10000)
+            spread = page.evaluate("""() => { const h = document.documentElement; const term = document.querySelector('#lec-term');
+              const box = (el) => { const r = el.getBoundingClientRect(); return [Math.round(r.x), Math.round(r.y), Math.round(r.width), Math.round(r.height)]; };
+              return { on: h.classList.contains('spread-on'), pressed: document.querySelector('#lec-doctab-spread').getAttribute('aria-pressed'),
+                side: getComputedStyle(document.querySelector('#lec-sidebar')).display, toc: getComputedStyle(document.querySelector('#lec-toc')).display,
+                cells: [...document.querySelectorAll('.lec-pane.sp-cell')].map(el => [el.style.gridRow, el.style.gridColumn, el.querySelector('.sp-head .sp-name')?.textContent || '']),
+                term: [term.hidden, term.style.gridRow, term.style.gridColumn], boxes: [...document.querySelectorAll('.lec-pane.sp-cell')].map(box), termBox: box(term) }; }""")
+            shot('25c-spread')
+            # 칸 고르기: 첫 칸(머리)을 누른 뒤 html 칸 안(iframe)을 누르면 그 칸이 골라진다
+            page.locator('.lec-pane.sp-cell .sp-head').first.click()
+            first_pick = on_tab(base)
+            page.frame_locator('.lec-pane.sp-cell iframe.lec-html').locator('body').click(position={'x': 20, 'y': 20})
+            html_pick = on_tab('docs/04-HTML-보고서.html')
+            # 고르지 않은 칸(02)의 문서가 바뀌면 바로 다시 그린다
+            math_doc = work / 'docs' / '02-수식과-달러.md'
+            math_before = math_doc.read_bytes()
+            math_doc.write_bytes(math_before + '\n\n펼친칸고침\n'.encode('utf-8'))
+            redrawn = wait_until(page, "[...document.querySelectorAll('.lec-pane.sp-cell:not(.active) article')].some(a => a.textContent.includes('펼친칸고침'))", 8000)
+            math_doc.write_bytes(math_before)
+            wait_until(page, "![...document.querySelectorAll('.lec-pane.sp-cell article')].some(a => a.textContent.includes('펼친칸고침'))", 8000)
+            page.click('#lec-doctab-spread')
+            ended_spread = wait_until(page, "!document.documentElement.classList.contains('spread-on')", 3000)
+            after_spread = page.evaluate("""() => ({ heads: document.querySelectorAll('.sp-head').length, termHidden: document.querySelector('#lec-term').hidden,
+              side: getComputedStyle(document.querySelector('#lec-sidebar')).display, cells: document.querySelectorAll('.sp-cell').length,
+              shown: [...document.querySelectorAll('.lec-pane')].filter(el => getComputedStyle(el).visibility === 'visible').length,
+              place: [...document.querySelectorAll('.lec-pane')].some(el => el.style.gridRow || el.style.gridColumn) || !!document.querySelector('#lec-term').style.gridRow })""")
+            page.keyboard.press('Control+F4')
+            page.keyboard.press('Control+F4')
+            wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 1", 5000)
+            on_tab(base)
+            sb = spread['boxes']
+            check(spread_term and cells_ok and spread['on'] and spread['pressed'] == 'true' and spread['side'] == 'none' and spread['toc'] == 'none'
+                  and [c[:2] for c in spread['cells']] == [['1 / span 1', '1 / span 1'], ['1 / span 1', '2 / span 1'], ['2 / span 1', '1 / span 1']]
+                  and spread['term'] == [False, '2 / span 1', '2 / span 1'] and sb[0][1] == sb[1][1] and sb[2][1] > sb[0][1]
+                  and spread['termBox'][0] > sb[2][0] and spread['termBox'][1] == sb[2][1]
+                  and first_pick and html_pick and redrawn and ended_spread
+                  and after_spread == {'heads': 0, 'termHidden': True, 'side': 'flex', 'cells': 0, 'shown': 1, 'place': False},
+                  f"모두 펼치기: 문서 탭 3개 + 오른쪽 아래 터미널(2×2), 사이드바·목차 감춤, 칸 머리·html 칸 안을 누르면 그 탭, 고르지 않은 칸도 바로 다시 그림, 끄면 원래대로·펼치며 연 터미널은 감춤 ({spread}, {first_pick}, {html_pick}, {redrawn}, {after_spread})")
+
             print('[터미널 모음]')
             def tile_has(name: str, text: str, ms: int = 20000) -> bool:
                 try:
@@ -2997,7 +3044,7 @@ def run_english(headed: bool) -> None:
                   f'설정 language: en 이면 화면이 영어 — 툴바·사이드바 탭·개수(복수형)·날짜 ({ui})')
             page.locator('#lec-tree .row.file', has_text='README').click()
             page.wait_for_selector('#lec-view h1:has-text("Demo project")')
-            doc = page.evaluate('''() => ({ alert: document.querySelector('#lec-view .alert-title')?.textContent,
+            doc = page.evaluate('''() => ({ alert: !!document.querySelector('#lec-view blockquote.alert') && !document.querySelector('#lec-view .alert-title'),
               copy: document.querySelector('#lec-view .code-copy')?.textContent, toc: document.querySelector('#lec-toc .toc-head')?.textContent,
               chips: [...document.querySelectorAll('#lec-toc .toc-parts button')].map(b => b.textContent.trim()),
               status: document.querySelector('#lec-st-info').textContent })''')
@@ -3007,9 +3054,9 @@ def run_english(headed: bool) -> None:
             menu = page.locator('#lec-menu').inner_text()
             scan('본문 우클릭')
             page.keyboard.press('Escape')
-            check(doc['alert'] == 'Note' and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
+            check(doc['alert'] is True and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
                   and doc['status'].startswith('Modified') and 'Copy location for Claude' in menu and '@README.md line ' in menu,
-                  f'문서: 박스글 이름·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
+                  f'문서: 박스글(제목 줄 없음 — D72)·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
             page.click('#lec-btn-spot')
             spot = page.evaluate("document.querySelector('#lec-btn-spot').title")
             page.keyboard.press('Escape')

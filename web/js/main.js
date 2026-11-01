@@ -21,7 +21,7 @@ import { initTree, focusFilter } from './tree.js';
 import { initRecent, refreshRecent } from './recent.js';
 import { initOthers, refreshOthers } from './others.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
-import { initPanes } from './panes.js';
+import { initPanes, paneShown } from './panes.js';
 import { initNav, back, forward, refreshView } from './nav.js';
 import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded,
@@ -43,6 +43,7 @@ import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
+import { initSpread, spreadOn, leaveSpread } from './spread.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
 import { $, basename, toast } from './util.js';
@@ -79,6 +80,10 @@ function applyLayout() {
 }
 
 async function toggleSidebar() {
+  if (spreadOn()) {   // 모두 펼치기(D73)가 사이드바를 감추고 있으면 끝내고 사이드바를 보인다
+    leaveSpread();
+    if (S.config.sidebar_visible !== false) return;
+  }
   await saveConfig({ sidebar_visible: S.config.sidebar_visible === false });
   applyLayout();
 }
@@ -86,6 +91,10 @@ async function toggleSidebar() {
 async function toggleToc() {
   if (gatherOn()) {   // 터미널 모음이 문서 화면을 가리고 있으면 닫고 목차를 보인다
     leaveGather();
+    if (S.config.toc_visible !== false && !terminalOpen()) return;
+  }
+  if (spreadOn()) {   // 모두 펼치기(D73)가 목차를 감추고 있으면 끝내고 목차를 보인다 (펼치면서 연 터미널은 감춘 뒤)
+    leaveSpread();
     if (S.config.toc_visible !== false && !terminalOpen()) return;
   }
   if (terminalOpen() && !terminalBelow()) {   // 오른쪽 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
@@ -110,8 +119,8 @@ async function manualRefresh() {
     await loadTree({ fresh: true, tab });
     refreshOthers();
     refreshRecent();
-    for (const pane of tab.panes) if (pane !== tab.pane && pane.current) pane.stale = true;   // 숨은 문서 탭은 고를 때 (D64)
-    await refreshView(tab.pane);
+    for (const pane of tab.panes) if (!paneShown(pane) && pane.current) pane.stale = true;   // 숨은 문서 탭은 고를 때 (D64)
+    await Promise.all(tab.panes.filter(paneShown).map((pane) => refreshView(pane)));   // 보이는 칸 — 모두 펼치기 중이면 펼친 칸 모두 (D73)
     toast(t('다시 불러왔습니다'));
   } catch (e) {
     toast(t('다시 불러오지 못했습니다: {error}', { error: e.message }), 'error');
@@ -308,12 +317,16 @@ async function boot() {
   initSlides();
   initPresent();
   initGather();
+  initSpread();
   bindToolbar();
   bindKeys();
   applyLayout();
 
   on('view', () => { updateNavButtons(); updateWindowTitle(); });
-  on('show-sidebar', () => { if (S.config.sidebar_visible === false) toggleSidebar(); });
+  on('show-sidebar', () => {
+    if (spreadOn()) leaveSpread();   // 모두 펼치기(D73)는 사이드바를 감춘다
+    if (S.config.sidebar_visible === false) toggleSidebar();
+  });
 
   await loadTabs();
   startWatch();

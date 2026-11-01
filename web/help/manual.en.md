@@ -25,7 +25,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 |---|---|
 | Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
 | Tab bar | One tab per open project, open folder (+), and the **Contents** and **Terminal** buttons at the right end |
-| Document tab row | Just above the document — the documents open in this project (up to 20), open a document in a new tab (+), the list of open document tabs at the right end (∨) |
+| Document tab row | Just above the document — the documents open in this project (up to 20), open a document in a new tab (+), the list of open document tabs (∨) and Spread all (▦) at the right end |
 | Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
 | Main area (center) | Documents, folder overviews and the code view |
 | Contents (right) | The current document's headings and elements such as tables and figures. When the terminal is open, it takes this place |
@@ -49,6 +49,16 @@ Keep up to 20 documents of a project open as tabs and switch between them. They 
 - Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Send from the Clip tab opens the receiving document in its own tab.
 - To switch, click a tab or press **Alt+1~8** (by position) or **Alt+9** (last tab). When there are more tabs than fit, scroll the row with the mouse wheel or click **∨** at its right end (the number beside it is how many are open) and pick from the list of open document tabs. To close, click its ×, middle-click it or press **Ctrl+F4** (the last tab is not closed). Right-click a tab for Close other document tabs and copying its path.
 - The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them).
+
+### Spread all
+
+Click **▦** next to ∨ at the right end of the document tab row to spread this project's document tabs over the whole window as a grid — like All terminals. Click it again to go back.
+
+- One cell per document tab (in tab order), and **the bottom-right cell is this project's terminal** — hand work to Claude Code and watch several documents change at a glance. If the terminal was closed it opens (starting a shell if there is none) and is hidden again when you end the spread (the shell keeps running).
+- When the cells do not fill the grid, a document cell next to or above the gap widens to fill it. The sidebar and table of contents are hidden.
+- Clicking a cell selects that document tab (highlighted border) — the status bar, Find in document (Ctrl+F), right-click menus and Alt+1~9 work on the selected cell. A document that changes is redrawn at once in whichever cell it is.
+- **⤢** in a cell's header (or double-clicking the header) ends the spread showing only that document. The sidebar and contents buttons (Ctrl+B) also end it and show what you asked for.
+- Selecting another project tab while spread spreads that project's document tabs. View-only projects (the samples) have no terminal cell.
 
 ## Sidebar
 
@@ -130,7 +140,7 @@ This is the first screen when a folder opens. It shows recently changed document
 
 - Tables align number columns to the right, and the header row stays visible as you scroll.
 - Code blocks are colored by language; the 'Copy' button at the top right copies them.
-- Callouts (`> [!NOTE]` and so on), footnotes, checklists, math (`$…$`, `$$…$$`, and math/latex code blocks) and Mermaid diagrams are rendered. Dollar amounts such as `$105` are not turned into math.
+- Callouts (`> [!NOTE]` and so on — colored boxes without a title line), footnotes, checklists, math (`$…$`, `$$…$$`, and math/latex code blocks) and Mermaid diagrams are rendered. Dollar amounts such as `$105` are not turned into math.
 - **Charts**: code blocks whose language is `vega-lite` (data charts), `echarts` (many chart types such as donuts and candlesticks), `plotly` (analysis charts such as box plots and sunbursts — the output of Python's `fig.to_json()` works too) or `dot`/`graphviz` (structure and dependency graphs) are drawn as pictures. Colors follow the document style; click to enlarge, and use 'Copy image' in the right-click menu to paste a PNG. Settings are JSON and functions are not allowed. Write the data in the document or point to a CSV/JSON file in the project with a relative path (internet addresses are not read). There is no hover or zoom, and Plotly map charts are not drawn because they need map data from the internet. The samples (**Open samples**) have an example of each kind in the chart guide (number 07 in the `guide` folder).
 - Click an image to enlarge it.
 - Paths in the text that point to real files, such as `src/app.py:42`, become links.

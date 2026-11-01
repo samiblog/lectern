@@ -259,9 +259,8 @@ function figureLabel(el, cap) {
 }
 
 function boxLabel(el) {
-  const title = squeeze(el.querySelector(':scope > .alert-title')?.textContent);
-  const text = [...el.children].filter((c) => !c.classList.contains('alert-title')).map((c) => c.textContent).join(' ') || el.textContent;
-  return { name: title || (el.tagName === 'BLOCKQUOTE' ? t('인용') : t('박스글')), label: clip(text, 40) };
+  const text = [...el.children].map((c) => c.textContent).join(' ') || el.textContent;
+  return { name: el.tagName === 'BLOCKQUOTE' && !el.classList.contains('alert') ? t('인용') : t('박스글'), label: clip(text, 40) };
 }
 
 const DIAGRAMS = {

@@ -193,14 +193,14 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-btn-open svg { width: 16px; height: 16px; }
 
 /* ---- 본문 영역 ------------------------------------------------------------- */
-#lec-main { display: flex; min-height: 0; position: relative; }
+#lec-main { display: flex; min-height: 0; position: relative; --doctabs-h: 33px; }
 #lec-sidebar {
   width: var(--side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--ui-border); background: var(--ui-bg);
 }
 /* 문서 칸 (panes.js): 탭마다 하나를 겹쳐 두고 선택된 탭의 칸만 보인다. 숨은 칸은 자리를 지킨다 (visibility) —
    display:none 이면 스크롤 위치를 잃고, 숨은 동안 그림·html 문서의 크기를 잴 수 없다 */
-#lec-panes { flex: 1; min-width: 0; position: relative; --doctabs-h: 33px; }
+#lec-panes { flex: 1; min-width: 0; position: relative; }
 .lec-pane { position: absolute; inset: 0; display: flex; flex-direction: column; }
 .lec-pane:not(.active) { visibility: hidden; }
 /* 문서 탭 (doctabs.js, D64): 문서 칸 위 한 줄 — 프로젝트를 열면 보이고, 칸은 그 아래부터. 고른 탭은 문서 바탕색으로 아래 문서와 이어진다.
@@ -236,6 +236,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums;
 }
 #lec-doctab-all .n:empty { display: none; }
+/* 모두 펼치기 (spread.js, D73): 줄 오른쪽 끝 [▦] — 켜져 있으면 눌린 모양 */
+#lec-doctab-spread { align-self: center; flex: none; }
+#lec-doctab-spread[aria-pressed="true"] { color: var(--ui-accent); background: var(--ui-active-bg); }
 .lec-scroll {
   flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
   container-type: inline-size;   /* 좁은 창에서 본문 여백·찾기 칸을 줄인다 (@container) */
@@ -332,6 +335,46 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .term-on.term-bottom #lec-toc { grid-area: toc; }
 .term-on.term-bottom #lec-term-resizer { grid-area: hres; width: auto; height: 7px; margin: -3px 0 -4px; cursor: row-resize; }
 .term-on.term-bottom #lec-term { grid-area: term; min-width: 0; max-width: none; border-left: 0; border-top: 1px solid var(--ui-border); }
+
+/* ---- 모두 펼치기 (spread.js, D73) — 선택된 탭의 문서 탭들과 터미널을 창 전체에 격자로. 칸 수는 --sp-cols × --sp-rows,
+   칸의 자리(grid-row·grid-column)는 spread.js 가 준다. #lec-panes 는 상자 없이(display: contents) 칸들을 #lec-main 격자에 내놓는다 —
+   칸을 옮기지 않으므로 스크롤·그린 문서가 그대로. 문서 탭 줄은 그대로 맨 위(#lec-main 의 위 여백), 사이드바·목차·경계는 감춘다.
+   아래 터미널(term-bottom)의 격자 규칙보다 뒤에 있어 같은 무게로 덮는다 ---- */
+@media screen {   /* 인쇄는 base.css 의 인쇄 규칙대로 — 고른 문서만 */
+  :root.spread-on #lec-main {
+    display: grid; gap: 6px; padding: calc(var(--doctabs-h) + 6px) 6px 6px; background: var(--ui-bg);
+    grid-template-columns: repeat(var(--sp-cols, 1), minmax(0, 1fr)); grid-template-rows: repeat(var(--sp-rows, 1), minmax(0, 1fr));
+    grid-template-areas: none;
+  }
+  :root.spread-on #lec-panes { display: contents; }
+  :root.spread-on #lec-sidebar, :root.spread-on #lec-resizer, :root.spread-on #lec-toc, :root.spread-on #lec-toc-resizer,
+  :root.spread-on #lec-term-resizer, :root.spread-on #lec-term-place, :root.spread-on.sp-noterm #lec-term { display: none; }
+  :root.spread-on #lec-panes > .lec-pane.sp-cell {
+    position: relative; inset: auto; visibility: visible; min-width: 0; min-height: 0; --sp-head-h: 30px;
+    border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden;
+  }
+  :root.spread-on #lec-panes > .lec-pane.sp-cell.active { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent); }
+  :root.spread-on .sp-cell > .lec-editor { top: var(--sp-head-h); }   /* 편집 상자는 칸 머리 아래를 덮는다 */
+  :root.spread-on #lec-term {
+    grid-area: auto; flex: none; width: auto; min-width: 0; max-width: none;
+    border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden;
+  }
+  :root.spread-on #lec-term:focus-within { border-color: var(--ui-accent); box-shadow: 0 0 0 1px var(--ui-accent); }
+}
+/* 칸 머리: 아이콘·이름·●·[⤢] 이 문서만 보기 (고른 칸은 강조 — 터미널 모음의 칸 머리처럼) */
+.sp-head {
+  display: flex; align-items: center; gap: 6px; flex: none; height: var(--sp-head-h, 30px); padding: 0 4px 0 9px; min-width: 0;
+  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-muted); font-size: 12.5px; font-weight: 600;
+  user-select: none; cursor: default;
+}
+.sp-cell.active > .sp-head { background: var(--ui-active-bg); color: var(--ui-active-fg); }
+.sp-head .ficon {
+  width: 15px; height: 15px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round;
+  color: var(--ui-faint);
+}
+.sp-head .ficon.doc, .sp-cell.active > .sp-head .ficon { color: var(--ui-accent); }
+.sp-head .sp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sp-head .dirty { flex: none; color: var(--ui-accent); font-size: 10px; line-height: 1; }
 
 /* ---- 터미널 모음 (gather.js) — 문서 화면 위를 덮는 격자. 칸 수는 --g-cols × --g-rows ---- */
 #lec-gather {

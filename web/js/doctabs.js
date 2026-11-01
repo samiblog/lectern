@@ -273,8 +273,8 @@ export const openDocs = (tab) => tab.panes.map((p) => viewOf(p)).filter((v) => v
 
 // ---- 문서 탭 줄 -------------------------------------------------------------------
 
-/** 문서 탭의 아이콘·이름·설명 */
-function describe(pane) {
+/** 문서 탭의 아이콘·이름·설명 (모두 펼치기의 칸 머리도 — spread.js) */
+export function describe(pane) {
   const v = viewOf(pane);
   const tab = pane.tab;
   if (!v) return { icon: folderIcon(), name: t('빈 탭'), tip: '' };
@@ -306,6 +306,7 @@ function render() {
   all.title = t('열린 문서 탭 {n}개 — 골라서 가기', { n });
   all.querySelector('.n').textContent = n > 1 ? n : '';
   $('#lec-doctab-list .doc-tab.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  emit('doctab-list', tab);   // 모두 펼치기(spread.js, D73)가 칸을 다시 놓는다 — 탭이 생기거나 닫히거나 이름·고른 탭이 바뀜
 }
 
 /** i 번째(0부터) 문서 탭의 단축키 — Alt+1~8, 마지막 탭은 Alt+9 (n: 탭 수) */
@@ -340,7 +341,8 @@ function listMenu(btn) {
 
 const paneAt = (el) => S.tab?.panes[Number(el?.closest('.doc-tab')?.dataset.i)] || null;
 
-function tabMenu(pane) {
+/** 문서 탭의 우클릭 메뉴 (모두 펼치기의 칸 머리도 — spread.js) */
+export function tabMenu(pane) {
   const v = viewOf(pane);
   const items = [{ header: v?.path || pane.tab.name }];
   if (pane.tab.panes.length > 1) {

@@ -11,7 +11,6 @@ import { bindLink, showMissing, scrollToAnchor } from './doc.js';
 import { setToc } from './toc.js';
 import { setStatus } from './status.js';
 import { setDocSource, frameContextMenu } from './docmenu.js';
-import { hideMenu } from './ui.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { textScale, mdScale } from './textsize.js';
 import { docWidth } from './docwidth.js';
@@ -196,7 +195,9 @@ function prepare(frame, path, tab) {
   doc.addEventListener('keydown', (e) => {
     if (!document.dispatchEvent(new KeyboardEvent('keydown', e))) e.preventDefault();
   });
-  doc.addEventListener('mousedown', hideMenu);   // 앱의 메뉴는 바깥을 누르면 닫힌다 — iframe 안의 누름은 앱 문서에 오지 않는다
+  // iframe 안의 누름은 앱 문서에 오지 않는다 — iframe 이 누른 것처럼 넘긴다: 앱의 메뉴는 바깥을 누르면 닫히고(ui.js),
+  // 모두 펼치기(spread.js, D73)는 누른 칸의 문서 탭을 고른다
+  doc.addEventListener('mousedown', (e) => { frame.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: e.button })); });
   doc.addEventListener('mouseup', (e) => {
     if (e.button === 3 || e.button === 4) window.dispatchEvent(new MouseEvent('mouseup', { button: e.button }));
   });

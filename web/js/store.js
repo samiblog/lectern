@@ -27,8 +27,10 @@
 //   new-doc          새로 만들기 {dir} — 폴더 우클릭 '이 폴더에 새 문서…'   (tree·others → basket, D65)
 //   doctabs          탭(tab)의 문서 탭을 닫음 — 다음 실행에 되살릴 목록     (doctabs → position, D64)
 //   rename           이름 바꾸기 {path} — 파일 우클릭 '이름 바꾸기…'·F2       (tree·others → rename, D66)
-//   tabs             열린 탭 목록이 바뀜 (열기·닫기·서버에 맞추기)          (tabs → gather)
+//   doctab-list      선택된 탭(tab)의 문서 탭 줄을 다시 그림 — 탭이 생기거나 닫히거나 이름·고른 탭이 바뀜 (doctabs → spread, D73)
+//   tabs             열린 탭 목록이 바뀜 (열기·닫기·서버에 맞추기)          (tabs → gather·spread)
 //   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)
+//   term-panel       오른쪽 터미널 패널을 열거나 감춤 (open)                (terminal → spread, D73)
 //   term-paste       글(text)을 선택된 탭의 터미널에 붙여 넣음 — 우클릭 메뉴의 터미널 버튼 (ui → terminal, D51)
 // 팔레트(palette.js)는 이벤트를 듣지 않고 열 때마다 S.files 를 읽는다.
 

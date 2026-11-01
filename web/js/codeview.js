@@ -16,6 +16,7 @@ import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
 import { isTableFile, renderCsv, initCsv } from './csvview.js';
 import { DATA_VIEW_EXT } from './icons.js';
+import { paneShown } from './panes.js';
 import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
 import { t } from './i18n.js';
 
@@ -194,15 +195,19 @@ export function goToLine(view, line, { flash = false } = {}) {
   return el;
 }
 
-/** 보고 있는 코드 파일의 수정 시각이 바뀌었으면 다시 그린다 */
+/** 보고 있는 코드 파일의 수정 시각이 바뀌었으면 다시 그린다 — 보이는 칸마다 (모두 펼치기 중이면 펼친 칸 모두, D73) */
 async function check() {
-  const pane = S.pane;
-  const v = pane?.current;
-  if (document.hidden || v?.type !== 'code' || pane.pending) return;
+  if (document.hidden || !S.tab) return;
+  await Promise.all(S.tab.panes.filter(paneShown).map(checkPane));
+}
+
+async function checkPane(pane) {
+  const v = pane.current;
+  if (v?.type !== 'code' || pane.pending) return;
   try {
     const res = await fetch(docUrl(pane.tab, v.path), { method: 'HEAD', cache: 'no-store' });
     const stamp = res.ok ? `${res.headers.get('Last-Modified')}|${Number(res.headers.get('Content-Length')) || 0}` : 'gone';
-    if (pane === S.pane && pane.current === v && stamp !== pane.codeStamp) emit('refresh-view', pane);
+    if (paneShown(pane) && pane.current === v && stamp !== pane.codeStamp) emit('refresh-view', pane);
   } catch { /* 서버가 잠시 답하지 않음 */ }
 }
 

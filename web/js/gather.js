@@ -30,8 +30,8 @@ let lastTab = null;   // 마지막으로 입력이 간 칸의 탭 (Ctrl+` 로 �
 
 export const gatherOn = () => shown;
 
-/** 칸 수 → [열, 행] */
-function shapeOf(n) {
+/** 칸 수 → [열, 행] (모두 펼치기도 같은 격자 — spread.js) */
+export function shapeOf(n) {
   if (n <= 1) return [1, 1];
   if (n === 2) return [2, 1];
   const cols = Math.ceil(Math.sqrt(n));

@@ -51,7 +51,7 @@
 | `--md-th-fg` | 표 머리행 글자 (머리행을 짙게 칠할 때 흰 글자로 — 없으면 제목 색) |
 | `--md-th-rule` | 표 머리행 아래 굵은 선 |
 | `--md-stripe` | 표의 짝수 행 바탕 |
-| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | 박스글(`> [!NOTE]` 등)의 막대·제목·옅은 바탕 색 |
+| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | 박스글(`> [!NOTE]` 등)의 막대·옅은 바탕 색 |
 | `--md-font` | 본문 글꼴 |
 | `--md-heading-font` | 제목 글꼴 |
 | `--md-mono` | 코드 글꼴 |
@@ -72,7 +72,7 @@
 | 링크 | `.md-body a` (인터넷 링크 `a.ext` — 뒤에 ↗ 표시, 프로젝트 파일 `a.file-link`, 본문 속 경로 `a.path-link`, 열 수 없는 링크 `a.link-off`) |
 | 굵게·강조·표시 | `.md-body strong`, `em`, `mark`, `kbd` |
 | 인용문 | `.md-body blockquote` (박스글은 `blockquote.alert` — 아래) |
-| 박스글 | `.md-body blockquote.alert.alert-note` (`-tip`·`-important`·`-warning`·`-caution`), 그 안 첫 줄 제목 `.alert-title`. 색은 그 박스의 `--alert` 변수 |
+| 박스글 | `.md-body blockquote.alert.alert-note` (`-tip`·`-important`·`-warning`·`-caution`). 제목 줄은 없다 — 종류는 색으로만. 색은 그 박스의 `--alert` 변수 |
 | 코드 블록 | `.md-body .code-block` > `.code-tools`(언어 이름 `.code-lang`, 복사 단추 `.code-copy`) + `pre` > `code.hljs` |
 | 인라인 코드 | `.md-body :not(pre) > code` |
 | 표 | `.md-body .table-wrap`(테두리·스크롤 상자) > `table` > `thead th`, `tbody td`. 숫자 열은 `th.num`·`td.num` (오른쪽 정렬) |

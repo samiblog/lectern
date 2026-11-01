@@ -37,6 +37,12 @@ export function paneOf(node) {
   return el ? S.panes.find((p) => p.el.contains(el)) || null : null;
 }
 
+/**
+ * 칸이 화면에 보이는지: 선택된 칸, 모두 펼치기(spread.js, D73) 중이면 선택된 탭의 칸 모두.
+ * 보이는 칸은 바뀌면 바로 다시 그리고(자동 새로고침·F5·스타일), 숨은 칸은 표시(pane.stale)만 해 두었다가 고를 때 그린다
+ */
+export const paneShown = (pane) => pane === S.pane || (!!pane?.tab && pane.tab === S.tab && document.documentElement.classList.contains('spread-on'));
+
 /** 칸을 고른다. 목차·상태줄 등은 'pane' 을 듣고 이 칸 것으로 바꾸고, 트리·툴바·창 제목은 'view' 를 듣는다 */
 export function selectPane(pane) {
   if (!pane || pane === S.pane) return;

@@ -62,6 +62,14 @@ Put the kind on the first line of a quote. There are exactly five.
 
 `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`. Any other `>` is a plain quote.
 
+Lectern does not add a title line (such as 'Note' or 'Tip') to callouts — the kind shows only as a color. If a callout needs a title, write its first line in bold:
+
+```markdown
+> [!TIP]
+> **Numbers only in tables**
+> Put units in the header row.
+```
+
 ### Other blocks
 
 - Lists, numbered lists, checklists (`- [ ]`, `- [x]` — display only, not clickable).

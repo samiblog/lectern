@@ -6,6 +6,7 @@ import { S, emit } from './store.js';
 import { getJSON } from './api.js';
 import { loadTree } from './project.js';
 import { knownTabsSeq, resyncTabs } from './tabs.js';
+import { paneShown } from './panes.js';
 
 const INTERVAL_MS = 1000;
 let timer = 0;
@@ -29,11 +30,11 @@ async function apply(tab, d) {
     return;
   }
   await loadTree({ tab });
-  const view = tab.pane.current;
-  const shown = tab === S.tab && view?.type === 'doc' ? view.path : null;
+  // 지금 보고 있는 문서 (모두 펼치기 중이면 펼친 칸들의 문서 — D73)
+  const shown = new Set(tab.panes.filter((p) => paneShown(p) && p.current?.type === 'doc').map((p) => p.current.path));
   for (const p of d.paths) {
     // 지워졌거나 이름이 바뀐(옛 이름) 경로, 지금 보고 있는 문서는 표시하지 않는다
-    if (tab.fileMap.has(p) && p !== shown) tab.changed.add(p);
+    if (tab.fileMap.has(p) && !shown.has(p)) tab.changed.add(p);
   }
   tab.lastSync = new Date();
   emit('changed');
@@ -50,7 +51,7 @@ async function apply(tab, d) {
       affected = d.structure || d.paths.some((p) => p.startsWith(prefix));
     }
     if (!affected) continue;
-    if (pane === S.pane) emit('refresh-view', pane);
+    if (paneShown(pane)) emit('refresh-view', pane);
     else pane.stale = true;
   }
 }

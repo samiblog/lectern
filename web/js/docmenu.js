@@ -159,7 +159,7 @@ function kindOf(el) {
   if (el.matches('.math-block')) return t('수식');
   if (el.matches('.front-matter')) return t('메타데이터');
   if (tag === 'LI') return t('목록 항목');
-  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? t('박스글 ({kind})', { kind: el.querySelector('.alert-title')?.textContent || '' }) : t('인용');
+  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? t('박스글') : t('인용');
   return t('단락');
 }
 
@@ -373,8 +373,8 @@ function openMenu(e, view, x, y) {
 }
 
 function onContextMenu(e) {
-  // 편집 모드 (D54) — 아래의 숨은 화면이 아니라 편집기 것. 문서 탭 줄(D64)은 #lec-panes 안에 있지만 자기 메뉴가 있다
-  if (e.target.closest?.('.lec-editor, #lec-doctabs')) return;
+  // 편집 모드 (D54) — 아래의 숨은 화면이 아니라 편집기 것. 문서 탭 줄(D64)·모두 펼치기의 칸 머리(D73)는 #lec-panes 안에 있지만 자기 메뉴가 있다
+  if (e.target.closest?.('.lec-editor, #lec-doctabs, .sp-head')) return;
   openMenu(e, $('#lec-view'), e.clientX, e.clientY);
 }
 
