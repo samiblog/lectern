@@ -20,6 +20,7 @@
 // - 그리기: 칸의 스크롤 상자에 덮개(.lec-spot — 하이라이트 위·아래를 덮는 반투명 회색 둘과 왼쪽 강조 막대)와 현재 위치 삼각형을 겹쳐 둔다 (base.css).
 //   문서 DOM 은 그대로이고 장의 블록에 lec-lit 만 붙인다. 위치는 블록의 화면 위치로 재므로, 문서의 크기가 바뀌면(그림을 불러옴·접기·칸 폭·
 //   글자 크기 — ResizeObserver) 다시 잰다. 덮개는 누르기를 막지 않는다 (pointer-events: none).
+//   한 줄 편집 중(lineedit.js, D76)에는 회색을 걷고 막대만 둔다 (.lec-spot.editing — 위아래 글을 읽으며 고치게, ↑·↓ 로 이어 고치는 동안도).
 // - html 문서(iframe)는 원문 줄을 몰라 쓰지 않는다. 슬라이드로 보는 발표 문서(D59)는 슬라이드 하나가 한 장 (장 하이라이트만).
 // - 선택된 탭의 칸(#lec-view)의 화면에 한다. 다른 탭을 고르면 하이라이트는 꺼지고, 현재 위치는 그 칸의 것이 보인다.
 
@@ -48,6 +49,8 @@ let revealing = 0;      // 'reveal' 뒤 현재 위치를 그곳으로 옮기기 
 
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
 const view = () => $('#lec-view');
+/** 선택된 칸에서 한 줄 편집 중인지 — 시작해서 끝낼 때까지, ↑·↓ 로 다음 줄로 넘어가는 사이(lineEditHold)도 */
+const lineEditing = () => !!(S.pane?.lineEdit || S.pane?.lineEditHold);
 // 'rendered' 때는 S.view 가 아직 앞 화면이므로 화면(DOM)으로 본다. doc.js 가 그린 md 문서에 data-doc-path, codeview.js 가 data-code-path 를 단다
 const isMdDoc = () => view().classList.contains('md-body') && !!view().dataset.docPath && !view().querySelector('.doc-missing');
 const isCodeView = () => view().classList.contains('code-view') && !!view().dataset.codePath;
@@ -469,6 +472,7 @@ function place() {
   const r = lit() && root === view() ? litBox() : null;
   box.hidden = !r;
   if (!r) return;
+  box.classList.toggle('editing', lineEditing());
   const top = Math.max(0, r.top - r.padTop);
   const bottom = r.bottom + r.padBottom;
   const end = Math.max(bottom, root.offsetTop + root.offsetHeight);
@@ -551,7 +555,11 @@ export const spotlightOn = () => active && mode === 'chapter' && chapters.length
 // 한 줄 편집(lineedit.js, D76)이 쓰는 것: 지금 화면의 줄 단위·원문 줄, 그 줄을 하이라이트, 상태줄 다시 쓰기
 export const currentUnits = () => units();
 export const sourceLines = () => srcLines();
-export const showLitStatus = () => updateStatus();
+/** 한 줄 편집을 시작·끝낼 때 (lineedit.js): 덮개의 회색과 상태줄을 맞춘다 */
+export function showLineEdit() {
+  place();
+  updateStatus();
+}
 
 /** 원문 줄 line 하나를 줄 하이라이트하고 현재 위치로 (보이게) */
 export function highlightLine(line) {

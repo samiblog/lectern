@@ -17,7 +17,7 @@
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines, indexOfLine } from './lineunits.js';
-import { currentUnits, sourceLines, highlightLine, showLitStatus } from './spotlight.js';
+import { currentUnits, sourceLines, highlightLine, showLineEdit } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
@@ -190,7 +190,7 @@ async function begin(line, { cell = 0 } = {}) {
   for (const p of places) bind(p.span);
   document.addEventListener('mousedown', onOutside, true);
   focusPlace(session.cell);
-  showLitStatus();
+  showLineEdit();
 }
 
 function focusPlace(i, atEnd = true) {
@@ -225,7 +225,7 @@ async function finish(save) {
   const next = buildLine(s);
   if (!save || next === s.original) {
     restore(s);
-    showLitStatus();
+    showLineEdit();
     if (s.pane.lineEditMissed) {   // 편집하는 동안 미룬 다시 그리기
       s.pane.lineEditMissed = false;
       refreshView(s.pane);
@@ -236,7 +236,7 @@ async function finish(save) {
     p.span.contentEditable = 'false';
     p.span.classList.add('saving');
   }
-  showLitStatus();
+  showLineEdit();
   try {
     const r = await writeLine(s.tab, s.path, s.line, s.original, next);
     if (!r) {   // 그사이 다른 곳에서 그 줄이 바뀌었다
@@ -295,26 +295,32 @@ function caretAtEnd(span) {
   return !r.toString();
 }
 
-/** ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례) */
+/** ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례). 넘어가는 사이에도 하이라이트의 회색은 걷어 둔다 (lineEditHold) */
 async function step(dir) {
   const s = session;
-  const res = await finish(true);
-  if (!res.ok || S.pane !== s.pane) return;
-  const units = currentUnits();
-  const src = sourceLines();
-  const order = units.flatMap((u) => editableLines(u, src));
-  let i = order.indexOf(s.line);
-  if (i < 0) {   // 그 줄이 없어졌다 — 가장 가까운 줄부터
-    const u = indexOfLine(units, s.line);
-    i = u < 0 ? -1 : order.indexOf(editableLines(units[u], src)[0]);
+  s.pane.lineEditHold = true;
+  try {
+    const res = await finish(true);
+    if (!res.ok || S.pane !== s.pane) return;
+    const units = currentUnits();
+    const src = sourceLines();
+    const order = units.flatMap((u) => editableLines(u, src));
+    let i = order.indexOf(s.line);
+    if (i < 0) {   // 그 줄이 없어졌다 — 가장 가까운 줄부터
+      const u = indexOfLine(units, s.line);
+      i = u < 0 ? -1 : order.indexOf(editableLines(units[u], src)[0]);
+    }
+    const next = order[i + dir];
+    if (next == null) {
+      highlightLine(s.line);
+      return;
+    }
+    highlightLine(next);
+    await begin(next, { cell: s.kind === 'table' ? s.cell : 0 });
+  } finally {
+    s.pane.lineEditHold = false;
+    showLineEdit();
   }
-  const next = order[i + dir];
-  if (next == null) {
-    highlightLine(s.line);
-    return;
-  }
-  highlightLine(next);
-  begin(next, { cell: s.kind === 'table' ? s.cell : 0 });
 }
 
 /** Shift+→ (글 끝에서): 저장하고 그 줄의 위치를 맨 앞 터미널에 (spotlight 의 Shift+→ 와 같은 길 — Enter 없이) */

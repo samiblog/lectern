@@ -675,6 +675,12 @@ def run(headed: bool) -> None:
 
             editing = lambda: page.evaluate("""[...document.querySelectorAll('#lec-view .lec-line-edit')].map(s => s.parentElement.tagName + ':' + s.textContent)""")
             focused = lambda: page.evaluate("document.activeElement.classList.contains('lec-line-edit') ? document.activeElement.textContent : null")
+            # 하이라이트 덮개: [편집 중 표시, 위·아래 회색의 opacity, 막대의 opacity] — 한 줄 편집 중에는 회색만 걷는다
+            shade_js = """(() => { const box = document.querySelector('#lec-view').parentElement.querySelector(':scope > .lec-spot');
+              if (!box || box.hidden) return null; const o = (s) => getComputedStyle(box.querySelector(s)).opacity;
+              return [box.classList.contains('editing'), o('.spot-above'), o('.spot-below'), o('.spot-bar')]; })()"""
+            unshaded = f"(() => {{ const v = {shade_js}; return !!v && v[0] && v[1] === '0' && v[2] === '0' && v[3] === '1'; }})()"
+            shaded = f"(() => {{ const v = {shade_js}; return !!v && !v[0] && v[1] === '1' && v[2] === '1'; }})()"
 
             def start(locator, **kw):
                 """줄을 Shift+누르기로 하이라이트하고 Shift+Enter — 글 칸이 생길 때까지"""
@@ -687,12 +693,15 @@ def run(headed: bool) -> None:
             h2 = start(page.locator('#lec-view h2', has_text='고칠 제목'))
             sizes = page.evaluate("[getComputedStyle(document.querySelector('#lec-view h2')).fontSize, getComputedStyle(document.querySelector('#lec-view .lec-line-edit')).fontSize]")
             h2_status = page.evaluate(lit_status)
+            h2_clear = wait_until(page, unshaded, 3000)
             page.keyboard.press('Control+a')
             page.keyboard.type('고친 제목')
             page.keyboard.press('Enter')
             saved_h2 = file_line(edit_doc, 5, '## 고친 제목')
             shown_h2 = wait_until(page, "document.querySelector('#lec-view h2')?.textContent.trim() === '고친 제목'", 5000)
             after_status = page.evaluate(lit_status)
+            h2_back = wait_until(page, shaded, 3000)
+            check(h2_clear and h2_back, f"한 줄 편집 중에는 하이라이트 밖의 회색을 걷고(막대는 그대로), 저장하면 다시 회색 ({h2_clear}, {h2_back}, {page.evaluate(shade_js)})")
             page.locator('#lec-view h1').click()
             page.keyboard.press('Control+z')
             undone = file_line(edit_doc, 5, '## 고칠 제목')
@@ -718,11 +727,17 @@ def run(headed: bool) -> None:
             page.keyboard.press('Tab')
             page.keyboard.press('Control+a')
             page.keyboard.type('a|b')
+            page.evaluate("""(() => { const box = document.querySelector('#lec-view').parentElement.querySelector(':scope > .lec-spot');
+              window.__shadeGaps = 0; window.__shadeBox = box;
+              new MutationObserver(() => { if (!box.classList.contains('editing')) window.__shadeGaps++; }).observe(box, { attributes: true, attributeFilter: ['class'] }); })()""")
             page.keyboard.press('ArrowDown')   # 저장하고 아래 행의 같은 칸
             saved_row = file_line(edit_doc, 15, '| 구리 | a\\|b |')
             wait_until(page, "document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent === '2'", 5000)
             next_row = [editing(), focused(), page.evaluate(lit_status)]
+            step_gaps = page.evaluate("[window.__shadeGaps, window.__shadeBox.isConnected && window.__shadeBox.classList.contains('editing')]")
             page.keyboard.press('Escape')
+            esc_back = wait_until(page, shaded, 3000)
+            check(step_gaps == [0, True] and esc_back, f"↓ 로 이어 고치는 동안 회색이 돌아오지 않고, Esc 로 끝내면 다시 회색 ({step_gaps}, {esc_back})")
             check(row == ['TD:구리', 'TD:1'] and first_cell == '구리' and saved_row == '| 구리 | a\\|b |'
                   and next_row == [['TD:니켈', 'TD:2'], '2', '한 줄 편집 16행'],
                   f"표는 칸마다 (| 는 잠금, Tab 으로 옆 칸, 칸 글의 | 는 \\| 로), ↓ 는 저장하고 아래 행의 같은 칸 ({row}, {saved_row!r}, {next_row})")

@@ -190,6 +190,7 @@ In Markdown documents and the code view (including csv and txt), lines are count
 
 With exactly one line focused, **Shift+Enter** lets you edit that line right where it is (press Shift+Enter twice on the current line). A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
 
+- While you edit, the grey shading outside the focus is lifted so the lines above and below read normally. The line being edited keeps its bar on the left and the box around the text; the shading returns when you finish.
 - **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
 - **↑ ↓** save and go on editing the line above or below. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
 - **Tables**: focus a row and press Shift+Enter to edit it cell by cell. **Tab** and Shift+Tab move between cells; ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.

@@ -138,7 +138,8 @@
   --spot-shade: color-mix(in srgb, color-mix(in srgb, var(--md-fg) 11%, var(--md-bg)) 80%, transparent);
 }
 :root[data-ui="dark"] .lec-spot { --spot-shade: color-mix(in srgb, color-mix(in srgb, #000000 42%, var(--md-bg)) 80%, transparent); }
-.lec-spot .spot-shade { position: absolute; left: 0; right: 0; background: var(--spot-shade); transition: top .2s, height .2s; }
+.lec-spot .spot-shade { position: absolute; left: 0; right: 0; background: var(--spot-shade); transition: top .2s, height .2s, opacity .15s; }
+.lec-spot.editing .spot-shade { opacity: 0; }   /* 한 줄 편집 중(lineedit.js, D76)에는 회색을 걷는다 — 위아래 글을 보며 고치게. 막대는 그대로 */
 .lec-spot .spot-above { top: 0; height: var(--spot-top, 0px); }
 .lec-spot .spot-below { top: var(--spot-bottom, 0px); height: calc(var(--spot-end, 0px) - var(--spot-bottom, 0px)); }
 .lec-spot .spot-bar {   /* 하이라이트한 곳의 왼쪽 막대 (본문 왼쪽 여백에) */
