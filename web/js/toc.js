@@ -5,7 +5,7 @@
 // (설정 toc_hidden_parts — 감춘 종류를 적어 두므로 새 종류는 처음부터 보인다). 번호(표 1, 표 2 …)는 감춘 것과 상관없이 문서 순서다.
 // 편집 모드(D55)에서는 '지금 읽는 위치'가 편집기의 지금 보는 곳을 따르고, 목차를 누르면 편집기가 그 줄로 간다 (editor.js).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { saveConfig } from './api.js';
 import { unfoldTo } from './fold.js';
 import { chartLabel } from './charts.js';
@@ -481,7 +481,8 @@ export function initToc() {
     e.preventDefault();
     const h = heads[+a.dataset.i];
     if (!h || editJump?.(h)) return;   // 편집 중이면 편집기가 그 제목(줄)으로
-    if (h.classList.contains('cv-line')) {   // 코드 화면: 그 줄을 위에 두고 잠깐 표시
+    if (h.classList.contains('cv-line')) {   // 코드 화면: 그 줄을 위에 두고 잠깐 표시 (현재 위치도 그 줄로 — spotlight.js)
+      emit('reveal', h);
       h.scrollIntoView({ block: 'start' });
       h.classList.remove('lec-target');
       void h.offsetWidth;

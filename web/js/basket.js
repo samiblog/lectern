@@ -16,11 +16,10 @@ import { getText } from './api.js';
 import { showMenu } from './ui.js';
 import { openTarget, openDocs } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
-import { rangeText } from './docmenu.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
 import { newDocGuess, cleanPath, createDoc, openCreated } from './newdoc.js';
-import { $, esc, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly } from './util.js';
+import { $, esc, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
 import { t } from './i18n.js';
 
 let seq = 0;

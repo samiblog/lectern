@@ -1,6 +1,7 @@
 // 문서 본문 우클릭 메뉴: 우클릭한 블록(제목·단락·목록 항목·표·그림·코드·다이어그램·수식)에 테두리를 그리고 복사 메뉴를 띄운다.
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
-// 하이라이트한 곳(장 하이라이트·Alt+끌기 — spotlight.js) 안이면 그 범위의 선택 상자: Claude 로 보내기, 위치·원문 복사, 담기 … (litMenu, D74).
+// 하이라이트한 곳(장 하이라이트·줄 하이라이트 — spotlight.js) 안이면 그 범위의 선택 상자: Claude 로 보내기, 위치·원문 복사, 담기 … (litMenu, D74·D75).
+// 코드 화면에서도 하이라이트한 곳 안이면 같은 상자 (담기 없이).
 //
 // 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
 // md 문서의 블록·절·고른 글은 '담기'·'보내기…'(basket.js, D63·D65) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
@@ -11,12 +12,12 @@ import { S, emit } from './store.js';
 import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems, litAt, stopSpotlight } from './spotlight.js';
+import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource } from './spotlight.js';
 import { partExtent } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
-import { $, esc, toast, copyText } from './util.js';
+import { $, esc, toast, copyText, rangeText } from './util.js';
 import { t } from './i18n.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
@@ -70,7 +71,6 @@ function sectionRange(h) {
   return [head[0], end];
 }
 
-export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
 const sourceOf = ([a, b]) => doc.lines.slice(a - 1, b).join('\n');
 // Claude Code는 '@경로' 를 파일 전체로 붙인다. 줄 범위 표기(#L40-52)는 문서화되어 있지 않아 글로 적는다 (D24)
 const claudeRef = (range, note = '') => `@${doc.path} ${rangeText(range)}${note}`;
@@ -223,31 +223,27 @@ function takeItems(range, info, labels = [t('담기'), t('보내기…')]) {
 }
 
 /**
- * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, Alt+끌기의 블록들) 안에서 우클릭하면 나오는 선택 상자 (D74).
+ * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, 줄 하이라이트의 줄들) 안에서 우클릭하면 나오는 선택 상자 (D74·D75).
  * 맨 위 'Claude 로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
- * 그 밖에 위치·원문 복사, 담기·문서로 보내기, 그 블록의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄 — 장은 그 블록들의 처음부터 끝까지.
- * 하이라이트로 할 일이 늘면 이 상자에 더한다. blockMenu: 우클릭한 블록의 보통 메뉴를 띄우는 함수 (없으면 null)
+ * 그 밖에 위치·원문 복사, 담기·문서로 보내기(md 만), 그 블록(코드 화면은 그 줄)의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄.
+ * 보내기·복사는 키(Shift+→·Shift+←·Ctrl+C)와 같은 함수다. 하이라이트로 할 일이 늘면 이 상자에 더한다.
+ * hl: litAt 의 {path, range, ref, text, code}. blockMenu: 우클릭한 블록의 보통 메뉴를 띄우는 함수 (없으면 null)
  */
 function litMenu(hl, selected, blockMenu) {
-  let range = hl.lines;
-  if (hl.blocks) {
-    const spans = hl.blocks.map(lineRange).filter(Boolean);
-    range = spans.length ? [Math.min(...spans.map((s) => s[0])), Math.max(...spans.map((s) => s[1]))] : null;
-  }
-  if (!range) return null;
-  range = [range[0], Math.min(range[1], doc.lines.length)];
-  const ref = claudeRef(range);
-  const text = sourceOf(range);
+  const { range, ref, text } = hl;
   const name = t('하이라이트한 곳');
   const items = [{ header: `${name} · ${rangeText(range)}` },
-    { label: t('Claude 로 보내기'), hint: `${ref} — ${t('터미널에 (Enter 는 누르지 않음)')}`, action: () => emit('term-paste', `${ref} `) },
+    { label: t('Claude 로 보내기'), hint: `Shift+→ · ${t('터미널에 (Enter 는 누르지 않음)')}`, action: sendLit },
     '-',
-    { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref) },
-    { label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(text) },
-    ...takeItems(range, { kind: hl.blocks ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]),
-    '-'];
+    { label: t('Claude용 위치 복사'), hint: `Shift+← · ${ref}`, action: copyLitRef },
+    { label: t('원문 복사'), hint: `Ctrl+C · ${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource }];
+  if (!hl.code) items.push(...takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]));
+  items.push('-');
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) });
-  if (blockMenu) items.push({ label: t('이 블록의 메뉴…'), hint: t('표·그림·코드 복사 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 이 상자를 닫은 뒤에 부른다
+  if (blockMenu) {
+    items.push(hl.code ? { label: t('이 줄의 메뉴…'), hint: t('줄·고른 글 복사, 편집기에서 열기 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu }
+      : { label: t('이 블록의 메뉴…'), hint: t('표·그림·코드 복사 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 이 상자를 닫은 뒤에 부른다
+  }
   items.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
   return items;
 }
@@ -343,11 +339,23 @@ function docItems() {
 /** 코드 화면의 줄 번호 (요소·글 위치가 든 줄) */
 const lineOf = (node) => Number((node?.nodeType === 1 ? node : node?.parentElement)?.closest?.('.cv-line')?.dataset.line) || 0;
 
-/** 코드 화면의 우클릭 메뉴 */
+/** 코드 화면의 우클릭 메뉴 — 하이라이트한 곳 안이면 그 범위의 선택 상자 (D75), '이 줄의 메뉴…' 로 아래의 줄 메뉴 */
 function codeMenu(e, view, x, y) {
   const path = view.dataset.codePath;
   if (!path || e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
+  const sel = getSelection();
+  const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString() : '';
+  const hl = litAt(e.clientY);
+  if (hl) {
+    showMenu(x, y, litMenu(hl, selected.trim(), () => codeLineMenu(e, view, x, y)));
+    return;
+  }
+  codeLineMenu(e, view, x, y);
+}
+
+function codeLineMenu(e, view, x, y) {
+  const path = view.dataset.codePath;
   const row = e.target.closest?.('.cv-line');
   const line = Number(row?.dataset.line) || 0;
   const end = Number(row?.dataset.end) || line;   // csv 의 한 행이 여러 줄이면 (따옴표 안 줄바꿈 — csvview.js)
@@ -372,6 +380,8 @@ function codeMenu(e, view, x, y) {
   }
   items.push('-', ...pathMenuItems(path, true), '-',
     { label: isCode(path) ? t('코드 전체 복사') : t('전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });
+  const spot = spotlightItems(e.target);   // 하이라이트 해제 (D75)
+  if (spot.length) items.push('-', ...spot);
   row?.classList.add('lec-picked');
   showMenu(x, y, items, () => row?.classList.remove('lec-picked'));
 }
@@ -389,7 +399,7 @@ function openMenu(e, view, x, y) {
   const el = pickBlock(e.target, view);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
-  // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74 — md 문서만). '이 블록의 메뉴…' 로 아래의 보통 메뉴
+  // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74). '이 블록의 메뉴…' 로 아래의 보통 메뉴
   const hl = view === $('#lec-view') ? litAt(e.clientY) : null;
   const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y));
   if (lit) {

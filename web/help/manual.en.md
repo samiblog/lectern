@@ -174,14 +174,17 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 - **Open style folder** in Settings opens the folder. Deleting a file removes it from the list.
 - Anything that would load fonts or images from the internet is removed by the app; only fonts installed on the PC are used.
 
-### Focus
+### Current line and focus
 
-The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. It works in Markdown documents.
+In Markdown documents and the code view (including csv and txt), lines are counted as lines of the source file — a paragraph, list item, heading or table row written on one line is one line, a paragraph wrapped over several lines goes line by line, and code goes line by line. So the `@path lines 12-20` sent to Claude matches what you picked on screen.
 
-- **Section focus**: the **Focus** button in the toolbar keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there.
-- **Alt+drag**: **hold Alt and drag** over the text to focus only the blocks you drag over — paragraphs, list items, headings and table rows. Code blocks go by line. Alt+click focuses a single block. Dragging to the top or bottom edge scrolls. Click a dimmed area to clear it.
-- **Right-click**: right-clicking inside the focused part opens a selection box — **Send to Claude** (puts the location of that range, `@path lines 12-20`, into Claude Code in the terminal without pressing Enter), copy location for Claude, copy source, Clip, Send to a document, **Menu for this block…** (the usual menu you get outside the focus) and Clear focus.
-- Press Esc or click the button again to turn it off. You can also right-click the text and choose 'Focus this section'.
+- **Current line**: the small triangle to the left of the line you are reading. Click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. Each document tab keeps its own.
+- **Line focus**: **Shift+click** focuses that line, **Shift+drag** the lines you drag over, and **Shift+Enter** the current line. The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. Dragging to the top or bottom edge scrolls.
+- **Grow and shrink**: **Shift+↑ ↓** move the last line of the focus up or down — the first line stays, so the focus grows or shrinks. With a focus, Shift+click extends it to that line. Without one, Shift+↑ ↓ start from the current line.
+- **Send to Claude**: **Shift+→** puts the location of the focused part, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed, so go on typing your request. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While focusing, the status bar shows the line range.
+- **Section focus**: the **Focus** button in the toolbar keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
+- **Right-click**: right-clicking inside the focused part opens a selection box — **Send to Claude**, copy location for Claude, copy source, Clip, Send to a document, **Menu for this block…** (the usual menu you get outside the focus) and Clear focus.
+- Click a dimmed area or press Esc or the button to turn it off. Moving the current line with ↑ ↓ also clears a line focus. You can also right-click the text and choose 'Focus this section'.
 
 ### Find in document
 

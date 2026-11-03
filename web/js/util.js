@@ -86,6 +86,9 @@ export function timeAgo(sec) {
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
+/** 원문 줄 범위의 글: [12, 12] → '12행', [12, 20] → '12~20행' (Claude용 위치 '@경로 12~20행' — D24) */
+export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
+
 export async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);

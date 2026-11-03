@@ -16,7 +16,7 @@
 //   refresh-view     칸(pane, 없으면 모든 탭)을 같은 스크롤 위치로 다시 그림 (watch·theme·settings → nav)
 //   rendered         칸(pane)의 문서/개요 렌더링 완료                     (doc·htmldoc·overview → find·spotlight·position)
 //   synced           변경 확인 주기 완료                                  (watch → status)
-//   reveal           문서 속 요소로 가기 직전 (목차·찾기·앵커·바뀐 곳)   (fold.unfoldTo → spotlight)
+//   reveal           문서 속 요소로 가기 직전 (목차·찾기·앵커·바뀐 곳)   (fold.unfoldTo·codeview.goToLine·toc → spotlight — 장, 현재 위치)
 //   text-size        글자 크기가 바뀜                                     (textsize → htmldoc·tablefit)
 //   doc-width        툴바의 문서 폭이 바뀜                                (docwidth → htmldoc, D68)
 //   term-colors      설정 '터미널 색을 스타일에 맞춤'이 바뀜              (settings → terminal)

@@ -6,8 +6,8 @@
 // - 제목 수준: 조각의 맨 위 제목을 넣을 자리에 맞춘다 (조각 안의 차이는 그대로, 1~6).
 // - 넣을 자리: 맨 앞(맨 앞 설정·문서 제목 아래), 맨 끝(끝의 각주 정의 앞), 절 끝, 커서가 든 블록 끝 — 앞뒤에 빈 줄을 둔다.
 
+import { rangeText } from './util.js';
 import { t } from './i18n.js';
-import { rangeText } from './docmenu.js';
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 const HEADING = /^ {0,3}(#{1,6})(?=\s|$)(.*)$/;

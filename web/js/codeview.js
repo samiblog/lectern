@@ -181,10 +181,11 @@ function finish(pane, path, outline, status) {
   emit('rendered', pane);
 }
 
-/** 코드 화면에서 line 번째 줄로 (가운데), flash 면 잠깐 표시 */
+/** 코드 화면에서 line 번째 줄로 (가운데), flash 면 잠깐 표시. 현재 위치도 그 줄로 (spotlight.js — 'reveal') */
 export function goToLine(view, line, { flash = false } = {}) {
   const el = view.querySelector(`.cv-line[data-line="${Number(line)}"]`);
   if (!el) return null;
+  emit('reveal', el);
   el.scrollIntoView({ block: 'center' });
   if (flash) {
     el.classList.remove('lec-target');

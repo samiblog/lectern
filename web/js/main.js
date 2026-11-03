@@ -7,7 +7,7 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotlightOn, moveSpotlight, stopSpotlight } from './spotlight.js';
+import { initSpotlight, spotKey, stopSpotlight } from './spotlight.js';
 import { initTextSize } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
@@ -140,8 +140,6 @@ function bindToolbar() {
   // 툴바의 터미널 모음 버튼은 initGather 가 잇는다
 }
 
-// 장 하이라이트 중에 앞뒤 장으로 가는 키 (입력칸·목록·열린 팝업에서는 원래대로)
-const SPOT_KEYS = { ArrowUp: -1, ArrowDown: 1, PageUp: -1, PageDown: 1 };
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
@@ -240,9 +238,8 @@ function bindKeys() {
     } else if (helpKey) {   // Ctrl+/
       e.preventDefault();
       toggleShortcuts();
-    } else if (SPOT_KEYS[e.key] && !mod && !e.altKey && !e.shiftKey && spotlightOn() && !typing(e)) {
+    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
-      moveSpotlight(SPOT_KEYS[e.key]);
     } else if (e.key === 'Escape') {
       if (closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();

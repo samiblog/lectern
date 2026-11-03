@@ -51,7 +51,7 @@
 /* 코드 화면 (codeview.js, D43): 줄 번호 + 줄(긴 줄은 접어서). 색은 highlight.js(github / github-dark), 바탕은 스타일의 코드 바탕 */
 .md-body.code-view { max-width: none; padding-top: 0; }
 .code-view .cv-head {
-  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
+  position: sticky; top: 0; z-index: 6;   /* 하이라이트 덮개(.lec-spot, 5)·현재 위치 표시 위 */ display: flex; align-items: center; flex-wrap: wrap; gap: 4px 12px;
   margin: 0 0 8px; padding: 14px 0 10px; border-bottom: 1px solid var(--md-border); background: var(--md-bg);
 }
 /* 파일 이름은 문서 제목처럼 스타일의 제목 글꼴로, 그 옆 정보는 앱 글꼴로 (본문 글꼴이 명조인 스타일에서도 문서 화면과 같게) */
@@ -118,7 +118,7 @@
 .md-body .lec-target { outline: 3px solid transparent; outline-offset: 4px; border-radius: 3px; animation: lec-target 1.8s ease-in; }
 @media (prefers-reduced-motion: reduce) { .md-body .lec-target { animation: none; outline-color: var(--md-link); } }
 
-/* 하이라이트 (spotlight.js, D74 — 장 하이라이트·Alt+끌기): 하이라이트한 곳만 그대로, 그 밖은 회색 바탕에 흐린 글자·선·그림.
+/* 하이라이트 (spotlight.js, D74·D75 — 장 하이라이트·줄 하이라이트): 하이라이트한 곳만 그대로, 그 밖은 회색 바탕에 흐린 글자·선·그림.
    칸의 스크롤 상자에 겹친 덮개가 하이라이트한 곳(--spot-top ~ --spot-bottom)의 위·아래를 덮는다 */
 .lec-spot {
   position: absolute; left: 0; top: 0; width: 100%; height: 0; z-index: 5; pointer-events: none;   /* 표 머리행(1) 위, 편집 상자(6)·찾기 막대 아래 */
@@ -133,8 +133,13 @@
   position: absolute; left: var(--spot-bar, 8px); width: 3px; border-radius: 2px; background: var(--md-link);
   top: calc(var(--spot-top, 0px) + 4px); height: max(0px, calc(var(--spot-bottom, 0px) - var(--spot-top, 0px) - 8px)); transition: top .2s, height .2s;
 }
-.lec-spot.dragging .spot-shade, .lec-spot.dragging .spot-bar { transition: none; }   /* Alt+끌기 중에는 바로 따라오게 */
-@media (prefers-reduced-motion: reduce) { .lec-spot .spot-shade, .lec-spot .spot-bar { transition: none; } }
+.lec-spot.dragging .spot-shade, .lec-spot.dragging .spot-bar { transition: none; }   /* Shift+끌기 중에는 바로 따라오게 */
+/* 현재 위치 (spotlight.js, D75): 지금 보는 원문 줄의 첫 화면 줄 왼쪽, 본문 글 바로 앞 여백의 작은 삼각형 (하이라이트 막대·접기 화살표보다 안쪽) */
+.lec-here {
+  position: absolute; z-index: 5; pointer-events: none; left: var(--here-x, 8px); top: calc(var(--here-y, 0px) - 5px);
+  width: 7px; height: 10px; background: var(--md-link); clip-path: polygon(0 0, 100% 50%, 0 100%); transition: top .1s;
+}
+@media (prefers-reduced-motion: reduce) { .lec-spot .spot-shade, .lec-spot .spot-bar, .lec-here { transition: none; } }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }
@@ -363,7 +368,7 @@
   .md-body thead th { position: static; }
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
   .md-body .lec-changed, .md-body .lec-picked, .md-body .lec-target { outline: none !important; animation: none !important; }
-  .lec-spot { display: none !important; }   /* 하이라이트 중이어도 모두 그대로 인쇄 */
+  .lec-spot, .lec-here { display: none !important; }   /* 하이라이트 중이어도 모두 그대로 인쇄, 현재 위치 표시도 빼고 */
   /* 발표 문서 (D59): 한 장에 한 쪽 — 쪽 크기는 슬라이드 크기 (@page lec-slide), 줄이지 않고 그대로 */
   .md-body.lec-deck { max-width: none; padding: 0; }
   .lec-deck .lec-slide-wrap { margin: 0; page: lec-slide; }

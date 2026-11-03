@@ -37,6 +37,10 @@ failures: list[str] = []
 
 
 
+# 줄 단위 점검(D75)에 쓰는 문서: 짧게 나눠 쓴 문단(화면의 한 줄), 길게 나눠 쓴 문단(원문 줄마다), 목록·박스글·표·코드, 스크롤할 만큼 긴 둘째 절
+LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 쓴 문단.\n\n이 문단은 원문에서 두 줄로 나눠 썼습니다. 첫 줄은 길어서 화면에서 한 줄을 넘기고, 다음 원문 줄은 화면의 둘째 줄이나 셋째 줄에서 시작합니다. 그래도 원문 줄은 따로 셉니다.\n둘째 원문 줄은 여기서 시작해 문단 끝까지 이어집니다.\n\n- 항목 하나\n- 항목 둘\n  - 안쪽 항목\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n```python\na = 1\n\nb = 2\n```\n\n## 둘째 절\n\n단락 1.\n\n단락 2.\n\n단락 3.\n\n단락 4.\n\n단락 5.\n\n단락 6.\n\n단락 7.\n\n단락 8.\n\n단락 9.\n\n단락 10.\n\n단락 11.\n\n단락 12.\n\n단락 13.\n\n단락 14.\n\n단락 15.\n\n단락 16.\n\n단락 17.\n\n단락 18.\n\n단락 19.\n\n단락 20.\n\n단락 21.\n\n단락 22.\n\n단락 23.\n\n단락 24.\n\n단락 25.\n\n단락 26.\n\n단락 27.\n\n단락 28.\n\n단락 29.\n\n단락 30.\n\n단락 31.\n\n단락 32.\n\n단락 33.\n\n단락 34.\n\n단락 35.\n\n단락 36.\n\n단락 37.\n\n단락 38.\n\n단락 39.\n\n단락 40.\n'
+
+
 def check(cond: bool, message: str) -> None:
     print(('  ok   ' if cond else '  FAIL ') + message)
     if not cond:
@@ -479,19 +483,19 @@ def run(headed: bool) -> None:
             check('이 장 하이라이트' in items_off and by_menu == ['콜아웃'] and '하이라이트 해제' in items_on
                   and '이 장 하이라이트' not in items_on and off_by_menu,
                   f'본문 우클릭 메뉴로 그 장 하이라이트 / 하이라이트 해제 ({by_menu})')
-            # Alt+끌기 (D74): 표의 '구리' 행에서 '니켈' 행까지 → 그 행들(원문 11~13행)만 하이라이트, 글은 고르지 않음.
+            # Shift+끌기 (D75 — D74 의 Alt+끌기): 표의 '구리' 행에서 '니켈' 행까지 → 그 행들(원문 11~13행)만 하이라이트, 글은 고르지 않음.
             # 우클릭은 선택 상자 — 맨 위 'Claude 로 보내기'(맨 앞 터미널에 넣기), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
             row_at = lambda text: page.evaluate(f"""(() => {{ const tr = [...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('{text}'));
               const b = tr.getBoundingClientRect(); return [b.left + 30, b.top + b.height / 2]; }})()""")
             page.evaluate("[...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('알루미늄')).scrollIntoView({ block: 'center' })")
             a = row_at('구리')
             b = row_at('니켈')
-            page.keyboard.down('Alt')
+            page.keyboard.down('Shift')
             page.mouse.move(*a)
             page.mouse.down()
             page.mouse.move(*b, steps=6)
             page.mouse.up()
-            page.keyboard.up('Alt')
+            page.keyboard.up('Shift')
             band = page.evaluate("""(() => { const box = document.querySelector('#lec-content > .lec-spot'); if (!box || box.hidden) return null;
               const y = (sel) => Math.round(box.querySelector(sel).getBoundingClientRect()[sel === '.spot-above' ? 'bottom' : 'top']);
               const rows = [...document.querySelectorAll('#lec-view tr')].map(r => [r.textContent.trim().split(/\\s+/)[0], r.getBoundingClientRect()]);
@@ -506,7 +510,7 @@ def run(headed: bool) -> None:
             check(band and band['lit'] == ['구리', '알루미늄', '니켈'] and band['on'] and not band['sel']
                   and alt_first == ['하이라이트한 곳 · 11~13행', 'Claude 로 보내기', 'Claude용 위치 복사'] and '@docs/01-기능-점검.md 11~13행' in alt_menu
                   and '이 블록의 메뉴…' in alt_menu and '하이라이트 해제' in alt_menu and no_term_btn and cleared,
-                  f"Alt+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude 로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
+                  f"Shift+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude 로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
             para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
             head = menu(para).split('\n')[0]
             picked = page.locator('#lec-view .lec-picked').count()
@@ -556,6 +560,98 @@ def run(headed: bool) -> None:
             page.evaluate('getSelection().removeAllRanges()')
             sec('표').click()   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
             shot('02-doc-folded')
+
+            print('[현재 위치와 줄 하이라이트]')   # D75 — 원문 줄 단위: 현재 위치(삼각형)·↑·↓, Shift+Enter·Shift+↑·↓·Shift+누르기·끌기, Shift+←·Ctrl+C, 상태줄
+            lines_src = LINES_DOC.split('\n')
+            (work / 'docs' / '97-줄.md').write_text(LINES_DOC, encoding='utf-8')
+            page.click('.side-tabs button[data-tab="files"]')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', timeout=10000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-줄.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("줄 점검")')
+            lit_status = "document.querySelector('#lec-st-lit').hidden ? null : document.querySelector('#lec-st-lit').textContent"
+            # 줄 단위: 한 줄짜리 블록은 통째, 화면의 한 줄에 이어지는 짧은 줄들은 함께, 화면에서 따로 시작하는 원문 줄은 따로, 코드는 줄마다(``` 빼고),
+            # 표의 구분 줄은 머리행에, 박스글의 [!NOTE] 줄은 그 글에
+            unit_list = page.evaluate("""(src) => import('/static/js/lineunits.js').then((m) => m.collectUnits(document.querySelector('#lec-view'), src)
+              .filter((u) => u.a < 33).map((u) => `${u.a}-${u.b}`).join(' '))""", lines_src)
+            here_on = page.locator('#lec-content > .lec-here').count() == 1
+            page.locator('#lec-view p', has_text='첫 문단').click()
+            page.keyboard.press('Shift+Enter')
+            s1 = page.evaluate(lit_status)
+            steps = []
+            for key in ('Shift+ArrowDown', 'Shift+ArrowDown', 'Shift+ArrowDown', 'Shift+ArrowUp'):
+                page.keyboard.press(key)
+                steps.append(page.evaluate(lit_status))
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.keyboard.press('Shift+ArrowLeft')
+            wait_until(page, "document.querySelector('#lec-toast').textContent.startsWith('복사')")
+            ref = page.evaluate('navigator.clipboard.readText()')
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.keyboard.press('Control+c')
+            wait_until(page, "document.querySelector('#lec-toast').textContent.startsWith('복사')")
+            source = page.evaluate('navigator.clipboard.readText()').replace('\r\n', '\n')
+            page.keyboard.press('ArrowDown')   # 줄 하이라이트를 풀고 끝 줄(8행) 다음 줄로
+            released = page.evaluate(lit_status)
+            page.keyboard.press('Shift+Enter')
+            moved = page.evaluate(lit_status)
+            check(here_on and unit_list == '1-1 3-3 5-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
+                  and s1 == '하이라이트 3행 · 1줄' and steps == ['하이라이트 3~6행 · 4줄', '하이라이트 3~8행 · 6줄', '하이라이트 3~9행 · 7줄', '하이라이트 3~8행 · 6줄']
+                  and ref == '@docs/97-줄.md 3~8행' and source == '\n'.join(lines_src[2:8]) and released is None and moved == '하이라이트 9행 · 1줄',
+                  f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+Enter·Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
+                  f"↓ 는 하이라이트를 풀고 다음 줄로 ({released}, {moved})")
+            page.keyboard.press('Escape')
+            row34 = page.locator('#lec-view tr', has_text='3').last.bounding_box()
+            code_box = page.locator('#lec-view .code-block code').first.bounding_box()
+            page.keyboard.down('Shift')
+            page.mouse.click(row34['x'] + 20, row34['y'] + row34['height'] / 2)
+            by_shift_click = page.evaluate(lit_status)
+            page.mouse.click(code_box['x'] + 20, code_box['y'] + code_box['height'] - 4)   # 있으면 거기까지 넓힌다
+            extended = page.evaluate(lit_status)
+            page.keyboard.up('Shift')
+            page.keyboard.press('Escape')
+            one = page.locator('#lec-view li', has_text='항목 하나').bounding_box()
+            inner = page.locator('#lec-view li', has_text='안쪽 항목').last.bounding_box()
+            page.keyboard.down('Shift')
+            page.mouse.move(one['x'] + 30, one['y'] + 6)
+            page.mouse.down()
+            page.mouse.move(inner['x'] + 30, inner['y'] + inner['height'] / 2, steps=6)
+            page.mouse.up()
+            page.keyboard.up('Shift')
+            by_drag = page.evaluate(lit_status)
+            drag_sel = page.evaluate('getSelection().toString()')
+            page.mouse.click(one['x'] + 30, one['y'] - 120)   # 흐린 곳을 누르면 푼다
+            by_grey = page.evaluate(lit_status)
+            check(by_shift_click == '하이라이트 21행 · 1줄' and extended == '하이라이트 21~26행 · 6줄' and by_drag == '하이라이트 11~13행 · 3줄'
+                  and not drag_sel and by_grey is None,
+                  f"Shift+누르기는 그 줄(있으면 거기까지 넓힘), Shift+끌기는 끈 줄들(글은 고르지 않음), 흐린 곳을 누르면 풂 ({by_shift_click}, {extended}, {by_drag})")
+            # 현재 위치는 스크롤하면 화면 안으로 따라오고, ↓ 로 옮기면 화면이 따라간다
+            here_y = "parseFloat(document.querySelector('#lec-content > .lec-here').style.getPropertyValue('--here-y'))"
+            visible = f"(() => {{ const sc = document.querySelector('#lec-content'), y = {here_y}; return y >= sc.scrollTop && y <= sc.scrollTop + sc.clientHeight; }})()"
+            page.locator('#lec-view p', has_text='첫 문단').click()
+            page.locator('#lec-content').evaluate('el => el.scrollTop = el.scrollHeight')
+            followed = wait_until(page, visible, 3000)
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
+            wait_until(page, visible, 3000)
+            top0 = page.evaluate("document.querySelector('#lec-content').scrollTop")
+            for _ in range(30):
+                page.keyboard.press('ArrowDown')
+            page.wait_for_timeout(200)
+            down_scrolled = page.evaluate("document.querySelector('#lec-content').scrollTop") > top0 + 100 and page.evaluate(visible)
+            # 툴바 버튼은 장 하이라이트 — Shift+↓ 는 그 장의 처음~끝 줄을 줄 하이라이트로 바꿔 끝 줄을 옮긴다
+            page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
+            page.wait_for_timeout(100)
+            page.click('#lec-btn-spot')
+            chapter = page.evaluate(lit_status)
+            page.keyboard.press('Shift+ArrowDown')
+            from_chapter = page.evaluate(lit_status)
+            page.keyboard.press('Escape')
+            check(followed and down_scrolled and chapter == '하이라이트 1~27행 · 27줄' and from_chapter == '하이라이트 1~29행 · 29줄',
+                  f"스크롤하면 현재 위치가 화면 안으로 따라오고, ↓ 로 옮기면 화면이 따라감 ({followed}, {down_scrolled}); "
+                  f"툴바 버튼은 장, Shift+↓ 로 그 장을 줄 범위로 ({chapter}, {from_chapter})")
+            shot('03b-line-highlight')
+            (work / 'docs' / '97-줄.md').unlink()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', state='detached', timeout=10000)
 
             print('[수식과 달러]')
             page.locator('#lec-view a', has_text='수식과 달러 표기').click()
@@ -1352,6 +1448,25 @@ def run(headed: bool) -> None:
             copied = choose('Claude용 위치 복사')
             check(found_code and '편집기에서 이 줄 열기' in items and '코드 전체 복사' in items and copied == '@code/example.py 3행',
                   f"코드 화면에서도 Ctrl+F 찾기, 줄 우클릭 메뉴 — Claude용 위치 ({copied!r})")
+            # 코드 화면의 현재 위치·줄 하이라이트 (D75): 줄을 누르고 Shift+Enter·Shift+↓, Shift+← 는 위치 복사, 우클릭은 선택 상자(담기 없이)
+            page.locator('#lec-view .cv-line[data-line="5"]').click()
+            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('Shift+ArrowDown')
+            page.keyboard.press('Shift+ArrowDown')
+            code_lit = page.evaluate(lit_status)
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.keyboard.press('Shift+ArrowLeft')
+            wait_until(page, "document.querySelector('#lec-toast').textContent.startsWith('복사')")
+            code_ref = page.evaluate('navigator.clipboard.readText()')
+            code_here = page.locator('#lec-content > .lec-here').count() == 1
+            code_menu = menu(page.locator('#lec-view .cv-line[data-line="6"]'))
+            page.keyboard.press('Escape')   # 메뉴
+            page.keyboard.press('Escape')   # 하이라이트
+            code_off = page.evaluate(lit_status)
+            check(code_lit == '하이라이트 5~7행 · 3줄' and code_ref == '@code/example.py 5~7행' and code_here
+                  and code_menu.startswith('하이라이트한 곳 · 5~7행') and '이 줄의 메뉴…' in code_menu and '담기' not in code_menu and code_off is None,
+                  f"코드 화면의 현재 위치·줄 하이라이트: 줄 누르기·Shift+Enter·Shift+↓, Shift+← 위치 복사, 우클릭은 선택 상자(담기 없이), Esc 로 풂 "
+                  f"({code_lit}, {code_ref!r}, {code_menu[:30]!r})")
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
@@ -2603,6 +2718,17 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)
             check(term_btns >= 2 and pasted and in_term and told and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
                   f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
+            # Shift+→ (D75): 하이라이트한 곳의 위치를 맨 앞 터미널에 Enter 없이 — 초점은 터미널로
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Shift+Enter')
+            h1_at = page.locator('#lec-view h1').first.get_attribute('data-lines').split('-')[0]
+            page.keyboard.press('Shift+ArrowRight')
+            sent = term_has(f'@{doc_path} {h1_at}행 ')
+            sent_focus = page.evaluate("!!document.activeElement?.closest('#lec-term')")
+            page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Escape')   # 하이라이트 끄기
+            check(sent and sent_focus, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점은 터미널로 ({sent}, {sent_focus})")
             # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
             term_colors = lambda: page.evaluate('''() => {
               const lum = (c) => { const m = c.match(/[\\d.]+/g).map(Number);

@@ -16,7 +16,6 @@
 
 import { S, on, emit } from './store.js';
 import { getText, postJSON } from './api.js';
-import { rangeText } from './docmenu.js';
 import { showMenu } from './ui.js';
 import { openTarget } from './doctabs.js';
 import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
@@ -30,7 +29,7 @@ import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { readYaml } from './slides.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow,
+  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow, rangeText,
 } from './util.js';
 import { t } from './i18n.js';
 
