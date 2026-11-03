@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, osutil, styles, terminal
+from . import __version__, editing, i18n, osutil, sheet, styles, terminal
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -435,6 +435,26 @@ def create_app(state: AppState) -> Flask:
             return jsonify(path=rel, **editing.read_source(target))
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
+
+    @app.get('/api/sheet')
+    def api_sheet() -> Any:
+        """?p=&path=&sheet= — 엑셀 보기 (D77): {sheets:[{name, hidden}], index, sheet:{name, rows, first_col, cols, formulas, truncated}}.
+        .xlsx·.xlsm 만, 값만 (보기 전용 — lectern/sheet.py)"""
+        project = arg_project()
+        rel = request.args.get('path', '')
+        target = resolve_inside(project.root, rel) if rel else None
+        if target is None or not target.is_file():   # 없음·밖·숨김 — 어느 것인지 밝히지 않는다
+            return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
+        try:
+            index = int(request.args.get('sheet', '0'))
+        except ValueError:
+            index = 0
+        try:
+            return jsonify(path=rel, **sheet.read(target, index))
+        except sheet.SheetError as exc:
+            return jsonify(error=exc.message), exc.status
+        except OSError as exc:
+            return jsonify(error=t('엑셀 파일을 읽지 못했습니다 — 손상되었거나 다른 형식입니다 ({error})', error=exc.strerror or str(exc))), 500
 
     @app.post('/api/save')
     def api_save() -> Any:

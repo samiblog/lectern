@@ -6,6 +6,7 @@
 // - 머리행은 어림한다 (첫 줄에 숫자가 없고, 아래에 숫자가 많은 열이 있거나 첫 줄 값이 모두 다르면). 막대의 '첫 줄은 머리행'으로 바꾼다.
 // - 숫자: 1,234 / -3.5% / $105 / 12억 같은 표기도 숫자로 (doc.js 의 숫자 열과 같은 규칙). 70% 이상이 숫자면 숫자 열.
 // - 그리는 행은 MAX_SHOW 까지 (통계·개수는 거른 행 전부로). 거르기·정렬·머리행은 파일마다 이번 실행 동안 기억한다.
+// - 엑셀 보기(D77)도 이 표로 그린다 (renderRows — 행은 엑셀의 행 번호, 열 이름 앞에 엑셀의 열 글자, 수식 칸은 마우스를 올리면 수식).
 
 import { S } from './store.js';
 import { saveConfig } from './api.js';
@@ -105,7 +106,7 @@ function guessHeader(rows) {
   return numericBelow || new Set(first).size === first.length;
 }
 
-const colName = (i) => {   // A, B, …, Z, AA, … (머리행이 없을 때)
+export const colName = (i) => {   // A, B, …, Z, AA, … (머리행이 없을 때, 엑셀의 열 글자)
   let s = '';
   for (let n = i + 1; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + ((n - 1) % 26)) + s;
   return s;
@@ -213,7 +214,11 @@ function update(view) {
   const tbody = view.querySelector('.csv-table tbody.csv-rows');
   tbody.innerHTML = shown.map((i) => {
     const [a, b] = bodyLines[i];
-    const cells = cols.map((col, c) => `<td${col.numeric ? ' class="num"' : ''}>${esc(body[i][c] ?? '')}</td>`).join('');
+    const cells = cols.map((col, c) => {
+      const formula = st.titleOf?.(a, c);   // 엑셀의 수식 (D77)
+      const tip = formula ? ` title="${esc(t('수식: {formula}', { formula }))}"` : '';
+      return `<td${col.numeric ? ' class="num"' : ''}${tip}>${esc(body[i][c] ?? '')}</td>`;
+    }).join('');
     return `<tr class="cv-line" data-line="${a}"${b > a ? ` data-end="${b}"` : ''}><td class="csv-rn">${a}</td>${cells}</tr>`;
   }).join('')
     + (idx.length > MAX_SHOW ? `<tr class="csv-more"><td colspan="${cols.length + 1}">${esc(t('처음 {n}행만 보입니다 — 거르면 좁힐 수 있습니다', { n: MAX_SHOW.toLocaleString() }))}</td></tr>` : '')
@@ -240,19 +245,20 @@ function update(view) {
 function build(view) {
   const st = view.csv;
   const { rows, mem } = st;
+  const letter = st.letter || colName;
   st.header = mem.header ?? guessHeader(rows);
   const width = Math.max(0, ...rows.slice(0, 500).map((r) => r.length));
   const body = st.header ? rows.slice(1) : rows;
   st.cols = Array.from({ length: width }, (_, c) => {
     const vals = body.slice(0, 1000).map((r) => r[c]).filter((v) => v != null && String(v).trim());
     const numeric = vals.length > 0 && vals.filter((v) => numberOf(v) != null).length / vals.length >= 0.7;
-    return { name: st.header ? (rows[0][c] ?? '').trim() || colName(c) : colName(c), numeric };
+    return { name: st.header ? (rows[0][c] ?? '').trim() || letter(c) : letter(c), numeric, letter: st.letter && st.header ? letter(c) : '' };
   });
   if (mem.filters.length !== width) mem.filters = Array(width).fill('');
   if (mem.sort && mem.sort.col >= width) mem.sort = null;
   const tip = t('글자를 포함하는 행 — !글자 는 빼기, =글자 는 같은 것. 숫자는 >100 · <=5 · 10..20');
   view.querySelector('.csv-table thead').innerHTML = `<tr class="csv-head"><th class="csv-rn">#</th>${st.cols.map((col, c) => (
-    `<th data-col="${c}"${col.numeric ? ' class="num"' : ''} title="${esc(t('누르면 정렬 ({kind})', { kind: col.numeric ? t('숫자 열') : t('글자 열') }))}">${esc(col.name)}</th>`
+    `<th data-col="${c}"${col.numeric ? ' class="num"' : ''} title="${esc(t('누르면 정렬 ({kind})', { kind: col.numeric ? t('숫자 열') : t('글자 열') }))}">${col.letter ? `<small class="csv-letter">${col.letter}</small>` : ''}${esc(col.name)}</th>`
   )).join('')}</tr><tr class="csv-filter"><th class="csv-rn"></th>${st.cols.map((col, c) => (
     `<th><input type="search" data-col="${c}" value="${esc(mem.filters[c] || '')}" placeholder="${esc(t('거르기'))}" title="${esc(tip)}" spellcheck="false"></th>`
   )).join('')}</tr>`;
@@ -266,11 +272,20 @@ function build(view) {
  */
 export function renderCsv(view, path, text, key) {
   const { rows, lines } = parseCsv(text, delimiterOf(text, path));
+  return { ...renderRows(view, rows, lines, key), delim: delimiterOf(text, path) };
+}
+
+/**
+ * 행 배열을 표로 (엑셀 보기 — D77, csv 도 이것으로). rows: [[칸 글…]], lines: 행마다 [첫 줄, 끝 줄] (엑셀은 행 번호).
+ * opts.letter: 열 차례 → 열 이름 (엑셀의 A·B…, 머리행이 있으면 그 앞에 작게), opts.titleOf: (행 번호, 열 차례) → 마우스를 올리면 보일 수식,
+ * opts.note: 막대에 보일 알림 (앞부분만 보일 때). {rows, cols}
+ */
+export function renderRows(view, rows, lines, key, { letter = null, titleOf = null, note = '' } = {}) {
   if (!memory.has(key)) memory.set(key, { filters: [], sort: null, header: null });
-  view.csv = { rows, lines, mem: memory.get(key), stats: S.config?.csv_stats !== false, header: false, cols: [] };
+  view.csv = { rows, lines, mem: memory.get(key), stats: S.config?.csv_stats !== false, header: false, cols: [], letter, titleOf };
   view.classList.add('csv-view');
   view.insertAdjacentHTML('beforeend', `<div class="csv-bar">
-    <span class="csv-count"></span>
+    <span class="csv-count"></span>${note ? `<span class="csv-note">${esc(note)}</span>` : ''}
     <button type="button" class="text-btn csv-stats-btn" aria-pressed="${view.csv.stats}">${esc(t('통계'))}</button>
     <label class="csv-headrow"><input type="checkbox"> ${esc(t('첫 줄은 머리행'))}</label>
     <button type="button" class="text-btn csv-clear" hidden>${esc(t('거르기 지우기'))}</button>
@@ -278,7 +293,7 @@ export function renderCsv(view, path, text, key) {
   build(view);
   const head = view.querySelector('.cv-head');
   view.style.setProperty('--csv-top', `${head?.offsetHeight || 0}px`);
-  return { rows: rows.length - (view.csv.header ? 1 : 0), cols: view.csv.cols.length, delim: delimiterOf(text, path) };
+  return { rows: rows.length - (view.csv.header ? 1 : 0), cols: view.csv.cols.length };
 }
 
 let timer = 0;

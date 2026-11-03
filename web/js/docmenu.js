@@ -17,7 +17,8 @@ import { partExtent } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
-import { $, esc, toast, copyText, rangeText } from './util.js';
+import { colName } from './csvview.js';
+import { $, esc, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
@@ -369,14 +370,22 @@ function codeLineMenu(e, view, x, y) {
     const b = lineOf(sel.focusNode);
     if (a && b) range = [Math.min(a, b), Math.max(a, b)];
   }
-  const items = [{ header: range ? `${path} ${rangeText(range)}` : path }];
+  const sheet = view.dataset.sheet || '';   // 엑셀 보기 (D77) — 행은 엑셀의 행 번호, 보기만
+  const items = [{ header: range ? `${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}` : path }];
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
-  if (row && !selected) items.push({ label: t('이 줄 복사'), hint: describe(rowText), action: () => copyPlain(rowText), term: rowText.trim() });
+  const cell = sheet && !selected ? e.target.closest?.('td:not(.csv-rn)') : null;
+  if (cell && row) {   // 엑셀의 칸: 그 칸의 글 (이름은 B3 처럼)
+    const name = `${colName(Number(view.dataset.firstCol || 0) + cell.cellIndex - 1)}${line}`;
+    items.push({ label: t('이 칸 복사'), hint: `${name} · ${describe(cell.textContent)}`, action: () => copyPlain(cell.textContent) });
+  }
+  if (row && !selected) items.push({ label: sheet ? t('이 행 복사') : t('이 줄 복사'), hint: describe(rowText), action: () => copyPlain(rowText), term: sheet ? undefined : rowText.trim() });
   if (range) {
-    const ref = `@${path} ${rangeText(range)}`;
-    items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
-      { label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },
-      { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
+    const ref = lineRef(path, range, sheet);
+    items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` });
+    if (!sheet) {
+      items.push({ label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },
+        { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
+    }
   }
   items.push('-', ...pathMenuItems(path, true), '-',
     { label: isCode(path) ? t('코드 전체 복사') : t('전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });

@@ -89,6 +89,9 @@ export function timeAgo(sec) {
 /** 원문 줄 범위의 글: [12, 12] → '12행', [12, 20] → '12~20행' (Claude용 위치 '@경로 12~20행' — D24) */
 export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
 
+/** Claude용 위치 '@경로 12~20행' — 엑셀 보기는 시트 이름도 ('@표.xlsx '1분기' 시트 3~5행' — D77) */
+export const lineRef = (path, range, sheet = '') => `@${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}`;
+
 export async function copyText(text) {
   try {
     await navigator.clipboard.writeText(text);

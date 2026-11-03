@@ -59,6 +59,11 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    # sheet.py (엑셀 보기 — D77)
+    '엑셀 파일 안의 내용이 너무 큽니다 — 엑셀로 여세요': 'The contents of this Excel file are too large — open it in Excel.',
+    '엑셀 파일을 읽지 못했습니다 — 손상되었거나 다른 형식입니다 ({error})': 'Could not read the Excel file — it is damaged or in another format ({error}).',
+    '이 형식은 Lectern 에서 보지 못합니다 — .xlsx·.xlsm 만 봅니다. 엑셀로 여세요': 'Lectern cannot show this format — only .xlsx and .xlsm. Open it in Excel.',
+    '엑셀 파일이 너무 큽니다 ({n}MB 넘음) — 엑셀로 여세요': 'The Excel file is too large (over {n} MB) — open it in Excel.',
     # server.py
     '열려 있지 않은 프로젝트입니다. 탭이 닫혔을 수 있습니다': 'This project is not open. Its tab may have been closed.',
     'JSON 본문만 받습니다': 'Only JSON request bodies are accepted.',

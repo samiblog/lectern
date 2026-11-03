@@ -139,6 +139,10 @@ async function begin(line, { cell = 0 } = {}) {
   if (pane.pending || S.pane !== pane || session) return;
   const view = $('#lec-view');
   const path = view.dataset.docPath || view.dataset.codePath;
+  if (view.dataset.sheet != null && view.classList.contains('code-view') && view.dataset.codePath && /\.xls[xm]$/i.test(path)) {
+    toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));   // D77
+    return;
+  }
   const shown = sourceLines();
   const slot = line && path ? lineSlot(view, line, shown) : null;
   if (!slot) {

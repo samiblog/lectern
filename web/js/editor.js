@@ -201,7 +201,7 @@ function setDirty(ed, dirty) {
 /** 편집 버튼들: 탭 막대의 [편집]은 편집 중이면 눌린 모양, 문서·코드 화면이 아니면 누를 수 없음. 상태줄의 '편집'은 편집할 수 있을 때만 */
 function updateButton() {
   const editing = !!S.pane?.editor;
-  const can = S.view?.type === 'doc' || S.view?.type === 'code';
+  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && !/\.xls[xm]$/i.test(S.view.path));   // 엑셀 보기는 보기만 (D77)
   $('#lec-st-edit').hidden = !can || editing || !!S.tab?.readonly;   // 보기만 하는 프로젝트 (D71) — 탭 막대의 [편집]은 눌러서 까닭을 알린다
   const btn = $('#lec-btn-edit');
   btn.setAttribute('aria-pressed', String(editing));
@@ -216,6 +216,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
     return;
   }
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
+  if (view.type === 'code' && /\.xls[xm]$/i.test(view.path)) {   // 엑셀 보기 (D77) — 값만 읽은 표라 고칠 원문이 없다
+    toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
+    return;
+  }
   if (pane.editor) {
     if (line) goTo(pane.editor, Math.floor(toEditor(pane.editor.log, line - 1)) + 1, { flash: true });   // 그사이 늘거나 준 줄만큼 옮겨서
     pane.editor.cm.focus();

@@ -270,6 +270,16 @@ Click a `csv`, `tsv`, `txt` or `log` file once in the 'Other files' list (also i
 - CSV files saved by Excel (CP949) and 'Unicode text' (UTF-16) are read too (the encoding shows in the status bar). Edit mode works only on UTF-8 files.
 - Up to 2,000 rows are shown; filter to narrow down larger files (counts and stats use all rows).
 
+### Excel files
+
+Click an Excel file (`xlsx`, `xlsm`) once in the 'Other files' list, or right-click it and choose **Show in code view**, to view it in Lectern. Double-click opens it in Excel as before.
+
+- It shows as a table like CSV — filter, sort, stats and the header option all work, and the **sheet tabs** under the header switch sheets (hidden sheets in italics).
+- Column names start with Excel's column letters (A, B, C…) and row numbers are Excel's row numbers. Rows without values are left out.
+- Cells show what Excel shows — number formats such as thousands separators, percentages, dates and decimals are followed, and formula cells show the calculated value (hover to see the formula). Colors, fonts and merged cells are not shown.
+- Right-click a cell for **Copy this cell** (with its name, such as B3), **Copy this row** and **Copy location for Claude** (`@data/prices.xlsx sheet 'Q1' line 3`). **Copy all** copies the current sheet as tab-separated text that fills the cells when pasted into Excel. You can also focus rows and send them to Claude with Shift+→.
+- It is read-only — open the file in Excel to change it. The old `xls` and `xlsb` formats open in Excel. Up to 50,000 rows and 1,000,000 cells per sheet are shown; the bar says so when a sheet is longer.
+
 ## Links and opening files
 
 | Link target | Opens in |

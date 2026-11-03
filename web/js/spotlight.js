@@ -24,7 +24,7 @@
 // - 선택된 탭의 칸(#lec-view)의 화면에 한다. 다른 탭을 고르면 하이라이트는 꺼지고, 현재 위치는 그 칸의 것이 보인다.
 
 import { S, on, emit } from './store.js';
-import { $, toast, copyText, rangeText } from './util.js';
+import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf } from './lineunits.js';
 
@@ -384,7 +384,7 @@ function litInfo() {
   if (!range) return null;
   const path = pathOf();
   return {
-    path, range, ref: `@${path} ${rangeText(range)}`, text: srcLines().slice(range[0] - 1, range[1]).join('\n'), code: isCodeView(), chapter: mode === 'chapter',
+    path, range, ref: lineRef(path, range, isCodeView() ? view().dataset.sheet || '' : ''), text: srcLines().slice(range[0] - 1, range[1]).join('\n'), code: isCodeView(), chapter: mode === 'chapter',
   };
 }
 

@@ -284,7 +284,7 @@ function revealCurrent() {
   listEl(k).querySelector('.row.active')?.scrollIntoView({ block: 'nearest' });
 }
 
-// 코드 화면에서 보는 파일 — 코드와 csv·tsv·txt·log (D60). 한 번 누르면 Lectern 에서, 두 번 누르면 편집기·기본 앱
+// 코드 화면에서 보는 파일 — 코드와 csv·tsv·txt·log (D60), 엑셀 xlsx·xlsm (D77). 한 번 누르면 Lectern 에서, 두 번 누르면 편집기·기본 앱
 const isViewFile = (n) => n?.type === 'file' && !n.doc && isViewable(n.name);
 
 // ---- 읽기 ---------------------------------------------------------------------

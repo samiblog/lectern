@@ -653,6 +653,21 @@ def test_source_and_save_endpoints(client, state, project, pid):
     assert missing.status_code == 404 and '없습니다' in missing.get_json()['error'] and not (project / 'docs' / 'new.md').exists()   # 새로 만들지 않는다
 
 
+
+def test_sheet_endpoint(client, project, pid):
+    """엑셀 보기 (D77): GET /api/sheet — .xlsx 의 시트 목록과 한 시트의 값. 없는·밖·숨김은 404, 다른 형식은 415"""
+    from test_sheet import make_xlsx
+    make_xlsx(project / 'docs' / '표.xlsx', [('가', '<row r="1"><c r="A1"><v>1</v></c></row>', None),
+                                            ('나', '<row r="2"><c r="B2"><v>2</v></c></row>', None)])
+    r = client.get(f'/api/sheet?p={pid}&path=docs/표.xlsx&sheet=1').get_json()
+    assert [s['name'] for s in r['sheets']] == ['가', '나'] and r['index'] == 1 and r['sheet']['rows'] == [[2, ['2']]] and r['sheet']['first_col'] == 1
+    assert client.get(f'/api/sheet?p={pid}&path=docs/표.xlsx&sheet=x').get_json()['index'] == 0
+    assert client.get(f'/api/sheet?p={pid}&path=docs/없음.xlsx').status_code == 404
+    assert client.get(f'/api/sheet?p={pid}&path=../표.xlsx').status_code == 404
+    (project / 'docs' / '옛.xls').write_bytes(b'\xd0\xcf\x11\xe0')
+    assert client.get(f'/api/sheet?p={pid}&path=docs/옛.xls').status_code == 415
+
+
 def test_new_doc_endpoints(client, project, pid):
     """새 문서 (D63): 고를 때 확인(GET /api/new-doc — 만들지 않음), 저장할 때 만듦(POST /api/save create)"""
     assert client.get(f'/api/new-doc?p={pid}&path=docs/모음.md').get_json() == {'path': 'docs/모음.md'}

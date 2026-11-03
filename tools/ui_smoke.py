@@ -2323,6 +2323,15 @@ def run(headed: bool) -> None:
             (tables / 'data' / 'excel.csv').write_bytes('지역,물동량(천톤),증감률\n부산,1234,3.5%\n인천,987,-1.2%\n'.encode('cp949'))
             (tables / 'data' / 'memo.txt').write_bytes('한글 메모 (CP949)\n두 번째 줄\n'.encode('cp949'))
             (tables / 'data' / 'uni.txt').write_bytes('\ufeff유니코드 텍스트\n'.encode('utf-16-le'))
+            # 엑셀 보기 (D77): 두 시트 — 공유 문자열 머리행, 자리 쉼표·백분율·날짜 형식, 수식(계산 값), 둘째 시트는 B 열부터
+            sys.path[:0] = [str(ROOT), str(ROOT / 'tests')]   # 시험용 xlsx 를 만드는 도우미 (tests/test_sheet.py)
+            from test_sheet import make_xlsx
+            xl_rows = ('<row r="1"><c r="A1" t="s"><v>0</v></c><c r="B1" t="s"><v>1</v></c><c r="C1" t="s"><v>2</v></c><c r="D1" t="s"><v>3</v></c></row>'
+                       '<row r="2"><c r="A2" t="inlineStr"><is><t>구리</t></is></c><c r="B2" s="1"><v>8950</v></c><c r="C2" s="2"><v>0.053</v></c><c r="D2" s="3"><v>45000</v></c></row>'
+                       '<row r="3"><c r="A3" t="inlineStr"><is><t>니켈</t></is></c><c r="B3" s="1"><v>16800</v></c><c r="C3" s="2"><v>-0.019</v></c><c r="D3" s="3"><v>45031</v></c></row>'
+                       '<row r="5"><c r="A5" t="inlineStr"><is><t>합계</t></is></c><c r="B5" s="1"><f>SUM(B2:B3)</f><v>25750</v></c></row>')
+            make_xlsx(tables / 'data' / '가격.xlsx', [('1분기', xl_rows, None), ('메모', '<row r="2"><c r="B2" t="inlineStr"><is><t>둘째 시트</t></is></c></row>', None)],
+                      shared=['품목', '가격', '증감', '날짜'], xfs=(0, 3, 10, 14))
             # 캡션 (D61): 굵은 〈표 Ⅱ-15〉, '표 1.', 캡션 없는 표, 아래 캡션이 있는 그림과 없는 그림
             (tables / 'img').mkdir()
             for n in ('a', 'b'):
@@ -2390,6 +2399,33 @@ def run(headed: bool) -> None:
                   and enc['data/memo.txt']['text'] == '한글 메모 (CP949)|두 번째 줄' and '텍스트 · 2줄' in enc['data/memo.txt']['info'] and 'CP949' in enc['data/memo.txt']['info']
                   and enc['data/uni.txt']['text'] == '유니코드 텍스트' and 'UTF-16' in enc['data/uni.txt']['info'] and by_link and to_line,
                   f"엑셀 CSV(CP949)·CP949·UTF-16 txt 도 읽고, 문서 속 csv 링크·`경로:줄`은 표의 그 행으로 ({enc['data/excel.csv']['head']}, {enc['data/memo.txt']['info']}, {by_link}, {to_line})")
+            print('[엑셀 보기]')   # D77 — xlsx 를 한 번 누르면 csv 같은 표(시트 탭·열 글자·표시 형식·수식 풍선), 우클릭은 칸·행 복사와 시트가 든 Claude용 위치, 보기만
+            page.locator('#lec-others-list .row[data-path="data/가격.xlsx"]').click()
+            page.wait_for_selector('#lec-view.csv-view .xl-sheet')
+            xl = lambda: page.evaluate("""() => { const v = document.querySelector('#lec-view');
+              return { tabs: [...v.querySelectorAll('.xl-sheet')].map(b => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')),
+                head: [...v.querySelectorAll('.csv-head th[data-col]')].map(th => th.textContent),
+                rows: [...v.querySelectorAll('tbody.csv-rows tr.cv-line')].map(r => [...r.cells].map(c => c.textContent).join('|')),
+                formula: [...v.querySelectorAll('tbody.csv-rows td[title]')].map(c => c.title), info: document.querySelector('#lec-st-info').textContent,
+                edit: document.querySelector('#lec-st-edit').hidden }; }""")
+            x1 = xl()
+            cell_menu = menu(page.locator('#lec-view tr.cv-line', has_text='니켈').locator('td').nth(2))
+            copied = choose('Claude용 위치 복사')
+            page.locator('#lec-view .xl-sheet', has_text='메모').click()
+            wait_until(page, "document.querySelector('#lec-view .xl-sheet[aria-pressed=\"true\"]')?.textContent === '메모'", 5000)
+            x2 = xl()
+            page.locator('#lec-view tr.cv-line').first.click()
+            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('Shift+Enter')   # 한 줄 편집은 하지 않는다 — 보기만
+            told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('엑셀 보기는 보기만')", 3000)
+            page.keyboard.press('Escape')
+            check(x1['tabs'] == ['1분기*', '메모'] and x1['head'] == ['A품목', 'B가격', 'C증감', 'D날짜']
+                  and x1['rows'] == ['2|구리|8,950|5.30%|2023-03-15', '3|니켈|16,800|-1.90%|2023-04-15', '5|합계|25,750||']
+                  and x1['formula'] == ['수식: =SUM(B2:B3)'] and x1['info'].startswith("엑셀 · '1분기' 시트 · 3행 · 4열") and x1['edit']
+                  and '이 칸 복사' in cell_menu and 'B3 · 16,800' in cell_menu and '여기를 편집' not in cell_menu
+                  and copied == "@data/가격.xlsx '1분기' 시트 3행" and x2['rows'] == ['2|둘째 시트'] and x2['head'] == ['B'] and told,
+                  f"엑셀(xlsx)을 한 번 누르면 표 — 시트 탭·열 글자·자리 쉼표·%·날짜·수식 풍선, 칸 우클릭은 칸 복사·'시트'가 든 Claude용 위치, 다른 시트, 보기만 "
+                  f"({x1['head']}, {x1['rows']}, {copied!r}, {x2['rows']}, {told})")
             print('[캡션]')   # D61 — 모아 보기는 캡션을 이름으로, 우클릭은 Claude용 위치·원문 복사와 터미널 버튼
             page.click('.side-tabs button[data-tab="parts"]')
             wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && !!document.querySelector('#lec-parts-list .pt-item')", 15000)

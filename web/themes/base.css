@@ -106,6 +106,18 @@
 .csv-view .csv-stats span { color: var(--md-muted); }
 .csv-view .csv-stats b { font-weight: 600; color: var(--md-fg); }
 .csv-view .csv-more td { color: var(--md-muted); font-style: italic; }
+/* 엑셀 보기 (codeview.js, D77): 머리줄 아래 시트 탭, 머리행 앞의 열 글자 */
+.code-view .xl-sheets { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 4px; margin-top: 4px; font-family: var(--ui-font, sans-serif); }
+.code-view .xl-sheet {
+  height: 26px; padding: 0 12px; border: 1px solid var(--md-border); border-radius: 6px 6px 0 0; background: var(--md-bg);
+  color: var(--md-muted); font: inherit; font-size: calc(12.5px * var(--md-scale, 1)); cursor: pointer;
+}
+.code-view .xl-sheet:hover { color: var(--md-link); border-color: var(--md-link); }
+.code-view .xl-sheet[aria-pressed="true"] { color: var(--md-fg); font-weight: 600; border-color: var(--md-link); box-shadow: inset 0 -2px 0 var(--md-link); }
+.code-view .xl-sheet.xl-hidden { font-style: italic; opacity: .7; }
+.code-view .xl-empty { color: var(--md-muted); font-family: var(--ui-font, sans-serif); }
+.csv-view .csv-letter { margin-right: 6px; color: var(--md-muted); font-weight: 400; font-size: .8em; }
+.csv-view .csv-note { color: var(--ui-fresh, #b45309); }
 .csv-view tr.cv-line { display: table-row; padding: 0; background: none; font-family: inherit; font-size: inherit; line-height: inherit; }
 .csv-view tr.cv-line::before { content: none; }
 .csv-view tr.cv-line:hover { background: color-mix(in srgb, var(--md-link) 7%, transparent); }
