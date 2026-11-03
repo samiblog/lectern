@@ -7,7 +7,8 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotKey, stopSpotlight } from './spotlight.js';
+import { initSpotlight, spotKey, stopSpotlight, docKeyTarget } from './spotlight.js';
+import { initLineEdit, undoLineEdit } from './lineedit.js';
 import { initTextSize } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
@@ -140,7 +141,7 @@ function bindToolbar() {
   // 툴바의 터미널 모음 버튼은 initGather 가 잇는다
 }
 
-const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable="true"]')
+const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 
@@ -238,6 +239,8 @@ function bindKeys() {
     } else if (helpKey) {   // Ctrl+/
       e.preventDefault();
       toggleShortcuts();
+    } else if (mod && !e.shiftKey && !e.altKey && (e.code === 'KeyZ' || key === 'z') && !typing(e) && docKeyTarget(e) && undoLineEdit()) {
+      e.preventDefault();   // 한 줄 편집으로 저장한 줄 되돌리기 (lineedit.js, D76)
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
@@ -284,6 +287,7 @@ async function boot() {
   initFind();
   initFold();
   initSpotlight();
+  initLineEdit();
   initTextSize();
   initDocWidth();
   initTableFit();

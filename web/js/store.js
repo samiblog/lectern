@@ -32,6 +32,7 @@
 //   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)
 //   term-panel       오른쪽 터미널 패널을 열거나 감춤 (open)                (terminal → spread, D73)
 //   term-paste       글(text)을 선택된 탭의 터미널에 붙여 넣음 — 우클릭 메뉴의 터미널 버튼 (ui → terminal, D51)
+//   line-edit        한 줄만 하이라이트한 채 Shift+Enter — 그 단위(unit)를 한 줄 편집 (spotlight → lineedit, D76)
 // 팔레트(palette.js)는 이벤트를 듣지 않고 열 때마다 S.files 를 읽는다.
 
 const metaMode = document.querySelector('meta[name="lec-mode"]')?.content;

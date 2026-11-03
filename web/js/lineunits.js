@@ -79,17 +79,9 @@ export function collectUnits(view, src = []) {
       whole(lines[0], lines.at(-1));
       continue;
     }
-    // 줄바꿈 자리로 나눈 조각 ↔ 줄. 조각이 모자라면 남는 줄을 붙인다 — 박스글의 [!NOTE] 줄(첫 줄)은 첫 조각에, 그 밖은 마지막 조각에
-    // (setext 제목의 === 줄, 줄을 넘는 코드·수식 조각처럼 \n 이 남지 않는 것)
-    const k = segs.length;
-    let groups;
-    if (k >= lines.length) groups = lines.map((n) => [n]);
-    else if (CALLOUT.test(src[lines[0] - 1] ?? '')) groups = [lines.slice(0, lines.length - k + 1), ...lines.slice(lines.length - k + 1).map((n) => [n])];
-    else groups = [...lines.slice(0, k - 1).map((n) => [n]), lines.slice(k - 1)];
     // 화면의 같은 줄에서 시작하는 원문 줄은 한 단위로 — 짧게 나눠 쓴 줄들이 한 화면 줄에 이어지면 따로 고를 수도, 현재 위치로 구별할 수도 없다
     let prev = null;
-    groups.forEach((g, i) => {
-      const parts = i < groups.length - 1 ? [segs[i]] : segs.slice(i);   // 조각이 남으면 마지막 줄에 모두
+    groupsOf(lines, segs, src).forEach(({ lines: g, parts }) => {
       const box = boxOf(parts, base);
       if (!box) return;
       const last = parts.at(-1);
@@ -110,13 +102,33 @@ export function collectUnits(view, src = []) {
   return units;
 }
 
-/** 코드 블록(<pre><code data-lines>)의 줄마다 — 줄바꿈하지 않으므로(white-space: pre) 줄 높이가 같다. ``` 줄은 뺀다 */
-function codeUnits(el, r, base, span, src, units) {
+/**
+ * 여러 줄 블록의 자기 줄들(lines)을 줄바꿈 자리로 나눈 조각(segs)과 잇는다: [{lines, parts}].
+ * 조각이 모자라면 남는 줄을 붙인다 — 박스글의 [!NOTE] 줄(첫 줄)은 첫 조각에, 그 밖은 마지막 조각에
+ * (setext 제목의 === 줄, 줄을 넘는 코드·수식 조각처럼 \n 이 남지 않는 것). 조각이 남으면 마지막 줄에 모두
+ */
+function groupsOf(lines, segs, src) {
+  const k = segs.length;
+  let groups;
+  if (k >= lines.length) groups = lines.map((n) => [n]);
+  else if (CALLOUT.test(src[lines[0] - 1] ?? '')) groups = [lines.slice(0, lines.length - k + 1), ...lines.slice(lines.length - k + 1).map((n) => [n])];
+  else groups = [...lines.slice(0, k - 1).map((n) => [n]), lines.slice(k - 1)];
+  return groups.map((g, i) => ({ lines: g, parts: i < groups.length - 1 ? [segs[i]] : segs.slice(i) }));
+}
+
+/** 펜스 코드의 내용 줄 [첫 줄, 끝 줄] (``` 줄 뺌) */
+function codeSpan(span, src) {
   let [a, b] = span;
   if (FENCE.test(src[a - 1] ?? '')) {
     a += 1;
     if (b >= a && FENCE.test(src[b - 1] ?? '')) b -= 1;
   }
+  return [a, b];
+}
+
+/** 코드 블록(<pre><code data-lines>)의 줄마다 — 줄바꿈하지 않으므로(white-space: pre) 줄 높이가 같다. ``` 줄은 뺀다 */
+function codeUnits(el, r, base, span, src, units) {
+  const [a, b] = codeSpan(span, src);
   const rows = Math.max(1, el.textContent.replace(/\n$/, '').split('\n').length);
   const h = r.height / rows;
   for (let n = a; n <= b && n - a < rows; n++) {
@@ -288,4 +300,97 @@ export function markOf(u, base) {
     if (y != null && y >= u.top - 2 && y <= u.bottom + 2) return y;
   }
   return u.top + Math.min(h / 2, 12);
+}
+
+// ---- 한 줄 편집 (lineedit.js, D76) ------------------------------------------------
+
+// 글이 보이지 않는 표시 줄: 박스글의 [!NOTE] 줄, 표의 구분 줄, setext 제목의 밑줄, 코드 펜스
+const MARKER_LINE = /^\s*(?:>\s*)*(?:\[!\w+\]\s*|\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*|=+\s*|-+\s*|(?:`{3,}|~{3,}).*)$/;
+
+/** 단위에서 한 줄 편집으로 고칠 수 있는 원문 줄들 (다이어그램·수식·csv 표·표시 줄 뺌, 코드의 빈 줄은 넣음) */
+export function editableLines(u, src) {
+  if (u.el.matches(ATOMIC) || u.el.closest('.csv-table')) return [];
+  if (u.row != null || u.el.classList.contains('cv-line')) return [u.a];
+  const out = [];
+  for (let n = u.a; n <= u.b; n++) {
+    const s = String(src[n - 1] ?? '');
+    if (s.replace(/^[\s>]*/, '').trim() && !MARKER_LINE.test(s)) out.push(n);
+  }
+  return out;
+}
+
+const contentsOf = (node) => {
+  const r = document.createRange();
+  r.selectNodeContents(node);
+  return r;
+};
+
+/** 코드 요소 안 row 번째(0부터) 줄의 글 범위 (줄 끝의 \n 뺌). 없으면 null */
+function codeRowRange(el, row) {
+  const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+  let n = 0;
+  let start = row === 0 ? [el, 0] : null;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const s = node.nodeValue;
+    for (let i = 0; i < s.length; i++) {
+      if (s[i] !== '\n') continue;
+      if (n === row) return rangeOf(start, [node, i]);
+      n += 1;
+      if (n === row) start = [node, i + 1];
+    }
+  }
+  return start ? rangeOf(start, [el, el.childNodes.length]) : null;
+}
+
+/** 요소의 자기 줄 (안쪽 [data-lines] 블록이 가진 줄과 빈 줄 뺌) */
+function ownLines(el, src) {
+  const span = spanOf(el);
+  const inner = new Set();
+  for (const x of el.querySelectorAll('[data-lines]')) {
+    const s = spanOf(x);
+    if (s) for (let n = s[0]; n <= s[1]; n++) inner.add(n);
+  }
+  const out = [];
+  for (let n = span[0]; n <= span[1]; n++) {
+    if (!inner.has(n) && String(src[n - 1] ?? '').replace(/^[\s>]*/, '').trim()) out.push(n);
+  }
+  return out;
+}
+
+/**
+ * 원문 줄 line 이 화면에 보이는 자리 — 한 줄 편집(lineedit.js)이 그 자리에 글 칸을 넣는다.
+ * {kind: 'text'|'code'|'table', el(그 줄을 가진 블록), ranges(글 칸을 넣을 Range — 표는 칸마다), whole(블록의 글 전체인지), fence(코드 블록의 ``` 줄)}.
+ * 고칠 수 없는 줄(다이어그램·수식·raw HTML·표시 줄·csv 표·접힌 곳)이면 null
+ */
+export function lineSlot(view, line, src) {
+  if (view.classList.contains('code-view')) {
+    if (view.querySelector('.csv-table')) return null;
+    const row = view.querySelector(`.cv-line[data-line="${Number(line)}"]`);
+    const text = row?.querySelector('.cv-text');
+    return text && row.getClientRects().length ? { kind: 'code', el: row, ranges: [contentsOf(text)], whole: true } : null;
+  }
+  let el = null;
+  for (const x of view.querySelectorAll('[data-lines]')) {
+    const s = spanOf(x);
+    if (s && line >= s[0] && line <= s[1] && !x.closest('.front-matter')) el = x;   // 문서 차례로 뒤의 것이 더 안쪽
+  }
+  if (!el || !el.getClientRects().length || el.closest(ATOMIC)) return null;
+  if (isCodeLines(el)) {
+    const span = spanOf(el);
+    const [a, b] = codeSpan(span, src);
+    const range = line >= a && line <= b ? codeRowRange(el, line - a) : null;
+    return range && { kind: 'code', el, ranges: [range], fence: a > span[0] ? String(src[span[0] - 1] ?? '') : '' };
+  }
+  if (el.tagName === 'TR') return { kind: 'table', el, ranges: [...el.cells].map(contentsOf), whole: true };
+  const lines = ownLines(el, src);
+  if (!lines.includes(line) || MARKER_LINE.test(String(src[line - 1] ?? ''))) return null;
+  const segs = segmentsOf(el);
+  if (!segs.length) return null;   // 글이 없는 블록 (hr, 표·목록 자체)
+  if (lines.length === 1 && !el.querySelector('[data-lines]')) return { kind: 'text', el, ranges: [contentsOf(el)], whole: true };
+  const g = groupsOf(lines, segs, src).find((x) => x.lines.includes(line));
+  if (!g) return null;
+  const range = g.parts[0].cloneRange();
+  const last = g.parts.at(-1);
+  range.setEnd(last.endContainer, last.endOffset);
+  return { kind: 'text', el, ranges: [range], whole: false };
 }

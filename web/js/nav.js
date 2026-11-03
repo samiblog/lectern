@@ -138,6 +138,10 @@ export async function refreshView(pane) {
     pane.missedRefresh = true;
     return;
   }
+  if (pane.lineEdit) {   // 한 줄 편집 중 (lineedit.js, D76) — 글 칸을 지우지 않게 끝낸 뒤 그린다
+    pane.lineEditMissed = true;
+    return;
+  }
   pane.stale = false;
   const scrollTop = () => pane.scroller.scrollTop;
   try {

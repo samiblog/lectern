@@ -140,6 +140,16 @@
   width: 7px; height: 10px; background: var(--md-link); clip-path: polygon(0 0, 100% 50%, 0 100%); transition: top .1s;
 }
 @media (prefers-reduced-motion: reduce) { .lec-spot .spot-shade, .lec-spot .spot-bar, .lec-here { transition: none; } }
+/* 한 줄 편집 (lineedit.js, D76): 그 줄의 블록 안에 넣는 글 칸 — 글꼴·크기·색·정렬은 그 블록(제목·목록·박스글·표의 칸·코드)의 것 */
+.md-body .lec-line-edit {
+  white-space: pre-wrap; caret-color: var(--md-link); border-radius: 2px; cursor: text;
+  outline: 2px solid color-mix(in srgb, var(--md-link) 70%, transparent); outline-offset: 2px;
+  background: color-mix(in srgb, var(--md-link) 8%, transparent);
+}
+.md-body pre .lec-line-edit { white-space: pre; }
+.md-body .lec-line-edit.whole { display: block; }
+.md-body .lec-line-edit:empty { display: inline-block; min-width: 2ch; min-height: 1.2em; vertical-align: bottom; }
+.md-body .lec-line-edit.saving { opacity: .6; outline-style: dashed; }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }

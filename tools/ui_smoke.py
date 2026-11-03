@@ -41,6 +41,10 @@ failures: list[str] = []
 LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 쓴 문단.\n\n이 문단은 원문에서 두 줄로 나눠 썼습니다. 첫 줄은 길어서 화면에서 한 줄을 넘기고, 다음 원문 줄은 화면의 둘째 줄이나 셋째 줄에서 시작합니다. 그래도 원문 줄은 따로 셉니다.\n둘째 원문 줄은 여기서 시작해 문단 끝까지 이어집니다.\n\n- 항목 하나\n- 항목 둘\n  - 안쪽 항목\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n```python\na = 1\n\nb = 2\n```\n\n## 둘째 절\n\n단락 1.\n\n단락 2.\n\n단락 3.\n\n단락 4.\n\n단락 5.\n\n단락 6.\n\n단락 7.\n\n단락 8.\n\n단락 9.\n\n단락 10.\n\n단락 11.\n\n단락 12.\n\n단락 13.\n\n단락 14.\n\n단락 15.\n\n단락 16.\n\n단락 17.\n\n단락 18.\n\n단락 19.\n\n단락 20.\n\n단락 21.\n\n단락 22.\n\n단락 23.\n\n단락 24.\n\n단락 25.\n\n단락 26.\n\n단락 27.\n\n단락 28.\n\n단락 29.\n\n단락 30.\n\n단락 31.\n\n단락 32.\n\n단락 33.\n\n단락 34.\n\n단락 35.\n\n단락 36.\n\n단락 37.\n\n단락 38.\n\n단락 39.\n\n단락 40.\n'
 
 
+# 한 줄 편집 점검(D76)에 쓰는 문서: 제목·할 일·박스글·표·나눠 쓴 문단·코드
+EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n'
+
+
 def check(cond: bool, message: str) -> None:
     print(('  ok   ' if cond else '  FAIL ') + message)
     if not cond:
@@ -652,6 +656,130 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', state='detached', timeout=10000)
+
+            print('[한 줄 편집]')   # D76 — 한 줄 하이라이트에서 Shift+Enter: 그 자리의 글 칸(스타일 그대로, 표시는 잠금), Enter 저장·Esc·↑↓·Tab, Ctrl+Z
+            edit_doc = work / 'docs' / '97-편집.md'
+            edit_doc.write_text(EDIT_DOC, encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', timeout=10000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
+
+            def file_line(path, n, text=None, ms=6000):
+                """파일의 n 번째 줄 (text 가 있으면 그렇게 될 때까지 기다린다)"""
+                end = time.time() + ms / 1000
+                while True:
+                    got = path.read_text(encoding='utf-8').split('\n')[n - 1]
+                    if text is None or got == text or time.time() > end:
+                        return got
+                    time.sleep(0.1)
+
+            editing = lambda: page.evaluate("""[...document.querySelectorAll('#lec-view .lec-line-edit')].map(s => s.parentElement.tagName + ':' + s.textContent)""")
+            focused = lambda: page.evaluate("document.activeElement.classList.contains('lec-line-edit') ? document.activeElement.textContent : null")
+
+            def start(locator, **kw):
+                """줄을 Shift+누르기로 하이라이트하고 Shift+Enter — 글 칸이 생길 때까지"""
+                page.keyboard.press('Escape')
+                locator.click(modifiers=['Shift'], **kw)
+                page.keyboard.press('Shift+Enter')
+                wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
+                return editing()
+
+            h2 = start(page.locator('#lec-view h2', has_text='고칠 제목'))
+            sizes = page.evaluate("[getComputedStyle(document.querySelector('#lec-view h2')).fontSize, getComputedStyle(document.querySelector('#lec-view .lec-line-edit')).fontSize]")
+            h2_status = page.evaluate(lit_status)
+            page.keyboard.press('Control+a')
+            page.keyboard.type('고친 제목')
+            page.keyboard.press('Enter')
+            saved_h2 = file_line(edit_doc, 5, '## 고친 제목')
+            shown_h2 = wait_until(page, "document.querySelector('#lec-view h2')?.textContent.trim() === '고친 제목'", 5000)
+            after_status = page.evaluate(lit_status)
+            page.locator('#lec-view h1').click()
+            page.keyboard.press('Control+z')
+            undone = file_line(edit_doc, 5, '## 고칠 제목')
+            check(h2 == ['H2:고칠 제목'] and sizes[0] == sizes[1] and h2_status == '한 줄 편집 5행' and saved_h2 == '## 고친 제목' and shown_h2
+                  and after_status == '하이라이트 5행 · 1줄' and undone == '## 고칠 제목',
+                  f"한 줄 하이라이트에서 Shift+Enter: 제목 안에 글 칸(## 는 잠금, 글자 크기 그대로), Enter 로 그 줄 저장·다시 그림, Ctrl+Z 로 되돌림 ({h2}, {sizes}, {saved_h2!r}, {undone!r})")
+            page.wait_for_selector('#lec-view h2:has-text("고칠 제목")')
+            task = start(page.locator('#lec-view li', has_text='할 일'))
+            page.keyboard.press('End')
+            page.keyboard.type(' 끝')
+            page.keyboard.press('Enter')
+            saved_task = file_line(edit_doc, 8, '- [ ] 할 일 끝')
+            page.wait_for_selector('#lec-view li:has-text("할 일 끝")')
+            note = start(page.locator('#lec-view blockquote p'))
+            page.keyboard.type('XXX')
+            page.keyboard.press('Escape')
+            note_back = page.evaluate("[document.querySelector('#lec-view blockquote').textContent.trim(), !!document.querySelector('#lec-view .lec-line-edit')]")
+            check(task == ['LI:할 일'] and saved_task == '- [ ] 할 일 끝' and note == ['P:박스글 한 줄.'] and file_line(edit_doc, 11) == '> 박스글 한 줄.'
+                  and note_back == ['박스글 한 줄.', False],
+                  f"목록·할 일·박스글 표시는 잠그고 글만 (- [ ]·> 그대로), Esc 는 그만두고 되돌림 ({task}, {saved_task!r}, {note}, {note_back})")
+            row = start(page.locator('#lec-view tr', has_text='구리'))
+            first_cell = focused()
+            page.keyboard.press('Tab')
+            page.keyboard.press('Control+a')
+            page.keyboard.type('a|b')
+            page.keyboard.press('ArrowDown')   # 저장하고 아래 행의 같은 칸
+            saved_row = file_line(edit_doc, 15, '| 구리 | a\\|b |')
+            wait_until(page, "document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent === '2'", 5000)
+            next_row = [editing(), focused(), page.evaluate(lit_status)]
+            page.keyboard.press('Escape')
+            check(row == ['TD:구리', 'TD:1'] and first_cell == '구리' and saved_row == '| 구리 | a\\|b |'
+                  and next_row == [['TD:니켈', 'TD:2'], '2', '한 줄 편집 16행'],
+                  f"표는 칸마다 (| 는 잠금, Tab 으로 옆 칸, 칸 글의 | 는 \\| 로), ↓ 는 저장하고 아래 행의 같은 칸 ({row}, {saved_row!r}, {next_row})")
+            second = page.evaluate("""(() => { const p = [...document.querySelectorAll('#lec-view p')].find(e => e.textContent.includes('둘째 줄입니다'));
+              const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.nodeValue.indexOf('둘째 줄');
+                if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 2); const b = r.getBoundingClientRect(); return [b.left + 3, b.top + b.height / 2]; } } })()""")
+            page.keyboard.press('Escape')
+            page.keyboard.down('Shift')
+            page.mouse.click(*second)
+            page.keyboard.up('Shift')
+            page.keyboard.press('Shift+Enter')
+            wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
+            para = editing()
+            page.keyboard.press('End')
+            page.keyboard.type(' 더')
+            page.keyboard.press('Enter')
+            saved_para = file_line(edit_doc, 19, '둘째 줄입니다. 더')
+            code_box = page.locator('#lec-view .code-block code').first.bounding_box()
+            page.keyboard.press('Escape')
+            page.keyboard.down('Shift')
+            page.mouse.click(code_box['x'] + 20, code_box['y'] + code_box['height'] - 6)
+            page.keyboard.up('Shift')
+            page.keyboard.press('Shift+Enter')
+            wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
+            code_row = editing()
+            page.keyboard.press('Backspace')
+            page.keyboard.type('3')
+            page.keyboard.press('Enter')
+            saved_code = file_line(edit_doc, 23, 'b = 3')
+            page.locator('#lec-view h1').click()
+            page.keyboard.press('Control+z')
+            undo1 = file_line(edit_doc, 23, 'b = 2')
+            page.keyboard.press('Control+z')
+            undo2 = file_line(edit_doc, 19, '둘째 줄입니다.')
+            check(para == ['P:둘째 줄입니다.'] and saved_para == '둘째 줄입니다. 더' and file_line(edit_doc, 18).endswith('넘깁니다.')
+                  and code_row == ['CODE:b = 2'] and saved_code == 'b = 3' and undo1 == 'b = 2' and undo2 == '둘째 줄입니다.',
+                  f"나눠 쓴 문단은 그 원문 줄만, 코드 블록은 그 줄, Ctrl+Z 를 거듭 누르면 앞 저장도 되돌림 ({para}, {code_row}, {undo1!r}, {undo2!r})")
+            shot('03c-line-edit')
+            # 코드 화면의 줄 (점검 뒤 원래대로 — 뒤의 [코드 보기] 가 이 파일을 본다)
+            example = work / 'code' / 'example.py'
+            example_text = example.read_bytes()
+            page.keyboard.press('Control+p')
+            page.keyboard.type('example.py')
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            page.wait_for_selector('#lec-view.code-view .cv-line[data-line="9"]')
+            cv = start(page.locator('#lec-view .cv-line[data-line="9"]'))
+            page.keyboard.press('Control+a')
+            page.keyboard.type('    """고친 설명."""')
+            page.keyboard.press('Enter')
+            saved_cv = file_line(example, 9, '    """고친 설명."""')
+            check(cv == ['SPAN:    """단순 이동평균."""'] and saved_cv == '    """고친 설명."""', f"코드 화면의 줄도 한 줄 편집 ({cv}, {saved_cv!r})")
+            page.keyboard.press('Escape')
+            example.write_bytes(example_text)
+            edit_doc.unlink()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', state='detached', timeout=10000)
 
             print('[수식과 달러]')
             page.locator('#lec-view a', has_text='수식과 달러 표기').click()

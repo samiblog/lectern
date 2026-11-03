@@ -526,9 +526,16 @@ function updateButton() {
   $('#lec-spot-next').disabled = !chapterOn || current >= chapters.length - 1;
 }
 
-/** 상태줄: 하이라이트한 줄 범위 */
+/** 상태줄: 하이라이트한 줄 범위 (한 줄 편집 중이면 그 줄과 키 — lineedit.js, D76) */
 function updateStatus() {
   const el = $('#lec-st-lit');
+  const edit = S.pane?.lineEdit;
+  if (edit && painted === view()) {
+    el.hidden = false;
+    el.textContent = `${t('한 줄 편집')} ${rangeText([edit.line, edit.line])}`;
+    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄 · Shift+→(글 끝) 저장하고 Claude 로 보내기');
+    return;
+  }
   const r = lit() && painted === view() ? litLines() : null;
   el.hidden = !r;
   if (!r) return;
@@ -540,6 +547,19 @@ function updateStatus() {
 
 /** 장 하이라이트 중인지 (↑·↓·PageUp·PageDown 이 앞뒤 장) */
 export const spotlightOn = () => active && mode === 'chapter' && chapters.length > 0;
+
+// 한 줄 편집(lineedit.js, D76)이 쓰는 것: 지금 화면의 줄 단위·원문 줄, 그 줄을 하이라이트, 상태줄 다시 쓰기
+export const currentUnits = () => units();
+export const sourceLines = () => srcLines();
+export const showLitStatus = () => updateStatus();
+
+/** 원문 줄 line 하나를 줄 하이라이트하고 현재 위치로 (보이게) */
+export function highlightLine(line) {
+  if (!linesOn()) return;
+  startRange(line);
+  paint();
+  setHere(line, { scroll: true });
+}
 
 /** ↑·↓·PageUp·PageDown·∧∨: 앞(-1)·뒤(+1) 장으로 가서 그 장의 처음을 화면 위에 둔다 */
 export function moveSpotlight(step) {
@@ -596,7 +616,7 @@ export function spotlightItems(target) {
 
 // 하이라이트 키를 받는 곳: 문서 칸(본문·스크롤 상자)과 툴바·목차·상태줄의 버튼 (사이드바 목록·메뉴·대화상자는 자기 ↑·↓ 가 있다)
 const KEY_PLACES = '#lec-panes, #lec-toolbar, #lec-toc, #lec-status';
-const NOT_KEYS = 'input, textarea, select, [contenteditable="true"], #lec-doctabs, .sp-head, .lec-editor, #lec-findbar';
+const NOT_KEYS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), #lec-doctabs, .sp-head, .lec-editor, #lec-findbar';
 const OVERLAYS = '.overlay:not([hidden]), #lec-menu:not([hidden]), #lec-help:not([hidden]), #lec-gather:not([hidden]), #lec-present:not([hidden])';
 
 function keyPlace(el) {
@@ -605,10 +625,13 @@ function keyPlace(el) {
   return !!el.closest(KEY_PLACES) && !el.closest(NOT_KEYS);
 }
 
+/** 하이라이트 키를 받을 곳인지 — 문서 칸·툴바·목차·상태줄 (main.js 의 Ctrl+Z 되돌리기도 — lineedit.js) */
+export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
+
 /**
  * 문서·코드 화면의 현재 위치·하이라이트 키 (main.js 의 keydown 이 부른다). 다뤘으면 true — 부른 쪽이 기본 동작(스크롤 등)을 막는다.
- * ↑·↓ 현재 위치 (장 하이라이트 중에는 앞뒤 장 — PageUp·PageDown 도), Shift+Enter 현재 줄 하이라이트, Shift+↑·↓ 넓히기·줄이기,
- * Shift+→ Claude 로 보내기, Shift+← 위치 복사, Ctrl+C 원문 복사 (하이라이트 중이고 고른 글이 없을 때)
+ * ↑·↓ 현재 위치 (장 하이라이트 중에는 앞뒤 장 — PageUp·PageDown 도), Shift+Enter 현재 줄 하이라이트 (한 줄만 하이라이트했으면 한 줄 편집 — D76),
+ * Shift+↑·↓ 넓히기·줄이기, Shift+→ Claude 로 보내기, Shift+← 위치 복사, Ctrl+C 원문 복사 (하이라이트 중이고 고른 글이 없을 때)
  */
 export function spotKey(e) {
   if (e.defaultPrevented || e.altKey || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
@@ -620,7 +643,15 @@ export function spotKey(e) {
   }
   if (e.shiftKey) {
     if (!linesOn() && !lit()) return false;
-    if (k === 'Enter') return highlightHere();
+    if (k === 'Enter') {
+      const us = ranged() ? units() : [];
+      const ix = us.length ? litIndexes(us) : null;
+      if (ix && ix[0] === ix[1]) {   // 한 줄만 하이라이트 — 한 줄 편집 (lineedit.js, D76)
+        emit('line-edit', us[ix[0]]);
+        return true;
+      }
+      return highlightHere();
+    }
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
     if (k === 'ArrowRight') sendLit();
     else if (k === 'ArrowLeft') copyLitRef();
@@ -702,6 +733,7 @@ function onMouseDown(e) {
   }
   e.preventDefault();
   getSelection()?.removeAllRanges();
+  root.parentElement.focus({ preventScroll: true });   // 기본 동작을 막아 초점이 옮지 않는다 — 이어서 치는 키(Shift+↑·↓·Enter)가 이 칸으로 오게
   if (!ranged()) anchor = us[i].a;
   active = true;
   mode = 'range';
