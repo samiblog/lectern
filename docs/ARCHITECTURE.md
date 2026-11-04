@@ -8,7 +8,7 @@ Lectern이 어떻게 돌아가는지 정리한 문서. 코드를 고치기 전�
 flowchart LR
     subgraph Win[Windows 프로세스: Lectern.exe / python app.py]
         PW[pywebview 창<br/>WebView2]
-        HTTP[Flask 서버<br/>127.0.0.1:임의 포트<br/>별도 스레드]
+        HTTP[Flask 앱 + waitress<br/>127.0.0.1:임의 포트<br/>별도 스레드]
         W[Watcher — 탭마다<br/>watchdog 또는 폴링]
         LOG[(ChangeLog — 탭마다)]
         CFG[(config.json)]
@@ -322,6 +322,11 @@ sequenceDiagram
 - 툴바의 − 100% + 로 문서 글자 배율을 0.8·0.9·1·1.1·1.2·1.35·1.5·1.7·2 단계로 바꾼다. 가운데를 누르면 1. 설정 `font_scale` 에 저장한다.
 - `:root` 의 CSS 변수 `--md-scale` 을 툴바 배율 × 1.1(`BASE` — 툴바의 100% 가 예전 110%, D47)로 바꾸고, `base.css` 가 본문 글자 크기와 단 폭(`--md-width`)에 함께 곱한다 (줄 길이가 그대로). 코드·메타데이터처럼 px 로 정한 글자도 곱한다. 앱 UI·그림·다이어그램은 그대로.
 - 바꿀 때 화면 위쪽 블록의 위치를 맞춰 읽던 곳이 움직이지 않게 한다. html 문서는 `text-size` 이벤트로 스타일 없는 문서는 iframe 안의 `--md-scale`(`mdScale()` — 기준을 곱한 값), 스타일 있는 문서는 iframe 문서의 `zoom`(툴바 배율 그대로) (틀 높이는 fitHeight 가 따라간다).
+
+### 로컬 서버 (app.py 의 HttpServer — D82)
+- `make_http_server` 가 Flask 앱을 waitress 로 띄운다 (`127.0.0.1` 에만). 연결을 재사용하므로 켜 둔 동안 닫힌 연결이 쌓이지 않는다 — TIME_WAIT 0~1개 (Werkzeug 개발 서버는 약 160개). 304 만은 waitress 가 연결을 닫아, 캐시가 있으면 시작마다 약 70개가 2분간 남는다. 스레드 32개, `inbuf_overflow`·`outbuf_overflow` 64MB (큰 요청·응답을 임시 파일에 쓰지 않게).
+- 끝낼 때: waitress 에 정지 API 가 없고 이벤트 루프가 한 스레드라, `shutdown` 은 `trigger.pull_trigger` 로 루프 안에서 연결을 모두 닫아 `serve_forever` 를 끝낸다 (밖에서 닫으면 루프가 닫힌 소켓을 건드린다).
+- 연결이 실패할 때 (D81): 시작 스크립트는 `bootguard.js` 가 다시 불러오고, 받기만 하는 요청은 `api.getJSON`·`getText` 가 한 번 더 받고, 한 줄 편집의 저장은 `writeLines` 가 원문을 다시 받아 한 번 더 보낸다.
 
 ### 줄 번호 (linenums.js — D80)
 - 툴바 `#lec-btn-lines`·Alt+L 로 설정 `line_numbers` 를 바꾼다. 켜면 `html.line-numbers` 가 본문 왼쪽 여백을 넓히고(app.css — 화면을 그릴 때마다 칸의 class 를 다시 쓰므로 칸에 달지 않는다), 칸마다 스크롤 상자에 덮개 `.lec-gutter` 를 겹쳐 `lineunits.collectUnits` 의 단위마다 `markOf` 높이에 `u.a` 를 적는다. 'rendered' 와 칸 화면의 ResizeObserver(그림을 불러옴·접기·폭·글자 크기)로 다시 그린다.

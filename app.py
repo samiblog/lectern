@@ -35,19 +35,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-class _QuietPolling(logging.Filter):
-    """1초마다 오는 /api/changes 와 터미널의 키 입력·출력 요청 로그는 숨긴다."""
-
-    def filter(self, record: logging.LogRecord) -> bool:
-        message = record.getMessage()
-        return '/api/changes' not in message and '/api/term/' not in message
-
-
 def setup_logging(quiet: bool) -> None:
-    log = logging.getLogger('werkzeug')
-    log.addFilter(_QuietPolling())
     if quiet:
-        log.setLevel(logging.ERROR)
+        logging.getLogger('waitress').setLevel(logging.ERROR)
 
 
 def open_initial(state: AppState, folder: str | None) -> None:
@@ -69,11 +59,38 @@ def open_folder(state: AppState, folder: str) -> None:
         state.notify(t('폴더를 열 수 없습니다: {error}', error=exc))
 
 
-def make_http_server(state: AppState, port: int):
-    """창 모드와 브라우저 모드가 함께 쓰는 서버. 127.0.0.1 에만 바인딩한다."""
-    from werkzeug.serving import make_server
+HTTP_THREADS = 32                    # 터미널의 긴 폴링이 자리를 오래 쓰고, 시작할 때 요청이 몰린다
+MEMORY_BUFFER = 64 * 1024 * 1024     # waitress 는 이보다 큰 요청·응답을 임시 파일에 쓴다 — 문서 내용이 디스크에 남지 않게
 
-    return make_server('127.0.0.1', port, create_app(state), threaded=True)
+
+class HttpServer:
+    """로컬 서버 (D82). 연결을 재사용한다 — 응답마다 닫는 Werkzeug 개발 서버는 닫힌 연결이 쌓여 시작 파일을 받지 못하는 일이 있었다"""
+
+    def __init__(self, app: Any, port: int) -> None:
+        from waitress.server import create_server
+
+        self._server = create_server(app, host='127.0.0.1', port=port, threads=HTTP_THREADS, ident='Lectern',
+                                     inbuf_overflow=MEMORY_BUFFER, outbuf_overflow=MEMORY_BUFFER)
+        self.server_port = self._server.effective_port
+
+    def serve_forever(self) -> None:
+        self._server.run()
+        self._server.task_dispatcher.shutdown(timeout=1)   # 긴 폴링이 남아 있어도 기다리지 않는다 (일꾼 스레드는 daemon)
+
+    def shutdown(self) -> None:
+        """연결을 모두 닫아 serve_forever 를 끝낸다. waitress 에는 정지 API 가 없고 이벤트 루프는 한 스레드라, 밖에서 닫으면 루프가 닫힌 소켓을 건드린다 — 루프 안에서 닫는다"""
+        server = self._server
+
+        def close_all() -> None:
+            for channel in list(server._map.values()):
+                channel.close()
+
+        server.trigger.pull_trigger(close_all)
+
+
+def make_http_server(state: AppState, port: int) -> HttpServer:
+    """창 모드와 브라우저 모드가 함께 쓰는 서버. 127.0.0.1 에만 바인딩한다."""
+    return HttpServer(create_app(state), port)
 
 
 def run_browser(state: AppState, port: int) -> None:

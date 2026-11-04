@@ -312,7 +312,8 @@ async function finish(save) {
     return { ok: true, saved: true };
   } catch (e) {
     restore(s);
-    toast(t('저장하지 못했습니다: {error}', { error: e.message }), 'error');
+    await copyText(next);   // 칸을 되돌리면 친 글이 사라진다
+    toast(t('저장하지 못했습니다 — 고친 줄은 클립보드에 복사했습니다: {error}', { error: e.message }), 'error');
     return { ok: false, saved: false };
   }
 }
@@ -331,7 +332,8 @@ async function writeLines(tab, path, start, before, after) {
     try {
       return { ...await postJSON('/api/save', { p: tab.id, path, text: lines.join('\n'), hash: src.hash }), at };
     } catch (e) {
-      if (e.status !== 409 || attempt) throw e;   // 받은 뒤 저장하기 전에 바뀌었다 — 다시 받아 본다
+      // 409: 받은 뒤 저장하기 전에 바뀌었다. status 없음: 연결이 잠깐 실패했다 (D81) — 둘 다 원문을 다시 받아 한 번 더
+      if ((e.status != null && e.status !== 409) || attempt) throw e;
     }
   }
 }

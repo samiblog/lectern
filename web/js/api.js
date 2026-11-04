@@ -23,9 +23,19 @@ async function check(res) {
   throw err;
 }
 
+/** 받기만 하는 요청 — 연결이 잠깐 실패한 것이면 한 번 더 (D81. 다시 보내도 되는 요청에만 쓴다) */
+async function fetchRetry(path, options) {
+  try {
+    return await fetch(path, options);
+  } catch {
+    await new Promise((r) => setTimeout(r, 200));
+    return fetch(path, options);
+  }
+}
+
 /** extra: 더 붙일 헤더 (터미널 API 의 X-Term — terminal.js) */
 export async function getJSON(path, extra = {}) {
-  const res = await fetch(path, { headers: headers(extra), cache: 'no-store' });
+  const res = await fetchRetry(path, { headers: headers(extra), cache: 'no-store' });
   return (await check(res)).json();
 }
 
@@ -41,7 +51,7 @@ export async function postJSON(path, body, extra = {}, { signal } = {}) {
 }
 
 export async function getText(path) {
-  const res = await fetch(path, { cache: 'no-store' });
+  const res = await fetchRetry(path, { cache: 'no-store' });
   return (await check(res)).text();
 }
 

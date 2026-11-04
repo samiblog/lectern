@@ -1045,6 +1045,35 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-둘째.md"]', state='detached', timeout=10000)
             page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
+            # 저장 요청이 실패하면: 한 번 더 보내고, 그래도 안 되면 고친 줄을 클립보드에 (D81)
+            save_left = {'n': 1}
+
+            def flaky_save(route):
+                if save_left['n'] > 0:
+                    save_left['n'] -= 1
+                    route.abort('addressunreachable')
+                else:
+                    route.continue_()
+
+            page.route('**/api/save', flaky_save)
+            editing_end()
+            page.keyboard.press('Enter')
+            # 칸이 닫힐 때까지 화면으로 기다린다 — time.sleep 으로 기다리면 page.route 처리기가 돌지 않아 요청이 멈춘 채로 있다
+            wait_until(page, "!document.querySelector('#lec-view .lec-line-edit') && document.querySelector('#lec-view').textContent.includes('줄입니다. 끝')", 6000)
+            retried = file_line(edit_doc, 3, first_line + ' 끝')
+            page.wait_for_timeout(300)
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+z')
+            file_line(edit_doc, 3, first_line)
+            page.wait_for_timeout(500)
+            save_left['n'] = 100
+            editing_end()
+            page.keyboard.press('Enter')
+            lost_told = toast_has('고친 줄은 클립보드에')
+            lost_clip = page.evaluate('navigator.clipboard.readText()')
+            page.unroute('**/api/save')
+            check(retried == first_line + ' 끝' and lost_told and lost_clip == first_line + ' 끝' and file_line(edit_doc, 3) == first_line,
+                  f"저장 요청이 한 번 실패하면 다시 보내 저장하고, 끝내 안 되면 고친 줄을 클립보드에 ({retried!r}, {lost_told}, {lost_clip!r})")
             # 코드 화면의 줄 (점검 뒤 원래대로 — 뒤의 [코드 보기] 가 이 파일을 본다)
             example = work / 'code' / 'example.py'
             example_text = example.read_bytes()
@@ -1929,12 +1958,15 @@ def run(headed: bool) -> None:
                   f"'코드' 목록에서 한 번 누르면 읽기 화면, 목차를 누르면 그 줄로, 두 번 누르면 편집기 ({body})")
             src = work / 'code' / 'example.py'
             original = src.read_text(encoding='utf-8')
+            # 앞의 두 번 누르기가 같은 파일을 다시 그리는 중이면 끝난 뒤에 쓴다 — 그 그리기와 겹치면 드물게 강조가 빠진다 (새로고침은 된다)
+            page.evaluate("""() => import('/static/js/store.js').then(({ S }) => new Promise((done) => { const id = setInterval(() => {
+              if (!S.pane.pending && !S.pane.redrawing) { clearInterval(id); done(); } }, 20); }))""")
             src.write_text(original + '\n\ndef added_later():\n    return 1\n', encoding='utf-8')
             refreshed = wait_until(page, "[...document.querySelectorAll('#lec-toc .code-outline a')].some(a => a.textContent.includes('added_later'))", 8000)
             flashed = page.evaluate("document.querySelectorAll('#lec-view .cv-line.lec-changed').length")
             src.write_text(original, encoding='utf-8')
             restored = wait_until(page, "![...document.querySelectorAll('#lec-toc .code-outline a')].some(a => a.textContent.includes('added_later'))", 8000)
-            check(refreshed and flashed >= 2 and restored, f'보고 있는 코드가 바뀌면 다시 그리고 바뀐 줄 강조 ({flashed}줄)')
+            check(refreshed and flashed >= 2 and restored, f'보고 있는 코드가 바뀌면 다시 그리고 바뀐 줄 강조 ({flashed}줄, 다시 그림 {refreshed}, 되돌림 {restored})')
             page.keyboard.press('Control+f')
             page.fill('#lec-find-input', 'window')
             found_code = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)", 3000)
@@ -2408,6 +2440,20 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-tree .row.file', timeout=8000)
             check(recovered and told_fail and tries_used == 5 and page.evaluate("document.querySelector('#lec-boot-fail').hidden"),
                   f"시작 모듈을 한 번 못 받으면 다시 불러와 되살아나고, 계속 못 받으면 세 번 뒤 안내 ({recovered}, {told_fail}, {tries_used})")
+            tree_left = {'n': 1}
+
+            def flaky_tree(route):
+                if tree_left['n'] > 0:
+                    tree_left['n'] -= 1
+                    route.abort('addressunreachable')
+                else:
+                    route.continue_()
+
+            page.route('**/api/tree*', flaky_tree)
+            page.reload()
+            page.wait_for_selector('#lec-tree .row.file', timeout=8000)
+            page.unroute('**/api/tree*')
+            check(tree_left['n'] == 0, '시작할 때 파일 목록 요청이 한 번 실패해도 다시 받아 목록이 나옴')
             lang_hits = []
             page.route('**/highlight/languages/dos.min.js*', lambda r: (lang_hits.append(1), r.abort('addressunreachable')))
             page.reload()

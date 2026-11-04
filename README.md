@@ -247,4 +247,4 @@ python tools\ui_smoke.py     :: playwright 필요: pip install playwright && pyt
 
 Lectern 은 [MIT 라이선스](LICENSE)입니다. 누구나 무료로 쓰고, 고치고, 배포할 수 있습니다 (저작권 표시를 남겨 주세요). 있는 그대로 제공되며, 사용으로 생긴 문제에 대해 보증이나 책임을 지지 않습니다.
 
-설치 파일에는 Python, pywebview, Flask, watchdog, markdown-it, Mermaid, Vega, ECharts, Plotly, Graphviz(Viz.js), KaTeX, highlight.js, DOMPurify, xterm.js 등 오픈소스 소프트웨어가 들어 있습니다. 각각의 저작권 표시와 라이선스 전문은 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 에 있습니다. `web/vendor/` 의 라이브러리 원문 라이선스는 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.
+설치 파일에는 Python, pywebview, Flask, waitress, watchdog, markdown-it, Mermaid, Vega, ECharts, Plotly, Graphviz(Viz.js), KaTeX, highlight.js, DOMPurify, xterm.js 등 오픈소스 소프트웨어가 들어 있습니다. 각각의 저작권 표시와 라이선스 전문은 [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md) 에 있습니다. `web/vendor/` 의 라이브러리 원문 라이선스는 `web/vendor/licenses/`, 버전은 `web/vendor/VERSIONS.json` 에 있습니다.

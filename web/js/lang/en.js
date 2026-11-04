@@ -677,6 +677,7 @@ export default {
 "그사이 파일이 바뀌어 다시 하지 않았습니다": "The file changed in the meantime, so this was not redone",
 "다시 했습니다: {where}": "Redone: {where}",
 "다시 하지 못했습니다: {error}": "Could not redo: {error}",
+"저장하지 못했습니다 — 고친 줄은 클립보드에 복사했습니다: {error}": "Could not save — your edited line was copied to the clipboard: {error}",
 "한 줄 편집 (F2 · 본문 두 번 누르기)": "Line editing (F2 or double-click the body)",
 "저장 — 원문 파일에 바로": "Save — straight into the source file",
 "그만두기": "Cancel",
