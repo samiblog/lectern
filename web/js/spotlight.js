@@ -15,7 +15,8 @@
 //   목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 그곳의 장으로 (fold.js 의 unfoldTo 가 보내는 'reveal'). Shift+↑·↓ 를 누르면 그 장의 처음~끝 줄을
 //   줄 하이라이트로 바꿔 넓히고 줄인다.
 // - 키 (main.js 의 keydown 이 spotKey 로): Shift+→ 하이라이트한 곳을 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행' 으로 (Enter 없이 —
-//   D51·D69 와 같은 길), Shift+← 그 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때), F2 현재 줄·한 줄 하이라이트를 한 줄 편집 (D76).
+//   D51·D69 와 같은 길, 초점은 문서에), Ctrl+Shift+→ 같은 일을 하고 초점도 터미널로 (D79), Shift+← 그 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때),
+//   F2 현재 줄·한 줄 하이라이트를 한 줄 편집 (D76).
 //   상태줄에 하이라이트한 줄 범위 (#lec-st-lit).
 // - 우클릭 메뉴(docmenu.js)는 하이라이트한 곳 안이면 그 범위의 선택 상자 — litAt.
 // - 그리기: 칸의 스크롤 상자에 덮개(.lec-spot — 하이라이트 위·아래를 덮는 반투명 회색 둘과 왼쪽 강조 막대)와 현재 위치 삼각형을 겹쳐 둔다 (base.css).
@@ -47,6 +48,7 @@ let gen = 0;            // 다시 그리거나 크기가 바뀌면 늘려 줄 �
 let codeSrc = { text: null, lines: [] };
 let followRaf = 0;
 let revealing = 0;      // 'reveal' 뒤 현재 위치를 그곳으로 옮기기 전 — 그사이의 스크롤로 따라오지 않게
+let revealLine = null; // 다음 'reveal' 에서 현재 위치로 삼을 원문 줄 — 여러 줄 블록 안의 자리로 돌아갈 때 (뒤로·앞으로, nav.js)
 
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
 const view = () => $('#lec-view');
@@ -411,11 +413,28 @@ function litInfo() {
 
 const noLit = () => toast(t('하이라이트한 곳이 없습니다 — Shift+Enter 로 현재 줄을, Shift+↑·↓ 로 여러 줄을 하이라이트합니다'));
 
-/** Shift+→ · 메뉴 'Claude 로 보내기': 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal) */
-export function sendLit() {
+/**
+ * Shift+→ · 메뉴 'Claude 로 보내기': 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal).
+ * stay: 초점은 문서에 둔다 (Shift+→ — 여러 곳을 이어서 넣게, D79). 메뉴에서 고르면 터미널로
+ */
+export function sendLit(stay = false) {
   const info = litInfo();
   if (!info) noLit();
-  else emit('term-paste', `${info.ref} `);
+  else emit(stay ? 'term-paste-stay' : 'term-paste', `${info.ref} `);
+}
+
+/** Ctrl+Shift+→: 위치를 맨 앞 터미널에 넣고 초점도 그 터미널로 (D79) — 하이라이트가 없으면 현재 줄 */
+function sendAndGo() {
+  const info = litInfo();
+  if (info) {
+    emit('term-paste', `${info.ref} `);
+    return true;
+  }
+  const us = units();
+  const i = hereIndex(us);
+  if (i < 0) return false;
+  emit('term-paste', `${lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '')} `);
+  return true;
 }
 
 /** Shift+← · 메뉴 'Claude용 위치 복사' */
@@ -589,6 +608,9 @@ export function followLine(line) {
   setHere(line, { scroll: true });
 }
 
+/** 다음 'reveal' 의 현재 위치를 블록의 첫 줄이 아니라 원문 줄 line 으로 (뒤로·앞으로 — nav.js 의 showPlace) */
+export const revealAt = (line) => { revealLine = line; };
+
 /** 두 번 누른 곳(e)의 줄 단위 (lineedit.js) — 본문의 글이 아니거나 줄을 고르지 않는 곳이면 null */
 export function unitAtPoint(e) {
   const root = view();
@@ -662,6 +684,9 @@ function keyPlace(el) {
   return !!el.closest(KEY_PLACES) && !el.closest(NOT_KEYS);
 }
 
+/** 팝업·메뉴·사용설명서 같은 것이 문서 화면을 덮고 있는지 (main.js 의 F6) */
+export const overlayOpen = () => !!document.querySelector(OVERLAYS);
+
 /** 하이라이트 키를 받을 곳인지 — 문서 칸·툴바·목차·상태줄 (main.js 의 Ctrl+Z 되돌리기도 — lineedit.js) */
 export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
 
@@ -674,6 +699,7 @@ export function spotKey(e) {
   if (e.defaultPrevented || e.altKey || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
   const k = e.key;
   if (e.ctrlKey) {
+    if (e.shiftKey && k === 'ArrowRight') return sendAndGo();
     if (e.shiftKey || (e.code !== 'KeyC' && k.toLowerCase() !== 'c') || !lit() || getSelection()?.toString()) return false;
     copyLitSource();
     return true;
@@ -690,7 +716,7 @@ export function spotKey(e) {
       return highlightHere();
     }
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
-    if (k === 'ArrowRight') sendLit();
+    if (k === 'ArrowRight') sendLit(true);
     else if (k === 'ArrowLeft') copyLitRef();
     else return false;
     return true;
@@ -823,6 +849,8 @@ export function initSpotlight() {
   });
   // 목차·찾기·앵커·바뀐 곳·검색으로 가면: 장 하이라이트 중이면 그 장을, 현재 위치는 그 줄로 (줄 하이라이트 중이면 끝 줄이 현재 위치라 그대로)
   on('reveal', (el) => {
+    const line = revealLine;
+    revealLine = null;
     if (spotlightOn()) {
       const i = chapterOf(el);
       if (i >= 0 && i !== current) select(i);
@@ -835,7 +863,7 @@ export function initSpotlight() {
       const us = units();
       const r = el.getBoundingClientRect();
       const i = unitAt(us, r.top - baseOf(view()) + Math.min(r.height / 2, 8));
-      if (i >= 0) setHere(us[i].a);
+      if (i >= 0) setHere(line ?? us[i].a);
     }));
   });
   // 누르기·Shift+끌기 — 거품 단계에서 받는다: 모두 펼치기(spread.js)가 잡기 단계에서 누른 칸을 먼저 고른다 (D73)

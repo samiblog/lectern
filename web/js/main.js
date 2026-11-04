@@ -7,8 +7,8 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotKey, stopSpotlight, docKeyTarget } from './spotlight.js';
-import { initLineEdit, undoLineEdit } from './lineedit.js';
+import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen } from './spotlight.js';
+import { initLineEdit, undoLineEdit, focusLineEdit } from './lineedit.js';
 import { initTextSize } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
@@ -35,7 +35,7 @@ import { initPosition } from './position.js';
 import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
-import { initTerminal, toggleTerminal, terminalOpen, terminalBelow } from './terminal.js';
+import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, focusTerminal } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert, askNewDoc } from './basket.js';
 import { initRename, closeRename } from './rename.js';
@@ -43,7 +43,7 @@ import { initDocTabs, docTabAt, closeDocTab } from './doctabs.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
-import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, focusNextTile } from './gather.js';
+import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveToDoc, focusNextTile } from './gather.js';
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
@@ -128,6 +128,27 @@ async function manualRefresh() {
   }
 }
 
+// ---- 초점 ---------------------------------------------------------------------
+
+/** 보던 문서로 초점을 — 편집 중이면 편집기, 한 줄 편집 중이면 그 칸의 그 자리 */
+function focusDoc() {
+  const pane = S.pane;
+  if (pane?.editor) pane.editor.cm.focus();
+  else if (!focusLineEdit()) pane?.scroller.focus({ preventScroll: true });
+}
+
+/** F6·Shift+F6 (D79): 문서 ↔ 터미널. 초점이 문서 칸(또는 아무 데도 없음)이면 터미널로, 터미널·사이드바 등이면 문서로. 지금은 두 곳뿐이라 거꾸로도 같다 */
+function hopFocus() {
+  if (gatherOn()) {
+    leaveToDoc().then(focusDoc);
+    return;
+  }
+  if (overlayOpen()) return;
+  const el = document.activeElement;
+  if (!el || el === document.body || el.closest('#lec-panes')) focusTerminal();
+  else focusDoc();
+}
+
 // ---- 연결 ---------------------------------------------------------------------
 
 function bindToolbar() {
@@ -153,6 +174,11 @@ function bindKeys() {
     }
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
+    if (e.key === 'F6' && !mod && !e.altKey) {   // 문서 ↔ 터미널 — 터미널·편집기·한 줄 편집 안에서도 (terminal.js 의 keyFor, lineedit.js 의 onKey)
+      e.preventDefault();
+      hopFocus();
+      return;
+    }
     if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도), Shift 와 함께면 터미널 모음
       e.preventDefault();
       closeManual();   // 사용설명서가 덮고 있으면 걷고
@@ -324,6 +350,7 @@ async function boot() {
   applyLayout();
 
   on('view', () => { updateNavButtons(); updateWindowTitle(); });
+  on('history', updateNavButtons);
   on('show-sidebar', () => {
     if (spreadOn()) leaveSpread();   // 모두 펼치기(D73)는 사이드바를 감춘다
     if (S.config.sidebar_visible === false) toggleSidebar();

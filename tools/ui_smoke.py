@@ -41,6 +41,9 @@ failures: list[str] = []
 LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 쓴 문단.\n\n이 문단은 원문에서 두 줄로 나눠 썼습니다. 첫 줄은 길어서 화면에서 한 줄을 넘기고, 다음 원문 줄은 화면의 둘째 줄이나 셋째 줄에서 시작합니다. 그래도 원문 줄은 따로 셉니다.\n둘째 원문 줄은 여기서 시작해 문단 끝까지 이어집니다.\n\n- 항목 하나\n- 항목 둘\n  - 안쪽 항목\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n```python\na = 1\n\nb = 2\n```\n\n## 둘째 절\n\n단락 1.\n\n단락 2.\n\n단락 3.\n\n단락 4.\n\n단락 5.\n\n단락 6.\n\n단락 7.\n\n단락 8.\n\n단락 9.\n\n단락 10.\n\n단락 11.\n\n단락 12.\n\n단락 13.\n\n단락 14.\n\n단락 15.\n\n단락 16.\n\n단락 17.\n\n단락 18.\n\n단락 19.\n\n단락 20.\n\n단락 21.\n\n단락 22.\n\n단락 23.\n\n단락 24.\n\n단락 25.\n\n단락 26.\n\n단락 27.\n\n단락 28.\n\n단락 29.\n\n단락 30.\n\n단락 31.\n\n단락 32.\n\n단락 33.\n\n단락 34.\n\n단락 35.\n\n단락 36.\n\n단락 37.\n\n단락 38.\n\n단락 39.\n\n단락 40.\n'
 
 
+# 뒤로 기록 점검(D78)에 쓰는 문서: 길게 — 절 여섯, 맨 앞에 각주·다른 문서 링크, 맨 끝에 각주 본문
+MOVE_DOC = ('# 이동 점검\n\n본문 각주[^1] 입니다. [다른 문서](01-기능-점검.md)\n\n'
+            + ''.join(f'## 절 {i}\n\n' + ('긴 문단입니다. ' * 40 + '\n\n') * 6 for i in range(1, 7)) + '[^1]: 각주 본문.\n')
 # 한 줄 편집 점검(D76)에 쓰는 문서: 제목·할 일·박스글·표·나눠 쓴 문단·코드
 EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n\n[절로 가는 링크](#고칠-제목)\n\n- 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다.\n'
 
@@ -2074,6 +2077,85 @@ def run(headed: bool) -> None:
             focused = page.evaluate("document.activeElement?.dataset?.doc")
             check(focused == row.get_attribute('data-doc'), f'파일이 바뀌어 트리를 다시 그려도 키보드 초점이 그 행에 남음 ({focused})')
 
+            print('[문서 안의 뒤로 기록]')   # D78 — 목차·각주·찾기로 뛴 자리도 Alt+←·→ 로, 접힌 절은 펴고, 다른 문서를 다녀와도 뛴 곳으로
+            was_doc = page.inner_text('#lec-st-path')
+            move_doc = work / 'docs' / '97-이동.md'
+            move_doc.write_text(MOVE_DOC, encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-이동.md"]', timeout=10000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-이동.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("이동 점검")')
+            scroll_top = lambda: page.evaluate("document.querySelector('#lec-content').scrollTop")
+            here_line = lambda: page.evaluate("import('/static/js/store.js').then(m => m.S.pane.here?.line)")
+            near = lambda a, b: abs(a - b) <= 2
+            toc_to = lambda name: page.locator('#lec-toc a[data-i]', has_text=name).click()
+            settle = lambda: page.wait_for_timeout(200)
+            para9 = page.locator('#lec-view p').nth(9)   # 절 2 안
+            para9.scroll_into_view_if_needed()
+            para9.click()
+            settle()
+            read_top, line0 = scroll_top(), here_line()
+            toc_to('절 5')
+            settle()
+            top1 = scroll_top()
+            back_ok = not page.evaluate("document.querySelector('#lec-btn-back').disabled")
+            page.keyboard.press('Alt+ArrowLeft')
+            settle()
+            jump_back = [scroll_top(), here_line()]
+            fwd_on = not page.evaluate("document.querySelector('#lec-btn-forward').disabled")
+            page.keyboard.press('Alt+ArrowRight')
+            settle()
+            jump_fwd = scroll_top()
+            check(top1 > read_top + 200 and back_ok and fwd_on and near(jump_back[0], read_top) and jump_back[1] == line0 and near(jump_fwd, top1),
+                  f"목차로 뛴 뒤 Alt+← 는 앞 문서가 아니라 읽던 자리(스크롤·현재 위치)로, Alt+→ 는 뛴 곳으로 ({read_top}, {line0}, {top1}, {jump_back}, {jump_fwd})")
+            page.evaluate("[...document.querySelectorAll('#lec-view h2')].find((h) => h.textContent.includes('절 2')).click()")   # 읽던 절을 접는다
+            fold_n = page.locator('#lec-view .lec-folded').count()
+            page.keyboard.press('Alt+ArrowLeft')
+            settle()
+            unfolded = [page.locator('#lec-view .lec-folded').count(), here_line(), page.evaluate(f"""(() => {{ const r = document.querySelector('#lec-view [data-lines^="{line0}-"]').getBoundingClientRect();
+              const b = document.querySelector('#lec-content').getBoundingClientRect(); return r.bottom > b.top && r.top < b.bottom; }})()""")]
+            check(fold_n == 1 and unfolded == [0, line0, True], f"뒤로 간 자리가 접힌 절 안이면 펴고 그 줄이 보임 ({fold_n}, {unfolded})")
+            page.evaluate("document.querySelector('#lec-content').scrollTop = 0")
+            settle()
+            page.locator('#lec-view sup a').first.click()
+            settle()
+            note_top = scroll_top()
+            page.keyboard.press('Alt+ArrowLeft')
+            settle()
+            check(note_top > 500 and near(scroll_top(), 0), f"본문의 각주로 뛴 뒤 Alt+← 는 본문 자리로 ({note_top}, {scroll_top()})")
+            page.evaluate("document.querySelector('#lec-content').scrollTop = 350")
+            settle()
+            find_from = scroll_top()
+            page.keyboard.press('Control+f')
+            page.keyboard.type('각주 본문')
+            page.wait_for_timeout(350)
+            found_top = scroll_top()
+            page.keyboard.press('Control+a')
+            page.keyboard.type('절 6')
+            page.wait_for_timeout(350)
+            page.keyboard.press('Enter')
+            page.keyboard.press('Escape')
+            page.locator('#lec-content').focus()
+            page.keyboard.press('Alt+ArrowLeft')
+            settle()
+            check(found_top > find_from + 200 and near(scroll_top(), find_from), f"찾기로 옮겨 다닌 뒤 Alt+← 한 번이면 찾기 전 자리로 ({find_from}, {found_top}, {scroll_top()})")
+            page.evaluate("document.querySelector('#lec-content').scrollTop = 0")
+            settle()
+            toc_to('절 3')
+            settle()
+            top3 = scroll_top()
+            page.evaluate("[...document.querySelectorAll('#lec-view a')].find((a) => a.textContent === '다른 문서').click()")
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.keyboard.press('Alt+ArrowLeft')
+            page.wait_for_selector('#lec-view h1:has-text("이동 점검")')
+            settle()
+            cross_top = scroll_top()
+            page.keyboard.press('Alt+ArrowLeft')
+            settle()
+            check(top3 > 200 and near(cross_top, top3) and near(scroll_top(), 0), f"다른 문서를 다녀와도 Alt+← 는 뛴 곳으로, 한 번 더 누르면 뛰기 전 자리로 ({top3}, {cross_top}, {scroll_top()})")
+            move_doc.unlink()
+            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-이동.md"]', state='detached', timeout=10000)
+
             print('[설정과 마지막 위치]')
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
@@ -2341,6 +2423,11 @@ def run(headed: bool) -> None:
             page.locator('#lec-view h1').dblclick()
             page.wait_for_timeout(450)
             check(ro_task and page.locator('#lec-view .lec-line-edit').count() == 0, f"예제의 할 일을 눌러도 바꾸지 않고 알림, 두 번 눌러도 한 줄 편집을 열지 않음 ({ro_task})")
+            page.locator('#lec-content').focus()
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.keyboard.press('F6')
+            ro_f6 = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000)
+            check(ro_f6 and page.evaluate("document.querySelector('#lec-term').hidden"), f"보기만 하는 프로젝트의 F6 은 터미널을 열지 않고 까닭을 알림 ({ro_f6})")
             page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click()
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
@@ -3037,11 +3124,58 @@ def run(headed: bool) -> None:
             h1_at = page.locator('#lec-view h1').first.get_attribute('data-lines').split('-')[0]
             page.keyboard.press('Shift+ArrowRight')
             sent = term_has(f'@{doc_path} {h1_at}행 ')
-            sent_focus = page.evaluate("!!document.activeElement?.closest('#lec-term')")
+            in_term_js = "!!document.activeElement?.closest('#lec-term')"
+            sent_stay = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
+            head_shadow = "getComputedStyle(document.querySelector('.term-head')).boxShadow"
+            tabs_shadow = "getComputedStyle(document.querySelector('#lec-doctabs')).boxShadow"
+            mark_doc = [page.evaluate(head_shadow), page.evaluate(tabs_shadow)]
+            page.keyboard.press('F6')   # 문서 → 터미널
+            to_term = wait_until(page, in_term_js, 3000)
+            mark_term = [page.evaluate(head_shadow), page.evaluate(tabs_shadow)]
             page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
-            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Shift+F6')   # 터미널 → 문서
+            hop_doc = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
             page.keyboard.press('Escape')   # 하이라이트 끄기
-            check(sent and sent_focus, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점은 터미널로 ({sent}, {sent_focus})")
+            check(sent and sent_stay, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점은 문서에 ({sent}, {sent_stay})")
+            check(to_term and hop_doc and mark_doc[0] == 'none' and mark_doc[1] != 'none' and mark_term[0] != 'none' and mark_term[1] == 'none',
+                  f"F6·Shift+F6 은 문서 ↔ 터미널, 초점이 있는 쪽을 강조색으로 보임 ({to_term}, {hop_doc}, {mark_doc}, {mark_term})")
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+Shift+ArrowRight')   # 하이라이트 없이 — 현재 줄
+            go_sent = term_has(f'@{doc_path} {h1_at}행 ')
+            go_focus = wait_until(page, in_term_js, 3000)
+            page.keyboard.press('Escape')
+            check(go_sent and go_focus, f"Ctrl+Shift+→ 는 현재 줄의 위치를 넣고 초점도 터미널로 ({go_sent}, {go_focus})")
+            page.keyboard.press('Control+Backquote')   # 패널을 닫고
+            wait_until(page, "document.querySelector('#lec-term').hidden", 3000)
+            page.locator('#lec-content').focus()
+            page.keyboard.press('F6')
+            f6_open = wait_until(page, "!document.querySelector('#lec-term').hidden && !!document.activeElement?.closest('#lec-term')", 5000)
+            page.locator('#lec-tree .row.file').first.focus()
+            page.keyboard.press('F6')
+            f6_side = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
+            check(f6_open and f6_side, f"F6 은 닫힌 터미널을 열면서 가고, 사이드바에서는 문서로 ({f6_open}, {f6_side})")
+            # 한 줄 편집 중: 칸을 그대로 두고 터미널로, 돌아오면 그 자리로 (저장하지 않는다)
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('F2')
+            wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
+            page.keyboard.press('Home')
+            page.keyboard.press('ArrowRight')
+            page.keyboard.press('F6')
+            f6_kept = [wait_until(page, in_term_js, 3000), page.locator('#lec-view .lec-line-edit').count()]
+            page.keyboard.press('F6')
+            back_cell = wait_until(page, "document.activeElement?.classList.contains('lec-line-edit')", 3000)
+            caret_at = page.evaluate("getSelection().focusOffset")
+            page.keyboard.press('Escape')
+            page.keyboard.press('Control+e')
+            page.wait_for_selector('.lec-editor .CodeMirror')
+            page.keyboard.press('F6')
+            editor_out = wait_until(page, in_term_js, 3000)
+            page.keyboard.press('F6')
+            editor_back = wait_until(page, "!!document.activeElement?.closest('.lec-editor')", 3000)
+            page.keyboard.press('Control+e')
+            wait_until(page, "!document.querySelector('.lec-editor')", 5000)
+            check(f6_kept == [True, 1] and back_cell and caret_at == 1 and editor_out and editor_back,
+                  f"F6 은 한 줄 편집 칸을 그대로 두고 가서 그 자리로 돌아오고, 편집 모드도 편집기로 돌아옴 ({f6_kept}, {back_cell}, {caret_at}, {editor_out}, {editor_back})")
             # 터미널 색은 문서 스타일을 따른다 (바탕 = 코드 블록 바탕). 프로그램이 쓴 흰 글자·회색도 바탕과 4.5:1 이상 (minimumContrastRatio)
             term_colors = lambda: page.evaluate('''() => {
               const lum = (c) => { const m = c.match(/[\\d.]+/g).map(Number);
@@ -3338,6 +3472,11 @@ def run(headed: bool) -> None:
             page.click('#lec-btn-toc')   # 되돌린다 (터미널을 연 동안 목차를 함께 보던 것)
             check(toc_shown and wait_until(page, "document.documentElement.classList.contains('toc-off')"),
                   '목차 버튼도 탭 막대 끝 — 모음에서 누르면 모음을 닫고 목차를 보임, 다시 누르면 감춤')
+            page.keyboard.press('Control+Shift+Backquote')
+            wait_until(page, "document.documentElement.classList.contains('gather-on') && !!document.activeElement?.closest('.g-tile')")
+            page.keyboard.press('F6')
+            g_f6 = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.activeElement?.id === 'lec-content'", 5000)
+            check(g_f6, f"터미널 모음의 F6 은 고른 칸의 프로젝트 문서로 ({g_f6})")
             tab_el(1).hover()   # 고르지 않은 탭의 × 는 마우스를 올려야 보인다
             tab_el(1).locator('.tab-close').click()
             n_tabs(1)

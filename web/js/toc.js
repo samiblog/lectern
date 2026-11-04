@@ -473,7 +473,10 @@ export function initToc() {
     if (part) {
       e.preventDefault();
       const el = parts[+part.dataset.c];
-      if (el?.isConnected) goToPart(el);
+      if (el?.isConnected) {
+        emit('jump');   // 뒤로 기록에 (nav.js, D78)
+        goToPart(el);
+      }
       return;
     }
     const a = e.target.closest('a[data-i]');
@@ -481,6 +484,7 @@ export function initToc() {
     e.preventDefault();
     const h = heads[+a.dataset.i];
     if (!h || editJump?.(h)) return;   // 편집 중이면 편집기가 그 제목(줄)으로
+    emit('jump');   // 뒤로 기록에 (nav.js, D78)
     if (h.classList.contains('cv-line')) {   // 코드 화면: 그 줄을 위에 두고 잠깐 표시 (현재 위치도 그 줄로 — spotlight.js)
       emit('reveal', h);
       h.scrollIntoView({ block: 'start' });

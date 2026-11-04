@@ -6,6 +6,9 @@ import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
 import { showCode } from './codeview.js';
 import { paneShown } from './panes.js';
+import { unfoldTo } from './fold.js';
+import { blockOfLine } from './lineunits.js';
+import { revealAt } from './spotlight.js';
 import { isHtml, toast } from './util.js';
 import { t } from './i18n.js';
 
@@ -17,6 +20,46 @@ function render(pane, target, opts) {
 }
 
 const keyOf = (target) => `${target.type}:${target.path || ''}`;
+
+// 뒤로 기록 (pane.history): 화면마다 한 칸이고, 같은 문서 안에서 뛴 것도 한 칸이다 (D78). 칸의 자리(top — 스크롤, line — 현재 위치의 원문 줄)는 떠날 때 적는다.
+
+/** 떠나는 자리를 지금 칸에 적는다. 바로 앞 칸과 같은 자리면(제자리로 뛴 것) 한 칸으로 — 뒤로가 아무 일도 안 한 것처럼 보이지 않게 */
+function keepPlace(pane) {
+  const cur = pane.history[pane.hIndex];
+  if (!cur || !pane.current || keyOf(cur) !== keyOf(pane.current)) return;
+  cur.top = pane.scroller.scrollTop;
+  cur.line = pane.here?.path === cur.path ? pane.here.line : undefined;
+  const prev = pane.history[pane.hIndex - 1];
+  if (prev && keyOf(prev) === keyOf(cur) && prev.top === cur.top) {
+    pane.history.splice(pane.hIndex, 1);
+    pane.hIndex -= 1;
+  }
+}
+
+/** 같은 문서 안에서 뛰기 직전 ('jump' — 목차·#절 링크·각주·찾기·모아 보기·검색): 지금 자리를 적고 뛴 곳의 칸을 연다. 편집 중이면 남기지 않는다 */
+function noteJump(pane = S.pane) {
+  if (!pane?.current || pane.editor) return;
+  keepPlace(pane);
+  const { type, path } = pane.current;
+  pane.history.splice(pane.hIndex + 1);
+  pane.history.push({ type, path });
+  pane.hIndex = pane.history.length - 1;
+  if (pane === S.pane) emit('history');
+}
+
+/** 기록의 자리로: 접힌 절 안이면 펴고(현재 위치도 그 줄로) 그 스크롤 위치로. 그사이 접거나 펴서 높이가 달라졌으면 그 줄이 보이게 */
+function showPlace(pane, place) {
+  const el = place.line ? blockOfLine(pane.view, place.line) : null;
+  if (el) {
+    revealAt(place.line);
+    unfoldTo(el);
+  }
+  if (place.top != null) pane.scroller.scrollTop = place.top;
+  if (!el) return;
+  const box = pane.scroller.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  if (r.bottom <= box.top || r.top >= box.bottom) el.scrollIntoView({ block: 'center' });
+}
 
 /**
  * 화면 이동. 성공하면 true.
@@ -36,6 +79,10 @@ export async function navigate(target, { pane = S.pane, push = true, restoreScro
   if (pane.current) pane.scrollPos.set(keyOf(pane.current), pane.scroller.scrollTop);
   if (index == null) pane.wanted = null;
   const next = { type: target.type, path: target.path || '' };
+  if (index == null) {   // 뒤로·앞으로(go)는 이미 적었다
+    if (push && pane.current && keyOf(pane.current) === keyOf(next) && (target.hash || target.line)) noteJump(pane);   // 보던 문서의 앵커·줄로
+    else keepPlace(pane);
+  }
   const top = scrollTop ?? (restoreScroll ? pane.scrollPos.get(keyOf(next)) : undefined);
   pane.pending += 1;   // 이동 중에는 자동 새로고침이 끼어들지 않게 한다
   let done;
@@ -94,7 +141,7 @@ export function renamePath(tab, from, targetOf) {
   const showing = [];
   const same = (v) => v && v.type !== 'overview' && v.path === from;
   for (const pane of tab.panes) {
-    pane.history = pane.history.map((h) => (same(h) ? targetOf(h.type) : h));
+    pane.history = pane.history.map((h) => (same(h) ? { ...h, ...targetOf(h.type) } : h));
     for (const type of ['doc', 'code']) {
       const key = keyOf({ type, path: from });
       if (!pane.scrollPos.has(key)) continue;
@@ -109,10 +156,21 @@ export function renamePath(tab, from, targetOf) {
 
 function go(step) {
   const pane = S.pane;
+  if (pane.wanted == null) keepPlace(pane);
   const index = (pane.wanted ?? pane.hIndex) + step;
   if (index < 0 || index >= pane.history.length) return;
+  const place = pane.history[index];
+  if (pane.wanted == null && pane.current && keyOf(place) === keyOf(pane.current)) {   // 같은 문서 안 — 다시 그리지 않는다
+    pane.hIndex = index;
+    if (!pane.editor) showPlace(pane, place);
+    else if (place.line) emit('edit', { line: place.line });   // 편집 중이면 편집기가 그 줄로 (D55)
+    emit('history');
+    return;
+  }
   pane.wanted = index;   // 빠르게 여러 번 누르면 여기서 이어 간다
-  navigate(pane.history[index], { pane, push: false, restoreScroll: true, index }).finally(() => {
+  navigate(place, { pane, push: false, restoreScroll: true, index, scrollTop: place.top }).then((done) => {
+    if (done && pane === S.pane && pane.hIndex === index) showPlace(pane, place);
+  }).finally(() => {
     if (pane.wanted === index) pane.wanted = null;
   });
 }
@@ -155,4 +213,5 @@ export async function refreshView(pane) {
 export function initNav() {
   // 'open' 은 doctabs.js 가 받는다 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로, newTab 이면 새 문서 탭에서)
   on('refresh-view', (pane) => refreshView(pane));
+  on('jump', () => noteJump());
 }

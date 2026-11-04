@@ -5,7 +5,7 @@
 // html 문서는 iframe 안을 찾는다. 하이라이트는 문서마다 따로라서 iframe 창의 CSS.highlights 에 넣는다 (표시 색은 css/frame.css).
 // 사용설명서(help.js)를 연 동안은 설명서 안을 찾는다 (setFindTarget — 찾기 막대도 설명서로 옮긴다).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { unfoldTo } from './fold.js';
 import { $, debounce, docRoot, screenRect } from './util.js';
 import { t } from './i18n.js';
@@ -15,6 +15,7 @@ let ranges = [];
 let current = -1;
 let win = window;   // 하이라이트를 넣은 창 (html 문서면 iframe 의 창)
 let target = null;  // 문서 화면 대신 찾을 곳 {root, scroller} — 사용설명서(help.js)를 연 동안
+let jumped = false; // 이번 찾기를 뒤로 기록에 남겼는지 — 결과를 옮겨 다녀도 한 번만, 뒤로 하면 찾기 전 자리로 (D78)
 
 const bar = () => $('#lec-findbar');
 const rootOf = () => target?.root || docRoot();
@@ -100,6 +101,10 @@ function go(index, scroll = true) {
   win.CSS.highlights.set('lec-find-current', new win.Highlight(ranges[current]));
   $('#lec-find-count').textContent = `${current + 1}/${ranges.length}`;
   if (!scroll) return;
+  if (!target && !jumped) {
+    jumped = true;
+    emit('jump');
+  }
   if (!target) unfoldTo(ranges[current].startContainer.parentElement);   // 접힌 절 안의 결과는 펴서 보여 준다
   const content = scrollerOf();
   const box = content.getBoundingClientRect();
@@ -142,6 +147,7 @@ export function closeFind() {
   // 찾기 칸에 있던 초점은 본문으로 — 숨은 칸에 남으면 다음 Esc·화살표 키가 그 칸으로 간다
   if (bar().contains(document.activeElement)) scrollerOf()?.focus({ preventScroll: true });
   bar().hidden = true;
+  jumped = false;
   clearMarks();
   return true;
 }

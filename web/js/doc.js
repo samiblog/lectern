@@ -170,6 +170,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
     case 'anchor':
       a.addEventListener('click', (e) => {
         e.preventDefault();
+        emit('jump');   // 절 링크·각주 — 뒤로 기록에 (nav.js, D78)
         if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
       });
       break;
@@ -199,6 +200,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         a.addEventListener('click', (e) => {
           e.preventDefault();
           if (r.path === docPath && r.hash && !newTabWanted(e)) {
+            emit('jump');
             if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
           } else {
             emit('open', { type: 'doc', path: r.path, hash: r.hash, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)

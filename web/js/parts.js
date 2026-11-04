@@ -683,7 +683,9 @@ async function openItem(el, how = {}) {
   if ((!here || how.twice) && !(await openTarget({ type: 'doc', path, ...how }))) return;
   if (!el.dataset.kind) return;   // 문서 머리줄
   const row = readParts(docRoot(), { more: true }).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
-  if (row) goToPart(row.el);
+  if (!row) return;
+  if (here && !how.twice) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78 — 다른 문서를 연 것은 이미 남았다)
+  goToPart(row.el);
 }
 
 /** 모아 보기를 연다 (폴더 개요의 버튼·트리 우클릭·'코드'·'자료' 목록의 폴더 우클릭). path: 범위 폴더 ('' = 프로젝트 전체),

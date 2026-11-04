@@ -393,6 +393,11 @@ async function sendToClaude() {
 }
 
 function onKey(e) {
+  if (e.key === 'F6') {   // 터미널로 — main.js 가 받는다. 칸은 그대로 두고, 돌아오면 이 자리로 (D79)
+    const sel = getSelection();
+    if (session) session.caret = [sel.focusNode, sel.focusOffset];
+    return;
+  }
   e.stopPropagation();   // 칸 안의 키는 칸의 것 — 앱 단축키(main.js)는 쉰다
   if (!session || e.isComposing || e.keyCode === 229) return;   // 한글 조합 중
   const span = e.currentTarget;
@@ -437,6 +442,14 @@ function bind(span) {
   span.addEventListener('focus', () => {
     if (session) session.cell = Number(span.dataset.i);
   });
+}
+
+/** F6 으로 돌아올 때 (main.js, D79): 칸의 그 자리로. 한 줄 편집 중이 아니면 false */
+export function focusLineEdit() {
+  if (!session) return false;
+  session.places[session.cell]?.span.focus();
+  if (session.caret) getSelection().collapse(...session.caret);
+  return true;
 }
 
 // ---- 두 번 누르기 -------------------------------------------------------------------

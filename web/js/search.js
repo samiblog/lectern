@@ -13,6 +13,7 @@ import { switchPanel } from './tree.js';
 import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
 import { flashBlock } from './diffmark.js';
+import { blockOfLine } from './lineunits.js';
 import { fileIcon, isCode } from './icons.js';
 import { labelOf } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
@@ -151,15 +152,7 @@ async function run(again = false) {
 
 /** 지금 문서에서 line 번째 원문 줄이 든 가장 작은 블록으로 간다. 그 블록(없으면 null) */
 function goToLine(line) {
-  let best = null;
-  let size = Infinity;
-  for (const el of $('#lec-view').querySelectorAll('[data-lines]')) {
-    const [a, b] = el.dataset.lines.split('-').map(Number);
-    if (a <= line && line <= b && b - a < size) {
-      best = el;
-      size = b - a;
-    }
-  }
+  const best = blockOfLine($('#lec-view'), line);
   if (!best) return null;
   unfoldTo(best);
   best.scrollIntoView({ block: 'center' });
@@ -189,6 +182,7 @@ async function openHit(path, line, code = false, how = {}) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
     findText(query);
+    if (here && !how.twice && line) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78)
     const block = line ? goToLine(line) : null;
     if (block) pickMatchAt(block);   // 찾기 막대의 '지금 결과'도 그 줄의 것으로 (↓ 가 거기서 이어지게)
   }

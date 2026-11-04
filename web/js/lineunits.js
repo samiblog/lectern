@@ -258,6 +258,22 @@ export function indexOfLine(units, line) {
 /** 원문 줄 line 을 보여 주는 단위가 있는지 */
 export const hasLine = (units, line) => units.some((u) => line >= u.a && line <= u.b);
 
+/** 원문 줄 line 이 든 가장 작은 블록 (코드 화면은 그 줄). 없으면 null */
+export function blockOfLine(view, line) {
+  const row = view.querySelector(`.cv-line[data-line="${Number(line)}"]`);
+  if (row) return row;
+  let best = null;
+  let size = Infinity;
+  for (const el of view.querySelectorAll('[data-lines]')) {
+    const s = spanOf(el);
+    if (s && s[0] <= line && line <= s[1] && s[1] - s[0] < size) {
+      best = el;
+      size = s[1] - s[0];
+    }
+  }
+  return best;
+}
+
 /**
  * 세로 위치 y(스크롤 상자 안 좌표)의 단위 차례: y 를 품은 것, 없으면(블록 사이 여백) 가장 가까운 것.
  * 여러 줄 문단은 이웃 줄과 한 화면 줄을 나눠 쓰므로, 겹치면 point(화면 좌표 {x, y})의 글자가 든 줄로 고른다

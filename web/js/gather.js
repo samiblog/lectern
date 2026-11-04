@@ -222,6 +222,9 @@ export async function leaveGather({ tab = null, panel = false } = {}) {
 
 export const toggleGather = () => (shown ? leaveGather() : enterGather());
 
+/** F6 (모아 보는 중, D79): 마지막으로 쓰던 칸의 프로젝트로 가서 문서로 */
+export const leaveToDoc = () => leaveGather({ tab: tabOfTile(document.activeElement) || lastTab || S.tab });
+
 /** Ctrl+` (모아 보는 중): 마지막으로 쓰던 칸의 프로젝트로 가서 오른쪽 터미널을 연다 */
 export const leaveToFocused = () => leaveGather({ tab: tabOfTile(document.activeElement) || lastTab || S.tab, panel: true });
 

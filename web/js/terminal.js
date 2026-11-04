@@ -215,6 +215,7 @@ async function pasteFromClipboard(term) {
 /** xterm 이 키를 셸로 보내기 전에. false 면 xterm 이 다루지 않는다 (브라우저 기본 동작이나 앱이 다룬다) */
 function keyFor(term, e) {
   if (e.type !== 'keydown') return true;
+  if (e.key === 'F6') return false;   // 문서 ↔ 터미널 (main.js, D79)
   const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
   if (ctrl && (e.code === 'Backquote' || e.key === 'Tab')) return false;     // 패널 열고 닫기, 다음·이전 탭 (main.js)
   if (ctrl && e.code === 'KeyC' && (e.shiftKey || term.xterm.hasSelection())) {   // 고른 글 복사 (없으면 Ctrl+C 는 셸로 — 중단)
@@ -558,6 +559,13 @@ export function toggleTerminal(want = !open, { focus = true } = {}) {
   if (open !== was) emit('term-panel', open);
 }
 
+/** F6 (main.js, D79): 고른 터미널로 초점을 옮긴다 — 패널이 닫혀 있으면 열면서 */
+export function focusTerminal() {
+  if (!S.tab || blockedReadOnly(S.tab)) return;
+  if (open) showCurrent({ focus: true });
+  else toggleTerminal(true);
+}
+
 /** 탭을 닫기 전에: 그 탭의 셸들에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */
 export async function confirmCloseTerminal(tab) {
   const busy = [];
@@ -603,19 +611,21 @@ async function pasteInto(term, text) {
  * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
+ * stay: 초점은 문서에 둔다 (Shift+→ — D79). 아니면 터미널로
  */
-export async function pasteToTerminal(text) {
+export async function pasteToTerminal(text, { stay = false } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
   if (!tab || !text || blockedReadOnly(tab)) return;
   if (!gathered()) {
-    if (!open) toggleTerminal(true);
+    if (!open) toggleTerminal(true, { focus: !stay });
     await showCurrent();
   }
   const term = termsOf(tab)[0];
   if (!term || tab !== S.tab) return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다), 또는 그사이 다른 탭
   if (term !== tab.term) selectTerminal(tab, term);   // 넣는 터미널을 보인다 (셸이 없으면 띄운다)
   if (!(await pasteInto(term, text))) return;
+  if (stay) S.pane?.scroller.focus({ preventScroll: true });
   // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 몇 번 터미널인지도
   toast(t("'{name}' 탭의 {n}번 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name, n: term.n + 1 }));
 }
@@ -772,6 +782,7 @@ export function initTerminal() {
   $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
   on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
+  on('term-paste-stay', (text) => pasteToTerminal(text, { stay: true }));   // Shift+→ (spotlight.js, D79)
   applyColors();
   renderHead();
 }

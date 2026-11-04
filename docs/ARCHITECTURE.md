@@ -506,7 +506,7 @@ sequenceDiagram
 | Ctrl+B | 사이드바 보이기/숨기기 |
 | `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음). 터미널 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널 |
 | `` Ctrl+Shift+` `` | 터미널 모음 열기/닫기. 모음 안에서 Ctrl+Tab / Ctrl+Shift+Tab 은 다음 / 이전 칸 |
-| Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 탭에서 뒤로 / 앞으로 |
+| Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 칸에서 뒤로 / 앞으로 (D78 — 같은 문서 안에서 뛴 자리도, `nav.go`) |
 | Ctrl+1 ~ 8 / Ctrl+9 | 그 순번의 탭 / 마지막 탭 |
 | Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |
 | Ctrl+W, 탭을 가운데 버튼으로 | 탭 닫기 |
@@ -520,7 +520,9 @@ sequenceDiagram
 | ↑ / ↓ | md 문서·코드 화면: 현재 위치를 위 / 아래 줄로, 화면이 따라감 (D75 — 줄 하이라이트 중이면 풀고). 장 하이라이트 중에는 앞 장 / 뒤 장 (PageUp / PageDown 도). 받는 곳은 문서 칸·툴바·목차·상태줄 (`spotlight.spotKey` — 입력칸·사이드바 목록·열린 팝업에서는 원래대로) |
 | Shift+누르기 / Shift+끌기, Shift+Enter | 그 줄들 / 현재 줄 하이라이트 (원문 줄 단위, D75). 하이라이트가 있으면 Shift+누르기는 거기까지 넓힘 |
 | Shift+↑ / Shift+↓ | 하이라이트의 끝 줄을 위 / 아래로 (처음 줄은 그대로 — 넓히거나 줄이기). 하이라이트가 없으면 현재 줄부터, 장 하이라이트면 그 장의 처음~끝 줄부터 |
-| Shift+→ / Shift+← | 하이라이트한 곳을 맨 앞 터미널에 `@경로 a~b행 ` (Enter 없이 — `term-paste`) / 그 위치 복사. 하이라이트가 없으면 알림만 |
+| Shift+→ / Shift+← | 하이라이트한 곳을 맨 앞 터미널에 `@경로 a~b행 ` (Enter 없이, 초점은 문서에 — `term-paste-stay`) / 그 위치 복사. 하이라이트가 없으면 알림만 |
+| Ctrl+Shift+→ | 위치를 맨 앞 터미널에 넣고 초점도 터미널로 (`term-paste` — 하이라이트가 없으면 현재 줄, D79) |
+| F6 / Shift+F6 | 문서 ↔ 터미널로 초점 옮기기 (`main.hopFocus`, D79 — 터미널 안에서도 앱이 받는다: `terminal.keyFor`·`lineedit.onKey` 가 넘긴다) |
 | Ctrl+C | 하이라이트 중이고 고른 글이 없으면 그 줄들의 원문 복사 |
 | F2 · 두 번 누르기 · Shift+Enter (한 줄만 하이라이트) | 한 줄 편집 (D76 — `spotKey` 가 'line-edit', 두 번 누르기는 `lineedit.onDoubleClick`). 편집 칸 안: Enter·Ctrl+S 저장, Esc 그만두기, ↑·↓ 저장하고 위·아래 줄(화면에서 꺾인 글은 맨 윗줄·맨 아랫줄에서 — `caretOnEdge`), Tab·Shift+Tab 표의 옆 칸(코드는 탭 글자), Shift+→(글 끝) 저장하고 Claude 로 — 칸 안의 키는 앱으로 가지 않는다 |
 | Ctrl+Z | 문서 칸에서: 한 줄 편집으로 저장한 줄을 고치기 전으로 (`lineedit.undoLineEdit` — 파일이 마지막 저장 그대로일 때만) |
