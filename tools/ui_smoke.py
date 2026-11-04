@@ -884,6 +884,27 @@ def run(headed: bool) -> None:
             check(dbl_saved == '첫 문단은 **굵게** 한 X줄입니다.' and dbl_head == [['H2:고칠 제목'], 0] and dbl_link == []
                   and dbl_triple[0] == [] and dbl_triple[1].startswith('첫 문단은'),
                   f"두 번 누르기: 그 줄을 누른 자리 커서로 (서식 표시 건너뜀), 제목은 접지 않음, 링크·세 번 누르기(문단 고르기)는 그대로 ({dbl_saved!r}, {dbl_head}, {dbl_link}, {dbl_triple})")
+            # 다시 그리는 중에 시작해도 칸이 사라지지 않는다 — 문서 받기를 늦춰 늘 그 사이에 시작한다 (자동 새로고침과의 경합)
+            page.evaluate("""() => { const real = window.fetch; window.__realFetch = real;
+              window.fetch = (u, o) => (String(u).includes('/doc/') && o?.method !== 'HEAD' ? new Promise((r) => setTimeout(r, 900)).then(() => real(u, o)) : real(u, o)); }""")
+            first_p.click()
+            page.evaluate("import('/static/js/store.js').then((m) => m.emit('refresh-view', m.S.pane))")
+            page.wait_for_timeout(100)
+            page.keyboard.press('F2')
+            page.wait_for_timeout(1800)
+            race = [editing(), focused()]
+            page.keyboard.press('End')
+            page.keyboard.type(' 끝')
+            page.keyboard.press('Enter')
+            race_saved = file_line(edit_doc, 3, '첫 문단은 **굵게** 한 줄입니다. 끝')
+            page.evaluate('window.fetch = window.__realFetch')
+            page.wait_for_selector('#lec-view p:has-text("줄입니다. 끝")')
+            page.locator('#lec-view h1').click()
+            page.keyboard.press('Control+z')
+            file_line(edit_doc, 3, '첫 문단은 **굵게** 한 줄입니다.')
+            page.wait_for_selector('#lec-view p:has-text("한 줄입니다."):not(:has-text("끝"))')
+            check(race == [['P:첫 문단은 **굵게** 한 줄입니다.'], '첫 문단은 **굵게** 한 줄입니다.'] and race_saved == '첫 문단은 **굵게** 한 줄입니다. 끝',
+                  f"다시 그리는 중에 F2 를 눌러도 다 그린 뒤 칸이 열려 친 글이 저장됨 ({race}, {race_saved!r})")
             # 할 일 체크박스: 누르면 [ ] ↔ [x] 를 저장, Ctrl+Z 로 되돌림, 초점은 문서 칸에
             page.locator('#lec-view li:has-text("할 일 끝") input').click()
             task_x = file_line(edit_doc, 8, '- [x] 할 일 끝')

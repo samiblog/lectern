@@ -202,11 +202,14 @@ export async function refreshView(pane) {
   }
   pane.stale = false;
   const scrollTop = () => pane.scroller.scrollTop;
+  pane.redrawing += 1;
   try {
     await render(pane, view, { scrollTop });
   } catch (e) {
     console.error(e);
     toast(t('다시 그리지 못했습니다: {error}', { error: e.message }), 'error');
+  } finally {
+    pane.redrawing -= 1;
   }
 }
 

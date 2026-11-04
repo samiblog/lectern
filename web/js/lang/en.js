@@ -697,6 +697,7 @@ export default {
 "이 줄은 한 줄 편집으로 고칠 수 없습니다 — 그림·다이어그램·수식·HTML 은 편집 모드(Ctrl+E)에서 고칩니다": "This line cannot be line-edited — edit pictures, diagrams, math and HTML in edit mode (Ctrl+E)",
 "한 줄 편집을 하지 못했습니다: {error}": "Could not start line editing: {error}",
 "화면이 원문과 달라 다시 그렸습니다 — F2 를 누르면 다시 시작합니다": "The view was behind the file and has been redrawn — press F2 to start again",
+"화면을 그리는 중입니다 — 다 그린 뒤 F2 를 누르세요": "The view is still being drawn — press F2 when it is done",
 "다른 곳에서 이 줄이 바뀌어 저장하지 않았습니다 — 고친 줄은 클립보드에 복사했습니다": "This line was changed elsewhere, so it was not saved — your edited line was copied to the clipboard",
 "저장했습니다: {where} — Ctrl+Z 로 되돌립니다": "Saved: {where} — Ctrl+Z undoes it",
 "그사이 파일이 바뀌어 되돌리지 않았습니다": "The file has changed since, so nothing was undone",

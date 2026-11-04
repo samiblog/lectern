@@ -42,6 +42,10 @@ const TASK_LINE = /^((?:[ \t]*>[ \t]?|[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+)*\[)([ x
 
 export const lineEditing = () => !!session;
 
+/** 칸의 화면이 그려져 있는지 — 그리는 중에 글 칸을 넣으면 그리기가 끝날 때 화면째 바뀌어 칸이 사라진다 (친 글도 함께) */
+const drawn = (pane) => !pane.pending && !pane.redrawing;
+const nap = () => new Promise((r) => setTimeout(r, 50));
+
 // ---- 줄 나누기: 잠그는 앞뒤 + 고칠 글 -------------------------------------------------
 
 const QUOTE = /^(?:[ \t]*>[ \t]?)*/;
@@ -167,9 +171,13 @@ async function begin(line, { cell = 0, at = null } = {}) {
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
-  // 다시 그리는 중(앞 줄을 저장한 뒤 등)이면 다 그린 뒤에 — 지금 보이는 것은 곧 바뀔 화면이다
-  for (let waited = 0; pane.pending && waited < 5000; waited += 50) await new Promise((r) => setTimeout(r, 50));
-  if (pane.pending || S.pane !== pane || session) return;
+  // 다시 그리는 중(앞 줄을 저장한 뒤, 자동 새로고침 등)이면 다 그린 뒤에 — 지금 보이는 것은 곧 바뀔 화면이다
+  for (let waited = 0; !drawn(pane) && waited < 5000; waited += 50) await nap();
+  if (S.pane !== pane || session) return;
+  if (!drawn(pane)) {
+    toast(t('화면을 그리는 중입니다 — 다 그린 뒤 F2 를 누르세요'));
+    return;
+  }
   const view = $('#lec-view');
   const path = view.dataset.docPath || view.dataset.codePath;
   if (view.dataset.sheet != null && view.classList.contains('code-view') && view.dataset.codePath && /\.xls[xm]$/i.test(path)) {
@@ -189,8 +197,14 @@ async function begin(line, { cell = 0, at = null } = {}) {
     toast(t('한 줄 편집을 하지 못했습니다: {error}', { error: e.message }), 'error');
     return;
   }
+  // 받는 사이에 시작한 다시 그리기가 있으면 끝날 때까지. 여기부터 칸을 넣고 pane.lineEdit 을 달 때까지는 멈추지 않는다 — 그 뒤의 다시 그리기는 refreshView 가 미룬다
+  for (let waited = 0; !drawn(pane) && waited < 5000; waited += 50) await nap();
   if (S.pane !== pane || $('#lec-view') !== view || session) return;   // 그사이 다른 화면
-  // 자리는 받은 뒤에 찾는다 — 받는 사이에 자동 새로고침이 화면을 바꿔도 지금 화면의 것으로 (여기부터 칸을 넣을 때까지는 멈추지 않는다)
+  if (!drawn(pane)) {
+    toast(t('화면을 그리는 중입니다 — 다 그린 뒤 F2 를 누르세요'));
+    return;
+  }
+  // 자리는 받은 뒤에 찾는다 — 받는 사이에 자동 새로고침이 화면을 바꿨어도 지금 화면의 것으로
   const shown = sourceLines();
   const slot = lineSlot(view, line, shown);
   if (!slot) return;
