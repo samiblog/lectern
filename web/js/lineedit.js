@@ -7,19 +7,23 @@
 //   잠그는 것: 인용 >·들여쓰기·목록 표시(- * + 1. 1))·할 일 [ ]·제목 #·박스글 [!NOTE]·각주 [^1]:, 제목 끝의 #, 줄 끝의 공백·\(줄바꿈 표시),
 //   코드 블록이 인용·목록 안이면 그 앞부분. 표의 행은 칸마다 (| 는 잠금, Tab·Shift+Tab 으로 옆 칸, 칸 글의 | 는 \| 로 저장).
 // - Enter(·Ctrl+S): 저장. 원문을 새로 받아 그 줄이 시작할 때와 같으면 그 줄만 바꿔 /api/save — 편집 모드(D54)와 같은 길이라 줄바꿈·BOM·
-//   읽기 전용·프로그램 폴더(D71)를 서버가 지킨다. 그사이 그 줄이 다른 곳에서 바뀌었으면 저장하지 않고 고친 줄을 클립보드에.
+//   읽기 전용·프로그램 폴더(D71)를 서버가 지킨다. 줄 번호만 밀렸으면 근처에서 같은 줄을 찾아 하나뿐일 때 그 자리에 (linefind.js).
+//   그 줄 자체가 바뀌었거나 어느 것인지 모르면 저장하지 않고 고친 줄을 클립보드에.
 //   저장하면 그 칸을 바로 다시 그린다 (바뀐 곳 강조). Esc: 그만두기. 칸 밖을 누르거나 다른 탭을 고르면 고친 것이 있으면 저장, 없으면 그만둔다.
 //   ↑·↓: 글이 화면에서 여러 줄로 꺾이면 칸 안에서 움직이고, 맨 윗줄·맨 아랫줄에서는 저장하고 위·아래 줄을 이어서 (표는 같은 칸 차례).
 //   Shift+→(글 끝에서): 저장하고 그 줄의 위치를 맨 앞 터미널에 (Claude 로 보내기).
 //   한글 조합 중의 Enter·화살표는 조합의 것이다 (isComposing).
 // - 본문의 할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 바꿔 저장한다 (같은 저장 길, 같은 되돌리기).
-// - 저장한 뒤 Ctrl+Z(main.js — 문서 칸에서): 그 줄을 고치기 전으로 되돌려 저장. 거듭 누르면 그 앞 것도 — 파일이 마지막 저장 그대로일 때만 (hash).
+// - 저장은 replaceLines 하나로 — 범위(시작 줄, 원래 줄들, 새 줄들)를 바꾼다. 줄 추가·옮기기처럼 여러 줄을 바꾸는 편집도 이 길로.
+// - 저장한 뒤 Ctrl+Z·Ctrl+Y(main.js — 문서 칸에서): 파일마다 기록을 따라 되돌리고 다시 한다 — 파일이 마지막 저장 그대로일 때만 (hash).
+//   그사이 파일이 바뀌었으면 그 파일의 기록을 버린다 (Claude Code 가 고친 것을 덮어쓰지 않게). 빠르게 눌러도 차례로 (turn).
 // - 편집하는 동안 그 칸은 자동 새로고침·F5 로 다시 그리지 않는다 (nav.refreshView 가 pane.lineEdit 을 본다 — 끝낸 뒤 그린다).
 //   글 칸 안의 키는 칸의 것이다 (앱 단축키는 쉰다), 누르기는 제목 접기·링크로 가지 않는다.
 
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines } from './lineunits.js';
+import { locateLines } from './linefind.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit,
 } from './spotlight.js';
@@ -28,8 +32,11 @@ import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el}
-const undos = [];     // 저장한 줄 [{tabId, path, line, before, after, hash}] — 마지막 것이 끝
+// 되돌리기 기록 — 파일마다 ('탭 id|경로' → {done, undone}). done 은 저장한 변경(마지막 것이 끝), undone 은 되돌린 변경.
+// 변경 {line, before: [줄], after: [줄], hash(적용한 뒤의 파일), prior(되돌린 뒤의 파일)}
+const records = new Map();
 const MAX_UNDO = 50;
+let turn = Promise.resolve();   // 되돌리기·다시 하기는 차례로 — 앞의 것이 저장을 마치기 전에 다음 것이 파일을 보면 '바뀌었다'고 잘못 안다
 let opening = 0;     // 두 번 누른 뒤 칸을 열 때까지의 타이머 — 세 번째 누르기(문단 고르기)면 열지 않는다
 let taskSaving = false;
 
@@ -291,7 +298,8 @@ async function finish(save) {
   }
   showLineEdit();
   try {
-    const r = await writeLine(s.tab, s.path, s.line, s.original, next);
+    s.pane.lineEditMissed = false;
+    const r = await replaceLines(s.pane, s.path, s.line, [s.original], [next]);
     if (!r) {   // 그사이 다른 곳에서 그 줄이 바뀌었다
       restore(s);
       await copyText(next);
@@ -299,9 +307,7 @@ async function finish(save) {
       refreshView(s.pane);
       return { ok: false, saved: false };
     }
-    pushUndo({ tabId: s.tab.id, path: s.path, line: s.line, before: s.original, after: next, hash: r.hash });
-    s.pane.lineEditMissed = false;
-    await refreshView(s.pane);
+    s.line = r.at;   // 위쪽이 바뀌어 줄이 밀렸으면 새 자리
     toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${s.path} ${rangeText([s.line, s.line])}` }));
     return { ok: true, saved: true };
   } catch (e) {
@@ -312,26 +318,38 @@ async function finish(save) {
 }
 
 /**
- * 파일의 line 번째 줄이 before 그대로이면 after 로 바꿔 저장한다 — 원문을 새로 받아서 (저장하는 사이에 바뀌면 한 번 더).
- * {hash} — 그 줄이 before 가 아니면 null
+ * 파일의 start 번째 줄부터 before(줄 배열)를 after(줄 배열)로 바꿔 저장한다 — 원문을 새로 받아서 (저장하는 사이에 바뀌면 한 번 더).
+ * 줄 번호가 밀렸으면 근처에서 같은 줄들을 찾아 하나뿐일 때만 그 자리에 (linefind.js). {hash, at(쓴 자리)} — 자리를 찾지 못하면 null
  */
-async function writeLine(tab, path, line, before, after) {
+async function writeLines(tab, path, start, before, after) {
   for (let attempt = 0; ; attempt++) {
     const src = await getJSON(`/api/source?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}`);
     const lines = src.text.split('\n');
-    if (lines[line - 1] !== before) return null;
-    lines[line - 1] = after;
+    const at = locateLines(lines, start, before);
+    if (!at) return null;
+    lines.splice(at - 1, before.length, ...after);
     try {
-      return await postJSON('/api/save', { p: tab.id, path, text: lines.join('\n'), hash: src.hash });
+      return { ...await postJSON('/api/save', { p: tab.id, path, text: lines.join('\n'), hash: src.hash }), at };
     } catch (e) {
       if (e.status !== 409 || attempt) throw e;   // 받은 뒤 저장하기 전에 바뀌었다 — 다시 받아 본다
     }
   }
 }
 
-function pushUndo(entry) {
-  undos.push(entry);
-  if (undos.length > MAX_UNDO) undos.shift();
+/**
+ * 원문 줄 범위를 바꿔 저장하고 되돌리기 기록에 쌓고 칸을 다시 그린다 — 편집이 파일을 고치는 길은 이것 하나다.
+ * before 는 한 줄 이상 (넣기는 앞 줄을 before·after 양쪽에). {hash, at} — 자리를 찾지 못해 저장하지 않았으면 null. 보기만 하는 프로젝트(D71)는 부르는 쪽이 막는다
+ */
+export async function replaceLines(pane, path, start, before, after) {
+  const { tab } = pane;
+  const r = await writeLines(tab, path, start, before, after);
+  if (!r) return null;
+  const rec = recordOf(tab.id, path);
+  rec.done.push({ line: r.at, before, after, hash: r.hash });
+  if (rec.done.length > MAX_UNDO) rec.done.shift();
+  rec.undone.length = 0;   // 새로 고치면 되돌린 것을 다시 할 수 없다
+  await refreshView(pane);
+  return r;
 }
 
 /** 칸 밖을 누르면: 고친 것이 있으면 저장, 없으면 그만둔다 (그 블록 — 표면 그 행 — 안은 그대로) */
@@ -501,20 +519,17 @@ async function onTaskClick(e) {
     toast(t('이 할 일은 눌러서 바꿀 수 없습니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
     return;
   }
-  const { tab } = pane;
   const path = pane.view.dataset.docPath;
   const after = `${m[1]}${m[2] === ' ' ? 'x' : ' '}${before.slice(m[1].length + 1)}`;
   taskSaving = true;
   try {
-    const r = await writeLine(tab, path, line, before, after);
+    const r = await replaceLines(pane, path, line, [before], [after]);
     if (!r) {
       toast(t('다른 곳에서 이 줄이 바뀌어 저장하지 않았습니다 — 화면을 다시 그렸습니다'), 'error');
       refreshView(pane);
       return;
     }
-    pushUndo({ tabId: tab.id, path, line, before, after, hash: r.hash });
-    await refreshView(pane);
-    toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${path} ${rangeText([line, line])}` }));
+    toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${path} ${rangeText([r.at, r.at])}` }));
   } catch (err) {
     toast(t('저장하지 못했습니다: {error}', { error: err.message }), 'error');
   } finally {
@@ -524,38 +539,57 @@ async function onTaskClick(e) {
 
 // ---- 되돌리기 ---------------------------------------------------------------------
 
-/**
- * Ctrl+Z (main.js — 문서 칸에서, 한 줄 편집 중이 아닐 때): 지금 문서에서 한 줄 편집으로 저장한 마지막 줄을 고치기 전으로.
- * 되돌릴 것이 있으면 true (부른 쪽이 기본 동작을 막는다) — 저장은 그 뒤에
- */
-export function undoLineEdit() {
+/** 파일의 기록 (없으면 만든다) */
+function recordOf(tabId, path) {
+  const key = `${tabId}|${path}`;
+  if (!records.has(key)) records.set(key, { done: [], undone: [] });
+  return records.get(key);
+}
+
+/** 기록의 다음 변경을 되돌리거나(undoing) 다시 한다 — 파일이 그 변경의 앞뒤 상태 그대로일 때만 */
+async function replay(pane, path, rec, undoing) {
+  const [from, to] = undoing ? [rec.done, rec.undone] : [rec.undone, rec.done];
+  const change = from.at(-1);
+  if (!change) return;
+  try {
+    const src = await getJSON(`/api/source?p=${encodeURIComponent(pane.tab.id)}&path=${encodeURIComponent(path)}`);
+    if (src.hash !== (undoing ? change.hash : change.prior)) {   // 그 뒤에 파일이 또 바뀌었다 (Claude Code·편집 모드 등) — 이 파일의 기록은 버린다
+      rec.done.length = 0;
+      rec.undone.length = 0;
+      toast(undoing ? t('그사이 파일이 바뀌어 되돌리지 않았습니다') : t('그사이 파일이 바뀌어 다시 하지 않았습니다'));
+      return;
+    }
+    const [gone, back] = undoing ? [change.after, change.before] : [change.before, change.after];
+    const lines = src.text.split('\n');
+    lines.splice(change.line - 1, gone.length, ...back);
+    const saved = await postJSON('/api/save', { p: pane.tab.id, path, text: lines.join('\n'), hash: src.hash });
+    if (undoing) change.prior = saved.hash;
+    else change.hash = saved.hash;
+    to.push(from.pop());
+    await refreshView(pane);
+    if (S.pane === pane) followLine(change.line);
+    const where = `${path} ${rangeText([change.line, change.line + Math.max(back.length, 1) - 1])}`;
+    toast(undoing ? t('되돌렸습니다: {where}', { where }) : t('다시 했습니다: {where}', { where }));
+  } catch (e) {
+    toast(undoing ? t('되돌리지 못했습니다: {error}', { error: e.message }) : t('다시 하지 못했습니다: {error}', { error: e.message }), 'error');
+  }
+}
+
+/** 지금 화면의 파일 기록에서 한 걸음. 할 것이 있으면 true (부른 쪽이 기본 동작을 막는다) — 저장은 차례가 오면 */
+function walk(undoing) {
   const view = $('#lec-view');
   const path = view.dataset.docPath || view.dataset.codePath;
-  const last = undos.at(-1);
-  if (session || !last || !S.tab || last.tabId !== S.tab.id || last.path !== path) return false;
-  undo(S.pane, last);
+  const rec = S.tab && path ? records.get(`${S.tab.id}|${path}`) : null;
+  if (session || !(undoing ? rec?.done : rec?.undone)?.length) return false;
+  const pane = S.pane;
+  turn = turn.then(() => replay(pane, path, rec, undoing));
   return true;
 }
 
-async function undo(pane, last) {
-  try {
-    const src = await getJSON(`/api/source?p=${encodeURIComponent(pane.tab.id)}&path=${encodeURIComponent(last.path)}`);
-    if (src.hash !== last.hash) {   // 그 뒤에 파일이 또 바뀌었다 (Claude Code·편집 모드 등) — 이 파일의 되돌리기는 버린다
-      for (let i = undos.length - 1; i >= 0; i--) if (undos[i].path === last.path && undos[i].tabId === last.tabId) undos.splice(i, 1);
-      toast(t('그사이 파일이 바뀌어 되돌리지 않았습니다'));
-      return;
-    }
-    const lines = src.text.split('\n');
-    lines[last.line - 1] = last.before;
-    await postJSON('/api/save', { p: pane.tab.id, path: last.path, text: lines.join('\n'), hash: src.hash });
-    undos.splice(undos.indexOf(last), 1);
-    await refreshView(pane);
-    if (S.pane === pane) followLine(last.line);
-    toast(t('되돌렸습니다: {where}', { where: `${last.path} ${rangeText([last.line, last.line])}` }));
-  } catch (e) {
-    toast(t('되돌리지 못했습니다: {error}', { error: e.message }), 'error');
-  }
-}
+/** Ctrl+Z (main.js — 문서 칸에서, 한 줄 편집 중이 아닐 때): 지금 문서에서 저장한 마지막 변경을 고치기 전으로 */
+export const undoLineEdit = () => walk(true);
+/** Ctrl+Y: 되돌린 변경을 다시 */
+export const redoLineEdit = () => walk(false);
 
 export function initLineEdit() {
   on('line-edit', (unit) => begin(lineOf(unit)));

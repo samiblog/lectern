@@ -915,6 +915,136 @@ def run(headed: bool) -> None:
             task_off = wait_until(page, "!document.querySelector('#lec-view .task-list-item-checkbox').checked", 5000)
             check(task_x == '- [x] 할 일 끝' and task_shown and task_focus != 'INPUT' and task_back == '- [ ] 할 일 끝' and task_off,
                   f"할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 저장, Ctrl+Z 로 되돌림 ({task_x!r}, {task_shown}, {task_focus}, {task_back!r})")
+            # 밀린 줄 찾기 (linefind.js): 그 자리·밀린 자리·여럿이면 0·없으면 0·근처 밖이면 0
+            located = page.evaluate("""() => import('/static/js/linefind.js').then(({ locateLines: f }) => { const L = ['a', 'b', 'c', 'b', 'd', 'e'];
+              return [f(L, 2, ['b']), f(L, 5, ['e']), f(L, 1, ['d', 'e']), f(L, 1, ['b']), f(L, 1, ['x']), f(L, 5, ['a'], 2), f(L, 6, ['e', 'f'])]; })""")
+            check(located == [2, 6, 5, 0, 0, 0, 0], f"밀린 줄 찾기: 그 자리, 밀린 자리, 둘 이상·없음·근처 밖이면 찾지 않음 ({located})")
+            base_text = edit_doc.read_text(encoding='utf-8')
+            first_line = base_text.split('\n')[2]
+            shown = lambda text: wait_until(page, f"document.querySelector('#lec-view').textContent.includes({text!r})", 6000)
+
+            def external(text, marker):
+                """다른 곳(Claude Code)이 파일을 고친 것처럼 쓰고 화면이 따라올 때까지"""
+                edit_doc.write_text(text, encoding='utf-8')
+                shown(marker)
+                page.wait_for_timeout(300)
+
+            def editing_end():
+                first_p.click()
+                page.keyboard.press('F2')
+                wait_edit()
+                page.keyboard.press('End')
+                page.keyboard.type(' 끝')
+
+            # 고치는 사이에 위쪽에 줄이 생겨 밀렸다 — 그 자리를 찾아 저장, Ctrl+Z 로 되돌림
+            editing_end()
+            edit_doc.write_text('앞에 더한 문단\n\n' + base_text, encoding='utf-8')
+            page.keyboard.press('Enter')
+            moved_line = file_line(edit_doc, 5, first_line + ' 끝')
+            moved_toast = toast_has('97-편집.md 5행')
+            shown('줄입니다. 끝')
+            page.wait_for_timeout(300)
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+z')
+            moved_undo = file_line(edit_doc, 5, first_line)
+            check(moved_line == first_line + ' 끝' and moved_toast and moved_undo == first_line and file_line(edit_doc, 1) == '앞에 더한 문단',
+                  f"고치는 사이에 줄이 밀려도 그 줄을 찾아 저장하고 Ctrl+Z 로 되돌림 ({moved_line!r}, {moved_toast}, {moved_undo!r})")
+            external(base_text, '첫 문단은')
+            wait_until(page, "!document.querySelector('#lec-view').textContent.includes('앞에 더한 문단')", 6000)
+            # 그 줄 자체가 바뀌었으면 저장하지 않고 고친 줄을 클립보드에
+            editing_end()
+            edit_doc.write_text(base_text.replace('첫 문단은', '첫째 문단은'), encoding='utf-8')
+            page.keyboard.press('Enter')
+            changed_told = toast_has('다른 곳에서 이 줄이 바뀌어')
+            changed_kept = file_line(edit_doc, 3)
+            changed_clip = page.evaluate('navigator.clipboard.readText()')
+            check(changed_told and changed_kept == first_line.replace('첫 문단은', '첫째 문단은') and changed_clip == first_line + ' 끝',
+                  f"그 줄 자체가 바뀌었으면 저장하지 않고 고친 줄을 클립보드에 ({changed_told}, {changed_kept!r}, {changed_clip!r})")
+            external(base_text, '첫 문단은')
+            # 같은 줄이 둘이면 어느 것인지 모르니 저장하지 않는다
+            editing_end()
+            twice = base_text.replace(first_line, f'앞에 더한 문단\n\n{first_line}\n\n{first_line}')
+            edit_doc.write_text(twice, encoding='utf-8')
+            page.keyboard.press('Enter')
+            twice_told = toast_has('다른 곳에서 이 줄이 바뀌어')
+            check(twice_told and edit_doc.read_text(encoding='utf-8') == twice, f"밀린 자리에 같은 줄이 둘이면 저장하지 않음 ({twice_told})")
+            external(base_text, '첫 문단은')
+            wait_until(page, "!document.querySelector('#lec-view').textContent.includes('앞에 더한 문단')", 6000)
+            # 여러 줄 저장 (replaceLines) — 한 걸음으로 되돌리고 다시 한다
+            replace = lambda at, before, after, path='docs/97-편집.md': page.evaluate(
+                """([path, at, before, after]) => Promise.all([import('/static/js/lineedit.js'), import('/static/js/store.js')])
+                  .then(([e, { S }]) => e.replaceLines(S.pane, path, at, before, after)).then((r) => r && r.at)""", [path, at, before, after])
+            many_at = replace(7, ['- 항목 하나', '- [ ] 할 일 끝'], ['- 가', '- 나', '- 다'])
+            many = edit_doc.read_text(encoding='utf-8').split('\n')[6:9]
+            shown('다')
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+z')
+            back_ok = wait_until(page, "!document.querySelector('#lec-view').textContent.includes('- 가')", 3000) and file_line(edit_doc, 8, '- [ ] 할 일 끝') == '- [ ] 할 일 끝'
+            back_same = edit_doc.read_text(encoding='utf-8') == base_text
+            page.wait_for_timeout(300)
+            page.keyboard.press('Control+y')
+            redo_line = file_line(edit_doc, 9, '- 다')
+            redo_told = toast_has('다시 했습니다')
+            page.wait_for_timeout(300)
+            page.keyboard.press('Control+z')
+            file_line(edit_doc, 7, '- 항목 하나')
+            page.wait_for_timeout(300)
+            check(many_at == 7 and many == ['- 가', '- 나', '- 다'] and back_ok and back_same and redo_line == '- 다' and redo_told and edit_doc.read_text(encoding='utf-8') == base_text,
+                  f"여러 줄 저장은 한 걸음 — Ctrl+Z·Ctrl+Y 로 통째로 오감 ({many_at}, {many}, {back_same}, {redo_line!r}, {redo_told})")
+            # 여러 단계: 연타해도 차례로, 새로 고치면 다시 하기는 없어짐, 그사이 파일이 바뀌면 기록을 버림
+            replace(7, ['- 항목 하나'], ['- x1'])
+            replace(7, ['- x1'], ['- x2'])
+            replace(7, ['- x2'], ['- x3'])
+            page.locator('#lec-view h1').first.click()
+            for _ in range(3):
+                page.keyboard.press('Control+z')
+            burst_back = file_line(edit_doc, 7, '- 항목 하나')
+            page.wait_for_timeout(500)
+            page.keyboard.press('Control+y')
+            page.keyboard.press('Control+y')
+            burst_fwd = file_line(edit_doc, 7, '- x2')
+            page.wait_for_timeout(500)
+            replace(7, ['- x2'], ['- y'])
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+y')
+            page.wait_for_timeout(500)
+            no_redo = file_line(edit_doc, 7)
+            page.keyboard.press('Control+z')
+            page.keyboard.press('Control+z')
+            two_back = file_line(edit_doc, 7, '- x1')
+            page.wait_for_timeout(300)
+            external(base_text.replace('- 항목 하나', '- 밖에서 고침'), '밖에서 고침')
+            page.locator('#lec-view h1').first.click()
+            clear_toast = "document.querySelector('#lec-toast').textContent = ''"
+            page.evaluate(clear_toast)
+            page.keyboard.press('Control+z')
+            dropped = toast_has('그사이 파일이 바뀌어 되돌리지')
+            page.wait_for_timeout(300)
+            after_drop = file_line(edit_doc, 7)
+            check(burst_back == '- 항목 하나' and burst_fwd == '- x2' and no_redo == '- y' and two_back == '- x1' and dropped and after_drop == '- 밖에서 고침',
+                  f"Ctrl+Z·Ctrl+Y 를 연타해도 차례로, 새로 고치면 다시 하기가 없어지고, 그사이 파일이 바뀌면 덮어쓰지 않음 ({burst_back!r}, {burst_fwd!r}, {no_redo!r}, {two_back!r}, {dropped}, {after_drop!r})")
+            external(base_text, '항목 하나')
+            # 파일마다 따로: 다른 문서를 고쳐도 앞 문서의 되돌리기가 남는다
+            other_doc = work / 'docs' / '97-둘째.md'
+            other_doc.write_text('# 둘째 문서\n\n둘째 글\n', encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-둘째.md"]', timeout=10000)
+            replace(7, ['- 항목 하나'], ['- 첫 문서 고침'])
+            page.locator('#lec-tree .row.file[data-doc="docs/97-둘째.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("둘째 문서")')
+            replace(3, ['둘째 글'], ['둘째 글 고침'], 'docs/97-둘째.md')
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
+            page.locator('#lec-view h1').first.click()
+            page.keyboard.press('Control+z')
+            first_undone = file_line(edit_doc, 7, '- 항목 하나')
+            kept_other = other_doc.read_text(encoding='utf-8').split('\n')[2]
+            check(first_undone == '- 항목 하나' and kept_other == '둘째 글 고침', f"되돌리기는 파일마다 — 다른 문서를 고친 뒤에도 앞 문서의 것을 되돌림 ({first_undone!r}, {kept_other!r})")
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            other_doc.unlink()
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-둘째.md"]', state='detached', timeout=10000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
             # 코드 화면의 줄 (점검 뒤 원래대로 — 뒤의 [코드 보기] 가 이 파일을 본다)
             example = work / 'code' / 'example.py'
             example_text = example.read_bytes()
@@ -940,6 +1070,83 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', state='detached', timeout=10000)
+
+            print('[줄 번호]')   # D80 — md 문서 왼쪽 여백의 원문 줄 번호: 툴바 버튼·Alt+L, 코드 화면·html·슬라이드 제외, 찾기·복사에 안 들어감
+            num_doc = work / 'docs' / '97-번호.md'
+            num_text = ('# 번호\n\n문단 하나\n\n' + '나눠 쓴 문단의 첫째 줄입니다. ' * 12 + '\n둘째 줄입니다.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n\n```python\na = 1\nb = 2\n```\n\n## 접을 절\n\n절 안의 글\n')
+            num_doc.write_text(num_text, encoding='utf-8')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-번호.md"]', timeout=10000)
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("번호")')
+            nums = lambda: page.evaluate("[...document.querySelectorAll('#lec-content > .lec-gutter span')].map((s) => s.textContent)")
+            lines_btn = lambda: page.evaluate("(() => { const b = document.querySelector('#lec-btn-lines'); return [b.disabled, b.classList.contains('on'), b.getAttribute('aria-pressed')]; })()")
+            pad = lambda: page.evaluate("getComputedStyle(document.querySelector('#lec-view')).paddingLeft")
+            off_state = [nums(), lines_btn(), pad()]
+            top_before = page.evaluate("document.querySelector('#lec-view p').getBoundingClientRect().left")
+            page.keyboard.press('Alt+l')
+            want_nums = ['1', '3', '5', '6', '8', '10', '13', '14', '17', '19']
+            shown_nums = wait_until(page, "document.querySelectorAll('#lec-content > .lec-gutter span').length === 10", 3000)
+            on_state = [nums(), lines_btn(), pad()]
+            saved_on = page.evaluate("fetch('/api/config').then((r) => r.json()).then((c) => c.line_numbers)")
+            spots = page.evaluate("""(() => { const g = [...document.querySelectorAll('#lec-content > .lec-gutter span')]; const v = document.querySelector('#lec-view');
+              const left = v.getBoundingClientRect().left + parseFloat(getComputedStyle(v).paddingLeft); const h1 = v.querySelector('h1').getBoundingClientRect(); const a = g[0].getBoundingClientRect();
+              const sc = document.querySelector('#lec-content').getBoundingClientRect();
+              return { gap: left - Math.max(...g.map((s) => s.getBoundingClientRect().right)), mid: Math.abs((a.top + a.bottom) / 2 - (h1.top + h1.bottom) / 2) < h1.height / 2, inside: Math.min(...g.map((s) => s.getBoundingClientRect().left)) >= sc.left,
+                out: !v.querySelector('.lec-gutter'), noPointer: getComputedStyle(g[0].parentElement).pointerEvents }; })()""")
+            shot('03d-line-numbers')
+            check(off_state[0] == [] and off_state[1] == [False, False, 'false'] and shown_nums and on_state[0] == want_nums and on_state[1] == [False, True, 'true'] and saved_on is True,
+                  f"Alt+L 로 줄 번호 — 원문 줄 번호로 (빈 줄·표 구분 줄·``` 은 건너뜀), 버튼 켜짐, 설정에 저장 ({off_state}, {on_state}, {saved_on})")
+            check(spots['gap'] >= 24 and spots['mid'] and spots['inside'] and spots['out'] and spots['noPointer'] == 'none' and on_state[2] != off_state[2],
+                  f"번호는 본문 왼쪽 여백에 (삼각형·막대 자리를 두고), 그 줄 높이에, 칸 안에, 본문 밖이라 찾기·복사에 안 들어감 ({spots}, {off_state[2]} → {on_state[2]})")
+            page.locator('#lec-view h2').click()
+            folded_nums = wait_until(page, "!document.querySelector('#lec-content > .lec-gutter').textContent.includes('19')", 3000)
+            page.locator('#lec-view h2').click()
+            unfolded_nums = wait_until(page, "document.querySelector('#lec-content > .lec-gutter').textContent.includes('19')", 3000)
+            num_doc.write_text('앞 문단\n\n' + num_text, encoding='utf-8')
+            redrawn = wait_until(page, "[...document.querySelectorAll('#lec-content > .lec-gutter span')].map((s) => s.textContent).join(' ').startsWith('1 3 5')"
+                                       " && document.querySelectorAll('#lec-content > .lec-gutter span').length === 11", 6000)
+            num_doc.write_text(num_text, encoding='utf-8')
+            wait_until(page, "document.querySelectorAll('#lec-content > .lec-gutter span').length === 10", 6000)
+            check(folded_nums and unfolded_nums and redrawn, f"접힌 절의 번호는 감추고, 파일이 바뀌면 번호도 따라옴 ({folded_nums}, {unfolded_nums}, {redrawn})")
+            page.emulate_media(media='print')
+            print_hidden = page.evaluate("getComputedStyle(document.querySelector('#lec-content > .lec-gutter')).display")
+            print_pad = page.evaluate("getComputedStyle(document.querySelector('#lec-view')).paddingLeft")
+            page.emulate_media(media='null')   # 'screen' 으로 두면 뒤의 PDF 점검이 화면 모드로 찍힌다
+            check(print_hidden == 'none' and print_pad != on_state[2], f"인쇄에는 번호와 넓힌 여백이 없음 ({print_hidden}, {print_pad})")
+            page.set_viewport_size({'width': 900, 'height': 900})
+            page.wait_for_timeout(400)
+            narrow = page.evaluate("""(() => { const g = [...document.querySelectorAll('#lec-content > .lec-gutter span')]; const sc = document.querySelector('#lec-content').getBoundingClientRect();
+              return [Math.min(...g.map((s) => s.getBoundingClientRect().left)) >= sc.left, sc.width]; })()""")
+            page.set_viewport_size({'width': 1440, 'height': 900})
+            page.wait_for_timeout(300)
+            check(narrow[0], f"좁은 창에서도 번호가 칸 안에 ({narrow})")
+            page.reload()
+            page.wait_for_selector('#lec-view h1')
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("번호")')
+            kept_nums = wait_until(page, "document.querySelectorAll('#lec-content > .lec-gutter span').length === 10", 4000)
+            page.keyboard.press('Control+p')
+            page.keyboard.type('example.py')
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            page.wait_for_selector('#lec-view.code-view .cv-line[data-line="9"]')
+            code_state = [page.locator('#lec-content > .lec-gutter').count(), lines_btn(), page.evaluate("getComputedStyle(document.querySelector('#lec-view')).paddingLeft") != on_state[2]]
+            page.locator('#lec-view .cv-line[data-line="9"]').click()
+            page.keyboard.press('Alt+l')
+            still_on = page.evaluate("import('/static/js/store.js').then((m) => m.S.config.line_numbers)")
+            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click()
+            wait_until(page, "!!document.querySelector('#lec-view iframe.lec-html')", 8000)
+            html_state = [page.locator('#lec-content > .lec-gutter').count(), lines_btn()[0]]
+            check(kept_nums and code_state[0] == 0 and code_state[1][0] and code_state[2] and still_on is True and html_state == [0, True],
+                  f"다시 불러와도 켜져 있고, 코드 화면(늘 번호가 있음)·html 문서에서는 쓰지 않음 ({kept_nums}, {code_state}, {still_on}, {html_state})")
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("번호")')
+            page.click('#lec-btn-lines')
+            off_again = wait_until(page, "!document.querySelector('#lec-content > .lec-gutter')", 3000)
+            check(off_again and pad() == off_state[2] and lines_btn() == [False, False, 'false'], f"툴바 버튼으로 끄면 번호와 넓힌 여백이 사라짐 ({off_again}, {pad()}, {lines_btn()})")
+            num_doc.unlink()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
+            page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-번호.md"]', state='detached', timeout=10000)
 
             print('[수식과 달러]')
             page.locator('#lec-view a', has_text='수식과 달러 표기').click()
@@ -2176,6 +2383,32 @@ def run(headed: bool) -> None:
             move_doc.unlink()
             page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-이동.md"]', state='detached', timeout=10000)
+
+            print('[시작 스크립트]')   # D81 — 하나만 못 받아도 빈 화면으로 멈추지 않는다 (bootguard.js)
+            boot_left = {'n': 1, 'aborted': 0}
+
+            def flaky_boot(route):
+                if boot_left['n'] > 0:
+                    boot_left['n'] -= 1
+                    boot_left['aborted'] += 1
+                    route.abort('addressunreachable')
+                else:
+                    route.continue_()
+
+            page.route('**/static/js/toc.js*', flaky_boot)
+            page.reload()
+            page.wait_for_selector('#lec-tree .row.file', timeout=8000)
+            recovered = boot_left['aborted'] == 1 and page.evaluate("document.querySelector('#lec-boot-fail').hidden")
+            boot_left['n'] = 100
+            page.reload()
+            told_fail = wait_until(page, "!document.querySelector('#lec-boot-fail').hidden", 8000)
+            tries_used = boot_left['aborted']
+            page.unroute('**/static/js/toc.js*')
+            page.reload()
+            page.wait_for_selector('#lec-tree .row.file', timeout=8000)
+            check(recovered and told_fail and tries_used == 5 and page.evaluate("document.querySelector('#lec-boot-fail').hidden"),
+                  f"시작 모듈을 한 번 못 받으면 다시 불러와 되살아나고, 계속 못 받으면 세 번 뒤 안내 ({recovered}, {told_fail}, {tries_used})")
+            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
 
             print('[설정과 마지막 위치]')
             page.keyboard.press('Control+Comma')

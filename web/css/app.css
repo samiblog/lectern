@@ -243,7 +243,23 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   flex: 1; min-height: 0; overflow: auto; background: var(--md-bg, #fff); position: relative; scroll-behavior: auto;
   container-type: inline-size;   /* 좁은 창에서 본문 여백·찾기 칸을 줄인다 (@container) */
 }
+#lec-boot-fail:not([hidden]) {   /* 시작 스크립트를 끝내 받지 못함 (bootguard.js, D81) — 앱이 돌지 않으니 다른 화면 위에 */
+  position: fixed; inset: 0; z-index: 100; display: grid; place-content: center; padding: 24px; text-align: center;
+  background: var(--ui-panel, #fff); color: var(--ui-fg, #1f2933); font: 15px/1.8 var(--ui-font, sans-serif);
+}
 .lec-scroll:focus { outline: none; }   /* 키보드 스크롤을 위해 초점을 받는다 (tabindex=-1) */
+/* 줄 번호 (linenums.js, D80): 칸의 스크롤 상자에 겹쳐 본문과 함께 스크롤한다. 하이라이트의 회색(z-index 5) 아래. 번호 자리만큼 본문 왼쪽 여백을 넓힌다 */
+.lec-gutter { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; user-select: none; }
+.lec-gutter span {
+  position: absolute; right: 0; transform: translateY(-50%); line-height: 1; color: var(--md-muted); opacity: .8;
+  font-family: var(--md-mono); font-size: calc(11px * var(--md-scale, 1)); font-variant-numeric: tabular-nums;
+}
+@media screen {
+  :root.line-numbers #lec-panes .md-body:not(.lec-deck, .code-view), :root.line-numbers .lec-stage:not(.lec-deck) { padding-left: 84px; }
+}
+@container (max-width: 640px) {
+  :root.line-numbers #lec-panes .md-body:not(.lec-deck, .code-view) { padding-left: 60px; }
+}
 #lec-toc {
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
