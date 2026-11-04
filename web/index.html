@@ -13,16 +13,16 @@
 <link id="lec-theme-css" rel="stylesheet" href="/static/themes/default.css">
 <link id="lec-user-css" rel="stylesheet"><!-- 내 스타일 (D53 — theme.js 가 바탕 스타일 위에 얹는다) -->
 <link rel="stylesheet" href="/static/css/app.css">
-<!-- 시작 스크립트를 받지 못하면 다시 불러온다 (js/bootguard.js, D81) — data-boot 를 단 것이 대상 -->
+<!-- 시작 스크립트를 받지 못하면 다시 불러온다 (js/bootguard.js, D81) — data-boot 를 단 것이 대상. 없어도 앱이 도는 코드 색칠 언어 묶음은 빼 둔다 -->
 <script src="/static/js/bootguard.js"></script>
 <script data-boot src="/static/vendor/markdown-it/markdown-it.min.js"></script>
 <script data-boot src="/static/vendor/markdown-it/markdown-it-anchor.min.js"></script>
 <script data-boot src="/static/vendor/markdown-it/markdown-it-footnote.min.js"></script>
 <script data-boot src="/static/vendor/markdown-it/markdown-it-task-lists.min.js"></script>
 <script data-boot src="/static/vendor/highlight/highlight.min.js"></script>
-<script data-boot src="/static/vendor/highlight/languages/powershell.min.js"></script>
-<script data-boot src="/static/vendor/highlight/languages/dos.min.js"></script>
-<script data-boot src="/static/vendor/highlight/languages/dockerfile.min.js"></script>
+<script src="/static/vendor/highlight/languages/powershell.min.js"></script>
+<script src="/static/vendor/highlight/languages/dos.min.js"></script>
+<script src="/static/vendor/highlight/languages/dockerfile.min.js"></script>
 <script data-boot src="/static/vendor/katex/katex.min.js"></script>
 <script data-boot src="/static/vendor/dompurify/purify.min.js"></script>
 <!-- mermaid(약 5MB)는 다이어그램이 있는 문서를 처음 열 때 js/mermaid.js 가 불러온다 -->

@@ -2408,6 +2408,13 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-tree .row.file', timeout=8000)
             check(recovered and told_fail and tries_used == 5 and page.evaluate("document.querySelector('#lec-boot-fail').hidden"),
                   f"시작 모듈을 한 번 못 받으면 다시 불러와 되살아나고, 계속 못 받으면 세 번 뒤 안내 ({recovered}, {told_fail}, {tries_used})")
+            lang_hits = []
+            page.route('**/highlight/languages/dos.min.js*', lambda r: (lang_hits.append(1), r.abort('addressunreachable')))
+            page.reload()
+            page.wait_for_selector('#lec-tree .row.file', timeout=8000)
+            page.wait_for_timeout(900)
+            page.unroute('**/highlight/languages/dos.min.js*')
+            check(len(lang_hits) == 1, f"없어도 앱이 도는 코드 색칠 언어 묶음을 못 받으면 다시 불러오지 않음 ({len(lang_hits)}번 받으려 함)")
             page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
 
             print('[설정과 마지막 위치]')
