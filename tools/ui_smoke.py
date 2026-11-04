@@ -42,7 +42,7 @@ LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 �
 
 
 # 한 줄 편집 점검(D76)에 쓰는 문서: 제목·할 일·박스글·표·나눠 쓴 문단·코드
-EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n'
+EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n\n[절로 가는 링크](#고칠-제목)\n\n- 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다.\n'
 
 
 def check(cond: bool, message: str) -> None:
@@ -776,6 +776,121 @@ def run(headed: bool) -> None:
                   and code_row == ['CODE:b = 2'] and saved_code == 'b = 3' and undo1 == 'b = 2' and undo2 == '둘째 줄입니다.',
                   f"나눠 쓴 문단은 그 원문 줄만, 코드 블록은 그 줄, Ctrl+Z 를 거듭 누르면 앞 저장도 되돌림 ({para}, {code_row}, {undo1!r}, {undo2!r})")
             shot('03c-line-edit')
+            # F2: 현재 줄 — 하이라이트를 만들지 않아 끝낸 뒤 회색이 남지 않는다. 여러 줄이면 열지 않고 알림, 한 줄 하이라이트면 그 줄
+            wait_edit = lambda: wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
+            toast_has = lambda s: wait_until(page, f"document.querySelector('#lec-toast').textContent.includes('{s}')", 3000)
+            first_p = page.locator('#lec-view p', has_text='첫 문단')
+            first_p.click()
+            page.keyboard.press('F2')
+            wait_edit()
+            f2_here = [editing(), page.evaluate(lit_status), page.evaluate(shade_js)]
+            page.keyboard.press('Escape')
+            f2_done = [editing(), page.evaluate(lit_status), page.evaluate(shade_js)]
+            first_p.click(modifiers=['Shift'])
+            page.keyboard.press('Shift+ArrowDown')
+            page.keyboard.press('F2')
+            f2_many = [toast_has('한 줄만 고칩니다'), editing()]
+            page.keyboard.press('Shift+Enter')   # 알림대로 — 현재 줄만 남긴다
+            page.keyboard.press('F2')
+            wait_edit()
+            f2_one = editing()
+            page.keyboard.press('Escape')
+            page.keyboard.press('Escape')
+            check(f2_here == [['P:첫 문단은 **굵게** 한 줄입니다.'], '한 줄 편집 3행', None] and f2_done == [[], None, None]
+                  and f2_many == [True, []] and f2_one == ['H2:고칠 제목'],
+                  f"F2 는 현재 줄을 한 줄 편집 (하이라이트를 만들지 않음), 여러 줄 하이라이트면 알림만, 한 줄 하이라이트면 그 줄 ({f2_here}, {f2_done}, {f2_many}, {f2_one})")
+            # 꺾인 글의 ↑·↓: 칸 안의 화면 줄 먼저, 맨 윗줄·맨 아랫줄에서 앞뒤 원문 줄로. 칸이 block(.whole)인 목록 항목도
+            caret_js = """(() => { const sp = document.activeElement; const c = getSelection().getRangeAt(0).cloneRange(); c.collapse(true);
+              if (c.startContainer === sp) { c.setStart(sp.firstChild, c.startOffset ? sp.firstChild.length : 0); c.collapse(true); }
+              const all = document.createRange(); all.selectNodeContents(sp);
+              const tops = [...new Set([...all.getClientRects()].filter((r) => r.height).map((r) => Math.round(r.top)))];
+              return [tops.indexOf(Math.round(c.getClientRects()[0].top)), tops.length]; })()"""
+            wrapped = []
+            for block, prev_cell, next_cell in ((page.locator('#lec-view p', has_text='나눠 쓴 문단'), 'TD:니켈', 'P:둘째 줄입니다.'),
+                                                (page.locator('#lec-view li', has_text='아주 긴 목록'), 'P:[절로 가는 링크](#고칠-제목)', None)):
+                block.click(position={'x': 40, 'y': 10})
+                page.keyboard.press('F2')
+                wait_edit()
+                cell_text = focused()
+                at_end = page.evaluate(caret_js)
+                page.keyboard.press('ArrowUp')
+                one_up = page.evaluate(caret_js) + [focused() == cell_text]
+                page.keyboard.press('ArrowDown')
+                back_down = page.evaluate(caret_js) + [focused() == cell_text]
+                if next_cell:
+                    page.keyboard.press('ArrowDown')   # 맨 아랫줄: 다음 원문 줄로
+                    wait_until(page, f"document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent !== {cell_text!r}", 5000)
+                    went_down = editing()
+                    page.keyboard.press('Escape')
+                    block.click(position={'x': 40, 'y': 10})
+                    page.keyboard.press('F2')
+                    wait_edit()
+                else:
+                    went_down = [next_cell]
+                for _ in range(at_end[1] - 1):
+                    page.keyboard.press('ArrowUp')
+                top_line = page.evaluate(caret_js)[0]
+                page.keyboard.press('ArrowUp')   # 맨 윗줄: 앞 원문 줄로
+                wait_until(page, f"document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent !== {cell_text!r}", 5000)
+                went_up = editing()
+                page.keyboard.press('Escape')
+                wrapped.append([at_end, one_up, back_down, top_line, went_up, went_down])
+            ok_wrap = all(w[0][1] >= 2 and w[0][0] == w[0][1] - 1 and w[1] == [w[0][1] - 2, w[0][1], True] and w[2] == [w[0][1] - 1, w[0][1], True] and w[3] == 0 for w in wrapped)
+            check(ok_wrap and wrapped[0][4][0] == 'TD:니켈' and wrapped[0][5] == ['P:둘째 줄입니다.'] and wrapped[1][4] == ['P:[절로 가는 링크](#고칠-제목)'],
+                  f"화면에서 꺾인 글의 ↑·↓ 는 칸 안에서 움직이고, 맨 윗줄·맨 아랫줄에서 앞뒤 줄로 (문단·목록 항목) ({wrapped})")
+            # 빈 칸: 글을 지운 칸에서도 ↓ 는 이어서 (저장 뒤 되돌림)
+            page.locator('#lec-view li', has_text='항목 하나').click()
+            page.keyboard.press('F2')
+            wait_edit()
+            page.keyboard.press('Control+a')
+            page.keyboard.press('Delete')
+            page.keyboard.press('ArrowDown')
+            emptied = file_line(edit_doc, 7, '- ')
+            wait_until(page, "document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent === '할 일 끝'", 5000)
+            empty_next = focused()
+            page.keyboard.press('Escape')
+            page.locator('#lec-view h1').click()
+            page.keyboard.press('Control+z')
+            check(emptied == '- ' and empty_next == '할 일 끝' and file_line(edit_doc, 7, '- 항목 하나') == '- 항목 하나', f"빈 칸의 ↓ 도 다음 줄로 ({emptied!r}, {empty_next!r})")
+            # 두 번 누르기: 그 줄을 누른 자리 커서로 (서식 표시를 건너뛰어), 제목의 접기는 되돌리고, 링크·세 번 누르기는 그대로
+            page.wait_for_selector('#lec-view li:has-text("항목 하나")')
+            dbl_at = page.evaluate("""(needle) => { const w = document.createTreeWalker(document.querySelector('#lec-view'), NodeFilter.SHOW_TEXT);
+              for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.nodeValue.indexOf(needle); if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1);
+                const b = r.getBoundingClientRect(); return [b.left + 1, b.top + b.height / 2]; } } }""", '줄입니다')
+            page.mouse.dblclick(*dbl_at)
+            wait_edit()
+            page.keyboard.type('X')
+            page.keyboard.press('Enter')
+            dbl_saved = file_line(edit_doc, 3, '첫 문단은 **굵게** 한 X줄입니다.')
+            page.wait_for_selector('#lec-view p:has-text("X줄")')
+            page.locator('#lec-view h1').click()
+            page.keyboard.press('Control+z')
+            file_line(edit_doc, 3, '첫 문단은 **굵게** 한 줄입니다.')
+            page.wait_for_selector('#lec-view p:has-text("한 줄입니다")')
+            page.locator('#lec-view h2', has_text='고칠 제목').dblclick()
+            wait_edit()
+            dbl_head = [editing(), page.locator('#lec-view .lec-folded').count()]
+            page.keyboard.press('Escape')
+            page.locator('#lec-view a', has_text='절로 가는 링크').dblclick()
+            page.wait_for_timeout(450)
+            dbl_link = editing()
+            first_p.click(click_count=3)
+            page.wait_for_timeout(450)
+            dbl_triple = [editing(), page.evaluate('getSelection().toString().trim()')]
+            page.evaluate('getSelection().removeAllRanges()')
+            check(dbl_saved == '첫 문단은 **굵게** 한 X줄입니다.' and dbl_head == [['H2:고칠 제목'], 0] and dbl_link == []
+                  and dbl_triple[0] == [] and dbl_triple[1].startswith('첫 문단은'),
+                  f"두 번 누르기: 그 줄을 누른 자리 커서로 (서식 표시 건너뜀), 제목은 접지 않음, 링크·세 번 누르기(문단 고르기)는 그대로 ({dbl_saved!r}, {dbl_head}, {dbl_link}, {dbl_triple})")
+            # 할 일 체크박스: 누르면 [ ] ↔ [x] 를 저장, Ctrl+Z 로 되돌림, 초점은 문서 칸에
+            page.locator('#lec-view li:has-text("할 일 끝") input').click()
+            task_x = file_line(edit_doc, 8, '- [x] 할 일 끝')
+            task_shown = wait_until(page, "document.querySelector('#lec-view .task-list-item-checkbox').checked", 5000)
+            task_focus = page.evaluate("document.activeElement.tagName")
+            page.keyboard.press('Control+z')
+            task_back = file_line(edit_doc, 8, '- [ ] 할 일 끝')
+            task_off = wait_until(page, "!document.querySelector('#lec-view .task-list-item-checkbox').checked", 5000)
+            check(task_x == '- [x] 할 일 끝' and task_shown and task_focus != 'INPUT' and task_back == '- [ ] 할 일 끝' and task_off,
+                  f"할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 저장, Ctrl+Z 로 되돌림 ({task_x!r}, {task_shown}, {task_focus}, {task_back!r})")
             # 코드 화면의 줄 (점검 뒤 원래대로 — 뒤의 [코드 보기] 가 이 파일을 본다)
             example = work / 'code' / 'example.py'
             example_text = example.read_bytes()
@@ -790,6 +905,12 @@ def run(headed: bool) -> None:
             saved_cv = file_line(example, 9, '    """고친 설명."""')
             check(cv == ['SPAN:    """단순 이동평균."""'] and saved_cv == '    """고친 설명."""', f"코드 화면의 줄도 한 줄 편집 ({cv}, {saved_cv!r})")
             page.keyboard.press('Escape')
+            page.wait_for_selector('#lec-view .cv-line[data-line="9"]:has-text("고친 설명")')
+            page.locator('#lec-view .cv-line[data-line="9"] .cv-text').dblclick()
+            wait_edit()
+            cv_dbl = editing()
+            page.keyboard.press('Escape')
+            check(cv_dbl == ['SPAN:    """고친 설명."""'], f"코드 화면도 두 번 누르면 그 줄을 한 줄 편집 ({cv_dbl})")
             example.write_bytes(example_text)
             edit_doc.unlink()
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
@@ -2212,6 +2333,14 @@ def run(headed: bool) -> None:
               return [open.status, list.terms.length, src.status]; }''')
             check(ro == [True, [False, True]] and locked and no_edit and no_new and no_rename and st_edit and refused == [403, 0, 403],
                   f"예제(프로그램 폴더 안)는 보기만 — 터미널 자리에 안내, 편집·새 문서·이름 바꾸기는 열지 않음, 서버도 403 ({ro}, {locked}, {no_edit}, {no_new}, {no_rename}, {refused})")
+            page.locator('#lec-tree .row.file[data-doc="guide/01-처음-둘러보기.md"]').click()
+            page.wait_for_selector('#lec-view .task-list-item-checkbox')
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.locator('#lec-view .task-list-item-checkbox').first.click()
+            ro_task = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000)
+            page.locator('#lec-view h1').dblclick()
+            page.wait_for_timeout(450)
+            check(ro_task and page.locator('#lec-view .lec-line-edit').count() == 0, f"예제의 할 일을 눌러도 바꾸지 않고 알림, 두 번 눌러도 한 줄 편집을 열지 않음 ({ro_task})")
             page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click()
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
@@ -2434,6 +2563,11 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+Enter')   # 한 줄 편집은 하지 않는다 — 보기만
             told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('엑셀 보기는 보기만')", 3000)
             page.keyboard.press('Escape')
+            page.evaluate("document.querySelector('#lec-toast').textContent = ''")
+            page.locator('#lec-view tr.cv-line td').first.dblclick()
+            page.wait_for_timeout(450)
+            check(page.locator('#lec-view .lec-line-edit').count() == 0 and not page.evaluate("document.querySelector('#lec-toast').textContent"),
+                  '엑셀 표를 두 번 눌러도 한 줄 편집을 열지 않고 알리지도 않음 (낱말 고르기 그대로)')
             check(x1['tabs'] == ['1분기*', '메모'] and x1['head'] == ['A품목', 'B가격', 'C증감', 'D날짜']
                   and x1['rows'] == ['2|구리|8,950|5.30%|2023-03-15', '3|니켈|16,800|-1.90%|2023-04-15', '5|합계|25,750||']
                   and x1['formula'] == ['수식: =SUM(B2:B3)'] and x1['info'].startswith("엑셀 · '1분기' 시트 · 3행 · 4열") and x1['edit']

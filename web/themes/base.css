@@ -190,6 +190,7 @@
 .md-body li > ul, .md-body li > ol { margin: .3em 0 0; }
 .md-body .task-list-item { list-style: none; }
 .md-body .task-list-item-checkbox { margin: 0 .55em 0 -1.45em; vertical-align: -.1em; accent-color: var(--md-link); }
+.md-body .task-list-item-checkbox:not(:disabled) { cursor: pointer; }
 
 .md-body blockquote { margin-left: 0; padding: .15em 1.05em; border-left: 3px solid var(--md-quote-bar); color: var(--md-muted); }
 .md-body blockquote > :last-child { margin-bottom: 0; }

@@ -241,7 +241,7 @@ function bindKeys() {
       toggleShortcuts();
     } else if (mod && !e.shiftKey && !e.altKey && (e.code === 'KeyZ' || key === 'z') && !typing(e) && docKeyTarget(e) && undoLineEdit()) {
       e.preventDefault();   // 한 줄 편집으로 저장한 줄 되돌리기 (lineedit.js, D76)
-    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, 장 하이라이트 중 앞뒤 장
+    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
       if (closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()

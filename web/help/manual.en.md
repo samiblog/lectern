@@ -188,13 +188,15 @@ In Markdown documents and the code view (including csv and txt), lines are count
 
 ### Line editing
 
-With exactly one line focused, **Shift+Enter** lets you edit that line right where it is (press Shift+Enter twice on the current line). A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
+You can edit a line right where it is. Press **F2** on the current line, or **double-click** the body to open that line with the cursor where you clicked. **Shift+Enter** does the same with exactly one line focused. With several lines focused, F2 only tells you so. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
 
 - While you edit, the grey shading outside the focus is lifted so the lines above and below read normally. The line being edited keeps its bar on the left and the box around the text; the shading returns when you finish.
 - **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
-- **↑ ↓** save and go on editing the line above or below. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
-- **Tables**: focus a row and press Shift+Enter to edit it cell by cell. **Tab** and Shift+Tab move between cells; ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
+- **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
+- **Tables**: press F2 on a row or double-click a cell to edit it cell by cell. **Tab** and Shift+Tab move between cells; ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
 - In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. Pictures, diagrams, math, HTML and CSV tables are edited in edit mode (Ctrl+E).
+- Links, pictures, diagrams, charts and math do not open on a double-click, and a triple-click still selects the paragraph. To copy a word, double-click it again inside the box — clicking outside without changing anything ends without saving.
+- **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
 - After saving, **Ctrl+Z** restores the line as it was and saves again. Press it again for earlier edits — but not if the file has changed elsewhere (Claude Code and so on) in the meantime.
 - If the line was changed elsewhere while you were editing, it is not saved; your edited line is copied to the clipboard instead.
 

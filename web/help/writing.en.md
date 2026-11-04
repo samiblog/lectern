@@ -72,7 +72,7 @@ Lectern does not add a title line (such as 'Note' or 'Tip') to callouts — the 
 
 ### Other blocks
 
-- Lists, numbered lists, checklists (`- [ ]`, `- [x]` — display only, not clickable).
+- Lists, numbered lists, checklists (`- [ ]`, `- [x]` — clicking a box switches the marker in the source and saves it).
 - Footnotes: `[^1]` in the text and `[^1]: note` anywhere; they gather at the end.
 - Code blocks: give the language (```` ```python ````) for colors and a copy button.
 - HTML fragments: `<details><summary>…</summary>…</details>` for folded content. `<script>`, `<style>`, `<form>` and event attributes (`onclick` and so on) are removed.

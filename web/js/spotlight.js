@@ -15,7 +15,8 @@
 //   목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 그곳의 장으로 (fold.js 의 unfoldTo 가 보내는 'reveal'). Shift+↑·↓ 를 누르면 그 장의 처음~끝 줄을
 //   줄 하이라이트로 바꿔 넓히고 줄인다.
 // - 키 (main.js 의 keydown 이 spotKey 로): Shift+→ 하이라이트한 곳을 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행' 으로 (Enter 없이 —
-//   D51·D69 와 같은 길), Shift+← 그 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때). 상태줄에 하이라이트한 줄 범위 (#lec-st-lit).
+//   D51·D69 와 같은 길), Shift+← 그 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때), F2 현재 줄·한 줄 하이라이트를 한 줄 편집 (D76).
+//   상태줄에 하이라이트한 줄 범위 (#lec-st-lit).
 // - 우클릭 메뉴(docmenu.js)는 하이라이트한 곳 안이면 그 범위의 선택 상자 — litAt.
 // - 그리기: 칸의 스크롤 상자에 덮개(.lec-spot — 하이라이트 위·아래를 덮는 반투명 회색 둘과 왼쪽 강조 막대)와 현재 위치 삼각형을 겹쳐 둔다 (base.css).
 //   문서 DOM 은 그대로이고 장의 블록에 lec-lit 만 붙인다. 위치는 블록의 화면 위치로 재므로, 문서의 크기가 바뀌면(그림을 불러옴·접기·칸 폭·
@@ -63,6 +64,8 @@ const lit = () => active && (mode === 'range' ? linesOn() : chapters.length > 0)
 const ranged = () => lit() && mode === 'range';
 // 누르기로 줄을 고르지 않는 곳 — 코드 화면의 머리줄·csv 의 거르기 칸 등
 const NO_PICK = 'input, button, select, textarea, .cv-head, .csv-bar, .csv-filter, .csv-head';
+// 본문의 할 일 체크박스는 글처럼 — 누르면 그 줄이 현재 위치, 흐린 곳이면 하이라이트만 끈다 (lineedit.js 의 onTaskClick 이 받기 전에)
+const noPick = (el) => !!el.closest(NO_PICK) && !el.matches('.task-list-item-checkbox');
 
 /** 원문 줄 배열 — md 는 doc.js 가 넘긴 원문(docmenu.setDocSource), 코드 화면은 그 글 */
 function srcLines() {
@@ -338,6 +341,21 @@ function highlightHere() {
   return true;
 }
 
+/** F2: 현재 줄을 한 줄 편집 (D76) — 한 줄만 하이라이트했으면 그 줄. 여러 줄이면 어느 줄인지 몰라 알리기만 한다 */
+function editHere() {
+  if (!linesOn()) return false;
+  const us = units();
+  const ix = ranged() ? litIndexes(us) : null;
+  if (ix && ix[0] !== ix[1]) {
+    toast(t('한 줄 편집은 한 줄만 고칩니다 — Shift+Enter 로 현재 줄만 남기고 F2 를 누르세요'));
+    return true;
+  }
+  const i = ix ? ix[0] : hereIndex(us);
+  if (i < 0) return false;
+  emit('line-edit', us[i]);
+  return true;
+}
+
 /** Shift+↑·↓: 끝 줄을 옮겨 넓히거나 줄인다 (처음 줄은 그대로). 하이라이트가 없으면 현재 줄부터, 장 하이라이트면 그 장의 처음~끝 줄부터 */
 function extend(step) {
   const us = units();
@@ -561,12 +579,23 @@ export function showLineEdit() {
   updateStatus();
 }
 
-/** 원문 줄 line 하나를 줄 하이라이트하고 현재 위치로 (보이게) */
-export function highlightLine(line) {
+/** 한 줄 편집이 옮겨 간 원문 줄 line 을 현재 위치로 (보이게) — 줄 하이라이트 중이면 하이라이트도 그 줄로. F2·두 번 누르기로 연 편집은 하이라이트를 만들지 않는다 */
+export function followLine(line) {
   if (!linesOn()) return;
-  startRange(line);
-  paint();
+  if (ranged()) {
+    startRange(line);
+    paint();
+  }
   setHere(line, { scroll: true });
+}
+
+/** 두 번 누른 곳(e)의 줄 단위 (lineedit.js) — 본문의 글이 아니거나 줄을 고르지 않는 곳이면 null */
+export function unitAtPoint(e) {
+  const root = view();
+  if (!root?.contains(e.target) || e.target === root || !linesOn() || noPick(e.target)) return null;
+  const us = units();
+  const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
+  return i < 0 ? null : us[i];
 }
 
 /** ↑·↓·PageUp·PageDown·∧∨: 앞(-1)·뒤(+1) 장으로 가서 그 장의 처음을 화면 위에 둔다 */
@@ -638,7 +667,7 @@ export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
 
 /**
  * 문서·코드 화면의 현재 위치·하이라이트 키 (main.js 의 keydown 이 부른다). 다뤘으면 true — 부른 쪽이 기본 동작(스크롤 등)을 막는다.
- * ↑·↓ 현재 위치 (장 하이라이트 중에는 앞뒤 장 — PageUp·PageDown 도), Shift+Enter 현재 줄 하이라이트 (한 줄만 하이라이트했으면 한 줄 편집 — D76),
+ * ↑·↓ 현재 위치 (장 하이라이트 중에는 앞뒤 장 — PageUp·PageDown 도), Shift+Enter 현재 줄 하이라이트 (한 줄만 하이라이트했으면 한 줄 편집 — D76), F2 한 줄 편집,
  * Shift+↑·↓ 넓히기·줄이기, Shift+→ Claude 로 보내기, Shift+← 위치 복사, Ctrl+C 원문 복사 (하이라이트 중이고 고른 글이 없을 때)
  */
 export function spotKey(e) {
@@ -666,6 +695,7 @@ export function spotKey(e) {
     else return false;
     return true;
   }
+  if (k === 'F2') return editHere();
   if (k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'PageUp' && k !== 'PageDown') return false;
   const step = k === 'ArrowUp' || k === 'PageUp' ? -1 : 1;
   if (spotlightOn()) return moveSpotlight(step);
@@ -730,7 +760,7 @@ function endDrag() {
 function onMouseDown(e) {
   if (e.button !== 0 || e.ctrlKey || e.altKey || e.metaKey) return;
   const root = view();
-  if (!root?.contains(e.target) || !linesOn() || e.target.closest(NO_PICK)) return;
+  if (!root?.contains(e.target) || !linesOn() || noPick(e.target)) return;
   if (!e.shiftKey && ranged() && insideLit(e.clientY)) return;
   const us = units();
   const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
@@ -818,7 +848,7 @@ export function initSpotlight() {
   }, true);
   // 흐린 곳을 누르면: 장 하이라이트는 그 장으로, 줄 하이라이트는 끈다 (그 누름은 링크·접기로 쓰지 않는다)
   $('#lec-panes').addEventListener('click', (e) => {
-    if (!lit() || !view().contains(e.target) || e.shiftKey || e.target.closest(NO_PICK) || window.getSelection()?.toString()) return;
+    if (!lit() || !view().contains(e.target) || e.shiftKey || noPick(e.target) || window.getSelection()?.toString()) return;
     if (mode === 'range') {
       if (insideLit(e.clientY)) return;
       e.preventDefault();
