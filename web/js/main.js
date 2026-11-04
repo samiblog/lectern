@@ -137,16 +137,18 @@ function focusDoc() {
   else if (!focusLineEdit()) pane?.scroller.focus({ preventScroll: true });
 }
 
-/** F6·Shift+F6 (D79): 문서 ↔ 터미널. 초점이 문서 칸(또는 아무 데도 없음)이면 터미널로, 터미널·사이드바 등이면 문서로. 지금은 두 곳뿐이라 거꾸로도 같다 */
+/**
+ * F6·Shift+F6 (D79): 문서 ↔ 터미널. 터미널·사이드바에 초점이 있으면 문서로, 그 밖은 터미널로 — 목차·툴바는 누른 뒤 초점이 남은 것이라
+ * 읽는 중이다 (문서로 보내면 첫 F6 이 아무 일도 안 한 것처럼 보인다). 지금은 두 곳뿐이라 거꾸로도 같다
+ */
 function hopFocus() {
   if (gatherOn()) {
     leaveToDoc().then(focusDoc);
     return;
   }
   if (overlayOpen()) return;
-  const el = document.activeElement;
-  if (!el || el === document.body || el.closest('#lec-panes')) focusTerminal();
-  else focusDoc();
+  if (document.activeElement?.closest('#lec-term, #lec-sidebar')) focusDoc();
+  else focusTerminal();
 }
 
 // ---- 연결 ---------------------------------------------------------------------

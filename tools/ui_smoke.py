@@ -3147,13 +3147,13 @@ def run(headed: bool) -> None:
             check(go_sent and go_focus, f"Ctrl+Shift+→ 는 현재 줄의 위치를 넣고 초점도 터미널로 ({go_sent}, {go_focus})")
             page.keyboard.press('Control+Backquote')   # 패널을 닫고
             wait_until(page, "document.querySelector('#lec-term').hidden", 3000)
-            page.locator('#lec-content').focus()
+            page.locator('#lec-btn-spot').focus()   # 툴바를 누른 뒤처럼 — 읽는 중이니 터미널로
             page.keyboard.press('F6')
             f6_open = wait_until(page, "!document.querySelector('#lec-term').hidden && !!document.activeElement?.closest('#lec-term')", 5000)
             page.locator('#lec-tree .row.file').first.focus()
             page.keyboard.press('F6')
             f6_side = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
-            check(f6_open and f6_side, f"F6 은 닫힌 터미널을 열면서 가고, 사이드바에서는 문서로 ({f6_open}, {f6_side})")
+            check(f6_open and f6_side, f"F6 은 닫힌 터미널을 열면서 가고 (툴바·목차에 초점이 남아 있어도), 사이드바에서는 문서로 ({f6_open}, {f6_side})")
             # 한 줄 편집 중: 칸을 그대로 두고 터미널로, 돌아오면 그 자리로 (저장하지 않는다)
             page.locator('#lec-view h1').first.click()
             page.keyboard.press('F2')
