@@ -19,7 +19,8 @@ import { goToPart, PARTS } from './toc.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
 import { newDocGuess, cleanPath, createDoc, openCreated } from './newdoc.js';
-import { $, esc, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
 import { t } from './i18n.js';
 
 let seq = 0;
@@ -66,14 +67,7 @@ export function addSnippets(list, note = '') {
 function row(sn, i, n, put) {
   const where = `${sn.path}${sn.lines ? ` · ${rangeText(sn.lines)}` : ''}`;
   const tip = [sn.label, `${sn.name}`, where].filter(Boolean).join('\n');
-  return `<div class="pt-item bk-item has-cap" tabindex="0" data-id="${sn.id}" title="${esc(tip)}">`
-    + `<svg class="tp-icon" aria-hidden="true"><use href="#${iconOf(sn)}"/></svg>`
-    + `<span class="pt-text"><span class="pt-name">${esc(sn.label || sn.name)}</span>`
-    + `<span class="pt-label">${esc([sn.label && sn.name, where].filter(Boolean).join(' · '))}</span></span>`
-    + `<span class="bk-btns">${put ? `<button type="button" class="text-btn bk-put" title="${esc(t('편집 중인 문서의 커서 자리로 보내기'))}">${t('보내기')}</button>` : ''}`
-    + `<button type="button" class="icon-btn small bk-up" title="${esc(t('위로 (Alt+↑)'))}"${i === 0 ? ' disabled' : ''}><svg><use href="#i-up"/></svg></button>`
-    + `<button type="button" class="icon-btn small bk-down" title="${esc(t('아래로 (Alt+↓)'))}"${i === n - 1 ? ' disabled' : ''}><svg><use href="#i-down"/></svg></button>`
-    + `<button type="button" class="icon-btn small bk-del" title="${esc(t('빼기 (Delete)'))}"><svg><use href="#i-close"/></svg></button></span></div>`;
+  return [html`<div class="pt-item bk-item has-cap" tabindex="0" data-id="${sn.id}" title="${tip}">`, html`<svg class="tp-icon" aria-hidden="true"><use href="#${iconOf(sn)}"/></svg>`, html`<span class="pt-text"><span class="pt-name">${sn.label || sn.name}</span>`, html`<span class="pt-label">${[sn.label && sn.name, where].filter(Boolean).join(' · ')}</span></span>`, html`<span class="bk-btns">${put ? html`<button type="button" class="text-btn bk-put" title="${t('편집 중인 문서의 커서 자리로 보내기')}">${t('보내기')}</button>` : ''}`, html`<button type="button" class="icon-btn small bk-up" title="${t('위로 (Alt+↑)')}"${i === 0 ? ' disabled' : ''}><svg><use href="#i-up"/></svg></button>`, html`<button type="button" class="icon-btn small bk-down" title="${t('아래로 (Alt+↓)')}"${i === n - 1 ? ' disabled' : ''}><svg><use href="#i-down"/></svg></button>`, html`<button type="button" class="icon-btn small bk-del" title="${t('빼기 (Delete)')}"><svg><use href="#i-close"/></svg></button></span></div>`];
 }
 
 /** 탭의 개수 표시와 (보이면) 목록 */
@@ -86,7 +80,7 @@ function render() {
   const editing = editingDoc();
   const list = $('#lec-basket-list');
   keepFocus(list, () => {
-    list.innerHTML = items.map((sn, i) => row(sn, i, items.length, !!editing)).join('');
+    setHtml(list, items.map((sn, i) => row(sn, i, items.length, !!editing)));
   });
   for (const id of ['#lec-basket-insert', '#lec-basket-claude', '#lec-basket-clear']) $(id).disabled = !items.length;
   let info;
@@ -264,14 +258,12 @@ function update() {
 function renderPick() {
   const ul = $('#lec-insert-list');
   // 받는 곳은 열린 문서뿐이다 — 다른 문서로 보내는 길을 알린다 (고를 수 없는 줄)
-  const note = pick.step === 'target' ? `<li class="note">${esc(t('다른 문서로 보내려면 먼저 그 문서를 문서 탭으로 여세요 — 트리에서 Ctrl+클릭'))}</li>` : '';
+  const note = pick.step === 'target' ? html`<li class="note">${t('다른 문서로 보내려면 먼저 그 문서를 문서 탭으로 여세요 — 트리에서 Ctrl+클릭')}</li>` : '';
   if (!pick.items.length) {
-    ul.innerHTML = `<li class="empty">${esc(pick.step === 'place' ? t('맞는 절이 없습니다') : t('맞는 문서가 없습니다'))}</li>${note}`;
+    setHtml(ul, html`<li class="empty">${pick.step === 'place' ? t('맞는 절이 없습니다') : t('맞는 문서가 없습니다')}</li>${note}`);
     return;
   }
-  ul.innerHTML = pick.items.map((it, i) => `<li role="option" data-i="${i}" class="${i === pick.sel ? 'sel' : ''} ins-${it.type}" aria-selected="${i === pick.sel}"`
-    + `${it.level ? ` style="padding-left:${10 + (it.level - 1) * 14}px"` : ''}>`
-    + `<span class="t">${esc(it.label)}</span><span class="when">${esc(it.when || '')}</span>${it.sub ? `<span class="p">${esc(it.sub)}</span>` : ''}</li>`).join('') + note;
+  setHtml(ul, [pick.items.map((it, i) => [html`<li role="option" data-i="${i}" class="${i === pick.sel ? 'sel' : ''} ins-${it.type}" aria-selected="${i === pick.sel}"`, html`${it.level ? html` style="padding-left:${10 + (it.level - 1) * 14}px"` : ''}>`, html`<span class="t">${it.label}</span><span class="when">${it.when || ''}</span>${it.sub ? html`<span class="p">${it.sub}</span>` : ''}</li>`]), note]);
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 

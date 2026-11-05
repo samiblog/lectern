@@ -7,7 +7,8 @@
 
 import { chartLib } from './charts.js';
 import { readTable } from './tabledata.js';
-import { $, $$, esc, toast } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, $$, toast } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_ON = 6;
@@ -86,8 +87,7 @@ function draw() {
   if (!both) st.scale = 'both';
   for (const b of $$('#lec-chart-kind button')) b.setAttribute('aria-pressed', String(b.dataset.kind === st.kind));
   for (const b of $$('#lec-chart-scale button')) b.setAttribute('aria-pressed', String(b.dataset.scale === st.scale));
-  $('#lec-chart-series').innerHTML = read.series.map((s, i) => `<label title="${esc(s.name)}"><input type="checkbox" data-i="${i}"${st.on.has(i) ? ' checked' : ''}>`
-    + `<span>${esc(s.name)}</span>${s.unit ? `<small>${esc(s.unit)}</small>` : ''}</label>`).join('');
+  setHtml($('#lec-chart-series'), read.series.map((s, i) => [html`<label title="${s.name}"><input type="checkbox" data-i="${i}"${st.on.has(i) ? ' checked' : ''}>`, html`<span>${s.name}</span>${s.unit ? html`<small>${s.unit}</small>` : ''}</label>`]));
   const notes = [];
   if (read.freq) notes.push(frequencyName(read.freq));
   notes.push(t('{n}개 시점', { n: read.labels.length.toLocaleString() }));

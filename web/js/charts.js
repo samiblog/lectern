@@ -11,7 +11,8 @@
 //   Plotly 의 지도(인터넷의 지도 자료가 있어야 한다)는 그리지 않고, 배경 그림은 data: 주소만 둔다.
 // - 그리지 못하면 Mermaid 처럼 원문과 까닭을 보인다 (.diagram-error).
 
-import { esc, docUrl } from './util.js';
+import { html, raw, setHtml } from './html.js';
+import { docUrl } from './util.js';
 import { mermaidTheme } from './theme.js';
 import { openLightbox } from './ui.js';
 import { SLIDE_ZOOM } from './slides.js';
@@ -442,7 +443,7 @@ function showSource(node, message) {
   box.className = 'diagram-error';
   box.dataset.chart = node.dataset.chart;
   if (node.dataset.lines) box.dataset.lines = node.dataset.lines;   // 본문 우클릭 메뉴의 원문 복사용
-  box.innerHTML = `<p>${esc(message)}</p><pre><code>${esc(node.dataset.source ?? node.textContent)}</code></pre>`;
+  setHtml(box, html`<p>${message}</p><pre><code>${node.dataset.source ?? node.textContent}</code></pre>`);
   node.replaceWith(box);
 }
 
@@ -491,7 +492,7 @@ async function draw(node, ctx) {
   }
   if (seq !== info.seq) return;   // 그사이 더 나중에 시작한 그리기가 있다
   const holder = document.createElement('div');
-  holder.innerHTML = ctx.sanitize(out.svg);
+  setHtml(holder, raw(ctx.sanitize(out.svg)));
   const el = holder.querySelector('svg');
   if (!el) {
     if (!drawn.has(node)) showSource(node, t('{kind} 그림을 그리지 못해 원문을 표시합니다: {error}', { kind: CHART_NAMES[kind], error: 'SVG' }));

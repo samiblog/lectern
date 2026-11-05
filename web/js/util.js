@@ -7,9 +7,6 @@ export const $ = (sel, root = document) => root.querySelector(sel);
 /** @type {(sel: string, root?: ParentNode) => any[]} */
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
-const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-export const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ESC[c]);
-
 /** 'docs/한글 문서.md' → URL 경로 조각마다 인코딩 */
 export const encodePath = (p) => p.split('/').map(encodeURIComponent).join('/');
 

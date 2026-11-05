@@ -5,7 +5,8 @@
 // 3초마다 목록을 다시 받아, 파일이 생기거나 고쳐지면(Claude Code 가 저장하면) 바로 반영한다.
 
 import { S, emit } from './store.js';
-import { $, esc } from './util.js';
+import { html, setHtml } from './html.js';
+import { $ } from './util.js';
 import { saveConfig, getJSON } from './api.js';
 import { t } from './i18n.js';
 
@@ -166,12 +167,12 @@ export function fillPicker() {
   const kind = grouping();
   const groups = Object.entries(GROUPINGS[kind].groups).map(([key, label]) => {
     const items = Object.entries(THEMES).filter(([, th]) => groupOf(th, kind) === key);
-    return `<optgroup label="${esc(label)}">${items.map(([id, th]) => `<option value="${esc(id)}">${esc(th.name)}</option>`).join('')}</optgroup>`;
+    return html`<optgroup label="${label}">${items.map(([id, th]) => html`<option value="${id}">${th.name}</option>`)}</optgroup>`;
   });
   const mine = userStyles.length
-    ? `<optgroup label="${esc(t('내 스타일'))}">${userStyles.map((s) => `<option value="${esc(s.id)}">${esc(s.name)}</option>`).join('')}</optgroup>`
+    ? html`<optgroup label="${t('내 스타일')}">${userStyles.map((s) => html`<option value="${s.id}">${s.name}</option>`)}</optgroup>`
     : '';
-  $('#lec-theme').innerHTML = `<option value="auto">${t('자동 (시스템)')}</option>${groups.join('')}${mine}`;
+  setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}`);
   $('#lec-theme').value = themeOf(S.config.theme) ? S.config.theme : 'auto';
   updateSteps();
 }

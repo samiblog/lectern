@@ -23,7 +23,8 @@ import { docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
-import { $, esc, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
 import { isCode } from './icons.js';
 import { t } from './i18n.js';
 
@@ -254,12 +255,7 @@ function build(pane, path, src, mode, line) {
   box.className = 'lec-editor';
   box.setAttribute('role', 'region');
   box.setAttribute('aria-label', t('편집 — {path}', { path }));
-  box.innerHTML = `<div class="ed-head"><svg class="ed-icon" aria-hidden="true"><use href="#i-edit"/></svg>`
-    + `<span class="ed-title" title="${esc(path)}">${esc(path)}</span><span class="ed-state"></span>`
-    + `<button type="button" class="text-btn ed-find" title="${esc(t('찾기 (Ctrl+F) · 바꾸기 (Ctrl+H) · 줄로 가기 (Alt+G)'))}">${t('찾기·바꾸기')}</button>`
-    + `<button type="button" class="primary ed-save" title="${esc(t('저장 (Ctrl+S)'))}">${t('저장')}</button>`
-    + `<button type="button" class="icon-btn small ed-close" title="${esc(t('편집 닫기 (Esc) — 저장하지 않은 것이 있으면 묻습니다'))}"><svg><use href="#i-close"/></svg></button></div>`
-    + '<div class="ed-body"></div>';
+  setHtml(box, [html`<div class="ed-head"><svg class="ed-icon" aria-hidden="true"><use href="#i-edit"/></svg>`, html`<span class="ed-title" title="${path}">${path}</span><span class="ed-state"></span>`, html`<button type="button" class="text-btn ed-find" title="${t('찾기 (Ctrl+F) · 바꾸기 (Ctrl+H) · 줄로 가기 (Alt+G)')}">${t('찾기·바꾸기')}</button>`, html`<button type="button" class="primary ed-save" title="${t('저장 (Ctrl+S)')}">${t('저장')}</button>`, html`<button type="button" class="icon-btn small ed-close" title="${t('편집 닫기 (Esc) — 저장하지 않은 것이 있으면 묻습니다')}"><svg><use href="#i-close"/></svg></button></div>`, html`<div class="ed-body"></div>`]);
   pane.el.append(box);
   const ext = extOf(path);
   const indent = INDENT4.has(ext) ? 4 : 2;

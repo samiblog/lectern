@@ -22,7 +22,8 @@ import { confirmCloseEditor, disposeEditor } from './editor.js';
 import { restoreDocTabs, selectDocTab } from './doctabs.js';
 import { gatherOn } from './gather.js';
 import { manualOpen } from './help.js';
-import { $, esc, basename, toast, copyText } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
 let maxTabs = 10;          // 서버의 MAX_TABS (/api/state 의 max_tabs)
@@ -105,9 +106,9 @@ function syncTabs(info) {
 }
 
 /** 칸에 짧은 안내를 보인다 (폴더를 읽는 중·읽지 못함) */
-function showMessage(pane, html) {
+function showMessage(pane, text) {
   pane.view.className = 'welcome';
-  pane.view.innerHTML = `<p>${html}</p>`;
+  setHtml(pane.view, html`<p>${text}</p>`);
   setToc(pane, null);
   setStatus({ path: '', info: '' }, pane);
 }
@@ -117,7 +118,7 @@ function loadTab(tab) {
   tab.loading ??= (async () => {
     const { pane } = tab;
     // 문서가 수천 개인 폴더는 처음 훑는 데 몇 초 걸린다 (막 만든 파일이 많으면 더). 그동안 빈 화면 대신 알린다
-    const wait = setTimeout(() => { if (!pane.current) showMessage(pane, t('{name} 폴더를 읽고 있습니다…', { name: esc(tab.name) })); }, 400);
+    const wait = setTimeout(() => { if (!pane.current) showMessage(pane, t('{name} 폴더를 읽고 있습니다…', { name: tab.name })); }, 400);
     try {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
@@ -128,7 +129,7 @@ function loadTab(tab) {
       if (restore && tab.panes.length === 1) restoreDocTabs(tab, tab.position);   // 열어 두었던 다른 문서 탭 (고를 때 그린다)
       tab.loaded = true;
     } catch (e) {
-      if (S.tabs.includes(tab)) showMessage(pane, t('폴더를 읽지 못했습니다 ({error}). F5 를 누르면 다시 불러옵니다.', { error: esc(e.message) }));
+      if (S.tabs.includes(tab)) showMessage(pane, t('폴더를 읽지 못했습니다 ({error}). F5 를 누르면 다시 불러옵니다.', { error: e.message }));
     } finally {
       clearTimeout(wait);
       tab.loading = null;
@@ -144,13 +145,13 @@ function showWelcome() {
   const pane = homePane();
   const recent = (S.config.recent || []).slice(0, 8);
   pane.view.className = 'welcome';
-  pane.view.innerHTML = `<h1>${t('프로젝트 폴더를 여세요')}</h1>
+  setHtml(pane.view, html`<h1>${t('프로젝트 폴더를 여세요')}</h1>
     <p>${t('폴더 안의 Markdown·HTML 문서를 트리와 개요로 정리해 보여 줍니다. 폴더마다 탭으로 열려 여러 프로젝트를 오가며 볼 수 있습니다. 숨김 파일과 node_modules 같은 폴더는 제외합니다.')}</p>
     <p class="welcome-acts"><button type="button" class="primary" data-act="open">${t('폴더 열기')}</button>
-      ${S.samples ? `<button type="button" class="text-btn" data-act="samples" title="${esc(t('Lectern 둘러보기와 문서 쓰는 법이 든 예제 프로젝트 — {path}', { path: S.samples }))}">${t('예제 열기')}</button>` : ''}
+      ${S.samples ? html`<button type="button" class="text-btn" data-act="samples" title="${t('Lectern 둘러보기와 문서 쓰는 법이 든 예제 프로젝트 — {path}', { path: S.samples })}">${t('예제 열기')}</button>` : ''}
       <button type="button" class="text-btn" data-act="help">${t('사용설명서')}<kbd>F1</kbd></button></p>
-    ${recent.length ? `<h2>${t('최근 연 폴더')}</h2><ul>${recent.map((p) => `<li><button type="button" data-path="${esc(p)}">
-      <span class="t">${esc(folderName(p))}</span><span class="p">${esc(p)}</span></button></li>`).join('')}</ul>` : ''}`;
+    ${recent.length ? html`<h2>${t('최근 연 폴더')}</h2><ul>${recent.map((p) => html`<li><button type="button" data-path="${p}">
+      <span class="t">${folderName(p)}</span><span class="p">${p}</span></button></li>`)}</ul>` : ''}`);
   setToc(pane, null);
   setStatus({ path: '', info: '' }, pane);
 }
@@ -300,15 +301,13 @@ export async function loadTabs() {
 function renderTabs() {
   const count = new Map();
   for (const tb of S.tabs) count.set(tb.name.toLowerCase(), (count.get(tb.name.toLowerCase()) || 0) + 1);
-  $('#lec-tablist').innerHTML = S.tabs.map((tb, i) => {
+  setHtml($('#lec-tablist'), S.tabs.map((tb, i) => {
     const active = tb === S.tab;
     const parent = count.get(tb.name.toLowerCase()) > 1 ? parentName(tb.root) : '';   // 같은 이름의 폴더는 상위 폴더 이름으로 구분
     const key = i < 8 ? `Ctrl+${i + 1}` : i === S.tabs.length - 1 ? 'Ctrl+9' : '';
-    return `<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${esc(tb.id)}"
-      title="${esc(tb.root)}${tb.readonly ? `\n${esc(t('보기만 — Lectern 프로그램 폴더 안이라 터미널·편집이 없습니다'))}` : ''}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${esc(tb.name)}</span>${parent ? `<span class="sub">${esc(parent)}</span>` : ''}`
-      + `${!active && tb.changed.size ? `<span class="dot" title="${t('열어 보기 전에 바뀐 문서가 있습니다')}"></span>` : ''}`
-      + `<button type="button" class="tab-close" title="${t('탭 닫기 (Ctrl+W)')}" aria-label="${esc(t('{name} 탭 닫기', { name: tb.name }))}"><svg><use href="#i-close"/></svg></button></div>`;
-  }).join('');
+    return [html`<div class="lec-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-id="${tb.id}"
+      title="${tb.root}${tb.readonly ? `\n${t('보기만 — Lectern 프로그램 폴더 안이라 터미널·편집이 없습니다')}` : ''}${key ? `\n${key}` : ''}">${folderIcon()}<span class="name">${tb.name}</span>${parent ? html`<span class="sub">${parent}</span>` : ''}`, html`${!active && tb.changed.size ? html`<span class="dot" title="${t('열어 보기 전에 바뀐 문서가 있습니다')}"></span>` : ''}`, html`<button type="button" class="tab-close" title="${t('탭 닫기 (Ctrl+W)')}" aria-label="${t('{name} 탭 닫기', { name: tb.name })}"><svg><use href="#i-close"/></svg></button></div>`];
+  }));
 }
 
 const tabOf = (el) => S.tabs.find((tb) => tb.id === el?.closest('.lec-tab')?.dataset.id) || null;

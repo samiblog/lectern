@@ -49,6 +49,7 @@ import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveT
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
 import { loadTree } from './project.js';
 import { forgetFailedImages } from './doc.js';
+import { html, setHtml } from './html.js';
 import { $, basename, toast } from './util.js';
 import { t, translatePage } from './i18n.js';
 
@@ -301,7 +302,7 @@ async function waitForBridge() {
   const slow = setTimeout(() => {
     const view = $('#lec-view');
     view.className = 'welcome';
-    view.innerHTML = `<h1>${t('창과 연결하는 중입니다')}</h1><p>${t('이 화면이 계속되면 Lectern을 닫았다가 다시 실행해 주세요.')}</p>`;
+    setHtml(view, html`<h1>${t('창과 연결하는 중입니다')}</h1><p>${t('이 화면이 계속되면 Lectern을 닫았다가 다시 실행해 주세요.')}</p>`);
   }, 4000);
   await new Promise((resolve) => window.addEventListener('pywebviewready', resolve, { once: true }));
   clearTimeout(slow);

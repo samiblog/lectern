@@ -1,6 +1,7 @@
 // 사이드바 목록(문서 트리·최근 변경·파일)의 파일 종류 아이콘. 그림은 index.html 의 i-* 기호, 모양은 app.css 의 .ficon.
 // 문서(md·트리에 보이는 html)는 강조색으로 다른 파일과 구분한다. 여는 방법은 아이콘과 상관없이 서버가 정한다 (osutil.how_to_open).
 
+import { html } from './html.js';
 import { t } from './i18n.js';
 
 const KINDS = {
@@ -15,7 +16,7 @@ const KINDS = {
 };
 const KIND_OF = new Map(Object.entries(KINDS).flatMap(([kind, exts]) => exts.split(' ').map((x) => [x, kind])));
 
-const svg = (id, extra = '') => `<svg class="ficon${extra}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const svg = (id, extra = '') => html`<svg class="ficon${extra}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 
 /** 파일 이름 앞의 아이콘. docKind 가 있으면 문서 (scanner 의 kind: markdown | html) */
 export function fileIcon(name, docKind) {

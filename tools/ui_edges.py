@@ -13,17 +13,17 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide']
+SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['structure', 'lines']),
-    (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide']),
-    (r'web/js/(htmldoc|nav|find|toc|fold)\.js', ['frames', 'reading']),
-    (r'web/js/(tabs|doctabs|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure']),
+    (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile']),
+    (r'web/js/(htmldoc|nav|find|toc|fold)\.js', ['frames', 'reading', 'hostile']),
+    (r'web/js/(tabs|doctabs|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure', 'hostile']),
     (r'tools/edges/harness\.py', SUITES),
     (r'tools/edges/(\w+)\.py', None),
 ]
-AREA_OTHER = ['reading', 'combos']
+AREA_OTHER = ['reading', 'combos', 'hostile']
 
 
 def changed_files() -> list[str]:

@@ -1,4 +1,4 @@
-// 규칙 시험 (브라우저 없이, 1초 안에): 줄 구조(lineops.js)·표 읽기(tabledata.js)의 표 점검과 임의의 문서, 자료 모음(tests/corpus).
+// 규칙 시험 (브라우저 없이, 1초 안에): 줄 구조(lineops.js)·표 읽기(tabledata.js)·자동 이스케이프(html.js)의 표 점검과 임의의 문서, 자료 모음(tests/corpus).
 // tests/test_rules.py 가 돌린다 — Node 가 없으면 건너뛰고, 같은 표 점검은 ui_edges 의 structure·data 가 페이지 안에서 돌린다.
 //
 //   node tools/rules_check.mjs
@@ -23,6 +23,7 @@ const cases = (file, m) => new Function('m', readFileSync(join(root, file), 'utf
 
 const lineops = await load('web/js/lineops.js');
 const table = await load('web/js/tabledata.js');
+const safe = await load('web/js/html.js');
 {
   const r = cases('tools/edges/lineops_cases.js', lineops);
   say('줄 구조 표 점검', r.fails, r.n);
@@ -34,6 +35,10 @@ const table = await load('web/js/tabledata.js');
 {
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
+}
+{
+  const r = cases('tools/edges/html_cases.js', safe);
+  say('자동 이스케이프 표 점검', r.fails, r.n);
 }
 
 // 자료 모음: 파일마다 같은 이름의 .expect.json 에 적은 대로 읽히는지

@@ -1,7 +1,8 @@
 // 팝업 메뉴, 확대 보기(라이트박스)
 
 import { emit } from './store.js';
-import { $, esc } from './util.js';
+import { html, setHtml } from './html.js';
+import { $ } from './util.js';
 import { t } from './i18n.js';
 
 // ---- 팝업 메뉴 -------------------------------------------------------------
@@ -10,15 +11,14 @@ let menuItems = [];
 let onMenuClose = null;
 
 function menuItemHtml(it, i) {
-  if (it === '-') return '<div class="menu-sep" role="separator"></div>';
-  if (it.header) return `<div class="menu-head">${esc(it.header)}</div>`;
-  const attrs = `${it.icon ? ' class="with-icon"' : ''}${it.current ? ' aria-current="true"' : ''}`;
-  const main = `<button role="menuitem" data-i="${i}"${attrs}>${it.icon || ''}<span>${esc(it.label)}</span>${it.hint ? `<small>${esc(it.hint)}</small>` : ''}</button>`;
+  if (it === '-') return html`<div class="menu-sep" role="separator"></div>`;
+  if (it.header) return html`<div class="menu-head">${it.header}</div>`;
+  const attrs = html`${it.icon ? html` class="with-icon"` : ''}${it.current ? html` aria-current="true"` : ''}`;
+  const main = html`<button role="menuitem" data-i="${i}"${attrs}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
   if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
-  return `<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${esc(tip)}" aria-label="${esc(tip)}">`
-    + `<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`;
+  return [html`<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${tip}" aria-label="${tip}">`, html`<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`];
 }
 
 /** items: [{label, hint?, action, term?, icon?, current?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.
@@ -34,7 +34,7 @@ export function showMenu(x, y, items, onClose = null) {
   hideMenu();
   menuItems = items;
   onMenuClose = onClose;
-  menu.innerHTML = items.map(menuItemHtml).join('');
+  setHtml(menu, items.map(menuItemHtml));
   menu.hidden = false;
   const { innerWidth: w, innerHeight: h } = window;
   const r = menu.getBoundingClientRect();

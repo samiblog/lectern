@@ -30,7 +30,7 @@ declare global {
   // querySelector 와 이벤트 대상마다 형을 밝히면 주석만 늘어난다
   interface Element {
     dataset: DOMStringMap;
-    content: string;
+    content: any;
     contentDocument: Document | null;
     focus(options?: FocusOptions): void;
   }
@@ -152,13 +152,16 @@ declare global {
     lastSync: any;
   }
 
+  /** 화면에 넣을 HTML (html.js) — html`` 의 결과와 그 배열. 없을 때는 빈 글 */
+  type Markup = import('../../web/js/html.js').Safe | '' | Markup[];
+
   /** 우클릭 메뉴의 한 줄 (ui.js 의 showMenu). '-' 는 구분선 */
   type MenuItem = '-' | { header: string } | {
     label: string;
     action: () => any;
     hint?: string;
     term?: string;
-    icon?: string;
+    icon?: Markup;
     current?: boolean;
   };
 

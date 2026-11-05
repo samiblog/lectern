@@ -1,6 +1,6 @@
 // Mermaid 다이어그램: 필요할 때만 라이브러리를 불러오고, 오류가 나면 원문을 보여 준다.
 
-import { esc } from './util.js';
+import { html, setHtml } from './html.js';
 import { mermaidTheme } from './theme.js';
 import { openLightbox } from './ui.js';
 import { t } from './i18n.js';
@@ -30,7 +30,7 @@ function showSource(node, message) {
   const box = document.createElement('div');
   box.className = 'diagram-error';
   if (node.dataset.lines) box.dataset.lines = node.dataset.lines;   // 본문 우클릭 메뉴의 원문 복사용
-  box.innerHTML = `<p>${esc(message)}</p><pre><code>${esc(node.dataset.source ?? node.textContent)}</code></pre>`;
+  setHtml(box, html`<p>${message}</p><pre><code>${node.dataset.source ?? node.textContent}</code></pre>`);
   node.replaceWith(box);
 }
 

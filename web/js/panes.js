@@ -8,6 +8,7 @@
 //   그 id 로 찾고, 모든 칸을 다루는 코드는 칸 객체를 쓴다. 찾기 막대(#lec-findbar)도 선택된 칸으로 옮긴다.
 
 import { S, emit } from './store.js';
+import { html, setHtml } from './html.js';
 import { $ } from './util.js';
 
 let home = null;   // 시작 화면 칸 (index.html 에 처음부터 있는 칸)
@@ -68,7 +69,7 @@ export function selectPane(pane) {
 export function createPane(tab) {
   const el = document.createElement('section');
   el.className = 'lec-pane';
-  el.innerHTML = '<div class="lec-scroll" tabindex="-1"><article></article></div>';
+  setHtml(el, html`<div class="lec-scroll" tabindex="-1"><article></article></div>`);
   $('#lec-panes').append(el);
   const pane = makePane(el, tab);
   S.panes.push(pane);

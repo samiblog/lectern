@@ -9,7 +9,8 @@ import { S, on, emit } from './store.js';
 import { saveConfig } from './api.js';
 import { unfoldTo } from './fold.js';
 import { chartLabel } from './charts.js';
-import { $, $$, esc, screenRect } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, $$, screenRect } from './util.js';
 import { t } from './i18n.js';
 
 let heads = [];   // 목차의 제목들 (지금 읽는 위치 표시는 제목만)
@@ -76,10 +77,9 @@ function buildOutline(view, items) {
   heads = rows.map((r) => r.el);
   parts = [];
   const box = $('#lec-toc');
-  box.innerHTML = `<p class="toc-head">${t('목차')}</p><ul class="toc-list code-outline">${rows.map((r, i) => (
-    `<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${esc(`${r.name} — ${t('{a}행', { a: r.line })}`)}">`
-    + `<span class="ok" aria-hidden="true">${OUTLINE_MARK[r.kind] || '·'}</span>${esc(r.name)}</a></li>`
-  )).join('')}</ul>`;
+  setHtml(box, html`<p class="toc-head">${t('목차')}</p><ul class="toc-list code-outline">${rows.map((r, i) => (
+    [html`<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${`${r.name} — ${t('{a}행', { a: r.line })}`}">`, html`<span class="ok" aria-hidden="true">${OUTLINE_MARK[r.kind] || '·'}</span>${r.name}</a></li>`]
+  ))}</ul>`);
   links = $$('a[data-i]', box);
   active = -1;
   spy();
@@ -375,24 +375,20 @@ function buildToc(view) {
     if (r.head) {
       lv = +r.head.tagName[1] - top;
       heads.push(r.head);
-      return `<li class="lv${lv}"><a href="#${esc(r.head.id)}" data-i="${heads.length - 1}">${esc(r.head.textContent.trim())}</a></li>`;
+      return html`<li class="lv${lv}"><a href="#${r.head.id}" data-i="${heads.length - 1}">${r.head.textContent.trim()}</a></li>`;
     }
     if (hidden.has(r.kind)) return '';
     parts.push(r.el);
     const pad = lv < 0 ? INDENT[0] : INDENT[Math.min(lv, 3)] + 14;
     const tip = [r.name, r.label].filter(Boolean).join(' · ');
-    return `<li class="part part-${r.kind}"><a href="#" data-c="${parts.length - 1}" style="padding-left:${pad}px" title="${esc(tip)}">`
-      + `<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[r.kind].icon}"/></svg>`
-      + `<span class="tp-name">${esc(r.name)}</span>${r.label ? `<span class="tp-label">${esc(r.label)}</span>` : ''}</a></li>`;
-  }).join('');
+    return [html`<li class="part part-${r.kind}"><a href="#" data-c="${parts.length - 1}" style="padding-left:${pad}px" title="${tip}">`, html`<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[r.kind].icon}"/></svg>`, html`<span class="tp-name">${r.name}</span>${r.label ? html`<span class="tp-label">${r.label}</span>` : ''}</a></li>`];
+  });
   const kinds = Object.keys(PARTS).filter((k) => counts[k]);
   const buttons = kinds.map((k) => {
     const on = !hidden.has(k);
-    return `<button type="button" data-part="${k}" aria-pressed="${on}" title="${esc(on ? t('목차에서 {kind} 감추기', { kind: PARTS[k].many }) : t('목차에 {kind} 보이기', { kind: PARTS[k].many }))}">`
-      + `<svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(counts[k] === 1 ? PARTS[k].name : PARTS[k].many)} ${counts[k]}</button>`;
-  }).join('');
-  box.innerHTML = `<p class="toc-head">${t('목차')}</p>${buttons ? `<div class="toc-parts" role="group" aria-label="${t('목차에 보일 구성 요소')}">${buttons}</div>` : ''}`
-    + `<ul class="toc-list">${items}</ul>`;
+    return [html`<button type="button" data-part="${k}" aria-pressed="${on}" title="${on ? t('목차에서 {kind} 감추기', { kind: PARTS[k].many }) : t('목차에 {kind} 보이기', { kind: PARTS[k].many })}">`, html`<svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${counts[k] === 1 ? PARTS[k].name : PARTS[k].many} ${counts[k]}</button>`];
+  });
+  setHtml(box, [html`<p class="toc-head">${t('목차')}</p>${kinds.length ? html`<div class="toc-parts" role="group" aria-label="${t('목차에 보일 구성 요소')}">${buttons}</div>` : ''}`, html`<ul class="toc-list">${items}</ul>`]);
   links = $$('a[data-i]', box);
   active = -1;
   spy();

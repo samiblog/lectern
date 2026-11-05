@@ -20,7 +20,8 @@ import { navigate, refreshView } from './nav.js';
 import { terminalOpen, toggleTerminal } from './terminal.js';
 import { shapeOf } from './gather.js';
 import { showMenu } from './ui.js';
-import { $, esc } from './util.js';
+import { html, setHtml } from './html.js';
+import { $ } from './util.js';
 import { t } from './i18n.js';
 
 const root = document.documentElement;
@@ -63,12 +64,10 @@ function renderHead(pane) {
   }
   const { icon, name, tip } = describe(pane);
   const only = t('이 문서만 보기 — 모두 펼치기를 끝냄');
-  const html = `${icon}<span class="sp-name">${esc(name)}</span>`
-    + `${pane.editor?.dirty ? `<span class="dirty" title="${esc(t('저장하지 않은 편집이 있습니다'))}">●</span>` : ''}`
-    + `<button type="button" class="icon-btn small sp-only" title="${esc(only)}" aria-label="${esc(only)}"><svg><use href="#i-expand"/></svg></button>`;
-  if (head.lecHtml !== html) {
-    head.innerHTML = html;
-    head.lecHtml = html;
+  const markup = html`${[html`${icon}<span class="sp-name">${name}</span>`, html`${pane.editor?.dirty ? html`<span class="dirty" title="${t('저장하지 않은 편집이 있습니다')}">●</span>` : ''}`, html`<button type="button" class="icon-btn small sp-only" title="${only}" aria-label="${only}"><svg><use href="#i-expand"/></svg></button>`]}`;
+  if (head.lecHtml !== markup.text) {   // 같으면 다시 넣지 않는다
+    setHtml(head, markup);
+    head.lecHtml = markup.text;
   }
   head.title = `${tip}\n${t('머리를 두 번 누르면 이 문서만')}`;
 }

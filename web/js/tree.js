@@ -6,7 +6,8 @@ import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, $$, esc, dirname, copyText, toast, keepFocus, openHow, middleClickOpens } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, $$, dirname, copyText, toast, keepFocus, openHow, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -37,32 +38,28 @@ export function hasChangedInside(dirPath) {
 }
 
 /** html 문서 표시 (md 와 구분) — 폴더 개요에서. 사이드바 목록은 아이콘으로 구분한다 (icons.js) */
-export const kindBadge = (f) => (f.kind === 'html' ? `<span class="kind" title="${t('HTML 문서')}">HTML</span>` : '');
+export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" title="${t('HTML 문서')}">HTML</span>` : '');
 
-function fileRow(f, depth, extra = '') {
+function fileRow(f, depth, extra = null) {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
-  return `<div class="${cls.join(' ')}" data-doc="${esc(f.path)}" style="--d:${depth}" title="${esc(tipOf(f))}" tabindex="0">`
-    + `<span class="caret-space"></span>${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${extra}`
-    + `${S.changed.has(f.path) ? `<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`;
+  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="0">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
 }
 
 function nodesHtml(nodes, depth) {
-  let html = '';
+  const markup = [];
   for (const n of nodes) {
     if (n.type === 'file') {
-      html += fileRow(n, depth);
+      markup.push(fileRow(n, depth));
       continue;
     }
     const open = S.open.has(n.path);
     const cls = ['row', 'dir'];
     if (n.path === activeDir()) cls.push('active');
-    html += `<div class="${cls.join(' ')}" data-dir="${esc(n.path)}" style="--d:${depth}" title="${esc(n.path)}" tabindex="0">`
-      + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>`
-      + `${!open && hasChangedInside(n.path) ? `<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`;
-    if (open) html += nodesHtml(n.children, depth + 1);
+    markup.push([html`<div class="${cls.join(' ')}" data-dir="${n.path}" style="--d:${depth}" title="${n.path}" tabindex="0">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>`, html`${!open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`]);
+    if (open) markup.push(nodesHtml(n.children, depth + 1));
   }
-  return html;
+  return markup;
 }
 
 function renderTree() {
@@ -79,12 +76,12 @@ function renderTree() {
       const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
       return terms.every((w) => hay.includes(w));
     });
-    box.innerHTML = hits.length
-      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(f, 0, dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : '')).join('')
-      : `<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`;
+    setHtml(box, hits.length
+      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''))
+      : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`);
   } else {
     // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)
-    box.innerHTML = S.tree.length ? nodesHtml(S.tree, 0) : `<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`;
+    setHtml(box, S.tree.length ? nodesHtml(S.tree, 0) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
 }

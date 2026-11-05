@@ -14,6 +14,7 @@
 //   링크는 대상(문서·코드·자료·폴더·인터넷)을 가르고, 프로젝트 안의 파일이 없으면 '깨짐' (서버에 묻는다 — /api/exists).
 // - 문서 정보 (D62): 맨 앞 설정(frontmatter)의 키마다 값으로 문서를 묶는다 ('문서 정보' — status·author·date 등).
 
+import { html, raw, setHtml } from './html.js';
 import { S, on, emit } from './store.js';
 import { getText, postJSON } from './api.js';
 import { showMenu } from './ui.js';
@@ -29,7 +30,7 @@ import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { readYaml } from './slides.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow, rangeText,
+  $, $$, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow, rangeText,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -115,9 +116,9 @@ async function readDoc(tab, path) {
   if (isHtml(path)) {
     root = new DOMParser().parseFromString(text, 'text/html').body;   // 스크립트는 돌지 않고 그림도 부르지 않는다
   } else {
-    const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
+    const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
     const tpl = document.createElement('template');   // template 안은 그림을 부르지 않는다 (정화가 src 도 data-src 로 뗀다)
-    tpl.innerHTML = sanitizeHtml(html);
+    setHtml(tpl, raw(sanitizeHtml(markup)));
     root = tpl.content;
     prepareParts(root);
     await linkPaths(root, path, tab);   // 본문 속 경로 표기도 본문(doc.js)처럼 링크로 — 링크 번호가 본문과 같게
@@ -206,25 +207,18 @@ function itemRow(file, item, extra = '') {
   const { main, sub } = itemTexts(item);
   const long = item.caption || item.text;
   const cls = `pt-item${long ? ' has-cap' : ''}${item.done ? ' pt-done' : ''}`;
-  const bad = item.broken ? `<span class="pt-bad">${esc(t('깨짐'))}</span>` : '';
-  return `<div class="${cls}" tabindex="0" data-doc="${esc(file.path)}" data-kind="${item.kind}" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
-    + `<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[item.kind].icon}"/></svg>`
-    + `<span class="pt-text"><span class="pt-name">${esc(main)}</span>${sub || bad ? `<span class="pt-label">${bad}${esc(sub)}</span>` : ''}`
-    + `${item.section ? `<span class="pt-sec">${esc(item.section)}</span>` : ''}</span>${extra}</div>`;
+  const bad = item.broken ? html`<span class="pt-bad">${t('깨짐')}</span>` : '';
+  return [html`<div class="${cls}" tabindex="0" data-doc="${file.path}" data-kind="${item.kind}" data-n="${item.n}" title="${itemTip(file, item)}">`, html`<svg class="tp-icon" aria-hidden="true"><use href="#${PARTS[item.kind].icon}"/></svg>`, html`<span class="pt-text"><span class="pt-name">${main}</span>${sub || bad ? html`<span class="pt-label">${bad}${sub}</span>` : ''}`, html`${item.section ? html`<span class="pt-sec">${item.section}</span>` : ''}</span>${extra}</div>`];
 }
 
 /** 차트의 작은 그림 칸 — 그림은 보일 때 그린다 (drawChartThumb) */
 function chartThumb(file, item) {
-  return `<div class="pt-thumb pt-chart" tabindex="0" data-doc="${esc(file.path)}" data-kind="chart" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
-    + `<div class="pt-pic" data-chart="${esc(item.chart || '')}"></div>`
-    + `<span class="pt-cap">${esc(item.caption || item.label || item.name)}</span></div>`;
+  return [html`<div class="pt-thumb pt-chart" tabindex="0" data-doc="${file.path}" data-kind="chart" data-n="${item.n}" title="${itemTip(file, item)}">`, html`<div class="pt-pic" data-chart="${item.chart || ''}"></div>`, html`<span class="pt-cap">${item.caption || item.label || item.name}</span></div>`];
 }
 
 function thumb(file, item, others) {
-  const more = others.length ? `<span class="pt-more" title="${esc(`${t('같은 그림을 쓰는 다른 문서:')}\n${others.join('\n')}`)}">${t('+{n}곳', { n: others.length })}</span>` : '';
-  return `<div class="pt-thumb" tabindex="0" data-doc="${esc(file.path)}" data-kind="figure" data-n="${item.n}" title="${esc(itemTip(file, item))}">`
-    + `<div class="pt-pic" data-src="${esc(item.src)}" data-alt="${esc(item.alt)}"></div>`
-    + `<span class="pt-cap">${esc(item.caption || item.label || item.name)}</span>${more}</div>`;
+  const more = others.length ? html`<span class="pt-more" title="${`${t('같은 그림을 쓰는 다른 문서:')}\n${others.join('\n')}`}">${t('+{n}곳', { n: others.length })}</span>` : '';
+  return [html`<div class="pt-thumb" tabindex="0" data-doc="${file.path}" data-kind="figure" data-n="${item.n}" title="${itemTip(file, item)}">`, html`<div class="pt-pic" data-src="${item.src}" data-alt="${item.alt}"></div>`, html`<span class="pt-cap">${item.caption || item.label || item.name}</span>${more}</div>`];
 }
 
 /** 모을 것 버튼과 거르기 칸의 안내 */
@@ -277,16 +271,13 @@ function render() {
     if (!counts[state.kind]) state.kind = KINDS.find((k) => counts[k]) || state.kind;
     state.autoKind = false;
   }
-  $('#lec-parts-kinds').innerHTML = KINDS.map((k) => `<button type="button" role="tab" data-kind="${k}" aria-selected="${k === state.kind}"`
-    + ` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${esc(PARTS[k].many)}`
-    + `<span class="n">${counts[k]}</span></button>`).join('');
+  setHtml($('#lec-parts-kinds'), KINDS.map((k) => [html`<button type="button" role="tab" data-kind="${k}" aria-selected="${k === state.kind}"`, html` class="${k === state.kind ? 'active' : ''}${counts[k] ? '' : ' zero'}"><svg aria-hidden="true"><use href="#${PARTS[k].icon}"/></svg>${PARTS[k].many}`, html`<span class="n">${counts[k]}</span></button>`]));
   // 종류 아래 단추 (할 일·링크·출처 — D62): 범위 안의 그 종류를 단추마다 센다
   const subs = SUBS[state.kind];
   const sub = subs?.find(([k]) => k === state.sub[state.kind]) || subs?.[0];
   if (subs) {
     const of = (test) => groups.reduce((n, g) => n + g.items.filter((it) => it.kind === state.kind && test(it)).length, 0);
-    $('#lec-parts-sub').innerHTML = subs.map(([k, label, test]) => `<button type="button" data-sub="${k}" aria-pressed="${k === sub[0]}"`
-      + ` class="${k === sub[0] ? 'active' : ''}">${esc(label)}<span class="n">${of(test)}</span></button>`).join('');
+    setHtml($('#lec-parts-sub'), subs.map(([k, label, test]) => [html`<button type="button" data-sub="${k}" aria-pressed="${k === sub[0]}"`, html` class="${k === sub[0] ? 'active' : ''}">${label}<span class="n">${of(test)}</span></button>`]));
     $('#lec-parts-sub').hidden = false;
   }
   const subTest = sub ? sub[2] : () => true;
@@ -295,7 +286,7 @@ function render() {
   const seen = new Map();   // 그림 → 처음 보인 칸의 '다른 문서' 목록 (같은 그림을 한 번만)
   let shown = 0;
   let docs = 0;
-  const html = [];
+  const markup = [];
   for (const { file, items } of groups) {
     const title = file.title || basename(file.path);
     let mine = items.filter((it) => it.kind === state.kind && subTest(it)
@@ -323,17 +314,16 @@ function render() {
     if (shown >= MAX_SHOWN) break;   // 같은 그림의 '+N곳'은 여기까지 읽은 문서로 센다
     shown += mine.length;
     docs += 1;
-    const head = `<div class="pt-doc" tabindex="0" data-doc="${esc(file.path)}" title="${esc(file.path)}">`
-      + `<span class="label">${esc(title)}</span>${dirname(file.path) ? `<span class="sub">${esc(dirname(file.path))}</span>` : ''}</div>`;
-    html.push({ head, file, mine, body });
+    const head = [html`<div class="pt-doc" tabindex="0" data-doc="${file.path}" title="${file.path}">`, html`<span class="label">${title}</span>${dirname(file.path) ? html`<span class="sub">${dirname(file.path)}</span>` : ''}</div>`];
+    markup.push({ head, file, mine, body });
   }
-  listed = html.flatMap(({ file, mine }) => mine.map((item) => ({ file, item })));
+  listed = markup.flatMap(({ file, mine }) => mine.map((item) => ({ file, item })));
   keepFocus(list, () => {
-    list.innerHTML = html.map(({ head, file, mine, body }) => {
-      if (body?.charts) return `${head}<div class="pt-grid pt-charts">${body.charts.map((it) => chartThumb(file, it)).join('')}</div>`;
-      if (body) return `${head}<div class="pt-grid">${body.cells.map(([it, others]) => thumb(file, it, others)).join('')}</div>`;
-      return head + mine.map((it) => itemRow(file, it)).join('');
-    }).join('');
+    setHtml(list, markup.map(({ head, file, mine, body }) => {
+      if (body?.charts) return html`${head}<div class="pt-grid pt-charts">${body.charts.map((it) => chartThumb(file, it))}</div>`;
+      if (body) return html`${head}<div class="pt-grid">${body.cells.map(([it, others]) => thumb(file, it, others))}</div>`;
+      return [head, mine.map((it) => itemRow(file, it))];
+    }));
   });
   watchThumbs(tab);
   // 알림: 개수, 거른 결과, 읽는 중
@@ -372,8 +362,7 @@ function renderMeta(tab) {
   }
   const keys = [...counts.keys()].sort((a, b) => counts.get(b) - counts.get(a) || natCompare(a, b));
   if (!counts.has(state.mkey)) state.mkey = keys[0] || null;
-  $('#lec-parts-kinds').innerHTML = keys.map((k) => `<button type="button" role="tab" data-mkey="${esc(k)}" aria-selected="${k === state.mkey}"`
-    + ` class="${k === state.mkey ? 'active' : ''}">${esc(k)}<span class="n">${counts.get(k)}</span></button>`).join('');
+  setHtml($('#lec-parts-kinds'), keys.map((k) => [html`<button type="button" role="tab" data-mkey="${k}" aria-selected="${k === state.mkey}"`, html` class="${k === state.mkey ? 'active' : ''}">${k}<span class="n">${counts.get(k)}</span></button>`]));
   const reading = scanning?.tab === tab ? t('문서 읽는 중 {done}/{total}', { done: scanning.done, total: scanning.total }) : '';
   const list = $('#lec-parts-list');
   if (!state.mkey) {
@@ -401,11 +390,10 @@ function renderMeta(tab) {
   const dates = values.length && values.every((v) => DATE_LIKE.test(v));
   const numbers = values.length && values.every((v) => /^-?\d+(\.\d+)?$/.test(v));
   values.sort(dates ? (a, b) => natCompare(b, a) : numbers ? (a, b) => a - b : (a, b) => byValue.get(b).length - byValue.get(a).length || natCompare(a, b));
-  const row = (f) => `<div class="pt-doc pt-mdoc" tabindex="0" data-doc="${esc(f.path)}" title="${esc(f.path)}">`
-    + `<span class="label">${esc(f.title || basename(f.path))}</span>${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
-  const group = (label, files, cls = '') => `<div class="pt-val${cls}"><span class="label">${esc(label)}</span><span class="n">${files.length}</span></div>${files.map(row).join('')}`;
+  const row = (f) => [html`<div class="pt-doc pt-mdoc" tabindex="0" data-doc="${f.path}" title="${f.path}">`, html`<span class="label">${f.title || basename(f.path)}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+  const group = (label, files, cls = '') => html`<div class="pt-val${cls}"><span class="label">${label}</span><span class="n">${files.length}</span></div>${files.map(row)}`;
   keepFocus(list, () => {
-    list.innerHTML = values.map((v) => group(v, byValue.get(v))).join('') + (none.length ? group(t('값 없음'), none, ' none') : '');
+    setHtml(list, [values.map((v) => group(v, byValue.get(v))), (none.length ? group(t('값 없음'), none, ' none') : '')]);
   });
   $('#lec-parts-info').textContent = [`${t('문서 {n}개', { n: docs.length })}, ${t('값 {n}가지', { n: values.length })}`, reading].filter(Boolean).join(' · ');
 }
@@ -455,13 +443,12 @@ function renderFiles(tab) {
     const [best] = [...chips.entries()].sort(([, a], [, b]) => order.indexOf(a.group) - order.indexOf(b.group) || b.n - a.n);
     if (best) state.ftype = best[0];
   }
-  $('#lec-parts-kinds').innerHTML = GROUPS.map(([group, name]) => {
+  setHtml($('#lec-parts-kinds'), GROUPS.map(([group, name]) => {
     const mine = [...chips.entries()].filter(([, c]) => c.group === group)
       .sort(([, a], [, b]) => b.n - a.n || natCompare(a.type.label, b.type.label));
     if (!mine.length) return '';
-    return `<div class="ft-group"><span class="ft-label">${esc(name)}</span>${mine.map(([key, c]) => `<button type="button" role="tab" data-ftype="${esc(key)}"`
-      + ` aria-selected="${key === state.ftype}" class="${key === state.ftype ? 'active' : ''}">${c.icon}${esc(c.type.label)}<span class="n">${c.n}</span></button>`).join('')}</div>`;
-  }).join('');
+    return html`<div class="ft-group"><span class="ft-label">${name}</span>${mine.map(([key, c]) => [html`<button type="button" role="tab" data-ftype="${key}"`, html` aria-selected="${key === state.ftype}" class="${key === state.ftype ? 'active' : ''}">${c.icon}${c.type.label}<span class="n">${c.n}</span></button>`])}</div>`;
+  }));
   // 목록: 고른 형식의 파일 (거르기는 이름·경로, 문서는 제목도)
   const match = matcher(state.filter);
   let files = entries.filter((e) => e.key === state.ftype && match(e.f.name, e.f.path, e.f.title || '')).map((e) => e.f);
@@ -471,13 +458,10 @@ function renderFiles(tab) {
   fileRows = new Map(files.map((f) => [f.path, f]));
   const current = S.view?.type === 'doc' || S.view?.type === 'code' ? S.view.path : null;
   const [group, typeKey] = (state.ftype || '').split(':');
-  const html = group === 'others' && PICTURE_EXT.has(typeKey)
-    ? `<div class="pt-grid">${files.map((f) => `<div class="ft-thumb" tabindex="0" data-file="${esc(f.path)}" title="${esc(fileTip(f))}">`
-      + `<div class="pt-pic" data-file-src="${esc(f.path)}"></div><span class="pt-cap">${esc(f.name)}</span></div>`).join('')}</div>`
-    : files.map((f) => `<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${esc(f.path)}"`
-      + ` title="${esc(f.kind ? tipOf(f) : fileTip(f))}">${fileIcon(f.name, f.kind)}<span class="label">${esc(f.kind ? labelOf(f) : f.name)}</span>`
-      + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`).join('');
-  keepFocus(list, () => { list.innerHTML = html; });
+  const markup = group === 'others' && PICTURE_EXT.has(typeKey)
+    ? html`<div class="pt-grid">${files.map((f) => [html`<div class="ft-thumb" tabindex="0" data-file="${f.path}" title="${fileTip(f)}">`, html`<div class="pt-pic" data-file-src="${f.path}"></div><span class="pt-cap">${f.name}</span></div>`])}</div>`
+    : files.map((f) => [html`<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${f.path}"`, html` title="${f.kind ? tipOf(f) : fileTip(f)}">${fileIcon(f.name, f.kind)}<span class="label">${f.kind ? labelOf(f) : f.name}</span>`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`]);
+  keepFocus(list, () => { setHtml(list, markup); });
   watchThumbs(tab);
   const total = chips.get(state.ftype)?.n || 0;
   let info;
@@ -509,7 +493,7 @@ function watchThumbs(tab) {
         if (tab !== S.tab) continue;
         const img = document.createElement('img');
         img.alt = '';
-        img.addEventListener('error', () => { pic.innerHTML = `<span class="image-off">${esc(t('그림을 그리지 못했습니다'))}</span>`; }, { once: true });
+        img.addEventListener('error', () => { setHtml(pic, html`<span class="image-off">${t('그림을 그리지 못했습니다')}</span>`); }, { once: true });
         img.src = docUrl(tab, pic.dataset.fileSrc);
         pic.append(img);
         continue;
@@ -543,7 +527,7 @@ function drawChartThumb(pic, tab) {
   const { path, item } = found;
   const theme = document.documentElement.dataset.theme || '';
   if (item.svg && item.svgTheme === theme) {
-    pic.innerHTML = item.svg;
+    setHtml(pic, raw(item.svg));
     return;
   }
   chartQueue = chartQueue.then(async () => {
@@ -551,7 +535,7 @@ function drawChartThumb(pic, tab) {
     const stage = document.createElement('div');
     stage.className = 'lec-stage';
     stage.style.width = '560px';
-    stage.innerHTML = `<pre class="lec-chart" data-chart="${esc(item.chart)}">${esc(item.code || '')}</pre>`;
+    setHtml(stage, html`<pre class="lec-chart" data-chart="${item.chart}">${item.code || ''}</pre>`);
     document.body.append(stage);
     try {
       await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });
@@ -560,7 +544,7 @@ function drawChartThumb(pic, tab) {
     }
     const svg = stage.querySelector('pre.lec-chart > svg');
     if (svg) Object.assign(item, { svg: svg.outerHTML, svgTheme: theme });
-    if (pic.isConnected) pic.innerHTML = svg ? item.svg : `<span class="image-off">${esc(t('차트를 그리지 못했습니다'))}</span>`;
+    if (pic.isConnected) setHtml(pic, svg ? raw(item.svg) : html`<span class="image-off">${t('차트를 그리지 못했습니다')}</span>`);
   });
 }
 

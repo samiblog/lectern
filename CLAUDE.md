@@ -31,7 +31,7 @@ node tools/rules_check.mjs         :: 규칙 시험만 (브라우저 없이 1초
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
-변경을 마치면 `pytest`(규칙 시험 포함, 약 15초)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다. 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
+변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 15초)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다. 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
 Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열기, WebView2)은 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
 
 ## 폴더 구조
@@ -71,7 +71,7 @@ samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파�
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
-tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), rules_check.mjs(규칙 시험), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
+tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
 docs/                   VISION(방향 — 마름모형 리서치 방법), ARCHITECTURE, MODULES, PITFALLS, DECISIONS, ROADMAP, HISTORY, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다
@@ -84,6 +84,8 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 - Python 3.10+ (3.12+ 권장), 타입 힌트, 표준 라이브러리 우선. 정션은 `DirEntry.is_junction`(3.12+) 대신 `st_reparse_tag` 로 판정하므로 3.10·3.11에서도 걸러진다.
 - 새 Python 의존성은 꼭 필요할 때만. 넣으면 `requirements.txt` 와 `docs/DECISIONS.md` 에 이유를 남긴다. 사내망 설치는 wheel 반입이 필요하다는 점을 잊지 않는다. 버전은 `==` 로 고정하고, 요구사항 파일 첫 줄의 `coding: utf-8` 선언은 지우지 않는다 (D22: 없으면 한국어 Windows의 pip 24 이하가 한글 주석을 못 읽는다).
 - JS는 전역을 쓰지 않는다. 예외는 vendor 전역(`markdownit`, `markdownItAnchor`, `markdownitFootnote`, `markdownitTaskLists`, `hljs`, `katex`, `DOMPurify`, `mermaid`, 터미널을 처음 열 때 불러오는 `Terminal`·`FitAddon`·`Unicode11Addon`, 처음 편집할 때 불러오는 `CodeMirror`, 차트가 있는 문서를 처음 그릴 때 불러오는 `vega`·`vegaLite`·`echarts`·`Plotly`·`Viz`)과 `window.pywebview`.
+- 화면에 HTML 을 넣을 때는 `html.js` 의 `html` 태그와 `setHtml`·`addHtml` 을 쓴다 (D89 — 값은 저절로 이스케이프된다, `innerHTML` 을 바로 쓰면 시험이 잡는다). 조각을 `+`·`.join('')` 으로 잇지 않고 배열로 넘긴다. `raw()` 는 정화를 거친 HTML 에만.
+- 앱의 데이터 모양은 `tools/types/lectern.d.ts` 에 적는다 (`tsc` 가 개발할 때만 읽는다). 새 import 순환을 만들지 않는다 (시험이 잡는다).
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
 - UI 문구는 한국어로 쓰고 `t()` 로 감싼다 (JS 는 `t('…')`, 템플릿 글자 안이면 `${t('…')}`, 값은 `t('문서 {n}개', { n })` — Python 은 `i18n.t`). 영어는 `web/js/lang/en.js`·`lectern/i18n.py` 의 `EN` 에 같이 넣는다 (`tests/test_i18n.py` 가 감싸지 않은 한국어와 빠진 영어를 잡는다, D46). 한국어 문구는 짧은 평서문. 오류 메시지는 무엇이 안 됐고 어떻게 하면 되는지 말한다 ('F5 를 누르면 다시 불러옵니다'처럼 — 'F5 로 다시 불러옵니다'는 저절로 되는 것처럼 읽힌다).
 - 같은 것은 같은 이름으로 (v0.13.1 점검): 그림(이미지 아님 — 인터넷 그림), 박스글(콜아웃·인용 상자), 누르기(클릭 아님), 거르기, 장 하이라이트·하이라이트 해제, '자료' 목록(사이드바 '파일' 탭 안의 문서도 코드도 아닌 파일 — D48, 안쪽 이름은 others·files), 터미널 모음, 모아 보기. 툴바의 Ctrl+P 버튼은 '문서 열기'(이름·제목으로 열기)이고, '검색'은 본문 검색, '문서에서 찾기'는 Ctrl+F 다. 말줄임은 '…' 한 글자.

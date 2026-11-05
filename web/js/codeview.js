@@ -19,7 +19,8 @@ import { languageOf, outlineOf } from './outline.js';
 import { isTableFile, renderCsv, renderRows, colName, initCsv } from './csvview.js';
 import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet, isCode } from './icons.js';
 import { paneShown } from './panes.js';
-import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
+import { addHtml, esc, html, raw, setHtml } from './html.js';
+import { $, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_BYTES = 4 * 1024 * 1024;        // 이보다 크면 보이지 않고 편집기로
@@ -27,10 +28,10 @@ const MAX_HIGHLIGHT = 1024 * 1024;        // 이보다 크면 색 없이 (빨리
 const CHECK_MS = 2000;                    // 보고 있는 파일의 수정 시각을 보는 주기
 
 /** highlight.js 결과를 줄로 나눈다. 여러 줄에 걸친 <span>(주석·문자열)은 줄마다 닫고 다음 줄에서 다시 연다 */
-function splitLines(html) {
+function splitLines(markup) {
   const out = [];
   const open = [];
-  for (const raw of html.split('\n')) {
+  for (const raw of markup.split('\n')) {
     const head = open.join('');
     for (const m of raw.matchAll(/<span[^>]*>|<\/span>/g)) {
       if (m[0] === '</span>') open.pop();
@@ -75,8 +76,8 @@ function notice(view, path, message) {
   delete view.dataset.encoding;
   view.dataset.codePath = path;
   const label = isSheet(path) ? t('기본 앱으로 열기') : t('편집기로 열기');
-  view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(message)}</p>
-    <p><button type="button" class="primary cv-editor">${label}</button></p></div>`;
+  setHtml(view, html`<div class="doc-missing"><h1>${path}</h1><p>${message}</p>
+    <p><button type="button" class="primary cv-editor">${label}</button></p></div>`);
 }
 
 /**
@@ -128,11 +129,7 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   view.className = 'md-body code-view';
   delete view.dataset.docPath;   // 장 하이라이트·접기는 md 문서에서만
   view.style.setProperty('--cv-digits', String(String(lines.length).length));
-  view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
-    + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(lang.name)}</div>`
-    + `<div class="cv-tools">${editButton(path)}${openButton(path)}`
-    + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
-    + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');
+  setHtml(view, [html`<header class="cv-head"><div class="cv-title">${basename(path)}</div>`, html`<div class="cv-sub">${dirname(path) ? `${dirname(path)} · ` : ''}${lang.name}</div>`, html`<div class="cv-tools">${editButton(path)}${openButton(path)}`, html`<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`, lines.map((l, i) => html`<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${raw(l)}</span></div>`)]);
   view.dataset.codePath = path;
   if (encoding) view.dataset.encoding = encoding;   // UTF-8 이 아니면 보기만 — 한 줄 편집이 본다 (lineedit.js, D85)
   else delete view.dataset.encoding;
@@ -190,16 +187,12 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   view.dataset.codePath = path;
   view.dataset.sheet = sh?.name ?? '';
   view.dataset.firstCol = String(sh?.first_col ?? 0);
-  const tabs = data.sheets.map((s, i) => `<button type="button" class="xl-sheet${s.hidden ? ' xl-hidden' : ''}" data-sheet="${i}" aria-pressed="${i === data.index}"`
-    + `${s.hidden ? ` title="${esc(t('숨긴 시트'))}"` : ''}>${esc(s.name)}</button>`).join('');
-  view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
-    + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(t('엑셀'))}</div>`
-    + `<div class="cv-tools">${openButton(path)}<button type="button" class="text-btn cv-copy" title="${esc(t('지금 시트를 탭으로 나눈 글로 — 엑셀에 붙이면 칸이 나뉩니다'))}">${t('전체 복사')}</button></div>`
-    + `<nav class="xl-sheets" aria-label="${esc(t('시트'))}">${tabs}</nav></header>`;
+  const tabs = data.sheets.map((s, i) => [html`<button type="button" class="xl-sheet${s.hidden ? ' xl-hidden' : ''}" data-sheet="${i}" aria-pressed="${i === data.index}"`, html`${s.hidden ? html` title="${t('숨긴 시트')}"` : ''}>${s.name}</button>`]);
+  setHtml(view, [html`<header class="cv-head"><div class="cv-title">${basename(path)}</div>`, html`<div class="cv-sub">${dirname(path) ? `${dirname(path)} · ` : ''}${t('엑셀')}</div>`, html`<div class="cv-tools">${openButton(path)}<button type="button" class="text-btn cv-copy" title="${t('지금 시트를 탭으로 나눈 글로 — 엑셀에 붙이면 칸이 나뉩니다')}">${t('전체 복사')}</button></div>`, html`<nav class="xl-sheets" aria-label="${t('시트')}">${tabs}</nav></header>`]);
   if (!sh) {
     view.dataset.sheet = '';
     view.codeText = '';
-    view.insertAdjacentHTML('beforeend', `<p class="xl-empty">${esc(t('시트가 없습니다'))}</p>`);
+    addHtml(view, 'beforeend', html`<p class="xl-empty">${t('시트가 없습니다')}</p>`);
     finish(pane, path, null, { path, info: `${t('엑셀')} · ${formatSize(size)}${modifiedText(modified)}` });
     return true;
   }
@@ -213,7 +206,7 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   const letter = (c) => colName(first + c);
   const note = sh.truncated ? t('앞부분만 보입니다 (행 {rows}·칸 {cells}까지) — 전부 보려면 엑셀로 여세요', { rows: '50,000', cells: '1,000,000' }) : '';
   const shown = renderRows(view, rows, lines, `${key}:${data.index}`, { letter, titleOf: (r, c) => sh.formulas[`${letter(c)}${r}`] || '', note, keep, merges: sh.merges, line });
-  if (!rows.length) view.insertAdjacentHTML('beforeend', `<p class="xl-empty">${esc(t('빈 시트입니다'))}</p>`);
+  if (!rows.length) addHtml(view, 'beforeend', html`<p class="xl-empty">${t('빈 시트입니다')}</p>`);
   finish(pane, path, null, {
     path, info: `${t('엑셀')} · ${t("'{name}' 시트", { name: sh.name })} · ${t('{n}행', { n: shown.rows.toLocaleString() })} · ${t('{n}열', { n: shown.cols })}`
       + ` · ${formatSize(size)}${modifiedText(modified)}`,
@@ -225,14 +218,13 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
 }
 
 /** 머리줄의 '편집' — 코드만 (자료 파일은 편집 모드가 열지 않는다) */
-const editButton = (path) => (isCode(path) ? `<button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
-  + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>` : '');
+const editButton = (path) => (isCode(path) ? [html`<button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`, html`<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>`] : '');
 
 /** 머리줄의 '편집기로 열기' — 자료 파일(csv·txt 등)·엑셀은 기본 앱(엑셀·메모장)으로 */
 function openButton(path) {
   return isDataFile(path) || isSheet(path)
-    ? `<button type="button" class="text-btn cv-editor" title="${t('기본 앱으로 열기 (자료 목록에서 두 번 누르기)')}">${t('기본 앱으로 열기')}</button>`
-    : `<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`;
+    ? html`<button type="button" class="text-btn cv-editor" title="${t('기본 앱으로 열기 (자료 목록에서 두 번 누르기)')}">${t('기본 앱으로 열기')}</button>`
+    : html`<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`;
 }
 
 function modifiedText(modified) {
@@ -248,10 +240,7 @@ function showTable(pane, path, { text, size, modified, encoding, top, line }) {
   const keep = view.classList.contains('csv-view') ? view.csv : null;   // 다시 그릴 때 계산 열은 그대로 (D86)
   view.className = 'md-body code-view';
   delete view.dataset.docPath;
-  view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
-    + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(languageOf(path).name)}</div>`
-    + `<div class="cv-tools">${editButton(path)}${openButton(path)}`
-    + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`;
+  setHtml(view, [html`<header class="cv-head"><div class="cv-title">${basename(path)}</div>`, html`<div class="cv-sub">${dirname(path) ? `${dirname(path)} · ` : ''}${languageOf(path).name}</div>`, html`<div class="cv-tools">${editButton(path)}${openButton(path)}`, html`<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`]);
   view.dataset.codePath = path;
   view.codeText = text;
   const info = renderCsv(view, path, text, `${tab.id}:${path}`, keep, line);

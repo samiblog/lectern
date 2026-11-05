@@ -10,6 +10,11 @@ import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
 TYPESCRIPT = 'typescript@7.0.2'
+# raw() 를 쓰는 곳 (D89): 이미 안전한 HTML 이라고 약속한 곳이다. DOMPurify 를 거친 것(charts·doc·help·parts),
+# highlight.js 의 결과(codeview), 앱이 만든 단축키 표시(help), 앱이 그린 SVG(parts). 더할 때는 그 값이 정말 안전한지 본다
+RAW_USES = {'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 'parts': 3}
+# esc() 를 바로 쓰는 곳: 화면이 아니라 글을 만든다 — highlight.js 가 없을 때의 코드(codeview), 설명서의 Markdown(help)
+ESC_USES = {'codeview', 'help'}
 # 이미 있는 import 순환. 풀면 여기서 지운다 — 새로 생기거나 커지면 test_no_new_import_cycle 이 실패한다 (D88)
 KNOWN_CYCLES = [
     {'basket', 'codeview', 'csvview', 'doc', 'docmenu', 'doctabs', 'editor', 'htmldoc', 'lineedit', 'nav', 'newdoc', 'palette'},
@@ -66,6 +71,21 @@ def test_no_new_import_cycle():
     found = sorted(sorted(g) for g in import_cycles())
     known = sorted(sorted(g) for g in KNOWN_CYCLES)
     assert found == known, f'import 순환이 달라졌습니다 — 새 순환이면 풀고, 기존 순환을 풀었으면 KNOWN_CYCLES 를 줄입니다: {found}'
+
+
+def code_of(path: Path) -> str:
+    return '\n'.join(line for line in path.read_text(encoding='utf-8').splitlines() if not line.lstrip().startswith(('//', '*', '/*')))
+
+
+def test_html_goes_through_html_js():
+    # 값이 든 HTML 을 바로 넣으면 이스케이프를 빠뜨릴 수 있다. 비우기와 값 없는 글 상수만 둔다
+    direct = re.compile(r"\.innerHTML\s*\+?=(?!=)(?!\s*'[^'$]*';)|\.outerHTML\s*=(?!=)|\.insertAdjacentHTML\(")
+    modules = {p.stem: code_of(p) for p in (ROOT / 'web' / 'js').glob('*.js') if p.stem != 'html'}
+    bad = {name: direct.findall(code) for name, code in modules.items() if direct.search(code)}
+    assert not bad, f'html.js 의 setHtml·addHtml 을 씁니다: {bad}'
+    raws = {name: n for name, code in modules.items() if (n := len(re.findall(r'\braw\(', code)))}
+    assert raws == RAW_USES, 'raw() 가 달라졌습니다 — 그 값이 정말 안전한지 보고 RAW_USES 를 고칩니다'
+    assert {name for name, code in modules.items() if re.search(r'\besc\(', code)} == ESC_USES
 
 
 def test_every_js_module_is_listed():

@@ -15,7 +15,8 @@
 
 import { S } from './store.js';
 import { saveConfig } from './api.js';
-import { esc, basename, toast, copyText } from './util.js';
+import { addHtml, html, setHtml } from './html.js';
+import { basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 import {
   numberOf, isMissing, decimalsOf, findTimeColumn, periodText, hasSameTimes, calcValues, calcText, findRegions, reshapeRegion, regionOfLines, headerIsTime,
@@ -114,16 +115,16 @@ export function statsOf(values, numeric) {
 }
 
 function statsHtml(s, numeric) {
-  const row = (label, value) => `<div><span>${esc(label)}</span><b>${esc(value)}</b></div>`;
-  let html = row(t('개수'), format(s.count, 0)) + (s.empty ? row(t('빈칸'), format(s.empty, 0)) : '');
+  const row = (label, value) => html`<div><span>${label}</span><b>${value}</b></div>`;
+  /** @type {Markup[]} */
+  const markup = [row(t('개수'), format(s.count, 0)), (s.empty ? row(t('빈칸'), format(s.empty, 0)) : '')];
   if (numeric && s.numbers) {
-    html += row(t('합계'), format(s.sum, s.dec)) + row(t('평균'), format(s.mean, s.dec + 2)) + row(t('최소'), format(s.min, s.dec))
-      + row(t('최대'), format(s.max, s.dec)) + row(t('중앙값'), format(s.median, s.dec + 1));
+    markup.push([row(t('합계'), format(s.sum, s.dec)), row(t('평균'), format(s.mean, s.dec + 2)), row(t('최소'), format(s.min, s.dec)), row(t('최대'), format(s.max, s.dec)), row(t('중앙값'), format(s.median, s.dec + 1))]);
   } else if (!numeric && s.top) {
-    html += row(t('고유값'), format(s.unique, 0));
-    if (s.top[1] > 1) html += row(t('최빈'), `${s.top[0].length > 18 ? `${s.top[0].slice(0, 17)}…` : s.top[0]} (${format(s.top[1], 0)})`);   // 모두 다르면 뜻이 없다
+    markup.push(row(t('고유값'), format(s.unique, 0)));
+    if (s.top[1] > 1) markup.push(row(t('최빈'), `${s.top[0].length > 18 ? `${s.top[0].slice(0, 17)}…` : s.top[0]} (${format(s.top[1], 0)})`));   // 모두 다르면 뜻이 없다
   }
-  return html;
+  return markup;
 }
 
 // ---- 그리기 ---------------------------------------------------------------------------------
@@ -191,12 +192,11 @@ function drawRegions(view) {
   view.querySelector('.csv-headrow').hidden = !!st.region;
   if (bar.hidden) return;
   const name = (r, i) => (r.custom ? t('지정한 표') : t('표 {n}', { n: i + 1 }));
-  const chips = st.regions.map((r, i) => `<button type="button" class="csv-region" data-region="${i}" aria-pressed="${st.pick === i}" title="${esc(r.titles.join(' · '))}">${esc(name(r, i))}<small>${esc(regionRef(st, r))}</small></button>`).join('');
-  const all = `<button type="button" class="csv-region" data-region="all" aria-pressed="${st.pick === 'all'}">${esc(st.baseLetter ? t('시트 전체') : t('파일 전체'))}</button>`;
-  const depth = st.region ? `<span class="csv-depth">${esc(t('머리행'))}<button type="button" data-depth="-1" aria-label="${esc(t('머리행 줄이기'))}">−</button><b>${esc(t('{n}줄', { n: st.region.depth }))}</b>`
-    + `<button type="button" data-depth="1" aria-label="${esc(t('머리행 늘리기'))}">+</button></span>` : '';
-  const title = st.region?.titles.length ? `<span class="csv-title">${esc(st.region.titles.join(' · '))}</span>` : '';
-  bar.innerHTML = `${chips}${all}${depth}${title}`;
+  const chips = st.regions.map((r, i) => html`<button type="button" class="csv-region" data-region="${i}" aria-pressed="${st.pick === i}" title="${r.titles.join(' · ')}">${name(r, i)}<small>${regionRef(st, r)}</small></button>`);
+  const all = html`<button type="button" class="csv-region" data-region="all" aria-pressed="${st.pick === 'all'}">${st.baseLetter ? t('시트 전체') : t('파일 전체')}</button>`;
+  const depth = st.region ? [html`<span class="csv-depth">${t('머리행')}<button type="button" data-depth="-1" aria-label="${t('머리행 줄이기')}">−</button><b>${t('{n}줄', { n: st.region.depth })}</b>`, html`<button type="button" data-depth="1" aria-label="${t('머리행 늘리기')}">+</button></span>`] : '';
+  const title = st.region?.titles.length ? html`<span class="csv-title">${st.region.titles.join(' · ')}</span>` : '';
+  setHtml(bar, [chips, all, depth, title]);
   bar.title = t('시트를 표로 나눠 봅니다 — 틀리면 시트 전체나 머리행 단추로 바로잡습니다');
 }
 
@@ -389,23 +389,20 @@ function update(view) {
   Object.assign(st, { body, idx, bodyLines });
   const shown = idx.slice(0, MAX_SHOW);
   const tbody = view.querySelector('.csv-table tbody.csv-rows');
-  tbody.innerHTML = shown.map((i) => {
+  setHtml(tbody, [shown.map((i) => {
     const [a, b] = bodyLines[i];
     const cells = cols.map((col, c) => {
       const formula = c < width ? st.titleOf?.(a, c) : '';   // 엑셀의 수식 (D77) — 계산 열에는 없다
-      const tip = formula ? ` title="${esc(t('수식: {formula}', { formula }))}"` : '';
+      const tip = formula ? html` title="${t('수식: {formula}', { formula })}"` : '';
       const cls = [col.numeric ? 'num' : '', col.calc != null ? 'csv-calc' : ''].filter(Boolean).join(' ');
-      return `<td${cls ? ` class="${cls}"` : ''}${tip}>${esc(body[i][c] ?? '')}</td>`;
-    }).join('');
-    return `<tr class="cv-line" data-line="${a}"${b > a ? ` data-end="${b}"` : ''}><td class="csv-rn">${a}</td>${cells}</tr>`;
-  }).join('')
-    + (idx.length > MAX_SHOW ? `<tr class="csv-more"><td colspan="${cols.length + 1}">${esc(t('처음 {n}행만 보입니다 — 거르면 좁힐 수 있습니다', { n: MAX_SHOW.toLocaleString() }))}</td></tr>` : '')
-    + (idx.length ? '' : `<tr class="csv-more"><td colspan="${cols.length + 1}">${esc(t('맞는 행이 없습니다'))}</td></tr>`);
+      return html`<td${cls ? html` class="${cls}"` : ''}${tip}>${body[i][c] ?? ''}</td>`;
+    });
+    return html`<tr class="cv-line" data-line="${a}"${b > a ? html` data-end="${b}"` : ''}><td class="csv-rn">${a}</td>${cells}</tr>`;
+  }), (idx.length > MAX_SHOW ? html`<tr class="csv-more"><td colspan="${cols.length + 1}">${t('처음 {n}행만 보입니다 — 거르면 좁힐 수 있습니다', { n: MAX_SHOW.toLocaleString() })}</td></tr>` : ''), (idx.length ? '' : html`<tr class="csv-more"><td colspan="${cols.length + 1}">${t('맞는 행이 없습니다')}</td></tr>`)]);
   const statRow = view.querySelector('.csv-stats');
   statRow.hidden = !st.stats;
   if (st.stats) {
-    statRow.innerHTML = `<th class="csv-rn">${esc(t('통계'))}</th>`
-      + cols.map((col, c) => `<td>${statsHtml(statsOf(idx.map((i) => body[i][c]), col.numeric), col.numeric)}</td>`).join('');
+    setHtml(statRow, [html`<th class="csv-rn">${t('통계')}</th>`, cols.map((col, c) => html`<td>${statsHtml(statsOf(idx.map((i) => body[i][c]), col.numeric), col.numeric)}</td>`)]);
   }
   const filtered = mem.filters.some(Boolean) || calcs.some((c) => c.filter);
   view.querySelector('.csv-count').textContent = filtered
@@ -442,11 +439,11 @@ function build(view) {
   if (mem.filters.length !== width) mem.filters = Array(width).fill('');
   if (mem.sort && mem.sort.col >= st.cols.length) mem.sort = null;
   const tip = t('글자를 포함하는 행 — !글자 는 빼기, =글자 는 같은 것. 숫자는 >100 · <=5 · 10..20');
-  view.querySelector('.csv-table thead').innerHTML = `<tr class="csv-head"><th class="csv-rn">#</th>${st.cols.map((col, c) => (
-    `<th data-col="${c}" class="${[col.numeric ? 'num' : '', col.calc != null ? 'csv-calc' : ''].filter(Boolean).join(' ')}" title="${esc(col.calc != null ? t('계산 열 — 화면에만 있습니다. 파일에는 쓰지 않습니다') : t('누르면 정렬 ({kind}) — 우클릭은 계산·차트', { kind: col.numeric ? t('숫자 열') : t('글자 열') }))}">${col.letter ? `<small class="csv-letter">${col.letter}</small>` : ''}${esc(col.name)}${col.calc != null ? `<button type="button" class="csv-calc-x" data-calc="${col.calc}" title="${esc(t('이 계산 열 빼기'))}" aria-label="${esc(t('이 계산 열 빼기'))}">×</button>` : ''}</th>`
-  )).join('')}</tr><tr class="csv-filter"><th class="csv-rn"></th>${st.cols.map((col, c) => (
-    `<th><input type="search" data-col="${c}" value="${esc((col.calc != null ? st.calcs[col.calc].filter : mem.filters[c]) || '')}" placeholder="${esc(t('거르기'))}" title="${esc(tip)}" spellcheck="false"></th>`
-  )).join('')}</tr>`;
+  setHtml(view.querySelector('.csv-table thead'), html`<tr class="csv-head"><th class="csv-rn">#</th>${st.cols.map((col, c) => (
+    html`<th data-col="${c}" class="${[col.numeric ? 'num' : '', col.calc != null ? 'csv-calc' : ''].filter(Boolean).join(' ')}" title="${col.calc != null ? t('계산 열 — 화면에만 있습니다. 파일에는 쓰지 않습니다') : t('누르면 정렬 ({kind}) — 우클릭은 계산·차트', { kind: col.numeric ? t('숫자 열') : t('글자 열') })}">${col.letter ? html`<small class="csv-letter">${col.letter}</small>` : ''}${col.name}${col.calc != null ? html`<button type="button" class="csv-calc-x" data-calc="${col.calc}" title="${t('이 계산 열 빼기')}" aria-label="${t('이 계산 열 빼기')}">×</button>` : ''}</th>`
+  ))}</tr><tr class="csv-filter"><th class="csv-rn"></th>${st.cols.map((col, c) => (
+    html`<th><input type="search" data-col="${c}" value="${(col.calc != null ? st.calcs[col.calc].filter : mem.filters[c]) || ''}" placeholder="${t('거르기')}" title="${tip}" spellcheck="false"></th>`
+  ))}</tr>`);
   view.querySelector('.csv-headrow input').checked = st.header;
   update(view);
 }
@@ -474,15 +471,15 @@ export function renderRows(view, rows, lines, key, { letter = null, titleOf = nu
   pickRegion(st, line);
   if (keep?.key === key && keep.pick === st.pick) st.calcs = keep.calcs;   // 자동 새로고침으로 다시 그려도 남고, 파일을 다시 열면 없다
   view.classList.add('csv-view');
-  view.insertAdjacentHTML('beforeend', `<div class="csv-regions" hidden></div><div class="csv-bar">
-    <span class="csv-count"></span><span class="csv-summary"></span>${note ? `<span class="csv-note">${esc(note)}</span>` : ''}
-    <span class="csv-note csv-blocked" hidden>${esc(t('같은 시점이 여러 행이라 계산하지 못했습니다 — 품목 등으로 먼저 거르세요'))}</span>
-    <button type="button" class="text-btn csv-chart">${esc(t('차트로 보기'))}</button>
-    <button type="button" class="text-btn csv-stats-btn" aria-pressed="${view.csv.stats}">${esc(t('통계'))}</button>
-    <label class="csv-headrow"><input type="checkbox"> ${esc(t('첫 줄은 머리행'))}</label>
-    <button type="button" class="text-btn csv-clear" hidden>${esc(t('거르기 지우기'))}</button>
-    <button type="button" class="text-btn csv-copy-shown" title="${esc(t('거른 행과 계산 열까지 — 엑셀에 붙이면 칸이 나뉩니다'))}">${esc(t('보이는 표 복사'))}</button>
-    <button type="button" class="text-btn csv-send" title="${esc(t('Markdown 표로 다른 문서에 넣습니다'))}">${esc(t('문서로 보내기…'))}</button>
+  addHtml(view, 'beforeend', html`<div class="csv-regions" hidden></div><div class="csv-bar">
+    <span class="csv-count"></span><span class="csv-summary"></span>${note ? html`<span class="csv-note">${note}</span>` : ''}
+    <span class="csv-note csv-blocked" hidden>${t('같은 시점이 여러 행이라 계산하지 못했습니다 — 품목 등으로 먼저 거르세요')}</span>
+    <button type="button" class="text-btn csv-chart">${t('차트로 보기')}</button>
+    <button type="button" class="text-btn csv-stats-btn" aria-pressed="${view.csv.stats}">${t('통계')}</button>
+    <label class="csv-headrow"><input type="checkbox"> ${t('첫 줄은 머리행')}</label>
+    <button type="button" class="text-btn csv-clear" hidden>${t('거르기 지우기')}</button>
+    <button type="button" class="text-btn csv-copy-shown" title="${t('거른 행과 계산 열까지 — 엑셀에 붙이면 칸이 나뉩니다')}">${t('보이는 표 복사')}</button>
+    <button type="button" class="text-btn csv-send" title="${t('Markdown 표로 다른 문서에 넣습니다')}">${t('문서로 보내기…')}</button>
   </div><table class="csv-table"><thead></thead><tbody class="csv-stats-body"><tr class="csv-stats"></tr></tbody><tbody class="csv-rows"></tbody></table>`);
   drawRegions(view);
   build(view);

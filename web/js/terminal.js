@@ -25,7 +25,8 @@
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON, saveConfig, revealInExplorer } from './api.js';
 import { updateTocVisibility } from './toc.js';
-import { $, esc, toast, copyText, blockedReadOnly } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, toast, copyText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
@@ -388,14 +389,12 @@ function renderHead() {
   const tab = S.tab;
   const terms = termsOf(tab);
   const box = $('#lec-term-tabs');
-  box.innerHTML = terms.map((term) => {
+  setHtml(box, terms.map((term) => {
     const on = term === tab.term;
     const state = !term.alive ? ' ended' : term.stuck?.length ? ' stuck' : '';
-    const close = `<span class="term-tab-close" role="button" data-close="${term.n}" title="${esc(t('이 터미널 끝내기 — 셸과 거기서 띄운 프로그램을 끝냄'))}"><svg aria-hidden="true"><use href="#i-close"/></svg></span>`;
-    return `<button type="button" role="tab" class="term-tab${on ? ' on' : ''}${state}" data-n="${term.n}" aria-selected="${on}"`
-      + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">`
-      + `<span class="n">${term.n + 1}</span><span class="name">${esc(termLabel(term))}</span>${close}</button>`;
-  }).join('');
+    const close = html`<span class="term-tab-close" role="button" data-close="${term.n}" title="${t('이 터미널 끝내기 — 셸과 거기서 띄운 프로그램을 끝냄')}"><svg aria-hidden="true"><use href="#i-close"/></svg></span>`;
+    return [html`<button type="button" role="tab" class="term-tab${on ? ' on' : ''}${state}" data-n="${term.n}" aria-selected="${on}"`, html` title="${`${term.n + 1} · ${termLabel(term)}`}">`, html`<span class="n">${term.n + 1}</span><span class="name">${termLabel(term)}</span>${close}</button>`];
+  }));
   // 그래도 넘치면(좁은 패널) 고른 탭이 보이게 탭 줄을 민다
   const cur = box.querySelector('.term-tab.on');
   if (cur) {
@@ -760,9 +759,7 @@ export function initTerminal() {
   locked.id = 'lec-term-locked';
   locked.className = 'term-locked';
   locked.hidden = true;
-  locked.innerHTML = `<p><strong>${esc(t('이 프로젝트에서는 터미널을 열지 않습니다'))}</strong></p>`
-    + `<p>${esc(t('Lectern 프로그램 폴더 안에 있는 프로젝트(설치된 예제 등)는 보기만 합니다 — 터미널·편집·새 문서·이름 바꾸기가 없습니다. 예제로 Claude Code 를 써 보려면 이 폴더를 다른 곳(문서 폴더 등)에 복사해 그 복사본을 여세요.'))}</p>`
-    + `<button type="button" class="text-btn">${esc(t('탐색기에서 이 폴더 보기'))}</button>`;
+  setHtml(locked, [html`<p><strong>${t('이 프로젝트에서는 터미널을 열지 않습니다')}</strong></p>`, html`<p>${t('Lectern 프로그램 폴더 안에 있는 프로젝트(설치된 예제 등)는 보기만 합니다 — 터미널·편집·새 문서·이름 바꾸기가 없습니다. 예제로 Claude Code 를 써 보려면 이 폴더를 다른 곳(문서 폴더 등)에 복사해 그 복사본을 여세요.')}</p>`, html`<button type="button" class="text-btn">${t('탐색기에서 이 폴더 보기')}</button>`]);
   locked.querySelector('button').addEventListener('click', () => revealInExplorer('', S.tab));
   $('#lec-term-body').append(locked);
   const title = $('#lec-term-title');

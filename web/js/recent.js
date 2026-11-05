@@ -8,7 +8,8 @@ import { getJSON, saveConfig } from './api.js';
 import { labelOf, tipOf } from './tree.js';
 import { bindFileRows, fileTip } from './others.js';
 import { fileIcon } from './icons.js';
-import { $, esc, dirname, timeAgo, keepFocus } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, dirname, timeAgo, keepFocus } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_ROWS = 50;
@@ -40,21 +41,18 @@ function render() {
   list.sort((a, b) => b.mtime - a.mtime);
   const top = list.slice(0, MAX_ROWS);
   rows = new Map(top.map((f) => [f.path, f]));
-  let html;
-  if (!KINDS.some(([, key]) => want(key))) html = `<p class="side-empty">${t('보일 것(문서·코드·자료)을 고르세요')}</p>`;
-  else if (!top.length) html = r?.loading ? '' : `<p class="side-empty">${t('고친 파일이 없습니다')}</p>`;
+  let markup;
+  if (!KINDS.some(([, key]) => want(key))) markup = html`<p class="side-empty">${t('보일 것(문서·코드·자료)을 고르세요')}</p>`;
+  else if (!top.length) markup = r?.loading ? '' : html`<p class="side-empty">${t('고친 파일이 없습니다')}</p>`;
   else {
-    html = top.map((f) => {
+    markup = top.map((f) => {
       const doc = !!f.kind;
       const cls = `row recent${f.path === current() ? ' active' : ''}`;
-      return `<div class="${cls}" data-file="${esc(f.path)}" title="${esc(doc ? tipOf(f) : fileTip(f))}" tabindex="0">`
-        + `<span class="when">${esc(timeAgo(f.mtime))}</span><span class="label">${fileIcon(f.name, f.kind)}${esc(doc ? labelOf(f) : f.name)}</span>`
-        + `${doc && S.changed.has(f.path) ? '<span class="dot"></span>' : ''}`
-        + `${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
-    }).join('');
+      return [html`<div class="${cls}" data-file="${f.path}" title="${doc ? tipOf(f) : fileTip(f)}" tabindex="0">`, html`<span class="when">${timeAgo(f.mtime)}</span><span class="label">${fileIcon(f.name, f.kind)}${doc ? labelOf(f) : f.name}</span>`, html`${doc && S.changed.has(f.path) ? html`<span class="dot"></span>` : ''}`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+    });
   }
-  if (r?.error && filesKey()) html += `<p class="side-empty">${esc(t('코드·자료를 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: r.error }))}</p>`;
-  keepFocus(box(), () => { box().innerHTML = html; });
+  if (r?.error && filesKey()) markup = [markup, html`<p class="side-empty">${t('코드·자료를 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: r.error })}</p>`];
+  keepFocus(box(), () => { setHtml(box(), markup); });
 }
 
 /** 탭의 코드·자료 최근 파일을 받는다 (tab.recent) */

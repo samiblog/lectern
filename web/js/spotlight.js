@@ -27,6 +27,7 @@
 // - 선택된 탭의 칸(#lec-view)의 화면에 한다. 다른 탭을 고르면 하이라이트는 꺼지고, 현재 위치는 그 칸의 것이 보인다.
 
 import { S, on, emit } from './store.js';
+import { html, setHtml } from './html.js';
 import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf } from './lineunits.js';
@@ -495,7 +496,7 @@ function overlay(root, make) {
     box = document.createElement('div');
     box.className = 'lec-spot';
     box.setAttribute('aria-hidden', 'true');
-    box.innerHTML = '<div class="spot-shade spot-above"></div><div class="spot-shade spot-below"></div><div class="spot-bar"></div>';
+    setHtml(box, html`<div class="spot-shade spot-above"></div><div class="spot-shade spot-below"></div><div class="spot-bar"></div>`);
     sc.append(box);
   }
   return box;

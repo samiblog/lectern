@@ -6,7 +6,8 @@ import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
 import { askNewDoc } from './basket.js';
 import { fileIcon } from './icons.js';
-import { $, esc, timeAgo, middleClickOpens } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, timeAgo, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_ITEMS = 60;
@@ -63,12 +64,12 @@ function update() {
 function renderList() {
   const ul = $('#lec-palette-list');
   if (!items.length) {
-    ul.innerHTML = `<li class="empty">${S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요')}</li>`;
+    setHtml(ul, html`<li class="empty">${S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요')}</li>`);
     return;
   }
-  ul.innerHTML = items.map((f, i) => `<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}${f.newDoc ? ' new-doc' : ''}" aria-selected="${i === selected}">
-      <span class="t">${f.newDoc ? '<svg class="ficon doc" aria-hidden="true"><use href="#i-plus"/></svg>' : fileIcon(f.name, f.code ? undefined : f.kind)}${esc(f.title || f.name)}</span><span class="when">${f.newDoc ? '' : esc(timeAgo(f.mtime))}</span>
-      <span class="p">${esc(f.path)}</span></li>`).join('');
+  setHtml(ul, items.map((f, i) => html`<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}${f.newDoc ? ' new-doc' : ''}" aria-selected="${i === selected}">
+      <span class="t">${f.newDoc ? html`<svg class="ficon doc" aria-hidden="true"><use href="#i-plus"/></svg>` : fileIcon(f.name, f.code ? undefined : f.kind)}${f.title || f.name}</span><span class="when">${f.newDoc ? '' : timeAgo(f.mtime)}</span>
+      <span class="p">${f.path}</span></li>`));
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 

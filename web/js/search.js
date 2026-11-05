@@ -17,7 +17,8 @@ import { blockOfLine } from './lineunits.js';
 import { fileIcon, isCode } from './icons.js';
 import { labelOf } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
-import { $, esc, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens, openHow } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens, openHow } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_NAMES = 100;   // 이름이 맞는 파일을 보이는 수
@@ -30,16 +31,17 @@ const input = () => $('#lec-search-input');
 
 /** 글을 이스케이프하면서 검색어(대소문자 무시)를 <mark> 로 감싼다 */
 function highlight(text, q) {
-  if (!q) return esc(text);
+  if (!q) return text;
   const low = text.toLowerCase();
   const needle = q.toLowerCase();
-  let out = '';
+  const out = [];
   let from = 0;
   for (let at = low.indexOf(needle); at !== -1; at = low.indexOf(needle, from)) {
-    out += `${esc(text.slice(from, at))}<mark>${esc(text.slice(at, at + needle.length))}</mark>`;
+    out.push(text.slice(from, at), html`<mark>${text.slice(at, at + needle.length)}</mark>`);
     from = at + needle.length;
   }
-  return out + esc(text.slice(from));
+  out.push(text.slice(from));
+  return out;
 }
 
 function clear(info = '') {
@@ -80,8 +82,7 @@ function nameRow(f, q) {
   const has = (s) => (s || '').toLowerCase().includes(q.toLowerCase());
   const label = f.kind && !has(f.name) ? f.title : (f.kind ? labelOf(f) : f.name);   // 문서는 제목이 맞으면 제목
   const tip = f.kind ? [f.title, f.path].filter(Boolean).join('\n') : fileTip(f);
-  return `<div class="sr-name" data-file="${esc(f.path)}" tabindex="0" title="${esc(tip)}">${fileIcon(f.name, f.kind)}`
-    + `<span class="label">${highlight(label, q)}</span>${dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : ''}</div>`;
+  return [html`<div class="sr-name" data-file="${f.path}" tabindex="0" title="${tip}">${fileIcon(f.name, f.kind)}`, html`<span class="label">${highlight(label, q)}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
 }
 
 function render(d, names = null) {
@@ -94,28 +95,25 @@ function render(d, names = null) {
   if (d.results.length) info.push(`${found}, ${t('{n}곳', { n: d.total })}${d.truncated ? t(' (많아서 일부만 보입니다)') : ''}`);
   $('#lec-search-info').textContent = info.length ? info.join(' · ') : t('찾은 곳이 없습니다');
   const box = $('#lec-search-results');
-  let html = '';
+  const markup = [];
   nameRows = new Map((names?.files || []).map((f) => [f.path, f]));
   if (names?.files.length) {
-    html += `<p class="sr-group names">${t('이름이 맞는 파일')}<span class="n">${names.total}</span></p>`
-      + names.files.map((f) => nameRow(f, d.query || query)).join('');
-    if (names.total > names.files.length) html += `<div class="sr-more">${t('처음 {n}개만 보입니다', { n: names.files.length })}</div>`;
-    if (docs) html += `<p class="sr-group">${t('문서 본문')}</p>`;
+    markup.push([html`<p class="sr-group names">${t('이름이 맞는 파일')}<span class="n">${names.total}</span></p>`, names.files.map((f) => nameRow(f, d.query || query))]);
+    if (names.total > names.files.length) markup.push(html`<div class="sr-more">${t('처음 {n}개만 보입니다', { n: names.files.length })}</div>`);
+    if (docs) markup.push(html`<p class="sr-group">${t('문서 본문')}</p>`);
   }
   let codeHead = false;
   for (const r of d.results) {
     const isCode = r.kind === 'code';
-    if (isCode && !codeHead && (docs || names?.files.length)) html += `<p class="sr-group">${t('코드')}</p>`;   // 문서 결과 아래에 '코드' 묶음
+    if (isCode && !codeHead && (docs || names?.files.length)) markup.push(html`<p class="sr-group">${t('코드')}</p>`);   // 문서 결과 아래에 '코드' 묶음
     codeHead ||= isCode;
     const name = r.title || basename(r.path);
-    const kind = isCode ? ' data-kind="code"' : '';
-    html += `<div class="sr-doc" data-doc="${esc(r.path)}"${kind} title="${esc(r.path)}">${isCode ? fileIcon(name) : ''}`
-      + `<span class="label">${highlight(name, d.query)}</span>${dirname(r.path) ? `<span class="sub">${esc(dirname(r.path))}</span>` : ''}</div>`;
-    html += r.hits.map((h) => `<div class="sr-hit" data-doc="${esc(r.path)}"${kind} data-line="${h.line}" tabindex="0">`
-      + `<span class="ln">${h.line}</span><span class="tx">${highlight(h.text, d.query)}</span></div>`).join('');
-    if (r.more) html += `<div class="sr-more">${isCode ? t('이 파일에 더 있습니다') : t('이 문서에 더 있습니다')}</div>`;
+    const kind = isCode ? html` data-kind="code"` : '';
+    markup.push([html`<div class="sr-doc" data-doc="${r.path}"${kind} title="${r.path}">${isCode ? fileIcon(name) : ''}`, html`<span class="label">${highlight(name, d.query)}</span>${dirname(r.path) ? html`<span class="sub">${dirname(r.path)}</span>` : ''}</div>`]);
+    markup.push(r.hits.map((h) => [html`<div class="sr-hit" data-doc="${r.path}"${kind} data-line="${h.line}" tabindex="0">`, html`<span class="ln">${h.line}</span><span class="tx">${highlight(h.text, d.query)}</span></div>`]));
+    if (r.more) markup.push(html`<div class="sr-more">${isCode ? t('이 파일에 더 있습니다') : t('이 문서에 더 있습니다')}</div>`);
   }
-  keepFocus(box, () => { box.innerHTML = html; });
+  keepFocus(box, () => { setHtml(box, markup); });
 }
 
 /** again: 같은 검색어라도 다시 찾는다 (파일이 바뀌었을 때). 아니면 이미 결과가 있는 검색어는 건너뛴다 (Enter 뒤의 늦은 입력 처리) */

@@ -1,5 +1,6 @@
 // 문서 화면: md 원문을 받아 렌더링하고, 링크·이미지·표·코드 블록·콜아웃을 다듬는다.
 
+import { html, raw, setHtml } from './html.js';
 import { S, emit } from './store.js';
 import { getText, openExternal } from './api.js';
 import { renderMarkdown, splitFrontMatter } from './markdown.js';
@@ -17,7 +18,7 @@ import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import { isViewable } from './icons.js';
 import {
-  $, $$, esc, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted,
+  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -303,9 +304,9 @@ function fixImage(img, baseUrl, stamp, tab, zoom = true) {
 // ---- 모아 보기(parts.js)가 쓰는 것: 문서를 화면 밖에서 본문과 같은 규칙으로 읽고, 그림을 본문과 같은 규칙으로 불러온다 ----
 
 /** md 렌더링 결과를 본문과 같은 규칙으로 정화한다 (그림 주소는 data-src 로 떼어 둔다 — 넣어도 내려받지 않는다) */
-export function sanitizeHtml(html) {
+export function sanitizeHtml(markup) {
   installPurifyHook();
-  return window.DOMPurify.sanitize(html, PURIFY);
+  return window.DOMPurify.sanitize(markup, PURIFY);
 }
 
 /** 화면 밖 조각의 콜아웃·표·코드 블록을 본문처럼 꾸민다 (목차·모아 보기가 같은 규칙으로 세게) */
@@ -387,7 +388,7 @@ function decorateCode(root) {
     pre.replaceWith(box);
     const tools = document.createElement('div');
     tools.className = 'code-tools';
-    tools.innerHTML = `${lang ? `<span class="code-lang">${esc(lang)}</span>` : ''}<button type="button" class="code-copy">${t('복사')}</button>`;
+    setHtml(tools, html`${lang ? html`<span class="code-lang">${lang}</span>` : ''}<button type="button" class="code-copy">${t('복사')}</button>`);
     box.append(tools, pre);
     tools.querySelector('button').addEventListener('click', async (e) => {
       const btn = e.currentTarget;
@@ -416,13 +417,13 @@ function frontMatterHtml(raw) {
     else simple = false;
   }
   if (!simple || !entries.length) {
-    return `<details class="front-matter" open><summary>${t('메타데이터')}</summary><pre>${esc(raw)}</pre></details>`;
+    return html`<details class="front-matter" open><summary>${t('메타데이터')}</summary><pre>${raw}</pre></details>`;
   }
   const rows = entries.map(([k, v]) => {
     const value = v.replace(/^[|>]-?\s*\n?/, '').replace(/^(["'])(.*)\1$/s, '$2');
-    return `<tr><th>${esc(k)}</th><td>${esc(value)}</td></tr>`;
-  }).join('');
-  return `<details class="front-matter" open><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
+    return html`<tr><th>${k}</th><td>${value}</td></tr>`;
+  });
+  return html`<details class="front-matter" open><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
 }
 
 function enhance(root, docPath, stamp, tab) {
@@ -440,8 +441,8 @@ export function showMissing(view, path, err) {
   view.className = 'md-body';
   const parent = dirname(path);
   const reason = err?.status === 404 ? t('문서가 없거나(삭제·이동) 숨김 경로에 있습니다.') : t('문서를 읽지 못했습니다: {error}', { error: err?.message || '' });
-  view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(reason)}</p>
-    <p><button type="button" class="primary" data-parent="${esc(parent)}">${parent ? esc(t('{folder} 폴더 개요 보기', { folder: parent })) : t('프로젝트 개요 보기')}</button></p></div>`;
+  setHtml(view, html`<div class="doc-missing"><h1>${path}</h1><p>${reason}</p>
+    <p><button type="button" class="primary" data-parent="${parent}">${parent ? t('{folder} 폴더 개요 보기', { folder: parent }) : t('프로젝트 개요 보기')}</button></p></div>`);
   view.querySelector('button').addEventListener('click', () => emit('open', { type: 'overview', path: parent }));
 }
 
@@ -476,13 +477,13 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   // 발표 문서(맨 앞 설정에 marp: true — D59)는 슬라이드로. 상태줄의 '문서로 보기'를 골랐으면 보통 문서처럼
   const marp = readDeck(splitFrontMatter(text).frontMatter);
   const deck = marp && slidesWanted(pane, path) ? marp : null;
-  const { html, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck });
+  const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck });
   const viewClass = `md-body${marp ? ' lec-marp' : ''}${deck ? ' lec-deck' : ''}`;
   const stage = document.createElement('article');
   stage.className = `${viewClass} lec-stage`;
   stage.style.width = `${content.clientWidth}px`;
   if (deck) stage.style.setProperty('--slide-scale', '1');   // 무대에서는 줄이지 않는다 — Mermaid 가 글자 크기를 제대로 잰다
-  stage.innerHTML = (frontMatter && !deck ? frontMatterHtml(frontMatter) : '') + window.DOMPurify.sanitize(html, PURIFY);
+  setHtml(stage, [frontMatter && !deck ? frontMatterHtml(frontMatter) : '', raw(window.DOMPurify.sanitize(markup, PURIFY))]);
   document.body.append(stage);
   try {
     enhance(stage, path, Date.now(), tab);

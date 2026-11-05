@@ -20,7 +20,8 @@ import { openExternal } from './api.js';
 import { isCode } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
-import { $, esc, toast, copyText, rangeText, lineRef } from './util.js';
+import { html } from './html.js';
+import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
@@ -112,11 +113,11 @@ function tableData(table) {
     return { text: c.innerText.replace(/\s+/g, ' ').trim(), head: c.tagName === 'TH', align: /right|center/.test(align) ? align : '' };
   }));
   const tsv = rows.map((r) => r.map((c) => c.text).join('\t')).join('\n');
-  const html = `<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse">${rows.map((r) => `<tr>${r.map((c) => {
-    const tag = c.head ? 'th' : 'td';
-    return `<${tag}${c.align ? ` style="text-align:${c.align}"` : ''}>${esc(c.text)}</${tag}>`;
-  }).join('')}</tr>`).join('')}</table>`;
-  return { tsv, html };
+  const markup = html`<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse">${rows.map((r) => html`<tr>${r.map((c) => {
+    const style = c.align ? html` style="text-align:${c.align}"` : '';
+    return c.head ? html`<th${style}>${c.text}</th>` : html`<td${style}>${c.text}</td>`;
+  })}</tr>`)}</table>`;
+  return { tsv, html: markup.text };   // 클립보드에는 글로
 }
 
 function tableSize(table) {

@@ -21,7 +21,8 @@ import { labelOf, tipOf, pathMenuItems } from './tree.js';
 import { openPalette } from './palette.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
-import { $, esc, basename, toast, middleClickOpens, findAnchor } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, basename, toast, middleClickOpens, findAnchor } from './util.js';
 import { t } from './i18n.js';
 
 export const MAX_DOCS = 20;   // 서버 config.MAX_DOC_TABS 와 같게 (D67 — v0.35.0 은 5개)
@@ -290,15 +291,14 @@ function render() {
   $('#lec-panes').classList.toggle('has-doctabs', !!tab);
   if (!tab) return;
   const n = tab.panes.length;
-  $('#lec-doctab-list').innerHTML = tab.panes.map((p, i) => {
+  setHtml($('#lec-doctab-list'), tab.panes.map((p, i) => {
     const active = p === tab.pane;
     const { icon, name, tip } = describe(p);
-    const dirty = p.editor?.dirty ? `<span class="dirty" title="${esc(t('저장하지 않은 편집이 있습니다'))}">●</span>` : '';
-    const close = n > 1 ? `<button type="button" class="tab-close" title="${esc(t('문서 탭 닫기 (Ctrl+F4)'))}" aria-label="${esc(t('{name} 문서 탭 닫기', { name }))}"><svg><use href="#i-close"/></svg></button>` : '';
+    const dirty = p.editor?.dirty ? html`<span class="dirty" title="${t('저장하지 않은 편집이 있습니다')}">●</span>` : '';
+    const close = n > 1 ? html`<button type="button" class="tab-close" title="${t('문서 탭 닫기 (Ctrl+F4)')}" aria-label="${t('{name} 문서 탭 닫기', { name })}"><svg><use href="#i-close"/></svg></button>` : '';
     const key = keyOf(i, n);
-    return `<div class="doc-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-i="${i}" data-path="${esc(viewOf(p)?.path || '')}" title="${esc(key ? `${tip}\n${key}` : tip)}">`
-      + `${icon}<span class="name">${esc(name)}</span>${dirty}${close}</div>`;
-  }).join('');
+    return [html`<div class="doc-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-i="${i}" data-path="${viewOf(p)?.path || ''}" title="${key ? `${tip}\n${key}` : tip}">`, html`${icon}<span class="name">${name}</span>${dirty}${close}</div>`];
+  }));
   const full = n >= MAX_DOCS;
   $('#lec-doctab-new').title = full ? t('새 탭에 문서 열기 — {n}개가 차 있어 가장 오래 안 본 탭에서 엽니다', { n: MAX_DOCS })
     : t('새 탭에 문서 열기 (문서를 Ctrl+클릭·두 번 누르기·가운데 버튼으로 눌러도)');

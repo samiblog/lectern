@@ -27,7 +27,8 @@ import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
-import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, openHow, middleClickOpens } from './util.js';
+import { html, setHtml } from './html.js';
+import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, openHow, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -148,54 +149,49 @@ function view(o, k) {
 
 function rowAttrs(o, v, path, depth, extra = '') {
   const sel = path === o.selected[v.sel];
-  return `class="row${extra}${sel ? ' selected' : ''}" role="treeitem" aria-selected="${sel}" data-path="${esc(path)}"`
-    + ` style="--d:${depth}" tabindex="${sel ? 0 : -1}"`;
+  return [html`class="row${extra}${sel ? ' selected' : ''}" role="treeitem" aria-selected="${sel}" data-path="${path}"`, html` style="--d:${depth}" tabindex="${sel ? 0 : -1}"`];
 }
 
-const subHtml = (sub) => (sub ? `<span class="sub">${esc(sub)}</span>` : '');
+const subHtml = (sub) => (sub ? html`<span class="sub">${sub}</span>` : '');
 
 function fileRow(o, v, f, depth, sub = '') {
   if (f.doc) {   // 폴더 보기의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조
     const active = S.view?.type === 'doc' && S.view.path === f.path ? ' active' : '';
-    return `<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${esc(tipOf(f))}"><span class="caret-space"></span>`
-      + `${fileIcon(f.name, f.kind)}<span class="label">${esc(labelOf(f))}</span>${subHtml(sub)}`
-      + `${S.changed.has(f.path) ? `<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`;
+    return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind)}<span class="label">${labelOf(f)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
-  return `<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${esc(fileTip(f))}"><span class="caret-space"></span>${fileIcon(f.name)}`
-    + `<span class="label">${esc(f.name)}</span>${subHtml(sub)}</div>`;
+  return [html`<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${fileTip(f)}"><span class="caret-space"></span>${fileIcon(f.name)}`, html`<span class="label">${f.name}</span>${subHtml(sub)}</div>`];
 }
 
 /** 목록 안의 안내 줄 (제외 폴더를 읽는 중 등) — 그 깊이의 행 글자에 맞춰 들인다 */
-const noteHtml = (depth, text) => `<p class="side-note" style="--d:${depth}">${esc(text)}</p>`;
+const noteHtml = (depth, text) => html`<p class="side-note" style="--d:${depth}">${text}</p>`;
 
 function nodesHtml(o, v, nodes, depth, inside = false) {
-  let html = '';
+  const markup = [];
   for (const n of nodes) {
     if (n.type === 'file') {
-      html += fileRow(o, v, n, depth);
+      markup.push(fileRow(o, v, n, depth));
       continue;
     }
     const open = v.open.has(n.path);
     const folder = v.sel === 'folder';
     const cur = folder && S.view?.type === 'overview' && S.view.path === n.path ? ' active' : '';
-    const dot = folder && !open && hasChangedInside(n.path) ? `<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : '';
+    const dot = folder && !open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : '';
     const tip = n.excluded && !inside ? `${n.path}/\n${t('제외 폴더 — 펼칠 때 안을 읽습니다. 문서 트리와 검색에는 나오지 않습니다.')}` : `${n.path}/`;
-    html += `<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}${n.excluded ? ' excluded' : ''}`)} aria-expanded="${open}" title="${esc(tip)}">`
-      + `<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${esc(n.name)}</span>${dot}</div>`;
+    markup.push([html`<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}${n.excluded ? ' excluded' : ''}`)} aria-expanded="${open}" title="${tip}">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>${dot}</div>`]);
     if (!open) continue;
     if (!n.children) {   // 아직 읽지 않은 제외 폴더
-      html += noteHtml(depth + 1, t('읽는 중…'));
+      markup.push(noteHtml(depth + 1, t('읽는 중…')));
       const tab = S.tab;
       queueMicrotask(() => loadDir(tab, n.path));
-    } else if (n.error) html += noteHtml(depth + 1, t('이 폴더를 읽지 못했습니다 ({error})', { error: n.error }));
-    else if (n.excluded && !n.children.length) html += noteHtml(depth + 1, t('빈 폴더'));
+    } else if (n.error) markup.push(noteHtml(depth + 1, t('이 폴더를 읽지 못했습니다 ({error})', { error: n.error })));
+    else if (n.excluded && !n.children.length) markup.push(noteHtml(depth + 1, t('빈 폴더')));
     else {
-      html += nodesHtml(o, v, n.children, depth + 1, inside || n.excluded);
-      if (n.truncated) html += noteHtml(depth + 1, t('항목이 많아 {n}개까지만 보입니다', { n: n.limit }));
+      markup.push(nodesHtml(o, v, n.children, depth + 1, inside || n.excluded));
+      if (n.truncated) markup.push(noteHtml(depth + 1, t('항목이 많아 {n}개까지만 보입니다', { n: n.limit })));
     }
   }
-  return html;
+  return markup;
 }
 
 /** 종류별 보기의 파일·코드 목록 */
@@ -203,10 +199,10 @@ function kindHtml(o, k, v, terms) {
   if (terms) {
     const hits = [...filesIn(v.tree)].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     return hits.length
-      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
-      : `<p class="side-empty">${LISTS[k].noHit}</p>`;
+      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path)))
+      : html`<p class="side-empty">${LISTS[k].noHit}</p>`;
   }
-  return v.tree.length ? nodesHtml(o, v, v.tree, 0) : `<p class="side-empty">${LISTS[k].none}</p>`;
+  return v.tree.length ? nodesHtml(o, v, v.tree, 0) : html`<p class="side-empty">${LISTS[k].none}</p>`;
 }
 
 /** 폴더 보기: 맨 위 프로젝트 행(누르면 개요) + 문서와 파일을 합친 트리 */
@@ -216,10 +212,10 @@ function folderHtml(o, v, terms) {
     const files = [...filesIn(o.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     const hits = [...docs.map((f) => ({ ...f, doc: true })), ...files];
     return hits.length
-      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
-      : `<p class="side-empty">${t('일치하는 문서나 파일이 없습니다')}</p>`;
+      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path)))
+      : html`<p class="side-empty">${t('일치하는 문서나 파일이 없습니다')}</p>`;
   }
-  return o.all.length ? nodesHtml(o, v, o.all, 0) : `<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`;
+  return o.all.length ? nodesHtml(o, v, o.all, 0) : html`<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`;
 }
 
 /** 묶음 머리줄의 개수 */
@@ -236,7 +232,7 @@ function renderList(k) {
   const box = listEl(k);
   const folder = k === 'files' && folderView();
   if (!o || (folder ? !S.tab.treeLoaded : !o.data)) {   // 탭이 없거나 아직 읽는 중
-    box.innerHTML = o?.error && !folder ? `<p class="side-empty">${esc(o.error)}</p>` : '';
+    setHtml(box, o?.error && !folder ? html`<p class="side-empty">${o.error}</p>` : '');
     return;
   }
   if (folder) {
@@ -247,9 +243,9 @@ function renderList(k) {
   const v = view(o, k);
   const query = $('#lec-filter').value.trim().toLowerCase();
   const terms = query ? query.split(/\s+/) : null;
-  let html = folder ? folderHtml(o, v, terms) : kindHtml(o, k, v, terms);
-  if (o.data?.truncated) html += `<p class="side-empty">${t('파일이 많아 {n}개까지만 보입니다', { n: o.data.limit })}</p>`;
-  keepFocus(box, () => { box.innerHTML = html; });
+  const markup = [folder ? folderHtml(o, v, terms) : kindHtml(o, k, v, terms)];
+  if (o.data?.truncated) markup.push(html`<p class="side-empty">${t('파일이 많아 {n}개까지만 보입니다', { n: o.data.limit })}</p>`);
+  keepFocus(box, () => { setHtml(box, markup); });
   // Tab 키로 목록에 들어올 행: 고른 행, 없으면 첫 행
   if (!box.querySelector('.row[tabindex="0"]')) box.querySelector('.row')?.setAttribute('tabindex', '0');
 }

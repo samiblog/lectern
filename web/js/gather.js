@@ -17,7 +17,8 @@ import {
   ensureTerminal, restartTerminal, fitTerminal, returnTerminals, liveTerminals, terminalBusy, toggleTerminal,
   stuckMessage, termsOf, termLabel, selectTerminal,
 } from './terminal.js';
-import { $, $$, esc, toast } from './util.js';
+import { addHtml, html, setHtml } from './html.js';
+import { $, $$, toast } from './util.js';
 import { t } from './i18n.js';
 
 const POLL_MS = 2000;
@@ -46,23 +47,21 @@ function makeTile(tab) {
   tile.className = 'g-tile';
   tile.dataset.tab = tab.id;
   tile.setAttribute('aria-label', t('{name} 터미널', { name: tab.name }));
-  tile.innerHTML = `<div class="g-head" title="${esc(tab.root)}\n${t('머리를 두 번 누르면 이 칸만 크게')}">
-      <svg class="g-icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="g-name">${esc(tab.name)}</span>
+  setHtml(tile, html`<div class="g-head" title="${tab.root}\n${t('머리를 두 번 누르면 이 칸만 크게')}">
+      <svg class="g-icon" aria-hidden="true"><use href="#i-folder"/></svg><span class="g-name">${tab.name}</span>
       <span class="g-terms" role="tablist" aria-label="${t('터미널')}"></span>
       <span class="g-state"></span>
       <button type="button" class="icon-btn small g-solo" title="${t('이 칸만 크게')}" aria-label="${t('이 칸만 크게')}"><svg><use href="#i-expand"/></svg></button>
       <button type="button" class="icon-btn small g-restart" title="${t('셸 다시 시작 (지금 셸과 거기서 띄운 프로그램은 끝남)')}" aria-label="${t('셸 다시 시작')}"><svg><use href="#i-restart"/></svg></button>
       <button type="button" class="icon-btn small g-go" title="${t('이 프로젝트로 — 문서와 오른쪽 터미널 (Ctrl+`)')}" aria-label="${t('이 프로젝트로')}"><svg><use href="#i-forward"/></svg></button>
-    </div><div class="g-body"></div>`;
+    </div><div class="g-body"></div>`);
   return tile;
 }
 
 /** 칸 머리의 터미널 번호 (터미널이 여럿일 때만 — 누르면 그 터미널을 이 칸에) */
 function renderNums(tab, tile) {
   const terms = termsOf(tab);
-  tile.querySelector('.g-terms').innerHTML = terms.length < 2 ? '' : terms.map((term) => `<button type="button" role="tab"`
-    + ` class="g-term${term === tab.term ? ' on' : ''}" data-n="${term.n}" aria-selected="${term === tab.term}"`
-    + ` title="${esc(`${term.n + 1} · ${termLabel(term)}`)}">${term.n + 1}</button>`).join('');
+  setHtml(tile.querySelector('.g-terms'), terms.length < 2 ? '' : terms.map((term) => [html`<button type="button" role="tab"`, html` class="g-term${term === tab.term ? ' on' : ''}" data-n="${term.n}" aria-selected="${term === tab.term}"`, html` title="${`${term.n + 1} · ${termLabel(term)}`}">${term.n + 1}</button>`]));
 }
 
 /** 칸의 몸통: 셸이 있으면 고른 터미널의 화면, 없으면 '터미널 시작' (보기만 하는 프로젝트는 안내만 — D71) */
@@ -72,8 +71,8 @@ function fillBody(tab, tile) {
   renderNums(tab, tile);
   if (tab.readonly) {
     if (!body.querySelector('.g-empty')) {
-      body.innerHTML = `<div class="g-empty"><p>${esc(t('보기만 하는 프로젝트입니다 — Lectern 프로그램 폴더 안이라 터미널을 열지 않습니다'))}</p>
-        <small>${esc(tab.root)}</small></div>`;
+      setHtml(body, html`<div class="g-empty"><p>${t('보기만 하는 프로젝트입니다 — Lectern 프로그램 폴더 안이라 터미널을 열지 않습니다')}</p>
+        <small>${tab.root}</small></div>`);
     }
   } else if (term) {
     body.querySelector('.g-empty')?.remove();
@@ -81,8 +80,8 @@ function fillBody(tab, tile) {
     if (term.box.parentElement !== body) body.append(term.box);
     term.box.hidden = false;
   } else if (!body.querySelector('.g-empty')) {
-    body.innerHTML = `<div class="g-empty"><button type="button" class="primary g-start">${t('터미널 시작')}</button>
-      <small>${esc(tab.root)}</small></div>`;
+    setHtml(body, html`<div class="g-empty"><button type="button" class="primary g-start">${t('터미널 시작')}</button>
+      <small>${tab.root}</small></div>`);
   }
 }
 
@@ -112,7 +111,7 @@ function render() {
     if (!tile.querySelector('.g-state').textContent || !tab.term?.alive) setState(tile, tab, false);
   });
   if (!S.tabs.length) {
-    box.insertAdjacentHTML('beforeend', `<p class="g-none">${t('열린 프로젝트가 없습니다. 폴더를 열면 그 프로젝트의 터미널이 여기에 생깁니다.')}</p>`);
+    addHtml(box, 'beforeend', html`<p class="g-none">${t('열린 프로젝트가 없습니다. 폴더를 열면 그 프로젝트의 터미널이 여기에 생깁니다.')}</p>`);
   }
   const solo = box.querySelector('.g-tile.solo');
   if (box.classList.contains('solo') && !solo) box.classList.remove('solo');

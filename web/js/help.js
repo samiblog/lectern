@@ -7,7 +7,8 @@ import { on } from './store.js';
 import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
 import { setFindTarget } from './find.js';
-import { $, $$, esc, findAnchor } from './util.js';
+import { esc, html, raw, setHtml } from './html.js';
+import { $, $$, findAnchor } from './util.js';
 import { LANG, t } from './i18n.js';
 
 /** [묶음, [[키, 하는 일]]]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다 */
@@ -140,8 +141,8 @@ export function closeShortcuts() {
 export const toggleShortcuts = () => (closeShortcuts() || openShortcuts());
 
 function renderShortcuts() {
-  $('#lec-keys-list').innerHTML = SHORTCUTS.map(([group, rows]) => `<section class="keys-group"><h3>${esc(group)}</h3>
-    <table>${rows.map(([keys, what]) => `<tr><th scope="row">${keysHtml(keys)}</th><td>${esc(what)}</td></tr>`).join('')}</table></section>`).join('');
+  setHtml($('#lec-keys-list'), SHORTCUTS.map(([group, rows]) => html`<section class="keys-group"><h3>${group}</h3>
+    <table>${rows.map(([keys, what]) => html`<tr><th scope="row">${raw(keysHtml(keys))}</th><td>${what}</td></tr>`)}</table></section>`));
 }
 
 // ---- 사용설명서 -----------------------------------------------------------------
@@ -158,12 +159,11 @@ async function loadManual() {
   const r = await fetch(LANG === 'en' ? '/static/help/manual.en.md' : '/static/help/manual.md');   // 영어판 (D46)
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
   const text = (await r.text()).replace('<!-- 단축키 표 -->', shortcutsMarkdown());   // i18n-ok (두 설명서에 같은 자리 표시)
-  const { html } = renderMarkdown(text, { math: false });
-  view().innerHTML = window.DOMPurify.sanitize(html);
+  const { html: markup } = renderMarkdown(text, { math: false });
+  setHtml(view(), raw(window.DOMPurify.sanitize(markup)));
   decorateBlocks(view());
   heads = $$('h2, h3', view());
-  $('#lec-help-toc').innerHTML = heads.map((h, i) => `<li class="${h.tagName === 'H3' ? 'sub' : ''}">`
-    + `<a href="#" data-i="${i}">${esc(h.textContent)}</a></li>`).join('');
+  setHtml($('#lec-help-toc'), heads.map((h, i) => [html`<li class="${h.tagName === 'H3' ? 'sub' : ''}">`, html`<a href="#" data-i="${i}">${h.textContent}</a></li>`]));
   markCurrent();
 }
 
@@ -192,7 +192,7 @@ export async function openManual() {
   scroller().focus({ preventScroll: true });               // 화살표·PageDown 으로 설명서를 넘기게
   loaded ??= loadManual().catch((e) => {
     loaded = null;   // 다음에 다시 시도
-    view().innerHTML = `<p>${t('사용설명서를 읽지 못했습니다 ({error}). Lectern 을 다시 설치하면 고쳐집니다.', { error: esc(e.message) })}</p>`;
+    setHtml(view(), html`<p>${t('사용설명서를 읽지 못했습니다 ({error}). Lectern 을 다시 설치하면 고쳐집니다.', { error: e.message })}</p>`);
   });
   await loaded;
 }
