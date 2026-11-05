@@ -150,9 +150,10 @@ async function run(again = false) {
     const body = wantDocs() || wantCode()
       ? getJSON(`/api/search?p=${encodeURIComponent(tab.id)}&q=${encodeURIComponent(q)}&docs=${wantDocs() ? 1 : 0}&code=${wantCode() ? 1 : 0}`)
       : null;
-    if (wantCode() || wantOthers()) await loadOthers(tab);
+    // 함께 기다린다 — 목록을 기다리는 동안 본문 찾기가 먼저 실패하면 받는 곳이 없어 처리되지 않은 오류가 된다
+    const [found] = await Promise.all([body, wantCode() || wantOthers() ? loadOthers(tab) : null]);
     names = nameHits(tab, q);
-    if (body) d = await body;
+    if (found) d = found;
   } catch (e) {
     if (q === query && tab === S.tab) $('#lec-search-info').textContent = t('찾지 못했습니다: {error}', { error: e.message });
     return;

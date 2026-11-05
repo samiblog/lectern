@@ -71,6 +71,7 @@ declare global {
     scrollPos: Map<string, number>;
     pending: number;
     missedRefresh: boolean;
+    dragMissed: boolean;
     redrawing: number;
     stale: boolean;
     renderId: number;

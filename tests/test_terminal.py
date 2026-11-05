@@ -143,8 +143,10 @@ def test_ctrl_c_stops_child_program(tmp_path):
         k.SetConsoleCtrlHandler(None, False)
     try:
         assert read_until(s, '>')
-        s.write('ping -n 60 127.0.0.1\r')
-        assert wait_for(s.busy)
+        # 첫 출력을 본 뒤에 보낸다 — 뜬 뒤 콘솔에 붙기까지(약 11ms)의 Ctrl+C 는 Windows 콘솔이 그 프로그램에 전하지 않는다. busy 는 그 틈에도 참이다
+        s.write(f'& \'{sys.executable}\' -c "print(\'RE\' + \'ADY\', flush=True); import time; time.sleep(60)"\r')
+        assert read_until(s, 'READY')
+        assert s.busy()
         s.write('\x03')   # 고른 글이 없을 때의 Ctrl+C
         assert wait_for(lambda: not s.busy(), 10), 'Ctrl+C 로 셸에서 띄운 프로그램이 멈춘다'
         assert s.alive   # 셸은 그대로

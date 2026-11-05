@@ -1,7 +1,7 @@
 // 화면 이동, 뒤로/앞으로, 다시 그리기. 칸(panes.js — 프로젝트 탭마다 하나)마다 따로 — 기본은 선택된 탭의 칸
 
 import { S, emit, on } from './store.js';
-import { showDoc } from './doc.js';
+import { showDoc, sameAsShown } from './doc.js';
 import { showHtml } from './htmldoc.js';
 import { showOverview } from './overview.js';
 import { showCode } from './codeview.js';
@@ -182,20 +182,47 @@ function go(step) {
 export const back = () => go(-1);
 export const forward = () => go(1);
 
+let held = null;   // 왼쪽 단추를 누르고 있는 칸 — 글을 끌어 고르는 중일 수 있다 (D94)
+
 /**
- * 칸의 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경).
+ * 자동 새로고침이 화면을 그대로 둘지 (D94 — 화면을 바꿔 끼우면 고른 글이 사라진다). 끌어 고르는 중이면 놓을 때까지 미루고,
+ * 파일의 글이 화면과 같으면 그리지 않는다: 저장은 스스로 다시 그리는데 감시가 같은 변경을 또 알린다.
+ * 그리는 중이면 무엇이 그려질지 모르니 보통처럼 그린다 — 이 판정이 renderId 를 올리면 그리던 것이 버려진다.
+ */
+async function keepView(pane) {
+  if (held === pane) {
+    pane.dragMissed = true;
+    return true;
+  }
+  const { type, path } = pane.current;
+  if (type !== 'doc' || isHtml(path) || pane.pending || pane.redrawing) return false;
+  return sameAsShown(pane, path);
+}
+
+function release() {
+  const pane = held;
+  held = null;
+  if (!pane?.dragMissed) return;
+  pane.dragMissed = false;
+  setTimeout(() => refreshView(pane, { auto: true }));   // 누르기·두 번 누르기를 먼저 처리하고
+}
+
+/**
+ * 칸의 화면을 같은 스크롤 위치로 다시 그린다 (자동 새로고침, 테마 변경). auto: 자동 새로고침 — 화면을 그대로 둘 수 있다 (keepView).
  * pane 이 없으면 모든 탭: 보이는 칸(선택된 칸, 모두 펼치기 중이면 펼친 칸들 — D73)은 바로, 숨은 칸은 표시만 해 두고 그 탭을 고를 때 그린다
  * (tabs.js — 보이지 않는 탭을 모두 그리지 않게). 위치는 시작할 때가 아니라 바꿔 끼우기 직전에 읽는다 — 그리는 동안 사용자가 스크롤해도 되돌리지 않게.
  */
-export async function refreshView(pane) {
+export async function refreshView(pane, { auto = false } = {}) {
   if (!pane) {
     const shown = S.panes.filter(paneShown);
     for (const p of S.panes) if (!shown.includes(p) && p.current) p.stale = true;
     await Promise.all(shown.map((p) => refreshView(p)));
     return;
   }
+  if (!pane.current || !S.panes.includes(pane)) return;   // 빈 칸, 닫힌 탭
+  if (auto && await keepView(pane)) return;
   const view = pane.current;
-  if (!view || !S.panes.includes(pane)) return;   // 빈 칸, 닫힌 탭
+  if (!view || !S.panes.includes(pane)) return;   // 기다리는 사이에 닫힘
   if (pane.pending) {
     pane.missedRefresh = true;
     return;
@@ -220,5 +247,13 @@ export async function refreshView(pane) {
 export function initNav() {
   // 'open' 은 doctabs.js 가 받는다 (D64 — 다른 문서 탭에 열려 있으면 그 탭으로, newTab 이면 새 문서 탭에서)
   on('refresh-view', (pane) => refreshView(pane));
+  on('refresh-auto', (pane) => refreshView(pane, { auto: true }));
+  document.addEventListener('mousedown', (e) => {
+    // 진짜 누르기만 — html 틀(htmldoc.js)은 메뉴를 닫으려고 mousedown 을 전달하고 mouseup 은 전달하지 않는다
+    if (e.button === 0 && e.isTrusted) held = S.panes.find((pane) => pane.view.contains(e.target)) || null;
+  }, true);
+  for (const type of ['mouseup', 'dragend']) window.addEventListener(type, release, true);
+  window.addEventListener('mousemove', (e) => { if (held && !(e.buttons & 1)) release(); }, true);   // 놓는 것을 놓쳤어도 자동 새로고침이 멈춘 채 남지 않게
+  window.addEventListener('blur', release);   // 창을 떠남 — 잡기(capture)로 걸면 칸 안의 글 칸이 초점을 잃어도 불린다
   on('jump', () => noteJump());
 }

@@ -51,7 +51,7 @@ async function apply(tab, d) {
       affected = d.structure || d.paths.some((p) => p.startsWith(prefix));
     }
     if (!affected) continue;
-    if (paneShown(pane)) emit('refresh-view', pane);
+    if (paneShown(pane)) emit(d.reset ? 'refresh-view' : 'refresh-auto', pane);   // 기록이 끊겼으면(reset) 무엇이 바뀌었는지 모른다
     else pane.stale = true;
   }
 }

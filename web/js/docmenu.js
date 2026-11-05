@@ -26,9 +26,19 @@ import { t } from './i18n.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
+const sourceLines = (text) => text.replace(/^\uFEFF/, '').split(/\r\n?|\n/);
+
 /** doc.js·htmldoc.js 가 칸(pane)에 문서를 그릴 때마다 원문을 넘긴다 (문서 없음 화면이면 path 가 null). */
 export function setDocSource(pane, path, text = '') {
-  pane.source = path == null ? null : { path, lines: text.replace(/^﻿/, '').split(/\r\n?|\n/) };
+  pane.source = path == null ? null : { path, lines: sourceLines(text) };
+}
+
+/** 칸이 그린 원문이 text 와 같은지 — 줄바꿈 종류와 BOM 은 보지 않는다 (화면이 같다) */
+export function sameSource(pane, path, text) {
+  const shown = pane.source;
+  if (shown?.path !== path) return false;
+  const lines = sourceLines(text);
+  return lines.length === shown.lines.length && lines.every((line, i) => line === shown.lines[i]);
 }
 
 // 우클릭으로 고르는 블록. 가장 안쪽 것을 고른다 (목록 항목 안의 단락이면 단락, 표의 칸이면 표)

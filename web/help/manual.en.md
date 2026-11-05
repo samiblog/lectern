@@ -247,6 +247,8 @@ Markdown with `marp: true` in the front matter shows as **slides** — the [Marp
 
 - While Claude writes a document, changes appear within a second and your reading position stays where it was.
 - Changed paragraphs and tables are highlighted briefly. If the changes are off screen, the **changes** button in the status bar takes you through them.
+- If the text is unchanged, the screen is not redrawn, so your selection stays. While you drag to select text, the refresh waits until you release the mouse.
+- When the text really changes, the screen is redrawn and the selection is cleared.
 - If a change was missed, press F5 to reload.
 
 ### Print and PDF

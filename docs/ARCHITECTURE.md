@@ -250,7 +250,7 @@ sequenceDiagram
 - `openInNewTab`: 칸을 만들어 지금 탭 오른쪽에 넣거나(20개 미만), 고른 탭 말고 가장 오래 안 본(`pane.used`) 저장하지 않은 편집이 없는 칸을 바꾼다 (그 칸의 편집 상자는 닫는다). 그리는 동안 이름은 `pane.coming`. 그린 뒤 고른다 — 그사이 사용자가 다른 탭을 골랐으면 고르지 않는다.
 - `selectDocTab(pane)`: `tab.pane` 을 바꾸고 `panes.selectPane`(선택된 프로젝트 탭이면), 초점은 편집 상자가 있으면 편집기, 아니면 스크롤 상자. 되살린 탭(`pane.deferred`)은 그때 그리고, 숨은 동안 바뀐 칸(`stale`)은 다시 그린다.
 - 다음 실행: `position.js` 가 `openDocs(tab)`(md·html 문서 탭, 되살리고 아직 그리지 않은 것도)를 `POST /api/position` 의 `docs` 로 보낸다. `tabs.js` 의 `loadTab` 이 마지막 문서를 `tab.pane` 에 그린 뒤 `restoreDocTabs(tab, position)` — 나머지는 `deferred` 와 `nav.seedScroll`(문서별 스크롤)만 두고 고를 때 그린다.
-- 자동 새로고침(`watch.js`)·F5(`main.js`)는 프로젝트 탭의 칸마다 — 보이는 칸은 바로, 숨은 칸은 `stale`. 프로젝트 탭을 닫으면(`tabs.js`) 칸 모두와 편집 상자를 치우고, 닫기 전에 모든 칸의 저장하지 않은 편집을 묻는다 (`editor.confirmCloseEditor`).
+- 자동 새로고침(`watch.js`)·F5(`main.js`)는 프로젝트 탭의 칸마다 — 보이는 칸은 바로(자동 새로고침은 글이 같으면 그리지 않고 끄는 동안은 미룸 — D94), 숨은 칸은 `stale`. 프로젝트 탭을 닫으면(`tabs.js`) 칸 모두와 편집 상자를 치우고, 닫기 전에 모든 칸의 저장하지 않은 편집을 묻는다 (`editor.confirmCloseEditor`).
 
 ### 화면 이동 (nav.js)
 - 화면 종류는 `doc`(md·html 문서)·`overview`(폴더 개요)·`code`(코드 읽기 화면, D43). `navigate({type, path, hash?, line?})` — `line` 은 코드 화면의 그 줄로.

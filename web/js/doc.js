@@ -10,7 +10,7 @@ import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides
 import { setToc } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { fitTables } from './tablefit.js';
-import { setDocSource } from './docmenu.js';
+import { setDocSource, sameSource } from './docmenu.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { linkPaths } from './pathlink.js';
 import { setStatus } from './status.js';
@@ -448,6 +448,25 @@ export function showMissing(view, path, err) {
   view.querySelector('button').addEventListener('click', () => emit('open', { type: 'overview', path: parent }));
 }
 
+/** 상태줄의 수정 시각 */
+function showModified(pane, path) {
+  const file = pane.tab.fileMap.get(path);
+  setStatus({ path, info: file ? t('수정 {when}', { when: formatDateTime(file.mtime) }) : '' }, pane);
+}
+
+/** 파일의 글이 칸이 그린 것과 같은지 (자동 새로고침 — D94). 같으면 다시 그리지 않으니 수정 시각만 고친다 */
+export async function sameAsShown(pane, path) {
+  let text;
+  try {
+    text = await getText(docUrl(pane.tab, path));
+  } catch {
+    return false;   // 없어졌거나 읽지 못함 — 그 화면은 showDoc 이 그린다
+  }
+  if (!sameSource(pane, path, text)) return false;
+  showModified(pane, path);
+  return true;
+}
+
 /**
  * 문서를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab)이다 — 그리는 중에 다른 탭을 골라도 이 탭에 그린다.
  * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
@@ -520,8 +539,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   markChanges(view, before, pane);
 
   if (tab.changed.delete(path)) emit('changed');
-  const file = tab.fileMap.get(path);
-  setStatus({ path, info: file ? t('수정 {when}', { when: formatDateTime(file.mtime) }) : '' }, pane);
+  showModified(pane, path);
   emit('rendered', pane);
   return true;
 }
