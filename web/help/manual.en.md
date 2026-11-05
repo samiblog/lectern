@@ -302,6 +302,36 @@ Click an Excel file (`xlsx`, `xlsm`) once in the 'Other files' list, or right-cl
 - Right-click a cell for **Copy this cell** (with its name, such as B3), **Copy this row** and **Copy location for Claude** (`@data/prices.xlsx sheet 'Q1' line 3`). **Copy all** copies the current sheet as tab-separated text that fills the cells when pasted into Excel. You can also focus rows and send them to Claude with Shift+→.
 - It is read-only — open the file in Excel to change it. The old `xls` and `xlsb` formats open in Excel. Up to 50,000 rows and 1,000,000 cells per sheet are shown; the bar says so when a sheet is longer.
 
+### Viewing a table as a chart
+
+See a table as a line or bar chart on the spot. This only views — documents and files don't change.
+
+- **Where to open it**: right-click a table in a document and choose **View as chart**; right-click highlighted table rows for just those rows; use the **View as chart** button in the CSV and Excel views (filtered rows as they are) or right-click a column header.
+- Time is recognised automatically — `2026`, `2026-03`, `2026.3`, `202603`, `2026-03-15`, `2026Q1`, `1Q26`, `Mar-26`, `2026H1`, `2026E` and Korean forms. Tables with the latest row on top are put in time order, and a header row of periods (`2024 | 2025 | 2026`) swaps rows and columns by itself.
+- Units come from brackets in the header (`Price (USD/t)`), or from the table caption. When levels and rates (`%`, `YoY` and so on) are mixed they go on two axes, and **Level / Growth rate / Both** choose what to show. Two axes at most.
+- Blank cells, `-` and `n.a.` are gaps, not zero.
+- **Auto** draws levels as bars and rates as lines (levels become lines past 36 points). Switch to **Line** or **Bar**, and turn series on and off in the list on the left. Up to 6 start on.
+- If the guess is wrong, fix it with **Rows↔Columns** and the series list. Hover to see values; with many points, zoom with the bar below. **Esc** closes.
+
+### Data analysis (CSV and Excel)
+
+- **Summary**: a line above the table such as `Monthly · 2015-01 ~ 2026-09 · 6 numeric columns · 2 blanks`, counted again when you filter.
+- **Calculated columns**: right-click a numeric column header to add % vs previous period, % vs same period last year (12 back for months, 4 for quarters), difference, cumulative, moving average or an index with first value = 100. They have their own colour, and filters, sorting, statistics and charts all work on them.
+- Calculated columns are on screen only. They are never written to the file; they stay when the file changes and redraws, and are gone when you open the file again. Remove one with the **×** in its header.
+- Calculations use the filtered rows. A table stacked by item has several rows per period, so it isn't calculated and a note says why — filter by item first to get that item's series. After a missing month, the % vs previous period is blank.
+- **Copy shown table** copies filtered rows and calculated columns (pastes into separate cells in Excel). **Send to a document…** puts it into another document as a Markdown table (up to 500 rows).
+
+### Sheets with several tables
+
+Tables from Excel often have title rows above them, several header rows, or several tables on one sheet. Such a sheet is split into tables, the largest one is shown, and buttons appear above it. Clean sheets have no buttons and look as before. CSV works the same way.
+
+- Pick a table with **Table 1**, **Table 2**, or see everything as received with **Whole sheet** (**Whole file** for CSV). Row numbers stay as they are in the file.
+- Tables are split at blank rows and columns. A spacer column inside a table and blank rows inside the body stay in the same table.
+- A single-cell row above a table is its title (a line like `Unit: kt` gives the chart its unit). `Source:` and `Note:` rows below it are left out.
+- Rows above the first numeric row are the header. Several rows are combined, like `Imports · Copper` — merged cells carry their value across the merged range.
+- If the guess is wrong, change the number of rows with **Header rows − +**, or highlight rows in the whole sheet and right-click **Use this range as a table**.
+- The chosen table and header rows are remembered until you quit. The file doesn't change.
+
 ## Links and opening files
 
 | Link target | Opens in |

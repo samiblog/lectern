@@ -10,6 +10,7 @@ from __future__ import annotations
 import ast
 import json
 import re
+from collections import Counter
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -237,6 +238,13 @@ def test_js_korean_is_wrapped():
 def test_python_korean_is_wrapped():
     _, bare = python_strings()
     assert not bare, 'Python 의 화면 문구는 t()·N_() 로 감싼다 (번역하지 않을 것은 # i18n-ok): ' + ', '.join(bare)
+
+
+def test_english_keys_are_not_repeated():
+    # JSON 은 같은 열쇠의 뒤 값으로 덮어쓴다 — 새 문구가 있던 번역을 조용히 바꾸지 않게 (v0.51.0 에서 '{n}줄' 이 그렇게 바뀌었다)
+    text = (Path(__file__).resolve().parent.parent / 'web' / 'js' / 'lang' / 'en.js').read_text(encoding='utf-8')
+    keys = re.findall(r'^("(?:[^"\\]|\\.)*"):\s', text, re.M)
+    assert sorted(k for k, n in Counter(keys).items() if n > 1) == []
 
 
 def test_english_covers_every_phrase():

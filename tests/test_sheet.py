@@ -71,6 +71,15 @@ def test_display_formats_follow_the_cell_style(tmp_path):
     assert got == ['2023-03-15', '5.25%', '1,234,567', '2023-03-15', '(1,500)', '₩3,000', '18:00', '2023-03-15 12:00', '1,234.50']
 
 
+def test_merged_cells_come_as_spans_from_the_first_used_column(tmp_path):
+    # 병합 칸은 범위만 준다 (D86) — 열은 rows 의 칸 차례. 범위가 깨진 것은 뺀다
+    data = ('<row r="2"><c r="B2" t="s"><v>0</v></c></row><row r="3"><c r="B3"><v>1</v></c></row>'
+            '</sheetData><mergeCells count="3"><mergeCell ref="B2:D2"/><mergeCell ref="C3"/><mergeCell ref="?"/></mergeCells><sheetData>')
+    path = tmp_path / 'm.xlsx'
+    make_xlsx(path, [('값', data, None)], shared=('머리',))
+    assert sheet.read(path)['sheet']['merges'] == [[2, 0, 2, 2], [3, 1, 3, 1]]
+
+
 def test_general_numbers_like_excel():
     assert format_value(3.0, 'General') == '3' and format_value(0.1 + 0.2, 'General') == '0.3'
     assert format_value(1e20, 'General') == '1e+20' and format_value(-2.5, '') == '-2.5'

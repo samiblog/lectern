@@ -936,6 +936,25 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 
 /* 단축키 표 (help.js) — 묶음을 두 단으로. 단은 높이를 제한하면 옆으로 넘치므로 바깥 상자가 세로로 스크롤한다 */
 .keys-box { width: min(940px, 94vw); margin-top: 5vh; }
+
+/* 빠른 차트 (quickchart.js, D86) — 표를 차트로 보는 창. 그림 바탕은 문서 스타일 (ECharts 의 backgroundColor) */
+.chart-box { display: flex; flex-direction: column; width: min(1240px, 95vw); height: 88vh; margin: 5vh auto 0; }
+.chart-head { display: flex; align-items: center; gap: 10px; }
+.chart-head h2 { flex: 1; min-width: 0; margin: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.chart-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0; font-size: 12.5px; }
+.chart-tools .text-btn { height: 28px; padding: 0 10px; }
+.chart-group { display: inline-flex; border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden; }
+.chart-group[hidden] { display: none; }
+.chart-group button { height: 26px; padding: 0 10px; border: 0; border-left: 1px solid var(--ui-border); background: none; color: inherit; font: inherit; cursor: pointer; }
+.chart-group button:first-child { border-left: 0; }
+.chart-group button[aria-pressed="true"] { background: var(--ui-accent, var(--md-link)); color: var(--ui-on-accent, #fff); }
+#lec-chart-note { color: var(--ui-muted); }
+.chart-main { flex: 1; min-height: 0; display: flex; gap: 12px; }
+#lec-chart-series { flex: none; width: 190px; overflow: auto; font-size: 12.5px; }
+#lec-chart-series label { display: flex; align-items: center; gap: 6px; padding: 3px 2px; cursor: pointer; }
+#lec-chart-series span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+#lec-chart-series small { flex: none; margin-left: auto; color: var(--ui-muted); }
+#lec-chart-plot { flex: 1; min-width: 0; border-radius: 6px; overflow: hidden; }
 .keys-scroll { max-height: 72vh; overflow: auto; padding-right: 4px; }
 .keys-list { columns: 2 360px; column-gap: 28px; }
 .keys-group { break-inside: avoid; margin: 0 0 14px; }

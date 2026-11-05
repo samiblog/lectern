@@ -180,6 +180,7 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   sheetChoice.set(key, data.index);
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;
   const sh = data.sheet;
+  const keep = view.classList.contains('csv-view') ? view.csv : null;
   view.className = 'md-body code-view';
   delete view.dataset.docPath;
   view.dataset.codePath = path;
@@ -207,7 +208,7 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   view.codeText = text.join('\n');
   const letter = (c) => colName(first + c);
   const note = sh.truncated ? t('앞부분만 보입니다 (행 {rows}·칸 {cells}까지) — 전부 보려면 엑셀로 여세요', { rows: '50,000', cells: '1,000,000' }) : '';
-  const shown = renderRows(view, rows, lines, `${key}:${data.index}`, { letter, titleOf: (r, c) => sh.formulas[`${letter(c)}${r}`] || '', note });
+  const shown = renderRows(view, rows, lines, `${key}:${data.index}`, { letter, titleOf: (r, c) => sh.formulas[`${letter(c)}${r}`] || '', note, keep, merges: sh.merges });
   if (!rows.length) view.insertAdjacentHTML('beforeend', `<p class="xl-empty">${esc(t('빈 시트입니다'))}</p>`);
   finish(pane, path, null, {
     path, info: `${t('엑셀')} · ${t("'{name}' 시트", { name: sh.name })} · ${t('{n}행', { n: shown.rows.toLocaleString() })} · ${t('{n}열', { n: shown.cols })}`
@@ -236,6 +237,7 @@ const DELIMS = { ',': t('쉼표'), ';': t('세미콜론'), '\t': t('탭') };
 /** csv·tsv: 머리줄 + 표 (csvview.js). 바뀐 곳 강조는 하지 않는다 (표 전체가 한 블록이다) */
 function showTable(pane, path, { text, size, modified, encoding, top, line }) {
   const { view, scroller, tab } = pane;
+  const keep = view.classList.contains('csv-view') ? view.csv : null;   // 다시 그릴 때 계산 열은 그대로 (D86)
   view.className = 'md-body code-view';
   delete view.dataset.docPath;
   view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
@@ -245,7 +247,7 @@ function showTable(pane, path, { text, size, modified, encoding, top, line }) {
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`;
   view.dataset.codePath = path;
   view.codeText = text;
-  const info = renderCsv(view, path, text, `${tab.id}:${path}`);
+  const info = renderCsv(view, path, text, `${tab.id}:${path}`, keep);
   finish(pane, path, null, {
     path, info: `${languageOf(path).name} · ${t('{n}행', { n: info.rows.toLocaleString() })} · ${t('{n}열', { n: info.cols })}`
       + ` · ${DELIMS[info.delim] || info.delim} · ${formatSize(size)}${encoding ? ` · ${encoding}` : ''}${modifiedText(modified)}`,

@@ -13,12 +13,13 @@ import { showMenu } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource } from './spotlight.js';
-import { partExtent } from './toc.js';
+import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable } from './lineedit.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
-import { colName } from './csvview.js';
+import { colName, columnMenu, chartRange, markRange } from './csvview.js';
+import { openChart, domTable } from './quickchart.js';
 import { $, esc, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 
@@ -233,6 +234,7 @@ function takeItems(range, info, labels = [t('담기'), t('보내기…')]) {
  */
 function litMenu(hl, selected, blockMenu) {
   const { range, ref, text } = hl;
+  const chart = hl.chapter ? null : litChart(range);
   const name = t('하이라이트한 곳');
   const items = [{ header: `${name} · ${rangeText(range)}` },
     { label: t('Claude 로 보내기'), hint: `Shift+→ · ${t('터미널에 (Enter 는 누르지 않음)')}`, action: sendLit },
@@ -240,6 +242,8 @@ function litMenu(hl, selected, blockMenu) {
     { label: t('Claude용 위치 복사'), hint: `Shift+← · ${ref}`, action: copyLitRef },
     { label: t('원문 복사'), hint: `Ctrl+C · ${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource }];
   if (!hl.code) items.push(...takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]));
+  if (chart) items.push('-', chart);
+  if (chart && hl.code) items.push({ label: t('이 범위를 표로'), hint: t('맨 위 행을 머리행으로 어림합니다'), action: () => markRange($('#lec-view'), range) });
   if (!hl.chapter && linesEditable()) items.push('-', { label: t('줄 지우기'), hint: `Delete · ${rangeText(range)}`, action: () => emit('line-delete', {}) });
   items.push('-');
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) });
@@ -249,6 +253,22 @@ function litMenu(hl, selected, blockMenu) {
   }
   items.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
   return items;
+}
+
+/** 표를 차트로 — 캡션은 제목과 단위를 어림하는 데 쓴다 (D86). range: 이 원문 줄의 행만 */
+function chartTable(table, range = null) {
+  const caption = captionOf('table', table)?.text || '';
+  openChart({ ...domTable(table, range), title: caption || t('표'), caption });
+}
+
+/** 하이라이트한 곳이 표 하나의 행이면 '차트로 보기' 항목 (그 행만). 데이터 보기는 그 행들을, md 문서는 그 표의 행들을 */
+function litChart(range) {
+  const view = $('#lec-view');
+  if (view.csv && view.classList.contains('csv-view')) return { label: t('차트로 보기'), hint: t('하이라이트한 행'), action: () => chartRange(view, range) };
+  if (view.classList.contains('code-view')) return null;
+  const hit = [...view.querySelectorAll('table')].filter((table) => domTable(table, range).rows.length);
+  if (hit.length !== 1) return null;
+  return { label: t('차트로 보기'), hint: t('하이라이트한 행'), action: () => chartTable(hit[0], range) };
 }
 
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
@@ -280,7 +300,7 @@ function blockItems(el, target) {
     items.push({
       label: t('표 복사'), hint: t('엑셀에 붙이면 칸이 나뉘고, 워드·메일에는 표로'),
       action: () => { const data = tableData(el); copyParts({ 'text/plain': data.tsv, 'text/html': data.html }, `${t('표')} ${tableSize(el)}`); },
-    });
+    }, { label: t('차트로 보기'), hint: t('시간·단위를 어림해 선·막대로'), action: () => chartTable(el) });
   } else if (el.matches('.code-block')) {
     const code = el.querySelector('pre').textContent.replace(/\n$/, '');
     items.push({ label: t('코드 복사'), action: () => copyPlain(code), term: code });
@@ -347,6 +367,11 @@ function codeMenu(e, view, x, y) {
   const path = view.dataset.codePath;
   if (!path || e.target.closest?.('#lec-findbar')) return;
   e.preventDefault();
+  const head = view.csv && e.target.closest?.('.csv-head th[data-col]');
+  if (head) {   // 열 머리: 계산 열·차트 (D86)
+    showMenu(x, y, columnMenu(view, Number(head.dataset.col)));
+    return;
+  }
   const sel = getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString() : '';
   const hl = litAt(e.clientY);

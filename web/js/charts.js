@@ -62,6 +62,11 @@ const LIBS = {
   plotly: () => library(['plotly/plotly.min.js'], () => typeof window.Plotly?.toImage === 'function' && window.Plotly),
 };
 
+/** 빠른 차트(quickchart.js)가 쓴다 — ECharts 와 지금 스타일의 색 */
+export async function chartLib() {
+  return { echarts: await LIBS.echarts(), theme: echartsTheme(colors()) };
+}
+
 let viz = null;   // Graphviz (WebAssembly) — 한 번 만들어 둔다
 const graphviz = async () => {
   const Viz = await LIBS.dot();

@@ -1,7 +1,7 @@
 """엑셀 보기 (D77): .xlsx·.xlsm 을 표준 라이브러리(zipfile·ElementTree)로 읽어 시트의 칸 값(보이는 글)을 준다 — GET /api/sheet.
 
 - 값만 읽는다: 숫자·글·참거짓·오류, 수식은 파일에 저장된 계산 값 (수식 글은 따로 준다 — 마우스를 올리면 보인다).
-  색·글꼴·병합·숨긴 행 같은 서식은 읽지 않는다. 파일은 고치지 않는다 (보기 전용).
+  색·글꼴·숨긴 행 같은 서식은 읽지 않는다. 병합 칸은 범위만 준다 (화면이 여러 줄 머리행을 합치는 데 쓴다 — D86). 파일은 고치지 않는다 (보기 전용).
 - 숫자는 칸의 표시 형식을 조금 따른다: 날짜·시각(형식에 y·m·d·h·s), 백분율(%), 자리 쉼표(#,##0), 소수 자리(0.00), 지수(E+),
   앞뒤 글(₩·$·"원" 등), 음수 구역(;). 그 밖은 엑셀의 '일반'처럼 (15자리까지, 정수는 정수로).
 - 옛 형식 .xls(BIFF)·.xlsb·.ods 는 읽지 않는다 (엑셀로 연다).
@@ -30,6 +30,7 @@ MAX_ROWS = 50_000                   # 시트마다 보이는 행 (값이 있는 
 MAX_CELLS = 1_000_000               # 시트마다 칸
 MAX_COLS = 1_000                    # 이보다 오른쪽 열은 버린다
 MAX_FORMULAS = 5_000
+MAX_MERGES = 5_000
 
 REL_TYPE_SHEET = 'worksheet'
 
@@ -319,8 +320,8 @@ def col_name(i: int) -> str:
     return name
 
 
-def _cells(fh, shared: list[str], formats: list[str], date1904: bool) -> Iterator[tuple[int, int, str, str | None]]:
-    """시트 XML 의 칸마다 (행 차례, 열 차례, 보이는 글, 수식) — 0부터. 값이 없는 칸은 건너뛴다"""
+def _cells(fh, shared: list[str], formats: list[str], date1904: bool, merges: list[str] | None = None) -> Iterator[tuple[int, int, str, str | None]]:
+    """시트 XML 의 칸마다 (행 차례, 열 차례, 보이는 글, 수식) — 0부터. 값이 없는 칸은 건너뛴다. merges: 병합 칸의 범위 글('A1:C1')을 모은다"""
     row = -1
     col = -1
     for event, el in ET.iterparse(fh, events=('start', 'end')):
@@ -334,6 +335,8 @@ def _cells(fh, shared: list[str], formats: list[str], date1904: bool) -> Iterato
         if name != 'c':
             if name == 'row':
                 el.clear()
+            elif name == 'mergeCell' and merges is not None and len(merges) < MAX_MERGES:
+                merges.append(el.get('ref') or '')
             continue
         ref = _REF.fullmatch(el.get('r') or '')
         col = col_index(ref.group(1)) if ref else col + 1
@@ -378,6 +381,17 @@ def _cells(fh, shared: list[str], formats: list[str], date1904: bool) -> Iterato
                     style = 0
                 text = format_value(number, formats[style] if 0 <= style < len(formats) else 'General', date1904)
         yield row, col, text, formula
+
+
+def _merge_spans(refs: list[str], first: int) -> list[list[int]]:
+    """병합 칸의 범위 'B2:D3' → [첫 행, 첫 열, 끝 행, 끝 열] (행은 1부터, 열은 rows 의 칸 차례 — first 를 뺀다)"""
+    out = []
+    for ref in refs:
+        a, _, b = ref.partition(':')
+        m, n = _REF.fullmatch(a), _REF.fullmatch(b or a)
+        if m and n:
+            out.append([int(m.group(2)), col_index(m.group(1)) - first, int(n.group(2)), col_index(n.group(1)) - first])
+    return out
 
 
 def _broken(error: str) -> SheetError:
@@ -443,11 +457,12 @@ class Workbook:
             raise _broken(sheet['part'])
         rows: dict[int, dict[int, str]] = {}
         formulas: dict[str, str] = {}
+        merged: list[str] = []
         cells = 0
         truncated = False
         with fh:
             try:
-                for r, c, text, formula in _cells(fh, self.shared, self.formats, self.date1904):
+                for r, c, text, formula in _cells(fh, self.shared, self.formats, self.date1904, merged):
                     if c >= MAX_COLS or c < 0 or r < 0:
                         truncated = truncated or c >= MAX_COLS
                         continue
@@ -472,7 +487,7 @@ class Workbook:
         last = max(used, default=-1)
         out_rows = [[r + 1, [rows[r].get(c, '') for c in range(first, max(rows[r]) + 1)]] for r in sorted(rows)]
         return {'name': sheet['name'], 'rows': out_rows, 'first_col': first, 'cols': max(0, last - first + 1),
-                'formulas': formulas, 'truncated': truncated}
+                'formulas': formulas, 'merges': _merge_spans(merged, first), 'truncated': truncated}
 
 
 # ---- 열어 둔 파일 (경로·수정 시각·크기가 같으면 다시 읽지 않는다) ------------------------------

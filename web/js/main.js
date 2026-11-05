@@ -10,6 +10,7 @@ import { initFold } from './fold.js';
 import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
+import { initQuickChart, closeChart } from './quickchart.js';
 import { initTextSize } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
@@ -279,7 +280,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -354,6 +355,7 @@ async function boot() {
   initSlides();
   initPresent();
   initGather();
+  initQuickChart();
   initSpread();
   bindToolbar();
   bindKeys();

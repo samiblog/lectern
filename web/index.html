@@ -395,6 +395,28 @@
     </div>
   </div>
 </div>
+<div id="lec-chart" class="overlay" hidden>
+  <div class="dialog-box chart-box" role="dialog" aria-labelledby="lec-chart-title">
+    <div class="chart-head">
+      <h2 id="lec-chart-title"></h2>
+      <button type="button" id="lec-chart-close" class="icon-btn small" title="닫기 (Esc)" aria-label="닫기"><svg aria-hidden="true"><use href="#i-close"/></svg></button>
+    </div>
+    <div class="chart-tools">
+      <div id="lec-chart-kind" class="chart-group" role="group" aria-label="차트 종류">
+        <button type="button" data-kind="auto">자동</button><button type="button" data-kind="line">선</button><button type="button" data-kind="bar">막대</button>
+      </div>
+      <div id="lec-chart-scale" class="chart-group" role="group" aria-label="보일 단위" hidden>
+        <button type="button" data-scale="level">레벨</button><button type="button" data-scale="rate">증가율</button><button type="button" data-scale="both">둘 다</button>
+      </div>
+      <button type="button" id="lec-chart-swap" class="text-btn" title="행과 열을 바꿉니다">행↔열</button>
+      <span id="lec-chart-note"></span>
+    </div>
+    <div class="chart-main">
+      <div id="lec-chart-series" role="group" aria-label="계열"></div>
+      <div id="lec-chart-plot"></div>
+    </div>
+  </div>
+</div>
 <div id="lec-menu" class="menu" role="menu" hidden></div>
 <div id="lec-lightbox" class="overlay" hidden></div>
 <!-- 발표 모드 (present.js, D59): 창 전체에 슬라이드 한 장 -->
