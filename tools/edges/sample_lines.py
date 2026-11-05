@@ -81,6 +81,7 @@ try:
         check('사례 1: 두 번 누른 자리에서 오타를 고친다', until(lambda: '구리 가격은 1분기에 상승했다.' in read()), [x for x in read().split('\n') if '1분기에' in x][:1])
 
         # 2. 제목
+        settle(600)   # 저장이 화면을 다시 그린 뒤에
         head = page.locator('#lec-view h3', has_text='임시 제목')
         head.scroll_into_view_if_needed()
         head.dblclick()

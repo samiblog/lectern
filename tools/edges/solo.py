@@ -135,14 +135,35 @@ try:
         # --- 터미널·메모로 보내기
         calls = []
         solo.on('request', lambda r: calls.append(r.url) if '/api/term' in r.url else None)
-        solo.evaluate("import('/static/js/store.js').then(({ emit }) => emit('term-paste', '글'))")
+        solo.evaluate("import('/static/js/store.js').then(({ emit }) => emit('term-paste', '@보낸위치 '))")
         solo.wait_for_timeout(250)
         told = solo.text_content('#lec-toast')
-        check('터미널로 보내면 메인 창에 있다고 알린다', '메인 창' in told and not calls and hidden(solo, '#lec-term'), [told, calls])
-        solo.evaluate("import('/static/js/store.js').then(({ emit }) => emit('new-note', { body: '글' }))")
-        solo.wait_for_timeout(250)
-        told = solo.text_content('#lec-toast')
-        check('새 메모로 보내면 메인 창에서 쓴다고 알린다', '메인 창' in told and not (proj / '.lectern').exists(), told)
+        check('터미널로 보내면 메인 창에 맡긴다', '메인 창' in told and len(calls) == 1 and calls[0].endswith('/api/term/relay') and hidden(solo, '#lec-term'), [told, calls])
+        page.wait_for_selector('#lec-term .xterm', timeout=15000)
+        rows = lambda: page.evaluate("document.querySelector('#lec-term .xterm-rows')?.textContent || ''").replace(' ', '')   # 넓은 글자 뒤에 빈 칸이 따라온다
+        arrived = False
+        for _ in range(120):
+            if '@보낸위치' in rows():
+                arrived = True
+                break
+            page.wait_for_timeout(100)
+        check('메인 창의 터미널에 들어간다', arrived, rows()[-120:])
+        page.wait_for_timeout(600)
+        check('Enter 는 누르지 않는다 (명령이 돌지 않는다)', '인식되지' not in rows() and 'not recognized' not in rows() and rows().count('@보낸위치') == 1, rows()[-160:])
+        page.keyboard.press('Control+`')
+        page.wait_for_timeout(300)
+        page.locator('#lec-view h1').first.click()
+        solo.evaluate("import('/static/js/store.js').then(({ emit }) => emit('new-note', { body: '독립창의 글' }))")
+        page.wait_for_selector('#lec-notes:not([hidden])', timeout=4000)
+        check('새 메모로 보내면 메인 창의 메모에 들어간다', '메인 창' in solo.text_content('#lec-toast'), solo.text_content('#lec-toast'))
+        for _ in range(60):
+            if (proj / '.lectern' / 'notes.md').exists() and '독립창의 글' in (proj / '.lectern' / 'notes.md').read_text(encoding='utf-8'):
+                break
+            page.wait_for_timeout(100)
+        check('메모가 파일에 남는다', '독립창의 글' in (proj / '.lectern' / 'notes.md').read_text(encoding='utf-8'))
+        page.keyboard.press('Alt+m')
+        page.wait_for_timeout(300)
+        page.locator('#lec-view h1').first.click()
 
         # --- 자동 새로고침과 저장
         (proj / '라.md').write_text('# 넷째\n\n라 문서가 바뀜.\n', encoding='utf-8')
@@ -215,7 +236,7 @@ try:
 
         solo4.locator('#lec-view p', has_text='나 문서').click(button='right')
         solo4.wait_for_selector('#lec-menu:not([hidden])')
-        check('독립창의 메뉴에는 터미널 버튼이 없다', solo4.locator('#lec-menu [data-term]').count() == 0)
+        check('독립창의 메뉴에도 터미널 버튼이 있다', solo4.locator('#lec-menu [data-term]').count() > 0)
         solo4.keyboard.press('Escape')
 
         # --- 다시 불러와도 독립창

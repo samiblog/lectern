@@ -939,11 +939,13 @@ export default {
 "새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요": "Could not open a new window. Close a window you are not using and try again",
 "문서나 코드를 볼 때 새 창으로 옮길 수 있습니다": "You can move a document or code file to a new window",
 "이 창에 문서 탭이 하나뿐입니다": "This window has only one document tab",
-"메모는 메인 창에서 씁니다": "Notes are in the main window",
-"터미널은 메인 창에 있습니다": "The terminal is in the main window",
 "메인 창으로 보내기": "Send to main window",
 "{name} 창으로 보내기": "Send to window: {name}",
 "{name} 외 {n}개": "{name} and {n} more",
 "그 창이 닫혀 보내지 못했습니다": "That window has closed, so the document was not sent",
+"메인 창의 터미널로 보냈습니다 — Enter 는 누르지 않습니다": "Sent to the terminal in the main window — Enter is not pressed",
+"메인 창의 메모로 보냈습니다": "Sent to notes in the main window",
+"메인 창으로 보내지 못했습니다: {error}": "Could not send to the main window: {error}",
+"메인 창이 다른 프로젝트를 보고 있어 받지 않았습니다": "Not received, because the main window is showing another project",
 "{m}월 {d}일": "{mon} {d}"
 };

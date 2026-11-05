@@ -243,8 +243,14 @@ export async function sendToWindow(pane, to) {
   return true;
 }
 
-/** 다른 창이 보낸 문서를 새 문서 탭에서 연다 */
-async function receive({ type, path, top }) {
+/** 다른 창이 보낸 것을 받는다: 문서는 새 문서 탭에서, 터미널로 보낼 글·메모는 고른 프로젝트의 것일 때만 */
+async function receive({ type, path, top, term, note, p, stay }) {
+  if (term != null || note) {
+    if (p !== S.tab?.id) toast(t('메인 창이 다른 프로젝트를 보고 있어 받지 않았습니다'), 'error');
+    else if (note) emit('new-note', note);
+    else emit(stay ? 'term-paste-stay' : 'term-paste', term);
+    return;
+  }
   const pane = await openInNewTab({ type, path });
   if (pane && top) pane.scroller.scrollTop = top;
 }

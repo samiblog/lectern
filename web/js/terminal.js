@@ -618,11 +618,16 @@ async function pasteInto(term, text) {
 export async function pasteToTerminal(text, { stay = false } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
-  if (solo) {
-    toast(t('터미널은 메인 창에 있습니다'));
+  if (!tab || !text || blockedReadOnly(tab)) return;
+  if (solo) {   // 터미널은 메인 창에 있다 — 메인 창이 같은 길로 넣는다 (D95)
+    try {
+      await postJSON('/api/term/relay', { p: tab.id, text, stay }, TERM_HEADER);
+      toast(t('메인 창의 터미널로 보냈습니다 — Enter 는 누르지 않습니다'));
+    } catch (e) {
+      toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
+    }
     return;
   }
-  if (!tab || !text || blockedReadOnly(tab)) return;
   if (!gathered()) {
     if (!open) toggleTerminal(true, { focus: !stay });
     await showCurrent();

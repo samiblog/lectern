@@ -264,6 +264,20 @@ try:
         page.locator('#lec-tablist .lec-tab').first.click()
         page.wait_for_timeout(500)
 
+        # --- 메인 창이 다른 프로젝트를 보면 받지 않는다
+        page.locator('#lec-tablist .lec-tab').nth(1).click()
+        page.wait_for_timeout(500)
+        keep.evaluate("import('/static/js/store.js').then(({ emit }) => emit('term-paste', '@다른곳 '))")
+        ok = False
+        for _ in range(40):
+            if '다른 프로젝트' in toast(page):
+                ok = True
+                break
+            page.wait_for_timeout(100)
+        check('메인 창이 다른 프로젝트를 보면 터미널 글을 받지 않는다', ok and page.locator('#lec-term .xterm').count() == 0, toast(page))
+        page.locator('#lec-tablist .lec-tab').first.click()
+        page.wait_for_timeout(500)
+
         # --- 보내기 실패
         keep.route('**/api/window-send', lambda r: r.fulfill(status=500, content_type='application/json', body='{"error":"주입"}'))
         keep.locator('#lec-doctab-list .doc-tab').first.click(button='right')

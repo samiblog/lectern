@@ -340,12 +340,17 @@ export function initNotes() {
   on('new-note', async ({ title = '', body = '', path = '', line = 0, end = 0 }) => {
     const tab = S.tab;
     if (!tab) return;
-    if (solo) {
-      toast(t('메모는 메인 창에서 씁니다'));
-      return;
-    }
     if (tab.readonly) {
       toast(t('보기만 하는 프로젝트라 메모를 쓰지 않습니다 — 고쳐 보려면 그 폴더를 복사해 여세요'));
+      return;
+    }
+    if (solo) {   // 메모는 메인 창에 있다 — 메인 창이 쓴다 (D95)
+      try {
+        await postJSON('/api/window-note', { p: tab.id, note: { title, body, path, line, end } });
+        toast(t('메인 창의 메모로 보냈습니다'));
+      } catch (e) {
+        toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
+      }
       return;
     }
     const st = stateOf(tab);

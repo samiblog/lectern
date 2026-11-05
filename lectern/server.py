@@ -294,6 +294,20 @@ def create_app(state: AppState) -> Flask:
             state.on_send(to)
         return jsonify(ok=sent)
 
+    @app.post('/api/window-note')
+    def api_window_note() -> Any:
+        """{p, note: {title, body, path, line, end}} — 독립창의 '새 메모로 보내기'를 메인 창에 맡긴다 (D95). 메모는 메인 창이 쓴다"""
+        data = body()
+        pid, note = data.get('p'), data.get('note')
+        if not isinstance(pid, str) or not isinstance(note, dict):
+            abort(400)
+        kept = {k: note[k] for k in ('title', 'body', 'path') if isinstance(note.get(k), str)}
+        kept |= {k: note[k] for k in ('line', 'end') if isinstance(note.get(k), int) and not isinstance(note.get(k), bool)}
+        state.board.send('', {'note': kept, 'p': pid})
+        if state.on_send:
+            state.on_send('')
+        return jsonify(ok=True)
+
     @app.post('/api/window-gone')
     def api_window_gone() -> Any:
         """{w} — 독립창이 닫힌다. 다른 창의 보낼 곳에서 뺀다"""
@@ -412,6 +426,22 @@ def create_app(state: AppState) -> Flask:
         if len(text) > 65536:
             abort(413, description=t('한 번에 보낼 수 있는 글은 65536자까지입니다'))
         session_of(data.get('t')).write(text)
+        return jsonify(ok=True)
+
+    @app.post('/api/term/relay')
+    def api_term_relay() -> Any:
+        """{p, text, stay} — 독립창에서 고른 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95). 셸로 바로 보내지 않는다:
+        메인 창이 사용자가 고른 것과 같은 길(/api/term/input, Enter 없이)로 넣는다. stay 면 창을 앞으로 가져오지 않는다"""
+        term_guard()
+        data = body()
+        text, pid, stay = data.get('text'), data.get('p'), data.get('stay', False)
+        if not isinstance(text, str) or not isinstance(pid, str) or not isinstance(stay, bool):
+            abort(400)
+        if len(text) > 65536:
+            abort(413, description=t('한 번에 보낼 수 있는 글은 65536자까지입니다'))
+        state.board.send('', {'term': text, 'p': pid, 'stay': stay})
+        if not stay and state.on_send:
+            state.on_send('')
         return jsonify(ok=True)
 
     @app.post('/api/term/resize')

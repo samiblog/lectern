@@ -1,7 +1,6 @@
 // 팝업 메뉴, 확대 보기(라이트박스)
 
 import { emit } from './store.js';
-import { solo } from './solo.js';
 import { html, setHtml } from './html.js';
 import { $ } from './util.js';
 import { t } from './i18n.js';
@@ -24,7 +23,7 @@ function menuItemHtml(it, i) {
   if (it.header) return html`<div class="menu-head">${it.header}</div>`;
   const attrs = html`${it.icon ? html` class="with-icon"` : ''}${it.current ? html` aria-current="true"` : ''}`;
   const main = html`<button role="menuitem" data-i="${i}"${attrs}${it.tip ? html` title="${it.tip}"` : ''}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
-  if (!it.term || solo) return main;   // 터미널은 메인 창에 (D95)
+  if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
   return [html`<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${tip}" aria-label="${tip}">`, html`<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`];

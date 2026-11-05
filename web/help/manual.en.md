@@ -74,6 +74,7 @@ You can move a document into its own window and read side by side. With two moni
 - Sending the last document out of a separate window closes that window.
 - A separate window can hold several document tabs too. The sidebar starts hidden; press **Ctrl+B** to show it. **Ctrl+T** and **Ctrl+P** also open documents.
 - A separate window belongs to its project. When you pick another project in the main window it hides, and it comes back with its tabs and scroll position when you return. Closing the project tab closes it.
+- In a separate window, **Send to Claude**, the **Terminal** buttons and **Send to new note** go to the terminal and notes in the main window. Enter is not pressed, and the main window comes to the front. **Shift+→** sends while you stay in the separate window.
 - Project tabs, the terminal, notes, settings and styles stay in the main window. A style changed in the main window applies when you reopen the separate window.
 - Display changes such as text size apply to that window only and are not saved.
 - Closing the last document tab with **Ctrl+W** closes the window. Closing the main window closes them all. Separate windows do not reopen on the next start.

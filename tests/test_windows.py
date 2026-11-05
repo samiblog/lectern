@@ -6,6 +6,7 @@ from urllib.parse import parse_qs
 
 import pytest
 
+from lectern import terminal
 from lectern.config import Config
 from lectern.state import AppState
 from lectern.server import create_app
@@ -234,3 +235,44 @@ def test_front_brings_the_receiving_window(setup):
             break
         time.sleep(0.01)
     assert calls == ['main'] and made['a' * 16].calls == ['show']
+
+
+def relay_app(tmp_path):
+    (tmp_path / 'a.md').write_text('# 가', encoding='utf-8')
+    state = AppState(Config(tmp_path / 'config.json'), mode='browser')
+    state.open(tmp_path, remember=False)
+    return state, create_app(state).test_client(), {'X-Term': state.term_secret}
+
+
+@pytest.mark.skipif(not terminal.AVAILABLE, reason='Windows 의사 콘솔(ConPTY)이 있어야 한다')
+def test_terminal_relay_is_guarded_like_the_terminal(tmp_path):
+    state, c, secret = relay_app(tmp_path)
+    told = []
+    state.on_send = told.append
+    try:
+        body = {'p': 'p1', 'text': '@a.md 1행 ', 'stay': False}
+        assert c.post('/api/term/relay', json=body).status_code == 403   # 비밀값 없이는 안 된다
+        assert c.post('/api/term/relay', json=body, headers={'X-Term': 'x'}).status_code == 403
+        other_site = {**secret, 'Origin': 'http://evil.example'}
+        assert c.post('/api/term/relay', json=body, headers=other_site).status_code == 403
+        assert 'inbox' not in c.get('/api/changes').get_json()
+        assert c.post('/api/term/relay', json=body, headers=secret).get_json()['ok'] and told == ['']
+        assert c.get('/api/changes').get_json()['inbox'] == [{'term': '@a.md 1행 ', 'p': 'p1', 'stay': False}]
+        c.post('/api/term/relay', json={**body, 'stay': True}, headers=secret)
+        assert told == ['']   # 머무는 길은 메인 창을 앞으로 가져오지 않는다
+        c.get('/api/changes')
+        assert c.post('/api/term/relay', json={**body, 'text': 'x' * 65537}, headers=secret).status_code == 413
+        assert c.post('/api/term/relay', json={**body, 'text': 1}, headers=secret).status_code == 400
+    finally:
+        state.close()
+
+
+def test_document_route_cannot_carry_terminal_text(tmp_path):
+    """문서를 보내는 길로는 셸에 글자를 보낼 수 없다 — 받은 칸만 다시 적는다"""
+    state, c, _ = relay_app(tmp_path)
+    try:
+        c.post('/api/window-send', json={'to': '', 'type': 'doc', 'path': 'a.md', 'term': 'rm -rf', 'note': {'body': 'x'}, 'stay': True})
+        c.post('/api/window-note', json={'p': 'p1', 'note': {'body': '글', 'line': 3, 'term': 'rm -rf', 'end': True}})
+        assert c.get('/api/changes').get_json()['inbox'] == [{'type': 'doc', 'path': 'a.md', 'top': 0}, {'note': {'body': '글', 'line': 3}, 'p': 'p1'}]
+    finally:
+        state.close()
