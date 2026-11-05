@@ -83,10 +83,8 @@ function renderTree() {
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(f, 0, dirname(f.path) ? `<span class="sub">${esc(dirname(f.path))}</span>` : '')).join('')
       : `<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`;
   } else {
-    const rootCls = ['row', 'dir', 'root'];
-    if (activeDir() === '') rootCls.push('active');
-    box.innerHTML = `<div class="${rootCls.join(' ')}" data-dir="" title="${t('프로젝트 개요')}" tabindex="0"><span class="label">${esc(S.name)}</span></div>`
-      + (S.tree.length ? nodesHtml(S.tree, 0) : `<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
+    // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)
+    box.innerHTML = S.tree.length ? nodesHtml(S.tree, 0) : `<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`;
   }
   box.scrollTop = scroll;
 }

@@ -15,6 +15,7 @@ import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource } from './spotlight.js';
 import { partExtent } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
+import { linesEditable } from './lineedit.js';
 import { openExternal } from './api.js';
 import { isCode } from './icons.js';
 import { colName } from './csvview.js';
@@ -239,6 +240,7 @@ function litMenu(hl, selected, blockMenu) {
     { label: t('Claude용 위치 복사'), hint: `Shift+← · ${ref}`, action: copyLitRef },
     { label: t('원문 복사'), hint: `Ctrl+C · ${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource }];
   if (!hl.code) items.push(...takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]));
+  if (!hl.chapter && linesEditable()) items.push('-', { label: t('줄 지우기'), hint: `Delete · ${rangeText(range)}`, action: () => emit('line-delete', {}) });
   items.push('-');
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) });
   if (blockMenu) {

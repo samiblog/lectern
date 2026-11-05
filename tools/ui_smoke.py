@@ -1742,7 +1742,7 @@ def run(headed: bool) -> None:
             print('[폴더 보기]')
             page.click('#lec-btn-view')
             wait_until(page, "document.querySelector('#lec-files').classList.contains('folder-view')")
-            wait_until(page, f"!!document.querySelector('{olist} .row.root')")
+            wait_until(page, f"!!document.querySelector('{olist} .row')")
             hidden = page.evaluate("['#lec-docs', '#lec-others-split', '#lec-others-head', '#lec-code'].map(s => getComputedStyle(document.querySelector(s)).display)")
             active_row = lambda: page.evaluate(f"document.querySelector('{olist} .row.active')?.dataset.path ?? null")
             revealed = active_row()
@@ -2009,7 +2009,7 @@ def run(headed: bool) -> None:
             page.click('#lec-btn-edit')   # 끄기
             off = wait_until(page, "!document.querySelector('.lec-editor') && document.querySelector('#lec-btn-edit').getAttribute('aria-pressed') === 'false'", 3000)
             order = page.evaluate("[...document.querySelectorAll('#lec-tabbar .tabbar-btn')].map(b => b.id)")
-            page.click('#lec-tree .row.root')   # 폴더 개요에서는 누를 수 없다
+            page.click('#lec-tablist .lec-tab.active')   # 고른 프로젝트 탭을 또 누르면 프로젝트 개요 — 폴더 개요에서는 누를 수 없다
             no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
             page.locator('#lec-tree .row.file', has_text='후속 과제').click()
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
@@ -2543,7 +2543,7 @@ def run(headed: bool) -> None:
             n_tabs = lambda n: wait_until(page, f"document.querySelectorAll('#lec-tablist .lec-tab').length === {n}")
             tab_el = lambda i: page.locator('#lec-tablist .lec-tab').nth(i)
             h1_has = lambda text: wait_until(page, f"document.querySelector('#lec-view h1')?.textContent.includes('{text}')", 10000)
-            tree_root = lambda: page.evaluate("document.querySelector('#lec-tree .row.root .label')?.textContent")
+            tree_root = lambda: page.evaluate("document.querySelector('#lec-tablist .lec-tab.active .name')?.textContent")   # 트리의 내용은 labels 로 본다
             ui_now = lambda: page.evaluate('''() => ({ toc: document.querySelector('#lec-toc .toc-list a[data-i]')?.textContent || '',
               status: document.querySelector('#lec-st-path').textContent, tree: document.querySelector('#lec-tree .row.active')?.dataset.doc,
               top: Math.round(document.querySelector('#lec-content').scrollTop) })''')

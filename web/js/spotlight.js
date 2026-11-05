@@ -592,6 +592,16 @@ export const spotlightOn = () => active && mode === 'chapter' && chapters.length
 // 한 줄 편집(lineedit.js, D76)이 쓰는 것: 지금 화면의 줄 단위·원문 줄, 그 줄을 하이라이트, 상태줄 다시 쓰기
 export const currentUnits = () => units();
 export const sourceLines = () => srcLines();
+/** 줄 하이라이트의 원문 줄 [a, b] (lineedit.js 의 줄 지우기·옮기기) — 줄 하이라이트가 아니면 null */
+export const litSpan = () => (ranged() ? litLines() : null);
+/** 옮긴 줄들로 줄 하이라이트를 옮긴다 (lineedit.js) */
+export function setLitSpan(a, b) {
+  if (!ranged()) return;
+  anchor = a;
+  focus = b;
+  paint();
+  setHere(b, { scroll: true });
+}
 /** 한 줄 편집을 시작·끝낼 때 (lineedit.js): 덮개의 회색과 상태줄을 맞춘다 */
 export function showLineEdit() {
   place();
@@ -700,6 +710,10 @@ export function spotKey(e) {
   const k = e.key;
   if (e.ctrlKey) {
     if (e.shiftKey && k === 'ArrowRight') return sendAndGo();
+    if (!e.shiftKey && (e.code === 'KeyX' || k.toLowerCase() === 'x') && ranged() && !getSelection()?.toString()) {   // 잘라내기 (lineedit.js, D83)
+      emit('line-delete', { cut: true });
+      return true;
+    }
     if (e.shiftKey || (e.code !== 'KeyC' && k.toLowerCase() !== 'c') || !lit() || getSelection()?.toString()) return false;
     copyLitSource();
     return true;
@@ -722,6 +736,10 @@ export function spotKey(e) {
     return true;
   }
   if (k === 'F2') return editHere();
+  if (k === 'Delete' && ranged()) {   // 줄 지우기 (lineedit.js, D83)
+    emit('line-delete', {});
+    return true;
+  }
   if (k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'PageUp' && k !== 'PageDown') return false;
   const step = k === 'ArrowUp' || k === 'PageUp' ? -1 : 1;
   if (spotlightOn()) return moveSpotlight(step);

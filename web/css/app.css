@@ -497,7 +497,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .explorer:focus-within .row.selected { background: var(--ui-active-bg); color: var(--ui-active-fg); }
 .explorer .row.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }   /* 폴더 보기: 지금 보는 문서·폴더 */
 .explorer .row.dir .label { font-weight: 500; }
-.explorer .row.root .label { font-weight: 700; }
 /* 파일 종류 아이콘 (icons.js): 문서 트리·최근 변경·파일 목록. 문서(md·html)는 강조색 */
 .side-list .ficon {
   width: 16px; height: 16px; flex: none; margin-right: 2px;
@@ -516,8 +515,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .row .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row.dir .label { font-weight: 600; }
 .row.excluded > .label, .row.excluded > .ficon { opacity: .6; }   /* 제외 폴더와 그 안 ('자료' 목록, D49) */
-.row.root { padding-left: 8px; margin-bottom: 2px; }
-.row.root .label { font-weight: 700; }
 .row .sub { color: var(--ui-faint); font-size: 12px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 .row.active .sub { color: inherit; opacity: .7; }
 .caret, .caret-space { width: 18px; height: 18px; flex: none; }

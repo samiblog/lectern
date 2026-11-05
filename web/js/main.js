@@ -8,7 +8,7 @@ import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen } from './spotlight.js';
-import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit } from './lineedit.js';
+import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
 import { initTextSize } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
@@ -272,6 +272,8 @@ function bindKeys() {
       e.preventDefault();   // 한 줄 편집으로 저장한 것 되돌리기 (lineedit.js, D76)
     } else if (mod && !e.shiftKey && !e.altKey && (e.code === 'KeyY' || key === 'y') && !typing(e) && docKeyTarget(e) && redoLineEdit()) {
       e.preventDefault();   // 되돌린 것을 다시
+    } else if (e.altKey && !mod && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !typing(e) && docKeyTarget(e) && moveLit(e.key === 'ArrowUp' ? -1 : 1)) {
+      e.preventDefault();   // 하이라이트한 줄 옮기기 (lineedit.js, D83)
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyL' && !typing(e) && toggleLineNumbers()) {
       e.preventDefault();   // 줄 번호 (linenums.js, D80)
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장

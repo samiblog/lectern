@@ -15,6 +15,10 @@
 //   한글 조합 중의 Enter·화살표는 조합의 것이다 (isComposing).
 // - 본문의 할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 바꿔 저장한다 (같은 저장 길, 같은 되돌리기).
 // - 저장은 replaceLines 하나로 — 범위(시작 줄, 원래 줄들, 새 줄들)를 바꾼다. 줄 추가·옮기기처럼 여러 줄을 바꾸는 편집도 이 길로.
+// - 줄 구조 (D83 — 계산은 lineops.js): Ctrl+Enter·Ctrl+Shift+Enter 로 아래·위에 새 줄 (글 가운데서 Ctrl+Enter 면 그 자리에서 나눔), 줄 맨 앞의 Backspace 로 윗줄과 합침,
+//   목록의 Tab·Shift+Tab 으로 레벨 이동, Alt+↑·↓ 로 옮기기, Ctrl+Shift+K 지우기, Ctrl+Shift+D 복제. 하이라이트한 줄도 Alt+↑·↓ (moveLit)·Delete·Ctrl+X (deleteLit).
+//   새 줄은 글을 쓸 때까지 화면에만 있다 (session.fresh — 그 자리에 빈 <li>·<p>·코드 줄을 넣고, 글 없이 끝내면 걷는다 — 파일은 그대로다).
+//   이미 고친 글은 먼저 저장하고 구조를 바꾼다 (되돌리기는 두 걸음). 되지 않는 것은 칸을 그대로 두고 알린다.
 // - 저장한 뒤 Ctrl+Z·Ctrl+Y(main.js — 문서 칸에서): 파일마다 기록을 따라 되돌리고 다시 한다 — 파일이 마지막 저장 그대로일 때만 (hash).
 //   그사이 파일이 바뀌었으면 그 파일의 기록을 버린다 (Claude Code 가 고친 것을 덮어쓰지 않게). 빠르게 눌러도 차례로 (turn).
 // - 편집하는 동안 그 칸은 자동 새로고침·F5 로 다시 그리지 않는다 (nav.refreshView 가 pane.lineEdit 을 본다 — 끝낸 뒤 그린다).
@@ -25,13 +29,16 @@ import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines } from './lineunits.js';
 import { locateLines } from './linefind.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit,
+  diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
+} from './lineops.js';
+import {
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
 
-let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el}
+let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
 // 되돌리기 기록 — 파일마다 ('탭 id|경로' → {done, undone}). done 은 저장한 변경(마지막 것이 끝), undone 은 되돌린 변경.
 // 변경 {line, before: [줄], after: [줄], hash(적용한 뒤의 파일), prior(되돌린 뒤의 파일)}
 const records = new Map();
@@ -39,6 +46,7 @@ const MAX_UNDO = 50;
 let turn = Promise.resolve();   // 되돌리기·다시 하기는 차례로 — 앞의 것이 저장을 마치기 전에 다음 것이 파일을 보면 '바뀌었다'고 잘못 안다
 let opening = 0;     // 두 번 누른 뒤 칸을 열 때까지의 타이머 — 세 번째 누르기(문단 고르기)면 열지 않는다
 let taskSaving = false;
+let moves = 0;       // 차례를 기다리는 줄 옮기기 — 키를 누르고 있으면 쌓이지 않게
 
 const OPEN_WAIT = 250;
 // 두 번 눌러도 열지 않는 곳: 링크·그림·다이어그램·차트·수식, 머리 정보, 코드 블록의 도구
@@ -52,6 +60,15 @@ export const lineEditing = () => !!session;
 /** 칸의 화면이 그려져 있는지 — 그리는 중에 글 칸을 넣으면 그리기가 끝날 때 화면째 바뀌어 칸이 사라진다 (친 글도 함께) */
 const drawn = (pane) => !pane.pending && !pane.redrawing;
 const nap = () => new Promise((r) => setTimeout(r, 50));
+const isCodeView = (view) => view.classList.contains('code-view');
+const isSheet = (view) => view.dataset.sheet != null && isCodeView(view) && !!view.dataset.codePath && /\.xls[xm]$/i.test(view.dataset.codePath);
+const pathIn = (view) => view.dataset.docPath || view.dataset.codePath;
+
+/** 칸을 다 그릴 때까지 (오래 걸리면 false) */
+async function settled(pane) {
+  for (let waited = 0; !drawn(pane) && waited < 5000; waited += 50) await nap();
+  return drawn(pane);
+}
 
 // ---- 줄 나누기: 잠그는 앞뒤 + 고칠 글 -------------------------------------------------
 
@@ -127,13 +144,15 @@ function escapePipes(s) {
   return out;
 }
 
+/** 칸의 글 */
+function read(p) {
+  let text = p.span.textContent.replace(/[\r\n]+/g, ' ');
+  if (!p.nbsp) text = text.replace(/ /g, ' ');   // 칸이 공백을 nbsp 로 바꾼 것 (원문에 없던 것만)
+  return text;
+}
+
 /** 고친 글로 새 줄을 만든다 */
 function buildLine(s) {
-  const read = (p) => {
-    let text = p.span.textContent.replace(/[\r\n]+/g, ' ');
-    if (!p.nbsp) text = text.replace(/ /g, ' ');   // 칸이 공백을 nbsp 로 바꾼 것 (원문에 없던 것만)
-    return text;
-  };
   if (s.kind === 'table') {
     const { parts } = s;
     const cells = parts.cells.map((c, i) => {
@@ -173,21 +192,21 @@ function caretIn(ranges, bodies, at) {
   return { cell: i, offset: sourceOffset(shown.toString(), bodies[i]) };
 }
 
-/** 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳) */
-async function begin(line, { cell = 0, at = null } = {}) {
+/** 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳), offset: 커서를 둘 글 안의 자리 */
+async function begin(line, { cell = 0, at = null, offset = null } = {}) {
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
   // 다시 그리는 중(앞 줄을 저장한 뒤, 자동 새로고침 등)이면 다 그린 뒤에 — 지금 보이는 것은 곧 바뀔 화면이다
-  for (let waited = 0; !drawn(pane) && waited < 5000; waited += 50) await nap();
+  const ready = await settled(pane);
   if (S.pane !== pane || session) return;
-  if (!drawn(pane)) {
+  if (!ready) {
     toast(t('화면을 그리는 중입니다 — 다 그린 뒤 F2 를 누르세요'));
     return;
   }
   const view = $('#lec-view');
-  const path = view.dataset.docPath || view.dataset.codePath;
-  if (view.dataset.sheet != null && view.classList.contains('code-view') && view.dataset.codePath && /\.xls[xm]$/i.test(path)) {
+  const path = pathIn(view);
+  if (isSheet(view)) {
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));   // D77
     return;
   }
@@ -205,9 +224,9 @@ async function begin(line, { cell = 0, at = null } = {}) {
     return;
   }
   // 받는 사이에 시작한 다시 그리기가 있으면 끝날 때까지. 여기부터 칸을 넣고 pane.lineEdit 을 달 때까지는 멈추지 않는다 — 그 뒤의 다시 그리기는 refreshView 가 미룬다
-  for (let waited = 0; !drawn(pane) && waited < 5000; waited += 50) await nap();
+  const again = await settled(pane);
   if (S.pane !== pane || $('#lec-view') !== view || session) return;   // 그사이 다른 화면
-  if (!drawn(pane)) {
+  if (!again) {
     toast(t('화면을 그리는 중입니다 — 다 그린 뒤 F2 를 누르세요'));
     return;
   }
@@ -243,13 +262,95 @@ async function begin(line, { cell = 0, at = null } = {}) {
     range.insertNode(span);
     places.push({ span, frag, nbsp: bodies[i].includes(' ') });
   }
-  session = { pane, tab, path, line, kind: slot.kind, original, parts, places, el: slot.el, cell: Math.min(caret?.cell ?? cell, n - 1) };
+  session = { pane, tab, path, line, kind: slot.kind, original, parts, places, el: slot.el, cell: Math.min(caret?.cell ?? cell, n - 1), fence: slot.fence || '' };
   pane.lineEdit = session;
   for (const p of places) bind(p.span);
   document.addEventListener('mousedown', onOutside, true);
   focusPlace(session.cell);
-  const text = caret && places[caret.cell].span.firstChild;
-  if (text) getSelection().collapse(text, caret.offset);
+  const spot = caret ?? (offset != null ? { cell: session.cell, offset } : null);
+  const text = spot && places[spot.cell].span.firstChild;
+  if (text) getSelection().collapse(text, Math.min(spot.offset, text.length));
+  showLineEdit();
+}
+
+/** 아직 파일에 없는 새 줄의 자리를 화면에 만든다 {span, el, remove} — slot: 기준 줄의 자리 */
+function plantLine(slot, plan, below) {
+  const span = document.createElement('span');
+  span.className = 'lec-line-edit whole';
+  span.contentEditable = 'plaintext-only';
+  span.spellcheck = false;
+  span.dataset.i = '0';
+  span.textContent = plan.fill;
+  const side = below ? 'after' : 'before';
+  if (plan.kind === 'code' && !slot.el.classList.contains('cv-line')) {   // 코드 블록: 그 줄의 앞뒤에
+    span.classList.remove('whole');
+    const range = slot.ranges[0].cloneRange();
+    range.collapse(!below);
+    const nl = document.createTextNode('\n');
+    const frag = document.createDocumentFragment();
+    if (below) frag.append(nl, span);
+    else frag.append(span, nl);
+    range.insertNode(frag);
+    return { span, el: slot.el, remove: () => { span.remove(); nl.remove(); } };
+  }
+  let el;
+  if (plan.kind === 'code') {   // 코드 화면. data-line 이 없어 줄 단위에 들지 않고 번호도 비어 있다
+    el = document.createElement('div');
+    el.className = 'cv-line lec-new-line';
+    const text = document.createElement('span');
+    text.className = 'cv-text';
+    text.append(span);
+    el.append(text);
+    slot.el[side](el);
+  } else if (plan.kind === 'item') {
+    el = document.createElement('li');
+    el.className = 'lec-new-line';
+    if (plan.task) {
+      el.classList.add('task-list-item');
+      const box = document.createElement('input');
+      box.type = 'checkbox';
+      box.disabled = true;
+      box.className = 'task-list-item-checkbox';
+      el.append(box, ' ');
+    }
+    el.append(span);
+    (slot.el.closest('li') ?? slot.el)[side](el);
+  } else {
+    el = document.createElement('p');
+    el.className = 'lec-new-line';
+    el.append(span);
+    slot.el[side](el);
+  }
+  return { span, el, remove: () => el.remove() };
+}
+
+/** 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew) */
+async function beginNew(base, below) {
+  const pane = S.pane;
+  const ready = await settled(pane);
+  if (S.pane !== pane || session || !ready) return;
+  const view = $('#lec-view');
+  const src = sourceLines();
+  const slot = lineSlot(view, base, src);
+  if (!slot) {
+    toast(t('이 줄에는 새 줄을 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
+    return;
+  }
+  const plan = planNew(src, base, below, { code: isCodeView(view), parts: slot.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null });
+  if (plan.error) {
+    toast(whyNot(plan.error));
+    return;
+  }
+  const made = plantLine(slot, plan, below);
+  session = {
+    pane, tab: pane.tab, path: pathIn(view), line: base, kind: plan.kind === 'code' ? 'code' : 'text', original: '', parts: { head: '', body: '', tail: '' },
+    places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot.fence || '', fresh: { plan, lines: src.slice(), remove: made.remove },
+  };
+  pane.lineEdit = session;
+  bind(made.span);
+  document.addEventListener('mousedown', onOutside, true);
+  focusPlace(0);
+  made.span.scrollIntoView({ block: 'nearest' });
   showLineEdit();
 }
 
@@ -282,6 +383,7 @@ async function finish(save) {
   session = null;
   s.pane.lineEdit = null;
   document.removeEventListener('mousedown', onOutside, true);
+  if (s.fresh) return finishNew(s, save);
   const next = buildLine(s);
   if (!save || next === s.original) {
     restore(s);
@@ -313,6 +415,45 @@ async function finish(save) {
   } catch (e) {
     restore(s);
     await copyText(next);   // 칸을 되돌리면 친 글이 사라진다
+    toast(t('저장하지 못했습니다 — 고친 줄은 클립보드에 복사했습니다: {error}', { error: e.message }), 'error');
+    return { ok: false, saved: false };
+  }
+}
+
+/** 새 줄을 끝낸다: 글이 있으면 파일에 넣고, 없으면 화면의 자리를 걷는다 (파일은 그대로) */
+async function finishNew(s, save) {
+  const text = read(s.places[0]);
+  if (!save || !text.trim()) {
+    s.fresh.remove();
+    showLineEdit();
+    if (s.pane.lineEditMissed) {
+      s.pane.lineEditMissed = false;
+      refreshView(s.pane);
+    }
+    return { ok: true, saved: false };
+  }
+  const { span } = s.places[0];
+  span.contentEditable = 'false';
+  span.classList.add('saving');
+  showLineEdit();
+  const made = insertLine(s.fresh.lines, s.fresh.plan, text);
+  const d = diffRange(s.fresh.lines, made.lines);
+  try {
+    s.pane.lineEditMissed = false;
+    const r = await replaceLines(s.pane, s.path, d.start, d.before, d.after);
+    if (!r) {
+      s.fresh.remove();
+      await copyText(text);
+      toast(t('다른 곳에서 이 줄이 바뀌어 저장하지 않았습니다 — 고친 줄은 클립보드에 복사했습니다'), 'error');
+      refreshView(s.pane);
+      return { ok: false, saved: false };
+    }
+    s.line = made.line + r.at - d.start;
+    toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${s.path} ${rangeText([s.line, s.line])}` }));
+    return { ok: true, saved: true };
+  } catch (e) {
+    s.fresh.remove();
+    await copyText(text);
     toast(t('저장하지 못했습니다 — 고친 줄은 클립보드에 복사했습니다: {error}', { error: e.message }), 'error');
     return { ok: false, saved: false };
   }
@@ -354,6 +495,20 @@ export async function replaceLines(pane, path, start, before, after) {
   return r;
 }
 
+/** 줄 배열 old 를 next 로 저장한다 — 되돌리기 한 걸음으로. 줄이 밀린 수를 돌려준다. 저장하지 못했으면 알리고 null */
+async function commit(pane, path, old, next) {
+  const d = diffRange(old, next);
+  try {
+    const r = await replaceLines(pane, path, d.start, d.before, d.after);
+    if (r) return r.at - d.start;
+    toast(t('다른 곳에서 이 줄이 바뀌어 저장하지 않았습니다 — 화면을 다시 그렸습니다'), 'error');
+    refreshView(pane);
+  } catch (e) {
+    toast(t('저장하지 못했습니다: {error}', { error: e.message }), 'error');
+  }
+  return null;
+}
+
 /** 칸 밖을 누르면: 고친 것이 있으면 저장, 없으면 그만둔다 (그 블록 — 표면 그 행 — 안은 그대로) */
 function onOutside(e) {
   if (!session || session.el.contains(e.target)) return;
@@ -370,6 +525,16 @@ function caretAtEnd(span) {
   r.selectNodeContents(span);
   r.setStart(sel.focusNode, sel.focusOffset);
   return !r.toString();
+}
+
+/** 칸 안의 글 커서 자리 (글자 수). 글을 골랐거나 칸 밖이면 null */
+function caretOffset(span) {
+  const sel = getSelection();
+  if (!sel.isCollapsed || !span.contains(sel.focusNode)) return null;
+  const r = document.createRange();
+  r.selectNodeContents(span);
+  r.setEnd(sel.focusNode, sel.focusOffset);
+  return r.toString().length;
 }
 
 /**
@@ -402,6 +567,11 @@ async function step(dir) {
   try {
     const res = await finish(true);
     if (!res.ok || S.pane !== s.pane) return;
+    if (s.fresh && !res.saved) {   // 빈 새 줄을 떠나면 기준 줄로
+      followLine(s.line);
+      await begin(s.line);
+      return;
+    }
     const src = sourceLines();
     const order = currentUnits().flatMap((u) => editableLines(u, src));
     const i = order.indexOf(s.line);
@@ -426,6 +596,231 @@ async function sendToClaude() {
   if (res.ok) emit('term-paste', `@${s.path} ${rangeText([s.line, s.line])} `);
 }
 
+// ---- 줄 구조 (D83 — 계산은 lineops.js) ---------------------------------------------
+
+/** lineops 가 돌려준 까닭의 알림 문구 */
+function whyNot(error) {
+  switch (error) {
+    case 'edge': return t('더 옮길 곳이 없습니다');
+    case 'mixed': return t('수준이 다른 항목은 함께 옮기지 못합니다 — 한 항목씩 옮깁니다');
+    case 'table': return t('표의 행은 아직 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다');
+    case 'first-item': return t('목록의 맨 앞 항목은 더 안으로 옮기지 못합니다');
+    case 'top-level': return t('맨 바깥 항목은 더 밖으로 옮기지 못합니다');
+    case 'different': return t('종류가 다른 줄은 합치지 않습니다');
+    case 'fence': return t('코드 블록의 ``` 줄만 지우면 블록이 깨집니다 — 코드 블록 전체를 하이라이트하면 블록째 지웁니다');
+    default: return t('이 줄은 그렇게 고칠 수 없습니다 — 편집 모드(Ctrl+E)에서 고칩니다');
+  }
+}
+
+const splitterOf = (s) => (s.kind === 'code' ? (line) => splitCode(line, s.fence) : splitText);
+
+/** 줄 사이를 넘어가는 동안: 하이라이트의 회색을 걷어 둔다 */
+async function hold(s, work) {
+  s.pane.lineEditHold = true;
+  try {
+    await work();
+  } finally {
+    s.pane.lineEditHold = false;
+    showLineEdit();
+  }
+}
+
+/**
+ * 칸의 줄에 op(줄 배열 → {lines, line, offset?} | {error})를 한다 — 고친 글을 저장한 뒤 바꾸고 바뀐 줄에서 편집을 잇는다.
+ * 되지 않으면 칸을 그대로 두고 알린다 (quiet: 알리지 않는다)
+ */
+async function restructure(op, { quiet = false } = {}) {
+  const s = session;
+  const { span } = s.places[s.cell];
+  if (s.fresh && !read(s.places[0]).trim()) return;   // 아직 없는 줄
+  const first = s.fresh ? null : op(sourceLines());
+  if (first?.error) {
+    if (!quiet) toast(s.kind === 'table' && first.error === 'table-head' ? t('표의 머리행은 옮기지 않습니다') : whyNot(first.error));
+    return;
+  }
+  const offset = caretOffset(span);
+  await hold(s, async () => {
+    const res = await finish(true);
+    if (!res.ok || S.pane !== s.pane) return;
+    const src = sourceLines();
+    const r = op(src);
+    if (r.error) {
+      toast(whyNot(r.error));
+      await begin(s.line, { cell: s.cell, offset });
+      return;
+    }
+    const shift = await commit(s.pane, s.path, src, r.lines);
+    if (shift == null) return;
+    followLine(r.line + shift);
+    await begin(r.line + shift, { cell: s.cell, offset: r.offset ?? offset });
+  });
+}
+
+/** Ctrl+Enter(below)·Ctrl+Shift+Enter: 새 줄. 글 가운데서 Ctrl+Enter 면 그 자리에서 두 줄로 나눈다 */
+async function addLine(below) {
+  const s = session;
+  if (s.kind === 'table') {
+    toast(whyNot('table'));
+    return;
+  }
+  const { span } = s.places[0];
+  if (s.fresh && !read(s.places[0]).trim()) return;   // 빈 새 줄에서 또 — 쓴 것이 없다
+  const offset = caretOffset(span);
+  const length = span.textContent.length;
+  if (below && offset && offset < length) {
+    const code = isCodeView(s.pane.view);
+    restructure((lines) => {
+      const r = splitLine(lines, s.line, offset, { split: splitterOf(s), code });
+      if (r.error) return r;
+      const body = splitterOf(s)(r.lines[r.line - 1]).body;
+      return { ...r, offset: s.kind === 'code' ? /^[ \t]*/.exec(body)[0].length : 0 };
+    });
+    return;
+  }
+  await hold(s, async () => {
+    const res = await finish(true);
+    if (res.ok && S.pane === s.pane) await beginNew(s.line, below);
+  });
+}
+
+/** 줄 맨 앞의 Backspace: 윗줄 끝에 잇는다 */
+function joinUp() {
+  const s = session;
+  const code = isCodeView(s.pane.view);
+  restructure((lines) => joinLine(lines, s.line, { split: splitterOf(s), code }));
+}
+
+/** Tab·Shift+Tab: 목록 항목을 한 단계 안·밖으로. 목록이 아니면 아무것도 하지 않는다 */
+function levelHere(dir) {
+  const s = session;
+  const op = (lines) => (dir > 0 ? indentItem : outdentItem)(lines, s.line);
+  if (s.fresh ? s.fresh.plan.kind !== 'item' : op(sourceLines()).error === 'not-list') return;
+  if (s.fresh && !read(s.places[0]).trim()) toast(t('글을 쓴 뒤 Tab 을 누르세요'));
+  else restructure(op);
+}
+
+/** Alt+↑·↓: 이 줄을 옮긴다 (lineops.moveLines) */
+function moveHere(dir) {
+  const s = session;
+  const code = isCodeView(s.pane.view);
+  restructure((lines) => {
+    const r = moveLines(lines, s.line, s.line, dir, { code });
+    return r.error ? r : { lines: r.lines, line: r.a };
+  });
+}
+
+/** Ctrl+Shift+D: 이 줄을 복제해 복제한 줄을 이어서 고친다 */
+function duplicateHere() {
+  const s = session;
+  if (s.kind === 'table') {
+    toast(whyNot('table'));
+    return;
+  }
+  const code = isCodeView(s.pane.view);
+  restructure((lines) => duplicateLine(lines, s.line, { split: splitterOf(s), code }));
+}
+
+/** 물어볼 줄 지우기면 묻는다 */
+const sureToDelete = (r) => !r.ask || window.confirm(t('{n}줄을 지울까요? 제목이 들어 있거나 10줄이 넘습니다.', { n: r.b - r.a + 1 }));
+
+const deleteWhy = (error) => (error === 'table-head' ? t('표의 머리행이나 구분 줄만 지우면 표가 깨집니다 — 표 전체를 하이라이트하면 표째 지웁니다') : whyNot(error));
+
+/** Ctrl+Shift+K: 이 줄을 지우고 편집을 끝낸다 (고치던 글도 함께 — Ctrl+Z 로는 고치기 전의 줄이 돌아온다) */
+async function deleteHere() {
+  const s = session;
+  if (s.fresh) {
+    finish(false);
+    return;
+  }
+  const src = sourceLines();
+  const r = deleteLines(src, s.line, s.line, { code: isCodeView(s.pane.view) });
+  if (r.error) {
+    toast(deleteWhy(r.error));
+    return;
+  }
+  if (!sureToDelete(r)) return;
+  await hold(s, async () => {
+    await finish(false);
+    const shift = await commit(s.pane, s.path, src, r.lines);
+    if (shift == null) return;
+    if (S.pane === s.pane) followLine(r.line + shift);
+    toast(t('{n}줄을 지웠습니다 — Ctrl+Z 로 되돌립니다', { n: r.b - r.a + 1 }));
+  });
+}
+
+/** 줄 구조를 고칠 수 있는 화면인지 — md 문서·코드 화면 (csv 표·엑셀 보기·보기만 하는 프로젝트 뺌). 하이라이트 메뉴(docmenu.js)도 본다 */
+export function linesEditable() {
+  const pane = S.pane;
+  const view = pane?.view;
+  return !!view && !!pane.tab && !pane.tab.readonly && !pane.editor && !isSheet(view) && !view.querySelector('.csv-table');
+}
+
+/** 하이라이트한 줄에 할 수 있는지 — 안 되면 까닭을 알린다 */
+function litOpen() {
+  const pane = S.pane;
+  const view = pane?.view;
+  if (!view || !pane.tab || pane.editor || session || pane.lineEditHold) return false;
+  if (blockedReadOnly(pane.tab)) return false;
+  if (isSheet(view)) {
+    toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
+    return false;
+  }
+  if (view.querySelector('.csv-table')) {
+    toast(t('csv 표는 한 줄 편집을 하지 않습니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
+    return false;
+  }
+  return true;
+}
+
+/** Delete·메뉴 '줄 지우기'·Ctrl+X(cut — 원문을 복사하고 지운다): 하이라이트한 줄을 지운다 */
+async function deleteLit(cut) {
+  const pane = S.pane;
+  const span = litSpan();
+  if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const view = pane.view;
+  const src = sourceLines();
+  const r = deleteLines(src, span[0], span[1], { code: isCodeView(view) });
+  if (r.error) {
+    toast(deleteWhy(r.error));
+    return;
+  }
+  if (!sureToDelete(r)) return;
+  if (cut) await copyLitSource();
+  const shift = await commit(pane, pathIn(view), src, r.lines);
+  if (shift == null) return;
+  if (S.pane === pane) {
+    stopSpotlight();
+    followLine(r.line + shift);
+  }
+  const n = r.b - r.a + 1;
+  toast(cut ? t('{n}줄을 잘라 냈습니다 — Ctrl+Z 로 되돌립니다', { n }) : t('{n}줄을 지웠습니다 — Ctrl+Z 로 되돌립니다', { n }));
+}
+
+async function moveLitNow(dir) {
+  const pane = S.pane;
+  const span = litSpan();
+  if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const view = pane.view;
+  const src = sourceLines();
+  const r = moveLines(src, span[0], span[1], dir, { code: isCodeView(view) });
+  if (r.error) {
+    toast(r.error === 'table-head' ? t('표의 머리행은 옮기지 않습니다') : whyNot(r.error));
+    return;
+  }
+  const shift = await commit(pane, pathIn(view), src, r.lines);
+  if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
+}
+
+/** Alt+↑·↓ (main.js — 문서 칸에서, 줄 하이라이트 중일 때만): 하이라이트한 줄을 옮긴다. 받았으면 true. 차례로 — 누르고 있어도 쌓이지 않게 */
+export function moveLit(dir) {
+  if (!litSpan()) return false;
+  if (moves < 2) {
+    moves += 1;
+    turn = turn.then(() => moveLitNow(dir)).finally(() => { moves -= 1; });
+  }
+  return true;
+}
+
 function onKey(e) {
   if (e.key === 'F6') {   // 터미널로 — main.js 가 받는다. 칸은 그대로 두고, 돌아오면 이 자리로 (D79)
     const sel = getSelection();
@@ -437,7 +832,28 @@ function onKey(e) {
   const span = e.currentTarget;
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key;
-  if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
+  if (k === 'Enter' && mod && !e.altKey) {
+    e.preventDefault();
+    addLine(!e.shiftKey);
+  } else if (mod && e.shiftKey && !e.altKey && e.code === 'KeyK') {
+    e.preventDefault();
+    deleteHere();
+  } else if (mod && e.shiftKey && !e.altKey && e.code === 'KeyD') {
+    e.preventDefault();
+    duplicateHere();
+  } else if ((k === 'ArrowUp' || k === 'ArrowDown') && e.altKey && !mod && !e.shiftKey) {
+    e.preventDefault();
+    moveHere(k === 'ArrowUp' ? -1 : 1);
+  } else if (k === 'Backspace' && !mod && !e.altKey && !e.shiftKey && session.kind !== 'table' && caretOffset(span) === 0) {
+    if (session.fresh) {
+      if (span.textContent) return;   // 글이 남은 새 줄의 맨 앞 — 윗줄이 아직 없다
+      e.preventDefault();
+      step(-1);
+      return;
+    }
+    e.preventDefault();
+    joinUp();
+  } else if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
     e.preventDefault();
     finish(true);
   } else if (k === 'Escape') {
@@ -455,6 +871,7 @@ function onKey(e) {
     e.preventDefault();
     if (session.kind === 'table') focusPlace(Math.max(0, Math.min(session.places.length - 1, Number(span.dataset.i) + (e.shiftKey ? -1 : 1))), false);
     else if (session.kind === 'code' && !e.shiftKey) document.execCommand('insertText', false, '\t');
+    else if (session.kind === 'text') levelHere(e.shiftKey ? -1 : 1);
   }
 }
 
@@ -580,9 +997,9 @@ async function replay(pane, path, rec, undoing) {
 /** 지금 화면의 파일 기록에서 한 걸음. 할 것이 있으면 true (부른 쪽이 기본 동작을 막는다) — 저장은 차례가 오면 */
 function walk(undoing) {
   const view = $('#lec-view');
-  const path = view.dataset.docPath || view.dataset.codePath;
+  const path = pathIn(view);
   const rec = S.tab && path ? records.get(`${S.tab.id}|${path}`) : null;
-  if (session || !(undoing ? rec?.done : rec?.undone)?.length) return false;
+  if (session || S.pane?.lineEditHold || !(undoing ? rec?.done : rec?.undone)?.length) return false;
   const pane = S.pane;
   turn = turn.then(() => replay(pane, path, rec, undoing));
   return true;
@@ -595,6 +1012,7 @@ export const redoLineEdit = () => walk(false);
 
 export function initLineEdit() {
   on('line-edit', (unit) => begin(lineOf(unit)));
+  on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('pane', () => {   // 다른 탭을 고르면 고친 것은 저장하고 끝낸다
     if (session && session.pane !== S.pane) finish(true);
   });

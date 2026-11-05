@@ -34,6 +34,7 @@ Lectern is a viewer for people to skim and read the documents that Claude Code o
 ## Project tabs
 
 - Each folder gets its own tab (up to 10). Clicking a tab switches the sidebar and main area to that project, and every tab keeps its own document and scroll position.
+- Clicking the tab that is already selected shows that project's overview. Right-clicking a tab also offers the project overview, a new document in the top folder and the project's Elements.
 - When a document in a background tab changes, a dot appears next to the tab name.
 - Folders with the same name also show their parent folder's name.
 - To close a tab, click its ×, middle-click it, or press Ctrl+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer.
@@ -202,6 +203,20 @@ You can edit a line right where it is. Press **F2** on the current line, or **do
 - After saving, **Ctrl+Z** restores the line as it was and saves again. Press it again for earlier edits — but not if the file has changed elsewhere (Claude Code and so on) in the meantime.
 - **Ctrl+Y** redoes what you undid. Undo is kept per file, so you can go back to a document and undo there after editing another one. Editing again after an undo clears the redo.
 - If something else (Claude Code and so on) added lines above while you were editing, so only the line number moved, Lectern finds the same line and saves there. If that line itself changed, or the same line appears more than once, it is not saved; your edited line is copied to the clipboard instead.
+
+### Adding, moving and deleting lines
+
+While editing a line you can also change the structure around it. Any text you changed is saved first, so undoing takes two steps. If something can't be done, the box stays open and a message says why.
+
+- **New line**: **Ctrl+Enter** opens a new line below, **Ctrl+Shift+Enter** above. It takes after the line it came from: the same marker in a list (after any sub-items), the next number in a numbered list, a new paragraph after a blank line below paragraphs and headings, the same indent in code. It goes into the file when you finish with text in it, so leaving it empty leaves no blank line behind. Press Ctrl+Enter again to keep adding lines. New table rows are not available yet (use edit mode).
+- **Split and join**: **Ctrl+Enter** in the middle of the text splits the line there. **Backspace** at the start of a line joins it to the end of the line above — paragraphs with paragraphs, list items with list items, code within its block. Lines of different kinds, such as a heading and a paragraph, are not joined.
+- **Level**: on a list line, **Tab** indents and **Shift+Tab** outdents, taking the sub-items along. Heading levels are not changed. Moving between table cells and inserting a tab in code work as before.
+- **Move**: **Alt+↑ ↓** move lines. List items move with their sub-items within the same list, paragraphs swap with the block next to them, one line of a paragraph written over several lines stays inside that paragraph, code stays in its block, and table rows stay below the header. This works only while editing a line or with lines highlighted; while just reading, nothing happens.
+- **Delete**: highlight lines and press **Delete** (or right-click 'Delete lines'); while editing a line, **Ctrl+Shift+K**. **Ctrl+X** copies the source and deletes. You are asked first if it is more than 10 lines or includes a heading. Doubled blank lines left behind become one, and sub-items left behind move up to the deleted item's place.
+- Deleting only a table's header or divider row would break the table, so it is blocked (highlight the whole table to delete it). Deleting part of a code block together with lines outside it is blocked too; highlighting every code line deletes the block.
+- **Duplicate**: **Ctrl+Shift+D** while editing a line adds the same line below and goes on editing the copy. Table rows are not duplicated.
+- Numbered lists are renumbered when you add, move or delete. A list written with `1.` throughout stays as it is. One **Ctrl+Z** brings the numbers back too.
+- All of this also works in the code view. It is not available in HTML documents, CSV tables, the Excel view, presentation documents and view-only projects.
 
 ### Find in document
 

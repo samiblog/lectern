@@ -219,9 +219,7 @@ function folderHtml(o, v, terms) {
       ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path))).join('')
       : `<p class="side-empty">${t('일치하는 문서나 파일이 없습니다')}</p>`;
   }
-  const root = S.view?.type === 'overview' && !S.view.path ? ' active' : '';
-  return `<div ${rowAttrs(o, v, '', 0, ` dir root${root}`)} title="${t('프로젝트 개요')}"><span class="label">${esc(S.name)}</span></div>`
-    + (o.all.length ? nodesHtml(o, v, o.all, 0) : `<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`);
+  return o.all.length ? nodesHtml(o, v, o.all, 0) : `<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`;
 }
 
 /** 묶음 머리줄의 개수 */
@@ -404,13 +402,9 @@ function toggle(k, path, open) {
   select(k, path);
 }
 
-/** 두 번 누르기·Enter: 파일은 열고(문서는 뷰어에서) 폴더는 펼치거나 접는다. 폴더 보기의 프로젝트 행은 개요.
+/** 두 번 누르기·Enter: 파일은 열고(문서는 뷰어에서) 폴더는 펼치거나 접는다.
  * how: 문서를 열 곳 (util.openHow — Ctrl+누르기·두 번 누르기면 새 문서 탭, D64·D67) */
 function activate(k, path, how = {}) {
-  if (path === '' && k === 'files' && folderView()) {
-    emit('open', { type: 'overview', path: '' });
-    return;
-  }
   const n = view(state(), k).index.get(path);
   if (!n) return;
   if (n.type === 'dir') toggle(k, path);
@@ -510,11 +504,10 @@ export function bindFileRows(box, fileOf) {
 }
 
 function openMenu(k, path, x, y) {
-  const root = path === '' && k === 'files' && folderView();
-  const n = root ? { type: 'dir', path: '', root: true } : view(state(), k).index.get(path);
+  const n = view(state(), k).index.get(path);
   if (!n) return;
   select(k, path);
-  showMenu(x, y, n.root ? [{ header: S.root }, newDocItem(''), '-', ...pathMenuItems('', false)] : menuItems(k, n));
+  showMenu(x, y, menuItems(k, n));
 }
 
 // 글자를 치면 그 글자로 시작하는 다음 행으로 (탐색기처럼). 잠깐 사이에 이어 치면 이어진 글자로
@@ -648,9 +641,9 @@ function bindList(k) {
       return;
     }
     select(k, path);
-    // 폴더 보기의 문서와 프로젝트 행은 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
+    // 폴더 보기의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
-    if (k === 'files' && folderView() && (path === '' || n?.doc)) activate(k, path, openHow(e));   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
+    if (k === 'files' && folderView() && n?.doc) activate(k, path, openHow(e));   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
     else if (isViewFile(n)) emit('open', { type: 'code', path, newTab: newTabWanted(e) });
   });
   middleClickOpens(box, '.row');
@@ -658,7 +651,7 @@ function bindList(k) {
     const row = e.target.closest('.row');
     if (!row || e.target.closest('[data-toggle]')) return;
     const { path } = row.dataset;
-    if (k === 'files' && folderView() && (path === '' || view(state(), k).index.get(path)?.doc)) return;   // 한 번 누를 때 이미 열었다
+    if (k === 'files' && folderView() && view(state(), k).index.get(path)?.doc) return;   // 한 번 누를 때 이미 열었다
     activate(k, path);
   });
   box.addEventListener('contextmenu', (e) => {

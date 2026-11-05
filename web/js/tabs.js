@@ -20,6 +20,8 @@ import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { confirmCloseEditor, disposeEditor } from './editor.js';
 import { restoreDocTabs, selectDocTab } from './doctabs.js';
+import { gatherOn } from './gather.js';
+import { manualOpen } from './help.js';
 import { $, esc, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -315,8 +317,17 @@ async function copy(text) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'));
 }
 
+const openOverview = () => { if (S.view?.type !== 'overview' || S.view.path) emit('open', { type: 'overview', path: '' }); };
+
 function tabMenu(tab) {
-  const items = [{ header: tab.root }, { label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+W' : '', action: () => closeTab(tab) }];
+  const there = (act) => async () => {   // 뒤에 있는 탭의 메뉴면 그 탭을 고른 뒤에
+    if (tab !== S.tab) await selectTab(tab);
+    act();
+  };
+  const items = [{ header: tab.root }, { label: t('프로젝트 개요'), action: there(openOverview) },
+    { label: t('이 폴더에 새 문서…'), action: there(() => emit('new-doc', { dir: '' })) },
+    { label: t('프로젝트의 표·그림 등 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) },
+    '-', { label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+W' : '', action: () => closeTab(tab) }];
   if (S.tabs.length > 1) items.push({ label: t('다른 탭 모두 닫기'), action: () => closeOthers(tab) });
   items.push('-', { label: t('전체 경로 복사'), action: () => copy(tab.root) },
     { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) });
@@ -338,11 +349,19 @@ function recentMenu(e) {
 
 export function initTabs() {
   const list = $('#lec-tablist');
+  // 고른 탭을 또 누르면 프로젝트 개요. 사용설명서·터미널 모음이 덮고 있었으면 그것만 닫는다 — 누르는 때 보아 둔다 (click 전에 닫힌다)
+  let covered = false;
+  const coveredNow = () => manualOpen() || gatherOn();
+  const pick = (tab) => {
+    if (tab !== S.tab) selectTab(tab);
+    else if (!covered) openOverview();
+  };
+  list.addEventListener('pointerdown', () => { covered = coveredNow(); }, true);
   list.addEventListener('click', (e) => {
     const tab = tabOf(e.target);
     if (!tab) return;
     if (e.target.closest('.tab-close')) closeTab(tab);
-    else selectTab(tab);
+    else pick(tab);
   });
   list.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });   // 가운데 버튼의 자동 스크롤 대신
   list.addEventListener('auxclick', (e) => {   // 가운데 버튼으로 누르면 닫기 (브라우저 탭처럼)
@@ -352,7 +371,8 @@ export function initTabs() {
   list.addEventListener('keydown', (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.lec-tab')) {
       e.preventDefault();
-      selectTab(tabOf(e.target));
+      covered = coveredNow();
+      pick(tabOf(e.target));
     }
   });
   list.addEventListener('contextmenu', (e) => {
