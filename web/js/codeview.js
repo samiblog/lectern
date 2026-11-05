@@ -17,7 +17,7 @@ import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
 import { isTableFile, renderCsv, renderRows, colName, initCsv } from './csvview.js';
-import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet } from './icons.js';
+import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet, isCode } from './icons.js';
 import { paneShown } from './panes.js';
 import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
 import { t } from './i18n.js';
@@ -127,9 +127,7 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   view.style.setProperty('--cv-digits', String(String(lines.length).length));
   view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
     + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(lang.name)}</div>`
-    + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
-    + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>`
-    + openButton(path)
+    + `<div class="cv-tools">${editButton(path)}${openButton(path)}`
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
     + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');
   view.dataset.codePath = path;
@@ -208,7 +206,7 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   view.codeText = text.join('\n');
   const letter = (c) => colName(first + c);
   const note = sh.truncated ? t('앞부분만 보입니다 (행 {rows}·칸 {cells}까지) — 전부 보려면 엑셀로 여세요', { rows: '50,000', cells: '1,000,000' }) : '';
-  const shown = renderRows(view, rows, lines, `${key}:${data.index}`, { letter, titleOf: (r, c) => sh.formulas[`${letter(c)}${r}`] || '', note, keep, merges: sh.merges });
+  const shown = renderRows(view, rows, lines, `${key}:${data.index}`, { letter, titleOf: (r, c) => sh.formulas[`${letter(c)}${r}`] || '', note, keep, merges: sh.merges, line });
   if (!rows.length) view.insertAdjacentHTML('beforeend', `<p class="xl-empty">${esc(t('빈 시트입니다'))}</p>`);
   finish(pane, path, null, {
     path, info: `${t('엑셀')} · ${t("'{name}' 시트", { name: sh.name })} · ${t('{n}행', { n: shown.rows.toLocaleString() })} · ${t('{n}열', { n: shown.cols })}`
@@ -219,6 +217,10 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   else pane.scroller.scrollTop = 0;
   return true;
 }
+
+/** 머리줄의 '편집' — 코드만 (자료 파일은 편집 모드가 열지 않는다) */
+const editButton = (path) => (isCode(path) ? `<button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
+  + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>` : '');
 
 /** 머리줄의 '편집기로 열기' — 자료 파일(csv·txt 등)·엑셀은 기본 앱(엑셀·메모장)으로 */
 function openButton(path) {
@@ -242,12 +244,11 @@ function showTable(pane, path, { text, size, modified, encoding, top, line }) {
   delete view.dataset.docPath;
   view.innerHTML = `<header class="cv-head"><div class="cv-title">${esc(basename(path))}</div>`
     + `<div class="cv-sub">${dirname(path) ? `${esc(dirname(path))} · ` : ''}${esc(languageOf(path).name)}</div>`
-    + `<div class="cv-tools"><button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`
-    + `<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>${openButton(path)}`
+    + `<div class="cv-tools">${editButton(path)}${openButton(path)}`
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`;
   view.dataset.codePath = path;
   view.codeText = text;
-  const info = renderCsv(view, path, text, `${tab.id}:${path}`, keep);
+  const info = renderCsv(view, path, text, `${tab.id}:${path}`, keep, line);
   finish(pane, path, null, {
     path, info: `${languageOf(path).name} · ${t('{n}행', { n: info.rows.toLocaleString() })} · ${t('{n}열', { n: info.cols })}`
       + ` · ${DELIMS[info.delim] || info.delim} · ${formatSize(size)}${encoding ? ` · ${encoding}` : ''}${modifiedText(modified)}`,

@@ -197,7 +197,7 @@ You can edit a line right where it is. Press **F2** on the current line, or **do
 - **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
 - **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
 - **Tables**: press F2 on a row or double-click a cell to edit it cell by cell. **Tab** and Shift+Tab move between cells; ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
-- In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. Pictures, diagrams, math, HTML and CSV tables are edited in edit mode (Ctrl+E).
+- In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. Pictures, diagrams, math and HTML are edited in edit mode (Ctrl+E). Data files such as CSV, text and Excel are view-only.
 - Links, pictures, diagrams, charts and math do not open on a double-click, and a triple-click still selects the paragraph. To copy a word, double-click it again inside the box — clicking outside without changing anything ends without saving.
 - **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
 - After saving, **Ctrl+Z** restores the line as it was and saves again. Press it again for earlier edits — but not if the file has changed elsewhere (Claude Code and so on) in the meantime.
@@ -216,7 +216,7 @@ While editing a line you can also change the structure around it. Any text you c
 - Deleting only a table's header or divider row would break the table, so it is blocked (highlight the whole table to delete it). Deleting part of a code block together with lines outside it is blocked too; highlighting every code line deletes the block.
 - **Duplicate**: **Ctrl+Shift+D** while editing a line adds the same line below and goes on editing the copy. Table rows are not duplicated.
 - Numbered lists are renumbered when you add, move or delete. A list written with `1.` throughout stays as it is. One **Ctrl+Z** brings the numbers back too.
-- All of this also works in the code view. It is not available in HTML documents, CSV tables, the Excel view, presentation documents and view-only projects.
+- All of this also works in the code view. It is not available in HTML documents, data files (CSV, text, Excel), presentation documents and view-only projects.
 - Files that are not UTF-8 are view-only. Files in the Windows encoding, such as EViews programs (`prg`), show Korean correctly in the code view and in search, but line editing and edit mode don't change them. A `prg` written only in English can be edited; adding Korean to it is not saved, because the file would turn into UTF-8 and EViews would show broken characters.
 
 ### Find in document
@@ -307,9 +307,10 @@ Click an Excel file (`xlsx`, `xlsm`) once in the 'Other files' list, or right-cl
 See a table as a line or bar chart on the spot. This only views — documents and files don't change.
 
 - **Where to open it**: right-click a table in a document and choose **View as chart**; right-click highlighted table rows for just those rows; use the **View as chart** button in the CSV and Excel views (filtered rows as they are) or right-click a column header.
-- Time is recognised automatically — `2026`, `2026-03`, `2026.3`, `202603`, `2026-03-15`, `2026Q1`, `1Q26`, `Mar-26`, `2026H1`, `2026E` and Korean forms. Tables with the latest row on top are put in time order, and a header row of periods (`2024 | 2025 | 2026`) swaps rows and columns by itself.
+- Time is recognised automatically — `2026`, `2026-03`, `2026.3`, `202603`, `2026M03`, `2026-03-15`, `3/31/2026`, `2026Q1`, `1Q26`, `Mar-26`, `2026H1`, `FY2026`, `2026E` and Korean forms. Tables with the latest row on top are put in time order, and a header row of periods (`2024 | 2025 | 2026`) swaps rows and columns by itself. Text columns before the periods become series names and units.
 - Units come from brackets in the header (`Price (USD/t)`), or from the table caption. When levels and rates (`%`, `YoY` and so on) are mixed they go on two axes, and **Level / Growth rate / Both** choose what to show. Two axes at most.
-- Blank cells, `-` and `n.a.` are gaps, not zero.
+- Blank cells, `-`, `n.a.`, `x` and `#DIV/0!` are gaps, not zero. `(1,234)` is negative, and the provisional mark in `1,234p` is dropped.
+- Outside a time axis, `Total` and `Average` rows are left out of the chart so they don't flatten the bars; a note above says so.
 - **Auto** draws levels as bars and rates as lines (levels become lines past 36 points). Switch to **Line** or **Bar**, and turn series on and off in the list on the left. Up to 6 start on.
 - If the guess is wrong, fix it with **Rows↔Columns** and the series list. Hover to see values; with many points, zoom with the bar below. **Esc** closes.
 

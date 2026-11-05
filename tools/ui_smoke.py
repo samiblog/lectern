@@ -2171,7 +2171,8 @@ def run(headed: bool) -> None:
             code_at = cursor_line()
             page.click('#lec-btn-edit')
             page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click()
-            wait_until(page, "document.querySelector('#lec-view iframe.lec-html:not(.lec-loading)')?.contentDocument?.querySelector('h2')")
+            # data-ready: 다 그린 뒤 — 안의 글은 load 전에도 보이고, 그리는 중의 [편집]은 다시 누르라고 알린다
+            wait_until(page, "document.querySelector('#lec-view iframe.lec-html[data-ready]:not(.lec-loading)')?.contentDocument?.querySelector('h2')")
             page.click('#lec-btn-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
             page.locator('#lec-toc a[data-i]').nth(1).click()

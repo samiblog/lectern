@@ -18,7 +18,7 @@ import { saveConfig } from './api.js';
 import { esc, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 import {
-  numberOf, isMissing, decimalsOf, findTimeColumn, periodText, hasSameTimes, calcValues, calcText, findRegions, reshapeRegion, regionOfLines,
+  numberOf, isMissing, decimalsOf, findTimeColumn, periodText, hasSameTimes, calcValues, calcText, findRegions, reshapeRegion, regionOfLines, headerIsTime,
 } from './tabledata.js';
 import { openChart, frequencyName } from './quickchart.js';
 import { snippetOf, sendSnippets } from './basket.js';
@@ -103,6 +103,7 @@ export function parseCsv(text, delim) {
 function guessHeader(rows) {
   if (rows.length < 2) return false;
   const first = rows[0];
+  if (headerIsTime(first)) return true;   // 항목, 2024, 2025 — 숫자로 읽혀도 머리행이다
   if (first.some((c) => numberOf(c) != null) || first.some((c) => !c.trim())) return false;
   const body = rows.slice(1, 200);
   const numericBelow = first.some((_, c) => {
@@ -206,11 +207,17 @@ function loadRegions(st) {
   if (mark) st.regions.push({ ...mark, custom: true });
 }
 
-/** 고른 표를 보일 행으로 — 시트 전체면 받은 그대로 */
-function pickRegion(st) {
+/** 고른 표를 보일 행으로 — 시트 전체면 받은 그대로. line: 이 줄이 보여야 한다 (링크·뒤로 — 고른 표에 없으면 그 줄이 든 표로, 없으면 시트 전체로) */
+function pickRegion(st, line = null) {
   const { root, regions, grid } = st;
   const auto = st.plain ? 'all' : st.best;
-  const pick = root.region === 'all' || regions[root.region] ? root.region ?? auto : auto;
+  let pick = root.region === 'all' || regions[root.region] ? root.region ?? auto : auto;
+  const has = (r) => r?.lines.some(([a, b]) => line >= a && line <= b);
+  if (line != null && pick !== 'all' && !has(regions[pick])) {
+    const hit = regions.findIndex(has);
+    pick = hit >= 0 ? hit : 'all';
+    root.region = pick;
+  }
   st.pick = pick;
   let region = pick === 'all' ? null : regions[pick];
   if (region && root.depth[pick] != null) region = { ...reshapeRegion(grid.rows, grid.lines, grid.merges, region, root.depth[pick]), custom: region.custom };
@@ -448,7 +455,7 @@ function update(view) {
   tbody.innerHTML = shown.map((i) => {
     const [a, b] = bodyLines[i];
     const cells = cols.map((col, c) => {
-      const formula = st.titleOf?.(a, c);   // 엑셀의 수식 (D77)
+      const formula = c < width ? st.titleOf?.(a, c) : '';   // 엑셀의 수식 (D77) — 계산 열에는 없다
       const tip = formula ? ` title="${esc(t('수식: {formula}', { formula }))}"` : '';
       const cls = [col.numeric ? 'num' : '', col.calc != null ? 'csv-calc' : ''].filter(Boolean).join(' ');
       return `<td${cls ? ` class="${cls}"` : ''}${tip}>${esc(body[i][c] ?? '')}</td>`;
@@ -511,9 +518,9 @@ function build(view) {
  * 표를 그린다 (codeview.js 의 showCode 가 부른다 — view 의 머리줄 뒤에 붙인다). key: 탭 id + 경로 (거르기·정렬 기억)
  * {cols, rows, header} 를 돌려준다 (상태줄 글)
  */
-export function renderCsv(view, path, text, key, keep = null) {
+export function renderCsv(view, path, text, key, keep = null, line = null) {
   const { rows, lines } = parseCsv(text, delimiterOf(text, path));
-  return { ...renderRows(view, rows, lines, key, { keep }), delim: delimiterOf(text, path) };
+  return { ...renderRows(view, rows, lines, key, { keep, line }), delim: delimiterOf(text, path) };
 }
 
 /**
@@ -521,13 +528,13 @@ export function renderCsv(view, path, text, key, keep = null) {
  * opts.letter: 열 차례 → 열 이름 (엑셀의 A·B…, 머리행이 있으면 그 앞에 작게), opts.titleOf: (행 번호, 열 차례) → 마우스를 올리면 보일 수식,
  * opts.note: 막대에 보일 알림 (앞부분만 보일 때), opts.keep: 앞 화면의 view.csv (같은 표면 계산 열을 잇는다). {rows, cols}
  */
-export function renderRows(view, rows, lines, key, { letter = null, titleOf = null, note = '', keep = null, merges = [] } = {}) {
+export function renderRows(view, rows, lines, key, { letter = null, titleOf = null, note = '', keep = null, merges = [], line = null } = {}) {
   const st = {
     grid: { rows, lines, merges }, key, root: memoryOf(key), stats: S.config?.csv_stats !== false, header: false, cols: [], baseLetter: letter, baseTitle: titleOf, calcs: [],
   };
   view.csv = st;
   loadRegions(st);
-  pickRegion(st);
+  pickRegion(st, line);
   if (keep?.key === key && keep.pick === st.pick) st.calcs = keep.calcs;   // 자동 새로고침으로 다시 그려도 남고, 파일을 다시 열면 없다
   view.classList.add('csv-view');
   view.insertAdjacentHTML('beforeend', `<div class="csv-regions" hidden></div><div class="csv-bar">

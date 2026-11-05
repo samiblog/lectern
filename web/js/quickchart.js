@@ -62,10 +62,10 @@ function option() {
     legend: { type: 'scroll', top: 0 },
     grid: { left: 12, right: 16, top: 44, bottom: zoom ? 44 : 10, containLabel: true },
     xAxis: { type: 'category', data: labels, axisLabel: { hideOverlap: true } },
-    yAxis: keys.map((k, i) => ({
+    yAxis: keys.length ? keys.map((k, i) => ({
       type: 'value', name: unitOfKey(k), position: i ? 'right' : 'left', splitLine: { show: !i },
       scale: !list.some((s) => s.key === k && typeOf(s, labels.length) === 'bar'),   // 막대는 0 에서 시작해야 크기를 잴 수 있다
-    })),
+    })) : [{ type: 'value' }],   // 계열을 모두 꺼도 축은 있어야 한다
     dataZoom: zoom ? [{ type: 'inside' }, { type: 'slider', height: 20, bottom: 6 }] : [],
     series: list.map((s) => {
       const type = typeOf(s, labels.length);
@@ -92,6 +92,8 @@ function draw() {
   if (read.freq) notes.push(frequencyName(read.freq));
   notes.push(t('{n}개 시점', { n: read.labels.length.toLocaleString() }));
   if (read.skipped) notes.push(t('시점이 아닌 행 {n}개는 뺐습니다', { n: read.skipped }));
+  if (read.totals) notes.push(t('합계 행 {n}개는 뺐습니다', { n: read.totals }));
+  if (read.more) notes.push(t('계열이 많아 {n}개는 싣지 않았습니다', { n: read.more.toLocaleString() }));
   if (read.same) notes.push(t('같은 시점이 여러 행입니다 — 표를 거른 뒤 보면 좋습니다'));
   $('#lec-chart-note').textContent = read.series.length ? notes.join(' · ') : t('차트로 볼 숫자가 없습니다 — 행↔열을 다시 누르면 돌아갑니다');
   chart?.setOption(option(), true);

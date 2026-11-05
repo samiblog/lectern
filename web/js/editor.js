@@ -24,6 +24,7 @@ import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
 import { $, esc, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
+import { isCode } from './icons.js';
 import { t } from './i18n.js';
 
 const LIB = '/static/vendor/codemirror';
@@ -201,7 +202,7 @@ function setDirty(ed, dirty) {
 /** 편집 버튼들: 탭 막대의 [편집]은 편집 중이면 눌린 모양, 문서·코드 화면이 아니면 누를 수 없음. 상태줄의 '편집'은 편집할 수 있을 때만 */
 function updateButton() {
   const editing = !!S.pane?.editor;
-  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && !/\.xls[xm]$/i.test(S.view.path));   // 엑셀 보기는 보기만 (D77)
+  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && isCode(S.view.path));   // 코드 화면의 자료(csv·txt·엑셀)는 보기만 (D60·D77)
   $('#lec-st-edit').hidden = !can || editing || !!S.tab?.readonly;   // 보기만 하는 프로젝트 (D71) — 탭 막대의 [편집]은 눌러서 까닭을 알린다
   const btn = $('#lec-btn-edit');
   btn.setAttribute('aria-pressed', String(editing));

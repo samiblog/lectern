@@ -947,7 +947,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .chart-group[hidden] { display: none; }
 .chart-group button { height: 26px; padding: 0 10px; border: 0; border-left: 1px solid var(--ui-border); background: none; color: inherit; font: inherit; cursor: pointer; }
 .chart-group button:first-child { border-left: 0; }
-.chart-group button[aria-pressed="true"] { background: var(--ui-accent, var(--md-link)); color: var(--ui-on-accent, #fff); }
+.chart-group button[aria-pressed="true"] { color: var(--ui-accent); font-weight: 600; box-shadow: inset 0 -2px 0 var(--ui-accent); }
 #lec-chart-note { color: var(--ui-muted); }
 .chart-main { flex: 1; min-height: 0; display: flex; gap: 12px; }
 #lec-chart-series { flex: none; width: 190px; overflow: auto; font-size: 12.5px; }

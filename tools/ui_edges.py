@@ -11,7 +11,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data']
+SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide']
 
 
 def main() -> int:

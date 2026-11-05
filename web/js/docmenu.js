@@ -400,9 +400,9 @@ function codeLineMenu(e, view, x, y) {
   const sheet = view.dataset.sheet || '';   // 엑셀 보기 (D77) — 행은 엑셀의 행 번호, 보기만
   const items = [{ header: range ? `${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}` : path }];
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
-  const cell = sheet && !selected ? e.target.closest?.('td:not(.csv-rn)') : null;
-  if (cell && row) {   // 엑셀의 칸: 그 칸의 글 (이름은 B3 처럼)
-    const name = `${colName(Number(view.dataset.firstCol || 0) + cell.cellIndex - 1)}${line}`;
+  const cell = sheet && !selected ? e.target.closest?.('td:not(.csv-rn):not(.csv-calc)') : null;
+  if (cell && row) {   // 엑셀의 칸: 그 칸의 글 (이름은 B3 처럼 — 고른 표면 그 표의 왼쪽 끝부터, D86)
+    const name = `${colName(Number(view.dataset.firstCol || 0) + (view.csv?.region?.c0 ?? 0) + cell.cellIndex - 1)}${line}`;
     items.push({ label: t('이 칸 복사'), hint: `${name} · ${describe(cell.textContent)}`, action: () => copyPlain(cell.textContent) });
   }
   if (row && !selected) items.push({ label: sheet ? t('이 행 복사') : t('이 줄 복사'), hint: describe(rowText), action: () => copyPlain(rowText), term: sheet ? undefined : rowText.trim() });

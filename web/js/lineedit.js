@@ -28,6 +28,7 @@ import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines } from './lineunits.js';
 import { locateLines } from './linefind.js';
+import { isCode } from './icons.js';
 import {
   diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
@@ -65,6 +66,9 @@ const isSheet = (view) => view.dataset.sheet != null && isCodeView(view) && !!vi
 const pathIn = (view) => view.dataset.docPath || view.dataset.codePath;
 /** UTF-8 이 아닌 글로 읽은 코드 화면 (D85 — Windows 인코딩의 prg, CP949 의 txt 등): 보기만 */
 const notUtf8 = (view) => isCodeView(view) && !!view.dataset.encoding;
+/** 코드 화면의 자료 파일 (csv·txt·log — D60): 보기만. 코드 파일만 고친다 */
+const dataFile = (view) => isCodeView(view) && !!view.dataset.codePath && !isCode(view.dataset.codePath);
+const DATA_FILE_NOTE = () => t('자료 파일은 볼 수만 있습니다 — 고치려면 기본 앱으로 여세요');
 
 /** 칸을 다 그릴 때까지 (오래 걸리면 false) */
 async function settled(pane) {
@@ -212,13 +216,16 @@ async function begin(line, { cell = 0, at = null, offset = null } = {}) {
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));   // D77
     return;
   }
+  if (dataFile(view)) {
+    toast(DATA_FILE_NOTE());
+    return;
+  }
   if (notUtf8(view)) {
     toast(t('UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)'));
     return;
   }
   if (!line || !path || !lineSlot(view, line, sourceLines())) {
-    toast(view.querySelector('.csv-table') ? t('csv 표는 한 줄 편집을 하지 않습니다 — 편집 모드(Ctrl+E)에서 고칩니다')
-      : t('이 줄은 한 줄 편집으로 고칠 수 없습니다 — 그림·다이어그램·수식·HTML 은 편집 모드(Ctrl+E)에서 고칩니다'));
+    toast(t('이 줄은 한 줄 편집으로 고칠 수 없습니다 — 그림·다이어그램·수식·HTML 은 편집 모드(Ctrl+E)에서 고칩니다'));
     return;
   }
   const { tab } = pane;
@@ -758,7 +765,7 @@ async function deleteHere() {
 export function linesEditable() {
   const pane = S.pane;
   const view = pane?.view;
-  return !!view && !!pane.tab && !pane.tab.readonly && !pane.editor && !isSheet(view) && !notUtf8(view) && !view.querySelector('.csv-table');
+  return !!view && !!pane.tab && !pane.tab.readonly && !pane.editor && !isSheet(view) && !notUtf8(view) && !dataFile(view);
 }
 
 /** 하이라이트한 줄에 할 수 있는지 — 안 되면 까닭을 알린다 */
@@ -771,8 +778,8 @@ function litOpen() {
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
     return false;
   }
-  if (view.querySelector('.csv-table')) {
-    toast(t('csv 표는 한 줄 편집을 하지 않습니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
+  if (dataFile(view)) {
+    toast(DATA_FILE_NOTE());
     return false;
   }
   if (notUtf8(view)) {
@@ -923,7 +930,7 @@ function onDoubleClick(e) {
   const unit = unitAtPoint(e);
   if (!unit) return;
   const view = $('#lec-view');
-  if (notUtf8(view)) return;   // 고칠 수 없는 곳 — 낱말 고르기 그대로
+  if (notUtf8(view) || dataFile(view)) return;   // 고칠 수 없는 곳 — 낱말 고르기 그대로
   const src = sourceLines();
   const at = document.caretRangeFromPoint?.(e.clientX, e.clientY);
   // 한 화면 줄에 이어진 짧은 줄들은 한 단위다 — 누른 글자가 든 원문 줄로

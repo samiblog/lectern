@@ -505,7 +505,7 @@ try:
         press('Shift+Enter')
         settle(120)
         press('Delete')
-        csv_toast = toast_has('csv 표는')
+        csv_toast = toast_has('자료 파일은 볼 수만')
         check('csv 표는 지우지 않음', csv_toast and (proj / 'data.csv').read_text(encoding='utf-8') == 'a,b\n1,2\n3,4\n')
         press('Escape')
         fresh('para.md', '문단')
