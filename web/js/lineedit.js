@@ -63,6 +63,8 @@ const nap = () => new Promise((r) => setTimeout(r, 50));
 const isCodeView = (view) => view.classList.contains('code-view');
 const isSheet = (view) => view.dataset.sheet != null && isCodeView(view) && !!view.dataset.codePath && /\.xls[xm]$/i.test(view.dataset.codePath);
 const pathIn = (view) => view.dataset.docPath || view.dataset.codePath;
+/** UTF-8 이 아닌 글로 읽은 코드 화면 (D85 — Windows 인코딩의 prg, CP949 의 txt 등): 보기만 */
+const notUtf8 = (view) => isCodeView(view) && !!view.dataset.encoding;
 
 /** 칸을 다 그릴 때까지 (오래 걸리면 false) */
 async function settled(pane) {
@@ -208,6 +210,10 @@ async function begin(line, { cell = 0, at = null, offset = null } = {}) {
   const path = pathIn(view);
   if (isSheet(view)) {
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));   // D77
+    return;
+  }
+  if (notUtf8(view)) {
+    toast(t('UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)'));
     return;
   }
   if (!line || !path || !lineSlot(view, line, sourceLines())) {
@@ -752,7 +758,7 @@ async function deleteHere() {
 export function linesEditable() {
   const pane = S.pane;
   const view = pane?.view;
-  return !!view && !!pane.tab && !pane.tab.readonly && !pane.editor && !isSheet(view) && !view.querySelector('.csv-table');
+  return !!view && !!pane.tab && !pane.tab.readonly && !pane.editor && !isSheet(view) && !notUtf8(view) && !view.querySelector('.csv-table');
 }
 
 /** 하이라이트한 줄에 할 수 있는지 — 안 되면 까닭을 알린다 */
@@ -767,6 +773,10 @@ function litOpen() {
   }
   if (view.querySelector('.csv-table')) {
     toast(t('csv 표는 한 줄 편집을 하지 않습니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
+    return false;
+  }
+  if (notUtf8(view)) {
+    toast(t('UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)'));
     return false;
   }
   return true;
@@ -913,6 +923,7 @@ function onDoubleClick(e) {
   const unit = unitAtPoint(e);
   if (!unit) return;
   const view = $('#lec-view');
+  if (notUtf8(view)) return;   // 고칠 수 없는 곳 — 낱말 고르기 그대로
   const src = sourceLines();
   const at = document.caretRangeFromPoint?.(e.clientX, e.clientY);
   // 한 화면 줄에 이어진 짧은 줄들은 한 단위다 — 누른 글자가 든 원문 줄로

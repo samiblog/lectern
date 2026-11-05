@@ -7,6 +7,7 @@
 """
 from __future__ import annotations
 
+import codecs
 import re
 from html.parser import HTMLParser
 from pathlib import Path
@@ -15,6 +16,8 @@ from typing import Any
 HEAD_BYTES = 16 * 1024
 HTML_HEAD_BYTES = 64 * 1024   # html 은 앞에 큰 <style> 이 오기도 한다
 SUMMARY_LEN = 160
+# Windows 인코딩(CP949)으로 쓰는 코드 — EViews 프로그램 (D85). 화면은 icons.js 의 WINDOWS_TEXT_EXT
+WINDOWS_TEXT_EXT = frozenset({'.prg'})
 
 _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
 
@@ -43,10 +46,17 @@ _RE_EMPHS = (
 
 
 def read_text(path: Path, limit: int | None = None) -> str:
-    """UTF-8(BOM 허용)로 읽는다. Claude가 만드는 문서는 UTF-8이다."""
+    """UTF-8(BOM 허용)로 읽는다. Claude가 만드는 문서는 UTF-8이다. WINDOWS_TEXT_EXT 는 UTF-16(BOM) → UTF-8 → CP949 순서로 (코드 화면과 같다)."""
     with open(path, 'rb') as f:
         raw = f.read(limit) if limit else f.read()
-    return raw.decode('utf-8-sig', errors='replace')
+    if path.suffix.lower() not in WINDOWS_TEXT_EXT:
+        return raw.decode('utf-8-sig', errors='replace')
+    if raw[:2] in (b'\xff\xfe', b'\xfe\xff'):
+        return raw.decode('utf-16', errors='replace')
+    try:
+        return codecs.getincrementaldecoder('utf-8-sig')().decode(raw)   # limit 에서 잘린 끝 글자는 오류가 아니다
+    except UnicodeDecodeError:
+        return raw.decode('cp949', errors='replace')
 
 
 def strip_inline(text: str) -> str:

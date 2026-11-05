@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import time
 
-from lectern.docinfo import doc_info, extract_html_info, extract_info, split_front_matter, strip_inline
+from lectern.docinfo import doc_info, extract_html_info, extract_info, read_text, split_front_matter, strip_inline
 
 
 def test_title_from_h1_and_summary_from_first_paragraph():
@@ -81,3 +81,16 @@ def test_heading_closing_hashes_and_long_lines():
 def test_broken_html_does_not_break_scan():
     # html.parser 는 망가진 표기에서 AssertionError 를 낸다. 한 파일 때문에 트리·개요·검색이 실패하면 안 된다
     assert extract_html_info('<title>망가진 문서</title><p>see <![x> here</p>')['title'] == '망가진 문서'
+
+
+def test_read_text_reads_windows_encoded_prg(tmp_path):
+    # EViews 프로그램은 Windows 인코딩이다 (D85) — 다른 파일은 그대로 UTF-8
+    (tmp_path / 'a.prg').write_bytes("' 구리\n".encode('cp949'))
+    (tmp_path / 'b.prg').write_bytes("' 구리\n".encode('utf-8'))
+    (tmp_path / 'c.prg').write_bytes("' 구리\n".encode('utf-16'))
+    (tmp_path / 'd.py').write_bytes("' 구리\n".encode('cp949'))
+    for name in ('a.prg', 'b.prg', 'c.prg'):
+        assert read_text(tmp_path / name) == "' 구리\n"
+    assert '구리' not in read_text(tmp_path / 'd.py')
+    # limit 에서 UTF-8 글자가 잘려도 CP949 로 읽지 않는다 (잘린 글자만 버린다)
+    assert read_text(tmp_path / 'b.prg', 4) == "' "

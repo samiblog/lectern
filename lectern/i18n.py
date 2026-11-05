@@ -84,6 +84,8 @@ EN: dict[str, str] = {
         'Not saved because the file is read-only — turn off Read-only in the file properties to save it.',
     '{n}MB 가 넘는 파일은 편집할 수 없습니다': 'Files over {n} MB cannot be edited.',
     '글 파일이 아니라서 편집할 수 없습니다': 'This is not a text file, so it cannot be edited.',
+    'EViews 파일은 Windows 인코딩이라 한글을 넣어 저장하지 않았습니다 — 저장하면 UTF-8 로 바뀌어 EViews 에서 글자가 깨집니다':
+        'EViews files use the Windows encoding, so this was not saved with Korean text — saving would turn the file into UTF-8 and EViews would show broken characters',
     'UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)': 'Files that are not UTF-8 cannot be edited (Lectern only edits UTF-8 text).',
     '편집하는 동안 다른 곳에서 이 파일이 바뀌었습니다': 'This file was changed elsewhere while you were editing it.',
     '저장하지 못했습니다: {error}': 'Could not save: {error}',

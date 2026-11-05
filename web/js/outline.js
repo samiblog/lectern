@@ -25,6 +25,7 @@ const LANGS = {
   php: ['php', 'PHP', 'php'], sql: ['sql', 'SQL', 'sql'], r: ['r', 'R', 'r'], lua: ['lua', 'Lua', 'lua'], pl: ['perl', 'Perl', 'perl'],
   gradle: ['groovy', 'Gradle', 'java'], lock: ['plaintext', t('잠금 파일'), 'none'],
   // 코드 화면에서 보는 자료 (D60): 글자 파일은 그대로, csv·tsv 는 표 (csvview.js)
+  prg: ['plaintext', 'EViews', 'eviews'],   // highlight.js 에 문법이 없어 글자색은 없다 (D85)
   txt: ['plaintext', t('텍스트'), 'none'], log: ['plaintext', t('로그'), 'none'], csv: ['plaintext', 'CSV', 'none'], tsv: ['plaintext', 'TSV', 'none'],
 };
 
@@ -83,6 +84,7 @@ const RULES = {
     R('^(\\s*)(?:(?:public|private|protected|static|abstract|final)\\s+)*function\\s+&?([A-Za-z_]\\w*)', 'function'),
   ],
   lua: [R('^(\\s*)(?:local\\s+)?function\\s+([\\w.:]+)', 'function')],
+  eviews: [R('^(\\s*)subroutine\\s+(?:local\\s+)?([A-Za-z_]\\w*)', 'function', 2, 'i')],
   perl: [R('^(\\s*)sub\\s+(\\w+)', 'function'), R('^()package\\s+([\\w:]+)', 'class')],
   r: [R('^(\\s*)([\\w.]+)\\s*(?:<-|=)\\s*function\\b', 'function')],
   shell: [

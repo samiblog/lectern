@@ -7,6 +7,7 @@ from pathlib import Path
 
 from conftest import write
 
+from lectern.docinfo import WINDOWS_TEXT_EXT
 from lectern.scanner import CODE_EXT, is_code, iter_files, scan, scan_others
 from lectern.search import MAX_CODE_BYTES, MAX_HITS_PER_FILE, SNIPPET, TextCache, search, search_docs, snippet
 
@@ -65,6 +66,23 @@ def test_code_ext_matches_icons_js():
     block = re.search(r"code: '([^']*)'\s*\+\s*'([^']*)'", js)
     assert set((block.group(1) + block.group(2)).split()) == CODE_EXT
     assert is_code('a.PY') and is_code('b.tsx') and not is_code('c.md') and not is_code('d.pdf') and not is_code('README')
+    assert is_code('model.prg') and is_code('MODEL.PRG')
+
+
+def test_windows_text_ext_matches_icons_js():
+    # 화면과 서버가 같은 파일을 Windows 인코딩으로도 읽는다 (D85)
+    js = (Path(__file__).resolve().parent.parent / 'web' / 'js' / 'icons.js').read_text(encoding='utf-8')
+    block = re.search(r"WINDOWS_TEXT_EXT = new Set\(\[([^\]]*)\]\)", js)
+    assert {f".{x.strip(' ' + chr(39))}" for x in block.group(1).split(',')} == WINDOWS_TEXT_EXT
+
+
+def test_finds_korean_in_windows_encoded_prg(project):
+    (project / 'src').mkdir(exist_ok=True)
+    (project / 'src' / 'model.prg').write_bytes("' 구리 가격 모형\r\nsmpl 2000 2020\r\n".encode('cp949'))
+    r = search(project, [], code_files(project), '구리 가격')
+    assert [x['path'] for x in r['results']] == ['src/model.prg']
+    hit = r['results'][0]['hits'][0]
+    assert hit['line'] == 1 and '구리 가격 모형' in hit['text']
 
 
 def test_searches_code_after_docs(project):

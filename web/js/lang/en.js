@@ -266,6 +266,7 @@ export default {
 "프로젝트 개요": "Project overview",
 "이 줄에는 새 줄을 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다": "Can't add a line here — use edit mode (Ctrl+E)",
 "더 옮길 곳이 없습니다": "Nowhere further to move",
+"UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)": "Files that are not UTF-8 cannot be edited (Lectern only edits UTF-8 text)",
 "수준이 다른 항목은 함께 옮기지 못합니다 — 한 항목씩 옮깁니다": "Items at different levels can't move together — move them one at a time",
 "표의 행은 아직 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다": "Table rows can't be added yet — use edit mode (Ctrl+E)",
 "목록의 맨 앞 항목은 더 안으로 옮기지 못합니다": "The first item of a list can't be indented",

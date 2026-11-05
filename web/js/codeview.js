@@ -5,7 +5,7 @@
 //   그래서 보고 있는 동안 2초마다 그 파일의 수정 시각(HEAD /doc/…, Last-Modified)을 보고, 바뀌었으면 다시 그린다.
 // - 실행하지 않는다: 글자로만 보인다 (highlight.js 가 이스케이프한다). 너무 큰 파일·바이너리는 편집기로 열라고 알린다.
 // - 자료 파일도 여기서 본다 (D60): txt·log 는 글자 그대로, csv·tsv 는 표(csvview.js). 이것들은 UTF-8 이 아니면 UTF-16(BOM)·CP949 로 읽는다
-//   (엑셀이 저장한 CSV·유니코드 텍스트 — 보기만, 편집 모드는 UTF-8 만).
+//   (엑셀이 저장한 CSV·유니코드 텍스트 — 보기만, 편집 모드는 UTF-8 만). Windows 인코딩으로 쓰는 코드(EViews 의 prg — D85)도 같다.
 // - 엑셀(xlsx·xlsm — D77)은 서버가 읽은 값(GET /api/sheet)을 csv 와 같은 표로, 머리줄 아래 시트 탭. 행은 엑셀의 행 번호이고
 //   view.codeText 는 행 번호 자리마다 그 행의 칸을 탭으로 이은 글 (우클릭 '이 줄 복사'·하이라이트의 Ctrl+C 가 엑셀에 붙는 글), view.dataset.sheet 는 시트 이름.
 
@@ -17,7 +17,7 @@ import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
 import { isTableFile, renderCsv, renderRows, colName, initCsv } from './csvview.js';
-import { DATA_VIEW_EXT, isSheet } from './icons.js';
+import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet } from './icons.js';
 import { paneShown } from './panes.js';
 import { $, esc, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
 import { t } from './i18n.js';
@@ -51,12 +51,13 @@ function highlighted(text, lang) {
   return esc(text);
 }
 
-const isDataFile = (path) => DATA_VIEW_EXT.has(path.split('.').pop().toLowerCase());
+const extOf = (path) => path.split('.').pop().toLowerCase();
+const isDataFile = (path) => DATA_VIEW_EXT.has(extOf(path));
 
-/** 받은 바이트를 글로. 자료 파일은 UTF-16(BOM) → UTF-8 → CP949 순서로 — {text, encoding('' 이면 UTF-8)} */
+/** 받은 바이트를 글로. 자료 파일과 Windows 인코딩으로 쓰는 코드는 UTF-16(BOM) → UTF-8 → CP949 순서로 — {text, encoding('' 이면 UTF-8)} */
 function decode(buf, path) {
   const bytes = new Uint8Array(buf);
-  if (!isDataFile(path)) return { text: new TextDecoder('utf-8').decode(bytes), encoding: '' };
+  if (!isDataFile(path) && !WINDOWS_TEXT_EXT.has(extOf(path))) return { text: new TextDecoder('utf-8').decode(bytes), encoding: '' };
   if (bytes[0] === 0xff && bytes[1] === 0xfe) return { text: new TextDecoder('utf-16le').decode(bytes), encoding: 'UTF-16' };
   if (bytes[0] === 0xfe && bytes[1] === 0xff) return { text: new TextDecoder('utf-16be').decode(bytes), encoding: 'UTF-16' };
   try {
@@ -71,6 +72,7 @@ function notice(view, path, message) {
   view.className = 'md-body code-view';
   delete view.dataset.docPath;
   delete view.dataset.sheet;
+  delete view.dataset.encoding;
   view.dataset.codePath = path;
   const label = isSheet(path) ? t('기본 앱으로 열기') : t('편집기로 열기');
   view.innerHTML = `<div class="doc-missing"><h1>${esc(path)}</h1><p>${esc(message)}</p>
@@ -131,6 +133,8 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
     + `<button type="button" class="text-btn cv-copy">${t('전체 복사')}</button></div></header>`
     + lines.map((l, i) => `<div class="cv-line" data-line="${i + 1}"><span class="cv-text">${l}</span></div>`).join('');
   view.dataset.codePath = path;
+  if (encoding) view.dataset.encoding = encoding;   // UTF-8 이 아니면 보기만 — 한 줄 편집이 본다 (lineedit.js, D85)
+  else delete view.dataset.encoding;
   view.codeText = text;
   finish(pane, path, outlineOf(path, text), {
     path, info: `${lang.name} · ${t('{n}줄', { n: lines.length })} · ${formatSize(size)}${encoding ? ` · ${encoding}` : ''}${modifiedText(modified)}`,

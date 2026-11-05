@@ -8,7 +8,7 @@ const KINDS = {
   table: 'csv tsv xls xlsx xlsm xlsb ods',
   text: 'txt log pdf doc docx docm rtf odt hwp hwpx ppt pptx pptm odp key pages tex rst',
   code: 'py pyw js mjs cjs ts tsx jsx json jsonc yaml yml toml ini cfg conf env css scss less htm html xml xsl sh bash zsh bat cmd '
-    + 'ps1 psm1 c h cc cpp hpp cs java kt go rs rb php sql r ipynb vue svelte lua swift dart pl gradle lock',
+    + 'ps1 psm1 c h cc cpp hpp cs java kt go rs rb php sql r ipynb vue svelte lua swift dart pl gradle lock prg',
   archive: 'zip 7z rar tar gz tgz bz2 xz cab iso',
   media: 'mp3 wav flac m4a ogg mp4 mov avi mkv webm wmv',
   app: 'exe msi msix dll sys com scr lnk url jar apk',
@@ -35,6 +35,9 @@ export function isCode(name) {
 
 // 코드 화면에서 보는 자료 (D60): csv·tsv 는 표, txt·log 는 글자 그대로. '자료' 목록에 남고, 누르면 코드처럼 Lectern 에서 본다
 export const DATA_VIEW_EXT = new Set(['csv', 'tsv', 'txt', 'log']);
+
+// Windows 인코딩(CP949)으로 쓰는 코드 (D85): EViews 프로그램 — 코드 화면이 자료 파일처럼 UTF-8 이 아니어도 읽는다. 서버는 docinfo.WINDOWS_TEXT_EXT
+export const WINDOWS_TEXT_EXT = new Set(['prg']);
 
 // 엑셀 보기 (D77): xlsx·xlsm 은 서버가 값을 읽어(lectern/sheet.py) 코드 화면에 표로 — 옛 형식 xls·xlsb 는 엑셀로
 export const SHEET_VIEW_EXT = new Set(['xlsx', 'xlsm']);

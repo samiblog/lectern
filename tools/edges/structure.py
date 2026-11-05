@@ -38,6 +38,10 @@ proj = base / 'proj'
 files = {name: proj / name for name in ('list.md', 'para.md', 'table.md', 'code.md', 'src.py', 'long.md', 'crlf.md', 'sub/inner.md')}
 TEXTS = {'list.md': LIST, 'para.md': PARA, 'table.md': TABLE, 'code.md': CODE, 'src.py': SRC, 'long.md': LONG, 'sub/inner.md': '# 안쪽\n\n글\n'}
 CRLF_BYTES = b'\xef\xbb\xbf# CR\r\n\r\n- one\r\n- two\r\n'
+PRG = {
+    'model.prg': "' 구리 가격 모형\r\nsmpl 2000 2020\r\n' ---- 추정 ----\r\nsubroutine local run_model(scalar n)\r\n  equation eq1.ls y c x\r\nendsub\r\n".encode('cp949'),
+    'plain.prg': b"smpl 2000 2020\r\nequation eq1.ls y c x\r\n",
+}
 
 
 def reset():
@@ -135,6 +139,10 @@ try:
         def undo_to(name, want):
             press('Control+z')
             return until(name, want, page)
+
+        def undo_to_bytes(wait, want):
+            press('Control+z')
+            return wait(want)
 
         print('[계산]')
         cases = (Path(__file__).parent / 'lineops_cases.js').read_text(encoding='utf-8')
@@ -619,6 +627,106 @@ try:
         gone()
         press('Control+z')
         check('되돌려도 바이트가 같음', until_bytes(CRLF_BYTES))
+
+        print('[EViews 프로그램]')
+        reset()
+        for name, data in PRG.items():
+            (proj / name).write_bytes(data)
+        press('F5')
+        page.wait_for_function("[...document.querySelectorAll('#lec-code-list .row .label')].some((e) => e.textContent === 'model.prg')", timeout=8000)
+        check("'코드' 목록에 prg", True)
+        page.locator('#lec-code-list .row[data-path="model.prg"]').click()
+        page.wait_for_selector('.code-view .cv-line[data-line="1"]')
+        settle(300)
+        shown_prg = page.inner_text('.code-view .cv-line[data-line="1"] .cv-text')
+        info = page.inner_text('#lec-st-info')
+        check('Windows 인코딩의 한글이 그대로 보이고 상태줄에 EViews·CP949', shown_prg == "' 구리 가격 모형" and 'EViews' in info and 'CP949' in info, (shown_prg, info))
+        toc = page.evaluate("[...document.querySelectorAll('#lec-toc a')].map((a) => a.textContent.trim())")
+        check('목차에 구분 주석과 subroutine', any('추정' in x for x in toc) and any('run_model' in x for x in toc), toc)
+        clear_toast()
+        page.locator('.code-view .cv-line[data-line="2"] .cv-text').click()
+        press('F2')
+        utf8_toast = toast_has('UTF-8 이 아닌 파일은')
+        check('F2 는 까닭을 알리고 칸을 열지 않음', utf8_toast and not editing())
+        clear_toast()
+        page.locator('.code-view .cv-line[data-line="2"] .cv-text').dblclick()
+        settle(450)
+        quiet = page.inner_text('#lec-toast') == '' and not editing()
+        check('두 번 누르기는 알림 없이 낱말 고르기', quiet and page.evaluate('getSelection().toString().length') > 0)
+        page.locator('.code-view .cv-line[data-line="3"] .cv-text').click()
+        press('Shift+Enter')
+        settle(120)
+        clear_toast()
+        asked_before = len(dialogs)
+        press('Delete')
+        del_toast = toast_has('UTF-8 이 아닌 파일은')
+        clear_toast()
+        press('Alt+ArrowDown')
+        move_toast = toast_has('UTF-8 이 아닌 파일은')
+        clear_toast()
+        press('Control+x')
+        cut_toast = toast_has('UTF-8 이 아닌 파일은')
+        settle(200)
+        check('Delete·Alt+↓·Ctrl+X 도 묻지 않고 막음, 파일은 바이트까지 그대로', del_toast and move_toast and cut_toast and len(dialogs) == asked_before
+              and (proj / 'model.prg').read_bytes() == PRG['model.prg'])
+        page.locator('.code-view .cv-line[data-line="3"] .cv-text').click(button='right')
+        page.wait_for_selector('#lec-menu:not([hidden])')
+        items = page.evaluate("[...document.querySelectorAll('#lec-menu button')].map((b) => b.textContent)")
+        check("메뉴에 '줄 지우기'가 없음", not any('줄 지우기' in x for x in items) and any('원문 복사' in x for x in items), items)
+        press('Escape')
+        press('Escape')
+        settle(150)
+        page.click('.side-tabs button[data-tab="search"]')
+        page.fill('#lec-search-input', '구리 가격')
+        press('Enter')
+        page.wait_for_selector('#lec-search-results .sr-hit', timeout=6000)
+        hit = page.inner_text('#lec-search-results')
+        check('전체 검색이 Windows 인코딩의 한글을 찾음', 'model.prg' in hit and '구리 가격 모형' in hit, hit)
+        page.click('.side-tabs button[data-tab="files"]')
+        settle(150)
+        page.locator('#lec-code-list .row[data-path="plain.prg"]').click()
+        page.wait_for_function("document.querySelector('.code-view .cv-title')?.textContent === 'plain.prg'", timeout=5000)
+        page.wait_for_selector('.code-view .cv-line[data-line="1"]')
+        settle(300)
+        check('영문만 쓴 prg 는 인코딩 표시가 없음', 'CP949' not in page.inner_text('#lec-st-info'))
+        page.locator('.code-view .cv-line[data-line="1"] .cv-text').click()
+        press('F2')
+        page.wait_for_selector(cell)
+        press('Control+Enter')
+        page.wait_for_selector('.cv-line.lec-new-line')
+        typed('smpl 2001 2020')
+        press('Enter')
+
+        def prg_bytes(want, ms=5000):
+            end = time.time() + ms / 1000
+            got = None
+            while time.time() < end:
+                try:
+                    got = (proj / 'plain.prg').read_bytes()
+                except OSError:
+                    got = None
+                if got == want:
+                    return True
+                page.wait_for_timeout(40)
+            print('    파일:', got, flush=True)
+            return False
+
+        added = PRG['plain.prg'].replace(b'smpl 2000 2020\r\n', b'smpl 2000 2020\r\nsmpl 2001 2020\r\n')
+        check('영문만 쓴 prg 는 줄을 더함 (CRLF 그대로)', prg_bytes(added))
+        gone()
+        check('되돌리기', undo_to_bytes(prg_bytes, PRG['plain.prg']))
+        settle(300)
+        page.locator('.code-view .cv-line[data-line="1"] .cv-text').click()
+        press('F2')
+        page.wait_for_selector(cell)
+        press('End')
+        typed(' 구리')
+        clear_toast()
+        press('Enter')
+        refused = toast_has('EViews 파일은 Windows 인코딩')
+        clip = page.evaluate('navigator.clipboard.readText()')
+        check('영문만 쓴 prg 에 한글을 넣으면 저장하지 않고 고친 줄을 클립보드에', refused and prg_bytes(PRG['plain.prg']) and '구리' in clip, clip)
+        gone()
 
         print('[프로젝트 이름 줄]')
         page.click('.side-tabs button[data-tab="files"]')

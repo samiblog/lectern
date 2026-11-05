@@ -117,7 +117,7 @@ MAX_DIR_ENTRIES = 5000   # 제외 폴더 안을 한 단계씩 볼 때(list_dir) 
 # 전체 검색의 '코드'(D44)가 같은 목록을 쓴다 — 두 곳을 함께 고친다 (tests/test_search.py 가 맞춰 본다)
 CODE_EXT = frozenset((
     'py pyw js mjs cjs ts tsx jsx json jsonc yaml yml toml ini cfg conf env css scss less htm html xml xsl sh bash zsh bat cmd '
-    'ps1 psm1 c h cc cpp hpp cs java kt go rs rb php sql r ipynb vue svelte lua swift dart pl gradle lock'
+    'ps1 psm1 c h cc cpp hpp cs java kt go rs rb php sql r ipynb vue svelte lua swift dart pl gradle lock prg'
 ).split())
 
 

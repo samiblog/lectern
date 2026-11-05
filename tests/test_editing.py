@@ -215,3 +215,31 @@ def test_create_source_writes_lf_utf8_and_never_overwrites(tmp_path):
     with pytest.raises(EditError) as err:
         editing.create_source(p, 'x')
     assert err.value.status == 409 and p.read_bytes() == b'# \xea\xb3\xa0\xec\xb9\xa8\n'   # 덮어쓰지 않는다
+
+
+def test_prg_keeps_its_windows_encoding(tmp_path):
+    # EViews 프로그램 (D85): CP949 면 고치지 않고, 글이 모두 ASCII 면 한글을 넣는 저장을 막는다 — UTF-8 이 되면 EViews 에서 깨진다
+    cp949 = tmp_path / 'k.prg'
+    cp949.write_bytes("' 구리\r\n".encode('cp949'))
+    with pytest.raises(EditError) as err:
+        read_source(cp949)
+    assert err.value.status == 400
+
+    plain = tmp_path / 'a.prg'
+    plain.write_bytes(b"smpl 2000 2020\r\n")
+    src = read_source(plain)
+    with pytest.raises(EditError) as err:
+        save_source(plain, "' 구리\nsmpl 2000 2020\n", src['hash'])
+    assert err.value.status == 400 and 'EViews' in str(err.value) and plain.read_bytes() == b"smpl 2000 2020\r\n"
+    save_source(plain, "smpl 2001 2020\n", src['hash'])
+    assert plain.read_bytes() == b"smpl 2001 2020\r\n"
+
+    utf8 = tmp_path / 'u.prg'   # 이미 UTF-8 로 쓴 파일은 그대로 UTF-8
+    utf8.write_bytes("' 구리\n".encode())
+    save_source(utf8, "' 니켈\n", read_source(utf8)['hash'])
+    assert utf8.read_bytes() == "' 니켈\n".encode()
+
+    md = tmp_path / 'a.md'   # 다른 파일은 상관없다
+    md.write_bytes(b'plain\n')
+    save_source(md, '구리\n', read_source(md)['hash'])
+    assert md.read_bytes() == '구리\n'.encode()

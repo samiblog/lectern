@@ -71,7 +71,7 @@ The **Files** tab is split into three groups.
 | Group | What it holds | Clicking |
 |---|---|---|
 | Documents | Markdown and HTML documents (a folder tree) | Click once to open in the main area |
-| Code | Source (py, js, ts…), scripts (ps1, bat), web (css) and config (json, yaml, toml) | Click once for the code view, double-click for the editor |
+| Code | Source (py, js, ts…), scripts (ps1, bat, EViews prg), web (css) and config (json, yaml, toml) | Click once for the code view, double-click for the editor |
 | Other files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
 
 - Click a group header ('Documents 10', 'Code 3', 'Other files 4') to collapse that group. Drag the divider between groups to resize them, and double-click it to reset.
@@ -217,6 +217,7 @@ While editing a line you can also change the structure around it. Any text you c
 - **Duplicate**: **Ctrl+Shift+D** while editing a line adds the same line below and goes on editing the copy. Table rows are not duplicated.
 - Numbered lists are renumbered when you add, move or delete. A list written with `1.` throughout stays as it is. One **Ctrl+Z** brings the numbers back too.
 - All of this also works in the code view. It is not available in HTML documents, CSV tables, the Excel view, presentation documents and view-only projects.
+- Files that are not UTF-8 are view-only. Files in the Windows encoding, such as EViews programs (`prg`), show Korean correctly in the code view and in search, but line editing and edit mode don't change them. A `prg` written only in English can be edited; adding Korean to it is not saved, because the file would turn into UTF-8 and EViews would show broken characters.
 
 ### Find in document
 

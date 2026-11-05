@@ -23,6 +23,7 @@ from pathlib import Path
 from typing import Any
 
 from . import paths
+from .docinfo import WINDOWS_TEXT_EXT
 from .i18n import t
 from .scanner import doc_kind, is_code, resolve_inside
 
@@ -134,6 +135,9 @@ def save_source(path: Path, text: str, expect: Any, force: bool = False) -> dict
     if not os.access(path, os.W_OK):
         raise EditError(403, t('읽기 전용 파일이라 저장하지 않았습니다 — 파일 속성에서 읽기 전용을 끄면 저장할 수 있습니다'))
     body = text.replace('\r\n', '\n').replace('\r', '\n')
+    # 글이 모두 ASCII 면 UTF-8 로도 읽히지만 한글을 넣으면 파일이 UTF-8 이 되어 EViews 에서 깨진다 (D85)
+    if path.suffix.lower() in WINDOWS_TEXT_EXT and current.isascii() and not body.isascii():
+        raise EditError(400, t('EViews 파일은 Windows 인코딩이라 한글을 넣어 저장하지 않았습니다 — 저장하면 UTF-8 로 바뀌어 EViews 에서 글자가 깨집니다'))
     newline = _newline(current)
     if newline == b'\r\n':
         body = body.replace('\n', '\r\n')
