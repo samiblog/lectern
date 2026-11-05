@@ -1,6 +1,6 @@
 # Lectern — Claude Code 작업 지침
 
-Lectern(렉턴, 독서대)은 Windows용 로컬 문서 뷰어다. Claude Code·Claude가 프로젝트 폴더에 만든 문서를 **기계가 아닌 사람이** 한눈에 훑어보고 읽는 것이 목적이고, **보기 전용**이다.
+Lectern(렉턴, 독서대)은 Markdown 파일을 중심으로 사람과 AI가 함께 리서치하는 Windows용 로컬 통합 작업 환경(Integrated Research Work Environment)을 지향한다. 장기 지향점은 마름모형 리서치 방법의 구조화이고 지금은 구현하지 않는다 (`docs/VISION.md`, D87). 지금의 중심은 Claude Code·Claude가 프로젝트 폴더에 만든 문서와 자료를 **기계가 아닌 사람이** 읽고 살피고 그 자리에서 고치는 것이다.
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
@@ -8,7 +8,7 @@ Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 �
 
 ## 반드시 지킬 원칙
 
-1. **보기 전용.** 사용자 파일을 만들거나 고치거나 지우는 기능을 넣지 않는다 — **예외는 편집 모드(D54)**: 사용자가 저장할 때만 이미 있는 문서·코드 파일 하나를 고친다 (`lectern/editing.py` — UTF-8 글만, 줄바꿈·BOM 그대로, 그사이 바뀌었으면 묻기). 한 줄 편집(D76)과 줄 구조 편집(D83 — 줄 더하기·나누기·합치기·레벨·옮기기·지우기·복제)도 같은 저장 길(`/api/save`)로 사용자가 고른 줄과 그 번호 목록만 (할 일 체크 칸도 — `lineedit.replaceLines`). 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — 사용자가 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 한 줄로, `.md`, 이미 있는 폴더에, 같은 이름이 있으면 만들지 않음). 이름 바꾸기는 사용자가 사이드바에서 고른 파일 하나를 같은 폴더 안에서만 (D66 — `editing.rename_file`, 덮어쓰지 않음). 지우기·옮기기·폴더 만들기는 여전히 없다. Lectern 프로그램 폴더 안(설치된 예제 등)의 파일은 이 예외로도 고치지 않고, 그 안을 프로젝트로 열면 터미널도 열지 않는다 (D71 — `paths.is_protected`). 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다 (그 옆 `styles` 폴더는 '스타일 폴더 열기'가 비어 있을 때 만들기만 한다 — 내 스타일 파일은 읽기만, D53). **예외는 오른쪽 터미널(D38)이다**: 사용자가 직접 친 명령이 하는 일은 Lectern 이 한 것이 아니다. 대신 문서·링크·다른 기능이 셸로 명령을 보내는 길은 만들지 않는다 — 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'만 Ctrl+V 와 같은 길로, Enter 없이 넣는다 (D51).
+1. **파일은 사용자가 고를 때만, 그 파일만 바꾼다.** 앱이 스스로 사용자 파일을 만들거나 고치거나 지우지 않는다. 바꾸는 길은 아래의 것뿐이다 — **편집 모드(D54)**: 사용자가 저장할 때만 이미 있는 문서·코드 파일 하나를 고친다 (`lectern/editing.py` — UTF-8 글만, 줄바꿈·BOM 그대로, 그사이 바뀌었으면 묻기). 한 줄 편집(D76)과 줄 구조 편집(D83 — 줄 더하기·나누기·합치기·레벨·옮기기·지우기·복제)도 같은 저장 길(`/api/save`)로 사용자가 고른 줄과 그 번호 목록만 (할 일 체크 칸도 — `lineedit.replaceLines`). 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — 사용자가 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 한 줄로, `.md`, 이미 있는 폴더에, 같은 이름이 있으면 만들지 않음). 이름 바꾸기는 사용자가 사이드바에서 고른 파일 하나를 같은 폴더 안에서만 (D66 — `editing.rename_file`, 덮어쓰지 않음). 지우기·옮기기·폴더 만들기는 여전히 없다. Lectern 프로그램 폴더 안(설치된 예제 등)의 파일은 이 예외로도 고치지 않고, 그 안을 프로젝트로 열면 터미널도 열지 않는다 (D71 — `paths.is_protected`). 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다 (그 옆 `styles` 폴더는 '스타일 폴더 열기'가 비어 있을 때 만들기만 한다 — 내 스타일 파일은 읽기만, D53). **예외는 오른쪽 터미널(D38)이다**: 사용자가 직접 친 명령이 하는 일은 Lectern 이 한 것이 아니다. 대신 문서·링크·다른 기능이 셸로 명령을 보내는 길은 만들지 않는다 — 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'만 Ctrl+V 와 같은 길로, Enter 없이 넣는다 (D51).
 2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). html 문서도 같다 — 서버가 `/doc/*.html` 에 붙이는 CSP가 스크립트·연결·인터넷 CSS·글꼴을 막고 그림만 `external_images` 를 따르게 한다 (D27). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다. 이 함수는 `resolve()` 전에 글자만으로 root 안인지 먼저 본다 — `\\서버\공유` 를 `resolve()` 하면 Windows 가 그 서버에 접속해 로그인 정보(NTLM)를 건넨다 (D29).
 4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. 제외 폴더는 사이드바 '자료' 목록에만 흐린 접힌 폴더로 나오고 펼칠 때 안을 읽는다 (D49 — 숨김은 거기에도 없다). html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
@@ -71,7 +71,7 @@ assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → le
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
 tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
-docs/                   ARCHITECTURE, DECISIONS, ROADMAP, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
+docs/                   VISION(방향 — 마름모형 리서치 방법), ARCHITECTURE, DECISIONS, ROADMAP, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다
 ```
