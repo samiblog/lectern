@@ -1,8 +1,8 @@
 # Lectern User Guide
 
-Lectern is a viewer for people to skim and read the documents that Claude Code or Claude writes into a project folder. It shows Markdown (`.md`) and HTML (`.html`) documents in a readable layout, and shows code in a read-only code view.
+Lectern is a workspace for Markdown-centered research with AI. You read, review and fix in place the documents and data that Claude Code or Claude writes into a project folder. It shows Markdown (`.md`) and HTML (`.html`) documents in a readable layout, and shows code in a read-only code view.
 
-- **Made for reading.** Lectern never deletes or creates documents; the only files it writes are its settings file and files you save yourself in **edit mode**. Commands you type yourself in the right-hand terminal are also an exception.
+- **Files change only when you choose.** Lectern never creates, edits or deletes documents on its own; it writes only its settings file and the files you choose to save, create or rename. Commands you type yourself in the right-hand terminal are also an exception.
 - **It does not connect to the internet on its own.** Only web images inside documents are loaded, and you can turn that off in Settings.
 - **It only looks inside the folder you open.** Hidden files and folders (`.git`, `.claude` and so on) are not shown. Excluded folders such as `node_modules` and `dist` stay out of the document tree and search, and appear dimmed only in the 'Other files' list.
 
