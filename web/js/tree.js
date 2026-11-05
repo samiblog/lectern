@@ -205,6 +205,7 @@ export function docMenuItems(path, type = 'doc') {
     opens.push({ label: t('새 문서 탭에서 열기'), hint: t('누르기'), action: () => emit('open', { type, path, newTab: true, force: true }) },
       { label: t('지금 탭에서 열기'), hint: t('Alt+누르기'), action: () => emit('open', { type, path }) });
   }
+  opens.push({ label: t('새 창에서 열기'), action: () => emit('open-window', { type, path }) });
   return menuGroups([{ header: path }], opens, pathMenuItems(path, true), [renameItem(path)]);
 }
 

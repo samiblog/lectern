@@ -1,4 +1,4 @@
-"""pywebview js_api — 창에서만 가능한 네이티브 기능만 둔다 (폴더 대화상자, 창 제목, 발표 모드의 전체 화면).
+"""pywebview js_api — 창에서만 가능한 네이티브 기능만 둔다 (폴더 대화상자, 창 제목, 독립창, 발표 모드의 전체 화면).
 
 나머지 기능은 모두 HTTP API(server.py)에 있어서 브라우저 개발 모드에서도 동작한다.
 밑줄(_)로 시작하는 속성은 pywebview가 JS에 노출하지 않는다.
@@ -11,10 +11,20 @@ from .state import AppState
 
 
 class NativeApi:
-    def __init__(self, state: AppState):
+    def __init__(self, state: AppState, windows: Any = None):
         self._state = state
+        self._windows = windows   # 독립창 (D95 — windows.py)
         self._window: Any = None
         self._fullscreen = False
+
+    def open_window(self, query: str) -> bool:
+        """독립창을 띄운다 (D95). query: 화면이 만든 주소의 뒤쪽. 띄우지 못하면 False"""
+        return bool(self._windows and self._windows.open(query))
+
+    def close_window(self) -> None:
+        """이 창을 닫는다 — 독립창의 마지막 문서 탭을 닫을 때"""
+        if self._window is not None:
+            self._window.destroy()
 
     def choose_folder(self) -> str | None:
         """폴더 선택 대화상자. 취소하면 None. 폴더를 실제로 여는 것은 JS가 POST /api/open 으로 한다."""

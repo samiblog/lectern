@@ -403,6 +403,7 @@ def run(headed: bool) -> None:
             page.evaluate("getSelection().removeAllRanges(); document.querySelectorAll('#lec-view > .lec-folded').forEach(h => h.click())")
             page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
             arrows_off = page.is_disabled('#lec-spot-prev') and page.is_disabled('#lec-spot-next')   # 하이라이트 전에는 꺼져 있다
+            page.locator('#lec-view p').first.click()   # 하이라이트는 현재 위치(작은 화살표)의 장부터 — 스크롤만으로는 화면 끝에 있다
             page.click('#lec-btn-spot')
             first = lit()
             # 하이라이트 밖은 덮개(.lec-spot — 위·아래 반투명 회색)가 덮는다 (D74): 다른 장의 그림 블록이 덮개 안, 덮개 색은 바탕과 다름
@@ -679,7 +680,11 @@ def run(headed: bool) -> None:
                 """파일의 n 번째 줄 (text 가 있으면 그렇게 될 때까지 기다린다)"""
                 end = time.time() + ms / 1000
                 while True:
-                    got = path.read_text(encoding='utf-8').split('\n')[n - 1]
+                    try:
+                        got = path.read_text(encoding='utf-8').split('\n')[n - 1]
+                    except PermissionError:   # 저장이 파일을 바꿔 끼우는 순간
+                        time.sleep(0.05)
+                        continue
                     if text is None or got == text or time.time() > end:
                         return got
                     time.sleep(0.1)

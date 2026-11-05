@@ -18,7 +18,7 @@ import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import { isViewable } from './icons.js';
 import {
-  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow,
+  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow, linkTargets,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -199,6 +199,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
       } else if (isMd(r.path) || (isHtml(r.path) && tab.fileMap.has(r.path))) {
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
         a.dataset.lecOpen = '';   // 앱 안에서 연다 — 우클릭 '새 문서 탭에서 열기' (docmenu.js, D91)
+        linkTargets.set(a, { type: 'doc', path: r.path, hash: r.hash });   // 우클릭 '새 창에서 열기' (D95)
         a.addEventListener('click', (e) => {
           e.preventDefault();
           if (r.path === docPath && r.hash && !newTabWanted(e)) {
@@ -212,6 +213,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         // 코드 파일·csv·txt: 읽기 화면의 그 줄로 (#L42) — 편집기는 우클릭 메뉴 (D43·D60)
         a.classList.add('file-link');
         a.dataset.lecOpen = '';
+        linkTargets.set(a, { type: 'code', path: r.path, line: lineFromHash(r.hash) });
         a.addEventListener('click', (e) => {
           e.preventDefault();
           emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash), ...linkHow(e) });

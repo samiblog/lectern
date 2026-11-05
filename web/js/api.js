@@ -1,6 +1,7 @@
 // 서버 API 호출과 네이티브(pywebview) 기능 연결
 
 import { S } from './store.js';
+import { solo } from './solo.js';
 import { toast } from './util.js';
 import { t } from './i18n.js';
 
@@ -64,6 +65,7 @@ export async function getText(path) {
 /** 설정 일부를 저장한다. 실패해도 화면 동작에는 영향이 없다. */
 export async function saveConfig(patch) {
   Object.assign(S.config, patch);
+  if (solo) return;   // 독립창의 화면 설정은 그 창에서만 (D95 — 설정은 메인 창의 것이다)
   try {
     await postJSON('/api/config', patch);
   } catch (e) {
@@ -112,5 +114,21 @@ export const native = {
   setTitle(title) {
     document.title = title;
     if (native.has('set_title')) window.pywebview.api.set_title(title)?.catch?.(() => {});
+  },
+
+  /** 독립창을 띄운다 (D95 — query 는 solo.soloQuery). 띄웠으면 true */
+  async openWindow(query) {
+    if (native.has('open_window')) return window.pywebview.api.open_window(query);
+    return !!window.open(`/${query}`, '_blank', 'popup,width=1000,height=760');   // 브라우저 개발 모드
+  },
+
+  closeWindow() {
+    if (native.has('close_window')) window.pywebview.api.close_window();
+    else window.close();
+  },
+
+  /** 이 독립창이 닫힌다 — 다른 창의 보낼 곳에서 빠지게. 닫히는 중에도 닿도록 keepalive */
+  tellGone(id) {
+    fetch('/api/window-gone', { method: 'POST', keepalive: true, headers: headers({ 'Content-Type': 'application/json' }), body: JSON.stringify({ w: id }) }).catch(() => {});
   },
 };

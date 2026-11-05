@@ -19,6 +19,7 @@
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { setLeaveGuard, navigate } from './nav.js';
+import { solo } from './solo.js';
 import { docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
@@ -173,7 +174,7 @@ function reportDirty() {
   const now = JSON.stringify(dirtyPaths());
   if (now === reported) return;
   reported = now;
-  sending = sending.then(() => postJSON('/api/editing', { dirty: JSON.parse(now) })).catch(() => { reported = ''; });
+  sending = sending.then(() => postJSON('/api/editing', { dirty: JSON.parse(now), w: solo?.id })).catch(() => { reported = ''; });
 }
 
 /** 저장하지 않은 편집이 있는지 (화면을 다시 불러오기 전에 — settings.js) */

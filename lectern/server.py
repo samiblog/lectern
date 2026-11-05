@@ -149,7 +149,7 @@ def create_app(state: AppState) -> Flask:
         html = (web / 'index.html').read_text(encoding='utf-8')
         html = html.replace('{{MODE}}', state.mode).replace('{{VERSION}}', __version__).replace('{{TERM}}', state.term_secret)
         html = html.replace('{{LANG}}', i18n.language())   # 화면 언어 (설정 language, D46) — web/js/i18n.js 가 읽는다
-        state.unsaved = []   # 화면을 다시 불러왔다 — 편집 상자도 없다 (D54, 창을 닫을 때 묻는 목록)
+        state.set_unsaved(request.args.get('w', ''), [])   # 화면을 다시 불러왔다 — 편집 상자도 없다 (D54, 창을 닫을 때 묻는 목록)
         resp = Response(html, content_type='text/html; charset=utf-8')
         resp.headers['Content-Security-Policy'] = content_security_policy(state.config.get('external_images') is not False)
         resp.headers['Referrer-Policy'] = 'no-referrer'
@@ -177,6 +177,8 @@ def create_app(state: AppState) -> Flask:
         pid = body().get('p')
         if not isinstance(pid, str):
             abort(400)
+        if state.may_close and not state.may_close(pid):
+            abort(409, description=t('독립창의 저장하지 않은 편집을 두기로 해서 닫지 않았습니다'))
         state.close_tab(pid)
         return jsonify(state.info())
 
@@ -273,7 +275,33 @@ def create_app(state: AppState) -> Flask:
             project = state.get(pid)
             if project is not None and seq.isdigit():
                 projects[pid] = project.log.since(int(seq))
-        return jsonify(tabs_seq=state.tabs_seq, projects=projects)
+        # 창들이 서로 알고 문서를 받는 곳이기도 하다 (D95): w 창 id(메인은 빈 값), wp 그 창의 프로젝트, wt 그 창의 이름
+        window = request.args.get('w', '')
+        state.board.seen(window, request.args.get('wp', ''), request.args.get('wt', ''))
+        news = {'windows': state.board.others(window), 'inbox': state.board.take(window)}
+        return jsonify(tabs_seq=state.tabs_seq, projects=projects, **{k: v for k, v in news.items() if v})
+
+    @app.post('/api/window-send')
+    def api_window_send() -> Any:
+        """{to, type, path, top} — 문서를 다른 창으로 보낸다 (D95). to: 창 id, 메인 창은 빈 값. 그 창이 없으면 ok=false"""
+        data = body()
+        to, kind, path = data.get('to'), data.get('type'), data.get('path')
+        if not isinstance(to, str) or kind not in ('doc', 'code') or not isinstance(path, str):
+            abort(400)
+        top = data.get('top')
+        sent = state.board.send(to, {'type': kind, 'path': path, 'top': top if isinstance(top, (int, float)) else 0})
+        if sent and state.on_send:
+            state.on_send(to)
+        return jsonify(ok=sent)
+
+    @app.post('/api/window-gone')
+    def api_window_gone() -> Any:
+        """{w} — 독립창이 닫힌다. 다른 창의 보낼 곳에서 뺀다"""
+        window = body().get('w')
+        if not isinstance(window, str):
+            abort(400)
+        state.board.forget(window)
+        return jsonify(ok=True)
 
     @app.get('/api/config')
     def api_config_get() -> Any:
@@ -532,9 +560,10 @@ def create_app(state: AppState) -> Flask:
     def api_editing() -> Any:
         """{dirty: [경로…]} — 저장하지 않은 편집이 있는 파일. 창을 닫을 때 묻는 데 쓴다 (app.py)"""
         dirty = body().get('dirty')
-        if not isinstance(dirty, list):
+        window = body().get('w', '')   # 독립창이면 창 id (D95)
+        if not isinstance(dirty, list) or not isinstance(window, str):
             abort(400)
-        state.unsaved = [str(p) for p in dirty if isinstance(p, str)][:20]
+        state.set_unsaved(window[:32], [str(p) for p in dirty if isinstance(p, str)][:20])
         return jsonify(ok=True)
 
     # ---- 내 스타일 (D53): 설정 폴더의 styles\*.css ----------------------------------------

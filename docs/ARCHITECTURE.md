@@ -31,7 +31,7 @@ flowchart LR
 ```
 
 - 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38). 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 — 자식에게 물려지기 때문이다.
-- 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34).
+- 프로젝트를 여는 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34). 그 밖에 프로젝트에 속한 독립창을 띄울 수 있다 (`windows.py`, D95 — 같은 서버·같은 화면, 주소의 `?solo=<프로젝트 id>&w=<창 id>` 만 다르다).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
 - 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
 
@@ -168,7 +168,9 @@ flowchart LR
 | `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual.md`·영어판 `help/manual.en.md` 포함 — 토큰 없이) |
 | `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}], samples, writing_guide}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개). `samples` 는 예제 프로젝트 폴더(`paths.samples_dir()` — 없으면 `null`), `writing_guide` 는 화면 언어에 맞는 AI 용 작성 안내 파일 (D57) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
-| `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤). 이미 닫혔으면 그대로. `/api/state` 와 같은 형식 |
+| `POST /api/window-send` | `{to, type, path, top}` | 문서를 다른 창으로 보낸다 (D95 — to 는 창 id, 메인 창은 빈 값). 그 창이 없으면 `ok: false` |
+| `POST /api/window-gone` | `{w}` | 독립창이 닫힌다 — 다른 창의 보낼 곳에서 뺀다 (D95) |
+| `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤, 그 프로젝트의 독립창도 닫음). 이미 닫혔으면 그대로. 독립창의 저장하지 않은 편집을 두기로 하면 409. `/api/state` 와 같은 형식 |
 | `POST /api/activate` | `{p}` | 선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작). `{ok:true}` |
 | `GET /api/tree?p=<id>&fresh=1` | | `{root, tree}` (스캔 결과, 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(`tree_seq` — 문서 외 파일의 내용 수정(touch)은 세지 않는다, D50)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
 | `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크 규칙은 트리와 같고, 제외 폴더는 안을 훑지 않은 접힌 노드 `{type:'dir', children: null, excluded: true}` 로만 (D49 — 파일 수에 넣지 않음). 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
@@ -176,7 +178,7 @@ flowchart LR
 | `GET /api/others/recent?p=<id>&code=1&others=1` | | 최근에 고친 코드·자료 파일 `{files, limit}` — 사이드바 '최근 변경' (D50). `code`·`others`(기본 0): 코드 파일·자료. 최근 것부터 50개(`RECENT_FILES`), 노드는 `/api/others` 의 파일 노드와 같다. `scan_others` 의 목록에 그 뒤로 내용이 바뀐 파일(`touch`)의 수정 시각·크기만 새로 읽어 덮는다 |
 | `GET /api/overview?p=<id>&path=<폴더>` | | `{path, name, dirs:[{name,path,count,mtime}], files:[파일 노드+summary], recent:[파일 노드 최대 6], total}`. `path` 는 실제 경로로 맞춘 값 (`docs/../docs`·`DOCS` → `docs`) |
 | `GET /api/search?p=<id>&q=<검색어>&docs=1&code=1` | | 전체 본문 검색. `docs`(기본 1)·`code`(기본 0): 찾을 곳 — 문서, 코드('코드' 목록의 파일, D44). `{query, results:[{path, title, mtime, named, kind, hits:[{line, text}], more}], total, truncated, docs, code}` (`kind`: `doc`·`code` — 문서 먼저, 묶음마다 200파일·1000곳까지. `docs`·`code`: 묶음마다 결과 파일 수. 코드는 `title` 이 `null`. `named`: 제목·경로에 검색어가 있음 — 묶음 안에서 먼저 나옴). 검색어가 200자를 넘으면 400 |
-| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것 |
+| `GET /api/changes?since=<id>:<seq>,…` | | `{tabs_seq, projects:{<id>: {seq, paths, structure, others, touched, reset}}}` — 화면이 아는 탭마다 그 순번 뒤의 변경 (한 번의 요청으로 모든 탭). 닫힌 탭은 빠진다. `tabs_seq` 가 화면이 아는 값과 다르면 탭 목록이 바뀐 것. `&w=&wp=&wt=` 로 창을 알리면 다른 창들(`windows`)과 받은 문서(`inbox`)도 준다 — 있을 때만 (D95) |
 | `GET /api/sheet?p=<id>&path=<경로>&sheet=<차례>` | | 엑셀 보기 (D77, `lectern/sheet.py`) `{path, sheets:[{name, hidden}], index, sheet:{name, merges:[[첫 행, 첫 칸, 끝 행, 끝 칸]], rows:[[행 번호, [칸 글…]]], first_col, cols, formulas:{'B3': '=…'}, truncated}}` — .xlsx·.xlsm 의 값(표시 형식을 따른 글)만, 없는 시트 차례는 첫 시트. 다른 형식 415, 큰 파일·부분 413, 깨진 파일 422, 없음·숨김·밖 404 |
 | `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, hash, size}` — `text` 는 LF, `hash` 는 원문 바이트의 SHA-256. 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 없음·숨김·밖은 404 |
 | `POST /api/save` | `{p, path, text, hash, force?, create?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). `create: true` 면 새 Markdown 문서를 만든다 (D63·D65 — 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 으로. `editing.new_doc_path` 가 자리를 보고 `create_source` 가 `xb` 로 씀: 이미 있는 폴더·`.md`·숨김·제외 폴더 아님, 같은 이름이면 409, LF·BOM 없음 — 답에 만든 경로 `path` 를 더함). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` (create 면 `path` 도 — 폴더는 실제 이름) |
@@ -184,7 +186,7 @@ flowchart LR
 | `GET /api/notes?p=<id>` | | 프로젝트 메모의 글 (D92 — `.lectern/notes.md`, 없으면 빈 글): `{text, hash, exists}` |
 | `POST /api/notes` | `{p, text, hash}` | 프로젝트 메모를 쓴다. 경로는 정해져 있고 처음이면 만든다. 그사이 바뀌었으면 409. `{hash, size}` |
 | `POST /api/rename` | `{p, path, name}` | 파일 하나의 이름을 바꾼다 (D66 — `editing.rename_file`: 같은 폴더 안에서 이름만, 프로젝트 안의 보이는 파일만(숨김·제외 폴더 안·링크 아님), 새 이름은 Windows 가 받는 이름이고 점으로 시작하지 않음, 같은 이름이면 409(대소문자만 바꾸기는 됨), 다른 프로그램이 쓰고 있으면 409). `{path}`(바뀐 경로) |
-| `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
+| `POST /api/editing` | `{dirty: [이름…], w?}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved_by`, `app.py`). w: 독립창의 창 id (D95) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |

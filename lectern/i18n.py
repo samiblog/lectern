@@ -95,6 +95,7 @@ EN: dict[str, str] = {
     '저장하지 못했습니다: {error}. 고친 내용은 {tmp} 에 남겨 두었습니다': 'Could not save: {error}. Your edited text was kept in {tmp}',
     '저장하지 않은 편집이 있습니다:\n{files}\n\n닫으면 이 내용은 사라집니다. 닫을까요?':
         'There are unsaved edits:\n{files}\n\nClosing will discard them. Close anyway?',
+    '독립창의 저장하지 않은 편집을 두기로 해서 닫지 않았습니다': 'Not closed, because you chose to keep the unsaved edits in the separate window',
     # editing.py — 새 문서 (D63)
     '새 문서의 경로가 올바르지 않습니다': 'The path of the new document is not valid.',
     '새 문서는 .md 로 끝나는 이름이어야 합니다 — 점으로 시작하거나 : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다':

@@ -7,6 +7,8 @@ import { getJSON } from './api.js';
 import { loadTree } from './project.js';
 import { knownTabsSeq, resyncTabs } from './tabs.js';
 import { paneShown } from './panes.js';
+import { windowName } from './doctabs.js';
+import { solo } from './solo.js';
 
 const INTERVAL_MS = 1000;
 let timer = 0;
@@ -62,7 +64,9 @@ async function tick() {
   try {
     const tabs = S.tabs.filter((t) => !t.loading);   // 처음 그리는 중인 탭은 다음 주기에
     const since = tabs.map((t) => `${t.id}:${t.seq}`).join(',');
-    const d = await getJSON(`/api/changes?since=${encodeURIComponent(since)}`);
+    const me = `&wt=${encodeURIComponent(windowName())}${solo ? `&w=${solo.id}&wp=${solo.project}` : ''}`;   // 창끼리 서로 알게 (D95)
+    const d = await getJSON(`/api/changes?since=${encodeURIComponent(since)}${me}`);
+    emit('window-news', d);
     if (d.tabs_seq !== knownTabsSeq()) {
       await resyncTabs();
       return;

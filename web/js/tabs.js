@@ -22,6 +22,7 @@ import { confirmCloseEditor, disposeEditor } from './editor.js';
 import { restoreDocTabs, selectDocTab } from './doctabs.js';
 import { gatherOn } from './gather.js';
 import { manualOpen } from './help.js';
+import { solo } from './solo.js';
 import { html, setHtml } from './html.js';
 import { $, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
@@ -79,14 +80,15 @@ function syncTabs(info) {
   S.samples = info.samples ?? null;
   S.writingGuide = info.writing_guide || '';
   if (info.sep) S.sep = info.sep;
-  for (const n of info.notices || []) {
+  for (const n of solo ? [] : info.notices || []) {   // 알림은 메인 창이 보인다
     if (n.id <= noticeSeen) continue;
     noticeSeen = n.id;
     toast(n.text, 'error', 8000);
   }
   const known = new Map(S.tabs.map((tb) => [tb.id, tb]));
   const added = [];
-  const next = info.projects.map((p) => {
+  const projects = solo ? info.projects.filter((p) => p.id === solo.project) : info.projects;   // 독립창은 자기 프로젝트만 (D95)
+  const next = projects.map((p) => {
     if (known.has(p.id)) return known.get(p.id);
     const tab = makeTab(p);
     added.push(tab);
@@ -122,7 +124,8 @@ function loadTab(tab) {
     try {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
-      const restore = S.config.restore_last !== false;
+      const restore = !solo && S.config.restore_last !== false;
+      if (solo) await navigate(solo.start, { pane, scrollTop: solo.top || undefined });
       const restored = restore && await restorePosition(pane, tab.position);
       // 트리가 보인 뒤 사용자가 이미 다른 문서를 눌렀으면(그리는 중 포함) 개요로 덮지 않는다
       if (!restored && !pane.current && !pane.pending) await navigate({ type: 'overview', path: '' }, { pane });
@@ -231,6 +234,10 @@ export async function chooseAndOpen() {
 /** 탭을 닫는다 (그 탭의 터미널도 끝난다). 선택된 탭이었으면 그 오른쪽(없으면 왼쪽) 탭을 고른다. 마지막 탭이면 시작 화면 */
 export async function closeTab(tab) {
   if (!S.tabs.includes(tab)) return;
+  if (solo) {   // 프로젝트는 메인 창의 것이다 — 이 창만
+    if (confirmCloseEditor(tab)) native.closeWindow();
+    return;
+  }
   if (!await confirmCloseTerminal(tab)) return;   // 터미널에서 프로그램이 돌고 있으면 묻는다
   // 편집 모드에서 저장하지 않은 것이 있으면 묻는다 (D54 — 묻기만. 편집 상자는 탭이 실제로 닫힌 뒤 syncTabs 가 치운다)
   if (!confirmCloseEditor(tab)) return;
@@ -274,6 +281,10 @@ export function selectTabAt(n) {
 export async function resyncTabs() {
   const info = await getJSON('/api/state');
   syncTabs(info);
+  if (solo) {   // 프로젝트 탭이 닫혔으면 창도 (서버도 닫는다)
+    if (!S.tabs.length) native.closeWindow();
+    return;
+  }
   const want = S.tabs.find((tb) => tb.id === info.active) || S.tab || S.tabs[0] || null;
   if (want !== S.tab || !want) await selectTab(want, { tell: false });
 }
@@ -289,6 +300,10 @@ export async function loadTabs() {
     return;
   }
   syncTabs(info);
+  if (solo && !S.tabs.length) {   // 그 프로젝트가 닫혔다
+    native.closeWindow();
+    return;
+  }
   if (info.config_error && !configErrorShown) {
     configErrorShown = true;
     toast(info.config_error, 'error', 15000);

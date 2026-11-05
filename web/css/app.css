@@ -264,6 +264,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   width: var(--toc-w); flex: none; overflow: auto; padding: 28px 14px 40px 18px;
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
 }
+/* 독립창 (D95): 프로젝트 탭·터미널·메모·설정은 메인 창에 */
+.lec-solo #lec-tablist, .lec-solo #lec-btn-open, .lec-solo #lec-btn-recent, .lec-solo #lec-btn-notes, .lec-solo #lec-btn-term,
+.lec-solo #lec-btn-gather, .lec-solo #lec-btn-settings, .lec-solo #lec-theme, .lec-solo #lec-theme-prev, .lec-solo #lec-theme-next { display: none; }
 .sidebar-off #lec-sidebar, .sidebar-off #lec-resizer, .toc-off #lec-toc, .toc-off #lec-toc-resizer { display: none; }
 /* 사이드바 폭 조절 (resize.js): 경계 위에 겹친 얇은 손잡이 */
 #lec-resizer { flex: none; width: 7px; margin: 0 -4px 0 -3px; position: relative; z-index: 5; cursor: col-resize; }

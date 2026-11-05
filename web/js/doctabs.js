@@ -16,6 +16,8 @@ import { createPane, removePane, selectPane } from './panes.js';
 import { navigate, refreshView, seedScroll } from './nav.js';
 import { goToPart } from './toc.js';
 import { closeEditor } from './editor.js';
+import { native, postJSON } from './api.js';
+import { solo, soloQuery } from './solo.js';
 import { labelOf, tipOf, pathMenuItems } from './tree.js';
 import { openPalette } from './palette.js';
 import { showMenu } from './ui.js';
@@ -205,8 +207,82 @@ export async function reopenDocTab() {
   return false;
 }
 
-/** Ctrl+W: 지금 문서 탭을 닫는다. 하나뿐이면 닫지 않고 알린다 (프로젝트는 Ctrl+Shift+W) */
+let otherWindows = [];   // 서버가 알려 준 다른 창들 [{id, project, title}] (D95)
+
+/** 다른 창에 보일 이 창의 이름 — 보고 있는 문서 */
+export function windowName() {
+  const v = S.pane && viewOf(S.pane);
+  const name = v?.path ? basename(v.path) : S.tab?.name || '';
+  const more = (S.tab?.panes.length || 1) - 1;
+  return more ? t('{name} 외 {n}개', { name, n: more }) : name;
+}
+
+/** 이 프로젝트의 다른 독립창 */
+const peers = (tab) => otherWindows.filter((w) => w.id && w.project === tab.id);
+
+/** 칸을 떠나보낸 뒤: 다른 탭이 있으면 탭만 닫고, 마지막 탭이면 독립창은 닫고 메인 창은 폴더 개요로 */
+async function leavePane(pane) {
+  if (pane.tab.panes.length > 1) closeDocTab(pane);
+  else if (solo) native.closeWindow();
+  else await navigate({ type: 'overview', path: '' }, { pane });
+}
+
+/** 문서 탭을 다른 창으로 보낸다 (D95). to: 창 id, 메인 창은 빈 값 */
+export async function sendToWindow(pane, to) {
+  const v = viewOf(pane);
+  if (pane.editor && !closeEditor(pane, { sync: false })) return false;
+  let sent = false;
+  try {
+    sent = (await postJSON('/api/window-send', { to, type: v.type, path: v.path, top: Math.round(pane.scroller.scrollTop) })).ok;
+  } catch { /* 아래에서 알린다 */ }
+  if (!sent) {
+    toast(t('그 창이 닫혀 보내지 못했습니다'), 'error');
+    return false;
+  }
+  await leavePane(pane);
+  return true;
+}
+
+/** 다른 창이 보낸 문서를 새 문서 탭에서 연다 */
+async function receive({ type, path, top }) {
+  const pane = await openInNewTab({ type, path });
+  if (pane && top) pane.scroller.scrollTop = top;
+}
+
+/** 문서를 독립창에서 연다 (D95). 띄웠으면 true */
+async function openWindow(tab, target, top = 0) {
+  const done = await native.openWindow(soloQuery(tab.id, target, top));
+  if (!done) toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
+  return done;
+}
+
+/**
+ * 문서 탭을 독립창으로 옮긴다 (D95 — 브라우저의 '새 창으로 탭 이동'). 저장하지 않은 편집이 있으면 먼저 묻는다.
+ * 하나뿐인 문서 탭이면 메인 창은 폴더 개요로. 독립창의 하나뿐인 탭은 옮길 까닭이 없다.
+ */
+export async function moveToWindow(pane = S.pane) {
+  const v = pane && viewOf(pane);
+  if (v?.type !== 'doc' && v?.type !== 'code') {
+    toast(t('문서나 코드를 볼 때 새 창으로 옮길 수 있습니다'));
+    return false;
+  }
+  const only = pane.tab.panes.length < 2;
+  if (solo && only) {
+    toast(t('이 창에 문서 탭이 하나뿐입니다'));
+    return false;
+  }
+  if (pane.editor && !closeEditor(pane, { sync: false })) return false;
+  if (!await openWindow(pane.tab, v, pane.scroller.scrollTop)) return false;
+  await leavePane(pane);
+  return true;
+}
+
+/** Ctrl+W: 지금 문서 탭을 닫는다. 하나뿐이면 닫지 않고 알린다 (프로젝트는 Ctrl+Shift+W). 독립창이면 창을 닫는다 */
 export function closeDocTabKey() {
+  if (solo && S.tab?.panes.length < 2) {
+    if (!S.pane.editor || closeEditor(S.pane, { sync: false })) native.closeWindow();
+    return true;
+  }
   if (S.tab && S.tab.panes.length < 2) {
     toast(t('마지막 문서 탭입니다 — 프로젝트를 닫으려면 Ctrl+Shift+W 를 누르세요'));
     return false;
@@ -343,11 +419,22 @@ export function tabMenu(pane) {
     items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+W' : t('가운데 버튼'), action: () => closeDocTab(pane) },
       { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(pane) });
   }
-  if (v?.path && (v.type === 'doc' || v.type === 'code')) items.push('-', ...pathMenuItems(v.path, true));
+  if (v?.path && (v.type === 'doc' || v.type === 'code')) {
+    if (solo) items.push({ label: t('메인 창으로 보내기'), action: () => sendToWindow(pane, '') });
+    for (const w of peers(pane.tab)) items.push({ label: t('{name} 창으로 보내기', { name: w.title }), action: () => sendToWindow(pane, w.id) });
+    if (!solo || pane.tab.panes.length > 1) items.push({ label: t('새 창으로 옮기기'), hint: pane === S.pane ? 'Ctrl+Shift+N' : '', action: () => moveToWindow(pane) });
+    items.push('-', ...pathMenuItems(v.path, true));
+  }
   return items;
 }
 
 export function initDocTabs() {
+  on('open-window', (target) => { if (S.tab) openWindow(S.tab, target); });
+  on('window-news', async (d) => {
+    otherWindows = d.windows || [];
+    for (const item of d.inbox || []) await receive(item);
+  });
+  if (solo) addEventListener('pagehide', () => native.tellGone(solo.id));
   const list = $('#lec-doctab-list');
   list.addEventListener('click', (e) => {
     const pane = paneAt(e.target);

@@ -64,6 +64,21 @@ Click **▦** next to ∨ at the right end of the document tab row to spread thi
 - **⤢** in a cell's header (or double-clicking the header) ends the spread showing only that document. The sidebar and contents buttons (Ctrl+B) also end it and show what you asked for.
 - Selecting another project tab while spread spreads that project's document tabs. View-only projects (the samples) have no terminal cell.
 
+### Separate windows
+
+You can move a document into its own window and read side by side. With two monitors, keep the report on one and the source material on the other.
+
+- Move: right-click a document tab and choose **Move to new window**, or press **Ctrl+Shift+N**. The tab leaves the original window and opens at the same position in the new one.
+- Open and keep the tab: right-click a document in the sidebar or a link in the text and choose **Open in new window**.
+- Send between windows: right-click a document tab in a separate window and choose **Send to main window**. When other separate windows are open, any window offers **Send to window: (document name)**. About a second later it opens in a new document tab at the same position, and that window comes to the front.
+- Sending the last document out of a separate window closes that window.
+- A separate window can hold several document tabs too. The sidebar starts hidden; press **Ctrl+B** to show it. **Ctrl+T** and **Ctrl+P** also open documents.
+- A separate window belongs to its project. When you pick another project in the main window it hides, and it comes back with its tabs and scroll position when you return. Closing the project tab closes it.
+- Project tabs, the terminal, notes, settings and styles stay in the main window. A style changed in the main window applies when you reopen the separate window.
+- Display changes such as text size apply to that window only and are not saved.
+- Closing the last document tab with **Ctrl+W** closes the window. Closing the main window closes them all. Separate windows do not reopen on the next start.
+- You can open up to 8 windows.
+
 ## Sidebar
 
 ### Files — documents, code and other files
@@ -188,11 +203,13 @@ In Markdown documents and the code view (including csv and txt), lines are count
 - **Line focus**: **Shift+click** focuses that line, **Shift+drag** the lines you drag over, and **Shift+Enter** the current line (press again to turn it off). **Ctrl+L** focuses the current line, and pressing it again extends down. The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. Dragging to the top or bottom edge scrolls.
 - **Grow and shrink**: **Shift+↑ ↓** move the last line of the focus up or down — the first line stays, so the focus grows or shrinks. With a focus, Shift+click extends it to that line. Without one, Shift+↑ ↓ start from the current line.
 - **Send to Claude**: **Shift+→** puts the location of the focused part, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus stays in the document, so you can add several places in a row. To go on typing your request straight away, press **Ctrl+Shift+→** — focus moves to the terminal too (the current line if nothing is focused). **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While focusing, the status bar shows the line range.
-- **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
+- **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section at your current position (the small arrow) sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
 - **Right-click**: right-clicking inside the focused part opens a selection box — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, Edit here (for one line), Clear focus, and Delete lines at the bottom. Hover over an item for its description.
 - Click a dimmed area or press Esc or the button to turn it off. Moving the current line with ↑ ↓ also clears a line focus. You can also right-click the text and choose 'Focus this section'.
 
 ### Line editing
+
+Guide 09 in the sample project collects worked cases.
 
 You can edit a line right where it is. Press **F2** on the current line, or **double-click** the body to open that line with the cursor where you clicked. **Shift+Enter** does the same with exactly one line focused. With several lines focused, F2 only tells you so. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
 

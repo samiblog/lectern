@@ -24,6 +24,9 @@ export function natCompare(a, b) {
   return x.length - y.length;
 }
 
+/** 앱 안에서 여는 링크 → 그 대상 {type, path, hash?, line?} (doc.js 가 적고 docmenu.js 가 읽는다). 요소의 속성은 문서가 심을 수 있어 믿지 않는다 */
+export const linkTargets = new WeakMap();
+
 export const isMd = (p) => /\.(md|markdown)$/i.test(p);
 export const isHtml = (p) => /\.html?$/i.test(p);
 

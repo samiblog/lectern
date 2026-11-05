@@ -41,7 +41,8 @@ import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, focusTermina
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert, askNewDoc } from './basket.js';
 import { initRename, closeRename } from './rename.js';
-import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab } from './doctabs.js';
+import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab, moveToWindow } from './doctabs.js';
+import { solo } from './solo.js';
 import { initNotes, toggleNotes, closeNotes } from './notes.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
@@ -171,6 +172,9 @@ function bindToolbar() {
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
+/** 독립창(D95)에 없는 것의 키: 메모·프로젝트 탭·터미널·터미널 모음·설정·폴더 열기 */
+const mainOnlyKey = (e, mod, key) => (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyM' || e.key === 'PageDown' || e.key === 'PageUp'))
+  || (mod && !e.altKey && (e.code === 'Backquote' || e.key === ',' || key === 'o'));
 
 /** Shift+F10·메뉴 키: 초점이 있는 행, 없으면 현재 줄에서 우클릭한 것처럼 */
 function menuHere() {
@@ -191,6 +195,10 @@ function bindKeys() {
     }
     const mod = e.ctrlKey || e.metaKey;
     const key = e.key.toLowerCase();
+    if (solo && mainOnlyKey(e, mod, key)) {
+      e.preventDefault();
+      return;
+    }
     if (e.key === 'F6' && !mod && !e.altKey) {   // 문서 ↔ 터미널 — 터미널·편집기·한 줄 편집 안에서도 (terminal.js 의 keyFor, lineedit.js 의 onKey)
       e.preventDefault();
       hopFocus();
@@ -237,6 +245,9 @@ function bindKeys() {
     if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
       e.preventDefault();
       askNewDoc();
+    } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95)
+      e.preventDefault();
+      moveToWindow();
     } else if (mod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       openPalette();
@@ -352,6 +363,10 @@ async function boot() {
     S.config = await getJSON('/api/config');
   } catch {
     S.config = {};
+  }
+  if (solo) {   // 독립창 (D95): 문서가 기본, 사이드바는 Ctrl+B 로
+    document.documentElement.classList.add('lec-solo');
+    S.config.sidebar_visible = false;
   }
   await loadUserStyles();   // 내 스타일 (D53) — 고른 스타일이 내 것이면 목록이 있어야 입힐 수 있다
   initTheme();

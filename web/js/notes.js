@@ -7,6 +7,7 @@
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { openTarget } from './doctabs.js';
+import { solo } from './solo.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, rangeText, isMd, isHtml } from './util.js';
 import { t } from './i18n.js';
@@ -281,6 +282,7 @@ export function closeNotes() {
 }
 
 export function toggleNotes() {
+  if (solo) return;   // 메모는 메인 창에 (D95)
   if (!closeNotes()) openNotes();
 }
 
@@ -338,6 +340,10 @@ export function initNotes() {
   on('new-note', async ({ title = '', body = '', path = '', line = 0, end = 0 }) => {
     const tab = S.tab;
     if (!tab) return;
+    if (solo) {
+      toast(t('메모는 메인 창에서 씁니다'));
+      return;
+    }
     if (tab.readonly) {
       toast(t('보기만 하는 프로젝트라 메모를 쓰지 않습니다 — 고쳐 보려면 그 폴더를 복사해 여세요'));
       return;

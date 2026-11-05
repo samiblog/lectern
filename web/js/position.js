@@ -6,12 +6,14 @@
 import { S, on } from './store.js';
 import { postJSON } from './api.js';
 import { openDocs } from './doctabs.js';
+import { solo } from './solo.js';
 import { debounce } from './util.js';
 
 const sent = new WeakMap();   // 탭 → 마지막으로 보낸 값
 
 /** 탭의 위치를 바뀌었으면 바로 보낸다 — 고른 문서 탭의 문서와 위치, 열어 둔 문서 탭들(docs — D64). 탭을 닫기 전에도 부른다 (tabs.js) */
 export function rememberPosition(tab) {
+  if (solo) return Promise.resolve();   // 다음 실행에 되살릴 문서 탭은 메인 창의 것이다 (D95)
   // 고른 문서 탭이 문서가 아니면(코드·폴더 개요) 가장 최근에 본 문서 탭의 것 — 문서 탭 목록은 그래도 남게
   const isDoc = (p) => p.current?.type === 'doc' && tab.fileMap.has(p.current.path);
   const pane = isDoc(tab.pane) ? tab.pane : tab.panes.filter(isDoc).sort((a, b) => (b.used || 0) - (a.used || 0))[0];

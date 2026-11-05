@@ -14,6 +14,8 @@
 //   titles           '제목' 버튼(파일 이름 / 문서 제목)이 바뀜             (tree → recent·search·others)
 //   changed          '변경됨' 표시 집합이 바뀜 (어느 탭이든)              (watch·doc → tree·tabs)
 //   refresh-view     칸(pane, 없으면 모든 탭)을 같은 스크롤 위치로 다시 그림 (watch·theme·settings → nav)
+//   open-window      문서를 독립창에서 엶 {type, path, hash?, line?} (tree·docmenu → doctabs, D95)
+//   window-news      다른 창들과 받은 문서 {windows?, inbox?} (watch → doctabs, D95)
 //   refresh-auto     감시가 알린 칸(pane) — 글이 같으면 그대로, 끄는 중이면 놓을 때 (watch → nav, D94)
 //   rendered         칸(pane)의 문서/개요 렌더링 완료                     (doc·htmldoc·overview → find·spotlight·position)
 //   synced           변경 확인 주기 완료                                  (watch → status)

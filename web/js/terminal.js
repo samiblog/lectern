@@ -24,6 +24,7 @@
 
 import { S, on, emit } from './store.js';
 import { getJSON, postJSON, saveConfig, revealInExplorer } from './api.js';
+import { solo } from './solo.js';
 import { updateTocVisibility } from './toc.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, blockedReadOnly } from './util.js';
@@ -545,6 +546,7 @@ export async function closeTerminal(term) {
 
 /** 패널을 열고 닫는다 (버튼·Ctrl+`). 닫아도 셸은 그대로 돈다. focus: 열면서 셸에 입력이 가게 (모두 펼치기는 문서 칸에 남긴다 — D73) */
 export function toggleTerminal(want = !open, { focus = true } = {}) {
+  if (solo) return;   // 터미널은 메인 창에 (D95)
   const was = open;
   open = want;
   root.classList.toggle('term-on', open);
@@ -561,7 +563,7 @@ export function toggleTerminal(want = !open, { focus = true } = {}) {
 
 /** F6 (main.js, D79): 고른 터미널로 초점을 옮긴다 — 패널이 닫혀 있으면 열면서 */
 export function focusTerminal() {
-  if (!S.tab || blockedReadOnly(S.tab)) return;
+  if (solo || !S.tab || blockedReadOnly(S.tab)) return;
   if (open) showCurrent({ focus: true });
   else toggleTerminal(true);
 }
@@ -616,6 +618,10 @@ async function pasteInto(term, text) {
 export async function pasteToTerminal(text, { stay = false } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
+  if (solo) {
+    toast(t('터미널은 메인 창에 있습니다'));
+    return;
+  }
   if (!tab || !text || blockedReadOnly(tab)) return;
   if (!gathered()) {
     if (!open) toggleTerminal(true, { focus: !stay });

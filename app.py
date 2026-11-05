@@ -105,6 +105,7 @@ def run_browser(state: AppState, port: int) -> None:
 
 DEFAULT_WINDOW = (DEFAULTS['window']['width'], DEFAULTS['window']['height'])
 MIN_WINDOW = (720, 480)
+SOLO_WIDTH = 1000   # 독립창의 폭 (D95)
 
 
 def window_size(saved: Any) -> tuple[int, int]:
@@ -134,6 +135,7 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
     import webview
 
     from lectern.native import NativeApi
+    from lectern.windows import SoloWindows
 
     state.token = getattr(webview, 'token', None)
     server = make_http_server(state, port)
@@ -141,7 +143,29 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
     url = f'http://127.0.0.1:{server.server_port}/'
 
     width, height = window_size(state.config.get('window'))
-    api = NativeApi(state)
+
+    def create_solo(query: str, wid: str) -> Any:
+        """독립창 하나 (D95). 메인 창보다 좁게 — 나란히 놓기 좋게"""
+        solo_api = NativeApi(state, solos)
+        solo = webview.create_window(
+            'Lectern', url + query, js_api=solo_api,
+            width=min(width, SOLO_WIDTH), height=height,
+            min_size=MIN_WINDOW, text_select=True, zoomable=True,
+        )
+        solo_api._window = solo
+
+        def on_solo_closing() -> bool | None:
+            files = state.unsaved_by.get(wid)
+            if files and not solos.quitting and not confirm_discard(files):
+                return False
+            return None
+
+        solo.events.closing += on_solo_closing
+        solo.events.closed += lambda: solos.forget(wid)
+        return solo
+
+    solos = SoloWindows(state, create_solo, confirm_discard)
+    api = NativeApi(state, solos)
     window = webview.create_window(
         'Lectern', url, js_api=api,
         width=width, height=height,
@@ -150,6 +174,11 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
         zoomable=True,      # Ctrl+휠 확대
     )
     api._window = window
+    solos._main = window
+    state.on_active = solos.wake
+    state.on_closed = solos.project_closed
+    state.may_close = solos.may_close
+    solos.start()
 
     # 최소화·최대화한 채로 닫으면 그때 크기를 저장하지 않는다 (다음 실행 때 아주 작거나 화면만 한 일반 창이 되지 않도록)
     shown = {'state': 'normal'}
@@ -161,6 +190,7 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
         # 편집 모드에서 저장하지 않은 것이 있으면 묻는다 (D54). 아니오면 닫지 않는다
         if state.unsaved and not confirm_discard(state.unsaved):
             return False
+        solos.quitting = True   # 독립창의 것까지 물었다
         if shown['state'] != 'normal':
             return None
         try:
@@ -170,6 +200,7 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
         return None
 
     window.events.closing += on_closing
+    window.events.closed += solos.close_all   # 남은 창이 있으면 프로그램이 끝나지 않는다
 
     def bring_forward(folder: str | None) -> None:
         """다음 실행(탐색기 우클릭 등)이 넘긴 폴더를 탭으로 열고 창을 앞으로. 화면은 tabs_seq 로 새 탭을 알아챈다."""
@@ -179,6 +210,8 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
             window.restore()
         window.show()
 
+    solos.bring_main = lambda: bring_forward(None)
+    state.on_send = solos.front
     if receiver:
         receiver.start(bring_forward)
     try:

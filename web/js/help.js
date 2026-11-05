@@ -34,6 +34,7 @@ export const SHORTCUTS = [
     [t('Alt+누르기'), t('사이드바 목록의 문서를 지금 탭에서 열기')],
     ['Ctrl+T', t('새 문서 탭에 문서 열기')],
     ['Ctrl+Shift+T', t('닫은 문서 탭 다시 열기')],
+    ['Ctrl+Shift+N', t('지금 문서를 새 창으로 옮기기')],
     ['Ctrl+Tab / Ctrl+Shift+Tab', t('다음 / 이전 문서 탭 (Ctrl+PageDown / Ctrl+PageUp 도 됨)')],
     ['Alt+1~8', t('그 순번의 문서 탭')],
     ['Alt+9', t('마지막 문서 탭')],

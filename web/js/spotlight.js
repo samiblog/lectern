@@ -30,7 +30,7 @@ import { S, on, emit } from './store.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
-import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf } from './lineunits.js';
+import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf, blockOfLine } from './lineunits.js';
 
 let active = false;
 let mode = 'chapter';   // 'chapter' — 장 하이라이트, 'range' — 줄 하이라이트
@@ -191,6 +191,14 @@ function chapterOf(el) {
   let top = el;
   while (top && top.parentElement !== view()) top = top.parentElement;
   return top ? chapters.findIndex((blocks) => blocks.includes(top)) : -1;
+}
+
+/** 현재 위치(작은 화살표)가 든 장 — 현재 위치가 없거나 어느 장에도 들지 않으면 화면 위쪽의 장 */
+function chapterHere() {
+  const here = S.pane?.here;
+  const el = here?.path === pathOf() ? blockOfLine(view(), here.line) : null;
+  const i = el ? chapterOf(el) : -1;
+  return i >= 0 ? i : chapterAtTop();
 }
 
 /** 장 하이라이트를 그 장으로. 현재 위치가 그 장 밖이면 그 장의 첫 줄로 */
@@ -669,7 +677,7 @@ export function toggleSpotlight(want = !lit()) {
     paint();
     return;
   }
-  if (isMdDoc() && chapters.length) select(chapterAtTop());
+  if (isMdDoc() && chapters.length) select(chapterHere());
   else if (linesOn()) highlightHere();
 }
 
@@ -698,7 +706,7 @@ export function spotlightItems(target) {
         label: i >= 0 ? t('이 장 하이라이트') : t('장 하이라이트'),
         hint: 'Alt+H',
         tip: t('나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장'),
-        action: () => select(i >= 0 ? i : chapterAtTop()),
+        action: () => select(i >= 0 ? i : chapterHere()),
       });
     }
   }

@@ -17,11 +17,11 @@ import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable } from './lineedit.js';
 import { openExternal } from './api.js';
-import { isCode } from './icons.js';
+import { isCode, isViewable } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
 import { html } from './html.js';
-import { $, toast, copyText, rangeText, lineRef } from './util.js';
+import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
@@ -307,6 +307,15 @@ function blockTake(picked) {
   return { range, info: { kind: ext.kind || 'block', name: ext.kind === 'chart' ? t('차트') : kindOf(el), label } };
 }
 
+/** 앱 안에서 여는 링크의 대상 — 새 창에서 열기 (D95). 앱 밖의 앱으로 여는 경로 표기면 null */
+function linkTarget(link) {
+  if (linkTargets.has(link)) return linkTargets.get(link);
+  const { path, line } = link.dataset;
+  if (!path || !link.matches('.path-link')) return null;
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) return { type: 'doc', path };
+  return isViewable(basename(path)) ? { type: 'code', path, line: line ? Number(line) : undefined } : null;
+}
+
 /** 블록에서만 하는 일: 표 복사·그림 복사·코드 복사·링크 등 (하이라이트 메뉴에서도 바로 보인다) */
 function uniqueItems(el, target) {
   /** @type {MenuItem[]} */
@@ -320,6 +329,8 @@ function uniqueItems(el, target) {
     if (link.dataset.lecOpen != null || link.matches('.path-link')) {   // 앱 안에서 여는 링크 (D91 — Ctrl+누르기와 같다)
       items.push({ label: t('새 문서 탭에서 열기'), hint: t('Ctrl+누르기'), action: () => link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true })) });
     }
+    const target = linkTarget(link);
+    if (target) items.push({ label: t('새 창에서 열기'), action: () => emit('open-window', target) });
     items.push({ label: t('링크 주소 복사'), tip: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref), term: `${link.dataset.lecHref} ` });
   }
   if (tag === 'IMG') {

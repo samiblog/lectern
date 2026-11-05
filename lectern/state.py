@@ -10,7 +10,7 @@ import os
 import secrets
 import threading
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from . import __version__, i18n
 from .changes import ChangeLog, Watcher
@@ -20,6 +20,7 @@ from .paths import is_protected, samples_dir, web_dir
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
+from .windows import WindowBoard
 
 
 class TooManyTabs(Exception):
@@ -143,9 +144,31 @@ class AppState:
         self.notices: list[dict[str, Any]] = []   # 화면에 알릴 말 [{id, text}] — 화면이 처음 보는 id 만 한 번 보인다
         # 오른쪽 터미널 (D38): 탭마다 셸. 터미널 API 는 페이지에 실어 주는 실행마다 새 비밀값(X-Term)도 확인한다
         self.terminals = Terminals()
-        self.unsaved: list[str] = []   # 편집 모드에서 저장하지 않은 파일 (D54 — 화면이 알린다, 창을 닫을 때 묻는다)
+        # 저장하지 않은 파일 — 창마다 (메인 창은 '', 독립창은 창 id). D54·D95: 화면이 알리고 창을 닫을 때 묻는다
+        self.unsaved_by: dict[str, list[str]] = {}
+        # 독립창(D95 — windows.py)이 듣는다. 창 없이 띄우면 없다
+        self.board = WindowBoard()   # 창들이 문서를 주고받는 곳
+        self.on_send: Callable[[str], None] | None = None
+        self.on_active: Callable[[], None] | None = None
+        self.on_closed: Callable[[str], None] | None = None
+        self.may_close: Callable[[str], bool] | None = None
         self.term_secret = secrets.token_hex(16)
         self._lock = threading.RLock()
+
+    @property
+    def unsaved(self) -> list[str]:
+        """저장하지 않은 파일 (모든 창)"""
+        return list(dict.fromkeys(p for files in self.unsaved_by.values() for p in files))
+
+    def set_unsaved(self, window: str, files: list[str]) -> None:
+        if files:
+            self.unsaved_by[window] = files
+        else:
+            self.unsaved_by.pop(window, None)
+
+    def _tell_active(self) -> None:
+        if self.on_active:
+            self.on_active()
 
     def get(self, pid: Any) -> Project | None:
         return self.projects.get(pid) if isinstance(pid, str) else None
@@ -179,6 +202,7 @@ class AppState:
                 self.projects[pid] = project
             self.active = project.id
             self.tabs_seq += 1   # 이미 열린 탭을 고른 것도 — 다른 실행이 넘긴 폴더면 화면이 그 탭으로 가야 한다
+        self._tell_active()
         if remember:
             self.config.add_recent(str(path))
             self.remember_tabs()
@@ -214,6 +238,9 @@ class AppState:
         project.stop()
         self.terminals.close_project(pid)   # 그 탭의 셸과 셸에서 띄운 프로그램도
         self.remember_tabs()
+        if self.on_closed:
+            self.on_closed(pid)
+        self._tell_active()
         return True
 
     def activate(self, pid: str) -> bool:
@@ -222,6 +249,7 @@ class AppState:
         if self.active != pid:
             self.active = pid
             self.remember_tabs()
+            self._tell_active()
         return True
 
     def notify(self, text: str) -> None:

@@ -933,5 +933,17 @@ export default {
 "끝냄": "Done",
 "항목 추가 — Enter": "Add item — Enter",
 "그 자리로 가기": "Go to that place",
+"새 창으로 옮기기": "Move to new window",
+"새 창에서 열기": "Open in new window",
+"지금 문서를 새 창으로 옮기기": "Move the current document to a new window",
+"새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요": "Could not open a new window. Close a window you are not using and try again",
+"문서나 코드를 볼 때 새 창으로 옮길 수 있습니다": "You can move a document or code file to a new window",
+"이 창에 문서 탭이 하나뿐입니다": "This window has only one document tab",
+"메모는 메인 창에서 씁니다": "Notes are in the main window",
+"터미널은 메인 창에 있습니다": "The terminal is in the main window",
+"메인 창으로 보내기": "Send to main window",
+"{name} 창으로 보내기": "Send to window: {name}",
+"{name} 외 {n}개": "{name} and {n} more",
+"그 창이 닫혀 보내지 못했습니다": "That window has closed, so the document was not sent",
 "{m}월 {d}일": "{mon} {d}"
 };
