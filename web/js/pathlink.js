@@ -7,7 +7,7 @@
 import { S, emit } from './store.js';
 import { postJSON, openExternal } from './api.js';
 import { isViewable } from './icons.js';
-import { isMd, isHtml, dirname, basename } from './util.js';
+import { isMd, isHtml, dirname, basename, linkHow } from './util.js';
 import { t } from './i18n.js';
 
 // 경로: (./ ../)* (폴더/)* 이름.확장자, 뒤에 :줄(:칸) 이나 #L줄. 한글 파일 이름을 받고, 뒤에 붙은 조사('에서')는 끝으로 본다
@@ -33,9 +33,9 @@ function onClick(e) {
   if (!a) return;
   e.preventDefault();
   const { path, line } = a.dataset;
-  const newTab = e.ctrlKey || e.metaKey;   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64 — 가운데 버튼은 doctabs.js 가 Ctrl+누르기로)
-  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path, newTab });   // 누를 수 있는 것은 선택된 탭의 문서뿐
-  else if (isViewable(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined, newTab });
+  const how = linkHow(e);   // Ctrl+누르기·가운데 버튼: 뒤에서 새 문서 탭 (D91 — 가운데 버튼은 doctabs.js 가 Ctrl+누르기로 보낸다)
+  if ((isMd(path) || isHtml(path)) && S.fileMap.has(path)) emit('open', { type: 'doc', path, ...how });   // 누를 수 있는 것은 선택된 탭의 문서뿐
+  else if (isViewable(basename(path))) emit('open', { type: 'code', path, line: line ? Number(line) : undefined, ...how });
   else openExternal(path, line ? Number(line) : undefined);
 }
 

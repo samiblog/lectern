@@ -2,6 +2,7 @@
 //
 // vendor 전역: markdownit, markdownItAnchor, markdownitFootnote, markdownitTaskLists, hljs, katex
 
+import { S } from './store.js';
 import { slideRule } from './slides.js';
 
 const instances = new Map();
@@ -200,8 +201,8 @@ function sourceLines(md) {
 
 // ---------------------------------------------------------------------------
 
-function create(math) {
-  const md = window.markdownit({ html: true, linkify: true, typographer: false, highlight });
+function create(math, breaks) {
+  const md = window.markdownit({ html: true, linkify: true, typographer: false, breaks, highlight });
   // 기본값은 file: 링크를 글자로 남긴다. 프로젝트 안의 file:///C:/... 는 doc.js 가 상대경로로 바꾸고 밖은 막으므로 허용한다 (2-2)
   const validate = md.validateLink;
   md.validateLink = (url) => /^\s*file:/i.test(url) || validate(url);
@@ -234,7 +235,8 @@ export function splitFrontMatter(text) {
 /** deck: 발표 문서의 설정 (slides.js 의 readDeck) — 있으면 슬라이드로 감싸 그린다 */
 export function renderMarkdown(text, { math = true, deck = null } = {}) {
   const { frontMatter, body, lineOffset } = splitFrontMatter(text);
-  const key = math ? 'math' : 'plain';
-  if (!instances.has(key)) instances.set(key, create(math));
+  const breaks = S.config?.md_breaks !== false;   // 문단 안의 줄바꿈 (D93 — Word 의 Shift+Enter 처럼 보인다)
+  const key = `${math ? 'math' : 'plain'}-${breaks}`;
+  if (!instances.has(key)) instances.set(key, create(math, breaks));
   return { html: instances.get(key).render(body, { lineOffset, deck }), frontMatter };
 }

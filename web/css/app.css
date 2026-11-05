@@ -1077,3 +1077,41 @@ iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: h
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
 @media (max-width: 760px) { .overview { padding: 24px 20px 80px; } }
 @container (max-width: 640px) { .overview { padding: 24px 20px 80px; } }   /* 좁은 창 */
+
+/* 프로젝트 메모 (notes.js, D92): 오른쪽에서 문서 위를 덮는다. 카드 색은 스타일의 바탕에 섞어 어두운 스타일에서도 글이 읽힌다 */
+#lec-notes {
+  position: absolute; top: 0; right: 0; bottom: 0; z-index: 30; width: min(400px, 92%);
+  display: flex; flex-direction: column; background: var(--ui-bg); border-left: 1px solid var(--ui-border); box-shadow: -6px 0 18px rgb(0 0 0 / .14);
+}
+#lec-notes[hidden] { display: none; }
+.notes-head { display: flex; align-items: center; gap: 6px; padding: 8px; border-bottom: 1px solid var(--ui-border); }
+.notes-head input { flex: 1; min-width: 0; }
+.notes-undo { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0; padding: 6px 10px; border-bottom: 1px solid var(--ui-border); color: var(--ui-muted); font-size: 12.5px; }
+.notes-undo[hidden] { display: none; }
+#lec-notes-list { flex: 1; min-height: 0; overflow: auto; display: flex; flex-direction: column; gap: 8px; padding: 8px; }
+.note-card { --note: var(--ui-panel); flex: none; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--note); color: var(--ui-fg); }
+.note-card.pinned { border-left: 3px solid var(--ui-accent); }
+.note-card input[type="text"], .note-card textarea {
+  display: block; box-sizing: border-box; width: 100%; padding: 2px 0; border: 0; outline: none; resize: none; background: transparent; color: inherit; font: inherit;
+}
+.note-card input[type="text"]::placeholder, .note-card textarea::placeholder { color: var(--ui-faint); }
+.note-card .note-title { font-weight: 600; }
+.note-card textarea { min-height: 2.6em; overflow: hidden; line-height: 1.5; }
+.note-tasks { margin: 2px 0; padding: 0; list-style: none; }
+.note-tasks li { display: flex; align-items: center; gap: 6px; }
+.note-tasks li.done .note-task { color: var(--ui-muted); text-decoration: line-through; }
+.note-from { display: block; max-width: 100%; margin-top: 4px; padding: 0; overflow: hidden; border: 0; background: none; color: var(--ui-accent); font-size: 12px; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+.note-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 8px; margin-top: 6px; opacity: .6; }
+.note-card:hover .note-tools, .note-card:focus-within .note-tools { opacity: 1; }
+.note-colors { display: inline-flex; gap: 4px; }
+.note-dot { --note: var(--ui-panel); width: 15px; height: 15px; padding: 0; border: 1px solid var(--ui-border); border-radius: 50%; background: var(--note); cursor: pointer; }
+.note-dot.on { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.note-acts { display: inline-flex; flex-wrap: wrap; gap: 2px 6px; }
+.note-acts .text-btn { padding: 0 2px; font-size: 12px; }
+.note-del { color: var(--ui-danger); }
+.note-yellow { --note: color-mix(in srgb, var(--ui-panel) 78%, #f2cc4d); }
+.note-green { --note: color-mix(in srgb, var(--ui-panel) 78%, #6fcf97); }
+.note-blue { --note: color-mix(in srgb, var(--ui-panel) 78%, #6fb1e8); }
+.note-purple { --note: color-mix(in srgb, var(--ui-panel) 78%, #b49be6); }
+.note-pink { --note: color-mix(in srgb, var(--ui-panel) 78%, #ec9ab8); }
+.note-gray { --note: color-mix(in srgb, var(--ui-panel) 78%, #9aa5b1); }

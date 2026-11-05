@@ -26,9 +26,9 @@ import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, openHow, middleClickOpens } from './util.js';
+import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -399,7 +399,7 @@ function toggle(k, path, open) {
 }
 
 /** 두 번 누르기·Enter: 파일은 열고(문서는 뷰어에서) 폴더는 펼치거나 접는다.
- * how: 문서를 열 곳 (util.openHow — Ctrl+누르기·두 번 누르기면 새 문서 탭, D64·D67) */
+ * how: 문서를 열 곳 (util.openHow, D91) */
 function activate(k, path, how = {}) {
   const n = view(state(), k).index.get(path);
   if (!n) return;
@@ -409,19 +409,19 @@ function activate(k, path, how = {}) {
 }
 
 /** Enter: 코드·csv·txt 는 읽기 화면(한 번 누르기와 같게), 그 밖은 두 번 누르기와 같게 */
-function enter(k, path) {
-  if (isViewFile(view(state(), k).index.get(path))) emit('open', { type: 'code', path });
-  else activate(k, path);
+function enter(k, path, how) {
+  if (isViewFile(view(state(), k).index.get(path))) emit('open', { type: 'code', path, ...how });
+  else activate(k, path, how);
 }
 
 async function copy(text) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what: text }) : t('복사하지 못했습니다'));
 }
 
-/** 경로 복사 항목 (메뉴 끝) */
+/** 경로 복사 항목 */
 function copyItems(n) {
   /** @type {MenuItem[]} */
-  const items = ['-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
+  const items = [{ label: t('@{path} 복사', { path: n.path }), tip: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
     { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)), term: shellWord(fullPath(n.path)) }];
   if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name), term: shellWord(n.name) });
   return items;
@@ -430,20 +430,22 @@ function copyItems(n) {
 /** 코드·자료 파일의 우클릭 메뉴 — 이 목록과 다른 탭의 파일 행(bindFileRows)이 함께 쓴다 */
 export function fileMenuItems(n) {
   /** @type {MenuItem[]} */
-  const items = [{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }];
+  const views = [];
+  /** @type {MenuItem[]} */
+  const opens = [];
   if (isViewFile(n)) {
-    items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
-      { label: t('새 탭에서 보기'), hint: t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type: 'code', path: n.path, newTab: true }) },
-      isCode(n.name) ? { label: t('편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) }
-        : { label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기')}`, action: () => openExternal(n.path) });
+    views.push({ label: t('새 문서 탭에서 열기'), hint: t('누르기'), action: () => emit('open', { type: 'code', path: n.path, newTab: true, force: true }) },
+      { label: t('지금 탭에서 열기'), hint: t('Alt+누르기'), action: () => emit('open', { type: 'code', path: n.path }) });
+    opens.push(isCode(n.name) ? { label: t('외부 편집기로 열기'), hint: t('두 번 누르기'), action: () => openExternal(n.path) }
+      : { label: t('열기'), hint: t('두 번 누르기'), tip: OPEN_HINT[n.open] || '', action: () => openExternal(n.path) });
   } else {
-    items.push({ label: t('열기'), hint: `${OPEN_HINT[n.open] || ''} — ${t('두 번 누르기·Enter')}`, action: () => openExternal(n.path) });
+    opens.push({ label: t('열기'), hint: t('두 번 누르기'), tip: OPEN_HINT[n.open] || '', action: () => openExternal(n.path) });
   }
   // 기본 앱으로 여는 형식(csv·txt 등)은 편집기로도. 읽을 수 없는 형식(실행 파일·압축 등)은 편집기로 열지 않는다
-  if (n.open === 'default') items.push({ label: t('편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
-  items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
-  if (!n.excluded) items.push(renameItem(n.path));   // 이름 바꾸기 (D66 — 제외 폴더 안은 하지 않는다)
-  return [...items, ...copyItems(n)];
+  if (n.open === 'default') opens.push({ label: t('외부 편집기로 열기'), action: () => openExternal(n.path, undefined, 'editor') });
+  opens.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(n.path) });
+  // 이름 바꾸기 (D66 — 제외 폴더 안은 하지 않는다)
+  return menuGroups([{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }], views, copyItems(n), opens, n.excluded ? [] : [renameItem(n.path)]);
 }
 
 function menuItems(k, n) {
@@ -451,16 +453,17 @@ function menuItems(k, n) {
   if (n.type !== 'dir') return fileMenuItems(n);
   const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
   /** @type {MenuItem[]} */
-  const items = [{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
-    { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) }];
+  const items = [{ label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: 'Enter', action: () => toggle(k, n.path) }];
   if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
   if (!n.excluded) items.push(newDocItem(n.path));   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
-  items.push({ label: t('탐색기에서 열기'), action: () => openExternal(n.path) });
+  /** @type {MenuItem[]} */
+  const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
-    items.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path: n.path, mode: 'files' }) });
+    opens.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path: n.path, mode: 'files' }) });
   }
-  return [...items, ...copyItems(n)];
+  return menuGroups([{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` }], items, copyItems(n), opens);
 }
+
 
 /**
  * 다른 사이드바 탭의 파일 행 (D50 — 최근 변경, 검색의 이름, 모아 보기의 파일 종류): data-file 이 있는 행을 이 목록처럼 다룬다.
@@ -475,8 +478,9 @@ export function bindFileRows(box, fileOf) {
   };
   box.addEventListener('click', (e) => {
     const n = nodeOf(e);
-    if (n?.kind) emit('open', { type: 'doc', path: n.path, ...openHow(e) });   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
-    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path, newTab: newTabWanted(e) });
+    if (repeatClick(e)) return;
+    if (n?.kind) emit('open', { type: 'doc', path: n.path, ...openHow(e) });   // D91
+    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path, ...openHow(e) });
   });
   middleClickOpens(box, '[data-file]');
   box.addEventListener('dblclick', (e) => {
@@ -490,8 +494,8 @@ export function bindFileRows(box, fileOf) {
     e.preventDefault();
     if (e.key === 'F2') {   // 이름 바꾸기 (D66)
       if (!n.excluded) emit('rename', { path: n.path });
-    } else if (n.kind) emit('open', { type: 'doc', path: n.path });
-    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path });
+    } else if (n.kind) emit('open', { type: 'doc', path: n.path, ...openHow(e) });
+    else if (isViewFile(n)) emit('open', { type: 'code', path: n.path, ...openHow(e) });
     else openExternal(n.path);
   });
   box.addEventListener('contextmenu', (e) => {
@@ -534,7 +538,7 @@ function onKey(e) {
   } else if (e.key === 'ArrowLeft') {
     if (n?.type === 'dir' && v.open.has(path)) toggle(k, path, false);
     else if (n?.parent && rowOf(k, n.parent)) select(k, n.parent);   // 거른 목록에서는 부모가 보이지 않아 그대로
-  } else if (e.key === 'Enter') enter(k, path);
+  } else if (e.key === 'Enter') enter(k, path, openHow(e));
   else if (e.key === 'F2') {   // 이름 바꾸기 (D66) — 파일만, 제외 폴더 안은 하지 않는다
     if (n && n.type !== 'dir' && !n.excluded && path) emit('rename', { path });
   } else if (e.key === 'ContextMenu' || (e.key === 'F10' && e.shiftKey)) {
@@ -642,8 +646,9 @@ function bindList(k) {
     select(k, path);
     // 폴더 보기의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
-    if (k === 'files' && folderView() && n?.doc) activate(k, path, openHow(e));   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
-    else if (isViewFile(n)) emit('open', { type: 'code', path, newTab: newTabWanted(e) });
+    if (repeatClick(e)) return;
+    if (k === 'files' && folderView() && n?.doc) activate(k, path, openHow(e));   // D91
+    else if (isViewFile(n)) emit('open', { type: 'code', path, ...openHow(e) });
   });
   middleClickOpens(box, '.row');
   box.addEventListener('dblclick', (e) => {

@@ -36,6 +36,11 @@ status: in progress
 
 Go `##` → `###` → `####` without skipping levels. The contents panel, section folding (click a heading to fold) and section focus (one `##` section at a time) follow them. Split long sections with `###`.
 
+### Paragraphs and line breaks
+
+- A line you break with Enter inside a paragraph also breaks on screen (like Shift+Enter in Word). For outline-style writing, just break the line.
+- So do not wrap one sentence across several lines to fit a width — keep a sentence on one line.
+
 ### Tables
 
 - Put only values in cells and units in the header: `| Price (USD/t) |`.

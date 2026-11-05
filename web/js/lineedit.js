@@ -11,7 +11,6 @@
 //   그 줄 자체가 바뀌었거나 어느 것인지 모르면 저장하지 않고 고친 줄을 클립보드에.
 //   저장하면 그 칸을 바로 다시 그린다 (바뀐 곳 강조). Esc: 그만두기. 칸 밖을 누르거나 다른 탭을 고르면 고친 것이 있으면 저장, 없으면 그만둔다.
 //   ↑·↓: 글이 화면에서 여러 줄로 꺾이면 칸 안에서 움직이고, 맨 윗줄·맨 아랫줄에서는 저장하고 위·아래 줄을 이어서 (표는 같은 칸 차례).
-//   Shift+→(글 끝에서): 저장하고 그 줄의 위치를 맨 앞 터미널에 (Claude 로 보내기).
 //   한글 조합 중의 Enter·화살표는 조합의 것이다 (isComposing).
 // - 본문의 할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 바꿔 저장한다 (같은 저장 길, 같은 되돌리기).
 // - 저장은 replaceLines 하나로 — 범위(시작 줄, 원래 줄들, 새 줄들)를 바꾼다. 줄 추가·옮기기처럼 여러 줄을 바꾸는 편집도 이 길로.
@@ -24,7 +23,7 @@
 // - 편집하는 동안 그 칸은 자동 새로고침·F5 로 다시 그리지 않는다 (nav.refreshView 가 pane.lineEdit 을 본다 — 끝낸 뒤 그린다).
 //   글 칸 안의 키는 칸의 것이다 (앱 단축키는 쉰다), 누르기는 제목 접기·링크로 가지 않는다.
 
-import { S, on, emit } from './store.js';
+import { S, on } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines } from './lineunits.js';
 import { locateLines } from './linefind.js';
@@ -50,6 +49,7 @@ let taskSaving = false;
 let moves = 0;       // 차례를 기다리는 줄 옮기기 — 키를 누르고 있으면 쌓이지 않게
 
 const OPEN_WAIT = 250;
+let firstOnLink = false;   // 두 번 누르기의 첫 누름이 링크 등에 떨어졌는지 — 첫 누르기가 화면을 옮기면 둘째가 다른 곳에 떨어진다
 // 두 번 눌러도 열지 않는 곳: 링크·그림·다이어그램·차트·수식, 머리 정보, 코드 블록의 도구
 const NO_OPEN = 'a, img, svg, input, button, select, textarea, summary, video, .math-block, .katex, pre.mermaid, pre.lec-chart, .diagram-error, .image-off, .front-matter, .code-tools, .lec-line-edit';
 const TASK_BOX = '.task-list-item-checkbox';
@@ -530,16 +530,6 @@ function onOutside(e) {
 
 // ---- 칸 안의 키 ---------------------------------------------------------------------
 
-/** 칸 안의 글 커서가 글 끝인지 (고른 글 없이) */
-function caretAtEnd(span) {
-  const sel = getSelection();
-  if (!sel.isCollapsed || !span.contains(sel.focusNode)) return false;
-  const r = document.createRange();
-  r.selectNodeContents(span);
-  r.setStart(sel.focusNode, sel.focusOffset);
-  return !r.toString();
-}
-
 /** 칸 안의 글 커서 자리 (글자 수). 글을 골랐거나 칸 밖이면 null */
 function caretOffset(span) {
   const sel = getSelection();
@@ -600,13 +590,6 @@ async function step(dir) {
     s.pane.lineEditHold = false;
     showLineEdit();
   }
-}
-
-/** Shift+→ (글 끝에서): 저장하고 그 줄의 위치를 맨 앞 터미널에 (spotlight 의 Shift+→ 와 같은 길 — Enter 없이) */
-async function sendToClaude() {
-  const s = session;
-  const res = await finish(true);
-  if (res.ok) emit('term-paste', `@${s.path} ${rangeText([s.line, s.line])} `);
 }
 
 // ---- 줄 구조 (D83 — 계산은 lineops.js) ---------------------------------------------
@@ -881,9 +864,6 @@ function onKey(e) {
     if (!caretOnEdge(span, dir)) return;   // 꺾인 글의 안쪽 줄: 칸 안에서 위·아래로 (기본 동작)
     e.preventDefault();
     step(dir);
-  } else if (k === 'ArrowRight' && e.shiftKey && !mod && !e.altKey && caretAtEnd(span)) {
-    e.preventDefault();
-    sendToClaude();
   } else if (k === 'Tab' && !mod && !e.altKey) {
     e.preventDefault();
     if (session.kind === 'table') focusPlace(Math.max(0, Math.min(session.places.length - 1, Number(span.dataset.i) + (e.shiftKey ? -1 : 1))), false);
@@ -926,7 +906,7 @@ export function focusLineEdit() {
 function onDoubleClick(e) {
   const pane = S.pane;
   if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.altKey || e.metaKey || session || !pane?.tab || pane.tab.readonly || pane.editor) return;
-  if (e.target.closest(NO_OPEN)) return;
+  if (firstOnLink || e.target.closest(NO_OPEN)) return;
   const unit = unitAtPoint(e);
   if (!unit) return;
   const view = $('#lec-view');
@@ -1039,6 +1019,7 @@ export function initLineEdit() {
   panes.addEventListener('click', onTaskClick);
   panes.addEventListener('mousedown', (e) => {
     clearTimeout(opening);   // 세 번째 누르기 — 문단 고르기 그대로
+    if (e.detail === 1) firstOnLink = !!e.target.closest?.(NO_OPEN);
     if (e.target.matches?.(TASK_BOX)) e.preventDefault();   // 초점은 문서 칸에 — 이어서 치는 ↑·↓·F2 가 그대로 되게
   }, true);
 }

@@ -50,15 +50,20 @@ function setScale(s) {
 }
 
 /** 한 단계 크게(+1)·작게(-1). 설정 파일에 단계 사이 값(1.25 등)을 적었어도 가까운 단계로 */
-function step(dir) {
+export function step(dir) {
   const s = textScale();
   const next = dir > 0 ? STEPS.find((x) => x > s + 1e-6) : [...STEPS].reverse().find((x) => x < s - 1e-6);
   if (next) setScale(next);
 }
 
+/** Ctrl+0: 100% 로 */
+export function resetText() {
+  if (textScale() !== 1) setScale(1);
+}
+
 export function initTextSize() {
   $('#lec-text-smaller').addEventListener('click', () => step(-1));
   $('#lec-text-bigger').addEventListener('click', () => step(1));
-  $('#lec-text-reset').addEventListener('click', () => { if (textScale() !== 1) setScale(1); });
+  $('#lec-text-reset').addEventListener('click', resetText);
   render();
 }

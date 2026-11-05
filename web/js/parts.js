@@ -17,7 +17,7 @@
 import { html, raw, setHtml } from './html.js';
 import { S, on, emit } from './store.js';
 import { getText, postJSON } from './api.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { openTarget } from './doctabs.js';
 import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
@@ -30,7 +30,7 @@ import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { readYaml } from './slides.js';
 import {
-  $, $$, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow, rangeText,
+  $, $$, docUrl, isMd, isHtml, basename, dirname, debounce, keepFocus, docRoot, natCompare, toast, copyText, middleClickOpens, openHow, repeatClick, rangeText,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -631,45 +631,49 @@ async function partMenu(el, x, y) {
   const note = item.caption || (item.kind === 'task' || item.kind === 'source' ? (item.text.length > 40 ? `${item.text.slice(0, 39)}…` : item.text) : '');
   const ref = `@${path}${range ? ` ${rangeText(range)}` : ''}${note ? ` ('${note}')` : ''}`;
   /** @type {MenuItem[]} */
-  const items = [{ header: `${item.name} · ${path}` },
-    { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => openItem(el) },
-    { label: t('Claude용 위치 복사'), hint: ref, action: () => copy(ref, ref), term: `${ref} ` }];
-  if (item.kind === 'link') items.push({ label: t('링크 주소 복사'), hint: item.target, action: () => copy(item.target, item.target), term: item.target });
+  const copies = [{ label: t('위치 복사'), tip: ref, action: () => copy(ref, ref), term: `${ref} ` }];
+  if (item.kind === 'link') copies.push({ label: t('링크 주소 복사'), tip: item.target, action: () => copy(item.target, item.target), term: item.target });
   let lines = null;   // 그 문서의 원문 줄들 (md)
   if (!isHtml(path)) {
     try {
-      lines = (await getText(docUrl(tab, path))).replace(/^﻿/, '').split(/\r\n?|\n/);
+      lines = (await getText(docUrl(tab, path))).replace(/^\uFEFF/, '').split(/\r\n?|\n/);
     } catch { /* 읽는 사이 지워진 문서 — 원문 항목 없이 */ }
     if (tab !== S.tab) return;
   }
   const source = range && lines ? lines.slice(range[0] - 1, range[1]).join('\n') : '';
-  if (source) items.push({ label: t('원문 복사'), hint: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
+  if (source) copies.unshift({ label: t('원문 복사'), tip: `Markdown ${rangeText(range)}`, action: () => copy(source, `${path} ${rangeText(range)}`), term: source });
   // 담기·보내기 (D63·D65) — 그 하나, 또는 지금 목록에 보이는 것 모두
   const snip = itemSnippet(path, lines, item);
+  /** @type {MenuItem[]} */
+  const takes = [];
   if (snip) {
-    items.push('-', { label: t('담기'), hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip]) },
-      { label: t('보내기…'), hint: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip]) });
+    takes.push({ label: t('담기'), tip: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip]) },
+      { label: t('문서로 보내기…'), tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip]) },
+      { label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body: snip.text, path, line: range?.[0] || 0, end: range?.[1] || 0 }) });
   }
   if (listed.length > 1) {
-    items.push({ label: t('보이는 것 모두 담기 ({n}개)', { n: listed.length }), hint: t('지금 목록의 것을 문서 차례대로 — 거르기·단추로 좁힌 그대로'), action: () => takeAll(listed) });
+    takes.push({ label: t('보이는 것 모두 담기 ({n}개)', { n: listed.length }), tip: t('지금 목록의 것을 문서 차례대로 — 거르기·단추로 좁힌 그대로'), action: () => takeAll(listed) });
   }
-  items.push('-', ...pathMenuItems(path, true));
+  const items = menuGroups([{ header: `${item.name} · ${path}` }], [{ label: t('문서에서 보기'), hint: 'Enter', action: () => openItem(el) }], copies, takes, pathMenuItems(path, true));
   el.classList.add('lec-picked');
   showMenu(x, y, items, () => el.classList.remove('lec-picked'));
 }
 
 /**
- * 항목·문서 머리줄로 간다. how: 열 곳 (util.openHow — Ctrl+누르기는 새 문서 탭, 두 번 누르기는 첫 누르기가 연 것을 새 문서 탭으로 —
- * D64·D67. 다른 문서 탭에 열려 있으면 그 탭으로)
+ * 항목·문서 머리줄로 간다. how: 열 곳 (util.openHow, D91 — 뒤에서 열면 그 탭을 열어 두기만 한다)
  */
 async function openItem(el, how = {}) {
   const path = el.dataset.doc;
   const here = S.view?.type === 'doc' && S.view.path === path;
-  if ((!here || how.twice) && !(await openTarget({ type: 'doc', path, ...how }))) return;
+  if (how.behind) {
+    if (!here) await openTarget({ type: 'doc', path, ...how });
+    return;
+  }
+  if (!here && !(await openTarget({ type: 'doc', path, ...how }))) return;
   if (!el.dataset.kind) return;   // 문서 머리줄
   const row = readParts(docRoot(), { more: true }).rows.find((r) => r.kind === el.dataset.kind && r.n === Number(el.dataset.n));
   if (!row) return;
-  if (here && !how.twice) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78 — 다른 문서를 연 것은 이미 남았다)
+  if (here) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78 — 다른 문서를 연 것은 이미 남았다)
   goToPart(row.el);
 }
 
@@ -758,7 +762,7 @@ export function initParts() {
   bindFileRows(list, (path) => fileRows.get(path));   // 파일 종류의 행 (D50)
   list.addEventListener('click', (e) => {
     const el = e.target.closest('.pt-item, .pt-thumb, .pt-doc');
-    if (el) openItem(el, openHow(e));
+    if (el && !repeatClick(e)) openItem(el, openHow(e));
   });
   middleClickOpens(list, '.pt-item, .pt-thumb, .pt-doc');   // 가운데 버튼: 새 문서 탭 (D64)
   list.addEventListener('keydown', (e) => {

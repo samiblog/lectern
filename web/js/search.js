@@ -18,7 +18,8 @@ import { fileIcon, isCode } from './icons.js';
 import { labelOf } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { html, setHtml } from './html.js';
-import { $, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens, openHow } from './util.js';
+import { $, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens, openHow, repeatClick, toast, clickFromKey } from './util.js';
+import { goToLine as goToCodeLine } from './codeview.js';
 import { t } from './i18n.js';
 
 const MAX_NAMES = 100;   // 이름이 맞는 파일을 보이는 수
@@ -116,6 +117,17 @@ function render(d, names = null) {
   keepFocus(box, () => { setHtml(box, markup); });
 }
 
+/** Ctrl+G 의 줄로 가기 (palette.js): 지금 문서·코드의 그 줄로. 편집 중이면 편집기가 (D55) */
+function goLine(line) {
+  if (S.pane?.editor) {
+    emit('edit', { line });
+    return;
+  }
+  emit('jump');   // 뒤로 기록에 (nav.js, D78)
+  if (S.view?.type === 'code') goToCodeLine($('#lec-view'), line, { flash: true });
+  else if (!goToLine(line)) toast(t('{n}행을 찾지 못했습니다', { n: line }));
+}
+
 /** again: 같은 검색어라도 다시 찾는다 (파일이 바뀌었을 때). 아니면 이미 결과가 있는 검색어는 건너뛴다 (Enter 뒤의 늦은 입력 처리) */
 async function run(again = false) {
   const q = input().value.trim();
@@ -159,8 +171,7 @@ function goToLine(line) {
 }
 
 /**
- * 검색 결과로 간다. code: 코드 결과 — 코드 화면의 그 줄로. how: 열 곳 (util.openHow — Ctrl+누르기는 새 문서 탭, 두 번 누르기는 첫 누르기가 연 것을
- * 새 문서 탭으로 — D64·D67. 다른 문서 탭에 열려 있으면 그 탭으로)
+ * 검색 결과로 간다. code: 코드 결과 — 코드 화면의 그 줄로. how: 열 곳 (util.openHow, D91 — 뒤에서 열면 그 탭을 열어 두기만 한다)
  */
 async function openHit(path, line, code = false, how = {}) {
   if (line && S.pane?.editor?.path === path) {   // 편집 중인 파일 — 편집기가 그 줄로 (D55)
@@ -168,19 +179,23 @@ async function openHit(path, line, code = false, how = {}) {
     return;
   }
   if (code) {
-    if (!(await openTarget({ type: 'code', path, line, ...how }))) return;
+    if (!(await openTarget({ type: 'code', path, line, ...how })) || how.behind) return;
     findText(query);
     const row = line ? $(`#lec-view .cv-line[data-line="${line}"]`) : null;
     if (row) pickMatchAt(row);
     return;
   }
   const here = S.view?.type === 'doc' && S.view.path === path;
-  if ((!here || how.twice) && !(await openTarget({ type: 'doc', path, ...how }))) return;
+  if (how.behind) {
+    if (!here) await openTarget({ type: 'doc', path, ...how });
+    return;
+  }
+  if (!here && !(await openTarget({ type: 'doc', path, ...how }))) return;
   if (isHtml(path)) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {
     findText(query);
-    if (here && !how.twice && line) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78)
+    if (here && line) emit('jump');   // 보던 문서 안으로 가면 뒤로 기록에 (nav.js, D78)
     const block = line ? goToLine(line) : null;
     if (block) pickMatchAt(block);   // 찾기 막대의 '지금 결과'도 그 줄의 것으로 (↓ 가 거기서 이어지게)
   }
@@ -232,11 +247,11 @@ export function initSearch() {
   });
   $('#lec-search-results').addEventListener('click', (e) => {
     const row = e.target.closest('[data-doc]');
-    if (row) openHit(row.dataset.doc, Number(row.dataset.line) || 0, row.dataset.kind === 'code', openHow(e));
+    if (row && !repeatClick(e)) openHit(row.dataset.doc, Number(row.dataset.line) || 0, row.dataset.kind === 'code', openHow(e));
   });
   middleClickOpens($('#lec-search-results'), '[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
   $('#lec-search-results').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.matches('.sr-hit')) e.target.click();
+    if (e.key === 'Enter' && e.target.matches('.sr-hit')) clickFromKey(e);
   });
   bindFileRows($('#lec-search-results'), (path) => nameRows.get(path));
   // 찾을 곳: '문서'·'코드'·'자료' 버튼 (모두 끄면 찾지 않고 고르라고 알린다)
@@ -250,6 +265,7 @@ export function initSearch() {
   renderKinds();
   // 문서가 바뀌면(자동 새로고침) 결과도 다시 찾는다
   const again = debounce(() => run(true), 250);
+  on('go-line', ({ line }) => goLine(line));
   on('tree', () => { if (input().value.trim() && !$('#lec-search').hidden) again(); });
   on('others', () => { if (input().value.trim() && !$('#lec-search').hidden && (wantCode() || wantOthers())) again(); });   // 파일이 생기거나 지워짐
   on('titles', () => { if (shown) render(shown.d, shown.names); });

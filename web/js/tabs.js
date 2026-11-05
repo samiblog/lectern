@@ -15,7 +15,7 @@ import { loadTree } from './project.js';
 import { setToc } from './toc.js';
 import { setStatus } from './status.js';
 import { rememberPosition } from './position.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { confirmCloseEditor, disposeEditor } from './editor.js';
@@ -324,13 +324,14 @@ function tabMenu(tab) {
     act();
   };
   /** @type {MenuItem[]} */
-  const items = [{ header: tab.root }, { label: t('프로젝트 개요'), action: there(openOverview) },
-    { label: t('이 폴더에 새 문서…'), action: there(() => emit('new-doc', { dir: '' })) },
-    { label: t('프로젝트의 표·그림 등 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) },
-    '-', { label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+W' : '', action: () => closeTab(tab) }];
-  if (S.tabs.length > 1) items.push({ label: t('다른 탭 모두 닫기'), action: () => closeOthers(tab) });
-  items.push('-', { label: t('전체 경로 복사'), action: () => copy(tab.root) },
-    { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) });
+  const closes = [{ label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+Shift+W' : '', action: () => closeTab(tab) }];
+  if (S.tabs.length > 1) closes.push({ label: t('다른 탭 모두 닫기'), action: () => closeOthers(tab) });
+  const items = menuGroups([{ header: tab.root }],
+    [{ label: t('프로젝트 개요'), action: there(openOverview) },
+      { label: t('이 폴더에 새 문서…'), action: there(() => emit('new-doc', { dir: '' })) },
+      { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) }],
+    [{ label: t('전체 경로 복사'), action: () => copy(tab.root) }, { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) }],
+    closes);
   return items;
 }
 
@@ -343,7 +344,7 @@ function recentMenu(e) {
     }))
     : [{ label: t('최근 연 폴더가 없습니다'), action: () => {} }];
   items.push('-', { label: t('다른 폴더 열기…'), hint: 'Ctrl+O', action: chooseAndOpen });
-  if (S.samples) items.push({ label: t('예제 열기'), hint: t('Lectern 둘러보기·문서 쓰는 법'), action: openSamples });
+  if (S.samples) items.push({ label: t('예제 열기'), tip: t('Lectern 둘러보기·문서 쓰는 법'), action: openSamples });
   showMenu(r.left, r.bottom + 4, items);
 }
 

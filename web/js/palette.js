@@ -1,13 +1,14 @@
 // 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서와 코드를 찾아 연다 (D44). 맞는 문서 먼저, 그다음 코드 — 코드는 코드 화면으로.
 // 입력 전에는 최근 수정한 문서. 코드 목록은 사이드바 '코드' 목록과 같은 것 (others.js — 아직 받지 않았으면 받아 온다).
-// Ctrl+Enter·Ctrl+누르기·가운데 버튼은 새 문서 탭에서 (D64). 문서 탭 줄의 + 로 열면 Enter 도 새 문서 탭에서, 맨 위에 '새 문서 만들기…'(D65).
+// 고르면 새 문서 탭에서 (D91), Ctrl+Enter·Ctrl+누르기·가운데 버튼은 뒤에서, Alt+Enter·Alt+누르기는 지금 탭. 문서 탭 줄의 + 로 열면 폴더 개요에서도 새 탭에.
+// ':숫자' 는 지금 문서·코드의 그 줄로 (Ctrl+G).
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
 import { askNewDoc } from './basket.js';
 import { fileIcon } from './icons.js';
 import { html, setHtml } from './html.js';
-import { $, timeAgo, middleClickOpens } from './util.js';
+import { $, timeAgo, middleClickOpens, openHow } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_ITEMS = 60;
@@ -37,6 +38,13 @@ function score(f, terms, query) {
 }
 
 function update() {
+  const go = /^:(\d*)$/.exec(input().value.trim());
+  if (go) {   // 줄로 가기 (Ctrl+G)
+    items = go[1] ? [{ goto: Number(go[1]), name: '', path: '' }] : [];
+    selected = 0;
+    renderList(t('줄 번호를 입력합니다'));
+    return;
+  }
   const query = input().value.trim().toLowerCase();
   const terms = query.split(/\s+/).filter(Boolean);
   if (!terms.length) {
@@ -61,10 +69,14 @@ function update() {
   renderList();
 }
 
-function renderList() {
+function renderList(none = '') {
   const ul = $('#lec-palette-list');
   if (!items.length) {
-    setHtml(ul, html`<li class="empty">${S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요')}</li>`);
+    setHtml(ul, html`<li class="empty">${none || (S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요'))}</li>`);
+    return;
+  }
+  if (items[0].goto) {
+    setHtml(ul, html`<li role="option" data-i="0" class="sel" aria-selected="true"><span class="t">${t('{n}행으로 가기', { n: items[0].goto })}</span></li>`);
     return;
   }
   setHtml(ul, items.map((f, i) => html`<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}${f.newDoc ? ' new-doc' : ''}" aria-selected="${i === selected}">
@@ -73,21 +85,21 @@ function renderList() {
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }
 
-function choose(i, newTab = false) {
+function choose(i, e) {
   const f = items[i];
   if (!f) return;
-  const tab = newTab || asNewTab;
   closePalette();
-  if (f.newDoc) askNewDoc();   // 새로 만들기 (D65)
-  else emit('open', { type: f.code ? 'code' : 'doc', path: f.path, newTab: tab });
+  if (f.goto) emit('go-line', { line: f.goto });
+  else if (f.newDoc) askNewDoc();   // 새로 만들기 (D65)
+  else emit('open', { type: f.code ? 'code' : 'doc', path: f.path, ...openHow(e), force: asNewTab });
 }
 
-/** newTab: 고르면 새 문서 탭에서 (문서 탭 줄의 + — D64) */
-export function openPalette({ newTab = false } = {}) {
+/** newTab: 폴더 개요에서도 새 문서 탭에서 (문서 탭 줄의 +·Ctrl+T — D64). query: 처음 글 (Ctrl+G 의 ':') */
+export function openPalette({ newTab = false, query = '' } = {}) {
   asNewTab = newTab;
   box().hidden = false;
   input().placeholder = newTab ? t('새 탭에 열 문서·코드 — 이름, 제목, 경로') : t('문서·코드 이름, 제목, 경로');
-  input().value = '';
+  input().value = query;
   update();
   input().focus();
   // 코드 목록을 아직 받지 않았으면 받아 온 뒤 다시 거른다 (사이드바 '코드'를 열어 보지 않았어도 찾게)
@@ -111,7 +123,7 @@ export function initPalette() {
       renderList();
     } else if (e.key === 'Enter') {
       e.preventDefault();
-      choose(selected, e.ctrlKey || e.metaKey);   // Ctrl+Enter: 새 문서 탭에서
+      choose(selected, e);
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();   // 문서 전체 Esc 처리(찾기 닫기 등)까지 가지 않게
@@ -120,7 +132,7 @@ export function initPalette() {
   });
   $('#lec-palette-list').addEventListener('click', (e) => {
     const li = e.target.closest('li[data-i]');
-    if (li) choose(+li.dataset.i, e.ctrlKey || e.metaKey);
+    if (li) choose(+li.dataset.i, e);
   });
   middleClickOpens($('#lec-palette-list'), 'li[data-i]');
   box().addEventListener('mousedown', (e) => {

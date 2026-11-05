@@ -47,7 +47,7 @@ try:
         top = lambda: page.evaluate("document.querySelector('#lec-content').scrollTop")
         settle = lambda ms=250: page.wait_for_timeout(ms)
         print('[HTML 문서]')
-        page.locator('#lec-tree .row.file[data-doc="page.html"]').click()
+        page.locator('#lec-tree .row.file[data-doc="page.html"]').click(modifiers=['Alt'])
         wait("!!document.querySelector('iframe.lec-html')", 8000)
         settle(800)
         frame = page.frame_locator('iframe.lec-html')

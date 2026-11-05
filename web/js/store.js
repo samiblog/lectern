@@ -35,6 +35,9 @@
 //   term-paste-stay  term-paste 와 같고 초점은 문서에 둠 — Shift+→ (spotlight → terminal, D79)
 //   line-edit        F2·한 줄 하이라이트에서 Shift+Enter — 그 단위(unit)를 한 줄 편집 (spotlight → lineedit, D76)
 //   jump             같은 문서 안에서 뛰기 직전 — 뒤로 기록에 남김 (toc·doc·find·parts·search → nav, D78)
+//   go-line          Ctrl+G 의 줄로 가기 {line} (palette·notes → search, D91)
+//   new-note         새 메모로 보내기 {title?, body, path?, line?, end?} (docmenu·parts·basket → notes, D92)
+//   note-send        메모를 문서로 보내기 {text, label} (notes → basket, D92)
 //   history          뒤로 기록이 바뀜 — 화면은 그대로 (nav → main)
 // 팔레트(palette.js)는 이벤트를 듣지 않고 열 때마다 S.files 를 읽는다.
 

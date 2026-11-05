@@ -182,6 +182,11 @@ def run(headed: bool) -> None:
             context = browser.new_context(viewport={'width': 1440, 'height': 900}, locale='ko-KR',
                                           permissions=['clipboard-read', 'clipboard-write'])
             page = context.new_page()
+
+            def solo():
+                """앞 점검이 새 문서 탭에서 연 것을 닫는다 — 문서 탭 하나로 시작하는 점검 앞에"""
+                page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
+                  for (const p of [...S.tab.panes]) if (p !== S.tab.pane) d.closeDocTab(p); }""")
             page.on('pageerror', lambda e: errors.append(str(e)))
             # 앱 서버 밖으로 나가는 요청 기록. 허용되는 것은 문서 속 외부 이미지뿐이다 (설정 external_images)
             outside: list[tuple[str, str]] = []
@@ -221,7 +226,7 @@ def run(headed: bool) -> None:
             shot('01-overview')
 
             print('[문서 렌더링]')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view.md-body h1')
             check(page.locator('td.num').count() >= 15, '숫자 열 오른쪽 정렬')
             check(page.locator('blockquote.alert').count() == 4, '콜아웃 4개')
@@ -299,11 +304,11 @@ def run(headed: bool) -> None:
             page.locator('#lec-toc .toc-parts button', has_text='코드').click()
             no_code = page.locator('#lec-toc li.part-code').count() == 0 and toc_buttons()[3] == '코드 3 꺼짐'
             saved_hidden = wait_until(page, "fetch('/api/config').then(r => r.json()).then(c => JSON.stringify(c.toc_hidden_parts) === '[\"code\"]')")
-            page.locator('#lec-tree .row.file', has_text='수식과 달러').click()
+            page.locator('#lec-tree .row.file', has_text='수식과 달러').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러")')
             math = [r for r in toc_rows() if r[0] == 'math']
             maths_btn = toc_buttons()
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             still_off = page.locator('#lec-toc li.part-code').count() == 0
             page.locator('#lec-toc .toc-parts button', has_text='코드').click()
@@ -374,7 +379,7 @@ def run(headed: bool) -> None:
             gone_back = wait_until(page, f"+document.querySelector('#lec-parts-kinds button[data-kind=\"table\"] .n')?.textContent === {before_n}", 10000)
             check(pv()['scope'] == 'samples 전체' and grew and gone_back, f"'전체'로 프로젝트 전체, 문서가 생기거나 지워지면 바로 반영 (표 {before_n} → +1 → {before_n})")
             page.click('.side-tabs button[data-tab="files"]')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[글자 크기와 장 하이라이트]')
@@ -468,7 +473,8 @@ def run(headed: bool) -> None:
             def menu(target, **kw) -> str:
                 target.click(button='right', **kw)
                 page.wait_for_selector('#lec-menu:not([hidden])')
-                return page.locator('#lec-menu').inner_text()
+                tips = page.evaluate("[...document.querySelectorAll('#lec-menu [title]')].map((b) => b.title).join('\\n')")
+                return f"{page.locator('#lec-menu').inner_text()}\n{tips}"
 
             def choose(label: str) -> str:
                 """메뉴 항목을 누르고, 복사가 끝나면(알림이 뜨면) 클립보드 글을 돌려준다."""
@@ -491,7 +497,7 @@ def run(headed: bool) -> None:
                   and '이 장 하이라이트' not in items_on and off_by_menu,
                   f'본문 우클릭 메뉴로 그 장 하이라이트 / 하이라이트 해제 ({by_menu})')
             # Shift+끌기 (D75 — D74 의 Alt+끌기): 표의 '구리' 행에서 '니켈' 행까지 → 그 행들(원문 11~13행)만 하이라이트, 글은 고르지 않음.
-            # 우클릭은 선택 상자 — 맨 위 'Claude 로 보내기'(맨 앞 터미널에 넣기), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
+            # 우클릭은 선택 상자 — 맨 위 'Claude로 보내기'(맨 앞 터미널에 넣기), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
             row_at = lambda text: page.evaluate(f"""(() => {{ const tr = [...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('{text}'));
               const b = tr.getBoundingClientRect(); return [b.left + 30, b.top + b.height / 2]; }})()""")
             page.evaluate("[...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('알루미늄')).scrollIntoView({ block: 'center' })")
@@ -515,9 +521,9 @@ def run(headed: bool) -> None:
             page.mouse.click(a[0], a[1] - 260 if a[1] > 400 else a[1] + 320)   # 흐린 곳을 누르면 끈다
             cleared = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && document.querySelector('#lec-content > .lec-spot')?.hidden !== false")
             check(band and band['lit'] == ['구리', '알루미늄', '니켈'] and band['on'] and not band['sel']
-                  and alt_first == ['하이라이트한 곳 · 11~13행', 'Claude 로 보내기', 'Claude용 위치 복사'] and '@docs/01-기능-점검.md 11~13행' in alt_menu
+                  and alt_first[0] == '하이라이트한 곳 · 11~13행' and alt_first[1] == '표 복사' and 'Claude로 보내기' in alt_menu and '@docs/01-기능-점검.md 11~13행' in alt_menu
                   and '이 블록의 메뉴…' in alt_menu and '하이라이트 해제' in alt_menu and no_term_btn and cleared,
-                  f"Shift+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude 로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
+                  f"Shift+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
             para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
             head = menu(para).split('\n')[0]
             picked = page.locator('#lec-view .lec-picked').count()
@@ -530,16 +536,16 @@ def run(headed: bool) -> None:
             menu(sec('코드'))
             section = choose('이 절 원문 복사')
             menu(sec('코드'))
-            ref = choose('Claude용 위치 복사')
+            ref = choose('위치 복사')
             want = f"@docs/01-기능-점검.md {a}~{b}행 ('코드' 절)"
-            check(section == '\n'.join(src[a - 1:b]) and ref == want, f'제목 우클릭: 절 원문 복사, Claude용 위치 복사 ({ref!r})')
+            check(section == '\n'.join(src[a - 1:b]) and ref == want, f'제목 우클릭: 절 원문 복사, 위치 복사 ({ref!r})')
             items = menu(sec('코드'))
             page.locator('#lec-menu button', has_text='같은 수준(H2) 모두 접기').click()
             h2_folded = page.evaluate("[...document.querySelectorAll('#lec-view > h2.lec-fold')].every(h => h.classList.contains('lec-folded'))")
             menu(sec('코드'))
             page.locator('#lec-menu button', has_text='같은 수준(H2) 모두 펴기').click()
-            check(f'편집기에서 이 줄 열기\ndocs/01-기능-점검.md:{a}' in items and h2_folded and not folded('코드'),
-                  '제목 우클릭: 편집기에서 이 줄 열기(줄 번호), 같은 수준 제목 모두 접기·펴기')
+            check('외부 편집기로 이 줄 열기' in items and f'docs/01-기능-점검.md:{a}' in items and h2_folded and not folded('코드'),
+                  '제목 우클릭: 외부 편집기로 이 줄 열기(줄 번호), 같은 수준 제목 모두 접기·펴기')
             menu(page.locator('#lec-view a', has_text='수식과 달러 표기'))
             link_addr = choose('링크 주소 복사')
             check(link_addr == 'docs/02-수식과-달러.md', f'링크 우클릭: 링크 주소 복사 ({link_addr!r})')
@@ -562,8 +568,8 @@ def run(headed: bool) -> None:
             para.click(click_count=3)
             selected = page.evaluate('getSelection().toString().trim()')
             items = menu(para)   # 고른 곳 밖을 우클릭하면 브라우저가 선택을 푼다
-            copied = choose('선택한 글 복사') if items.startswith('선택한 글 복사') else ''
-            check(selected and copied == selected, f'글을 고른 채 우클릭하면 맨 위에 선택한 글 복사 ({items[:10]!r}, {copied[:20]!r})')
+            copied = choose('고른 글 복사') if items.split('\n')[1].startswith('고른 글 복사') else ''
+            check(selected and copied == selected, f'글을 고른 채 우클릭하면 맨 위에 고른 글 복사 ({items[:10]!r}, {copied[:20]!r})')
             page.evaluate('getSelection().removeAllRanges()')
             sec('표').click()   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
             shot('02-doc-folded')
@@ -573,7 +579,7 @@ def run(headed: bool) -> None:
             (work / 'docs' / '97-줄.md').write_text(LINES_DOC, encoding='utf-8')
             page.click('.side-tabs button[data-tab="files"]')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', timeout=10000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-줄.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-줄.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("줄 점검")')
             lit_status = "document.querySelector('#lec-st-lit').hidden ? null : document.querySelector('#lec-st-lit').textContent"
             # 줄 단위: 한 줄짜리 블록은 통째, 화면의 한 줄에 이어지는 짧은 줄들은 함께, 화면에서 따로 시작하는 원문 줄은 따로, 코드는 줄마다(``` 빼고),
@@ -600,12 +606,13 @@ def run(headed: bool) -> None:
             released = page.evaluate(lit_status)
             page.keyboard.press('Shift+Enter')
             moved = page.evaluate(lit_status)
-            check(here_on and unit_list == '1-1 3-3 5-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
-                  and s1 == '하이라이트 3행 · 1줄' and steps == ['하이라이트 3~6행 · 4줄', '하이라이트 3~8행 · 6줄', '하이라이트 3~9행 · 7줄', '하이라이트 3~8행 · 6줄']
-                  and ref == '@docs/97-줄.md 3~8행' and source == '\n'.join(lines_src[2:8]) and released is None and moved == '하이라이트 9행 · 1줄',
+            check(here_on and unit_list == '1-1 3-3 5-5 6-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
+                  and s1 == '하이라이트 3행 · 1줄' and steps == ['하이라이트 3~5행 · 3줄', '하이라이트 3~6행 · 4줄', '하이라이트 3~8행 · 6줄', '하이라이트 3~6행 · 4줄']
+                  and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '하이라이트 8행 · 1줄',
                   f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+Enter·Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
                   f"↓ 는 하이라이트를 풀고 다음 줄로 ({released}, {moved})")
             page.keyboard.press('Escape')
+            page.evaluate("document.querySelector('#lec-view .code-block').scrollIntoView({ block: 'center' })")
             row34 = page.locator('#lec-view tr', has_text='3').last.bounding_box()
             code_box = page.locator('#lec-view .code-block code').first.bounding_box()
             page.keyboard.down('Shift')
@@ -656,7 +663,7 @@ def run(headed: bool) -> None:
                   f"툴바 버튼은 장, Shift+↓ 로 그 장을 줄 범위로 ({chapter}, {from_chapter})")
             shot('03b-line-highlight')
             (work / 'docs' / '97-줄.md').unlink()
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', state='detached', timeout=10000)
 
@@ -664,7 +671,7 @@ def run(headed: bool) -> None:
             edit_doc = work / 'docs' / '97-편집.md'
             edit_doc.write_text(EDIT_DOC, encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', timeout=10000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
 
             def file_line(path, n, text=None, ms=6000):
@@ -686,10 +693,10 @@ def run(headed: bool) -> None:
             shaded = f"(() => {{ const v = {shade_js}; return !!v && !v[0] && v[1] === '1' && v[2] === '1'; }})()"
 
             def start(locator, **kw):
-                """줄을 Shift+누르기로 하이라이트하고 Shift+Enter — 글 칸이 생길 때까지"""
+                """줄을 Shift+누르기로 하이라이트하고 F2 — 글 칸이 생길 때까지"""
                 page.keyboard.press('Escape')
                 locator.click(modifiers=['Shift'], **kw)
-                page.keyboard.press('Shift+Enter')
+                page.keyboard.press('F2')
                 wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
                 return editing()
 
@@ -751,7 +758,7 @@ def run(headed: bool) -> None:
             page.keyboard.down('Shift')
             page.mouse.click(*second)
             page.keyboard.up('Shift')
-            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('F2')
             wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
             para = editing()
             page.keyboard.press('End')
@@ -763,7 +770,7 @@ def run(headed: bool) -> None:
             page.keyboard.down('Shift')
             page.mouse.click(code_box['x'] + 20, code_box['y'] + code_box['height'] - 6)
             page.keyboard.up('Shift')
-            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('F2')
             wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
             code_row = editing()
             page.keyboard.press('Backspace')
@@ -793,7 +800,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+ArrowDown')
             page.keyboard.press('F2')
             f2_many = [toast_has('한 줄만 고칩니다'), editing()]
-            page.keyboard.press('Shift+Enter')   # 알림대로 — 현재 줄만 남긴다
+            page.keyboard.press('Escape')   # 알림대로 — 하이라이트를 풀고
             page.keyboard.press('F2')
             wait_edit()
             f2_one = editing()
@@ -1029,21 +1036,21 @@ def run(headed: bool) -> None:
             other_doc.write_text('# 둘째 문서\n\n둘째 글\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-둘째.md"]', timeout=10000)
             replace(7, ['- 항목 하나'], ['- 첫 문서 고침'])
-            page.locator('#lec-tree .row.file[data-doc="docs/97-둘째.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-둘째.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("둘째 문서")')
             replace(3, ['둘째 글'], ['둘째 글 고침'], 'docs/97-둘째.md')
-            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
             page.locator('#lec-view h1').first.click()
             page.keyboard.press('Control+z')
             first_undone = file_line(edit_doc, 7, '- 항목 하나')
             kept_other = other_doc.read_text(encoding='utf-8').split('\n')[2]
             check(first_undone == '- 항목 하나' and kept_other == '둘째 글 고침', f"되돌리기는 파일마다 — 다른 문서를 고친 뒤에도 앞 문서의 것을 되돌림 ({first_undone!r}, {kept_other!r})")
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             other_doc.unlink()
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-둘째.md"]', state='detached', timeout=10000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-편집.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
             # 저장 요청이 실패하면: 한 번 더 보내고, 그래도 안 되면 고친 줄을 클립보드에 (D81)
             save_left = {'n': 1}
@@ -1079,7 +1086,7 @@ def run(headed: bool) -> None:
             example_text = example.read_bytes()
             page.keyboard.press('Control+p')
             page.keyboard.type('example.py')
-            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view.code-view .cv-line[data-line="9"]')
             cv = start(page.locator('#lec-view .cv-line[data-line="9"]'))
             page.keyboard.press('Control+a')
@@ -1096,7 +1103,7 @@ def run(headed: bool) -> None:
             check(cv_dbl == ['SPAN:    """고친 설명."""'], f"코드 화면도 두 번 누르면 그 줄을 한 줄 편집 ({cv_dbl})")
             example.write_bytes(example_text)
             edit_doc.unlink()
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', state='detached', timeout=10000)
 
@@ -1105,7 +1112,7 @@ def run(headed: bool) -> None:
             num_text = ('# 번호\n\n문단 하나\n\n' + '나눠 쓴 문단의 첫째 줄입니다. ' * 12 + '\n둘째 줄입니다.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n\n```python\na = 1\nb = 2\n```\n\n## 접을 절\n\n절 안의 글\n')
             num_doc.write_text(num_text, encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-번호.md"]', timeout=10000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("번호")')
             nums = lambda: page.evaluate("[...document.querySelectorAll('#lec-content > .lec-gutter span')].map((s) => s.textContent)")
             lines_btn = lambda: page.evaluate("(() => { const b = document.querySelector('#lec-btn-lines'); return [b.disabled, b.classList.contains('on'), b.getAttribute('aria-pressed')]; })()")
@@ -1151,29 +1158,29 @@ def run(headed: bool) -> None:
             check(narrow[0], f"좁은 창에서도 번호가 칸 안에 ({narrow})")
             page.reload()
             page.wait_for_selector('#lec-view h1')
-            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("번호")')
             kept_nums = wait_until(page, "document.querySelectorAll('#lec-content > .lec-gutter span').length === 10", 4000)
             page.keyboard.press('Control+p')
             page.keyboard.type('example.py')
-            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view.code-view .cv-line[data-line="9"]')
             code_state = [page.locator('#lec-content > .lec-gutter').count(), lines_btn(), page.evaluate("getComputedStyle(document.querySelector('#lec-view')).paddingLeft") != on_state[2]]
             page.locator('#lec-view .cv-line[data-line="9"]').click()
             page.keyboard.press('Alt+l')
             still_on = page.evaluate("import('/static/js/store.js').then((m) => m.S.config.line_numbers)")
-            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click(modifiers=['Alt'])
             wait_until(page, "!!document.querySelector('#lec-view iframe.lec-html')", 8000)
             html_state = [page.locator('#lec-content > .lec-gutter').count(), lines_btn()[0]]
             check(kept_nums and code_state[0] == 0 and code_state[1][0] and code_state[2] and still_on is True and html_state == [0, True],
                   f"다시 불러와도 켜져 있고, 코드 화면(늘 번호가 있음)·html 문서에서는 쓰지 않음 ({kept_nums}, {code_state}, {still_on}, {html_state})")
-            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-번호.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("번호")')
             page.click('#lec-btn-lines')
             off_again = wait_until(page, "!document.querySelector('#lec-content > .lec-gutter')", 3000)
             check(off_again and pad() == off_state[2] and lines_btn() == [False, False, 'false'], f"툴바 버튼으로 끄면 번호와 넓힌 여백이 사라짐 ({off_again}, {pad()}, {lines_btn()})")
             num_doc.unlink()
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-번호.md"]', state='detached', timeout=10000)
 
@@ -1199,7 +1206,7 @@ def run(headed: bool) -> None:
             check(True, '뒤로 가기')
 
             print('[다이어그램]')
-            page.locator('#lec-tree .row.file', has_text='다이어그램').click()
+            page.locator('#lec-tree .row.file', has_text='다이어그램').click(modifiers=['Alt'])
             page.wait_for_selector('pre.mermaid svg', timeout=20000)
             widths = page.evaluate("[...document.querySelectorAll('pre.mermaid svg')].map(s => s.getBoundingClientRect().width)")
             check(len(widths) == 2 and min(widths) > 200, 'Mermaid 그림 2개가 제 크기로 보임')
@@ -1216,7 +1223,7 @@ def run(headed: bool) -> None:
 
             print('[차트]')   # D56 — ```vega-lite·```echarts·```dot 를 SVG 로 (charts.js)
             shutil.copytree(ROOT / 'tests' / 'fixture' / 'docs' / 'data', work / 'docs' / 'data')   # 예제가 읽는 CSV (점검 뒤 지운다)
-            page.locator('#lec-tree .row.file[data-doc="docs/06-차트.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/06-차트.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("차트와 그래프")')
             drawn = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             # 문서 폭을 따르는 것(ECharts·Plotly·width "container")은 목차가 나온 뒤의 폭으로 다시 그린다 — 줄여 보이지 않게
@@ -1259,7 +1266,7 @@ def run(headed: bool) -> None:
                            ' "annotations": [{"text": "<a href=\\"https://example.com/\\">링크</a>", "x": 0, "y": 1, "xref": "paper", "yref": "paper", "showarrow": false}]}}\n```\n\n'
                            '```plotly\n{"data": [{"type": "scattergeo", "lon": [127], "lat": [37]}]}\n```\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]', timeout=8000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-차트-막기.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("차트 막기")')
             wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok, #lec-view .diagram-error').length === 7", 30000)
             guard = page.evaluate("""() => ({
@@ -1274,7 +1281,7 @@ def run(headed: bool) -> None:
             check(len(guard['err']) == 3 and '프로젝트 안의 파일만' in guard['err'][0] and '데이터 파일을 읽지 못했습니다' in guard['err'][1]
                   and '지도 차트' in guard['err'][2] and guard['ok'] == 4 and not guard['links'] and not guard['remote'] and not asked,
                   f"차트는 인터넷 데이터를 읽지 않고(없는 파일도 빈 그림 대신 까닭, Plotly 지도는 그리지 않음), 그림 속 링크는 풀고, 인터넷 그림은 부르지도 넣지도 않음 ({guard}, {asked})")
-            page.locator('#lec-tree .row.file', has_text='다이어그램').click()   # 아래 스타일 점검은 Mermaid 문서에서
+            page.locator('#lec-tree .row.file', has_text='다이어그램').click(modifiers=['Alt'])   # 아래 스타일 점검은 Mermaid 문서에서
             page.wait_for_selector('pre.mermaid svg', timeout=20000)
 
             print('[스타일]')
@@ -1330,7 +1337,7 @@ def run(headed: bool) -> None:
                     unstyled.append(theme)
                 shot(f'04-theme-{theme}-mermaid')
             check(not unstyled, 'Mermaid 다이어그램을 스타일 색으로 다시 그림 (기본·다크·논문·Nord)' + (f': {unstyled}' if unstyled else ''))
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             measure = '''() => {
               const v = document.querySelector('#lec-view');
@@ -1375,7 +1382,7 @@ def run(headed: bool) -> None:
             check(saved == 'paper' and page.evaluate("document.documentElement.dataset.theme") == 'paper'
                   and page.input_value('#lec-theme') == 'paper', f'고른 스타일은 다음 실행에도 그대로 ({saved})')
             # 내 스타일 (D53): 설정 폴더의 styles\*.css — 저장하면 목록 맨 아래 '내 스타일'에, 고르면 바탕 스타일 위에, 고치면 바로 다시
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()   # 다시 불러온 뒤 폴더 개요일 수 있다 — 문서에서 본다
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])   # 다시 불러온 뒤 폴더 개요일 수 있다 — 문서에서 본다
             page.wait_for_selector('#lec-view.md-body h1:has-text("렌더링 기능 점검")')
             mine = tmp / 'config' / 'styles'
             mine.mkdir(parents=True, exist_ok=True)
@@ -1406,25 +1413,25 @@ def run(headed: bool) -> None:
             check(gone and page.evaluate("document.documentElement.dataset.theme") == 'default' and not page.evaluate("document.querySelector('#lec-user-css').getAttribute('href')"),
                   '내 스타일 파일을 지우면 목록에서 빠지고 기본 스타일로')
             use_theme('default')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             sec('표').click()   # 다시 불러오면 접은 상태를 잊는다(메모리에만 둠). 아래 찾기 점검을 위해 다시 접는다
 
             print('[빠른 열기와 찾기]')
             page.keyboard.press('Control+p')
             page.fill('#lec-palette-input', '우선')
-            page.keyboard.press('Enter')
+            page.keyboard.press('Alt+Enter')
             page.wait_for_selector('#lec-view h1:has-text("우선순위")')
             check(True, 'Ctrl+P 로 문서 열기')
             page.keyboard.press('Control+p')
             page.fill('#lec-palette-input', 'example')
             code_item = wait_until(page, "!!document.querySelector('#lec-palette-list li.code')", 5000)
             pal = page.evaluate("[...document.querySelectorAll('#lec-palette-list li')].map(li => (li.classList.contains('code') ? 'code:' : 'doc:') + li.querySelector('.p').textContent)")
-            page.locator('#lec-palette-list li.code', has_text='code/example.py').click()
+            page.locator('#lec-palette-list li.code', has_text='code/example.py').click(modifiers=['Alt'])
             pal_code = wait_until(page, "document.querySelector('#lec-view.code-view .cv-title')?.textContent === 'example.py'", 5000)
             check(code_item and 'code:code/example.py' in pal and pal_code,
                   f'Ctrl+P 에 코드도 — 맞는 문서 먼저, 그다음 코드(아이콘), 고르면 코드 화면 ({pal[:5]})')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.keyboard.press('Control+f')
             page.fill('#lec-find-input', '예시')   # 한 번에 넣어 검색이 한 번만 돌게 (글자마다 치면 '예'로 먼저 찾을 수 있음)
@@ -1484,7 +1491,7 @@ def run(headed: bool) -> None:
             check(page.locator('#lec-tree .row.file:has-text("새 메모") .dot').count() == 1, '새 문서에 변경 표시')
 
             print('[전체 검색]')
-            page.locator('#lec-tree .row.file', has_text='우선순위').click()
+            page.locator('#lec-tree .row.file', has_text='우선순위').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("우선순위")')
             page.keyboard.press('Control+Shift+F')
             focused = page.evaluate("document.activeElement?.id")
@@ -1520,7 +1527,7 @@ def run(headed: bool) -> None:
             s1 = sr()
             check(s1['group'] and s1['docs'][0].startswith('doc:') and 'code:code/example.py' in s1['docs'] and '코드' in s1['info'] and '문서' in s1['info'],
                   f"전체 검색에 코드도 — 문서 결과 먼저, 그 아래 '코드' 묶음 ({s1})")
-            page.locator('#lec-search-results .sr-hit[data-kind="code"]').first.click()
+            page.locator('#lec-search-results .sr-hit[data-kind="code"]').first.click(modifiers=['Alt'])
             to_code = wait_until(page, "document.querySelector('#lec-view.code-view .lec-target')?.dataset.line === '8'", 5000)
             code_find = page.evaluate("document.querySelector('#lec-findbar').hidden ? null : document.querySelector('#lec-find-count').textContent")
             page.keyboard.press('Escape')
@@ -1540,7 +1547,7 @@ def run(headed: bool) -> None:
                   "'문서'·'코드'·'자료' 버튼으로 찾을 곳을 고름 (설정에 저장), 모두 끄면 고르라고 알림")
             page.fill('#lec-search-input', '')
             page.locator('.side-tabs button[data-tab="files"]').click()
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             opened_code = page.locator('#lec-code-list .row[data-path="code"][aria-expanded="true"] [data-toggle]')
             if opened_code.count():   # 코드 화면이 '코드' 목록에서 펼친 폴더를 접어 둔다 (아래 파일 목록 점검은 접힌 채로 시작)
@@ -1585,7 +1592,7 @@ def run(headed: bool) -> None:
                   and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(4)),
                   f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것과 제외 폴더, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김은 없음 "
                   f"({olabels()}, {clabels()}, 자료 {count}·코드 {ccount}·문서 {docs_n})")
-            orow('data').locator('[data-toggle]').click()
+            orow('data').locator('[data-toggle]').click(modifiers=['Alt'])
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
             in_data = olabels()[1:3]
             # 이름 앞의 종류 아이콘: 문서(md·html)와 폴더, 최근 변경, 파일 목록
@@ -1604,7 +1611,7 @@ def run(headed: bool) -> None:
             with page.expect_request('**/api/others/dir*'):
                 nm.locator('[data-toggle]').click()
             page.wait_for_selector(f'{olist} .row[data-path="node_modules/some-lib"]')
-            orow('node_modules/some-lib').locator('[data-toggle]').click()
+            orow('node_modules/some-lib').locator('[data-toggle]').click(modifiers=['Alt'])
             page.wait_for_selector(f'{olist} .row[data-path="node_modules/some-lib/index.js"]')
             lib_js = orow('node_modules/some-lib/index.js')
             inner = 'excluded' in (lib_js.get_attribute('class') or '')
@@ -1629,7 +1636,7 @@ def run(headed: bool) -> None:
             (work / 'dist').mkdir()
             dist_came = wait_until(page, f"!!document.querySelector('{olist} .row.excluded[data-path=\"dist\"]')", 8000)
             if dist_came:
-                orow('dist').locator('[data-toggle]').click()
+                orow('dist').locator('[data-toggle]').click(modifiers=['Alt'])
             empty_note = wait_until(page, f"document.querySelector('{olist} .side-note')?.textContent === '빈 폴더'")
             (work / 'dist').rmdir()
             dist_gone = wait_until(page, f"!document.querySelector('{olist} .row[data-path=\"dist\"]')", 8000)
@@ -1646,13 +1653,13 @@ def run(headed: bool) -> None:
             items = menu(csv)
             copied = choose('@data/표.csv 복사')
             menu(csv)
-            body = opens(lambda: page.locator('#lec-menu button', has_text='편집기로 열기').click())
+            body = opens(lambda: page.locator('#lec-menu button', has_text='외부 편집기로 열기').click())
             exe_items = menu(orow('data/setup.exe'))
             page.keyboard.press('Escape')
-            check(all(x in items for x in ('열기', '편집기로 열기', '탐색기에서 보기', '전체 경로 복사', '파일 이름 복사', 'B ·'))
+            check(all(x in items for x in ('열기', '외부 편집기로 열기', '탐색기에서 보기', '전체 경로 복사', '파일 이름 복사', 'B ·'))
                   and copied == '@data/표.csv' and body.get('how') == 'editor'
-                  and '실행하지 않음' in exe_items and '편집기로 열기' not in exe_items,
-                  "우클릭: 열기·편집기로 열기·탐색기에서 보기·경로 복사, 실행 파일은 열지 않고 탐색기에서 선택만 ('편집기로 열기' 없음)")
+                  and '실행하지 않음' in exe_items and '외부 편집기로 열기' not in exe_items,
+                  "우클릭: 열기·외부 편집기로 열기·탐색기에서 보기·경로 복사, 실행 파일은 열지 않고 탐색기에서 선택만 ('외부 편집기로 열기' 없음)")
             csv.click()
             page.keyboard.press('ArrowUp')
             up = picked()
@@ -1691,13 +1698,13 @@ def run(headed: bool) -> None:
                               " && !document.querySelector('#lec-code-list .row[data-path=\"나중-코드.py\"]')", 8000)
             check(appeared and counts_after == (str(int(count) + 1), str(int(ccount) + 1)) and gone,
                   f'파일·코드가 생기거나 지워지면 그 목록에 바로 반영 ({counts_after})')
-            code_body = opens(lambda: page.locator('#lec-code-list .row[data-path="code"]').locator('[data-toggle]').click()
+            code_body = opens(lambda: page.locator('#lec-code-list .row[data-path="code"]').locator('[data-toggle]').click(modifiers=['Alt'])
                               or page.locator('#lec-code-list .row[data-path="code/example.py"]').dblclick())
             code_items = menu(page.locator('#lec-code-list .row[data-path="code/example.py"]'))
             page.keyboard.press('Escape')
-            check(code_body['path'] == 'code/example.py' and '읽기 화면에서 보기' in code_items and '편집기로' in code_items,
+            check(code_body['path'] == 'code/example.py' and '지금 탭에서 열기' in code_items and '편집기로' in code_items,
                   f"'코드' 목록도 탐색기처럼 — 두 번 누르면 편집기, 우클릭 메뉴 ({code_body}, {code_items[:80]!r})")
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()   # 한 번 누를 때 연 코드 화면에서 문서로
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])   # 한 번 누를 때 연 코드 화면에서 문서로
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             tree_h = page.locator('#lec-tree').bounding_box()['height']
             page.click('#lec-others-head')
@@ -1754,10 +1761,10 @@ def run(headed: bool) -> None:
             check(hidden == ['none'] * 4 and revealed == 'docs/01-기능-점검.md' and mixed == [1, 1, '#i-md']
                   and page.is_visible('#lec-btn-view.on') and config_is('files_view', 'folder'),
                   f"'폴더' 버튼: 문서 트리를 감추고 한 트리에 문서와 파일을 폴더 구조 그대로, 지금 보는 문서까지 펼침, 설정에 저장 ({hidden}, {revealed}, {mixed})")
-            orow('research/구리-시장-동향.md').click()
+            orow('research/구리-시장-동향.md').click(modifiers=['Alt'])
             doc_open = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'research/구리-시장-동향.md'")
             now_active = active_row()
-            orow('data').locator('[data-toggle]').click()
+            orow('data').locator('[data-toggle]').click(modifiers=['Alt'])
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
             body = opens(orow('data/표.csv').dblclick)
             doc_menu = menu(orow('research/구리-시장-동향.md'))
@@ -1766,7 +1773,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-menu button', has_text='폴더 개요 보기').click()
             overview = wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'docs'")
             check(doc_open and now_active == 'research/구리-시장-동향.md' and body['path'] == 'data/표.csv'
-                  and '@research/구리-시장-동향.md 복사' in doc_menu and '편집기로 열기' in doc_menu and '폴더 개요 보기' in dir_menu and overview,
+                  and '@research/구리-시장-동향.md 복사' in doc_menu and '외부 편집기로 열기' in doc_menu and '폴더 개요 보기' in dir_menu and overview,
                   '폴더 보기: 문서는 한 번 눌러 뷰어에서(강조), 파일은 두 번 눌러 열기, 문서·폴더 우클릭 메뉴(폴더 개요 보기)')
             shot('05-folder-view')
             page.click('#lec-btn-view')
@@ -1791,7 +1798,7 @@ def run(headed: bool) -> None:
             page.click('#lec-recent-code')
             back = wait_until(page, "document.querySelector('#lec-recent .row')?.dataset.file === 'code/example.py'", 5000)
             body = opens(rrow('첨부.pdf').dblclick)
-            rrow('code/example.py').click()
+            rrow('code/example.py').click(modifiers=['Alt'])
             to_code = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'code/example.py' && !!document.querySelector('#lec-view .cv-line')", 5000)
             r_menu = menu(rrow('첨부.pdf'))
             page.keyboard.press('Escape')
@@ -1842,7 +1849,7 @@ def run(headed: bool) -> None:
             page.unroute('**/api/open-external', fake_open)
 
             print('[문서 속 원시 HTML]')
-            page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click()
+            page.locator('#lec-tree .row.file', has_text='원시 HTML 확인').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("원시 HTML 확인")')
             check(page.locator('#lec-view svg a[target="_blank"]').count() == 1, 'SVG 속 외부 링크가 있어도 문서를 그리고, 링크는 새 창으로')
             check(page.evaluate('typeof document.querySelector') == 'function', '<img name="querySelector"> 가 document 를 가리지 않음')
@@ -1871,7 +1878,7 @@ def run(headed: bool) -> None:
                 f'- [file 링크](file:///{w.replace(chr(92), "/")}/docs/01-기능-점검.md)\n'
                 '- [프로젝트 밖](<C:\\Windows\\win.ini>)\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file:has-text("절대경로 확인")', timeout=8000)
-            page.locator('#lec-tree .row.file', has_text='절대경로 확인').click()
+            page.locator('#lec-tree .row.file', has_text='절대경로 확인').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("절대경로 확인")')
             wait_until(page, "document.querySelector('#lec-view img')?.complete")
             got = page.evaluate("""() => ({
@@ -1883,7 +1890,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-view a', has_text='역슬래시 절대경로 링크').click()
             page.wait_for_selector('#lec-view h1:has-text("수식과 달러 표기")')
 
-            page.locator('#lec-tree .row.file', has_text='구현 계획').click()
+            page.locator('#lec-tree .row.file', has_text='구현 계획').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view .front-matter')
             menu(page.locator('#lec-view .front-matter summary'))
             fm = choose('원문 복사')
@@ -1896,7 +1903,7 @@ def run(headed: bool) -> None:
                 '없는 파일 src/none.py 와 e.g. 같은 글자는 링크가 아닙니다.\n\n'
                 '```\ncode/example.py\n```\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file:has-text("경로 표기 확인")', timeout=8000)
-            page.locator('#lec-tree .row.file', has_text='경로 표기 확인').click()
+            page.locator('#lec-tree .row.file', has_text='경로 표기 확인').click(modifiers=['Alt'])
             wait_until(page, "document.querySelectorAll('#lec-view a.path-link').length >= 3")
             links = page.evaluate("[...document.querySelectorAll('#lec-view a.path-link')].map(a => [a.textContent, a.dataset.path, a.dataset.line || ''])")
             in_pre = page.locator('#lec-view pre a').count()
@@ -1907,12 +1914,13 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[코드 보기]')
+            solo()
             cv = lambda: page.evaluate('''() => ({ code: document.querySelector('#lec-view').classList.contains('code-view'),
               title: document.querySelector('#lec-view .cv-title')?.textContent || '', lines: document.querySelectorAll('#lec-view .cv-line').length,
               status: document.querySelector('#lec-st-info').textContent, toc: [...document.querySelectorAll('#lec-toc .code-outline a')].map(a => a.textContent),
               active: document.querySelector('#lec-code-list .row.active')?.dataset.path || '', target: document.querySelector('#lec-view .lec-target')?.dataset.line || '',
               treeActive: document.querySelector('#lec-tree .row.active')?.dataset.doc || '', title2: document.title })''')
-            page.locator('#lec-tree .row.file[data-doc="docs/95-경로.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/95-경로.md"]').click(modifiers=['Alt'])
             wait_until(page, "document.querySelectorAll('#lec-view a.path-link').length >= 3")
             page.locator('#lec-view a.path-link', has_text='code/example.py:13').click()
             page.wait_for_selector('#lec-view.code-view .cv-line')
@@ -1939,15 +1947,15 @@ def run(headed: bool) -> None:
             doc_title = page.evaluate('document.title')   # 창 제목: 파일 이름 [문서 제목]
             check(doc_title == '95-경로.md [경로 표기 확인] - samples - Lectern' and c1['title2'] == 'example.py - samples - Lectern',
                   f'창 제목은 파일 이름 [문서 제목] - 프로젝트, 코드는 파일 이름 ({doc_title!r})')
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.locator('#lec-view a.file-link', has_text='example.py').first.click()
             by_link = wait_until(page, "document.querySelector('#lec-view.code-view .lec-target')?.dataset.line === '13'", 5000)
             check(back_doc and by_link, '뒤로 가기로 문서에 돌아오고, 문서 속 코드 파일 링크(#L13)도 읽기 화면의 그 줄로')
             crow = page.locator('#lec-code-list .row[data-path="code/example.py"]')
             if not crow.count():
-                page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click()
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+                page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click(modifiers=['Alt'])
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             crow.click()
             by_click = wait_until(page, "document.querySelector('#lec-view.code-view .cv-title')?.textContent === 'example.py'", 5000)
@@ -1972,8 +1980,8 @@ def run(headed: bool) -> None:
             found_code = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)", 3000)
             page.keyboard.press('Escape')
             items = menu(page.locator('#lec-view .cv-line[data-line="3"]'))
-            copied = choose('Claude용 위치 복사')
-            check(found_code and '편집기에서 이 줄 열기' in items and '코드 전체 복사' in items and copied == '@code/example.py 3행',
+            copied = choose('위치 복사')
+            check(found_code and '외부 편집기로 이 줄 열기' in items and '코드 전체 복사' in items and copied == '@code/example.py 3행',
                   f"코드 화면에서도 Ctrl+F 찾기, 줄 우클릭 메뉴 — Claude용 위치 ({copied!r})")
             # 코드 화면의 현재 위치·줄 하이라이트 (D75): 줄을 누르고 Shift+Enter·Shift+↓, Shift+← 는 위치 복사, 우클릭은 선택 상자(담기 없이)
             page.locator('#lec-view .cv-line[data-line="5"]').click()
@@ -1994,14 +2002,14 @@ def run(headed: bool) -> None:
                   and code_menu.startswith('하이라이트한 곳 · 5~7행') and '이 줄의 메뉴…' in code_menu and '담기' not in code_menu and code_off is None,
                   f"코드 화면의 현재 위치·줄 하이라이트: 줄 누르기·Shift+Enter·Shift+↓, Shift+← 위치 복사, 우클릭은 선택 상자(담기 없이), Esc 로 풂 "
                   f"({code_lit}, {code_ref!r}, {code_menu[:30]!r})")
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[편집 모드]')   # D54 — CodeMirror 5, 저장은 POST /api/save
             plan = work / 'plans' / '10-후속-과제.md'
             original = plan.read_bytes()
             ed_state = lambda: page.evaluate("document.querySelector('.lec-editor .ed-state')?.textContent || ''")
-            page.locator('#lec-tree .row.file', has_text='후속 과제').click()
+            page.locator('#lec-tree .row.file', has_text='후속 과제').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
             page.click('#lec-btn-edit')   # 탭 막대의 [편집] — 켜기 (목차·터미널 왼쪽)
             page.wait_for_selector('.lec-editor .CodeMirror')
@@ -2011,7 +2019,7 @@ def run(headed: bool) -> None:
             order = page.evaluate("[...document.querySelectorAll('#lec-tabbar .tabbar-btn')].map(b => b.id)")
             page.click('#lec-tablist .lec-tab.active')   # 고른 프로젝트 탭을 또 누르면 프로젝트 개요 — 폴더 개요에서는 누를 수 없다
             no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
-            page.locator('#lec-tree .row.file', has_text='후속 과제').click()
+            page.locator('#lec-tree .row.file', has_text='후속 과제').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
             check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-toc', 'lec-btn-term'],
                   f"탭 막대의 [편집] [목차] [터미널] — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
@@ -2038,7 +2046,7 @@ def run(headed: bool) -> None:
                   f"({ed_state()}, {dict(in_editor=in_editor, dirty=dirty, cm_find=cm_find, saved=saved, tail=on_disk[-30:].decode('utf-8', 'replace'), closed=closed, shown=shown)})")
             # 그사이 다른 곳(Claude Code 등)에서 바뀌면 덮어쓰지 않고 묻는다. 저장하지 않은 채 닫으면 묻는다
             page.locator('#lec-view li').last.click(button='right')
-            page.locator('#lec-menu button', has_text='여기를 편집').click()
+            page.locator('#lec-menu button', has_text='여기서 편집').click()
             page.wait_for_selector('.lec-editor .CodeMirror')
             at_line = page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line + 1")
             want_line = int(page.evaluate("[...document.querySelectorAll('#lec-view li')].pop().closest('[data-lines]').dataset.lines.split('-')[0]"))
@@ -2056,11 +2064,11 @@ def run(headed: bool) -> None:
             closed2 = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
             plan.write_bytes(original)
             check(at_line == want_line and asked and '바뀌었습니다' in asked[0] and kept and asked2 and '저장하지 않은' in asked2[0] and closed2,
-                  f"우클릭 '여기를 편집'은 그 줄에서, 그사이 다른 곳에서 바뀌면 덮어쓰지 않고 물음, 저장하지 않고 닫으면 물음 ({at_line}/{want_line}, {asked[:1]})")
+                  f"우클릭 '여기서 편집'은 그 줄에서, 그사이 다른 곳에서 바뀌면 덮어쓰지 않고 물음, 저장하지 않고 닫으면 물음 ({at_line}/{want_line}, {asked[:1]})")
             code_dir = page.locator('#lec-code-list .row[data-path="code"]')
             if code_dir.get_attribute('aria-expanded') != 'true':   # 앞에서 코드 화면을 보며 펼쳐 두었을 수 있다
                 code_dir.locator('[data-toggle]').click()
-            page.locator('#lec-code-list .row[data-path="code/example.py"]').click()
+            page.locator('#lec-code-list .row[data-path="code/example.py"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view .cv-edit')
             page.click('#lec-content')
             page.keyboard.press('Control+e')   # Ctrl+E 로 열고 닫기
@@ -2069,7 +2077,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+e')
             code_closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
             check(mode == 'python' and code_closed, f'코드 화면도 Ctrl+E 로 편집 모드 — 언어 색 ({mode})')
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[편집 위치 잇기]')   # D55 — 읽는 화면·편집기·목차가 원문의 같은 곳을
@@ -2159,7 +2167,7 @@ def run(headed: bool) -> None:
             doc1.write_bytes(doc1_orig)
             wait_until(page, "!document.querySelector('#lec-view p')?.textContent.startsWith('하나')", 8000)
             # 코드 화면: 목차(클래스·함수)를 누르면 편집기가 그 줄로. html 문서: 원문의 그 제목 태그로
-            page.locator('#lec-code-list .row[data-path="code/example.py"]').click()
+            page.locator('#lec-code-list .row[data-path="code/example.py"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view .cv-edit')
             page.click('#lec-btn-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
@@ -2170,7 +2178,7 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(200)
             code_at = cursor_line()
             page.click('#lec-btn-edit')
-            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/04-HTML-보고서.html"]').click(modifiers=['Alt'])
             # data-ready: 다 그린 뒤 — 안의 글은 load 전에도 보이고, 그리는 중의 [편집]은 다시 누르라고 알린다
             wait_until(page, "document.querySelector('#lec-view iframe.lec-html[data-ready]:not(.lec-loading)')?.contentDocument?.querySelector('h2')")
             page.click('#lec-btn-edit')
@@ -2183,7 +2191,7 @@ def run(headed: bool) -> None:
             html_closed = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
             check(code_at == want_code and want_html in html_at and '<h' in html_at.lower() and html_closed,
                   f"코드 화면의 목차는 그 줄로 ({code_at}/{want_code}), html 문서의 목차는 원문의 그 제목 태그로 ({html_at.strip()[:60]!r})")
-            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
             print('[HTML 문서]')
@@ -2192,7 +2200,7 @@ def run(headed: bool) -> None:
             check(page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').locator('use[href="#i-html"]').count() == 1
                   and page.locator('#lec-tree .row.dir', has_text='src').count() == 0,
                   'html 문서는 트리에 html 아이콘과 함께, src 폴더의 html(앱 소스)은 보이지 않음')
-            page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').click()
+            page.locator('#lec-tree .row.file', has_text='HTML 보고서 예시').click(modifiers=['Alt'])
             wait_until(page, f"{frame_js}?.contentDocument?.querySelector('h1')")
             frame = page.frame_locator('#lec-view iframe.lec-html:not(.lec-loading)')
             frame.locator('button').click()
@@ -2233,7 +2241,7 @@ def run(headed: bool) -> None:
             changed = page.evaluate(f"[...{frame_js}.contentDocument.querySelectorAll('.lec-changed')].map(e => e.tagName)")
             frames = page.locator('#lec-view iframe').count()
             check(changed_ok and changed == ['TR'] and frames == 1, f'html 문서도 자동 새로고침, 바뀐 행만 강조 ({changed}, 틀 {frames}개)')
-            page.locator('#lec-tree .row.file', has_text='접는 html').click()
+            page.locator('#lec-tree .row.file', has_text='접는 html').click(modifiers=['Alt'])
             wait_until(page, f"{frame_js}?.contentDocument?.title === '접는 html'")
             height = lambda: page.evaluate(f"{frame_js}.getBoundingClientRect().height")
             h0 = height()
@@ -2250,12 +2258,12 @@ def run(headed: bool) -> None:
             fold_url = lambda u: '/doc/' in u and '/docs/93-' in urllib.parse.unquote(u)
             page.route(fold_url, lambda route: route.fulfill(status=404, body='없음', headers={'Content-Security-Policy': 'sandbox'})
                        if route.request.method == 'GET' else route.continue_())
-            page.locator('#lec-tree .row.file', has_text='접는 html').click()
+            page.locator('#lec-tree .row.file', has_text='접는 html').click(modifiers=['Alt'])
             gone = wait_until(page, "document.querySelector('#lec-view .doc-missing')?.textContent.includes('문서가 없거나')")
             toc_left = page.locator('#lec-toc a').count()
             page.unroute(fold_url)
             check(gone and toc_left == 0, f'html 을 불러오다 없어지면 \'문서 없음\' 안내, 앞 문서의 목차는 지움 (목차 {toc_left}개)')
-            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click()
+            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click(modifiers=['Alt'])
             wait_until(page, f"{frame_js}?.contentDocument?.title === '스타일 없는 HTML'")
             themed = page.evaluate(f"""(() => {{ const d = {frame_js}.contentDocument;
               return d.body.classList.contains('md-body') && !!d.querySelector('link[href*="/static/themes/base.css"]'); }})()""")
@@ -2270,11 +2278,11 @@ def run(headed: bool) -> None:
               const [a, b] = [lum(rgb(w.getComputedStyle(d.querySelector('p')).color)), lum(back)].sort((m, n) => n - m);
               return Math.round((a + 0.05) / (b + 0.05) * 10) / 10; }})()'''
             use_theme('dark')
-            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click()
+            page.locator('#lec-tree .row.file', has_text='스타일 없는 HTML').click(modifiers=['Alt'])
             wait_until(page, f"{frame_js}?.contentDocument?.documentElement.dataset.lecBackdrop === 'dark'")
             plain_dark = page.evaluate(readable_js)
             use_theme('default')
-            page.locator('#lec-tree .row.file', has_text='밝은 글자 문서').click()
+            page.locator('#lec-tree .row.file', has_text='밝은 글자 문서').click(modifiers=['Alt'])
             wait_until(page, f"{frame_js}?.contentDocument?.title === '밝은 글자 문서'")
             light_text = page.evaluate(readable_js)
             shot('08-html-light-text')
@@ -2289,10 +2297,11 @@ def run(headed: bool) -> None:
             check(stale == 0 and opened, f'전체 검색이 html 본문도 찾고, 누르면 그 문서에서 표시 (남은 옛 결과 {stale}개)')
             shot('08-html')
             page.keyboard.press('Escape')
+            page.keyboard.press('Control+w')   # 검색이 연 새 문서 탭을 닫는다
             page.locator('.side-tabs button[data-tab="files"]').click()
 
             print('[외부 이미지]')
-            page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()
+            page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("외부 이미지 확인")')
             page.wait_for_selector('#lec-view .image-off', timeout=8000)
             # 없는 그림의 대체 표시가 먼저 나타날 수 있으므로, 있는 그림을 다 받을 때까지 기다린 뒤 크기를 읽는다
@@ -2316,7 +2325,7 @@ def run(headed: bool) -> None:
             page.reload()
             page.wait_for_selector('#lec-view h1')   # 마지막에 보던 문서나 폴더 개요 (마지막 위치 복원)
             before = len(outside)
-            page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click()
+            page.locator('#lec-tree .row.file', has_text='외부 이미지 확인').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("외부 이미지 확인")')
             page.wait_for_timeout(500)
             check(page.locator('#lec-view .image-off').count() == 2 and len(outside) == before,
@@ -2324,7 +2333,7 @@ def run(headed: bool) -> None:
 
             print('[뒤로 빠르게, 키보드 초점]')
             for title in ('우선순위', '후속 과제', '렌더링 기능 점검'):
-                page.locator('#lec-tree .row.file', has_text=title).click()
+                page.locator('#lec-tree .row.file', has_text=title).click(modifiers=['Alt'])
                 page.wait_for_selector(f'#lec-view h1:has-text("{title}")')
             page.keyboard.press('Alt+ArrowLeft')
             page.keyboard.press('Alt+ArrowLeft')   # 앞의 '뒤로'가 그리기를 마치기 전에
@@ -2343,7 +2352,7 @@ def run(headed: bool) -> None:
             move_doc = work / 'docs' / '97-이동.md'
             move_doc.write_text(MOVE_DOC, encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-이동.md"]', timeout=10000)
-            page.locator('#lec-tree .row.file[data-doc="docs/97-이동.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="docs/97-이동.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("이동 점검")')
             scroll_top = lambda: page.evaluate("document.querySelector('#lec-content').scrollTop")
             here_line = lambda: page.evaluate("import('/static/js/store.js').then(m => m.S.pane.here?.line)")
@@ -2414,7 +2423,7 @@ def run(headed: bool) -> None:
             settle()
             check(top3 > 200 and near(cross_top, top3) and near(scroll_top(), 0), f"다른 문서를 다녀와도 Alt+← 는 뛴 곳으로, 한 번 더 누르면 뛰기 전 자리로 ({top3}, {cross_top}, {scroll_top()})")
             move_doc.unlink()
-            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
+            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-이동.md"]', state='detached', timeout=10000)
 
             print('[시작 스크립트]')   # D81 — 하나만 못 받아도 빈 화면으로 멈추지 않는다 (bootguard.js)
@@ -2462,13 +2471,13 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(900)
             page.unroute('**/highlight/languages/dos.min.js*')
             check(len(lang_hits) == 1, f"없어도 앱이 도는 코드 색칠 언어 묶음을 못 받으면 다시 불러오지 않음 ({len(lang_hits)}번 받으려 함)")
-            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click()
+            page.locator(f'#lec-tree .row.file[data-doc="{was_doc}"]').click(modifiers=['Alt'])
 
             print('[설정과 마지막 위치]')
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
             boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
-            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'external_images=false',
+            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'external_images=false',
                                                    'terminal_follow_style=true'],
                   f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
             shot('07-settings')
@@ -2489,7 +2498,7 @@ def run(headed: bool) -> None:
             reset = page.locator('#lec-sidebar').bounding_box()['width']
             check(abs(dragged - 400) <= 2 and saved_w and abs(saved_w - 400) <= 2 and abs(reset - 288) <= 1,
                   f'사이드바 경계를 끌어 폭 조절·저장, 두 번 누르면 기본 폭 ({dragged:.0f} → 저장 {saved_w}, 기본 {reset:.0f})')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             # 목차 폭 (D47): 문서와 목차 사이 경계를 왼쪽으로 끌면 목차가 넓어지고 저장, 두 번 누르면 기본 폭, 목차를 감추면 경계도 감춤
             toc_w = lambda: page.locator('#lec-toc').bounding_box()['width']
@@ -2572,7 +2581,7 @@ def run(headed: bool) -> None:
                        icons: document.querySelectorAll('#lec-tablist .lec-tab .ficon use[href="#i-folder"]').length }; }''')
             check(look['size'] > look['side'] and look['weight'] >= 700 and look['otherWeight'] >= 600 and look['filled'] and look['icons'] == 2,
                   f'프로젝트 탭은 사이드바 글자보다 크고 굵게, 선택된 탭은 바탕색으로, 이름 앞에 폴더 아이콘 ({look})')
-            page.locator('#lec-tree .row.file', has_text='둘째 프로젝트').click()
+            page.locator('#lec-tree .row.file', has_text='둘째 프로젝트').click(modifiers=['Alt'])
             h1_has('둘째 프로젝트')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 900')
             tab_el(0).click()
@@ -2619,7 +2628,7 @@ def run(headed: bool) -> None:
             (work / 'docs' / '92-다른-탭.md').write_text(
                 f'# 다른 탭 경로\n\n[다른 탭 문서](../../{second_id}/README.md)\n\n![다른 탭 그림](../../{second_id}/notes/x.png)\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file:has-text("다른 탭 경로")', timeout=8000)
-            page.locator('#lec-tree .row.file', has_text='다른 탭 경로').click()
+            page.locator('#lec-tree .row.file', has_text='다른 탭 경로').click(modifiers=['Alt'])
             h1_has('다른 탭 경로')
             cross = page.evaluate('''() => ({ off: document.querySelector('#lec-view a')?.classList.contains('link-off'),
               img: document.querySelector('#lec-view .image-off')?.textContent || '' })''')
@@ -2654,11 +2663,11 @@ def run(headed: bool) -> None:
             scrolled = wait_until(page, f"document.querySelector('#lec-content').scrollTop > {before}")
             page.keyboard.press('Control+9')
             k9 = tabs()[2]['active']
-            page.keyboard.press('Control+PageDown')
+            page.keyboard.press('Alt+PageDown')
             wrap = tabs()[0]['active']
-            page.keyboard.press('Control+Shift+Tab')
+            page.keyboard.press('Alt+PageUp')
             prev = tabs()[2]['active']
-            check(k1 and scrolled and k9 and wrap and prev, 'Ctrl+1~8·Ctrl+9(마지막), Ctrl+PageDown·Ctrl+Shift+Tab 으로 탭, 고른 뒤 PageDown 은 그 탭 문서를 스크롤')
+            check(k1 and scrolled and k9 and wrap and prev, 'Ctrl+1~8·Ctrl+9(마지막), Alt+PageDown·PageUp 으로 프로젝트 탭, 고른 뒤 PageDown 은 그 탭 문서를 스크롤')
             items = menu(tab_el(2))
             page.keyboard.press('Escape')
             tab_el(2).locator('.tab-close').click()
@@ -2723,7 +2732,7 @@ def run(headed: bool) -> None:
               return [open.status, list.terms.length, src.status]; }''')
             check(ro == [True, [False, True]] and locked and no_edit and no_new and no_rename and st_edit and refused == [403, 0, 403],
                   f"예제(프로그램 폴더 안)는 보기만 — 터미널 자리에 안내, 편집·새 문서·이름 바꾸기는 열지 않음, 서버도 403 ({ro}, {locked}, {no_edit}, {no_new}, {no_rename}, {refused})")
-            page.locator('#lec-tree .row.file[data-doc="guide/01-처음-둘러보기.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="guide/01-처음-둘러보기.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view .task-list-item-checkbox')
             page.evaluate("document.querySelector('#lec-toast').textContent = ''")
             page.locator('#lec-view .task-list-item-checkbox').first.click()
@@ -2736,13 +2745,13 @@ def run(headed: bool) -> None:
             page.keyboard.press('F6')
             ro_f6 = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000)
             check(ro_f6 and page.evaluate("document.querySelector('#lec-term').hidden"), f"보기만 하는 프로젝트의 F6 은 터미널을 열지 않고 까닭을 알림 ({ro_f6})")
-            page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click(modifiers=['Alt'])
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
-            page.locator('#lec-tree .row.file[data-doc="guide/06-다이어그램.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="guide/06-다이어그램.md"]').click(modifiers=['Alt'])
             mermaid_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.mermaid.mermaid-ok').length === 8", 30000) \
                 and page.locator('#lec-view .diagram-error').count() == 0
-            page.locator('#lec-tree .row.file[data-doc="guide/04-문서-쓰는-법.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="guide/04-문서-쓰는-법.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("문서 쓰는 법")')
             page.locator('#lec-view img').first.scroll_into_view_if_needed()
             img_ok = wait_until(page, "[...document.querySelectorAll('#lec-view img')].every(i => i.complete && i.naturalWidth > 0)", 5000)
@@ -2753,7 +2762,7 @@ def run(headed: bool) -> None:
             page.click('#lec-settings-close')
 
             print('[슬라이드]')   # D59 — marp: true 인 발표 문서 (예제의 guide/08-발표.md)
-            page.locator('#lec-tree .row.file[data-doc="guide/08-발표.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="guide/08-발표.md"]').click(modifiers=['Alt'])
             deck_ok = wait_until(page, '''(() => { const v = document.querySelector('#lec-view');
               return v.classList.contains('lec-deck') && v.querySelector('pre.mermaid.mermaid-ok') && v.querySelector('pre.lec-chart.chart-ok'); })()''', 30000)
             page.wait_for_timeout(500)
@@ -2885,8 +2894,8 @@ def run(headed: bool) -> None:
             page.click('#lec-btn-open')
             n_tabs(2)
             page.wait_for_selector('#lec-others-list .row[data-path="data"]')
-            page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click()
-            page.locator('#lec-others-list .row[data-path="data/prices.csv"]').click()   # 한 번 누르면 Lectern 에서
+            page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click(modifiers=['Alt'])
+            page.locator('#lec-others-list .row[data-path="data/prices.csv"]').click(modifiers=['Alt'])   # 한 번 누르면 Lectern 에서
             page.wait_for_selector('#lec-view.csv-view tbody.csv-rows tr.cv-line')
             csv_state = lambda: page.evaluate("""() => { const v = document.querySelector('#lec-view');
               return { head: [...v.querySelectorAll('.csv-head th[data-col]')].map(th => th.textContent + (th.classList.contains('num') ? '#' : '')),
@@ -2911,7 +2920,7 @@ def run(headed: bool) -> None:
                   f"csv 는 표 — 머리행 어림·숫자 열·통계 줄(합계·중앙값), 열마다 거르기(>9800·구리)·머리행으로 내림차순, 통계는 거른 행으로 ({c1['head']}, {c1['count']}, {c2['count']}, {c2['first']})")
             page.locator('#lec-view tbody.csv-rows tr.cv-line').first.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])')
-            row_hint = page.locator('#lec-menu .menu-row', has_text='이 줄 복사').locator('small').inner_text()
+            row_hint = page.locator('#lec-menu .menu-row', has_text='이 줄 복사').locator('button').first.get_attribute('title')
             page.keyboard.press('Escape')
             page.click('.csv-stats-btn')
             stats_off = not csv_state()['statsShown'] and page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.csv_stats)") is False
@@ -2923,10 +2932,10 @@ def run(headed: bool) -> None:
                   f"표 행의 우클릭 '이 줄 복사'는 원문 줄, '통계' 버튼(설정에 저장), '첫 줄은 머리행' 끄면 A·B… ({row_hint!r}, {stats_off}, {c3['head']}, {c3['count']})")
             enc = {}
             for path in ('data/excel.csv', 'data/memo.txt', 'data/uni.txt'):
-                page.locator(f'#lec-others-list .row[data-path="{path}"]').click()
+                page.locator(f'#lec-others-list .row[data-path="{path}"]').click(modifiers=['Alt'])
                 wait_until(page, f"document.querySelector('#lec-view').dataset.codePath === '{path}' && !!document.querySelector('#lec-view .cv-line')", 8000)
                 enc[path] = csv_state()
-            page.locator('#lec-tree .row.file[data-doc="README.md"]').click()
+            page.locator('#lec-tree .row.file[data-doc="README.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("표 시험")')
             page.locator('#lec-view a', has_text='월별 가격').click()
             by_link = wait_until(page, "document.querySelector('#lec-view').dataset.codePath === 'data/prices.csv' && !!document.querySelector('#lec-view .csv-table')", 8000)
@@ -2939,7 +2948,7 @@ def run(headed: bool) -> None:
                   and enc['data/uni.txt']['text'] == '유니코드 텍스트' and 'UTF-16' in enc['data/uni.txt']['info'] and by_link and to_line,
                   f"엑셀 CSV(CP949)·CP949·UTF-16 txt 도 읽고, 문서 속 csv 링크·`경로:줄`은 표의 그 행으로 ({enc['data/excel.csv']['head']}, {enc['data/memo.txt']['info']}, {by_link}, {to_line})")
             print('[엑셀 보기]')   # D77 — xlsx 를 한 번 누르면 csv 같은 표(시트 탭·열 글자·표시 형식·수식 풍선), 우클릭은 칸·행 복사와 시트가 든 Claude용 위치, 보기만
-            page.locator('#lec-others-list .row[data-path="data/가격.xlsx"]').click()
+            page.locator('#lec-others-list .row[data-path="data/가격.xlsx"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view.csv-view .xl-sheet')
             xl = lambda: page.evaluate("""() => { const v = document.querySelector('#lec-view');
               return { tabs: [...v.querySelectorAll('.xl-sheet')].map(b => b.textContent + (b.getAttribute('aria-pressed') === 'true' ? '*' : '')),
@@ -2949,13 +2958,13 @@ def run(headed: bool) -> None:
                 edit: document.querySelector('#lec-st-edit').hidden }; }""")
             x1 = xl()
             cell_menu = menu(page.locator('#lec-view tr.cv-line', has_text='니켈').locator('td').nth(2))
-            copied = choose('Claude용 위치 복사')
+            copied = choose('위치 복사')
             page.locator('#lec-view .xl-sheet', has_text='메모').click()
             wait_until(page, "document.querySelector('#lec-view .xl-sheet[aria-pressed=\"true\"]')?.textContent === '메모'", 5000)
             x2 = xl()
             page.locator('#lec-view tr.cv-line').first.click()
             page.keyboard.press('Shift+Enter')
-            page.keyboard.press('Shift+Enter')   # 한 줄 편집은 하지 않는다 — 보기만
+            page.keyboard.press('F2')   # 한 줄 편집은 하지 않는다 — 보기만
             told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('엑셀 보기는 보기만')", 3000)
             page.keyboard.press('Escape')
             page.evaluate("document.querySelector('#lec-toast').textContent = ''")
@@ -2966,7 +2975,7 @@ def run(headed: bool) -> None:
             check(x1['tabs'] == ['1분기*', '메모'] and x1['head'] == ['A품목', 'B가격', 'C증감', 'D날짜']
                   and x1['rows'] == ['2|구리|8,950|5.30%|2023-03-15', '3|니켈|16,800|-1.90%|2023-04-15', '5|합계|25,750||']
                   and x1['formula'] == ['수식: =SUM(B2:B3)'] and x1['info'].startswith("엑셀 · '1분기' 시트 · 3행 · 4열") and x1['edit']
-                  and '이 칸 복사' in cell_menu and 'B3 · 16,800' in cell_menu and '여기를 편집' not in cell_menu
+                  and '이 칸 복사' in cell_menu and 'B3 · 16,800' in cell_menu and '여기서 편집' not in cell_menu
                   and copied == "@data/가격.xlsx '1분기' 시트 3행" and x2['rows'] == ['2|둘째 시트'] and x2['head'] == ['B'] and told,
                   f"엑셀(xlsx)을 한 번 누르면 표 — 시트 탭·열 글자·자리 쉼표·%·날짜·수식 풍선, 칸 우클릭은 칸 복사·'시트'가 든 Claude용 위치, 다른 시트, 보기만 "
                   f"({x1['head']}, {x1['rows']}, {copied!r}, {x2['rows']}, {told})")
@@ -2984,7 +2993,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-parts-list .pt-item[data-doc="caps.md"]').first.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden]) .menu-row')
             cap_menu = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-menu .menu-row')].map(r => r.querySelector('button[data-i] span').textContent),
-              ref: [...document.querySelectorAll('#lec-menu .menu-row')].find(r => r.textContent.includes('Claude용 위치'))?.querySelector('small').textContent,
+              ref: [...document.querySelectorAll('#lec-menu .menu-row')].find(r => r.textContent.includes('위치 복사'))?.querySelector('button').title,
               terms: document.querySelectorAll('#lec-menu .menu-term').length })''')
             shot('22-parts-caption')
             page.keyboard.press('Escape')
@@ -2998,7 +3007,7 @@ def run(headed: bool) -> None:
             page.click('.side-tabs button[data-tab="files"]')
             check(cap_tables == [['〈표 Ⅱ-15〉 철재의 HS코드', '표 1 · 1행 2열'], ['표 1. 항만별 물동량', '표 2 · 1행 2열'], ['표 3', 'a·b · 1행 2열']]
                   and cap_figs == ['[그림 1] 분기별 가격 범위', '나만']
-                  and cap_menu['rows'][:2] == ['Claude용 위치 복사', '원문 복사'] and cap_menu['ref'] == "@caps.md 3~7행 ('〈표 Ⅱ-15〉 철재의 HS코드')"
+                  and cap_menu['rows'][:2] == ['원문 복사', '위치 복사'] and cap_menu['ref'] == "@caps.md 3~7행 ('〈표 Ⅱ-15〉 철재의 HS코드')"
                   and cap_menu['terms'] >= 2,
                   f"모아 보기: 캡션(굵은 〈표 Ⅱ-15〉·'표 1.'·그림 아래 [그림 1])이 이름, 없으면 머리행·대체 글. 우클릭은 Claude용 위치(줄·캡션)·원문 복사와 터미널 버튼 "
                   f"({cap_tables}, {cap_figs}, {cap_menu})")
@@ -3052,7 +3061,7 @@ def run(headed: bool) -> None:
             not_open = page.locator('#lec-insert-list li.ins-doc').count() == 0 and page.locator('#lec-insert-list li.note').count() == 1
             page.keyboard.press('Escape')
             page.click('.side-tabs button[data-tab="files"]')
-            page.locator('#lec-tree .row[data-doc="README.md"]').click(modifiers=['Control'])   # 문서 탭으로 열어야 받는 곳이 된다
+            page.locator('#lec-tree .row[data-doc="README.md"]').click()   # 문서 탭으로 열어야 받는 곳이 된다
             wait_until(page, "document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === 'README.md'", 10000)
             page.click('.side-tabs button[data-tab="basket"]')
             page.click('#lec-basket-insert')
@@ -3116,7 +3125,7 @@ def run(headed: bool) -> None:
             page.click('.side-tabs button[data-tab="files"]')
 
             print('[이름 바꾸기]')   # D66 — 파일 우클릭 '이름 바꾸기…'·F2: 같은 폴더 안에서 이름만, 보던 문서 탭·담은 조각이 새 이름으로
-            page.locator('#lec-tree .row[data-doc="data/메모.md"]').click()
+            page.locator('#lec-tree .row[data-doc="data/메모.md"]').click(modifiers=['Alt'])
             on_doc = lambda path: wait_until(page, f"document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === '{path}'", 10000)
             on_doc('data/메모.md')
             page.locator('#lec-tree .row[data-doc="data/메모.md"]').focus()
@@ -3129,7 +3138,7 @@ def run(headed: bool) -> None:
             doc_moved = on_doc('data/메모-고침.md') and wait_until(page, "!!document.querySelector('#lec-tree .row[data-doc=\"data/메모-고침.md\"]')", 10000)
             disk = (tables / 'data' / '메모-고침.md').exists() and not (tables / 'data' / '메모.md').exists()
             if not page.locator('#lec-others-list .row[data-path="data/memo.txt"]').count():
-                page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click()
+                page.locator('#lec-others-list .row[data-path="data"] [data-toggle]').click(modifiers=['Alt'])
             page.locator('#lec-others-list .row[data-path="data/memo.txt"]').click(button='right')
             page.locator('#lec-menu button[data-i]', has_text='이름 바꾸기').click()
             page.fill('#lec-rename-input', 'uni.txt')   # 같은 이름 — 바꾸지 않고 까닭
@@ -3155,7 +3164,7 @@ def run(headed: bool) -> None:
                 + '\n## 보통 표\n\n| 이름 | 설명 |\n|---|---|\n| a | 짧은 설명 |\n'
                 '| b | 아주 긴 설명이 들어가는 칸입니다. 이 칸은 내용이 길어서 여러 줄로 감기는 것이 자연스럽습니다. 첫 열은 짧습니다. |\n', encoding='utf-8')
             page.wait_for_selector('#lec-tree .row[data-doc="wide.md"]', timeout=10000)
-            page.locator('#lec-tree .row[data-doc="wide.md"]').click()
+            page.locator('#lec-tree .row[data-doc="wide.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("폭 시험")')
             tables_state = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-view .table-wrap > table')].map(t => {
               const lh = parseFloat(getComputedStyle(t.querySelector('td')).lineHeight);
@@ -3188,19 +3197,20 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1')
 
             print('[문서 탭]')   # D64 — Ctrl+누르기·가운데 버튼으로 새 탭, 열린 문서는 그 탭으로, Alt+n·Ctrl+F4, 편집 상자는 탭마다
+            solo()
             dt = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-doctab-list .doc-tab')]
               .map(t => (t.classList.contains('active') ? '*' : '') + t.dataset.path)''')   # 이름은 '제목' 버튼에 따라 — 경로로 본다
             on_tab = lambda path: wait_until(page, f"document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === '{path}'", 10000)
             plan_doc = work / 'plans' / '구현-계획.md'
             plan_before = plan_doc.read_bytes()
             d0 = dt()
-            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click(modifiers=['Control'])
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click()
             on_tab('docs/02-수식과-달러.md')
-            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click(button='middle')
+            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click()
             on_tab('plans/구현-계획.md')
             d1 = dt()
             shot('25-doctabs')
-            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click()   # 이미 열린 문서 — 그 탭으로
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click(modifiers=['Alt'])   # 이미 열린 문서 — 그 탭으로
             on_tab('docs/02-수식과-달러.md')
             d2 = dt()
             page.keyboard.press('Alt+1')
@@ -3228,7 +3238,7 @@ def run(headed: bool) -> None:
                   f"문서 탭: Ctrl+누르기·가운데 버튼으로 새 탭(지금 탭 오른쪽), 열린 문서는 그 탭으로, Alt+n, 편집 상자는 탭마다(● — 돌아오면 편집기에 초점), Ctrl+F4 로 닫기 ({d0} → {d1} → {d2} → {d3})")
             # 문서 탭 우클릭은 탭 메뉴 (본문 메뉴가 덮지 않게 — 문서 탭 줄은 #lec-panes 안), 다른 탭에서 편집 중인 파일의 줄로 가면
             # 그 탭의 편집기가 그 줄로 (다시 그리며 편집을 닫거나 버릴지 묻지 않게)
-            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click(modifiers=['Control'])
+            page.locator('#lec-tree .row[data-doc="plans/구현-계획.md"]').click()
             on_tab('plans/구현-계획.md')
             page.locator('#lec-doctab-list .doc-tab').first.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])')
@@ -3413,7 +3423,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-view h1').first.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])')
             term_btns = page.locator('#lec-menu .menu-term').count()
-            page.locator('#lec-menu .menu-row', has_text='Claude용 위치 복사').locator('.menu-term').click()
+            page.locator('#lec-menu .menu-row', has_text='위치 복사').locator('.menu-term').click()
             pasted = term_has(f'@{doc_path} ')
             in_term = page.evaluate("!!document.activeElement?.closest('#lec-term')")
             told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('번 터미널에 넣었습니다')", 3000)   # 넣었다는 알림
@@ -3652,9 +3662,10 @@ def run(headed: bool) -> None:
                   f"하나 남은 터미널에도 ×, 누르면 셸을 끝내고 패널을 감춤·알림, 다시 열면 새 셸로 1번 ({lone_x}, {ended}, {left_shells}, {renewed}, {old_screen})")
 
             print('[모두 펼치기]')   # D73 — 문서 탭 줄 ▦: 문서 탭들과 터미널(오른쪽 아래)을 창 전체 격자로, 칸 누르기, 고르지 않은 칸도 자동 새로고침, 끄면 원래대로
-            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click(modifiers=['Control'])
+            solo()
+            page.locator('#lec-tree .row[data-doc="docs/02-수식과-달러.md"]').click()
             on_tab('docs/02-수식과-달러.md')
-            page.locator('#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]').click(modifiers=['Control'])
+            page.locator('#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]').click()
             on_tab('docs/04-HTML-보고서.html')
             page.click('#lec-doctab-spread')
             spread_term = term_has('PS ', 20000)
@@ -3699,6 +3710,7 @@ def run(headed: bool) -> None:
                   f"모두 펼치기: 문서 탭 3개 + 오른쪽 아래 터미널(2×2), 사이드바·목차 감춤, 칸 머리·html 칸 안을 누르면 그 탭, 고르지 않은 칸도 바로 다시 그림, 끄면 원래대로·펼치며 연 터미널은 감춤 ({spread}, {first_pick}, {html_pick}, {redrawn}, {after_spread})")
 
             print('[터미널 모음]')
+            solo()
             def tile_has(name: str, text: str, ms: int = 20000) -> bool:
                 try:
                     page.wait_for_function('''([name, t]) => { const tile = [...document.querySelectorAll('.g-tile')]
@@ -3837,7 +3849,7 @@ def run(headed: bool) -> None:
             f1 = wait_until(page, "!document.querySelector('#lec-help').hidden")
             page.keyboard.press('Control+p')
             page.fill('#lec-palette-input', '우선순위')
-            page.keyboard.press('Enter')
+            page.keyboard.press('Alt+Enter')
             to_doc = wait_until(page, "document.querySelector('#lec-view h1')?.textContent.includes('우선순위') && document.querySelector('#lec-help').hidden")
             page.keyboard.press('F1')
             again = wait_until(page, "!document.querySelector('#lec-help').hidden")
@@ -3846,7 +3858,7 @@ def run(headed: bool) -> None:
             check(f1 and to_doc and again and by_tab, 'F1 로 설명서, 문서를 열거나(Ctrl+P) 프로젝트 탭을 누르면 닫힘')
 
             print('[인쇄]')
-            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click()
+            page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             items = menu(page.locator('#lec-content'), position={'x': 30, 'y': 420})
             page.keyboard.press('Escape')
@@ -3944,6 +3956,11 @@ def run_english(headed: bool) -> None:
             context = browser.new_context(viewport={'width': 1440, 'height': 900}, locale='en-US',
                                           permissions=['clipboard-read', 'clipboard-write'])
             page = context.new_page()
+
+            def solo():
+                """앞 점검이 새 문서 탭에서 연 것을 닫는다 — 문서 탭 하나로 시작하는 점검 앞에"""
+                page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
+                  for (const p of [...S.tab.panes]) if (p !== S.tab.pane) d.closeDocTab(p); }""")
             page.on('pageerror', lambda e: errors.append(str(e)))
             page.route('**/api/open-external', lambda r: r.fulfill(status=200, content_type='application/json', body='{"action":"editor"}'))
             shot = lambda name: page.screenshot(path=str(SHOTS / f'{name}.png'))
@@ -3961,7 +3978,7 @@ def run_english(headed: bool) -> None:
             check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Elements', 'Clip']
                   and ui['sub'] == '3 documents, 1 folder' and ui['when'] == 'just now',
                   f'설정 language: en 이면 화면이 영어 — 툴바·사이드바 탭·개수(복수형)·날짜 ({ui})')
-            page.locator('#lec-tree .row.file', has_text='README').click()
+            page.locator('#lec-tree .row.file', has_text='README').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("Demo project")')
             doc = page.evaluate('''() => ({ alert: !!document.querySelector('#lec-view blockquote.alert') && !document.querySelector('#lec-view .alert-title'),
               copy: document.querySelector('#lec-view .code-copy')?.textContent, toc: document.querySelector('#lec-toc .toc-head')?.textContent,
@@ -3970,7 +3987,7 @@ def run_english(headed: bool) -> None:
             scan('문서')
             page.locator('#lec-view p', has_text='overview paragraph').click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])')
-            menu = page.locator('#lec-menu').inner_text()
+            menu = page.locator('#lec-menu').inner_text() + page.evaluate("[...document.querySelectorAll('#lec-menu [title]')].map((b) => b.title).join(' ')")
             scan('본문 우클릭')
             page.keyboard.press('Escape')
             check(doc['alert'] is True and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
@@ -4012,8 +4029,8 @@ def run_english(headed: bool) -> None:
             wait_until(page, "!!document.querySelector('#lec-recent .row[data-file$=\".py\"]')", 8000)
             scan('최근 변경')
             page.locator('.side-tabs button[data-tab="files"]').click()
-            page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click()
-            page.locator('#lec-code-list .row[data-path="code/app.py"]').click()
+            page.locator('#lec-code-list .row[data-path="code"] [data-toggle]').click(modifiers=['Alt'])
+            page.locator('#lec-code-list .row[data-path="code/app.py"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view.code-view .cv-line')
             code = page.evaluate("[document.querySelector('.cv-editor').textContent, document.querySelector('#lec-st-info').textContent]")
             scan('코드 화면')
@@ -4021,7 +4038,7 @@ def run_english(headed: bool) -> None:
             scan('코드 우클릭')
             page.keyboard.press('Escape')
             check(spot.startswith('Turn off focus') and search.startswith('3 documents·1 code file, ')
-                  and parts[0].startswith('Tables') and parts[1] == '1 document, 1 table' and code[0] == 'Open in editor',
+                  and parts[0].startswith('Tables') and parts[1] == '1 document, 1 table' and code[0] == 'Open in external editor',
                   f'영어 글의 복수형·이름 — 장 하이라이트 설명, 검색 개수, 모아 보기 종류·개수, 코드 화면 ({spot[:40]}, {search}, {parts}, {code})')
             page.keyboard.press('Control+Comma')
             lang_radio = page.evaluate("document.querySelector('#lec-settings input[name=\"language\"]:checked')?.value")
@@ -4054,7 +4071,7 @@ def run_english(headed: bool) -> None:
             check(not leftover, '영어 화면에 남은 한글 없음 — 개요·문서·우클릭·찾기·빠른 열기·검색·모아 보기·코드·설정·단축키·설명서·터미널 모음'
                   + (f': {leftover}' if leftover else ''))
             check(lang_radio == 'en' and guide[0] == 'Lectern User Guide' and guide[1] >= 40
-                  and code[0] == 'Open in editor' and code[1].startswith('Python · 6 lines'),
+                  and code[0] == 'Open in external editor' and code[1].startswith('Python · 6 lines'),
                   f'설정 창에 English 가 골라져 있고, 영어 사용설명서(단축키 표 포함)·코드 화면 ({lang_radio}, {guide}, {code})')
             check(all(x <= 0 for v in widths.values() for x in v), f'영어 글자로도 툴바·탭 막대·사이드바 탭이 넘치지 않음 (720·1060px: {widths})')
             page.keyboard.press('Control+Comma')

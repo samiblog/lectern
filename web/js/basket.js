@@ -11,9 +11,9 @@
 //   넣고, 저장은 사용자가 한다(Ctrl+S). 다듬는 것(경로·각주·제목 수준·담은 곳 주석)은 snippet.js.
 // - 새로 만들기(askNewDoc — 문서 탭 줄의 +·Ctrl+N·폴더 우클릭)도 이 창의 '새 문서' 단계를 쓴다.
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getText } from './api.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { openTarget, openDocs } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
@@ -346,20 +346,24 @@ function rowMenu(el, x, y) {
   const items = basketOf();
   const i = items.indexOf(sn);
   /** @type {MenuItem[]} */
-  const menu = [{ header: `${sn.label || sn.name} · ${sn.path}` },
-    { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => goToSource(sn) }];
-  if (editingDoc()) menu.push({ label: t('커서 자리로 보내기'), hint: editingDoc().path, action: () => putAtCursor([sn]) });
-  menu.push({ label: t('문서로 보내기…'), hint: t('열린 문서 탭이나 새 문서로'), action: () => sendSnippets([sn]) },
-    { label: t('원문 복사'), hint: sn.lines ? `${sn.path} ${rangeText(sn.lines)}` : '', action: async () => toast(await copyText(sn.text) ? t('복사했습니다: {what}', { what: clip(sn.label || sn.name, 30) }) : t('복사하지 못했습니다')), term: sn.text },
-    '-');
-  if (i > 0) menu.push({ label: t('위로'), hint: 'Alt+↑', action: () => move(sn, -1) });
-  if (i < items.length - 1) menu.push({ label: t('아래로'), hint: 'Alt+↓', action: () => move(sn, 1) });
-  menu.push({ label: t('빼기'), hint: 'Delete', action: () => remove(sn) });
+  const sends = [];
+  if (editingDoc()) sends.push({ label: t('커서 자리로 보내기'), tip: editingDoc().path, action: () => putAtCursor([sn]) });
+  sends.push({ label: t('문서로 보내기…'), tip: t('열린 문서 탭이나 새 문서로'), action: () => sendSnippets([sn]) },
+    { label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body: sn.text, path: sn.path, line: sn.lines?.[0] || 0, end: sn.lines?.[1] || 0 }) });
+  /** @type {MenuItem[]} */
+  const moves = [];
+  if (i > 0) moves.push({ label: t('위로'), hint: 'Alt+↑', action: () => move(sn, -1) });
+  if (i < items.length - 1) moves.push({ label: t('아래로'), hint: 'Alt+↓', action: () => move(sn, 1) });
+  const copyItem = { label: t('원문 복사'), tip: sn.lines ? `${sn.path} ${rangeText(sn.lines)}` : '', term: sn.text,
+    action: async () => toast(await copyText(sn.text) ? t('복사했습니다: {what}', { what: clip(sn.label || sn.name, 30) }) : t('복사하지 못했습니다')) };
+  const menu = menuGroups([{ header: `${sn.label || sn.name} · ${sn.path}` }], [{ label: t('문서에서 보기'), hint: 'Enter', action: () => goToSource(sn) }],
+    [copyItem], sends, moves, [{ label: t('빼기'), hint: 'Delete', action: () => remove(sn) }]);
   el.classList.add('lec-picked');
   showMenu(x, y, menu, () => el.classList.remove('lec-picked'));
 }
 
 export function initBasket() {
+  on('note-send', ({ text, label }) => sendSnippets([snippetOf({ path: '.lectern/notes.md', lines: [] }, null, { kind: 'text', name: t('메모'), label, text, plain: true })]));   // 메모를 문서로 (D92)
   const list = $('#lec-basket-list');
   list.addEventListener('click', (e) => {
     const el = e.target.closest('.bk-item');

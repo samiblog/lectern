@@ -217,6 +217,7 @@ async function pasteFromClipboard(term) {
 function keyFor(term, e) {
   if (e.type !== 'keydown') return true;
   if (e.key === 'F6') return false;   // 문서 ↔ 터미널 (main.js, D79)
+  if (e.altKey && !e.ctrlKey && !e.shiftKey && e.code === 'KeyM') return false;   // 메모 (main.js, D92)
   const ctrl = e.ctrlKey && !e.altKey && !e.metaKey;
   if (ctrl && (e.code === 'Backquote' || e.key === 'Tab')) return false;     // 패널 열고 닫기, 다음·이전 탭 (main.js)
   if (ctrl && e.code === 'KeyC' && (e.shiftKey || term.xterm.hasSelection())) {   // 고른 글 복사 (없으면 Ctrl+C 는 셸로 — 중단)

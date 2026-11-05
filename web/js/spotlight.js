@@ -345,12 +345,12 @@ function highlightHere() {
 }
 
 /** F2: 현재 줄을 한 줄 편집 (D76) — 한 줄만 하이라이트했으면 그 줄. 여러 줄이면 어느 줄인지 몰라 알리기만 한다 */
-function editHere() {
+export function editHere() {
   if (!linesOn()) return false;
   const us = units();
   const ix = ranged() ? litIndexes(us) : null;
   if (ix && ix[0] !== ix[1]) {
-    toast(t('한 줄 편집은 한 줄만 고칩니다 — Shift+Enter 로 현재 줄만 남기고 F2 를 누르세요'));
+    toast(t('한 줄 편집은 한 줄만 고칩니다 — 하이라이트를 풀고 F2 를 누르세요'));
     return true;
   }
   const i = ix ? ix[0] : hereIndex(us);
@@ -639,6 +639,29 @@ export function moveSpotlight(step) {
 }
 
 /** 툴바 버튼: 장 하이라이트를 켜고 끈다 — 장이 없는 문서·코드 화면이면 현재 줄을 하이라이트. 끄면 줄 하이라이트도 끈다 */
+/** 하이라이트가 한 줄뿐인지 — 우클릭 메뉴의 '여기서 편집' (F2 와 같다) */
+export function litOneLine() {
+  if (!ranged()) return false;
+  const ix = litIndexes(units());
+  return !!ix && ix[0] === ix[1];
+}
+
+/** Alt+H: 장 하이라이트 켜고 끄기 — 툴바 버튼을 쓸 수 있을 때만 (D91) */
+export function spotButton() {
+  if ($('#lec-btn-spot').disabled) return false;
+  toggleSpotlight();
+  return true;
+}
+
+/** Shift+F10: 현재 줄의 화면 위치 {x, y} — 없으면 null */
+export function herePoint() {
+  const us = linesOn() ? units() : [];
+  const i = hereIndex(us);
+  if (i < 0) return null;
+  const root = view();
+  return { x: root.getBoundingClientRect().left + 40, y: baseOf(root) + us[i].top + 8 };
+}
+
 export function toggleSpotlight(want = !lit()) {
   if (!want) {
     active = false;
@@ -673,7 +696,8 @@ export function spotlightItems(target) {
     if (!spotlightOn() || (i >= 0 && i !== current)) {
       items.push({
         label: i >= 0 ? t('이 장 하이라이트') : t('장 하이라이트'),
-        hint: t('나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장'),
+        hint: 'Alt+H',
+        tip: t('나머지는 흐리게 — ↑·↓·PageUp·PageDown 으로 앞뒤 장'),
         action: () => select(i >= 0 ? i : chapterAtTop()),
       });
     }
@@ -711,6 +735,10 @@ export function spotKey(e) {
   const k = e.key;
   if (e.ctrlKey) {
     if (e.shiftKey && k === 'ArrowRight') return sendAndGo();
+    if (!e.shiftKey && (e.code === 'KeyL' || k.toLowerCase() === 'l')) {   // 현재 줄 하이라이트, 거듭 누르면 아래로 넓힘 (D91)
+      if (!linesOn()) return false;
+      return ranged() ? extend(1) : highlightHere();
+    }
     if (!e.shiftKey && (e.code === 'KeyX' || k.toLowerCase() === 'x') && ranged() && !getSelection()?.toString()) {   // 잘라내기 (lineedit.js, D83)
       emit('line-delete', { cut: true });
       return true;
@@ -721,14 +749,10 @@ export function spotKey(e) {
   }
   if (e.shiftKey) {
     if (!linesOn() && !lit()) return false;
-    if (k === 'Enter') {
-      const us = ranged() ? units() : [];
-      const ix = us.length ? litIndexes(us) : null;
-      if (ix && ix[0] === ix[1]) {   // 한 줄만 하이라이트 — 한 줄 편집 (lineedit.js, D76)
-        emit('line-edit', us[ix[0]]);
-        return true;
-      }
-      return highlightHere();
+    if (k === 'Enter') {   // 현재 줄 하이라이트 켜고 끄기 (D91 — 편집은 F2)
+      if (!ranged()) return highlightHere();
+      toggleSpotlight(false);
+      return true;
     }
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
     if (k === 'ArrowRight') sendLit(true);

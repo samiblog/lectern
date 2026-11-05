@@ -7,11 +7,11 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen } from './spotlight.js';
+import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
 import { initQuickChart, closeChart } from './quickchart.js';
-import { initTextSize } from './textsize.js';
+import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
 import { initDocMenu } from './docmenu.js';
@@ -41,7 +41,8 @@ import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, focusTermina
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert, askNewDoc } from './basket.js';
 import { initRename, closeRename } from './rename.js';
-import { initDocTabs, docTabAt, closeDocTab } from './doctabs.js';
+import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab } from './doctabs.js';
+import { initNotes, toggleNotes, closeNotes } from './notes.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
@@ -171,6 +172,17 @@ const typing = (e) => e.target.closest?.('input, textarea, select, [contentedita
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 
+/** Shift+F10·메뉴 키: 초점이 있는 행, 없으면 현재 줄에서 우클릭한 것처럼 */
+function menuHere() {
+  const row = document.activeElement?.closest?.('.row, [role="tab"], .sr-hit, .sr-name, .pt-item, .bk-item');
+  const box = row?.getBoundingClientRect();
+  const at = box ? { x: box.left + 24, y: box.top + box.height / 2 } : herePoint();
+  const target = at && (row || document.elementFromPoint(at.x, at.y));
+  if (!target) return false;
+  target.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, button: 2, clientX: at.x, clientY: at.y }));
+  return true;
+}
+
 function bindKeys() {
   document.addEventListener('keydown', (e) => {
     if (presenting()) {   // 발표 중(present.js, D59): 키는 모두 발표의 것 — 넘기기·노트·전체 화면·Esc
@@ -182,6 +194,11 @@ function bindKeys() {
     if (e.key === 'F6' && !mod && !e.altKey) {   // 문서 ↔ 터미널 — 터미널·편집기·한 줄 편집 안에서도 (terminal.js 의 keyFor, lineedit.js 의 onKey)
       e.preventDefault();
       hopFocus();
+      return;
+    }
+    if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyM') {   // 메모 열고 닫기 — 터미널·편집기 안에서도 (terminal.js 의 keyFor, D92)
+      e.preventDefault();
+      toggleNotes();
       return;
     }
     if (mod && !e.altKey && e.code === 'Backquote') {   // 터미널 열고 닫기 (터미널 안에서도), Shift 와 함께면 터미널 모음
@@ -209,8 +226,8 @@ function bindKeys() {
     // 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등). 다음·이전 탭(Ctrl+Tab)만 앱이 받는다 — terminal.js 의 keyFor
     if (inTerminal(e) && !(mod && e.key === 'Tab')) return;
     // 편집 상자 안의 키는 편집기 것이다 (Ctrl+F 찾기·Ctrl+S 저장·Esc 닫기 등 — editor.js). 탭 옮기기·편집 닫기(Ctrl+E)·문서 열기·도움말,
-    // 문서 탭(Alt+1~9·Ctrl+F4 — D64·D67)만 앱이
-    const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) || (mod && !e.altKey && !e.shiftKey && e.key === 'F4');
+    // 문서 탭(Alt+1~9·Ctrl+W·Ctrl+F4·Ctrl+T — D64·D67·D91)만 앱이
+    const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) || (mod && !e.altKey && (key === 'w' || key === 't' || (!e.shiftKey && e.key === 'F4')));
     if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || key === 'n' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
     if (mod && !e.shiftKey && !e.altKey && key === 'e') {   // 편집 모드 열고 닫기 (D54)
       e.preventDefault();
@@ -239,19 +256,34 @@ function bindKeys() {
     } else if (mod && key === 'b') {
       e.preventDefault();
       toggleSidebar();
-    } else if (mod && !e.shiftKey && key === 'w') {   // 탭 닫기 (브라우저 탭처럼)
+    } else if (mod && !e.altKey && key === 'w') {   // 문서 탭 닫기, Shift 와 함께면 프로젝트 탭 (D91 — 안쪽 탭이 보편 키를 갖는다)
       e.preventDefault();
-      closeCurrentTab();
-    } else if (mod && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 탭
+      if (e.shiftKey) closeCurrentTab();
+      else closeDocTabKey();
+    } else if (mod && !e.altKey && key === 't') {   // 새 문서 탭, Shift 와 함께면 닫은 문서 탭 다시 열기 (D91)
       e.preventDefault();
-      cycleTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
+      if (e.shiftKey) reopenDocTab();
+      else if (S.tab) openPalette({ newTab: true });
+    } else if (mod && !e.altKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 문서 탭 (D91)
+      e.preventDefault();
+      cycleDocTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
+    } else if (e.altKey && !mod && !e.shiftKey && (e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 프로젝트 탭 (D91)
+      e.preventDefault();
+      cycleTab(e.key === 'PageUp' ? -1 : 1);
+    } else if (mod && !e.altKey && !e.shiftKey && key === 'g') {   // 줄로 가기 (D91 — 편집 상자 안은 편집기의 것)
+      e.preventDefault();
+      if (S.view?.type === 'doc' || S.view?.type === 'code') openPalette({ query: ':' });
+    } else if (mod && !e.altKey && !e.shiftKey && (e.key === '=' || e.key === '+' || e.key === '-' || e.key === '0') && !typing(e)) {   // 문서 글자 크기 (D91)
+      e.preventDefault();
+      if (e.key === '0') resetText();
+      else stepText(e.key === '-' ? -1 : 1);
     } else if (mod && !e.shiftKey && !e.altKey && /^[1-9]$/.test(e.key)) {   // Ctrl+1~8: 그 탭, Ctrl+9: 마지막 탭
       if (selectTabAt(Number(e.key))) e.preventDefault();
     } else if (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) {   // Alt+1~8: 그 순번의 문서 탭, Alt+9: 마지막 문서 탭 (D64·D67)
       if (docTabAt(Number(e.key))) e.preventDefault();
-    } else if (mod && e.key === 'F4') {   // 문서 탭 닫기 (D64 — 프로젝트 탭은 Ctrl+W)
+    } else if (mod && e.key === 'F4') {   // 문서 탭 닫기 (Ctrl+W 와 같다)
       e.preventDefault();
-      closeDocTab();
+      closeDocTabKey();
     } else if (e.altKey && e.key === 'ArrowLeft') {
       e.preventDefault();
       back();
@@ -278,10 +310,14 @@ function bindKeys() {
       e.preventDefault();   // 하이라이트한 줄 옮기기 (lineedit.js, D83)
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyL' && !typing(e) && toggleLineNumbers()) {
       e.preventDefault();   // 줄 번호 (linenums.js, D80)
+    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyH' && !typing(e) && spotButton()) {
+      e.preventDefault();   // 장 하이라이트 (spotlight.js, D91)
+    } else if (((e.key === 'F10' && e.shiftKey && !mod && !e.altKey) || e.key === 'ContextMenu') && !typing(e) && menuHere()) {
+      e.preventDefault();   // 초점이 있는 곳이나 현재 줄의 우클릭 메뉴 (D91)
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -351,6 +387,7 @@ async function boot() {
   initTerminal();
   initEditor();
   initDocTabs();
+  initNotes();
   initBasket();
   initRename();
   initSlides();

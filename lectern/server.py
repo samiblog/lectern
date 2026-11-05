@@ -17,7 +17,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, osutil, sheet, styles, terminal
+from . import __version__, editing, i18n, notes, osutil, sheet, styles, terminal
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -493,6 +493,26 @@ def create_app(state: AppState) -> Flask:
         if target.exists():
             return jsonify(error=t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요'), status=409)
         return jsonify(path=target.relative_to(project.root).as_posix())
+
+    @app.get('/api/notes')
+    def api_notes() -> Any:
+        """?p= — 프로젝트 메모의 글 (D92 — .lectern/notes.md, 없으면 만들지 않고 빈 글). {text, hash, exists}"""
+        try:
+            return jsonify(notes.read_notes(arg_project().root))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/notes')
+    def api_notes_save() -> Any:
+        """{p, text, hash} — 프로젝트 메모를 쓴다. 경로는 정해져 있다. 그사이 바뀌었으면 409. {hash, size}"""
+        data = body()
+        text = data.get('text')
+        if not isinstance(text, str):
+            abort(400)
+        try:
+            return jsonify(notes.save_notes(project_of(data.get('p')).root, text, data.get('hash')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
 
     @app.post('/api/rename')
     def api_rename() -> Any:

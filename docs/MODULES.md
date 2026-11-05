@@ -26,6 +26,8 @@
 | codeview.js | 코드 읽기 화면 (D43) — 코드 파일을 줄 번호·언어 색(highlight.js)으로, 보는 동안 수정 시각을 보고 다시 그림, '편집기로 열기'·'전체 복사'. 자료 파일(csv·tsv·txt·log, D60)도 — UTF-16·CP949 로도 읽고, csv·tsv 는 csvview.js 의 표 |
 | csvview.js | CSV 표 (D60) — 머리행 어림, 열마다 거르기(`matcherOf`)·머리행 정렬·통계 줄(`statsOf`), 행은 `tr.cv-line[data-line]`(원문 줄). 요약 줄·계산 열(`st.calcs`, 열 머리 메뉴 `columnMenu`)·표 영역(`pickRegion`·`drawRegions`·`markRange`)·지금 보이는 표(`shownTable`) — D86 |
 | outline.js | 코드 화면의 목차 — 언어마다 클래스·함수·메서드·구분 주석, 설정 파일은 키·섹션 (줄 단위 규칙), 확장자 → 언어 |
+| notes.js | 프로젝트 메모 (D92) — 탭 막대 '메모'·Alt+M 의 오른쪽 패널, 카드(제목·본문·할 일·색·고정), 저장과 합치기. `tab.notes`, 'new-note' 로 더한다 |
+| notesdata.js | 메모의 글 (D92, DOM 없음) — `.lectern/notes.md` ↔ 메모 목록, 할 일 줄 다루기 (`parseNotes`·`writeNotes`·`toggleTask`) |
 | html.js | 자동 이스케이프 (D89, DOM 없음) — `html` 태그의 값은 글로 들어간다. 화면에 넣는 길은 `setHtml`·`addHtml`, 이미 안전한 HTML 은 `raw`, 결과는 `Safe`. 조각은 배열로 잇는다 |
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
 | help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |

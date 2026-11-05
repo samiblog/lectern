@@ -104,7 +104,7 @@ try:
         check(f'tabledata.js 표 점검 {res["n"]}개', not res['fails'], res['fails'][:6])
 
         print('[문서의 표]')
-        page.locator('#lec-tree .row.file[data-doc="tables.md"]').click()
+        page.locator('#lec-tree .row.file[data-doc="tables.md"]').click(modifiers=['Alt'])
         page.wait_for_selector('#lec-view h1:has-text("표 문서")')
         settle()
         tables = page.locator('#lec-view table')
@@ -230,7 +230,7 @@ try:
         page.locator('.csv-calc-x').first.click()
         settle(150)
         check('× 로 뺌', page.locator('.csv-head th.csv-calc').count() == 1)
-        page.locator('#lec-tree .row.file[data-doc="tables.md"]').click()
+        page.locator('#lec-tree .row.file[data-doc="tables.md"]').click(modifiers=['Alt'])
         page.wait_for_selector('#lec-view h1:has-text("표 문서")')
         data('monthly.csv')
         check('파일을 다시 열면 계산 열은 없음', page.locator('.csv-head th.csv-calc').count() == 0)

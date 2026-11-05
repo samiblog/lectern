@@ -58,6 +58,7 @@ DEFAULTS: dict[str, Any] = {
     'toc_hidden_parts': [],  # 목차에서 감춘 구성 요소 종류: table·figure·box·diagram·code·math (목차 머리의 종류 버튼)
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
+    'md_breaks': True,       # 문단 안의 줄바꿈을 화면에서도 줄바꿈으로 (D93 — 끄면 표준 Markdown)
     'restore_last': True,    # 폴더를 열면 마지막에 보던 문서와 위치로
     'expand_first_level': True,  # 폴더를 열면 트리의 첫 단계 폴더를 펼쳐 둠
     'window': {'width': 1280, 'height': 860},
@@ -79,7 +80,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'theme_groups', 'font_scale', 'doc
                          'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',

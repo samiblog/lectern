@@ -333,7 +333,7 @@ export function columnMenu(view, c) {
   } else items.push({ header: col.name });
   items.push('-');
   if (series) items.push({ label: t('이 열을 차트로'), action: () => chartShown(view, col.name) });
-  items.push({ label: t('차트로 보기'), hint: t('거른 행 그대로'), action: () => chartShown(view) });
+  items.push({ label: t('차트로 보기'), tip: t('거른 행 그대로'), action: () => chartShown(view) });
   if (st.calcs.length && col.calc == null) items.push({ label: t('계산 열 모두 빼기'), action: () => dropCalc(view) });
   return items;
 }

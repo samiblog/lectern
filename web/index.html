@@ -39,6 +39,7 @@
     <symbol id="i-folder" viewBox="0 0 20 20"><path d="M2.5 6.2v8.3A1.5 1.5 0 0 0 4 16h12a1.5 1.5 0 0 0 1.5-1.5V7.7A1.5 1.5 0 0 0 16 6.2h-5.8L8.6 4.5H4a1.5 1.5 0 0 0-1.5 1.7z"/></symbol>
     <symbol id="i-search" viewBox="0 0 20 20"><circle cx="8.8" cy="8.8" r="5.3"/><path d="m12.8 12.8 4 4"/></symbol>
     <symbol id="i-toc" viewBox="0 0 20 20"><path d="M3 5h14M6.5 10H17M6.5 15H17"/></symbol>
+    <symbol id="i-note" viewBox="0 0 20 20"><path d="M4 3.5h12a1 1 0 0 1 1 1V12l-4.5 4.5H4a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1Z"/><path d="M17 12h-3.5a1 1 0 0 0-1 1v3.5M6.5 7.5h7M6.5 10.5h4"/></symbol>
     <symbol id="i-up" viewBox="0 0 20 20"><path d="m5.5 12 4.5-4.5 4.5 4.5"/></symbol>
     <symbol id="i-down" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
     <symbol id="i-minus" viewBox="0 0 20 20"><path d="M5 10h10"/></symbol>
@@ -130,6 +131,7 @@
     <button id="lec-btn-recent" class="icon-btn small" title="최근 연 폴더" aria-label="최근 연 폴더"><svg><use href="#i-chevron"/></svg></button>
     <!-- 오른쪽 패널: 목차(toc.js)와 선택된 프로젝트의 터미널(terminal.js, D38) — 화면의 왼쪽부터 같은 순서 -->
     <button id="lec-btn-edit" class="tabbar-btn" aria-pressed="false" title="편집 모드 켜기/끄기 (Ctrl+E) — 보고 있는 문서·코드를 여기서 고치기"><svg><use href="#i-edit"/></svg><span>편집</span></button>
+    <button id="lec-btn-notes" class="tabbar-btn" aria-pressed="false" title="메모 열기/닫기 (Alt+M) — 이 프로젝트의 메모"><svg><use href="#i-note"/></svg><span>메모</span></button>
     <button id="lec-btn-toc" class="tabbar-btn" aria-pressed="true" title="목차 보이기/숨기기"><svg><use href="#i-toc"/></svg><span>목차</span></button>
     <button id="lec-btn-term" class="tabbar-btn" aria-pressed="false" title="터미널 열기/닫기 (Ctrl+`) — 이 프로젝트 폴더의 PowerShell"><svg><use href="#i-term"/></svg><span>터미널</span></button>
   </nav>
@@ -275,6 +277,16 @@
       </div>
       <div id="lec-term-body"></div>
     </section>
+    <!-- 프로젝트 메모 (notes.js, D92): 오른쪽에서 문서 위를 덮는다. 글은 프로젝트의 .lectern/notes.md -->
+    <aside id="lec-notes" aria-label="메모" hidden>
+      <div class="notes-head">
+        <input id="lec-notes-filter" type="search" placeholder="메모 거르기" aria-label="메모 거르기" spellcheck="false">
+        <button type="button" id="lec-notes-new" class="primary small">새 메모</button>
+        <button type="button" id="lec-notes-close" class="icon-btn small" title="메모 닫기 (Alt+M)" aria-label="메모 닫기"><svg><use href="#i-close"/></svg></button>
+      </div>
+      <p id="lec-notes-undo" class="notes-undo" hidden><span>메모를 지웠습니다</span><button type="button" id="lec-notes-undo-btn" class="text-btn">되돌리기</button></p>
+      <div id="lec-notes-list"></div>
+    </aside>
     <!-- 터미널 모음 (gather.js): 문서 화면 위를 덮는 격자. 탭마다 칸 하나 -->
     <section id="lec-gather" aria-label="터미널 모음" hidden></section>
     <!-- 사용설명서 (help.js, D45): F1. 사이드바와 문서 화면 위를 덮는다 — 왼쪽 장 목록, 본문은 help/manual.md 를 지금 문서 스타일로 -->
@@ -367,6 +379,7 @@
     <label class="opt"><input type="checkbox" data-key="restore_last"><span><b>마지막 위치에서 시작</b><small>폴더를 열면 마지막에 보던 문서와 스크롤 위치로 엽니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="md_breaks"><span><b>문단 안의 줄바꿈 보이기</b><small>원문에서 Enter 로 바꾼 줄이 화면에서도 바뀝니다 (Word 의 Shift+Enter 처럼). 끄면 표준 Markdown 처럼 이어서 보입니다.</small></span></label>
     <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>
     <div class="opt-choice" role="radiogroup" aria-labelledby="lec-termpos-title">
       <span class="opt-head"><b id="lec-termpos-title">터미널 자리</b><small>터미널 머리줄의 버튼으로도 바꿉니다 (그러면 자동이 아니게 됩니다)</small></span>

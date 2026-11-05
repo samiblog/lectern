@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile']
+SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['structure', 'lines']),

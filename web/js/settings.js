@@ -88,6 +88,7 @@ async function onChange(e) {
     return;
   }
   await saveConfig({ [key]: e.target.checked });
+  if (key === 'md_breaks') emit('refresh-view');   // 문서를 새 규칙으로 다시 그린다 (D93)
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
   else if (key === 'terminal_follow_style') emit('term-colors');

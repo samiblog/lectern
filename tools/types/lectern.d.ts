@@ -119,6 +119,10 @@ declare global {
     panes: Pane[];
 
     basket?: any;
+    behindLast?: Pane;
+    behindOf?: Pane;
+    closedDocs?: any[];
+    notes?: any;
     closing?: any;
     partsCache?: any;
     restoring?: any;
@@ -160,6 +164,7 @@ declare global {
     label: string;
     action: () => any;
     hint?: string;
+    tip?: string;
     term?: string;
     icon?: Markup;
     current?: boolean;

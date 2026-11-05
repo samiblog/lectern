@@ -7,6 +7,14 @@ import { t } from './i18n.js';
 
 // ---- 팝업 메뉴 -------------------------------------------------------------
 
+/**
+ * 메뉴 묶음을 구분선으로 잇는다 (빈 묶음은 뺀다). 묶음의 차례는 어느 메뉴나 같다 (D91):
+ * 대상 고유 동작 → Claude → 복사 → 모으기·보내기 → 편집·열기 → 보기 → 위험한 동작
+ * @param {MenuItem[][]} groups
+ * @returns {MenuItem[]}
+ */
+export const menuGroups = (...groups) => groups.filter((g) => g?.length).flatMap((g, i) => (i ? ['-', ...g] : g));
+
 let menuItems = [];
 let onMenuClose = null;
 
@@ -14,14 +22,14 @@ function menuItemHtml(it, i) {
   if (it === '-') return html`<div class="menu-sep" role="separator"></div>`;
   if (it.header) return html`<div class="menu-head">${it.header}</div>`;
   const attrs = html`${it.icon ? html` class="with-icon"` : ''}${it.current ? html` aria-current="true"` : ''}`;
-  const main = html`<button role="menuitem" data-i="${i}"${attrs}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
+  const main = html`<button role="menuitem" data-i="${i}"${attrs}${it.tip ? html` title="${it.tip}"` : ''}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
   if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
   return [html`<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${tip}" aria-label="${tip}">`, html`<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`];
 }
 
-/** items: [{label, hint?, action, term?, icon?, current?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). onClose 는 메뉴가 닫힐 때.
+/** items: [{label, hint?, tip?, action, term?, icon?, current?}], {header}(누를 수 없는 머리말) 또는 '-'(구분선). hint 는 오른쪽의 단축키, tip 은 마우스를 올리면 보이는 설명. onClose 는 메뉴가 닫힐 때.
  * icon: 앞에 둘 아이콘 HTML (icons.js — 한 줄에 아이콘·이름·흐린 hint), current: 지금 고른 것 (강조 — 열린 문서 탭 목록, D67)
  * @param {number} x
  * @param {number} y

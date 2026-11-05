@@ -181,6 +181,8 @@ flowchart LR
 | `GET /api/source?p=<id>&path=<경로>` | | 편집할 원문 (D54) `{path, text, newline, bom, hash, size}` — `text` 는 LF, `hash` 는 원문 바이트의 SHA-256. 문서·코드·UTF-8·2MB 까지 (아니면 400·413), 없음·숨김·밖은 404 |
 | `POST /api/save` | `{p, path, text, hash, force?, create?}` | 고친 글을 저장 (D54 — 원칙 1 의 예외). `create: true` 면 새 Markdown 문서를 만든다 (D63·D65 — 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 으로. `editing.new_doc_path` 가 자리를 보고 `create_source` 가 `xb` 로 씀: 이미 있는 폴더·`.md`·숨김·제외 폴더 아님, 같은 이름이면 409, LF·BOM 없음 — 답에 만든 경로 `path` 를 더함). 그 파일의 줄바꿈(섞였으면 많은 쪽)·BOM 을 되살리고, 같은 폴더의 임시 파일(`.lectern-….tmp`)에 쓴 뒤 `ReplaceFileW` 로 바꿔 끼운다 (속성·ACL 유지). 지금 파일의 내용이 원문을 줄 때(`hash`)와 다르면 409 (`force` 면 덮어씀), 읽기 전용은 403, 없는 파일은 404 (새로 만들지 않음). 저장이 끝내 안 되면 500 과 고친 내용을 남긴 임시 파일 경로. `{hash, size}` (create 면 `path` 도 — 폴더는 실제 이름) |
 | `GET /api/new-doc?p=<id>&path=<경로>` | | 그 자리에 새 문서를 만들 수 있는지 (D65 — 경로를 정하면 먼저 묻고, 되면 `POST /api/save` 의 create 로 만든다). 읽기만. `{path}`(폴더는 실제 이름) 또는 `{error, status}` — 물음의 답이라 늘 200 |
+| `GET /api/notes?p=<id>` | | 프로젝트 메모의 글 (D92 — `.lectern/notes.md`, 없으면 빈 글): `{text, hash, exists}` |
+| `POST /api/notes` | `{p, text, hash}` | 프로젝트 메모를 쓴다. 경로는 정해져 있고 처음이면 만든다. 그사이 바뀌었으면 409. `{hash, size}` |
 | `POST /api/rename` | `{p, path, name}` | 파일 하나의 이름을 바꾼다 (D66 — `editing.rename_file`: 같은 폴더 안에서 이름만, 프로젝트 안의 보이는 파일만(숨김·제외 폴더 안·링크 아님), 새 이름은 Windows 가 받는 이름이고 점으로 시작하지 않음, 같은 이름이면 409(대소문자만 바꾸기는 됨), 다른 프로그램이 쓰고 있으면 409). `{path}`(바뀐 경로) |
 | `POST /api/editing` | `{dirty: [이름…]}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved`, `app.py`) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |

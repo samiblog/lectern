@@ -59,6 +59,9 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    'Lectern 프로그램 폴더 안에서는 메모를 쓰지 않습니다 — 고쳐 보려면 그 폴더를 복사해 여세요': 'Notes are not written inside the Lectern program folder — copy that folder and open the copy',
+    '메모 폴더가 링크라 쓰지 않았습니다 — .lectern 을 보통 폴더로 바꾸세요': 'The notes folder is a link, so nothing was written — make .lectern a normal folder',
+    '메모 폴더를 만들지 못했습니다: {error}': 'Could not create the notes folder: {error}',
     # sheet.py (엑셀 보기 — D77)
     '엑셀 파일 안의 내용이 너무 큽니다 — 엑셀로 여세요': 'The contents of this Excel file are too large — open it in Excel.',
     '엑셀 파일을 읽지 못했습니다 — 손상되었거나 다른 형식입니다 ({error})': 'Could not read the Excel file — it is damaged or in another format ({error}).',

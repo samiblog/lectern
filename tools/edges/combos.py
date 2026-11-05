@@ -86,7 +86,7 @@ try:
 
         def opened(path, title):
             page.click('.side-tabs button[data-tab="files"]')
-            page.locator(f'#lec-tree .row.file[data-doc="{path}"]').click()
+            page.locator(f'#lec-tree .row.file[data-doc="{path}"]').click(modifiers=['Alt'])
             page.wait_for_selector(f'#lec-view h1:has-text("{title}")')
             settle()
 
@@ -102,7 +102,7 @@ try:
         page.click('#lec-btn-open')
         page.wait_for_function("document.querySelectorAll('#lec-tablist .lec-tab').length === 2")
         settle(600)
-        page.locator('#lec-tree .row.file[data-doc="b.md"]').click()
+        page.locator('#lec-tree .row.file[data-doc="b.md"]').click(modifiers=['Alt'])
         page.wait_for_selector('#lec-view h1:has-text("둘째 프로젝트")')
         settle()
         page.keyboard.press('Alt+l')
@@ -372,7 +372,7 @@ try:
         page.route('**/vendor/mermaid/**', lambda r: r.abort('addressunreachable'))
         page.evaluate("window.__stay = 1")
         page.click('.side-tabs button[data-tab="files"]')
-        page.locator('#lec-tree .row.file[data-doc="dia.md"]').click()
+        page.locator('#lec-tree .row.file[data-doc="dia.md"]').click(modifiers=['Alt'])
         page.wait_for_selector('#lec-view h1:has-text("그림")')
         page.wait_for_timeout(2000)
         check('문서를 그릴 때 불러오는 라이브러리를 못 받아도 앱을 다시 불러오지 않음', page.evaluate("window.__stay === 1") and page.evaluate("document.querySelector('#lec-boot-fail').hidden"), page.evaluate("window.__stay"))

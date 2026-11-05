@@ -37,19 +37,21 @@ Lectern is a workspace for Markdown-centered research with AI. You read, review 
 - Clicking the tab that is already selected shows that project's overview. Right-clicking a tab also offers the project overview, a new document in the top folder and the project's Elements.
 - When a document in a background tab changes, a dot appears next to the tab name.
 - Folders with the same name also show their parent folder's name.
-- To close a tab, click its ×, middle-click it, or press Ctrl+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer.
-- To move between tabs: Ctrl+1~8 (tab by position), Ctrl+9 (last tab), Ctrl+Tab / Ctrl+Shift+Tab (next / previous tab).
+- To close a tab, click its ×, middle-click it, or press Ctrl+Shift+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer.
+- To move between tabs: Ctrl+1~8 (tab by position), Ctrl+9 (last tab), Alt+PageDown / Alt+PageUp (next / previous tab).
 
 ## Document tabs
 
 Keep up to 20 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
 
-- A normal click opens in the current tab. To open in a **new tab**, **Ctrl+click** or **middle-click** in the tree, the Code and Other files lists, links and paths in documents, the folder overview, search results or Elements. In the sidebar lists (tree, folder view, Recent, search results, Elements) simply **double-click** a document: the document the first click opened in the current tab moves to a new tab and the current tab goes back to what you were reading. (Files in the Code and Other files lists still open in your editor or default app on double-click — Ctrl+click them to view them in a new tab.) **Open in new tab** in right-click menus and **+** in the document tab row (the quick open box then opens in a new tab — Ctrl+Enter in quick open does too) work as well. **New document…** at the top of the **+** box makes a new document and opens it in a new tab (see New document below).
+- **Clicking a document in the sidebar opens it in a new document tab**, and the document you were reading stays open — the tree, the Code and Other files lists, folder view, Recent, search results, Elements and Open document (Ctrl+P) all work this way. If the current tab shows a folder overview, it opens there.
+- **Ctrl+click** or **middle-click** opens a new document tab behind the current one (as in a browser — the tab is drawn when you click it). **Alt+click** opens in the current tab. In quick open, Enter, Ctrl+Enter and Alt+Enter do the same.
+- Links and paths in a document open in the current tab (Alt+← comes back). Use Ctrl+click, the middle button or **Open in new tab** in the right-click menu for a new document tab.
 - Clicking a document that is already open in another tab goes to that tab (a document is not opened twice).
 - When all 20 are in use, the tab you looked at least recently is reused (tabs with unsaved edits are left alone).
 - **Back and forward** (Alt+← →, the mouse back and forward buttons) also undo jumps within a document — after going somewhere from the contents, a section link, a footnote, find, Elements or search results, they return you to where you were reading (scroll and current line), unfolding the section if needed. However many find results you step through, one press returns to where you started. Moves by scrolling or ↑ ↓ are not recorded.
 - Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Send from the Clip tab opens the receiving document in its own tab.
-- To switch, click a tab or press **Alt+1~8** (by position) or **Alt+9** (last tab). When there are more tabs than fit, scroll the row with the mouse wheel or click **∨** at its right end (the number beside it is how many are open) and pick from the list of open document tabs. To close, click its ×, middle-click it or press **Ctrl+F4** (the last tab is not closed). Right-click a tab for Close other document tabs and copying its path.
+- To switch, click a tab or press **Alt+1~8** (by position) or **Alt+9** (last tab). When there are more tabs than fit, scroll the row with the mouse wheel or click **∨** at its right end (the number beside it is how many are open) and pick from the list of open document tabs. **Ctrl+Tab** and **Ctrl+Shift+Tab** (or Ctrl+PageDown, PageUp) go to the next and previous document tab. To close, click its ×, middle-click it or press **Ctrl+W** (or Ctrl+F4 — the last tab is not closed); **Ctrl+Shift+T** reopens a closed document tab. **Ctrl+T** opens a document in a new document tab. Right-click a tab for Close other document tabs and copying its path.
 - The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them).
 
 ### Spread all
@@ -80,7 +82,7 @@ The **Files** tab is split into three groups.
 - Documents that changed since you last looked get an amber dot.
 - The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
 - **Excluded folders** such as `node_modules`, `dist`, `build`, `venv` and `__pycache__` appear dimmed and collapsed in 'Other files'. They can hold a great many files, so their contents are read when you expand them, and everything inside is listed there whatever its type (code still opens in the code view with one click). Changes inside are not followed automatically — collapse and expand the folder again, or press F5, to read it afresh. They are not counted in the group header or matched by the filter.
-- Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in editor, Show in Explorer, **Rename…**. Right-click a folder to collect the elements in just that folder.
+- Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in external editor, Show in Explorer, **Rename…**. Right-click a folder to collect the elements in just that folder.
 - **Renaming**: right-click a file in the document tree, Code or Other files list (or in Recent and search results) and choose **Rename…**, or select its row and press **F2**. The current name is selected up to the extension — type the new name and press Enter (Esc leaves it as is). Only the name changes; the file stays in its folder.
   - If a file with that name exists or the name cannot be used (starting with a dot, containing `\ / : * ? " < > |` and so on), the reason is shown and nothing changes. Changing the extension asks once more.
   - A document tab showing the file follows the new name (and edit mode reopens if it was on), and so do the back history and clips. A file with unsaved edits must be saved or closed first.
@@ -123,7 +125,7 @@ Collect pieces of documents and send them to a document open in a document tab, 
 
 - **To clip**: right-click a heading for **Clip this section** (the heading and everything under it), or a table, figure, chart, diagram, math, code or paragraph for **Clip** — tables, figures and charts take their caption and the 'Source:' line right below with them. With text selected, right-click for **Clip selected text**. In Elements, right-click an item for **Clip**, or **Clip all shown** (the list as filtered — all the tables in the project, for example).
 - Clips pile up in order in the sidebar **Clip** tab (with a count next to it). Reorder them with ↑ and ↓, remove one with ✕, and click one to go to its place in the original document. A clip keeps the text as it was when clipped, even if the document changes later. Each project tab has its own clips, and they are cleared when Lectern closes.
-- **Send to a document…** (above the clips — all of them, in order) or **Send…** in a right-click menu (just that piece) asks where: where you are editing (at the cursor), **New document…**, or **a document open in a document tab** → **At the end**, **At the beginning** or **End of section '…'**.
+- **Send to a document…** (above the clips — all of them, in order) or **Send to a document…** in a right-click menu (just that piece) asks where: where you are editing (at the cursor), **New document…**, or **a document open in a document tab** → **At the end**, **At the beginning** or **End of section '…'**.
 - Only documents open in document tabs and new documents can receive. To send to another document, open it in a document tab first (Ctrl+click it in the tree — see Document tabs above).
 - That document **opens in edit mode** with the sent text lightly shaded. Check it and save with **Ctrl+S** — the file does not change until you save.
 - For **New document…**, type a path and press Enter: the document is created right away with a title line (see New document below) and the clips go to its end in a new document tab.
@@ -144,6 +146,7 @@ This is the first screen when a folder opens. It shows recently changed document
 - Code blocks are colored by language; the 'Copy' button at the top right copies them.
 - Callouts (`> [!NOTE]` and so on — colored boxes without a title line), footnotes, checklists, math (`$…$`, `$$…$$`, and math/latex code blocks) and Mermaid diagrams are rendered. Dollar amounts such as `$105` are not turned into math.
 - **Charts**: code blocks whose language is `vega-lite` (data charts), `echarts` (many chart types such as donuts and candlesticks), `plotly` (analysis charts such as box plots and sunbursts — the output of Python's `fig.to_json()` works too) or `dot`/`graphviz` (structure and dependency graphs) are drawn as pictures. Colors follow the document style; click to enlarge, and use 'Copy image' in the right-click menu to paste a PNG. Settings are JSON and functions are not allowed. Write the data in the document or point to a CSV/JSON file in the project with a relative path (internet addresses are not read). There is no hover or zoom, and Plotly map charts are not drawn because they need map data from the internet. The samples (**Open samples**) have an example of each kind in the chart guide (number 07 in the `guide` folder).
+- A line you break with Enter inside a paragraph also breaks on screen (like Shift+Enter in Word — outline-style writing shows as written). Two spaces at the end of a line and `<br>` do the same. Turn this off in Settings to join lines as standard Markdown does.
 - Click an image to enlarge it.
 - Paths in the text that point to real files, such as `src/app.py:42`, become links.
 
@@ -182,11 +185,11 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 In Markdown documents and the code view (including csv and txt), lines are counted as lines of the source file — a paragraph, list item, heading or table row written on one line is one line, a paragraph wrapped over several lines goes line by line, and code goes line by line. So the `@path lines 12-20` sent to Claude matches what you picked on screen.
 
 - **Current line**: the small triangle to the left of the line you are reading. Click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. Each document tab keeps its own.
-- **Line focus**: **Shift+click** focuses that line, **Shift+drag** the lines you drag over, and **Shift+Enter** the current line. The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. Dragging to the top or bottom edge scrolls.
+- **Line focus**: **Shift+click** focuses that line, **Shift+drag** the lines you drag over, and **Shift+Enter** the current line (press again to turn it off). **Ctrl+L** focuses the current line, and pressing it again extends down. The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. Dragging to the top or bottom edge scrolls.
 - **Grow and shrink**: **Shift+↑ ↓** move the last line of the focus up or down — the first line stays, so the focus grows or shrinks. With a focus, Shift+click extends it to that line. Without one, Shift+↑ ↓ start from the current line.
 - **Send to Claude**: **Shift+→** puts the location of the focused part, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus stays in the document, so you can add several places in a row. To go on typing your request straight away, press **Ctrl+Shift+→** — focus moves to the terminal too (the current line if nothing is focused). **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While focusing, the status bar shows the line range.
-- **Section focus**: the **Focus** button in the toolbar keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
-- **Right-click**: right-clicking inside the focused part opens a selection box — **Send to Claude**, copy location for Claude, copy source, Clip, Send to a document, **Menu for this block…** (the usual menu you get outside the focus) and Clear focus.
+- **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section you are reading sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
+- **Right-click**: right-clicking inside the focused part opens a selection box — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, Edit here (for one line), Clear focus, and Delete lines at the bottom. Hover over an item for its description.
 - Click a dimmed area or press Esc or the button to turn it off. Moving the current line with ↑ ↓ also clears a line focus. You can also right-click the text and choose 'Focus this section'.
 
 ### Line editing
@@ -256,7 +259,7 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 
 - To open it: the **Edit** button at the right end of the tab bar (left of Contents and Terminal — press it again to close; it is highlighted and underlined while on), **Edit** in the status bar, **Edit** in the code view header, **Edit this document** or **Edit here** (at that block or line) in the right-click menu, or Ctrl+E. It opens with the source of what you were reading at the same height.
 - **It stays in step with the reading position**: while you edit, the contents on the right marks the section the cursor is in (the section at the top of the screen if the cursor is off screen). Clicking a place in this file in the contents, the Elements tab or search results moves the editor to that line. When you close the editor, the document view is where you were editing (a folded section is unfolded). HTML documents follow by headings.
-- It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace and Alt+G to go to a line. Tab indents with spaces.
+- It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace, Ctrl+G to go to a line, and F3 / Shift+F3 to find next and previous. Tab indents with spaces.
 - **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
@@ -274,7 +277,7 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 
 - Click a file once in the 'Code' list (or press Enter) to show it in the main area with line numbers and language colors. It is never edited or run.
 - The contents on the right list classes, functions, methods and divider comments such as `# ---- drawing ----`; click one to jump to that line. Config files list their keys and sections.
-- The **Open in editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location for Claude and Open this line in the editor.
+- The **Open in external editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location for Claude and Open this line in the editor.
 - When the code you are viewing changes, it is redrawn within two seconds and the changed lines are highlighted briefly.
 - Clicking a path such as `src/app.py:42` or a link to a code file in a document jumps to that line. Go back (Alt+←) to return to the document.
 - Files over 4 MB, or files that are not text, show a note to open them in an editor instead.
@@ -352,8 +355,23 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
 - **Copy location for Claude** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
 - If you right-click with text selected, 'Copy selected text' and 'Clip selected text' appear at the top.
-- **Clip** and **Send…** in block and heading menus send that piece to a document open in a document tab, or to a new one (see Clip above).
+- Menus keep the same order everywhere: what only that item can do → Claude → copying → Clip and Send → edit and open → view → delete. Only shortcuts appear on the right; hover over an item for its description.
+- From the keyboard, **Shift+F10** opens the menu for the focused item or the current line.
+- **Clip** and **Send to a document…** in block and heading menus send that piece to a document open in a document tab, or to a new one (see Clip above).
 - The **terminal button** to the right of a copy item puts the same text into the terminal (Enter is not pressed). It is there for selected text, the location for Claude, the source, code, `@path`, the full path and so on, including in the right-click menus of the tree and the 'Code' and 'Other files' lists. See 'Terminal' below.
+
+## Notes
+
+Each project has its own notes. The **Notes** button in the tab bar or **Alt+M** opens and closes a panel on the right (Esc closes it too). It covers the document, so you can write while reading.
+
+- Press **New note** and type; notes save themselves. You can add a title, a color and a pin; pinned notes come first. Type in the box at the top to show only matching notes.
+- **To to-do** adds a checkbox to each line. Finished items move down, and you add items in the box at the bottom. Writing `- [ ] item` in the text works too.
+- **Copy** copies Markdown text, **Terminal** pastes into the terminal (Enter is not pressed), and **To document** sends to a document in a document tab or a new one.
+- After **Delete**, **Undo** appears at the top for a moment.
+- Right-click a document and choose **Send to new note** to turn that text into a note, with where it came from (`@path lines 12-20`) below it. Click that to go back there.
+- Notes are stored as Markdown in one file in the project folder, `.lectern/notes.md`. It is created when you first write a note and does not appear in the tree or search. It moves with the folder, and Claude Code can read it as `@.lectern/notes.md`.
+- To keep notes out of a git repository, especially a public one, add `.lectern/` to `.gitignore`.
+- If the file changed elsewhere in the meantime, Lectern reads it again and merges. Notes are off in view-only projects such as the samples.
 
 ## Terminal
 

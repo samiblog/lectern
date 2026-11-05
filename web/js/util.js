@@ -131,15 +131,28 @@ export function toast(message, kind = '', ms = kind === 'error' ? 4000 : 2200) {
   toastTimer = setTimeout(() => { el.hidden = true; }, ms);
 }
 
-/** 새 문서 탭에서 열지 (D64): Ctrl(⌘)+누르기, 가운데 버튼 (middleClickOpens 가 Ctrl+누르기로 바꿔 보낸다) */
+/** 새 문서 탭을 뒤에서 열지 (D64·D91): Ctrl(⌘)+누르기, 가운데 버튼 (middleClickOpens 가 Ctrl+누르기로 바꿔 보낸다) */
 export const newTabWanted = (e) => !!(e && (e.ctrlKey || e.metaKey));
 
+/** 본문의 링크·경로 표기로 열 곳 (D91): 누르기는 지금 탭 (Alt+← 로 돌아온다), Ctrl+누르기·가운데 버튼은 뒤에서 새 문서 탭 */
+export const linkHow = (e) => (newTabWanted(e) ? { newTab: true, behind: true } : {});
+
 /**
- * 사이드바 목록의 누르기로 열 때 'open' 대상에 더할 것 (D64·D67): newTab — Ctrl+누르기·가운데 버튼, twice — 두 번 누르기의 두 번째 누르기
- * (첫 누르기가 지금 탭에서 연 것을 새 문서 탭으로 옮긴다 — doctabs.js 의 openTwice). 누르는 자리가 그대로 남는 목록에만 쓴다 —
- * 본문(링크·폴더 개요)은 첫 누르기에 화면이 바뀌어 두 번째 누르기가 다른 것에 떨어진다
+ * 사이드바 목록·빠른 열기로 열 곳 (D91) — 'open' 대상에 더한다. 누르기는 새 문서 탭으로, Ctrl+누르기·가운데 버튼은 보던 문서를
+ * 두고 뒤에서, Alt+누르기는 지금 탭. 지금 탭이 문서가 아니면(폴더 개요) doctabs.js 가 그 자리에서 연다
  */
-export const openHow = (e) => ({ newTab: newTabWanted(e), twice: (e?.detail || 0) > 1 });
+export const openHow = (e) => {
+  if (e?.altKey) return {};
+  return newTabWanted(e) ? { newTab: true, behind: true } : { newTab: true };
+};
+
+/** Enter 를 누르기로: Ctrl·Alt 를 함께 넘긴다 (openHow 가 본다) */
+export function clickFromKey(e) {
+  e.target.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey }));
+}
+
+/** 두 번 누르기의 두 번째 누르기 — 첫 누르기가 이미 열었다 */
+export const repeatClick = (e) => (e?.detail || 0) > 1;
 
 /** box 안의 selector 를 가운데 버튼으로 누르면 Ctrl+누르기처럼 — 새 문서 탭에서 연다 (D64). 가운데 버튼의 자동 스크롤 대신 */
 export function middleClickOpens(box, selector) {

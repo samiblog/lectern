@@ -18,7 +18,7 @@ import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import { isViewable } from './icons.js';
 import {
-  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted,
+  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow,
 } from './util.js';
 import { t } from './i18n.js';
 
@@ -198,21 +198,23 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
         });
       } else if (isMd(r.path) || (isHtml(r.path) && tab.fileMap.has(r.path))) {
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
+        a.dataset.lecOpen = '';   // 앱 안에서 연다 — 우클릭 '새 문서 탭에서 열기' (docmenu.js, D91)
         a.addEventListener('click', (e) => {
           e.preventDefault();
           if (r.path === docPath && r.hash && !newTabWanted(e)) {
             emit('jump');
             if (!scrollToAnchor(where(), r.hash)) toast(t('문서에서 해당 위치를 찾지 못했습니다'));
           } else {
-            emit('open', { type: 'doc', path: r.path, hash: r.hash, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
+            emit('open', { type: 'doc', path: r.path, hash: r.hash, ...linkHow(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
           }
         });
       } else if (isViewable(r.path.split('/').pop())) {
         // 코드 파일·csv·txt: 읽기 화면의 그 줄로 (#L42) — 편집기는 우클릭 메뉴 (D43·D60)
         a.classList.add('file-link');
+        a.dataset.lecOpen = '';
         a.addEventListener('click', (e) => {
           e.preventDefault();
-          emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash), newTab: newTabWanted(e) });
+          emit('open', { type: 'code', path: r.path, line: lineFromHash(r.hash), ...linkHow(e) });
         });
       } else {
         a.classList.add('file-link');

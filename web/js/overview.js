@@ -8,7 +8,7 @@ import { clearChanges } from './diffmark.js';
 import { paneOf } from './panes.js';
 import { kindBadge } from './tree.js';
 import { html, setHtml } from './html.js';
-import { $, timeAgo, formatDateTime, newTabWanted } from './util.js';
+import { $, timeAgo, formatDateTime, openHow } from './util.js';
 import { t } from './i18n.js';
 
 function crumbs(path, tab) {
@@ -115,7 +115,7 @@ export function initOverview() {
     }
     const btn = e.target.closest('button[data-doc], button[data-dir]');
     if (!btn) return;
-    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc, newTab: newTabWanted(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
+    if (btn.dataset.doc != null) emit('open', { type: 'doc', path: btn.dataset.doc, ...openHow(e) });   // Ctrl+누르기·가운데 버튼: 새 문서 탭 (D64)
     else {
       if (btn.dataset.dir) S.open.add(btn.dataset.dir);
       emit('open', { type: 'overview', path: btn.dataset.dir });

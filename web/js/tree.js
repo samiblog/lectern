@@ -4,10 +4,10 @@
 
 import { S, emit, on } from './store.js';
 import { saveConfig, openExternal, revealInExplorer } from './api.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, copyText, toast, keepFocus, openHow, middleClickOpens } from './util.js';
+import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -143,7 +143,7 @@ function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
   if (row.dataset.doc != null) {
-    emit('open', { type: 'doc', path: row.dataset.doc, ...openHow(e) });   // Ctrl+누르기·가운데 버튼·두 번 누르기: 새 문서 탭 (D64·D67)
+    if (!repeatClick(e)) emit('open', { type: 'doc', path: row.dataset.doc, ...openHow(e) });   // D91
     return;
   }
   const dir = row.dataset.dir;
@@ -174,17 +174,21 @@ export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? t
 
 /** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사(옆에 터미널에 붙여 넣기, D51), 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
-  const items = [];
-  if (path) items.push({ label: t('@{path} 복사', { path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`), term: `@${path} ` });
-  items.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)), term: shellWord(fullPath(path)) });
-  items.push('-');
-  if (isDoc) items.push({ label: t('편집기로 열기'), action: () => openExternal(path) });
-  items.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(path) });
+  /** @type {MenuItem[]} */
+  const copies = [];
+  if (path) copies.push({ label: t('@{path} 복사', { path }), tip: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`), term: `@${path} ` });
+  copies.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)), term: shellWord(fullPath(path)) });
+  /** @type {MenuItem[]} */
+  const opens = [];
+  if (isDoc) opens.push({ label: t('외부 편집기로 열기'), action: () => openExternal(path) });
+  opens.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(path) });
+  /** @type {MenuItem[]} */
+  const views = [];
   if (!isDoc && S.dirs.has(path)) {   // 문서가 있는 폴더 — 모아 보기 (parts.js)
-    items.push('-', { label: path ? t('이 폴더의 표·그림 등 모아 보기') : t('프로젝트의 표·그림 등 모아 보기'),
-      hint: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path }) });
+    views.push({ label: path ? t('이 폴더의 표·그림 등 모아 보기') : t('프로젝트의 표·그림 등 모아 보기'),
+      tip: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path }) });
   }
-  return items;
+  return menuGroups(copies, opens, views);
 }
 
 /** 파일 우클릭의 이름 바꾸기 (D66 — rename.js): 같은 폴더 안에서 이름만. F2 도 (트리·'코드'·'자료' 목록·최근 변경·검색) */
@@ -196,12 +200,12 @@ export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), a
 /** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)·이름 바꾸기(D66)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
 export function docMenuItems(path, type = 'doc') {
   /** @type {MenuItem[]} */
-  const items = [{ header: path }];
+  const opens = [];
   if (!(S.view?.type === type && S.view.path === path)) {
-    items.push({ label: t('새 탭에서 열기'), hint: type === 'doc' ? t('Ctrl+누르기·두 번 누르기·가운데 버튼') : t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) });
+    opens.push({ label: t('새 문서 탭에서 열기'), hint: t('누르기'), action: () => emit('open', { type, path, newTab: true, force: true }) },
+      { label: t('지금 탭에서 열기'), hint: t('Alt+누르기'), action: () => emit('open', { type, path }) });
   }
-  items.push(renameItem(path), '-');
-  return [...items, ...pathMenuItems(path, true)];
+  return menuGroups([{ header: path }], opens, pathMenuItems(path, true), [renameItem(path)]);
 }
 
 function onContextMenu(e) {
@@ -224,7 +228,7 @@ export function initTree() {
   middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
   tree.addEventListener('contextmenu', onContextMenu);
   tree.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.classList.contains('row')) e.target.click();
+    if (e.key === 'Enter' && e.target.classList.contains('row')) clickFromKey(e);
     else if (e.key === 'F2' && e.target.dataset?.doc != null) {   // 이름 바꾸기 (D66)
       e.preventDefault();
       emit('rename', { path: e.target.dataset.doc });

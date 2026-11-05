@@ -277,6 +277,9 @@ function build(pane, path, src, mode, line) {
       'Ctrl-S': () => save(ed),
       Esc: () => closeEditor(pane),
       'Ctrl-H': 'replace',
+      'Ctrl-G': 'jumpToLine',   // VS Code·Word 와 같게 (D91 — 다음 찾기는 F3)
+      F3: 'findNext',
+      'Shift-F3': 'findPrev',
       // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다
       Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
       'Shift-Tab': (cm) => cm.indentSelection('subtract'),

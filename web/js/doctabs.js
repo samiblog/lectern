@@ -15,7 +15,6 @@ import { S, on, emit } from './store.js';
 import { createPane, removePane, selectPane } from './panes.js';
 import { navigate, refreshView, seedScroll } from './nav.js';
 import { goToPart } from './toc.js';
-import { copyFolds } from './fold.js';
 import { closeEditor } from './editor.js';
 import { labelOf, tipOf, pathMenuItems } from './tree.js';
 import { openPalette } from './palette.js';
@@ -81,7 +80,7 @@ function dropPane(pane) {
 
 /** 문서 탭이 차 있을 때 비울 탭: keep 이 아닌 것 가운데 저장하지 않은 편집이 없고 가장 오래 안 본 것 (없으면 undefined) */
 const oldestSpare = (tab, keep) => tab.panes.filter((p) => p !== keep && !p.editor?.dirty).sort((a, b) => (a.used || 0) - (b.used || 0))[0];
-const fullMessage = () => t('문서 탭은 {n}개까지입니다 — 모두 저장하지 않은 편집이 있어 바꿀 탭이 없습니다. 탭 하나를 닫으세요 (Ctrl+F4)', { n: MAX_DOCS });
+const fullMessage = () => t('문서 탭은 {n}개까지입니다 — 모두 저장하지 않은 편집이 있어 바꿀 탭이 없습니다. 탭 하나를 닫으세요 (Ctrl+W)', { n: MAX_DOCS });
 
 /**
  * 새 문서 탭에서 연다 — 그 문서가 이미 다른 탭에 열려 있으면 그 탭으로. 20개가 차 있으면 가장 오래 안 본 탭(저장하지 않은 편집이 없는 것)에서.
@@ -91,6 +90,7 @@ export async function openInNewTab(target) {
   const tab = S.tab;
   if (!tab) return null;
   const open = docPaneOf(tab, target);
+  if (open && target.behind) return open;
   if (open) {
     await selectDocTab(open);
     if (target.hash || target.line) {
@@ -103,7 +103,10 @@ export async function openInNewTab(target) {
   let made = false;
   if (tab.panes.length < MAX_DOCS) {
     pane = createPane(tab);
-    tab.panes.splice(tab.panes.indexOf(tab.pane) + 1, 0, pane);   // 지금 탭 오른쪽에
+    // 지금 탭 오른쪽에. 뒤에서 잇따라 열면 연 차례대로 (브라우저처럼 — 앞서 뒤에서 연 탭의 오른쪽에)
+    const after = target.behind && tab.behindOf === tab.pane && tab.panes.includes(tab.behindLast) ? tab.behindLast : tab.pane;
+    tab.panes.splice(tab.panes.indexOf(after) + 1, 0, pane);
+    if (target.behind) Object.assign(tab, { behindOf: tab.pane, behindLast: pane });
     made = true;
   } else {
     pane = oldestSpare(tab, tab.pane);
@@ -116,6 +119,12 @@ export async function openInNewTab(target) {
     toast(t('문서 탭은 {n}개까지라 가장 오래 안 본 탭에서 열었습니다', { n: MAX_DOCS }));
   }
   pane.used = Date.now();
+  if (target.behind && made) {   // 뒤에서: 이름만 두고 고를 때 그린다 (되살린 탭처럼)
+    pane.deferred = { type: target.type, path: target.path, hash: target.hash, line: target.line };
+    render();
+    emit('doctabs', tab);   // 다음 실행에 되살릴 문서 탭 목록 (position.js)
+    return pane;
+  }
   pane.coming = target;
   render();
   const from = S.pane;
@@ -126,92 +135,35 @@ export async function openInNewTab(target) {
     render();
     return null;
   }
-  if (S.pane === from) await selectDocTab(pane);   // 그리는 동안 다른 탭을 골랐으면 그 선택을 빼앗지 않는다 (새 탭은 뒤에 남는다)
+  if (S.pane === from && !target.behind) await selectDocTab(pane);   // 그리는 동안 다른 탭을 골랐으면 그 선택을 빼앗지 않는다 (새 탭은 뒤에 남는다)
   else render();
   return pane;
 }
 
-// 지금 탭에서 마지막으로 연 것 {target, pane, from: 앞 화면·뒤로 기록, at, done: 그리기} — 두 번 누르기가 새 문서 탭으로 옮긴다 (openTwice)
-let lastOpen = null;
-const TWICE_MS = 1500;   // 첫 누르기에서 이만큼 안에 온 두 번째 누르기만 (Windows 의 두 번 누르기 간격은 기본 0.5초)
+/** 지금 탭이 문서·코드를 보여 주는지 — 그때만 새 문서 탭으로 연다 (D91). 폴더 개요·빈 탭에는 지킬 문서가 없어 그 자리에서 */
+const holdsDoc = (pane) => {
+  const v = pane && viewOf(pane);
+  return v?.type === 'doc' || v?.type === 'code';
+};
 
 /**
  * 화면을 연다 ('open' 이벤트 — 트리·목록·링크·검색·빠른 열기): 그 문서·코드가 다른 문서 탭에 열려 있으면 그 탭으로,
- * newTab 이면 새 문서 탭에서, twice(두 번 누르기 — D67)면 openTwice, 아니면 지금 탭에서 (nav.js 의 navigate). 열었으면 true
+ * newTab 이면 새 문서 탭에서 (behind 면 뒤에서, force 면 폴더 개요에서도), 아니면 지금 탭에서 (nav.js 의 navigate). 열었으면 true
  */
 export async function openTarget(target) {
   const tab = S.tab;
-  if (target.twice && tab && (target.type === 'doc' || target.type === 'code')) return openTwice(target);
-  lastOpen = null;
   if (tab && (target.type === 'doc' || target.type === 'code')) {
     const open = docPaneOf(tab, target);
+    if (open && target.behind) return true;   // 이미 열려 있다 — 보던 문서를 그대로
     // 다른 문서 탭에 열려 있으면 그 탭으로. 지금 탭에서 편집 중인 그 파일이면 떠나지 않는다 (담기의 '문서에서 보기' 등)
     if (open && (open !== S.pane || open.editor)) {
       if (open !== S.pane) await selectDocTab(open);
       if (!target.hash && !target.line) return true;
       return open.editor ? goInEditor(open, target) : navigate(target, { pane: open });
     }
-    if (target.newTab && !open) return !!(await openInNewTab(target));
+    if (target.newTab && !open && (target.behind || target.force || holdsDoc(S.pane))) return !!(await openInNewTab(target));
   }
-  const pane = S.pane;
-  const done = navigate(target);
-  if (pane?.tab && pane.current) lastOpen = { target, pane, from: { view: pane.current, history: pane.history.slice(), hIndex: pane.hIndex }, at: Date.now(), done };
-  return done;
-}
-
-/**
- * 두 번 누르기 (D67 — 사이드바 목록): 첫 누르기는 지금 탭에서 열었다 — 그 탭을 새 문서 탭으로 하고 제자리에는 앞 화면을 되살려
- * 새 탭에서 연 것과 같게 한다 (splitOff — 그린 문서를 다시 그리지 않는다). 첫 누르기가 그 문서의 탭으로 갔거나 이미 보던 문서면 그대로,
- * 지금 탭에서 열지 못했으면(편집을 떠나지 않기로 함 등) 새 탭에서 연다
- */
-async function openTwice(target) {
-  const tab = S.tab;
-  const last = lastOpen;
-  lastOpen = null;
-  const same = (v) => v?.type === target.type && v.path === target.path;
-  if (last && last.pane.tab === tab && same(last.target) && Date.now() - last.at < TWICE_MS) {
-    await last.done;   // 첫 누르기의 그리기가 끝나기를
-    const { pane, from } = last;
-    if (tab.panes.includes(pane) && same(pane.current) && !same(from.view)) return splitOff(pane, from);
-  }
-  const open = docPaneOf(tab, target);
-  if (open) {
-    if (open !== S.pane) await selectDocTab(open);
-    return true;
-  }
-  return !!(await openInNewTab(target));
-}
-
-/**
- * 칸(pane — 두 번 누르기의 첫 누르기가 연 화면)을 새 문서 탭으로 하고, 그 왼쪽(제자리)에 앞 화면(from — 그 화면·뒤로 기록·스크롤)의
- * 문서 탭을 새로 놓는다. 새 탭은 뒤로 기록이 없다 (새 탭에서 연 것처럼). 20개가 차 있으면 가장 오래 안 본 탭을 닫는다
- */
-function splitOff(pane, from) {
-  const { tab } = pane;
-  if (tab.panes.length >= MAX_DOCS) {
-    const spare = oldestSpare(tab, pane);
-    if (!spare) {
-      toast(fullMessage(), 'error', 5000);
-      return true;   // 지금 탭에서 연 채로 둔다
-    }
-    if (spare.editor) closeEditor(spare, { ask: false, sync: false });
-    dropPane(spare);
-    toast(t('문서 탭은 {n}개까지라 가장 오래 안 본 탭을 닫았습니다', { n: MAX_DOCS }));
-  }
-  const prev = createPane(tab);
-  Object.assign(prev, { history: from.history, hIndex: from.hIndex, scrollPos: new Map(pane.scrollPos), used: Date.now() - 1, coming: from.view });
-  copyFolds(pane, prev);
-  tab.panes.splice(tab.panes.indexOf(pane), 0, prev);
-  Object.assign(pane, { history: [pane.current], hIndex: 0, wanted: null, used: Date.now() });
-  render();
-  emit('doctabs', tab);   // 다음 실행에 되살릴 문서 탭 목록 (position.js)
-  // 앞 화면은 숨은 채 바로 그려 둔다 (돌아가면 곧바로 보이게). 그리지 못했으면 고를 때 다시
-  navigate(from.view, { pane: prev, restoreScroll: true }).then((ok) => {
-    prev.coming = null;
-    if (!ok && !prev.current && tab.panes.includes(prev)) prev.deferred = from.view;
-    render();
-  });
-  return true;
+  return navigate(target);
 }
 
 /** 문서 탭을 닫는다 (하나뿐이면 닫지 않는다). 저장하지 않은 편집이 있으면 묻는다. 닫았으면 true */
@@ -219,6 +171,7 @@ export function closeDocTab(pane = S.pane) {
   const tab = pane?.tab;
   if (!tab || tab.panes.length < 2 || !tab.panes.includes(pane)) return false;
   if (pane.editor && !closeEditor(pane, { sync: false })) return false;
+  rememberClosed(pane);
   const i = tab.panes.indexOf(pane);
   emit('doctabs', tab);   // 다음 실행에 되살릴 문서 탭 목록 (position.js — 고르지 않은 탭을 닫으면 view 이벤트가 없다)
   if (tab.pane === pane) {
@@ -228,6 +181,45 @@ export function closeDocTab(pane = S.pane) {
   }
   dropPane(pane);
   render();
+  return true;
+}
+
+/** 닫은 문서 탭을 기억한다 (Ctrl+Shift+T — D91). 프로젝트 탭마다, 그 탭이 열려 있는 동안만 */
+function rememberClosed(pane) {
+  const v = viewOf(pane);
+  if (v?.type !== 'doc' && v?.type !== 'code') return;
+  const list = (pane.tab.closedDocs ??= []);
+  list.push({ type: v.type, path: v.path });
+  list.splice(0, Math.max(0, list.length - MAX_DOCS));
+}
+
+/** Ctrl+Shift+T: 마지막에 닫은 문서 탭을 다시 연다. 지워진 파일은 건너뛴다 */
+export async function reopenDocTab() {
+  const tab = S.tab;
+  const list = tab?.closedDocs || [];
+  while (list.length) {
+    const target = list.pop();
+    if (target.type === 'code' || tab.fileMap.has(target.path)) return !!(await openInNewTab(target));
+  }
+  toast(t('다시 열 문서 탭이 없습니다'));
+  return false;
+}
+
+/** Ctrl+W: 지금 문서 탭을 닫는다. 하나뿐이면 닫지 않고 알린다 (프로젝트는 Ctrl+Shift+W) */
+export function closeDocTabKey() {
+  if (S.tab && S.tab.panes.length < 2) {
+    toast(t('마지막 문서 탭입니다 — 프로젝트를 닫으려면 Ctrl+Shift+W 를 누르세요'));
+    return false;
+  }
+  return closeDocTab();
+}
+
+/** Ctrl+Tab·Ctrl+PageDown: 다음(+1)·이전(-1) 문서 탭. 끝에서는 반대쪽 끝으로 */
+export function cycleDocTab(step) {
+  const tab = S.tab;
+  if (!tab || tab.panes.length < 2) return false;
+  const n = tab.panes.length;
+  selectDocTab(tab.panes[(tab.panes.indexOf(tab.pane) + step + n) % n]);
   return true;
 }
 
@@ -295,7 +287,7 @@ function render() {
     const active = p === tab.pane;
     const { icon, name, tip } = describe(p);
     const dirty = p.editor?.dirty ? html`<span class="dirty" title="${t('저장하지 않은 편집이 있습니다')}">●</span>` : '';
-    const close = n > 1 ? html`<button type="button" class="tab-close" title="${t('문서 탭 닫기 (Ctrl+F4)')}" aria-label="${t('{name} 문서 탭 닫기', { name })}"><svg><use href="#i-close"/></svg></button>` : '';
+    const close = n > 1 ? html`<button type="button" class="tab-close" title="${t('문서 탭 닫기 (Ctrl+W)')}" aria-label="${t('{name} 문서 탭 닫기', { name })}"><svg><use href="#i-close"/></svg></button>` : '';
     const key = keyOf(i, n);
     return [html`<div class="doc-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-i="${i}" data-path="${viewOf(p)?.path || ''}" title="${key ? `${tip}\n${key}` : tip}">`, html`${icon}<span class="name">${name}</span>${dirty}${close}</div>`];
   }));
@@ -348,7 +340,7 @@ export function tabMenu(pane) {
   /** @type {MenuItem[]} */
   const items = [{ header: v?.path || pane.tab.name }];
   if (pane.tab.panes.length > 1) {
-    items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+F4' : t('가운데 버튼'), action: () => closeDocTab(pane) },
+    items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+W' : t('가운데 버튼'), action: () => closeDocTab(pane) },
       { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(pane) });
   }
   if (v?.path && (v.type === 'doc' || v.type === 'code')) items.push('-', ...pathMenuItems(v.path, true));

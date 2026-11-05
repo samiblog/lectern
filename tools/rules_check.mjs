@@ -24,6 +24,7 @@ const cases = (file, m) => new Function('m', readFileSync(join(root, file), 'utf
 const lineops = await load('web/js/lineops.js');
 const table = await load('web/js/tabledata.js');
 const safe = await load('web/js/html.js');
+const notes = await load('web/js/notesdata.js');
 {
   const r = cases('tools/edges/lineops_cases.js', lineops);
   say('줄 구조 표 점검', r.fails, r.n);
@@ -39,6 +40,10 @@ const safe = await load('web/js/html.js');
 {
   const r = cases('tools/edges/html_cases.js', safe);
   say('자동 이스케이프 표 점검', r.fails, r.n);
+}
+{
+  const r = cases('tools/edges/notes_cases.js', notes);
+  say('메모 글 표 점검', r.fails, r.n);
 }
 
 // 자료 모음: 파일마다 같은 이름의 .expect.json 에 적은 대로 읽히는지

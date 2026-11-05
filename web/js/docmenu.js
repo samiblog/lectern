@@ -1,18 +1,18 @@
 // 문서 본문 우클릭 메뉴: 우클릭한 블록(제목·단락·목록 항목·표·그림·코드·다이어그램·수식)에 테두리를 그리고 복사 메뉴를 띄운다.
 // 블록 밖(여백·문서 아래 빈 곳)을 누르면 문서 메뉴(경로 복사, 편집기로 열기, 모두 접기 등)를 띄운다.
-// 하이라이트한 곳(장 하이라이트·줄 하이라이트 — spotlight.js) 안이면 그 범위의 선택 상자: Claude 로 보내기, 위치·원문 복사, 담기 … (litMenu, D74·D75).
+// 하이라이트한 곳(장 하이라이트·줄 하이라이트 — spotlight.js) 안이면 그 범위의 선택 상자: Claude로 보내기, 위치·원문 복사, 담기 … (litMenu, D74·D75).
 // 코드 화면에서도 하이라이트한 곳 안이면 같은 상자 (담기 없이).
 //
-// 원문 복사와 Claude용 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
+// 원문 복사와 위치 복사는 markdown.js 가 블록마다 단 data-lines(원문 줄 범위)를 쓴다.
 // md 문서의 블록·절·고른 글은 '담기'·'보내기…'(basket.js, D63·D65) — 표·그림·차트는 캡션과 '자료:' 줄도 함께.
 // 코드 화면(codeview.js)에서는 줄 메뉴: 이 줄·고른 글 복사, Claude용 위치(@경로 12~20행), 편집기에서 이 줄 열기, 경로 복사, 전체 복사.
 // 보기 전용: 클립보드에 복사하거나 다른 앱으로 열기만 하고, 파일을 만들거나 고치지 않는다 (D24 — 넣기는 편집 모드에서 사용자가 저장).
 
 import { S, emit } from './store.js';
-import { showMenu } from './ui.js';
+import { showMenu, menuGroups } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource } from './spotlight.js';
+import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable } from './lineedit.js';
@@ -204,57 +204,67 @@ function frontMatterRange() {
   return end > 0 ? [1, end + 1] : null;
 }
 
-const texItem = (node) => ({ label: t('LaTeX 복사'), hint: describe(node.dataset.tex), action: () => copyPlain(node.dataset.tex) });
-const editorItem = (line) => ({ label: t('편집기에서 이 줄 열기'), hint: `${doc.path}:${line}`, action: () => openExternal(doc.path, line) });
+const texItem = (node) => ({ label: t('LaTeX 복사'), tip: describe(node.dataset.tex), action: () => copyPlain(node.dataset.tex) });
+const editorItem = (line) => ({ label: t('외부 편집기로 이 줄 열기'), tip: `${doc.path}:${line}`, action: () => openExternal(doc.path, line) });
 
-/** 원문 줄 범위가 있는 블록의 공통 항목: 원문 복사, Claude용 위치 복사, 여기를 편집, 편집기에서 이 줄 열기 */
-function sourceItems(range, label = t('원문 복사'), note = '') {
+/** 원문 줄 범위의 복사 항목: 원문 복사, 위치 복사 (Claude 에 붙이는 @경로 a~b행) */
+function sourceCopies(range, label = t('원문 복사'), note = '') {
   const ref = claudeRef(range, note);
   return [
-    { label, hint: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)), term: sourceOf(range) },
-    { label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` },
-    { label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },   // 편집 모드 (D54)
-    editorItem(range[0]),
+    { label, tip: `Markdown ${rangeText(range)}`, action: () => copyPlain(sourceOf(range)), term: sourceOf(range) },
+    { label: t('위치 복사'), tip: ref, action: () => copyPlain(ref), term: `${ref} ` },
   ];
 }
 
+/** 원문 줄 범위의 편집 항목: 여기서 편집 (편집 모드 — D54), 외부 편집기로 이 줄 열기 */
+const sourceEdits = (range) => [
+  { label: t('여기서 편집'), hint: 'Ctrl+E', tip: t('{a}행', { a: range[0] }), action: () => emit('edit', { line: range[0] }) },
+  editorItem(range[0]),
+];
+
+/** 새 메모로 보내기 (D92): 글과 어디서 왔는지 — notes.js 가 받는다 */
+const noteItem = (body, path, range) => ({ label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body, path, line: range?.[0] || 0, end: range?.[1] || 0 }) });
+
 /** 담기·보내기 (D63·D65): 이 문서의 줄 범위(range)를 조각으로. info: {kind, name, label, text?, plain?} — basket.js 의 snippetOf */
-function takeItems(range, info, labels = [t('담기'), t('보내기…')]) {
+function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…')]) {
   const from = doc;
   const snip = () => snippetOf(from, range, info);
-  return [{ label: labels[0], hint: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip()]) },
-    { label: labels[1], hint: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) }];
+  return [{ label: labels[0], tip: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip()]) },
+    { label: labels[1], tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) },
+    noteItem(info.text ?? sourceOf(range), from.path, range)];
 }
 
 /**
  * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, 줄 하이라이트의 줄들) 안에서 우클릭하면 나오는 선택 상자 (D74·D75).
- * 맨 위 'Claude 로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
+ * 맨 위 'Claude로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
  * 그 밖에 위치·원문 복사, 담기·문서로 보내기(md 만), 그 블록(코드 화면은 그 줄)의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄.
  * 보내기·복사는 키(Shift+→·Shift+←·Ctrl+C)와 같은 함수다. 하이라이트로 할 일이 늘면 이 상자에 더한다.
  * hl: litAt 의 {path, range, ref, text, code}. blockMenu: 우클릭한 블록의 보통 메뉴를 띄우는 함수 (없으면 null)
  */
-function litMenu(hl, selected, blockMenu) {
+function litMenu(hl, selected, blockMenu, own = []) {
   const { range, ref, text } = hl;
   const chart = hl.chapter ? null : litChart(range);
   const name = t('하이라이트한 곳');
   /** @type {MenuItem[]} */
-  const items = [{ header: `${name} · ${rangeText(range)}` },
-    { label: t('Claude 로 보내기'), hint: `Shift+→ · ${t('터미널에 (Enter 는 누르지 않음)')}`, action: sendLit },
-    '-',
-    { label: t('Claude용 위치 복사'), hint: `Shift+← · ${ref}`, action: copyLitRef },
-    { label: t('원문 복사'), hint: `Ctrl+C · ${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource }];
-  if (!hl.code) items.push(...takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, [t('담기'), t('문서로 보내기…')]));
-  if (chart) items.push('-', chart);
-  if (chart && hl.code) items.push({ label: t('이 범위를 표로'), hint: t('맨 위 행을 머리행으로 어림합니다'), action: () => markRange($('#lec-view'), range) });
-  if (!hl.chapter && linesEditable()) items.push('-', { label: t('줄 지우기'), hint: `Delete · ${rangeText(range)}`, action: () => emit('line-delete', {}) });
-  items.push('-');
-  if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected) });
-  if (blockMenu) {
-    items.push(hl.code ? { label: t('이 줄의 메뉴…'), hint: t('줄·고른 글 복사, 편집기에서 열기 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu }
-      : { label: t('이 블록의 메뉴…'), hint: t('표·그림·코드 복사 등 — 하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 이 상자를 닫은 뒤에 부른다
-  }
-  items.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
-  return items;
+  const uniques = own.filter((it) => !(chart && it !== '-' && 'label' in it && it.label === t('차트로 보기')));
+  if (chart) uniques.push(chart);
+  if (chart && hl.code) uniques.push({ label: t('이 범위를 표로'), tip: t('맨 위 행을 머리행으로 어림합니다'), action: () => markRange($('#lec-view'), range) });
+  /** @type {MenuItem[]} */
+  const copies = [];
+  if (selected) copies.push({ label: t('고른 글 복사'), tip: describe(selected), action: () => copyPlain(selected) });
+  copies.push({ label: t('원문 복사'), hint: 'Ctrl+C', tip: `${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource },
+    { label: t('위치 복사'), hint: 'Shift+←', tip: ref, action: copyLitRef });
+  const takes = hl.code ? [noteItem(text, hl.path, range)] : takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) });
+  /** @type {MenuItem[]} */
+  const edits = !hl.chapter && linesEditable() && litOneLine() ? [{ label: t('여기서 편집'), hint: 'F2', action: () => editHere() }] : [];
+  /** @type {MenuItem[]} */
+  const views = [];
+  if (blockMenu) views.push({ label: hl.code ? t('이 줄의 메뉴…') : t('이 블록의 메뉴…'), tip: t('하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 메뉴를 닫은 뒤에 연다
+  views.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
+  /** @type {MenuItem[]} */
+  const danger = !hl.chapter && linesEditable() ? [{ label: t('줄 지우기'), hint: 'Delete', tip: rangeText(range), action: () => emit('line-delete', {}) }] : [];
+  return menuGroups([{ header: `${name} · ${rangeText(range)}` }], uniques,
+    [{ label: t('Claude로 보내기'), hint: 'Shift+→', tip: t('터미널에 (Enter 는 누르지 않음)'), action: sendLit }], copies, takes, edits, views, danger);
 }
 
 /** 표를 차트로 — 캡션은 제목과 단위를 어림하는 데 쓴다 (D86). range: 이 원문 줄의 행만 */
@@ -266,11 +276,11 @@ function chartTable(table, range = null) {
 /** 하이라이트한 곳이 표 하나의 행이면 '차트로 보기' 항목 (그 행만). 데이터 보기는 그 행들을, md 문서는 그 표의 행들을 */
 function litChart(range) {
   const view = $('#lec-view');
-  if (view.csv && view.classList.contains('csv-view')) return { label: t('차트로 보기'), hint: t('하이라이트한 행'), action: () => chartRange(view, range) };
+  if (view.csv && view.classList.contains('csv-view')) return { label: t('차트로 보기'), tip: t('하이라이트한 행'), action: () => chartRange(view, range) };
   if (view.classList.contains('code-view')) return null;
   const hit = [...view.querySelectorAll('table')].filter((table) => domTable(table, range).rows.length);
   if (hit.length !== 1) return null;
-  return { label: t('차트로 보기'), hint: t('하이라이트한 행'), action: () => chartTable(hit[0], range) };
+  return { label: t('차트로 보기'), tip: t('하이라이트한 행'), action: () => chartTable(hit[0], range) };
 }
 
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
@@ -287,57 +297,80 @@ function blockTake(picked) {
   return { range, info: { kind: ext.kind || 'block', name: ext.kind === 'chart' ? t('차트') : kindOf(el), label } };
 }
 
-function blockItems(el, target) {
+/** 블록에서만 하는 일: 표 복사·그림 복사·코드 복사·링크 등 (하이라이트 메뉴에서도 바로 보인다) */
+function uniqueItems(el, target) {
   /** @type {MenuItem[]} */
-  const items = [{ header: kindOf(el) }];
+  const items = [];
   const tag = el.tagName;
   // 블록 안에서 누른 작은 것: 문장 속 수식, 링크
   const math = target.closest('[data-tex]');
   if (math && math !== el && el.contains(math)) items.push(texItem(math));
   const link = target.closest('a[data-lec-href]');
-  if (link) items.push({ label: t('링크 주소 복사'), hint: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref), term: `${link.dataset.lecHref} ` });
+  if (link) {
+    if (link.dataset.lecOpen != null || link.matches('.path-link')) {   // 앱 안에서 여는 링크 (D91 — Ctrl+누르기와 같다)
+      items.push({ label: t('새 문서 탭에서 열기'), hint: t('Ctrl+누르기'), action: () => link.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, ctrlKey: true })) });
+    }
+    items.push({ label: t('링크 주소 복사'), tip: link.dataset.lecHref, action: () => copyPlain(link.dataset.lecHref), term: `${link.dataset.lecHref} ` });
+  }
   if (tag === 'IMG') {
-    if (el.classList.contains('external')) items.push({ label: t('그림 주소 복사'), hint: el.src, action: () => copyPlain(el.src) });
-    else items.push({ label: t('그림 복사'), hint: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyImage(el) });
+    if (el.classList.contains('external')) items.push({ label: t('그림 주소 복사'), tip: el.src, action: () => copyPlain(el.src) });
+    else items.push({ label: t('그림 복사'), tip: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyImage(el) });
   } else if (tag === 'TABLE') {
     items.push({
-      label: t('표 복사'), hint: t('엑셀에 붙이면 칸이 나뉘고, 워드·메일에는 표로'),
+      label: t('표 복사'), tip: t('엑셀에 붙이면 칸이 나뉘고, 워드·메일에는 표로'),
       action: () => { const data = tableData(el); copyParts({ 'text/plain': data.tsv, 'text/html': data.html }, `${t('표')} ${tableSize(el)}`); },
-    }, { label: t('차트로 보기'), hint: t('시간·단위를 어림해 선·막대로'), action: () => chartTable(el) });
+    }, { label: t('차트로 보기'), tip: t('시간·단위를 어림해 선·막대로'), action: () => chartTable(el) });
   } else if (el.matches('.code-block')) {
     const code = el.querySelector('pre').textContent.replace(/\n$/, '');
     items.push({ label: t('코드 복사'), action: () => copyPlain(code), term: code });
   } else if (el.matches('pre.mermaid, pre.lec-chart')) {
-    if (el.querySelector('svg')) items.push({ label: t('그림 복사'), hint: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyDiagram(el) });
+    if (el.querySelector('svg')) items.push({ label: t('그림 복사'), tip: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyDiagram(el) });
   } else if (el.matches('.math-block')) {
     items.push(texItem(el));
-  } else if (!el.matches('.diagram-error')) {
-    items.push({ label: HEADING.test(tag) ? t('제목 글자 복사') : t('텍스트 복사'), action: () => copyPlain(el.innerText.trim()), term: el.innerText.trim() });
   }
+  return items;
+}
 
+/** 블록의 보통 메뉴. 묶음의 차례는 ui.js 의 menuGroups */
+function blockItems(el, target, views = []) {
+  const tag = el.tagName;
+  /** @type {MenuItem[]} */
+  const copies = [];
+  /** @type {MenuItem[]} */
+  let takes = [];
+  /** @type {MenuItem[]} */
+  let edits = [];
+  /** @type {MenuItem[]} */
+  const folds = [];
+  const plain = !el.matches('img, table, .code-block, pre.mermaid, pre.lec-chart, .math-block, .diagram-error');
+  if (plain) copies.push({ label: HEADING.test(tag) ? t('제목 글자 복사') : t('텍스트 복사'), action: () => copyPlain(el.innerText.trim()), term: el.innerText.trim() });
   if (HEADING.test(tag)) {
     const section = sectionRange(el);
     if (el.id) {
       const anchor = `${doc.path}#${el.id}`;
-      items.push({ label: t('절 링크 복사'), hint: anchor, action: () => copyPlain(anchor) });
+      copies.push({ label: t('절 링크 복사'), tip: anchor, action: () => copyPlain(anchor) });
     }
     if (section) {
       const name = el.textContent.trim();
-      items.push(...sourceItems(section, t('이 절 원문 복사'), ` (${t("'{name}' 절", { name })})`), '-',
-        ...takeItems(section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name }, [t('이 절 담기'), t('이 절 보내기…')]));
+      copies.push(...sourceCopies(section, t('이 절 원문 복사'), ` (${t("'{name}' 절", { name })})`));
+      edits = sourceEdits(section);
+      takes = takeItems(section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name }, [t('이 절 담기'), t('이 절을 문서로 보내기…')]);
     }
     if (el.classList.contains('lec-fold') || el.parentElement === $('#lec-view')) {
       const level = +tag[1];
-      items.push('-', { label: t('같은 수준({tag}) 모두 접기', { tag }), action: () => foldLevel(level, true) },
+      folds.push({ label: t('같은 수준({tag}) 모두 접기', { tag }), action: () => foldLevel(level, true) },
         { label: t('같은 수준({tag}) 모두 펴기', { tag }), action: () => foldLevel(level, false) });
     }
   } else {
     const range = el.matches('.front-matter') ? frontMatterRange() : lineRange(el);
-    if (range) items.push(...sourceItems(range));
+    if (range) {
+      copies.push(...sourceCopies(range));
+      edits = sourceEdits(range);
+    }
     const take = range && !el.matches('.front-matter') && blockTake(el);   // 맨 앞 설정은 담지 않는다
-    if (take) items.push('-', ...takeItems(take.range, take.info));
+    if (take) takes = takeItems(take.range, take.info);
   }
-  return items;
+  return menuGroups([{ header: kindOf(el) }], uniqueItems(el, target), copies, takes, edits, [...folds, ...views]);
 }
 
 /** 고른 글이 든 블록들의 원문 줄 범위 (고른 글 담기의 담은 곳) */
@@ -353,14 +386,11 @@ function printDoc() {
   (frame ? frame.contentWindow : window).print();
 }
 
-function docItems() {
+function docItems(views = []) {
   /** @type {MenuItem[]} */
-  const items = [{ header: doc.path }, { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }, '-', ...pathMenuItems(doc.path, true)];
-  if (hasFolds()) {
-    items.push('-', { label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) });
-  }
-  items.push('-', { label: t('인쇄 / PDF로 저장…'), hint: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc });
-  return items;
+  const folds = hasFolds() ? [{ label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) }] : [];
+  return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [{ label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }], [...folds, ...views],
+    [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }]);
 }
 
 /** 코드 화면의 줄 번호 (요소·글 위치가 든 줄) */
@@ -403,28 +433,28 @@ function codeLineMenu(e, view, x, y) {
   }
   const sheet = view.dataset.sheet || '';   // 엑셀 보기 (D77) — 행은 엑셀의 행 번호, 보기만
   /** @type {MenuItem[]} */
-  const items = [{ header: range ? `${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}` : path }];
-  if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
+  const items = [];
+  if (selected) items.push({ label: t('고른 글 복사'), tip: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
   const cell = sheet && !selected ? e.target.closest?.('td:not(.csv-rn):not(.csv-calc)') : null;
   if (cell && row) {   // 엑셀의 칸: 그 칸의 글 (이름은 B3 처럼 — 고른 표면 그 표의 왼쪽 끝부터, D86)
     const name = `${colName(Number(view.dataset.firstCol || 0) + (view.csv?.region?.c0 ?? 0) + cell.cellIndex - 1)}${line}`;
-    items.push({ label: t('이 칸 복사'), hint: `${name} · ${describe(cell.textContent)}`, action: () => copyPlain(cell.textContent) });
+    items.push({ label: t('이 칸 복사'), tip: `${name} · ${describe(cell.textContent)}`, action: () => copyPlain(cell.textContent) });
   }
-  if (row && !selected) items.push({ label: sheet ? t('이 행 복사') : t('이 줄 복사'), hint: describe(rowText), action: () => copyPlain(rowText), term: sheet ? undefined : rowText.trim() });
+  if (row && !selected) items.push({ label: sheet ? t('이 행 복사') : t('이 줄 복사'), tip: describe(rowText), action: () => copyPlain(rowText), term: sheet ? undefined : rowText.trim() });
+  /** @type {MenuItem[]} */
+  const edits = [];
   if (range) {
     const ref = lineRef(path, range, sheet);
-    items.push({ label: t('Claude용 위치 복사'), hint: ref, action: () => copyPlain(ref), term: `${ref} ` });
+    items.push({ label: t('위치 복사'), tip: ref, action: () => copyPlain(ref), term: `${ref} ` });
     if (!sheet) {
-      items.push({ label: t('여기를 편집'), hint: `${t('{a}행', { a: range[0] })} — Ctrl+E`, action: () => emit('edit', { line: range[0] }) },
-        { label: t('편집기에서 이 줄 열기'), hint: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
+      edits.push({ label: t('여기서 편집'), hint: 'Ctrl+E', tip: t('{a}행', { a: range[0] }), action: () => emit('edit', { line: range[0] }) },
+        { label: t('외부 편집기로 이 줄 열기'), tip: t('{a}행', { a: range[0] }), action: () => openExternal(path, range[0]) });
     }
   }
-  items.push('-', ...pathMenuItems(path, true), '-',
-    { label: isCode(path) ? t('코드 전체 복사') : t('전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });
-  const spot = spotlightItems(e.target);   // 하이라이트 해제 (D75)
-  if (spot.length) items.push('-', ...spot);
+  items.push({ label: isCode(path) ? t('코드 전체 복사') : t('전체 복사'), action: () => copyPlain(view.codeText || '', t('{name} 전체', { name: path })) });
+  const header = { header: range ? `${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}` : path };
   row?.classList.add('lec-picked');
-  showMenu(x, y, items, () => row?.classList.remove('lec-picked'));
+  showMenu(x, y, menuGroups([header], items, pathMenuItems(path, true), edits, spotlightItems(e.target)), () => row?.classList.remove('lec-picked'));
 }
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
@@ -442,7 +472,7 @@ function openMenu(e, view, x, y) {
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74). '이 블록의 메뉴…' 로 아래의 보통 메뉴
   const hl = view === $('#lec-view') ? litAt(e.clientY) : null;
-  const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y));
+  const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y), el ? uniqueItems(el, e.target) : []);
   if (lit) {
     showMenu(x, y, lit);
     return;
@@ -452,14 +482,13 @@ function openMenu(e, view, x, y) {
 
 /** 우클릭한 블록(없으면 문서)의 보통 메뉴 — 고른 글이 있으면 맨 위에 그 글 */
 function blockMenu(e, view, el, selected, x, y) {
-  const items = el ? blockItems(el, e.target) : docItems();
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
-  if (spot.length) items.push('-', ...spot);
+  const items = el ? blockItems(el, e.target, spot) : docItems(spot);
   const sel = view.ownerDocument.getSelection();
   if (selected) {
     const range = selectionRange(sel);
-    const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글 보내기…')]) : [];
-    items.unshift({ label: t('선택한 글 복사'), hint: describe(selected), action: () => copyPlain(selected), term: selected }, ...take, '-');
+    const take = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서로 보내기…')]) : [];
+    items.splice(1, 0, { label: t('고른 글 복사'), tip: describe(selected), action: () => copyPlain(selected), term: selected }, ...take, '-');
   }
   // 표는 가로 스크롤 상자가 테두리를 잘라 내므로 상자에 표시한다
   const mark = el?.tagName === 'TABLE' ? el.closest('.table-wrap') || el : el;

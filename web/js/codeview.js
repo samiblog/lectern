@@ -75,7 +75,7 @@ function notice(view, path, message) {
   delete view.dataset.sheet;
   delete view.dataset.encoding;
   view.dataset.codePath = path;
-  const label = isSheet(path) ? t('기본 앱으로 열기') : t('편집기로 열기');
+  const label = isSheet(path) ? t('기본 앱으로 열기') : t('외부 편집기로 열기');
   setHtml(view, html`<div class="doc-missing"><h1>${path}</h1><p>${message}</p>
     <p><button type="button" class="primary cv-editor">${label}</button></p></div>`);
 }
@@ -224,7 +224,7 @@ const editButton = (path) => (isCode(path) ? [html`<button type="button" class="
 function openButton(path) {
   return isDataFile(path) || isSheet(path)
     ? html`<button type="button" class="text-btn cv-editor" title="${t('기본 앱으로 열기 (자료 목록에서 두 번 누르기)')}">${t('기본 앱으로 열기')}</button>`
-    : html`<button type="button" class="text-btn cv-editor" title="${t('편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('편집기로 열기')}</button>`;
+    : html`<button type="button" class="text-btn cv-editor" title="${t('외부 편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('외부 편집기로 열기')}</button>`;
 }
 
 function modifiedText(modified) {
