@@ -158,6 +158,15 @@ try:
         check('틀린 다이어그램·차트의 알림', page.locator('#lec-view pre code', has_text='틀린 다이어그램').count() + page.locator('#lec-view pre', has_text='틀린 차트').count() >= 2,
               page.locator('#lec-view').inner_text()[-300:])
         menu(page.locator('#lec-view h2').first, '문서 우클릭 메뉴')
+        # 표 복사의 HTML 은 화면이 아니라 클립보드로 간다 — 글이어야 하고 값은 이스케이프된다
+        page.evaluate("""() => { window.__copied = null; navigator.clipboard.write = async (items) => {
+          const out = {}; for (const type of items[0].types) out[type] = await (await items[0].getType(type)).text(); window.__copied = out; }; }""")
+        page.locator('#lec-view td', has_text='a&b').first.click(button='right')
+        page.locator('#lec-menu button', has_text='표 복사').first.click()
+        wait('!!window.__copied', 4000)
+        copied = page.evaluate('window.__copied') or {}
+        table_html = copied.get('text/html', '')
+        check('표 복사의 HTML: 표 글이고 값은 이스케이프', table_html.startswith('<table') and 'a&amp;b' in table_html and '&lt;i data-xss' in table_html and 'data-xss="1">' not in table_html, table_html[:300])
         menu(page.locator('#lec-doctab-list [role=tab]').first, '문서 탭 우클릭 메뉴')
 
         print('[찾기]')
