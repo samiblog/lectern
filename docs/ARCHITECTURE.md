@@ -507,51 +507,7 @@ sequenceDiagram
 
 ### 단축키
 
-| 키 | 동작 |
-|---|---|
-| Ctrl+P | 빠른 열기 — 문서와 코드, 맞는 문서 먼저 (입력 전에는 최근 수정한 문서, D44) |
-| Ctrl+F | 문서·코드 화면: 화면 안 찾기 / 개요 화면: 트리 필터로 이동 / 사용설명서를 연 동안: 설명서 안 찾기 |
-| Ctrl+Shift+F | 전체 검색 (사이드바 '검색' 탭) |
-| Ctrl+, | 설정 창 |
-| Ctrl+O | 폴더 열기 (새 탭으로, 이미 열린 폴더면 그 탭) |
-| Ctrl+N | 새 문서 만들기 — 경로를 정하면 바로 `# 제목` 으로 만들어 새 문서 탭에서 편집 (편집 중에도, D65) |
-| F2 | 사이드바에서 고른 파일의 이름 바꾸기 (트리·'코드'·'자료' 목록·최근 변경·검색 — 같은 폴더 안에서, D66) |
-| Ctrl+B | 사이드바 보이기/숨기기 |
-| `` Ctrl+` `` | 오른쪽 터미널 열기/닫기 (터미널 안에서도). 터미널 안의 다른 키는 셸로 간다 (Ctrl+Tab 만 앱이 받음). 터미널 모음에서는 고른 칸의 프로젝트로 가서 오른쪽 터미널 |
-| `` Ctrl+Shift+` `` | 터미널 모음 열기/닫기. 모음 안에서 Ctrl+Tab / Ctrl+Shift+Tab 은 다음 / 이전 칸 |
-| Alt+← / Alt+→, 마우스 뒤로/앞으로 버튼 | 선택된 칸에서 뒤로 / 앞으로 (D78 — 같은 문서 안에서 뛴 자리도, `nav.go`) |
-| Ctrl+1 ~ 8 / Ctrl+9 | 그 순번의 탭 / 마지막 탭 |
-| Ctrl+Tab / Ctrl+Shift+Tab, Ctrl+PageDown / Ctrl+PageUp | 다음 / 이전 탭 (끝에서는 반대쪽 끝으로) |
-| Ctrl+W, 탭을 가운데 버튼으로 | 탭 닫기 |
-| Ctrl+누르기, 가운데 버튼 | 문서를 새 문서 탭에서 열기 — 트리·목록·링크·경로 표기·폴더 개요·검색·모아 보기·빠른 열기(Ctrl+Enter) (D64) |
-| 두 번 누르기 | 사이드바 목록(트리·폴더 보기·최근 변경·검색 결과·모아 보기)의 문서를 새 문서 탭에서 열기 (D67) |
-| Alt+1 ~ 8 / Alt+9 | 그 순번의 문서 탭 / 마지막 문서 탭 (편집 상자 안에서도) |
-| Ctrl+F4, 문서 탭을 가운데 버튼으로 | 문서 탭 닫기 (하나뿐이면 닫지 않음) |
-| F5 | 선택된 탭의 트리와 화면 다시 불러오기 |
-| Shift+F5 | 발표 문서를 슬라이드로 볼 때: 발표 — 지금 보는 슬라이드부터 (D59) |
-| → ← Space·PageDown·↓ / PageUp·↑ · Home·End · N · F · Esc | 발표 중: 다음 / 이전 · 처음·끝 · 발표자 노트 · 전체 화면 · 끝내기 (발표 중의 키는 모두 `present.js` 가 받는다) |
-| ↑ / ↓ | md 문서·코드 화면: 현재 위치를 위 / 아래 줄로, 화면이 따라감 (D75 — 줄 하이라이트 중이면 풀고). 장 하이라이트 중에는 앞 장 / 뒤 장 (PageUp / PageDown 도). 받는 곳은 문서 칸·툴바·목차·상태줄 (`spotlight.spotKey` — 입력칸·사이드바 목록·열린 팝업에서는 원래대로) |
-| Shift+누르기 / Shift+끌기, Shift+Enter | 그 줄들 / 현재 줄 하이라이트 (원문 줄 단위, D75). 하이라이트가 있으면 Shift+누르기는 거기까지 넓힘 |
-| Shift+↑ / Shift+↓ | 하이라이트의 끝 줄을 위 / 아래로 (처음 줄은 그대로 — 넓히거나 줄이기). 하이라이트가 없으면 현재 줄부터, 장 하이라이트면 그 장의 처음~끝 줄부터 |
-| Shift+→ / Shift+← | 하이라이트한 곳을 맨 앞 터미널에 `@경로 a~b행 ` (Enter 없이, 초점은 문서에 — `term-paste-stay`) / 그 위치 복사. 하이라이트가 없으면 알림만 |
-| Ctrl+Shift+→ | 위치를 맨 앞 터미널에 넣고 초점도 터미널로 (`term-paste` — 하이라이트가 없으면 현재 줄, D79) |
-| F6 / Shift+F6 | 문서 ↔ 터미널로 초점 옮기기 (`main.hopFocus`, D79 — 터미널 안에서도 앱이 받는다: `terminal.keyFor`·`lineedit.onKey` 가 넘긴다) |
-| Ctrl+C | 하이라이트 중이고 고른 글이 없으면 그 줄들의 원문 복사 |
-| F2 · 두 번 누르기 · Shift+Enter (한 줄만 하이라이트) | 한 줄 편집 (D76 — `spotKey` 가 'line-edit', 두 번 누르기는 `lineedit.onDoubleClick`). 편집 칸 안: Enter·Ctrl+S 저장, Esc 그만두기, ↑·↓ 저장하고 위·아래 줄(화면에서 꺾인 글은 맨 윗줄·맨 아랫줄에서 — `caretOnEdge`), Tab·Shift+Tab 표의 옆 칸(코드는 탭 글자), Shift+→(글 끝) 저장하고 Claude 로 — 칸 안의 키는 앱으로 가지 않는다 |
-| Ctrl+Z / Ctrl+Y | 문서 칸에서: 한 줄 편집으로 저장한 것을 되돌림 / 다시 (`lineedit.undoLineEdit`·`redoLineEdit` — 파일마다, 파일이 기록의 상태 그대로일 때만) |
-| Ctrl+Enter / Ctrl+Shift+Enter | 한 줄 편집 중: 아래 / 위에 새 줄, 글 가운데서 Ctrl+Enter 는 나누기 (`lineedit.addLine`, D83) |
-| Backspace | 한 줄 편집 중 줄 맨 앞에서: 같은 종류의 윗줄과 합침 (`lineedit.joinUp`, D83) |
-| Tab / Shift+Tab | 한 줄 편집 중: 목록 레벨 이동 (`lineedit.levelHere`, D83 — 표는 옆 칸, 코드는 탭) |
-| Alt+↑ / Alt+↓ | 한 줄 편집 중(`lineedit.moveHere`)·줄 하이라이트 중(`lineedit.moveLit` — main.js): 줄 옮기기 (D83 — 그냥 읽는 중에는 받지 않는다) |
-| Delete · Ctrl+X | 줄 하이라이트 중: 줄 지우기 · 원문 복사하고 지우기 (`spotKey` 가 'line-delete', D83) |
-| Ctrl+Shift+K / Ctrl+Shift+D | 한 줄 편집 중: 이 줄 지우기 / 복제 (`lineedit.deleteHere`·`duplicateHere`, D83) |
-| Alt+L | md 문서의 줄 번호 보이기·감추기 (`linenums.toggleLineNumbers`, D80) |
-| Esc | 팝업·메뉴·확대·찾기·사용설명서 닫기, 그다음 하이라이트 끄기 |
-| F1 | 사용설명서 열기/닫기 (D45) |
-| Ctrl+/ | 단축키 표 열기/닫기 (툴바의 `?` 버튼과 같음) |
-| Ctrl+E | 편집 모드 열기/닫기 — 보고 있는 문서·코드 (D54) |
-| Ctrl+S · Esc · Ctrl+F · Ctrl+H · Alt+G | 편집 모드 안: 저장 · 닫기 · 찾기 · 바꾸기 · 줄로 가기 (편집 상자 안의 키는 편집기 것) |
-| Ctrl+휠 | 확대/축소 (pywebview `zoomable`) |
+목록은 `help.js` 의 `SHORTCUTS` 에 있다. 키를 받는 곳은 `main.js` 의 `bindKeys`, 한 줄 편집 안은 `lineedit.js` 의 `onKey`, 터미널 안은 `terminal.js` 의 `keyFor`.
 
 ### 테마 (theme.js, themes/)
 - 스타일 24종 (D26, D30): 밝은 16 — `default`(기본)·`report`(보고서)·`office`(사내 문서)·`consulting`(컨설팅)·`notion`(노션풍)·`contrast`(고대비)·`paper`(종이·세피아)·`book`(책)·`academic`(논문)·`newsprint`(신문)·`magazine`(잡지)·`manuscript`(원고·타자기)·`github`·`docsite`(문서 사이트)·`solarized-light`·`gruvbox-light`, 어두운 8 — `dark`·`github-dark`·`nord`·`solarized-dark`·`dracula`·`one-dark`·`night`(밤 종이)·`ink`(먹·완전 검정).

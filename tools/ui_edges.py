@@ -1,10 +1,12 @@
-"""가장자리 점검: ui_smoke 에 없는 동작 — 문서에 적은 조합·실패 길·경쟁 상태·줄 구조 편집을 실제 키로 본다.
+"""가장자리 점검: ui_smoke 에 없는 동작 — 문서에 적은 조합·실패 길·경쟁 상태·줄 구조 편집·데이터 보기를 실제 키로 본다.
 
-tools/edges/ 의 점검마다 임시 프로젝트·설정으로 서버를 따로 띄워 돌린다. 준비는 ui_smoke 와 같다 (playwright).
+tools/edges/ 의 묶음마다 임시 프로젝트·설정으로 서버를 따로 띄워 돌린다. 준비는 ui_smoke 와 같다 (playwright).
 
     python tools/ui_edges.py              :: 모두
     python tools/ui_edges.py structure    :: 이름이 맞는 것만
+    python tools/ui_edges.py --changed    :: 고친 파일에 닿는 것만 (master 와 다른 파일, 커밋 전 것도)
 """
+import re
 import subprocess
 import sys
 import time
@@ -12,10 +14,43 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide']
+# 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
+AREAS = [
+    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['structure', 'lines']),
+    (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide']),
+    (r'web/js/(htmldoc|nav|find|toc|fold)\.js', ['frames', 'reading']),
+    (r'web/js/(tabs|doctabs|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure']),
+    (r'tools/edges/harness\.py', SUITES),
+    (r'tools/edges/(\w+)\.py', None),
+]
+AREA_OTHER = ['reading', 'combos']
+
+
+def changed_files() -> list[str]:
+    def git(*args):
+        return subprocess.run(['git', *args], cwd=ROOT, capture_output=True, text=True, encoding='utf-8').stdout.split('\n')
+    return sorted({f for f in git('diff', '--name-only', 'master') + git('ls-files', '--others', '--exclude-standard') if f})
+
+
+def suites_for(files: list[str]) -> list[str]:
+    want: set[str] = set()
+    for f in files:
+        for pattern, names in AREAS:
+            m = re.fullmatch(pattern, f)
+            if m:
+                want |= {m.group(1)} if names is None and m.group(1) in SUITES else set(names or [])
+                break
+        else:
+            if f.startswith(('web/', 'lectern/')):
+                want |= set(AREA_OTHER)
+    return [s for s in SUITES if s in want]
 
 
 def main() -> int:
-    want = sys.argv[1:] or SUITES
+    args = sys.argv[1:]
+    want = suites_for(changed_files()) if args == ['--changed'] else args or SUITES
+    if args == ['--changed']:
+        print('고친 파일에 닿는 묶음:', want or '없음', flush=True)
     failed = []
     for name in SUITES:
         if name not in want:

@@ -43,6 +43,73 @@ export function isMissing(cell) {
   return !s || MISSING.test(s);
 }
 
+// ---- csv ----------------------------------------------------------------------------------
+
+/** 구분자: tsv 는 탭, 아니면 앞 20줄에서 쉼표·세미콜론·탭 가운데 줄마다 개수가 가장 고르게 많은 것 */
+export function delimiterOf(text, path) {
+  if (path.toLowerCase().endsWith('.tsv')) return '\t';
+  const sample = text.split('\n', 20).filter((l) => l.trim());
+  let best = ',';
+  let score = -1;
+  for (const d of [',', ';', '\t']) {
+    const counts = sample.map((l) => l.split(d).length - 1);
+    const min = Math.min(...counts);
+    if (min > 0 && min > score) {
+      best = d;
+      score = min;
+    }
+  }
+  return best;
+}
+
+/** RFC 4180 — 따옴표 안의 구분자·줄바꿈·"" 를 다룬다. {rows: [[칸]], lines: [[첫 줄, 끝 줄]] (1부터)} */
+export function parseCsv(text, delim) {
+  const rows = [];
+  const lines = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  let line = 1;
+  let start = 1;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (quoted) {
+      if (ch === '"') {
+        if (text[i + 1] === '"') {
+          cell += '"';
+          i += 1;
+        } else quoted = false;
+      } else {
+        if (ch === '\n') line += 1;
+        cell += ch;
+      }
+    } else if (ch === '"' && !cell) {
+      quoted = true;
+    } else if (ch === delim) {
+      row.push(cell);
+      cell = '';
+    } else if (ch === '\n') {
+      row.push(cell);
+      if (row.length > 1 || row[0] !== '') {
+        rows.push(row);
+        lines.push([start, line]);
+      }
+      row = [];
+      cell = '';
+      line += 1;
+      start = line;
+    } else {
+      cell += ch;
+    }
+  }
+  if (cell || row.length) {
+    row.push(cell);
+    rows.push(row);
+    lines.push([start, line]);
+  }
+  return { rows, lines };
+}
+
 // ---- 시간 ---------------------------------------------------------------------------------
 
 const yearOf = (s) => {

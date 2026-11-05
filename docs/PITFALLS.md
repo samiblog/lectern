@@ -1,0 +1,90 @@
+# 알아 둘 함정
+
+코드를 고치다 걸리기 쉬운 곳을 영역별로 모았다. 그 영역을 고치기 전에 해당 절을 읽는다. 걸린 일이 새로 생기면 한 항목을 더한다.
+
+
+## 터미널
+
+- 터미널 API(`/api/term/*`)는 `X-Term` 헤더(= 페이지의 `meta lec-term`, 실행마다 새 비밀값)를 검사한다 — 토큰이 없는 브라우저 모드에서도. 셸에 글자를 보내는 길은 사용자의 키 입력(`/api/term/input`) 하나로 둔다. 문서·링크·다른 기능에서 셸로 명령을 보내는 API 를 만들지 않는다 (D38). 터미널에 넣는 경로는 `tree.shellWord`·`psQuote` 로 (PowerShell 은 ‘ ’ ‚ ‛ 도 작은따옴표로 읽는다 — 모두 겹쳐 쓴다, D69). 메뉴의 '터미널에 붙여 넣기'는 `terminal.js` 의 `pasteToTerminal`(맨 앞 터미널에, xterm 의 `paste`, 끝 줄바꿈을 떼고, 여러 줄이면 묻기)로만 — 메뉴 항목에 `term` 을 주면 버튼이 붙는다 (D51).
+- 터미널은 탭마다 여럿(`tab.terms` — 번호 n, 서버도 (프로젝트, n)마다 셸 하나)이고 고른 것이 `tab.term` 이다 (D69). 출력은 모든 셸을 긴 폴링 하나(`POST /api/term/read` 의 want, `terminal.js` 의 `readAll`)로 받는다 — 브라우저는 한 주소에 연결을 6개까지만 여니, 셸·화면마다 오래 기다리는 요청을 따로 걸지 않는다. 탭의 셸을 다루는 코드(닫기 전에 묻기·치우기·색·되돌리기)는 `termsOf(tab)` 를 돈다. 터미널 화면(`term.box`)은 터미널 모음(`gather.js`)이 오른쪽 패널에서 모음 칸으로 옮겼다가 닫을 때 되돌린다 (`returnTerminals`). 모으는 동안(`gathered()`) `terminal.js` 는 화면을 옮기거나 감추지 않는다. 화면을 만들 곳이 따로 생기면 같은 방식(상자를 옮기고 `fitTerminal`)을 쓴다 — xterm 을 새로 만들면 셸 출력이 이어지지 않는다.
+- 셸을 띄우기 전에 `conpty.py` 가 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 (`SetConsoleCtrlHandler(NULL, FALSE)`). 이 표시는 자식에게 물려져서, Lectern 을 새 프로세스 그룹으로 띄운 쪽(일부 실행기·자동화 도구)에서 켜진 채로 오면 셸에서 띄운 프로그램이 Ctrl+C 로 멈추지 않는다 (v0.12.0 에서 고침, `test_ctrl_c_stops_child_program`).
+- 의사 콘솔은 pywinpty 가 아니라 `conpty.py`(ctypes)다 — pywinpty 3.1 에 든 OpenConsole 은 PowerShell 5.1 의 한글 출력을 cp949 로 깨뜨렸다 (D38). `STARTF_USESTDHANDLES` 와 빈 표준 핸들을 지우지 않는다 (지우면 창 없는 앱에서 셸 입출력이 의사 콘솔을 거치지 않는다). 셸은 멈춘 채 만들어 작업 개체에 넣은 뒤 시작한다 — 그래야 탭을 닫거나 앱이 끝날 때(강제 종료 포함) 셸에서 띄운 프로그램까지 끝난다.
+- 셸에서 띄운 프로그램이 시작하다 멈추는 것(D58)은 Lectern 탓이 아니라 보안 프로그램(DRM)의 커널 드라이버가 프로세스 생성을 막은 것이다 — 그 프로그램은 모듈 0개·스레드가 모두 일시 정지로 남고 핸들의 종료 권한이 깎여 있다. `conpty.stuck_children` 은 읽기만 하고, 끝내는 것은 작업 개체째(다시 시작)뿐이다. 멈춘 것을 Lectern 이 스스로 끝내거나 셸에 명령을 보내지 않는다.
+- 터미널 안의 키는 셸 것이다 (Ctrl+C·Ctrl+W·Esc 등 — Claude Code 가 쓴다). `main.js` 의 keydown 은 `#lec-term` 안에서는 `` Ctrl+` ``·Ctrl+Tab·F6 만 다룬다 (터미널 모음이 열려 있으면 칸 안에서 `` Ctrl+` ``·`` Ctrl+Shift+` ``·Ctrl+Tab 만, 칸 밖에서도 몇 가지만 — 문서 화면이 가려져 있다). 새 앱 단축키를 터미널 안에서도 쓰게 하려면 `main.js` 와 `terminal.js` 의 `keyFor`(xterm 이 셸로 보내기 전에 거르는 곳)를 함께 고친다.
+
+## 한 줄 편집·줄 구조·편집 모드·보내기
+
+- 현재 위치·줄 하이라이트(D75)의 줄은 `lineunits.js` 가 그린 DOM 과 `data-lines` 로 센다 — 여러 줄로 나눠 쓴 문단은 markdown-it 이 softbreak 자리에 남긴 글 노드의 `\n` 으로 나누므로, 문단 안의 글 노드를 바꾸는 후처리(박스글 표시 떼기처럼)를 더하면 줄 수가 맞는지 본다 (조각이 모자라면 남는 줄을 붙인다). 블록 렌더러가 `data-lines` 를 빠뜨리면 그 줄은 고를 수 없다. 칸 위에 새 상자를 덮으면 `.lec-spot`·`.lec-here`(z-index 5)와의 순서를 본다 — 코드 화면 머리줄은 6.
+- 한 줄 편집(D76)은 문서 DOM 안에 글 칸을 넣는다 (편집 상자처럼 덮지 않는다) — 편집하는 동안(`pane.lineEdit`) `refreshView` 가 그 칸을 다시 그리지 않으니, 칸을 다시 그리는 새 길을 만들면 `refreshView` 를 거치거나 `pane.lineEdit` 을 본다. 이미 그리던 것은 끝날 때 화면째 바꾸므로 칸은 다시 그리는 중(`pane.pending`·`pane.redrawing`)이 아닐 때만 넣는다. 칸 안의 키는 거품을 막으므로 main.js 의 단축키는 편집 중에 오지 않는다. 저장은 편집 모드와 같은 `/api/save` 만 — 편집이 파일을 고치는 새 길은 `replaceLines` 를 거쳐야 되돌리기 기록에 쌓인다. F2·두 번 누르기는 하이라이트를 만들지 않으니 편집 중 줄을 옮기는 코드는 `followLine` 을 쓴다. 본문의 체크 칸은 `doc.js` 가 `disabled` 를 뗀 것이고 슬라이드·사용설명서는 그대로 표시만이다.
+- 줄 구조 편집(D83)의 새 줄은 글을 쓸 때까지 화면에만 있다 (`session.fresh`, `.lec-new-line` — `data-lines`·`data-line` 이 없어 줄 단위에 들지 않는다). 구조를 바꾸는 새 키는 `lineedit.restructure` 를 거친다 — 고친 글을 저장하고 `lineops` 로 계산해 `commit`(`diffRange` + `replaceLines`) 한 뒤 그 줄에서 편집을 잇는다. `lineops.js` 의 계산은 들여쓰기로 목록을 읽으므로 markdown-it 설정을 바꾸면 `tools/edges/lineops_cases.js` 를 같이 본다. 넘어가는 사이(`pane.lineEditHold`)에는 Ctrl+Z 와 하이라이트 옮기기가 쉰다.
+- 뒤로 기록의 칸(`pane.history`)은 화면마다 하나이고 같은 문서 안에서 뛴 것도 한 칸이다 (D78). 문서 속 어느 곳으로 '뛰는' 새 길은 뛰기 직전에 `emit('jump')` 를 보내야 Alt+← 로 돌아온다 — 다른 문서를 연 직후의 이동은 보내지 않는다 (이미 기록이 남아 Alt+← 가 두 번 필요해진다). 칸의 자리(`top`·`line`)는 떠날 때 적으므로 기록을 옮기는 코드는 칸을 새로 만들지 말고 `{...h}` 로 잇는다 (`renamePath`).
+- 편집 모드(D54)의 편집 상자(`.lec-editor`)는 칸 위를 덮는다 — 아래의 문서 화면은 그대로 다시 그려지므로 렌더러는 편집 중인지 몰라도 된다. 화면을 옮기는 새 길을 만들면 `navigate` 를 거쳐야 저장하지 않은 편집을 묻는다 (leave guard). 편집 상자 안의 키는 편집기 것이라, 새 앱 단축키를 편집 중에도 쓰게 하려면 `main.js` 의 `inEditor` 거르기에 넣는다. 저장은 `editing.save_source`(새 문서는 `create_source` — `/api/save` 의 `create`)만 — 다른 곳에서 파일에 쓰는 API 를 만들지 않는다.
+- 보내기(D63·D65)는 파일에 바로 쓰지 않는다 — 보내는 것은 `editor.js` 의 `insertIntoDoc` 이 그 문서를 편집 모드로 열어 편집기에 넣는 것까지, 저장은 사용자가. 받는 곳은 문서 탭에 열린 문서(`doctabs.openDocs`)와 새 문서뿐이다. 새 문서는 경로를 정할 때 `newdoc.createDoc` 이 만들고(새로 만들기도 같은 함수) 그 뒤로는 보통 문서다 — 편집 모드는 이미 있는 파일만 연다. 조각은 담는 순간의 원문(`data-lines` 범위)이라 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 담을 수 없다. 함께 갈 캡션·'자료:' 줄은 `toc.js` 의 `partExtent` 가 정한다 (구성 요소를 감싸는 상자를 새로 만들면 같이 본다). 경로·각주·제목을 다듬는 `snippet.js` 는 DOM 을 쓰지 않는다 — 새 링크 문법(차트의 데이터 키 등)을 더하면 `rebase` 에 넣을지 본다.
+- 편집하는 동안(D55) 아래의 읽는 화면은 편집기가 스크롤한다 (`editor.js` 의 `syncView` — 편집기를 움직일 때마다 다시 맞추므로, 아래 화면만 옮기는 기능은 편집 중에는 보이지 않는다). 문서 속 어느 곳으로 '가는' 새 기능(목차·모아 보기처럼)은 `toc.js` 의 `goToPart` 를 거치거나, 줄을 알면 `edit` 이벤트 {line} 를 보내야 편집 중에 편집기가 따라간다. 목차의 '지금 읽는 위치'는 편집 중이면 `pane.tocLimit` 를 쓴다. 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 위치 잇기에서 앞뒤 블록 사이로 어림잡힌다.
+
+## 데이터 보기·코드 화면·파일 목록
+
+- 엑셀(xlsx·xlsm — D77)은 `icons.js` 의 `SHEET_VIEW_EXT` 이고 `isViewable` 에 든다 — 코드 화면의 `showSheet` 가 `/api/sheet` 의 값으로 csv 표(`renderRows`)를 그린다. 행의 `data-line` 은 엑셀의 행 번호이고 `view.codeText` 는 그 자리마다 탭으로 이은 행 (원문 줄이 아니다), `view.dataset.sheet` 가 있으면 Claude용 위치는 `util.lineRef` 로 시트 이름을 넣는다. 편집 모드·한 줄 편집은 엑셀을 열지 않는다.
+- 코드 화면에서 보는 자료 파일(csv·tsv·txt·log)은 `icons.js` 의 `DATA_VIEW_EXT` 이고, 여는 곳(목록·문서 링크·경로 표기)은 `isCode` 대신 `isViewable` 로 본다 (D60). 이 파일들과 Windows 인코딩으로 쓰는 코드(EViews 의 `prg` — D85, 화면 `icons.WINDOWS_TEXT_EXT`·서버 `docinfo.WINDOWS_TEXT_EXT`)만 UTF-8 이 아니면 UTF-16·CP949 로 읽는다 (`codeview.js` 의 `decode`, 검색은 `docinfo.read_text` — 보기만, 편집 모드는 UTF-8 만. 그렇게 읽은 화면은 `view.dataset.encoding` 이 있고 한 줄 편집·줄 지우기가 먼저 막는다). 글이 모두 ASCII 인 `prg` 에 한글을 넣는 저장은 `save_source` 가 막는다 — 파일이 UTF-8 이 되면 EViews 에서 깨진다. csv 표의 행은 `tr.cv-line` 이라 `.code-view .cv-line` 규칙(격자·줄 번호 `::before`)을 `.csv-view tr.cv-line` 이 되돌린다 — 코드 줄 CSS 를 바꾸면 표를 같이 본다.
+- 문서 외 파일 목록(`/api/others`, `scanner.scan_others`)은 문서 트리와 따로 읽고, 화면이 '코드'와 '자료'로 나눈다 (`icons.js` 의 `isCode` — 아이콘의 코드 종류와 같다. 코드 종류를 바꾸면 두 목록이 함께 바뀐다). 감시는 문서 외 파일의 생성·삭제·이동을 `others` 로 남기고, 내용 수정은 `touch` 로 따로 남긴다 (D50 — 목록은 다시 읽지 않고 최근 변경만: 소스를 고칠 때마다 목록을 다시 훑지 않게). 목록에서 여는 것도 `osutil.open_path` 를 거친다: 실행·설치 파일·압축 등(`REVEAL_ONLY_EXT`)은 탐색기에서 선택만 한다. 이 목록에 지우기·옮기기 같은 탐색기 기능을 넣지 않는다 (보기 전용 — 이름 바꾸기만 D66, 파일 하나를 같은 폴더 안에서). 제외 폴더는 `children: None, excluded: True` 인 접힌 노드로만 싣고 펼칠 때 `GET /api/others/dir` 로 한 단계씩 읽는다 (D49) — 트리를 도는 코드는 `children` 이 None 일 수 있음을 본다 (`iter_files`·`others.js` 의 `filesIn`·`indexOf`).
+- 데이터 보기의 표(D86)는 `view.csv` 의 `grid`(받은 행 그대로)와 `rows`·`lines`(고른 표 — 시트 전체면 grid 그대로)가 다르다. 행 번호(`data-line`)는 늘 원래 번호다. 열 차례는 고른 표 안의 차례라, 엑셀의 열 글자·수식은 `st.letter`·`st.titleOf`(`region.c0` 를 더한다)로 본다. 계산 열은 `cols` 의 뒤(`col.calc`)이고 `mem.filters` 가 아니라 `st.calcs[k].filter` 에 거른다. 시간 열은 `numeric` 을 끈다 (합계·평균을 내지 않게). 표 읽기 규칙을 바꾸면 `tools/edges/tabledata_cases.js` 를 같이 본다. 큰 표는 18만 행도 오므로 행 배열을 `Math.max(...)` 처럼 함수 인자로 펼치지 않는다 (`rowWidth`).
+- 코드 파일의 확장자 목록은 두 곳이다 — 화면 `icons.js` 의 code 종류('코드' 목록·코드 화면·Ctrl+P)와 서버 `scanner.CODE_EXT`(전체 검색의 코드, D44). 함께 고친다 (`tests/test_search.py` 가 맞춰 본다).
+
+## 화면 구조·칸·탭
+
+- 화면 종류는 셋이다: `doc`(md·html 문서), `overview`(폴더 개요), `code`(코드 읽기 화면 — D43). 새 기능이 '문서 화면에서만'인지 볼 때 `S.view.type === 'doc'` 로 거르고, 코드 화면에서도 되어야 하면 `code` 를 함께 본다 (찾기·창 제목처럼). 코드 화면은 `#lec-view.md-body.code-view` 의 최상위 자식이 머리줄과 줄(`.cv-line[data-line]`)이라 바뀐 곳 강조·찾기가 문서처럼 되고, 목차는 `setToc(pane, view, outline)` 의 outline 으로 그린다. 코드 파일의 내용 수정은 서버 변경 기록에 오지 않으므로(D36) 코드 화면은 스스로 수정 시각(HEAD)을 본다.
+- 렌더링은 칸마다 `pane.renderId` 로 순번을 매긴다. 늦게 끝난 렌더링은 결과를 버린다. 비동기 렌더링 함수를 새로 만들 때 칸을 첫 인자로 받고 같은 방식을 쓴다. 렌더러는 프로젝트를 `S.root`·`S.fileMap` 이 아니라 칸의 탭(`pane.tab.root`·`pane.tab.fileMap`·`pane.tab.id`)에서 읽는다 — 그리는 중에 다른 탭을 고를 수 있다.
+- 문서 칸은 문서 탭마다 하나다 (`panes.js`·`doctabs.js`, D34·D64) — 프로젝트 탭이 `tab.panes`(탭 차례, 20개까지 — D67)와 고른 칸 `tab.pane` 을 갖는다. 프로젝트 탭의 모든 칸을 다루는 코드(자동 새로고침·F5·편집 상자 치우기·저장하지 않은 것 묻기)는 `tab.panes` 를 돈다. 화면을 여는 새 길은 'open' 이벤트(또는 `doctabs.openTarget`)를 거친다 — 그래야 이미 열린 문서는 그 탭으로 가고 Ctrl+누르기가 새 탭이 된다. 목록에 새로 누르는 행을 만들면 `util.newTabWanted(e)`·`middleClickOpens` 를 붙인다 — 사이드바 목록이면 `util.openHow(e)`(newTab 과 두 번 누르기 twice, D67). 두 번 누르기는 누른 자리가 그대로 남는 목록에만 — 본문은 첫 누르기에 화면이 바뀐다. 검색·모아 보기처럼 '이미 보는 문서면 열지 않는' 곳은 twice 일 때도 `openTarget` 을 부른다. 칸은 겹쳐 두고 고르지 않은 탭의 칸은 `visibility: hidden` 이다 (`display:none` 으로 바꾸면 숨은 탭의 스크롤 위치를 잃고 다시 그릴 때 크기를 못 잰다). `S.root`·`S.tree`·`S.files`·`S.fileMap`·`S.dirs`·`S.changed`·`S.open`·`S.seq` 는 선택된 탭(`S.tab`)의 값을 읽고 쓰는 접근자다 — 선택된 탭만 다루는 모듈은 그대로 쓰고, 모든 탭을 다루는 코드(자동 새로고침·위치 기록)는 `S.tabs` 의 탭 객체를 쓴다. 탭마다 남길 사이드바 상태는 `tab.side` 에 두고 `tab` 이벤트({tab, prev})에서 앞 탭에 남기고 새 탭 것을 되살린다 (`tree.js`·`search.js`).
+- `#lec-view`·`#lec-content` id 는 **선택된 칸**의 본문·스크롤 상자로 옮겨 다닌다 (D33 에서 만든 방식). 선택된 칸만 다루는 코드는 id 로 찾아도 되지만, 모든 칸에 해당하는 코드(렌더러·자동 새로고침 등)는 칸 객체(`S.panes`, `pane.view`·`pane.scroller`)를 쓴다. 문서 화면의 이벤트는 id 대신 `#lec-panes` 에 붙인다 (id 가 옮겨 가면 붙인 요소가 달라진다). 스크롤은 거품처럼 올라오지 않으므로 `document` 잡기 단계에서 듣는다 (`toc.js`·`position.js`).
+- 모두 펼치기(D73, `spread.js`) 중에는 선택된 탭의 칸이 모두 보인다 — '보이는 칸이면 바로 다시 그리고 숨은 칸은 `stale`' 은 `pane === S.pane` 이 아니라 `panes.paneShown(pane)` 으로 본다 (`watch.js`·`nav.refreshView`·F5·코드 화면의 수정 시각 보기). `#lec-panes` 가 `display: contents` 가 되므로 그 상자의 크기를 재는 코드는 0 을 얻는다 (목차 경계 `resize.js` — 펼친 동안은 감춰짐). 칸 맨 위에 칸 머리 `.sp-head` 가 붙으므로 칸을 덮는 새 상자는 편집 상자처럼 그 아래부터 (`--sp-head-h`). 문서 탭이 생기거나 닫히면 doctabs 의 `render` 가 `doctab-list` 를 보내 칸을 다시 놓는다 — 문서 탭 줄을 거치지 않고 칸을 더하는 길을 만들면 같은 이벤트를 보낸다. html 문서(iframe) 안의 mousedown 은 `htmldoc.js` 가 iframe 요소에 다시 보낸다 (칸 고르기·앱 메뉴 닫기).
+- 목차·상태줄·원문(우클릭 메뉴)·바뀐 곳은 칸마다 남기고 선택된 칸 것만 보인다 — 렌더러는 `setToc(pane, …)`·`setStatus(…, pane)`·`setDocSource(pane, …)`·`markChanges(…, pane)` 로 넘긴다. 다른 탭을 고르면 `pane` 이벤트가 간다. 숨은 탭의 화면이 바뀌면 바로 그리지 않고 `pane.stale` 을 달아 그 탭을 고를 때 그린다 (`watch.js`·`nav.refreshView()`).
+- 다시 그리기(`refreshView`)는 `scrollTop` 에 함수를 넘겨 바꿔 끼우기 직전의 위치를 읽는다. 그리는 동안 사용자가 스크롤해도 되돌리지 않게. 렌더러를 새로 만들면 같은 방식을 받는다.
+
+## 문서 그리기
+
+- 문서 속 요소의 id는 같은 이름의 전역이 없으면 `window.<id>` 로 잡힌다. 그래서 `## Mermaid` 제목(id `mermaid`)이 있으면 라이브러리를 불러오기 전의 `window.mermaid` 는 그 제목이다. 늦게 불러오는 전역은 있는지가 아니라 진짜 라이브러리인지 확인한다 (`mermaid.js` 의 `loaded()`).
+- DOMPurify는 `SANITIZE_DOM: false` 로 쓴다. 기본값이면 'title', 'images' 같은 제목 앵커 id가 지워진다. 대신 `document.querySelector` 같은 이름을 가릴 수 있는 `img` 의 `name` 은 정화 훅이 지운다 (D15).
+- 블록의 원문 줄 범위는 `data-lines="시작-끝"` 이다 (`markdown.js` 의 `sourceLines`). `data-src` 는 정화 훅이 그림 주소를 떼어 두는 데 쓰므로 다른 뜻으로 쓰지 않는다. 블록을 그리는 렌더러 규칙을 새로 만들면 `self.renderAttrs(token)` 으로 `data-lines` 를 내보낸다 (수식 블록·Mermaid 참고). 안 그러면 그 블록은 원문 복사가 안 된다.
+- 문서 속 절대경로(`C:\...`, `file:///...`)는 프로젝트 안일 때만 열린다 (`doc.js` 의 `absoluteRef`). DOMPurify 설정의 `ALLOWED_URI_REGEXP` 를 좁히면 이 기능이 조용히 깨진다 (`ui_smoke` 의 [절대경로]가 잡는다).
+- 문서 속 링크는 `a[href], area[href]` 를 모두 `bindLink` 가 다룬다. 다루지 않은 링크를 누르면 앱 창이 그 주소로 떠난다. SVG `<a>` 는 `target` 등이 읽기 전용 속성이라 `setAttribute` 로 준다.
+- 구성 요소는 목차(`toc.js`)와 모아 보기(`parts.js`)가 같은 함수 `readParts` 로 센다. 캡션도 같은 `captionOf`(D61)로 찾는다 — 요소의 형제 단락을 보므로, 요소를 감싸는 상자(`.table-wrap`·`.code-block`)를 새로 만들면 `captionOf`·`holderKind` 를 같이 본다. 할 일·링크·출처는 모아 보기만의 종류라 `readParts(root, {more: true})` 일 때만 센다 — 모아 보기에서 찾아갈 때(`openItem`)도 같은 옵션이어야 번호가 맞는다 (D62). 링크 번호가 본문과 같도록 화면 밖에서도 md 는 `linkPaths` 를 돌린다. 모아 보기는 문서를 화면 밖(md 는 `template`, html 은 `DOMParser`)에서 세고, 누르면 그 문서를 그려 같은 종류·번호의 것을 찾아간다 — 그래서 판정(`partKind`)은 그림을 불러오기 전과 후가 같아야 한다 (불러온 크기·로드 상태를 쓰지 않는다. 아이콘은 width·height 속성으로, 불러오지 못한 그림 자리 `.image-off` 도 그림으로 센다).
+- 목차의 링크는 제목이 `a[data-i]`, 구성 요소가 `a[data-c]` 다. 제목 링크만 세거나 고를 때는 `a[data-i]` 로 찾는다 (구성 요소의 글에 제목과 같은 낱말이 들어 있을 수 있다). 구성 요소를 새로 꾸미는 렌더러(예: 새 블록 종류)를 만들면 `toc.js` 의 `CANDIDATES`·`partKind` 에 넣을지 본다.
+- 접힌 절의 블록은 `display:none`(`lec-fold-hidden`)이라 위치가 0이다. 문서 속 요소로 스크롤하는 코드는 먼저 `fold.js` 의 `unfoldTo(el)` 을 부른다 (목차·앵커 링크·찾기가 그렇게 한다). `unfoldTo` 는 `reveal` 을 보내 장 하이라이트도 그 장으로 옮기므로, 새로 문서 속으로 가는 기능도 이 함수를 거친다.
+- 표 첫 열 넓히기(D68, `tablefit.js`)는 그린 뒤 칸에서 재어 표에 `lec-words`(머리행·첫 열은 낱말 가운데서 끊지 않음 — 표가 넘치면 뗌)·`lec-wide1`·`--lec-col1`, 묶은 열의 첫 행 칸에 `lec-pin`·`--lec-pin` 을 단다 — 표를 감싸는 상자(`.table-wrap`)나 표 칸의 안쪽 여백을 바꾸면 같이 본다. 표 칸에 min-width 를 새로 주는 CSS 를 넣으면 이 계산과 부딪힌다.
+- 문서 본문의 글자 크기는 `--md-scale`(툴바의 글자 크기)을 곱한다. 단 폭은 `--md-scale` × `--md-wide`(툴바의 문서 폭, D68). `base.css`·스타일 css 에 px 로 글자 크기를 새로 적으면 `calc(13px * var(--md-scale, 1))` 처럼 쓴다 (em 은 그대로 따라간다).
+- 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
+- 다이어그램은 Mermaid(`pre.mermaid`)와 차트(`pre.lec-chart[data-chart]`, D56) 두 가지이고, 그리지 못한 것은 둘 다 `.diagram-error`(까닭 + 원문)다. 다이어그램을 다루는 코드(목차·모아 보기의 `partKind`, 우클릭 메뉴, 바뀐 곳의 서명, 코드 블록 꾸미기에서 빼기)는 둘을 함께 본다. 차트 SVG 는 라이브러리가 만든 것이라도 `doc.js` 의 `sanitizeHtml`(DOMPurify 와 그림 주소 훅)을 거치고 그림 속 링크는 푼다 — 차트 설정에 링크·인터넷 그림을 넣을 수 있다. ECharts·Plotly 는 그리는 동안 그림을 불러오므로 그 전에 설정에서 data: 가 아닌 그림 주소를 지운다 (`dropImages`, Plotly 의 `layout.images`). ECharts 는 글꼴 이름을 style 속성에 그대로 넣으므로 글꼴 목록에 큰따옴표를 쓰지 않는다. Graphviz 는 글자 폭을 어림해 배치하므로(기본 Times 로는 한글이 상자보다 넓다) Verdana 로 어림하고 앱 글꼴로 그린다.
+- 발표 문서(D59)의 슬라이드는 1280×720(4:3 은 960×720)에 그리고 `transform: scale(var(--slide-scale))` 로 줄여 보인다 — 슬라이드 안에서 크기를 재는 코드는 `getBoundingClientRect`(줄인 크기)와 `clientWidth`·`offsetHeight`(그린 크기)가 다르다는 것을 본다. 화면 밖 무대는 `--slide-scale: 1` 이다 (Mermaid 가 줄인 크기로 글자를 재면 상자보다 글자가 커진다). 다이어그램·차트는 자기 글자가 작아 `SLIDE_ZOOM` 으로 키운다 (Mermaid 는 `fitDeck`, 차트는 `charts.js` 의 `draw`) — 새 그림 종류를 더하면 같이 본다. 칸 본문의 맨 위 자식이 `.lec-slide-wrap` 이라 맨 위 블록을 도는 코드(접기·장 하이라이트·바뀐 곳)는 슬라이드 단위가 된다.
+- 인쇄 규칙(`base.css` 의 `@media print`)은 `app.css` 보다 먼저 읽힌다 — 같은 무게의 앱 레이아웃 규칙(`#lec-app` 격자·`.lec-pane` absolute)을 덮으려면 `!important` 를 쓴다. 칸이 absolute 인 채 인쇄되면 쪽 나누기(`break-before`)·쪽 이름(`page`)이 먹지 않는다 (D59).
+- 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
+- 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
+- html 문서는 `<iframe sandbox="allow-same-origin allow-modals">` 이다 (`allow-modals` 는 앱이 그 문서를 인쇄하려고). **`allow-scripts` 를 더하지 않는다** — 같은 출처라서 스크립트가 돌면 앱의 `/api/*`·토큰에 닿는다. 서버 CSP(`html_doc_policy`)도 함께 막는다.
+- iframe 안의 키·마우스 이벤트는 앱 문서로 올라오지 않는다. `htmldoc.js` 가 keydown·mouseup·mousedown 을 앱으로 넘기므로, 새 단축키는 `main.js` 에만 넣으면 html 문서에서도 된다. 문서 속 요소를 찾을 때는 `util.docRoot()`, 화면 좌표는 `util.screenRect()` 를 쓴다 (iframe 위치를 더함).
+
+## 스타일·문구·예제
+
+- 새 스타일은 `theme.js` 의 `THEMES` 에 `light(이름, 용도, 분위기, 밝기, Mermaid 색)` 또는 `dark(이름, Mermaid 색)` 로 넣는다. 밝은 스타일은 세 묶는 방식 모두의 묶음을 정해야 목록에 나온다 (D30). 머리행을 짙게 칠하는 스타일은 `--md-th-fg` 로 글자색을 준다 (인쇄 때는 검정으로 덮인다). 터미널 색은 스타일의 `--md-code-bg`·`--md-fg`·`--md-link` 와 밝기로 저절로 정해진다 — 이름이 같은 터미널 색표(Solarized 등)가 있는 스타일만 `terminal.js` 의 `PALETTES` 에 더한다.
+- `t()` 를 쓰는 모듈에서 지역 변수 이름을 `t` 로 짓지 않는다 — 함수가 가려져 그 범위의 `t('…')` 가 깨진다 (탭은 `tab`·`tb`, 터미널은 `term`). 화면 언어는 페이지마다 고정이라(바꾸면 다시 불러옴) 모듈 맨 위 상수에도 `t()` 를 쓴다. 영어 복수형이 필요한 개수는 `{n}` 으로 넘긴다 (D46).
+- 문서가 보이는 규칙(보이는 범위·제목·요약·표·박스글·경로 링크·수식·다이어그램·차트·HTML)을 바꾸면 AI 용 작성 안내 `web/help/writing.md`·`writing.en.md` 와 예제 `samples/`(특히 `guide/04-문서-쓰는-법.md`·`CLAUDE.md`)도 고친다 (D57). 예제에는 점검용 함정을 넣지 않고, 점검할 것은 `tests/fixture/` 에 넣는다. 예제는 설치 파일에 들어가므로 `__pycache__` 같은 것이 남지 않게 한다 (pytest 가 본다).
+- 내 스타일(D53)의 규칙·변수를 바꾸면 AI 용 설명서 `web/help/styles.md`·`styles.en.md` 도 고친다 (변수 표·선택자 표·base 로 쓸 id 목록).
+- 앱 UI 색(`--ui-*`)은 문서 스타일의 `--md-*` 에서 만든다 (D28). 새 스타일은 `--md-*` 만 정하면 툴바·사이드바도 따라오니, `app.css` 에 스타일별 UI 색을 따로 넣지 않는다.
+- 문서 스타일은 PC에 있는 글꼴만 쓴다 (웹 글꼴 금지, 내장도 안 함 — D26). 글꼴 목록은 영문 글꼴 → 한글 글꼴 → `Malgun Gothic`·`Batang` 같은 Windows 기본 글꼴 순으로 끝내서, 그 글꼴이 없는 PC에서도 한글이 보이게 한다. 새 스타일은 `ui_smoke.py` 가 글자 대비(WCAG 4.5:1)와 제목 색·표 머리행 구분을 확인한다.
+
+## 서버·설정·설치
+
+- `/` 의 CSP 는 `script-src 'self' 'unsafe-eval'` 이다 (D38 — 문서에 끼어든 스크립트가 터미널 비밀값을 읽지 못하게). `index.html` 에 인라인 `<script>`·`onclick=` 을 넣으면 돌지 않는다. vendor 를 더할 때 인라인 스크립트를 끼워 넣는 라이브러리인지 본다.
+- 보기만 하는 프로젝트(D71 — `tab.readonly`, 서버 `Project.readonly`·`paths.is_protected`)에서는 파일을 고치거나 셸을 띄우는 새 길을 만들면 `util.blockedReadOnly(tab)` 를 앞에 두고, 서버의 쓰기는 `editing` 의 `_protect` 를 거친다 (대상 파일 기준 — 위 폴더를 프로젝트로 열어도 막히게).
+- 트리 스캔은 `Project.scan()` 을 거친다 (탭마다) — 변경 기록(touch 가 아닌 마지막 순번 `tree_seq`, D50)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.
+- pywebview는 디버그 모드가 아니면 WebView2의 기본 단축키(Ctrl+F, F5, Ctrl+P 인쇄 등)와 기본 우클릭 메뉴를 끈다. 필요한 기능은 직접 구현한다 (`find.js`, F5 처리 참고).
+- `/api/*` 는 창 모드에서 `X-Token` 헤더(= `window.pywebview.token`)를 검사한다. `<img>` 가 써야 하는 `/doc/<탭 id>/*` 는 토큰 없이 열려 있다 (127.0.0.1 전용).
+- 서버는 여러 프로젝트(탭)를 함께 연다 (D34). 프로젝트를 다루는 API 는 탭 id 를 `p` 로 받는다 (GET 은 `?p=`, POST 는 본문). 문서 주소는 `util.docUrl(tab, path)` 로 만든다 (`/doc/<id>/<경로>`). id 는 실행마다 무작위라 문서가 다른 탭의 주소를 짐작할 수 없다 — 상대경로가 `/doc/<그 탭 id>/` 밖으로 나가면 `resolveRef` 가 막는다.
+- 앱은 설정을 저장할 때 기본값도 함께 적는다. 그래서 기본값만 바꾸면 이미 쓰던 사람에게는 반영되지 않는다 — 꼭 바꿔야 하면 `config.CONFIG_VERSION` 을 올리고 `_upgrade` 에 옛 판을 바꾸는 코드를 둔다 (D35).
+- `config.json` 은 JSON 이 맞아도 값의 형식이 틀릴 수 있다 (`"exclude_dirs": "data"`). `config.value_ok` 가 `DEFAULTS` 와 같은 형식인지 보고, 틀린 값은 기본값으로 돌며 알린다. 새 키가 `null` 도 되면 `NULLABLE` 에 넣는다 (D29).
+- 로컬 서버는 waitress 다 (`app.py` 의 `HttpServer`, D82) — 스레드가 고정(32개)이라 요청을 오래 잡는 API 를 더하면 긴 폴링처럼 하나로 모은다. 다시 보내도 되는 받기 요청은 `api.getJSON`·`getText` 가 연결 실패 때 한 번 더 받는다.
+- `/api/*` 의 POST 는 `Content-Type: application/json` 만 받는다 (아니면 415). 토큰이 없는 브라우저 모드에서 다른 사이트의 폼이 보내지 못하게 하려는 것이니, 프런트는 `api.postJSON` 만 쓴다.
+- `config.json` 을 읽지 못하면(`Config.load_error`) 파일이 고쳐질 때까지 저장하지 않는다 (D21). 사용자가 실행 중에 파일을 고칠 수 있으므로, 설정을 바꾸는 코드는 반드시 `Config._update(change)` 를 거친다 (밖에서 고친 값을 다시 읽은 뒤 바꾸고 저장).
+- Windows에서 Python `mimetypes` 는 레지스트리 값을 기본값보다 우선한다. 레지스트리에 `.js` 가 `text/plain` 으로 잡힌 PC에서는 모듈 스크립트가 거부되어 화면이 빈다. 그래서 `server.py` 의 `FIXED_TYPES` 가 `.js`·`.mjs`·`.css`·`.svg`·`.woff2` 의 형식을 정한다. 앱이 새 확장자의 파일을 내보내면 여기에 넣을지 본다.
+- `installer/lectern.iss` 는 UTF-8(BOM)이어야 한다 (BOM이 없으면 한글이 깨진다). `AppId` 는 바꾸지 않는다 — 바꾸면 새 버전이 덮어 설치되지 않고 따로 설치된다.
+- 창 하나(`instance.py`)는 이름 있는 파이프로 JSON 바이트만 주고받는다 (`send_bytes`·`recv_bytes`). pickle 을 쓰는 `send`·`recv` 로 바꾸지 않는다 — 받은 바이트로 코드가 돌 수 있다. 파이프 이름이 설정 폴더를 따르므로 점검 스크립트는 `LECTERN_CONFIG_DIR` 을 바꿔 설치된 Lectern 창과 섞이지 않게 한다.
+- `index.html` 에서 시작할 때 꼭 필요한 스크립트에는 `data-boot` 를 단다 (D81) — 그것을 못 받으면 `bootguard.js` 가 다시 불러온다.
+- `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.

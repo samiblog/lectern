@@ -1,28 +1,13 @@
 """v0.48.0 의 아직 안 본 조합: 프로젝트 탭, 글자 크기·폭, 모든 스타일, CRLF·BOM, 지운 파일, 편집 모드와 교차, 시작 복구의 경계"""
-import os
-import shutil
-import socket
-import subprocess
-import sys
 import tempfile
 import time
 import traceback
-import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-ROOT = Path(__file__).resolve().parents[2]
-fails = []
-count = 0
+from harness import ROOT, check, fails, report, serve, stop
 
-
-def check(name, cond, detail=''):
-    global count
-    count += 1
-    print(f"  {'ok  ' if cond else 'FAIL'} {name}{'' if cond else f' — {detail}'}", flush=True)
-    if not cond:
-        fails.append(name)
 
 
 PARA = '긴 문단입니다. ' * 40
@@ -49,18 +34,7 @@ ren.write_text('# 이름 문서\n\n이름 글\n', encoding='utf-8')
 many = proj / 'many.md'
 many.write_text('# 많이\n\n값 0\n', encoding='utf-8')
 (proj2 / 'b.md').write_text('# 둘째 프로젝트\n\n글\n\n더 많은 글\n', encoding='utf-8')
-with socket.socket() as s:
-    s.bind(('127.0.0.1', 0))
-    port = s.getsockname()[1]
-server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
-                          env=os.environ | {'LECTERN_CONFIG_DIR': str(base / 'config')}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-url = f'http://127.0.0.1:{port}/'
-for _ in range(60):
-    try:
-        urllib.request.urlopen(url + 'api/state', timeout=1)
-        break
-    except Exception:
-        time.sleep(0.3)
+server, url, port = serve(proj, base / 'config')
 
 GUTTER = '#lec-content > .lec-gutter span'
 REPLACE = """([path, at, before, after]) => Promise.all([import('/static/js/lineedit.js'), import('/static/js/store.js')])
@@ -425,12 +399,5 @@ except Exception:
     traceback.print_exc()
     fails.append('점검이 중간에 멈춤')
 finally:
-    server.terminate()
-    try:
-        server.wait(10)
-    except subprocess.TimeoutExpired:
-        server.kill()
-    time.sleep(0.5)
-    shutil.rmtree(base, ignore_errors=True)
-print(f'\n{count}개 중 실패 {len(fails)}개', fails)
-sys.exit(1 if fails else 0)
+    stop(server, base)
+report()

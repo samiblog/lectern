@@ -1,32 +1,18 @@
 """표와 데이터 보기를 여러 상황으로 (D86): 실제 자료의 모양(ECOS·KOSIS·FRED·World Bank·Bloomberg·보고서 표), 망가진 입력, 끼어든 글, 큰 파일, 다른 기능과 겹치는 곳"""
 import json
-import os
-import shutil
-import socket
-import subprocess
 import sys
 import tempfile
 import time
 import traceback
-import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-ROOT = Path(__file__).resolve().parents[2]
+from harness import ROOT, check, fails, report, serve, stop
+
 sys.path[:0] = [str(ROOT), str(ROOT / 'tests')]
 from test_sheet import make_xlsx  # noqa: E402
 
-fails: list[str] = []
-count = 0
-
-
-def check(name, cond, detail=''):
-    global count
-    count += 1
-    print(f"  {'ok  ' if cond else 'FAIL'} {name}{'' if cond else f' — {detail}'}", flush=True)
-    if not cond:
-        fails.append(name)
 
 
 def xml_row(n, cells):
@@ -136,7 +122,7 @@ pink = ''.join([
     *[xml_row(8 + i, {'A': f'2024M{i + 1:02d}', 'B': 80 + i, 'C': 8000 + i * 10, 'D': '…' if i == 2 else 16000 + i}) for i in range(12)],
 ])
 make_xlsx(proj / 'pink.xlsx', sheets=[('Monthly Prices', pink, None)])
-report = ''.join([
+report_rows = ''.join([
     xml_row(2, {'B': '주요 지표 현황', 'F': '(단위: 조원, %)'}),
     xml_row(4, {'B': '구분', 'C': '2023', 'E': '2024'}), xml_row(5, {'C': '상반기', 'D': '하반기', 'E': '상반기', 'F': '하반기'}),
     xml_row(6, {'B': '[실물]'}),
@@ -145,7 +131,7 @@ report = ''.join([
     xml_row(10, {'B': '수출', 'C': 9, 'D': 10, 'E': 11, 'F': 12}),
     xml_row(11, {'B': '* 잠정치'}), xml_row(12, {'B': '자료: 통계청'}),
 ]) + merged(['C4:D4', 'E4:F4', 'B4:B5'])
-make_xlsx(proj / 'report.xlsx', sheets=[('요약', report, None)])
+make_xlsx(proj / 'report.xlsx', sheets=[('요약', report_rows, None)])
 side = ''.join([
     xml_row(3, {'B': '연도', 'C': '수입', 'E': '연도', 'F': '수출', 'H': '메모'}),
     xml_row(4, {'B': 2023, 'C': 1, 'E': 2023, 'F': 10, 'H': '비고입니다'}), xml_row(5, {'B': 2024, 'C': 2, 'E': 2024, 'F': 20}), xml_row(6, {'B': 2025, 'C': 3, 'E': 2025, 'F': 30}),
@@ -160,18 +146,7 @@ make_xlsx(proj / 'hidden.xlsx', sheets=[('보임', xml_row(1, {'A': '연도', 'B
 heavy = ''.join(xml_row(i + 1, {'A': f'품목{i // 2}', 'B': i, 'C': i * 2}) for i in range(30_000)) + merged([f'A{i * 2 + 1}:A{i * 2 + 2}' for i in range(5000)])
 make_xlsx(proj / 'heavy.xlsx', sheets=[('큰 시트', heavy, None)])
 
-with socket.socket() as s:
-    s.bind(('127.0.0.1', 0))
-    port = s.getsockname()[1]
-server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
-                          env=os.environ | {'LECTERN_CONFIG_DIR': str(base / 'config')}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-url = f'http://127.0.0.1:{port}/'
-for _ in range(60):
-    try:
-        urllib.request.urlopen(url + 'api/state', timeout=1)
-        break
-    except Exception:
-        time.sleep(0.3)
+server, url, port = serve(proj, base / 'config')
 
 OPTION = """(() => { const c = window.echarts.getInstanceByDom(document.querySelector('#lec-chart-plot')); const o = c?.getOption(); if (!o) return null;
   return { x: o.xAxis[0].data, axes: o.yAxis.map((a) => a.name), series: o.series.map((s) => ({ name: s.name, type: s.type, axis: s.yAxisIndex, data: s.data })) }; })()"""
@@ -698,12 +673,5 @@ except Exception:
     traceback.print_exc()
     fails.append('점검이 중간에 멈춤')
 finally:
-    server.terminate()
-    try:
-        server.wait(10)
-    except subprocess.TimeoutExpired:
-        server.kill()
-    time.sleep(0.5)
-    shutil.rmtree(base, ignore_errors=True)
-print(f'\n{count}개 중 실패 {len(fails)}개', fails)
-sys.exit(1 if fails else 0)
+    stop(server, base)
+report()

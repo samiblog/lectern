@@ -3,9 +3,10 @@
 ## 1. 자동 테스트
 
 ```bat
-python -m pytest -q          :: 단위·API 테스트 (Windows가 아니어도 됨)
+python -m pytest -q          :: 단위·API 테스트와 규칙 시험 (Windows가 아니어도 됨)
+node tools/rules_check.mjs   :: 규칙 시험만 — 줄 구조·표 읽기·자료 모음 (브라우저 없이 1초)
 python tools/ui_smoke.py     :: 화면 회귀 점검 (playwright + chromium 필요)
-python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음마다 임시 프로젝트로 (이름을 주면 그 묶음만)
+python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음마다 임시 프로젝트로 (이름을 주면 그 묶음만, --changed 면 고친 파일에 닿는 것만)
 ```
 
 | 파일 | 다루는 것 |
@@ -30,7 +31,7 @@ python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음�
 
 새 기능을 넣을 때:
 - 서버·스캔 쪽은 `tests/` 에 테스트를 추가한다.
-- 화면 쪽은 `tests/fixture/` 에 확인용 내용을 넣고 `ui_smoke.py` 에 `check(...)` 를 추가한다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
+- 새 화면 점검은 `tools/edges/` 의 묶음에 더한다 (`harness.py` 의 `serve`·`check`). `ui_smoke.py` 는 구획끼리 상태를 이어 받으므로 나누지 않고, 있는 점검을 고칠 때만 손댄다. 표를 잘못 읽은 자료는 `tests/corpus/` 에 먼저 넣고 규칙을 고친다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
 
 ## 2. Windows 수동 점검표
 

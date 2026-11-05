@@ -1,31 +1,17 @@
 """표와 데이터 보기 (D86): 표 읽기 규칙, 빠른 차트, 요약 줄, 계산 열, 복사·문서로 보내기. 프로젝트·설정은 임시 폴더"""
 import os
-import shutil
-import socket
-import subprocess
 import sys
 import tempfile
-import time
 import traceback
-import urllib.request
 from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-ROOT = Path(__file__).resolve().parents[2]
+from harness import ROOT, check, fails, report, serve, stop
+
 sys.path[:0] = [str(ROOT), str(ROOT / 'tests')]
 from test_sheet import make_xlsx  # noqa: E402
 
-fails: list[str] = []
-count = 0
-
-
-def check(name, cond, detail=''):
-    global count
-    count += 1
-    print(f"  {'ok  ' if cond else 'FAIL'} {name}{'' if cond else f' — {detail}'}", flush=True)
-    if not cond:
-        fails.append(name)
 
 
 DOC = """# 표 문서
@@ -78,18 +64,7 @@ MESSY = ''.join([
 ]) + '</sheetData><mergeCells count="2"><mergeCell ref="B4:C4"/><mergeCell ref="D4:E4"/></mergeCells><sheetData>'
 make_xlsx(proj / 'messy.xlsx', sheets=[('현황', MESSY, None)])
 (proj / 'messy.csv').write_text('구리 시세 통계,,\n단위: USD/t,,\n,,\n연도,가격,재고\n2024,1,5\n2025,2,6\n자료: LME,,\n', encoding='utf-8')
-with socket.socket() as s:
-    s.bind(('127.0.0.1', 0))
-    port = s.getsockname()[1]
-server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
-                          env=os.environ | {'LECTERN_CONFIG_DIR': str(base / 'config')}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-url = f'http://127.0.0.1:{port}/'
-for _ in range(60):
-    try:
-        urllib.request.urlopen(url + 'api/state', timeout=1)
-        break
-    except Exception:
-        time.sleep(0.3)
+server, url, port = serve(proj, base / 'config')
 
 OPTION = """(() => { const o = window.echarts.getInstanceByDom(document.querySelector('#lec-chart-plot'))?.getOption(); if (!o) return null;
   return { x: o.xAxis[0].data, axes: o.yAxis.map((a) => a.name), series: o.series.map((s) => ({ name: s.name, type: s.type, axis: s.yAxisIndex, data: s.data })) }; })()"""
@@ -370,12 +345,5 @@ except Exception:
     traceback.print_exc()
     fails.append('점검이 중간에 멈춤')
 finally:
-    server.terminate()
-    try:
-        server.wait(10)
-    except subprocess.TimeoutExpired:
-        server.kill()
-    time.sleep(0.5)
-    shutil.rmtree(base, ignore_errors=True)
-print(f'\n{count}개 중 실패 {len(fails)}개', fails)
-sys.exit(1 if fails else 0)
+    stop(server, base)
+report()
