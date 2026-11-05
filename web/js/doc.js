@@ -238,7 +238,7 @@ export const forgetFailedImages = () => failedImages.clear();
 
 /** 이미지 자리에 넣을 대체 표시. url 이 있으면 브라우저로 여는 링크가 된다. */
 function imageStandIn(label, alt, url) {
-  const el = document.createElement(url ? 'a' : 'span');
+  const el = /** @type {any} */ (document.createElement(url ? 'a' : 'span'));
   el.className = 'image-off';
   el.textContent = `${label}${alt ? `: ${alt}` : ''}`;
   if (url) {
@@ -449,6 +449,9 @@ export function showMissing(view, path, err) {
  * 문서를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab)이다 — 그리는 중에 다른 탭을 골라도 이 탭에 그린다.
  * - 화면 밖 무대(stage)에서 먼저 그린 뒤 한 번에 바꿔 끼워, 자동 새로고침 때 깜박임과 스크롤 튐을 막는다.
  * - 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false 반환).
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
  */
 export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   const id = ++pane.renderId;

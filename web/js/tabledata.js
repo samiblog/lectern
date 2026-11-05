@@ -134,6 +134,7 @@ const named = (word) => {
 };
 
 // [글, (묶음들) => 시점] — 위에서부터 처음 맞는 것
+/** @type {[RegExp, Function][]} */
 const FORMS = [
   [/^(\d{4})(?:\.0+)?$/, (y) => point('Y', yearOf(y))],
   [/^(\d{4}|\d{2})(?:년\s*|[-.\s])\s*([1-4])\/4(?:\s*분기)?$/, quarter],   // 2026년 1/4분기, 2026.1/4
@@ -195,6 +196,7 @@ export function parseTime(cell, { dayFirst = false } = {}) {
   return null;
 }
 
+/** @type {[number, string][]} */
 const GAPS = [[1.5, 'D'], [4.5, 'D'], [10, 'W'], [40, 'M'], [110, 'Q'], [220, 'H'], [400, 'Y']];
 
 /** 시점들의 주기 Y|H|Q|M|W|D (없으면 null). 날짜 표기는 가운데 간격으로 어림한다 */

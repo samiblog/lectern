@@ -70,7 +70,11 @@ function render(d, tab) {
   return parts.join('');
 }
 
-/** 폴더 개요를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab). 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false) */
+/** 폴더 개요를 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab). 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false)
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
+ */
 export async function showOverview(pane, path, { scrollTop } = {}) {
   const id = ++pane.renderId;
   const { view, tab } = pane;

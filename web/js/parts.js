@@ -39,7 +39,7 @@ const PARALLEL = 4;        // 문서를 함께 읽는 수
 
 // mode: parts(문서 속 요소) | meta(문서 정보, D62) | files(파일 종류, D50). kind: 문서 속 요소의 종류, ftype: 파일 형식 ('묶음:형식' — 'others:pdf'),
 // sub: 종류 아래 단추 (할 일·링크·출처), mkey: 문서 정보의 키
-const DEFAULT = { mode: 'parts', kind: 'table', ftype: null, scope: '', filter: '', order: 'tree', scroll: 0, sub: { task: 'open', link: 'all', source: 'all' }, mkey: null };
+const DEFAULT = { mode: 'parts', kind: 'table', ftype: null, scope: '', filter: '', order: 'tree', scroll: 0, sub: { task: 'open', link: 'all', source: 'all' }, mkey: null, autoKind: false };
 
 // 종류 아래 단추: [키, 이름, 맞는지]
 const SUBS = {
@@ -646,6 +646,7 @@ async function partMenu(el, x, y) {
   const range = item.lines;
   const note = item.caption || (item.kind === 'task' || item.kind === 'source' ? (item.text.length > 40 ? `${item.text.slice(0, 39)}…` : item.text) : '');
   const ref = `@${path}${range ? ` ${rangeText(range)}` : ''}${note ? ` ('${note}')` : ''}`;
+  /** @type {MenuItem[]} */
   const items = [{ header: `${item.name} · ${path}` },
     { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => openItem(el) },
     { label: t('Claude용 위치 복사'), hint: ref, action: () => copy(ref, ref), term: `${ref} ` }];

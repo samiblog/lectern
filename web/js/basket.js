@@ -229,6 +229,7 @@ function targetItems(query) {
   const tab = S.tab;
   const docs = openDocs(tab).filter((path) => isMd(path)).map((path) => tab.fileMap.get(path) || { path, name: basename(path) })
     .filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
+  /** @type {any[]} */
   const out = [];
   if (!terms.length) {
     const ed = editingDoc();
@@ -240,6 +241,7 @@ function targetItems(query) {
 
 function placeItems(query) {
   const q = query.toLowerCase().trim();
+  /** @type {any[]} */
   const out = q ? [] : [{ type: 'back', label: t('← 다른 곳 고르기') },
     { type: 'place', place: { at: 'end' }, label: t('맨 끝'), sub: t('끝의 각주 앞에') },
     { type: 'place', place: { at: 'start' }, label: t('맨 앞'), sub: t('문서 제목 아래에') }];
@@ -351,6 +353,7 @@ function rowMenu(el, x, y) {
   if (!sn) return;
   const items = basketOf();
   const i = items.indexOf(sn);
+  /** @type {MenuItem[]} */
   const menu = [{ header: `${sn.label || sn.name} · ${sn.path}` },
     { label: t('문서에서 보기'), hint: t('누르기·Enter'), action: () => goToSource(sn) }];
   if (editingDoc()) menu.push({ label: t('커서 자리로 보내기'), hint: editingDoc().path, action: () => putAtCursor([sn]) });

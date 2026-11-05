@@ -24,7 +24,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, pathMenuItems, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
+import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu } from './ui.js';
 import { $, $$, esc, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, newTabWanted, openHow, middleClickOpens } from './util.js';
@@ -119,7 +119,7 @@ const byName = (a, b) => natCompare(a.name, b.name);
 function merge(docs = [], others = []) {
   const dirs = new Map();
   const files = [];
-  for (const [nodes, doc] of [[docs, true], [others, false]]) {
+  for (const [nodes, doc] of /** @type {[any[], boolean][]} */ ([[docs, true], [others, false]])) {
     for (const n of nodes) {
       if (n.type === 'file') {
         files.push({ ...n, doc });
@@ -424,6 +424,7 @@ async function copy(text) {
 
 /** 경로 복사 항목 (메뉴 끝) */
 function copyItems(n) {
+  /** @type {MenuItem[]} */
   const items = ['-', { label: t('@{path} 복사', { path: n.path }), hint: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
     { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)), term: shellWord(fullPath(n.path)) }];
   if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name), term: shellWord(n.name) });
@@ -432,6 +433,7 @@ function copyItems(n) {
 
 /** 코드·자료 파일의 우클릭 메뉴 — 이 목록과 다른 탭의 파일 행(bindFileRows)이 함께 쓴다 */
 export function fileMenuItems(n) {
+  /** @type {MenuItem[]} */
   const items = [{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }];
   if (isViewFile(n)) {
     items.push({ label: t('읽기 화면에서 보기'), hint: t('누르기·Enter'), action: () => emit('open', { type: 'code', path: n.path }) },
@@ -452,6 +454,7 @@ function menuItems(k, n) {
   if (n.doc) return docMenuItems(n.path);   // 문서 트리와 같은 메뉴
   if (n.type !== 'dir') return fileMenuItems(n);
   const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
+  /** @type {MenuItem[]} */
   const items = [{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` },
     { label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: t('두 번 누르기·Enter'), action: () => toggle(k, n.path) }];
   if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });

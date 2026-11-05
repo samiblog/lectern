@@ -320,6 +320,7 @@ function listMenu(btn) {
   const tab = S.tab;
   if (!tab) return;
   const n = tab.panes.length;
+  /** @type {MenuItem[]} */
   const items = [{ header: t('열린 문서 탭 {n}개 (최대 {max}개)', { n, max: MAX_DOCS }) }];
   tab.panes.forEach((p, i) => {
     const v = viewOf(p);
@@ -344,6 +345,7 @@ const paneAt = (el) => S.tab?.panes[Number(el?.closest('.doc-tab')?.dataset.i)] 
 /** 문서 탭의 우클릭 메뉴 (모두 펼치기의 칸 머리도 — spread.js) */
 export function tabMenu(pane) {
   const v = viewOf(pane);
+  /** @type {MenuItem[]} */
   const items = [{ header: v?.path || pane.tab.name }];
   if (pane.tab.panes.length > 1) {
     items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+F4' : t('가운데 버튼'), action: () => closeDocTab(pane) },

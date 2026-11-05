@@ -12,6 +12,7 @@ import { $ } from './util.js';
 
 let home = null;   // 시작 화면 칸 (index.html 에 처음부터 있는 칸)
 
+/** @returns {Pane} */
 function makePane(el, tab) {
   return {
     el,                                       // section.lec-pane

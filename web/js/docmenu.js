@@ -236,6 +236,7 @@ function litMenu(hl, selected, blockMenu) {
   const { range, ref, text } = hl;
   const chart = hl.chapter ? null : litChart(range);
   const name = t('하이라이트한 곳');
+  /** @type {MenuItem[]} */
   const items = [{ header: `${name} · ${rangeText(range)}` },
     { label: t('Claude 로 보내기'), hint: `Shift+→ · ${t('터미널에 (Enter 는 누르지 않음)')}`, action: sendLit },
     '-',
@@ -286,6 +287,7 @@ function blockTake(picked) {
 }
 
 function blockItems(el, target) {
+  /** @type {MenuItem[]} */
   const items = [{ header: kindOf(el) }];
   const tag = el.tagName;
   // 블록 안에서 누른 작은 것: 문장 속 수식, 링크
@@ -351,6 +353,7 @@ function printDoc() {
 }
 
 function docItems() {
+  /** @type {MenuItem[]} */
   const items = [{ header: doc.path }, { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }, '-', ...pathMenuItems(doc.path, true)];
   if (hasFolds()) {
     items.push('-', { label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) });
@@ -398,6 +401,7 @@ function codeLineMenu(e, view, x, y) {
     if (a && b) range = [Math.min(a, b), Math.max(a, b)];
   }
   const sheet = view.dataset.sheet || '';   // 엑셀 보기 (D77) — 행은 엑셀의 행 번호, 보기만
+  /** @type {MenuItem[]} */
   const items = [{ header: range ? `${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}` : path }];
   if (selected) items.push({ label: t('선택한 글 복사'), hint: describe(selected.trim()), action: () => copyPlain(selected), term: selected });
   const cell = sheet && !selected ? e.target.closest?.('td:not(.csv-rn):not(.csv-calc)') : null;

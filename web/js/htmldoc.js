@@ -218,6 +218,9 @@ function missing(pane, path, err) {
 /**
  * html 문서를 칸(pane)에 그린다 (nav.js 가 확장자로 고른다). 프로젝트는 칸의 탭(pane.tab)이다.
  * 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
  */
 export async function showHtml(pane, path, { hash = '', scrollTop } = {}) {
   const id = ++pane.renderId;

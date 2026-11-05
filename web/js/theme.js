@@ -103,7 +103,7 @@ function redrawAfterLoad() {
   // 주소가 바뀐(아직 불러오는 중인) css 만 기다린다 — setHref 가 단 표시를 load·error 가 지운다
   const loaded = (link) => new Promise((resolve) => {
     if (!link.dataset.loading) {
-      resolve();
+      resolve(undefined);
       return;
     }
     link.addEventListener('load', resolve, { once: true });

@@ -2,7 +2,9 @@
 
 import { t } from './i18n.js';
 
+/** @type {(sel: string, root?: ParentNode) => any} */
 export const $ = (sel, root = document) => root.querySelector(sel);
+/** @type {(sel: string, root?: ParentNode) => any[]} */
 export const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
 
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
@@ -86,7 +88,10 @@ export function timeAgo(sec) {
   return `${d.getFullYear()}.${d.getMonth() + 1}.${d.getDate()}`;
 }
 
-/** 원문 줄 범위의 글: [12, 12] → '12행', [12, 20] → '12~20행' (Claude용 위치 '@경로 12~20행' — D24) */
+/**
+ * 원문 줄 범위의 글: [12, 12] → '12행', [12, 20] → '12~20행' (Claude용 위치 '@경로 12~20행' — D24)
+ * @type {(range: number[]) => string}
+ */
 export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
 
 /** Claude용 위치 '@경로 12~20행' — 엑셀 보기는 시트 이름도 ('@표.xlsx '1분기' 시트 3~5행' — D77) */

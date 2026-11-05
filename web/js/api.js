@@ -18,7 +18,7 @@ async function check(res) {
     const body = await res.json();
     if (body?.error) message = body.error;
   } catch { /* 본문이 JSON이 아님 */ }
-  const err = new Error(message);
+  const err = /** @type {any} */ (new Error(message));
   err.status = res.status;
   throw err;
 }
@@ -39,7 +39,13 @@ export async function getJSON(path, extra = {}) {
   return (await check(res)).json();
 }
 
-/** signal: 기다리는 요청을 그만둘 때 (터미널 출력의 긴 폴링 — terminal.js) */
+/**
+ * signal: 기다리는 요청을 그만둘 때 (터미널 출력의 긴 폴링 — terminal.js)
+ * @param {string} path
+ * @param {any} [body]
+ * @param {Record<string, any>} [extra]
+ * @param {{ signal?: AbortSignal }} [options]
+ */
 export async function postJSON(path, body, extra = {}, { signal } = {}) {
   const res = await fetch(path, {
     method: 'POST',

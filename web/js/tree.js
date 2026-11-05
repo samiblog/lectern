@@ -198,6 +198,7 @@ export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), a
 
 /** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)·이름 바꾸기(D66)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
 export function docMenuItems(path, type = 'doc') {
+  /** @type {MenuItem[]} */
   const items = [{ header: path }];
   if (!(S.view?.type === type && S.view.path === path)) {
     items.push({ label: t('새 탭에서 열기'), hint: type === 'doc' ? t('Ctrl+누르기·두 번 누르기·가운데 버튼') : t('Ctrl+누르기·가운데 버튼'), action: () => emit('open', { type, path, newTab: true }) });

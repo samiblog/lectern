@@ -73,6 +73,10 @@ export function setLeaveGuard(fn) {
   leaveGuard = fn;
 }
 
+/**
+ * @param {any} target
+ * @param {{ pane?: Pane, push?: boolean, restoreScroll?: boolean, index?: number | null, scrollTop?: ShowOptions['scrollTop'] }} [options]
+ */
 export async function navigate(target, { pane = S.pane, push = true, restoreScroll = false, index = null, scrollTop } = {}) {
   if (!pane?.tab) return false;   // 시작 화면 (열린 탭이 없음)
   if (pane.editor && leaveGuard && !leaveGuard(pane)) return false;   // 편집 중 — 저장하지 않은 것을 버리지 않기로 함

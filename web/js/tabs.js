@@ -324,6 +324,7 @@ function tabMenu(tab) {
     if (tab !== S.tab) await selectTab(tab);
     act();
   };
+  /** @type {MenuItem[]} */
   const items = [{ header: tab.root }, { label: t('프로젝트 개요'), action: there(openOverview) },
     { label: t('이 폴더에 새 문서…'), action: there(() => emit('new-doc', { dir: '' })) },
     { label: t('프로젝트의 표·그림 등 모아 보기'), hint: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) },

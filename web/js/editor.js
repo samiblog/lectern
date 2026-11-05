@@ -65,7 +65,7 @@ const loading = new Map();   // 주소 → Promise (한 번만)
 function load(src, css = false) {
   if (!loading.has(src)) {
     loading.set(src, new Promise((resolve, reject) => {
-      const el = document.createElement(css ? 'link' : 'script');
+      const el = /** @type {any} */ (document.createElement(css ? 'link' : 'script'));
       if (css) {
         el.rel = 'stylesheet';
         el.href = src;

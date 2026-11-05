@@ -185,7 +185,7 @@ function regionRef(st, r) {
 
 /** 막대 위의 표 단추 — 깔끔한 시트면 감춘다 */
 function drawRegions(view) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const bar = view.querySelector('.csv-regions');
   bar.hidden = st.plain && !st.root.custom;
   view.querySelector('.csv-headrow').hidden = !!st.region;
@@ -202,7 +202,7 @@ function drawRegions(view) {
 
 /** 다른 표로 — 계산 열은 그 표의 것이라 뺀다 */
 function selectRegion(view, pick) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   st.root.region = pick;
   st.calcs = [];
   pickRegion(st);
@@ -211,7 +211,7 @@ function selectRegion(view, pick) {
 }
 
 function stepDepth(view, step) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const r = st.region;
   if (!r) return;
   const next = Math.max(0, Math.min(MAX_DEPTH, r.depth + step, r.depth + r.rows.length - 1));
@@ -227,7 +227,7 @@ function stepDepth(view, step) {
 
 /** 하이라이트한 줄을 표로 (docmenu.js 의 선택 상자) */
 export function markRange(view, range) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   st.root.custom = range;
   loadRegions(st);
   const i = st.regions.findIndex((r) => r.custom);
@@ -277,7 +277,7 @@ function addCalc(view, calc) {
 
 /** 계산 열을 뺀다. k 가 없으면 모두 */
 function dropCalc(view, k = null) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   st.calcs = k == null ? [] : st.calcs.filter((_, i) => i !== k);
   if (st.mem.sort?.col >= st.width) st.mem.sort = null;
   build(view);
@@ -285,7 +285,7 @@ function dropCalc(view, k = null) {
 
 /** 지금 보이는 표 (거른 행, 정렬 차례, 계산 열까지 — 그리는 행 수 한도와 상관없이) {title, headers, rows} */
 export function shownTable(view, range = null) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const { body, idx, cols, bodyLines } = st;
   const name = basename(view.dataset.codePath || '');
   const within = (i) => !range || (bodyLines[i][0] <= range[1] && bodyLines[i][1] >= range[0]);
@@ -320,7 +320,7 @@ function sendShown(view) {
 
 /** 열 머리 우클릭의 메뉴 (docmenu.js) */
 export function columnMenu(view, c) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const col = st.cols[c];
   const series = col.numeric && c !== st.time?.col;
   const items = [];
@@ -364,7 +364,7 @@ function summaryText(st, idx, raw) {
 
 /** 표의 몸통·통계·개수만 다시 그린다 (거르기·정렬) */
 function update(view) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const { rows, lines, header, cols, mem, calcs, width } = st;
   const raw = header ? rows.slice(1) : rows;
   const bodyLines = header ? lines.slice(1) : lines;
@@ -375,12 +375,13 @@ function update(view) {
   if (calcTests.some(Boolean)) idx = idx.filter((i) => calcTests.every((test, k) => !test || test(body[i][width + k])));
   if (mem.sort) {
     const { col, dir } = mem.sort;
+    /** @type {(i: number) => any} */
     const key = cols[col].numeric ? (i) => numberOf(body[i][col]) : (i) => String(body[i][col] ?? '').trim();
     const blank = (v) => v == null || v === '';
     idx = [...idx].sort((a, b) => {
       const x = key(a);
       const y = key(b);
-      if (blank(x) || blank(y)) return blank(x) - blank(y);   // 빈칸은 늘 끝에
+      if (blank(x) || blank(y)) return Number(blank(x)) - Number(blank(y));   // 빈칸은 늘 끝에
       const c = typeof x === 'number' ? x - y : x.localeCompare(y, undefined, { numeric: true });
       return dir * c;
     });
@@ -422,7 +423,7 @@ function update(view) {
 
 /** 머리·거르기 칸까지 새로 (처음, '첫 줄은 머리행'을 바꿀 때) */
 function build(view) {
-  const st = view.csv;
+  const st = /** @type {CsvState} */ (view.csv);
   const { rows, mem } = st;
   const letter = st.letter || colName;
   st.header = mem.header ?? guessHeader(rows);

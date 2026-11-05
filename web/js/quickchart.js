@@ -45,7 +45,7 @@ function shown() {
 /** 축마다의 묶음 — 레벨 먼저 */
 function axisKeys(list) {
   const keys = [...new Set(list.map((s) => s.key))];
-  return keys.sort((a, b) => (a === 'rate') - (b === 'rate'));
+  return keys.sort((a, b) => Number(a === 'rate') - Number(b === 'rate'));
 }
 
 const typeOf = (s, points) => (st.kind !== 'auto' ? st.kind : s.group === 'level' && points <= LONG ? 'bar' : 'line');

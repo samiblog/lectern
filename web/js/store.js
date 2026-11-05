@@ -40,7 +40,7 @@
 
 const metaMode = document.querySelector('meta[name="lec-mode"]')?.content;
 
-export const S = {
+export const S = /** @type {AppState} */ ({
   mode: metaMode && !metaMode.includes('{') ? metaMode : 'browser', // 'app' | 'browser'
   sep: '\\',           // 서버 OS의 경로 구분자
   config: {},          // /api/config
@@ -51,7 +51,7 @@ export const S = {
   view: null,          // 선택된 칸의 화면 {type, path}
   samples: null,       // 예제 프로젝트 폴더 (/api/state — 없으면 null, D57)
   writingGuide: '',    // AI 용 작성 안내 파일 (web/help/writing.md, 화면 언어에 맞춘 것)
-};
+});
 
 // 선택된 탭의 프로젝트 값. 선택된 탭만 다루는 모듈(트리·팔레트·검색 등)은 S.root·S.files 처럼 읽고 쓰면 된다.
 // 모든 탭을 다루는 코드(렌더러·자동 새로고침)는 탭 객체(pane.tab)를 쓴다. 탭이 없으면 빈 값

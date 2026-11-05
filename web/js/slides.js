@@ -60,6 +60,7 @@ export function readYaml(raw, strict = false) {
       if (strict) return null;
       continue;
     }
+    /** @type {any} */
     let value = m[2] ?? '';
     const flow = /^\[(.*)\]$/.exec(value.trim());
     const next = lines.slice(i + 1).find((l) => l.trim() && !/^\s*#/.test(l)) || '';

@@ -916,7 +916,7 @@ function bind(span) {
 export function focusLineEdit() {
   if (!session) return false;
   session.places[session.cell]?.span.focus();
-  if (session.caret) getSelection().collapse(...session.caret);
+  if (session.caret) getSelection().collapse(session.caret[0], session.caret[1]);
   return true;
 }
 

@@ -160,6 +160,7 @@ const clip = (s, n = 44) => { const text = squeeze(s); return text.length > n ? 
 const CAPTION = /^[<[〈《(（【]?\s*(?:표|그림|도표|차트|사진|다이어그램|코드|예시|table|tab\.|fig(?:ure)?\.?|chart|diagram|listing|code)\s*[\dⅠ-Ⅻ]+(?:\s*[.\-–]\s*[\dⅠ-Ⅻ]+)*\s*[>\]〉》)）】]?\s*[.:)]?\s*/i;
 
 // 캡션 머리의 낱말이 말하는 종류 — 표 캡션은 표만, 그림 캡션은 그림·다이어그램만 가져간다
+/** @type {[RegExp, string][]} */
 const CAPTION_WORD = [[/^[<[〈《(（【]?\s*(?:표|table|tab\.)/i, 'table'], [/^[<[〈《(（【]?\s*(?:코드|예시|listing|code)/i, 'code'],
   [/^[<[〈《(（【]?\s*(?:그림|도표|차트|사진|다이어그램|fig|chart|diagram)/i, 'figure']];
 const wordKind = (text) => (CAPTION.test(text) ? CAPTION_WORD.find(([re]) => re.test(text))?.[1] : null) || null;

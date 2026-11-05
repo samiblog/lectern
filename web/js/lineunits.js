@@ -201,8 +201,8 @@ function segmentsOf(el) {
 
 function rangeOf(from, to) {
   const r = document.createRange();
-  r.setStart(...from);
-  r.setEnd(...to);
+  r.setStart(from[0], from[1]);
+  r.setEnd(to[0], to[1]);
   return r;
 }
 

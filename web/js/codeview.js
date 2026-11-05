@@ -82,6 +82,9 @@ function notice(view, path, message) {
 /**
  * 코드 파일을 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab). line: 그 줄로 가서 잠깐 표시. scrollTop: 이 위치로 (함수면 바꿔 끼우기 직전에 읽는다).
  * 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
  */
 export async function showCode(pane, path, { line, scrollTop } = {}) {
   if (isSheet(path)) return showSheet(pane, path, { line, scrollTop });
@@ -151,6 +154,9 @@ const sheetChoice = new Map();   // 탭 id + 경로 → 고른 시트 차례 (�
 /**
  * 엑셀 파일을 칸에 그린다 — 시트 탭과 csv 같은 표 (GET /api/sheet 가 고른 시트 하나의 값을 준다). sheet: 이 시트로 (탭을 누름).
  * 수정 시각은 HEAD 로 받아 두고 코드 화면처럼 바뀌면 다시 그린다 (check)
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
  */
 async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   const id = ++pane.renderId;
