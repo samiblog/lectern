@@ -622,6 +622,7 @@ def run(headed: bool) -> None:
             extended = page.evaluate(lit_status)
             page.keyboard.up('Shift')
             page.keyboard.press('Escape')
+            page.locator('#lec-view li', has_text='항목 하나').evaluate("(el) => el.scrollIntoView({ block: 'center' })")
             one = page.locator('#lec-view li', has_text='항목 하나').bounding_box()
             inner = page.locator('#lec-view li', has_text='안쪽 항목').last.bounding_box()
             page.keyboard.down('Shift')
@@ -2021,8 +2022,8 @@ def run(headed: bool) -> None:
             no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
             page.locator('#lec-tree .row.file', has_text='후속 과제').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
-            check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-toc', 'lec-btn-term'],
-                  f"탭 막대의 [편집] [목차] [터미널] — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
+            check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-notes', 'lec-btn-toc', 'lec-btn-term'],
+                  f"탭 막대의 [편집] [메모] [목차] [터미널] — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
             page.click('#lec-st-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
             in_editor = page.evaluate("!!document.activeElement?.closest('.lec-editor') && document.querySelector('#lec-st-edit').hidden")
@@ -3836,7 +3837,7 @@ def run(headed: bool) -> None:
             active = wait_until(page, "document.querySelector('#lec-help-toc a.active')?.textContent === '터미널 모음'")
             check(jumped and active, '설명서 차례를 누르면 그 장으로, 읽는 곳이 차례에 표시됨')
             page.keyboard.press('Control+f')
-            page.keyboard.type('Claude용 위치')
+            page.keyboard.type('위치 복사')
             found = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)")
             where = page.evaluate("document.querySelector('#lec-findbar').parentElement.id")
             page.keyboard.press('Escape')   # 찾기를 닫고
