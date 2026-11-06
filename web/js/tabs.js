@@ -126,7 +126,10 @@ function loadTab(tab) {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
       const restore = !solo && S.config.restore_last !== false;
-      if (solo) await navigate(solo.start, { pane, scrollTop: solo.top || undefined });
+      if (solo) {
+        await navigate(solo.start, { pane, scrollTop: solo.top || undefined });
+        if (solo.start.line && solo.start.type === 'doc') emit('go-line', { line: solo.start.line });   // 문서 화면은 navigate 의 line 을 듣지 않는다
+      }
       const restored = restore && await restorePosition(pane, tab.position);
       // 트리가 보인 뒤 사용자가 이미 다른 문서를 눌렀으면(그리는 중 포함) 개요로 덮지 않는다
       if (!restored && !pane.current && !pane.pending) await navigate({ type: 'overview', path: '' }, { pane });

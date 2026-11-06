@@ -18,7 +18,7 @@ Ten model decks, one for each situation. View the finished deck in the slide win
 | Explain technology to engineers | [07 Technical seminar](07-기술-세미나.md) | [Process](과정/07-기술-세미나-과정.md) | Code length, formulas, sequence diagrams, boxes |
 | Tell a story in pictures | [08 Photo record](08-사진-기록.md) | [Process](과정/08-사진-기록-과정.md) | Backgrounds and filters, text over pictures |
 | Show a year's plan | [09 Roadmap](09-로드맵.md) | [Process](과정/09-로드맵-과정.md) | Your own `grid`, dependencies, checklists |
-| Turn a document into a deck | [10 From document to deck](10-문서에서-발표로.md) | [Process](과정/10-문서에서-발표로-과정.md) | Choosing the message, relative paths, 'Request a deck' |
+| Turn a document into a deck | [10 From document to deck](10-문서에서-발표로.md) | [Process](과정/10-문서에서-발표로-과정.md) | Choosing the message, relative paths, 'Ask Claude to make slides' |
 
 ## The shared steps
 

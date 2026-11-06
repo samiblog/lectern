@@ -152,14 +152,15 @@ try:
         doc.write_text(TEXT, encoding='utf-8')
         page.wait_for_timeout(2300)
 
-        # --- 없어지는 문서
-        page.evaluate("""(p) => fetch('/api/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })""",
-                      {'p': page.evaluate("import('/static/js/store.js').then(({ S }) => S.tab.id)"), 'path': '가.md', 'name': '새이름.md'})
-        win.wait_for_selector('#lec-view .doc-missing', timeout=6000)
-        check('다른 창이 이름을 바꾸면 독립창은 없음 화면', True)
-        (proj / '새이름.md').rename(doc)
-        win.wait_for_selector('#lec-view h1:has-text("첫째")', timeout=7000)
-        check('이름이 돌아오면 다시 보인다', True)
+        # --- 이름이 바뀌는 문서, 없어지는 문서
+        rename = """(p) => fetch('/api/rename', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(p) })"""
+        pid = page.evaluate("import('/static/js/store.js').then(({ S }) => S.tab.id)")
+        page.evaluate(rename, {'p': pid, 'path': '가.md', 'name': '새이름.md'})
+        win.wait_for_function("document.querySelector('#lec-st-path')?.textContent.includes('새이름')", timeout=6000)
+        check('다른 창이 이름을 바꾸면 독립창이 따라간다', win.locator('#lec-view .doc-missing').count() == 0 and win.locator('#lec-view h1:has-text("첫째")').count() == 1)
+        page.evaluate(rename, {'p': pid, 'path': '새이름.md', 'name': '가.md'})
+        win.wait_for_function("document.querySelector('#lec-st-path')?.textContent.includes('가.md')", timeout=6000)
+        check('되돌려도 따라간다', win.locator('#lec-view h1:has-text("첫째")').count() == 1)
         doc.unlink()
         win.wait_for_selector('#lec-view .doc-missing', timeout=6000)
         doc.write_text(TEXT, encoding='utf-8')

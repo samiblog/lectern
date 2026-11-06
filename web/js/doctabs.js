@@ -264,11 +264,13 @@ async function receive({ type, path, top, term, note, p, stay, hash, line, to })
   const open = docPaneOf(S.tab, { type, path });   // 슬라이드 창이 이미 연 발표 (D96)
   if (open) {
     await selectDocTab(open);
-    if (hash || line) navigate({ type, path, hash, line }, { pane: open });
-    return;
+    if (hash || (line && type === 'code')) await navigate({ type, path, hash, line }, { pane: open });
+  } else {
+    const pane = await openInNewTab({ type, path, hash, line });
+    if (!pane) return;
+    if (top) pane.scroller.scrollTop = top;
   }
-  const pane = await openInNewTab({ type, path, hash, line });
-  if (pane && top) pane.scroller.scrollTop = top;
+  if (line && type === 'doc') emit('go-line', { line });   // 문서 화면은 navigate 의 line 을 듣지 않는다 (코드 화면만)
 }
 
 /** 이 창이 지금 연 발표 문서들 (D96) — 서버가 '이 발표의 창'을 찾는 데 쓴다 */

@@ -258,7 +258,7 @@ try:
         print('[슬라이드]')
         open_doc('deck.md', '표지')
         slide_box = page.evaluate("[...document.querySelectorAll('#lec-view .task-list-item-checkbox')].map((b) => b.disabled)")
-        check('슬라이드의 칸은 표시만', slide_box == [True], slide_box)
+        check('슬라이드의 칸도 누를 수 있음', slide_box == [False], slide_box)
         page.locator('#lec-status button', has_text='문서로 보기').click()
         wait("!document.querySelector('#lec-view').classList.contains('lec-deck')")
         settle(300)

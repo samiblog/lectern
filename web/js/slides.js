@@ -448,8 +448,12 @@ function fitCells(section) {
       el.style.maxHeight = '';
       el.classList.remove('lec-fit');
     }
-    const both = cell.classList.contains('center') ? 2 : 1;   // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다
-    let over = (cell.scrollHeight - cell.clientHeight) * both;
+    // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다. 1px 은 반올림이다
+    const overOf = () => {
+      const px = cell.scrollHeight - cell.clientHeight;
+      return px > 1 ? px * (cell.classList.contains('center') ? 2 : 1) : 0;
+    };
+    let over = overOf();
     if (over > 1) {
       const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
       const height = (el) => el.getBoundingClientRect().height / scale;
@@ -457,7 +461,7 @@ function fitCells(section) {
         const want = Math.max(48, height(el) - over - 2);
         el.style.maxHeight = `${Math.round(want)}px`;
         el.classList.add('lec-fit');
-        over = (cell.scrollHeight - cell.clientHeight) * both;
+        over = overOf();
         if (over <= 1) break;
       }
     }
