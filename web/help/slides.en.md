@@ -303,7 +303,7 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 
 For `Cell a overflows by 120px (cell height 300px)`, cut four body lines or three table rows.
 
-The sample project has ten model decks and how each was built, in `slides/README.md` (`samples/slides/` in the install folder). In a similar situation, follow how that example uses cells.
+The sample project has ten model decks and how each was built, in `slides/README.md` (`samples/slides/` in the install folder). In a similar situation, follow how that example uses cells. Twenty complex layouts such as dashboards, Gantt charts and risk matrices are in `slides/복잡한-배치/README.en.md`.
 
 ## 10. Good slides
 

@@ -297,7 +297,7 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 
 **Best practice examples**
 
-`slides/README.md` in the project opened by **Open samples** has ten model decks, one per situation (`slides/README.en.md` in English). Each finished deck comes with a process document, linked from that page, that builds it from scratch in seven steps: decide, ask Claude, write the titles, fill the cells, fix the check, polish by hand, present and share. The request text can be pasted straight into the terminal. The installed samples are read-only, so follow along in your own project.
+`slides/README.md` in the project opened by **Open samples** has ten model decks, one per situation (`slides/README.en.md` in English). Each finished deck comes with a process document, linked from that page, that builds it from scratch in seven steps: decide, ask Claude, write the titles, fill the cells, fix the check, polish by hand, present and share. The request text can be pasted straight into the terminal. The installed samples are read-only, so follow along in your own project. That page also links to twenty complex layouts such as dashboards, process maps and Gantt charts.
 
 **Viewing and exporting**
 

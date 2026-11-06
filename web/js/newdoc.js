@@ -28,6 +28,7 @@ export function newDocGuess(dir = null) {
 /** 적은 경로를 다듬는다: 앞의 /·\ 를 떼고, .md 가 없으면 붙인다 */
 export function cleanPath(raw) {
   let path = String(raw || '').trim().replace(/\\/g, '/').replace(/^\/+/, '');
+  path = path.replace(/(\.(?:md|markdown))\.md$/i, '$1');   // 입력란이 확장자 앞까지만 골라 두어 'x.md' 를 치면 'x.md.md' 가 된다
   if (path && !/\.(md|markdown)$/i.test(path)) path += '.md';
   return path;
 }

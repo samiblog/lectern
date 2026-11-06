@@ -29,3 +29,7 @@ Ten model decks, one for each situation. View the finished deck in the slide win
 5. **Fix the check.** Paste the **Check** list from the status bar into the terminal, and Claude fixes it.
 6. **Polish by hand.** Press F2 to edit in place.
 7. **Present and share.** Press Shift+F5 to present, and use **Print / Save as PDF…** from the right-click menu.
+
+## More complex layouts
+
+Twenty examples with many cells, such as dashboards, magazine pages, process maps, Gantt charts and frameworks, are in [Complex layouts](복잡한-배치/README.en.md).

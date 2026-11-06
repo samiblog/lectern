@@ -375,7 +375,9 @@ async function drawVega(kind, src, width, ctx, fit = 0) {
   try {
     const svg = await view.toSVG();
     if (problems.length) throw problems[0];
-    return { svg, fluid };
+    // 칸 크기에 맞춰 그릴 때 범례가 더 길면 그림 밖으로 잘린다 — 끝까지 보이게 키를 알린다 (draw 가 늘린다)
+    const bottom = spec?.autosize?.type === 'fit' ? (view.scenegraph().root.bounds?.y2 ?? 0) + view.origin()[1] : 0;
+    return { svg, fluid, bottom };
   } finally {
     view.finalize();
   }
@@ -518,6 +520,11 @@ async function draw(node, ctx) {
     const w = parseFloat(el.getAttribute('width'));
     const h = parseFloat(el.getAttribute('height'));
     if (w && h) el.setAttribute('viewBox', `0 0 ${w} ${h}`);
+  }
+  if (out.bottom > parseFloat(el.getAttribute('height'))) {
+    const h = Math.ceil(out.bottom) + 2;
+    el.setAttribute('height', String(h));
+    el.setAttribute('viewBox', `0 0 ${el.getAttribute('width')} ${h}`);
   }
   if (zoom !== 1) {
     const w = parseFloat(el.getAttribute('width')) || parseFloat(el.getAttribute('viewBox')?.split(/[\s,]+/)[2]);

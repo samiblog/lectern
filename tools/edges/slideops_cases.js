@@ -125,6 +125,7 @@ eq(deleteLines(yes, 5, 6), { error: 'wall' }, 'marp: yes 도 발표 문서');
 const quoted = L('---\nmarp: "true"\n---\n\n::: a\n글\n:::\n');
 eq(deleteLines(quoted, 5, 6).error, undefined, '따옴표를 쓰면 글이라 발표 문서가 아니다');
 
+// 새 문서 이름의 확장자를 두 번 쓰지 않는다 (cleanPath 는 화면에서 시험)
 // 발표 문서가 아니면 ::: 는 보통 글이다
 const pl = L('# 글\n\n::: a\n첫 글\n:::\n');
 eq(moveLines(pl, 4, 4, 1).lines, L('# 글\n\n::: a\n:::\n첫 글\n'), '보통 문서의 ::: 는 글');

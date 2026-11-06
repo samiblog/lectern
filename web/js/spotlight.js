@@ -673,6 +673,8 @@ export function herePoint() {
   const i = hereIndex(us);
   if (i < 0) return null;
   const root = view();
+  const box = us[i].el.closest?.('.lec-slide') && us[i].el.getBoundingClientRect();   // 슬라이드의 칸은 왼쪽 여백에서 멀다 — 그 줄 위를 눌러야 장 메뉴가 나온다
+  if (box) return { x: box.left + Math.min(12, box.width / 2), y: box.top + Math.min(8, box.height / 2) };
   return { x: root.getBoundingClientRect().left + 40, y: baseOf(root) + us[i].top + 8 };
 }
 

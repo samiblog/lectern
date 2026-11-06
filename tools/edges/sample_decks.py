@@ -87,7 +87,20 @@ def run():
                     check(f'링크 {target}', path.exists())
             for target, path in links_of(deck):
                 check(f'링크 {target}', path.exists())
-        for doc in (slides / 'README.md', slides / 'README.en.md'):
+        print('[복잡한 배치]')
+        folder = slides / '복잡한-배치'
+        complex_decks = sorted(folder.glob('[0-9][0-9]-*.md'))
+        check('복잡한 배치 스무 개', len(complex_decks) == 20, len(complex_decks))
+        for deck in complex_decks:
+            rel = f'slides/복잡한-배치/{deck.name}'
+            page.evaluate(OPEN, rel)
+            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=10000)
+            page.wait_for_timeout(1300)
+            r = page.evaluate(LOOK)
+            check(f'{deck.stem}: 점검 0건', not r['issues'], r['issues'][:3])
+            check(f'{deck.stem}: 차트·그림 오류 없음', not r['errors'] and not r['broken'], [r['errors'][:2], r['broken'][:2]])
+            check(f'{deck.stem}: 글을 모두 한 줄 편집으로 연다', r['ok'] == r['text'], [r['ok'], r['text']])
+        for doc in (slides / 'README.md', slides / 'README.en.md', folder / 'README.md', folder / 'README.en.md'):
             for target, path in links_of(doc):
                 check(f'{doc.name} 의 링크 {target}', path.exists())
         check('화면 오류 없음', not extra, extra[:3])

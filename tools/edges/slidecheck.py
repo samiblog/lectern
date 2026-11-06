@@ -37,6 +37,9 @@ MISTAKES = {
     '자리모자람': (f'## 제목\n\n::: a at 10 20 300\n{B}\n:::\n', "'at 10 20 300'"),
     '격자길이다름': (f'<!-- grid: t t / a b / c -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '줄마다 칸 수'),
     '격자이상한글자': (f'<!-- grid: t t / a <b> -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '격자를 읽지 못했습니다'),
+    '열폭합이넘침': (f'<!-- grid: t t / a b -->\n<!-- cols: 900px 900px -->\n\n## 제목\n\n::: a\n{B}\n:::\n\n::: b\n글\n:::\n', '칸 b 이(가) 슬라이드 밖으로'),
+    '자기로가는선': (f'<!-- links: a>a -->\n\n## 제목\n\n::: a card at 100 200 300 120\n{B}\n:::\n', '선의 양쪽이 같은 칸입니다'),
+    '칸이많이넘침': ('## 제목\n\n' + ''.join(f'::: k{i} at {56 + i % 40 * 29} {110 + i // 40 * 22} 26 20\n{i % 10}\n:::\n\n' for i in range(100)), '이 장에'),
     '격자네모아님': (f'<!-- grid: t t / a b / b a -->\n\n## 제목\n\n::: a\n{B}\n:::\n\n::: b\n글\n:::\n', '네모가 아닙니다'),
     '열수다름': (f'<!-- grid: t t t / a b c -->\n<!-- cols: 1fr -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '3개를 씁니다'),
     '열값글': (f'<!-- grid: t t / a b -->\n<!-- cols: 넓게 좁게 -->\n\n## 제목\n\n::: a\n{B}\n:::\n', "cols 값 '넓게 좁게'"),
@@ -270,6 +273,16 @@ def run():
             page.wait_for_timeout(200)
         page.locator('#lec-st-structure').click()
         page.wait_for_timeout(200)
+
+        print('[키보드 메뉴]')
+        show('꼬리표')
+        page.locator('#lec-view .lec-cell p').last.click()
+        page.wait_for_timeout(200)
+        page.keyboard.press('Shift+F10')
+        page.wait_for_timeout(250)
+        check('Shift+F10 메뉴에 장 다루기가 있다', '배치 넣기' in page.locator('#lec-menu').inner_text(), page.locator('#lec-menu').inner_text()[:160])
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
 
         print('[어두운 장의 글이 모든 스타일에서 보인다]')
         themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && !v.startsWith('user:'))")

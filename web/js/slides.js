@@ -495,6 +495,7 @@ function checkSlide(section) {
     for (const cell of cells) {
       if (cell.classList.contains('lec-at')) continue;
       if (names.has(cell.dataset.cell)) add(t('칸 {name} 이(가) 두 번 나옵니다 — 칸 이름은 장마다 하나만 씁니다', { name: cell.dataset.cell }), cell);
+      if (cell.offsetLeft + cell.offsetWidth > section.clientWidth + 1) add(t('칸 {name} 이(가) 슬라이드 밖으로 나갑니다', { name: cell.dataset.cell }), cell);   // 열 폭의 합이 넘칠 때
       names.add(cell.dataset.cell);
       if (!areas.includes(cell.dataset.cell)) {
         cell.classList.add('lec-cell-bad');
@@ -573,6 +574,10 @@ function drawLinks(section, add) {
       add(t('선의 칸 {name} 이(가) 없습니다', { name: from ? m[3] : m[1] }));
       continue;
     }
+    if (m[1] === m[3]) {
+      add(t('선의 양쪽이 같은 칸입니다: {name}', { name: m[1] }));
+      continue;
+    }
     const [p, q] = [edgeOf(from, to), edgeOf(to, from)];
     const line = document.createElementNS(SVG, 'line');
     for (const [key, value] of [['x1', p[0]], ['y1', p[1]], ['x2', q[0]], ['y2', q[1]]]) line.setAttribute(key, String(value));
@@ -642,6 +647,7 @@ export function fitSlide(section) {
     if (c.wide) issues.push({ text: t('칸 {name} 이(가) 옆으로 {over}px 넘칩니다', { name: c.cell.dataset.cell, over: c.wide }), line: lineOf(c.cell) });
   }
   if (over > 1) issues.push({ text: t('아래가 {over}px 잘렸습니다', { over: Math.round(over) }), line: lineOf(wrap) });
+  if (issues.length > 12) issues.splice(12, Infinity, { text: t('이 장에 {n}건이 더 있습니다', { n: issues.length - 12 }), line: lineOf(wrap) });   // 목록과 터미널로 보낼 글이 수백 줄이 되지 않게
   const frame = wrap.querySelector('.lec-slide-frame');
   wrap.classList.toggle('lec-over', issues.length > 0);
   if (issues.length) {

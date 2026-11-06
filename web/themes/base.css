@@ -355,6 +355,8 @@
 .lec-deck .lec-cell.cols-2 { display: block; column-count: 2; column-gap: 28px; }
 .lec-deck .lec-cell.cols-3 { display: block; column-count: 3; column-gap: 24px; }
 .lec-deck .lec-cell pre.lec-chart, .lec-deck .lec-cell pre.mermaid { margin: 0; padding: 0; background: none; border: 0; }
+/* 슬라이드는 배율이 바뀐다 (창 크기·인쇄). 브라우저가 SVG 글자의 크기를 앞 배율로 남겨 글자만 커지지 않게 */
+.lec-deck .lec-slide svg text { text-rendering: geometricPrecision; }
 .lec-deck .lec-cell svg { max-width: 100%; }
 .lec-deck .lec-cell pre.mermaid > svg { width: 100%; max-width: 100% !important; }
 .lec-deck .lec-cell .table-wrap, .lec-deck .lec-cell table { width: 100%; }
