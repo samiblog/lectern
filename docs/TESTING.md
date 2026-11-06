@@ -112,6 +112,18 @@ python app.py %TEMP%\lec-check
 | 27m | 창 모드에서 차트·체크리스트·frontmatter 가 있는 실제 프로젝트의 모아 보기 → 차트·할 일·링크·출처, '문서 정보' → status 등 | 차트가 작은 그림으로 그려짐(처음 몇 초), 안 한 할 일부터, 이름을 바꾼 문서를 가리키던 링크에 '깨짐', 문서 정보는 키마다 값으로 묶임 (D62) |
 | 28 | PowerShell 7 이 있으면 설정 파일에 `"terminal_shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"` → 터미널 머리줄의 ↻ | 'PowerShell 7' 셸이 뜸. 없는 경로·이름만 적으면 기본 PowerShell |
 
+### PowerPoint 스킬 점검
+PowerPoint 와 Claude Code 가 있는 PC 에서. 시험용 발표를 쓴다 (받은 pptx 는 저장소에 넣지 않는다).
+
+| # | 할 일 | 기대 결과 |
+|---|---|---|
+| S1 | 설정 → PowerPoint 스킬 → 요청을 터미널에 붙여 넣고 Enter | Claude 가 무엇을 설치할지 말하고 묻는다. 답하기 전에는 설치하지 않는다 |
+| S2 | pptx 파일을 Lectern 슬라이드로 옮겨 달라고 한다 | 쪽 수가 같고 원본이 그대로이며 점검 항목이 보고에 나온다 |
+| S3 | 저장 안 한 고침이 있는 발표를 PowerPoint 에 띄워 두고 옮겨 달라고 한다 | 고침이 문서에 들어오고 PowerPoint 의 발표는 저장되지 않은 채 그대로 떠 있다 |
+| S4 | 회사 DRM 파일을 PowerPoint 에 띄워 두고 S3 처럼 한다 | 옮겨진다. 사본 저장이 막히면 원본 쪽을 쓸 수 없다고 보고에 나온다 |
+| S5 | 옮긴 문서의 글을 고치고 pptx 로 만들어 달라고 한다 | `-수정.pptx` 가 생기고 원본은 그대로다. 고친 쪽만 글이 바뀌고 나머지 쪽은 애니메이션까지 원본과 같다 |
+| S6 | 암호가 걸린 pptx 를 옮겨 달라고 한다 | 멈추지 않고 암호를 풀어 달라고 안내한다 |
+
 ### 패키징 점검
 ```bat
 build.bat                                  :: dist\Lectern\Lectern.exe + dist\Lectern-버전-setup.exe

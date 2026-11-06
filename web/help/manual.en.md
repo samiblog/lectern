@@ -305,6 +305,7 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 - **View as document** in the status bar unfolds the cells into an ordinary document.
 - Printing or saving as PDF gives one slide per page, in the same colors as on screen. Speaker notes are left out.
 - Pressing a checkbox on a slide changes `[ ]` or `[x]` in the source. It does nothing during a presentation.
+- A slide with `<!-- hidden: true -->` is hidden. It shows faded on screen and is left out of presentations and PDF.
 - Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. `theme` (gaia and so on) is not read.
 
 ### Auto refresh
