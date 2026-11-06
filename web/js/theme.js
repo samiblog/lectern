@@ -9,6 +9,7 @@ import { html, setHtml } from './html.js';
 import { $ } from './util.js';
 import { saveConfig, getJSON } from './api.js';
 import { t } from './i18n.js';
+import { solo } from './solo.js';
 
 // 스타일 추가: web/themes/<id>.css 를 만들고 여기에 한 줄 추가 (선택 목록은 이 표로 만든다)
 //   dark: 앱 UI·코드 색(highlight.js github / github-dark)을 어둡게. 어두운 스타일은 어느 묶는 방식에서나 '어두운' 묶음
@@ -25,6 +26,7 @@ const THEMES = {
   default: light(t('기본'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#e8eff7', '#2b5c8a', '#1b3a5c', '#f1f4f8', '#fbfcfd', '#5f6b78', '#1f2933')),
   report: light(t('보고서'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#e6edf5', '#17304f', '#17304f', '#f3f6f9', '#fafbfc', '#5d6670', '#22262b')),
   office: light(t('사내 문서'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#dae3f3', '#2f5597', '#1f3864', '#f2f6fc', '#ffffff', '#595959', '#262626')),
+  deck: light(t('발표'), 'work', 'color', 'light', mermaidColors(false, '#ffffff', '#f3ede2', '#c2410c', '#17293d', '#ece7dc', '#fbf9f4', '#5c6773', '#1f2933')),
   consulting: light(t('컨설팅'), 'work', 'color', 'light', mermaidColors(false, '#ffffff', '#e3f3f5', '#13a3b2', '#0b2545', '#eef2f7', '#ffffff', '#556270', '#1d2733')),
   notion: light(t('노션풍'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#f1f1ef', '#9b9a97', '#37352f', '#f7f6f3', '#ffffff', '#787774', '#37352f')),
   contrast: light(t('고대비'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#ffffff', '#000000', '#000000', '#dfe6f2', '#ffffff', '#000000', '#000000')),
@@ -126,8 +128,11 @@ function setHref(link, href) {
   }
 }
 
+/** 스타일을 저장하는 설정 키 — 슬라이드 창(D96)은 메인 창과 따로 */
+const themeKey = () => (solo?.deck ? 'slide_theme' : 'theme');
+
 export function resolvedTheme() {
-  const id = S.config.theme || 'auto';
+  const id = S.config[themeKey()] || 'auto';
   if (id === 'auto') return media.matches ? 'dark' : 'default';
   return themeOf(id) ? id : 'default';
 }
@@ -173,7 +178,7 @@ export function fillPicker() {
     ? html`<optgroup label="${t('내 스타일')}">${userStyles.map((s) => html`<option value="${s.id}">${s.name}</option>`)}</optgroup>`
     : '';
   setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}`);
-  $('#lec-theme').value = themeOf(S.config.theme) ? S.config.theme : 'auto';
+  $('#lec-theme').value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
   updateSteps();
 }
 
@@ -185,7 +190,7 @@ function updateSteps() {
 }
 
 function choose(value) {
-  saveConfig({ theme: value });   // S.config 는 바로 바뀌고 저장은 뒤에서 — 위·아래를 빠르게 눌러도 화면이 바로 따라온다
+  saveConfig({ [themeKey()]: value });   // S.config 는 바로 바뀌고 저장은 뒤에서 — 위·아래를 빠르게 눌러도 화면이 바로 따라온다
   applyTheme();
   redrawAfterLoad();   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
 }
@@ -208,7 +213,7 @@ export function initTheme() {
   $('#lec-theme-prev').addEventListener('click', () => step(-1));
   $('#lec-theme-next').addEventListener('click', () => step(1));
   media.addEventListener('change', () => {
-    if ((S.config.theme || 'auto') !== 'auto') return;
+    if ((S.config[themeKey()] || 'auto') !== 'auto') return;
     applyTheme();
     emit('refresh-view');
   });

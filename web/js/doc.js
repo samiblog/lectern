@@ -500,7 +500,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   // 발표 문서(맨 앞 설정에 marp: true — D59)는 슬라이드로. 상태줄의 '문서로 보기'를 골랐으면 보통 문서처럼
   const marp = readDeck(splitFrontMatter(text).frontMatter);
   const deck = marp && slidesWanted(pane, path) ? marp : null;
-  const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck });
+  const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck, cells: !!marp });
   const viewClass = `md-body${marp ? ' lec-marp' : ''}${deck ? ' lec-deck' : ''}`;
   const stage = document.createElement('article');
   stage.className = `${viewClass} lec-stage`;
@@ -510,7 +510,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   document.body.append(stage);
   try {
     enhance(stage, path, Date.now(), tab);
-    if (deck) prepareDeck(stage, deck);   // 배경 그림·그림 크기·style: CSS
+    if (deck) prepareDeck(stage, deck, text);   // 배경 그림·그림 크기·style: CSS·구조 보기 꼬리표
     else for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
     await renderMermaid(stage);
     await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)

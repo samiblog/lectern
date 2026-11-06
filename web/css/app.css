@@ -224,6 +224,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   color: var(--ui-faint);
 }
 .doc-tab .ficon.doc, .doc-tab.active .ficon { color: var(--ui-accent); }
+.ficon.doc.deck, .side-list .ficon.doc.deck, .doc-tab .ficon.doc.deck, .sp-head .ficon.doc.deck, .parts-kinds .ficon.doc.deck, #lec-palette-list .ficon.doc.deck { color: var(--ui-deck, #d9692f); }
 .doc-tab:focus-visible { outline-offset: -2px; }
 .doc-tab .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .doc-tab .dirty { flex: none; color: var(--ui-accent); font-size: 10px; line-height: 1; }
@@ -265,8 +266,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   border-left: 1px solid var(--ui-border); background: var(--md-bg, #fff);
 }
 /* 독립창 (D95): 프로젝트 탭·터미널·메모·설정은 메인 창에 */
+#lec-st-check { color: var(--ui-danger, #b42318); border-color: currentColor; }
+.toc-slides li.warn > a::after { content: ' ●'; color: var(--ui-danger, #b42318); font-size: .8em; }
 .lec-solo #lec-tablist, .lec-solo #lec-btn-open, .lec-solo #lec-btn-recent, .lec-solo #lec-btn-notes, .lec-solo #lec-btn-term,
-.lec-solo #lec-btn-gather, .lec-solo #lec-btn-settings, .lec-solo #lec-theme, .lec-solo #lec-theme-prev, .lec-solo #lec-theme-next { display: none; }
+.lec-solo #lec-btn-gather, .lec-solo #lec-btn-settings, .lec-solo:not(.lec-slide-window) #lec-theme, .lec-solo:not(.lec-slide-window) #lec-theme-prev, .lec-solo:not(.lec-slide-window) #lec-theme-next { display: none; }
 .sidebar-off #lec-sidebar, .sidebar-off #lec-resizer, .toc-off #lec-toc, .toc-off #lec-toc-resizer { display: none; }
 /* 사이드바 폭 조절 (resize.js): 경계 위에 겹친 얇은 손잡이 */
 #lec-resizer { flex: none; width: 7px; margin: 0 -4px 0 -3px; position: relative; z-index: 5; cursor: col-resize; }

@@ -166,7 +166,7 @@ flowchart LR
 |---|---|---|
 | `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}`, `{{TERM}}`(터미널 비밀값), `{{LANG}}`(화면 언어 — `<html lang>`, D46) 치환) + CSP 헤더 |
 | `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual.md`·영어판 `help/manual.en.md` 포함 — 토큰 없이) |
-| `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}], samples, writing_guide}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개). `samples` 는 예제 프로젝트 폴더(`paths.samples_dir()` — 없으면 `null`), `writing_guide` 는 화면 언어에 맞는 AI 용 작성 안내 파일 (D57) |
+| `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}], samples, writing_guide, slides_guide}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개). `samples` 는 예제 프로젝트 폴더(`paths.samples_dir()` — 없으면 `null`), `writing_guide` 는 화면 언어에 맞는 AI 용 작성 안내 파일 (D57) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
 | `POST /api/window-send` | `{to, type, path, top}` | 문서를 다른 창으로 보낸다 (D95 — to 는 창 id, 메인 창은 빈 값). 그 창이 없으면 `ok: false` |
 | `POST /api/term/relay` | `{p, text, stay}` | 독립창의 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95 — 터미널 API 와 같은 비밀값 검사, 셸로 바로 보내지 않음) |
@@ -569,5 +569,5 @@ WebView2 런타임은 Windows 11과 대부분의 Windows 10에 있다.
 ## 예제와 AI 용 작성 안내 (D57)
 
 - `samples/` 는 사람·AI 용 예제 프로젝트다. `lectern.spec` 의 datas 로 `_internal\samples` 에 들어가고(`paths.samples_dir()`), `/api/state` 의 `samples` 로 화면에 알린다. 시작 화면·탭 막대 ∨ 메뉴·설정 창의 '예제 열기'가 `tabs.js` 의 `openSamples()` 로 그 폴더를 탭으로 열고, 처음 열면(폴더 개요면) `README.md` 로 간다.
-- `web/help/writing.md`(영어판 `writing.en.md`)는 AI 용 작성 안내다. 설정 창의 'Claude Code 에 Lectern 알려 주기'가 그 경로(`/api/state` 의 `writing_guide`)를 넣은 요청 글을 복사하거나 지금 탭의 터미널에 붙인다 (`settings.js` 의 `guidePrompt`, D51 의 `term-paste`).
+- `web/help/writing.md`(영어판 `writing.en.md`)는 AI 용 작성 안내다. 설정 창의 'Claude Code 에 Lectern 알려 주기'가 그 경로(`/api/state` 의 `writing_guide, slides_guide`)를 넣은 요청 글을 복사하거나 지금 탭의 터미널에 붙인다 (`settings.js` 의 `guidePrompt`, D51 의 `term-paste`).
 - 화면 점검은 `tests/fixture/`(점검용 프로젝트)를 쓰고, '[예제]' 점검만 `samples/` 를 열어 본다. pytest 는 예제에 숨김·제외 폴더(`__pycache__` 등)가 없는지 본다.

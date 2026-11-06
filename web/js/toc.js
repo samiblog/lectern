@@ -358,7 +358,31 @@ export function readParts(root, { more = false } = {}) {
   return { listed, rows, counts };
 }
 
+/** 슬라이드의 목차는 슬라이드 목록이다 (D96): 장마다 한 줄 — 제목이 없으면 첫 글. 넘치거나 잘못 쓴 장은 표시한다 */
+function buildDeckToc(view) {
+  const wraps = $$(':scope > .lec-slide-wrap', view);
+  heads = wraps;
+  parts = [];
+  const box = $('#lec-toc');
+  const titleOf = (w) => {
+    const slide = w.querySelector('.lec-slide');
+    const head = slide.querySelector('h1, h2') || slide.querySelector('h3, p, li');
+    return head?.textContent.trim() || t('{n}장', { n: w.dataset.slide });
+  };
+  setHtml(box, html`<p class="toc-head">${t('슬라이드')}</p><ul class="toc-list toc-slides">${wraps.map((w, i) => (
+    html`<li class="lv0${w.dataset.issues ? ' warn' : ''}"><a href="#" data-i="${i}">${i + 1}. ${titleOf(w)}</a></li>`
+  ))}</ul>`);
+  links = $$('a[data-i]', box);
+  active = -1;
+  spy();
+  updateTocVisibility();
+}
+
 function buildToc(view) {
+  if (view.classList.contains('lec-deck')) {
+    buildDeckToc(view);
+    return;
+  }
   const { listed, rows, counts } = readParts(view);
   const top = Math.min(4, ...[...listed].map((h) => +h.tagName[1]));
   const hidden = hiddenParts();

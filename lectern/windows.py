@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 MAX_WINDOWS = 8
 WINDOW_ID = re.compile(r'[0-9a-f]{8,32}')
-START_KEYS = ('type', 'path', 'top', 'hash', 'line')   # 주소에 실어 보내는 첫 화면 (solo.js)
+START_KEYS = ('type', 'path', 'top', 'hash', 'line', 'deck')   # 주소에 실어 보내는 첫 화면 (solo.js)
 MAIN = ''   # 메인 창의 창 id
 
 
@@ -64,6 +64,7 @@ class Solo:
     project: str
     window: Any = None
     visible: bool = True
+    deck: str = ''   # 슬라이드 창이면 그 발표 문서의 경로 (D96)
 
 
 class SoloWindows:
@@ -99,10 +100,16 @@ class SoloWindows:
         wid = fields.get('w', [''])[0]
         if self._state.get(pid) is None or not WINDOW_ID.fullmatch(wid):
             return False
+        deck = fields.get('path', [''])[0] if fields.get('deck', [''])[0] == '1' else ''
         with self._lock:
-            if len(self._solos) >= MAX_WINDOWS or wid in self._solos:
-                return False
-            solo = self._solos[wid] = Solo(wid, pid)
+            same = next((s for s in self._solos.values() if deck and s.deck == deck and s.project == pid), None)
+            if same is None:
+                if len(self._solos) >= MAX_WINDOWS or wid in self._solos:
+                    return False
+                solo = self._solos[wid] = Solo(wid, pid, deck=deck)
+        if same is not None:   # 이 발표의 슬라이드 창이 이미 있다 — 그 창을 앞으로
+            self.front(same.id)
+            return True
         start = {k: fields[k][0] for k in START_KEYS if k in fields}
         try:
             solo.window = self._create('?' + urlencode({'solo': pid, 'w': wid, **start}), wid)

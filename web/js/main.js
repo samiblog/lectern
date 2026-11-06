@@ -1,6 +1,6 @@
 // 시작점: 초기화, 툴바, 단축키
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getJSON, saveConfig, native } from './api.js';
 import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
@@ -46,6 +46,7 @@ import { solo } from './solo.js';
 import { initNotes, toggleNotes, closeNotes } from './notes.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
+import { initSlideTools } from './slidetools.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveToDoc, focusNextTile } from './gather.js';
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
@@ -275,6 +276,9 @@ function bindKeys() {
       e.preventDefault();
       if (e.shiftKey) reopenDocTab();
       else if (S.tab) openPalette({ newTab: true });
+    } else if (mod && e.shiftKey && !e.altKey && (e.key === 'PageDown' || e.key === 'PageUp') && !typing(e) && $('#lec-view')?.classList.contains('lec-deck')) {   // 슬라이드: 장 옮기기 (D96)
+      e.preventDefault();
+      emit('slide-op', { op: 'move', dir: e.key === 'PageUp' ? -1 : 1 });
     } else if (mod && !e.altKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 문서 탭 (D91)
       e.preventDefault();
       cycleDocTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
@@ -366,6 +370,7 @@ async function boot() {
   }
   if (solo) {   // 독립창 (D95): 문서가 기본, 사이드바는 Ctrl+B 로
     document.documentElement.classList.add('lec-solo');
+    if (solo.deck) document.documentElement.classList.add('lec-slide-window');   // 슬라이드 창 (D96): 스타일을 따로 고른다
     S.config.sidebar_visible = false;
   }
   await loadUserStyles();   // 내 스타일 (D53) — 고른 스타일이 내 것이면 목록이 있어야 입힐 수 있다
@@ -406,6 +411,7 @@ async function boot() {
   initBasket();
   initRename();
   initSlides();
+  initSlideTools();
   initPresent();
   initGather();
   initQuickChart();

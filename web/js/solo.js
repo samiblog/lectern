@@ -5,19 +5,21 @@
 
 const q = new URLSearchParams(location.search);
 
-/** 독립창이면 {project, id, start: {type, path}, top}, 메인 창이면 null */
+/** 독립창이면 {project, id, deck(슬라이드 창 — D96), start: {type, path}, top}, 메인 창이면 null */
 export const solo = q.get('solo') ? {
   project: q.get('solo'),
   id: q.get('w') || '',
+  deck: q.get('deck') === '1',
   start: { type: q.get('type') === 'code' ? 'code' : 'doc', path: q.get('path') || '', hash: q.get('hash') || undefined, line: Number(q.get('line')) || undefined },
   top: Number(q.get('top')) || 0,
 } : null;
 
 /** 독립창을 여는 주소의 뒤쪽 */
-export function soloQuery(project, target, top = 0) {
+export function soloQuery(project, target, top = 0, deck = false) {
   const id = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
   const fields = { solo: project, w: id, type: target.type, path: target.path, top: String(Math.round(top)) };
   if (target.hash) fields.hash = target.hash;
   if (target.line) fields.line = String(target.line);
+  if (deck) fields.deck = '1';
   return `?${new URLSearchParams(fields)}`;
 }

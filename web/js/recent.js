@@ -48,7 +48,7 @@ function render() {
     markup = top.map((f) => {
       const doc = !!f.kind;
       const cls = `row recent${f.path === current() ? ' active' : ''}`;
-      return [html`<div class="${cls}" data-file="${f.path}" title="${doc ? tipOf(f) : fileTip(f)}" tabindex="0">`, html`<span class="when">${timeAgo(f.mtime)}</span><span class="label">${fileIcon(f.name, f.kind)}${doc ? labelOf(f) : f.name}</span>`, html`${doc && S.changed.has(f.path) ? html`<span class="dot"></span>` : ''}`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+      return [html`<div class="${cls}" data-file="${f.path}" title="${doc ? tipOf(f) : fileTip(f)}" tabindex="0">`, html`<span class="when">${timeAgo(f.mtime)}</span><span class="label">${fileIcon(f.name, f.kind, f.deck)}${doc ? labelOf(f) : f.name}</span>`, html`${doc && S.changed.has(f.path) ? html`<span class="dot"></span>` : ''}`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
     });
   }
   if (r?.error && filesKey()) markup = [markup, html`<p class="side-empty">${t('코드·자료를 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: r.error })}</p>`];

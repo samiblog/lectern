@@ -154,6 +154,9 @@ const holdsDoc = (pane) => {
  */
 export async function openTarget(target) {
   const tab = S.tab;
+  if (tab && !solo && target.type === 'doc' && native.has('open_window') && (target.deck || tab.fileMap.get(target.path)?.deck)) {
+    return openWindow(tab, target);   // 발표 문서는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다)
+  }
   if (tab && (target.type === 'doc' || target.type === 'code')) {
     const open = docPaneOf(tab, target);
     if (open && target.behind) return true;   // 이미 열려 있다 — 보던 문서를 그대로
@@ -257,7 +260,8 @@ async function receive({ type, path, top, term, note, p, stay }) {
 
 /** 문서를 독립창에서 연다 (D95). 띄웠으면 true */
 async function openWindow(tab, target, top = 0) {
-  const done = await native.openWindow(soloQuery(tab.id, target, top));
+  const deck = target.deck || !!tab.fileMap.get(target.path)?.deck;
+  const done = await native.openWindow(soloQuery(tab.id, target, top, deck));
   if (!done) toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
   return done;
 }
@@ -355,7 +359,7 @@ export function describe(pane) {
   if (!v) return { icon: folderIcon(), name: t('빈 탭'), tip: '' };
   if (v.type === 'overview') return { icon: folderIcon(), name: v.path ? basename(v.path) : tab.name, tip: t('폴더 개요: {path}', { path: v.path || tab.name }) };
   const f = v.type === 'doc' ? tab.fileMap.get(v.path) : null;
-  return { icon: fileIcon(basename(v.path), f?.kind), name: f ? labelOf(f) : basename(v.path), tip: f ? tipOf(f) : v.path };
+  return { icon: fileIcon(basename(v.path), f?.kind, f?.deck), name: f ? labelOf(f) : basename(v.path), tip: f ? tipOf(f) : v.path };
 }
 
 function render() {

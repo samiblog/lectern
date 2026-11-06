@@ -29,7 +29,7 @@ The file must begin with this comment, one `key: value` per line.
 | `dark` | `yes` for a dark style. The app UI (toolbar, sidebar), code colors (highlight.js), terminal colors and diagrams switch to dark | `no` |
 | `base` | Id of a built-in style to lay down first. Lectern applies that style, then this file on top — write only what you change | `default` when light, `dark` when dark |
 
-Built-in ids for `base`: `default`, `report`, `office`, `consulting`, `notion`, `contrast`, `paper` (sepia), `book`, `academic`, `newsprint`, `magazine`, `manuscript` (typewriter), `github`, `docsite`, `solarized-light`, `gruvbox-light`, `dark`, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` (night paper), `ink` (pure black).
+Built-in ids for `base`: `default`, `report`, `office`, `consulting`, `deck`, `notion`, `contrast`, `paper` (sepia), `book`, `academic`, `newsprint`, `magazine`, `manuscript` (typewriter), `github`, `docsite`, `solarized-light`, `gruvbox-light`, `dark`, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` (night paper), `ink` (pure black).
 With `dark: yes`, pick a dark base (`dark`, `nord` and so on).
 
 ## 3. Change the variables first

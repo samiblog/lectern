@@ -7,7 +7,7 @@ import { saveConfig, openExternal, revealInExplorer } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey } from './util.js';
+import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -43,7 +43,7 @@ export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" tit
 function fileRow(f, depth, extra = null) {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
-  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="0">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
+  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="0">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
 }
 
 function nodesHtml(nodes, depth) {
@@ -197,6 +197,12 @@ export const renameItem = (path) => ({ label: t('이름 바꾸기…'), hint: 'F
 /** 폴더 우클릭의 새로 만들기 (D65): 이 폴더에 새 문서 — 경로를 정하면 바로 만들어 새 탭에서 편집 */
 export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), action: () => emit('new-doc', { dir }) });
 
+/** 문서를 발표 문서로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
+function slideRequest(path) {
+  const ask = t('@{path} 를 Lectern 발표 문서로 만들어 주세요. 원본은 고치지 말고 같은 폴더에 새 파일로 만드세요.', { path });
+  return S.slidesGuide ? `${ask} ${t('작성 방법은 {path} 를 읽으세요.', { path: S.slidesGuide })}` : ask;
+}
+
 /** 문서 행의 우클릭 메뉴 — 새 탭에서 열기(D64)·이름 바꾸기(D66)와 경로 항목 (트리·'코드'·'자료' 목록의 문서·최근 변경·검색이 함께 쓴다) */
 export function docMenuItems(path, type = 'doc') {
   /** @type {MenuItem[]} */
@@ -206,7 +212,11 @@ export function docMenuItems(path, type = 'doc') {
       { label: t('지금 탭에서 열기'), hint: t('Alt+누르기'), action: () => emit('open', { type, path }) });
   }
   opens.push({ label: t('새 창에서 열기'), action: () => emit('open-window', { type, path }) });
-  return menuGroups([{ header: path }], opens, pathMenuItems(path, true), [renameItem(path)]);
+  /** @type {MenuItem[]} */
+  const asks = type === 'doc' && isMd(path) && !S.tab?.fileMap.get(path)?.deck
+    ? [{ label: t('발표로 바꾸기 요청'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', slideRequest(path)) }]
+    : [];
+  return menuGroups([{ header: path }], opens, asks, pathMenuItems(path, true), [renameItem(path)]);
 }
 
 function onContextMenu(e) {

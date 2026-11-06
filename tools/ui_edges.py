@@ -13,11 +13,12 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines']
+SUITES = ['reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile']),
-    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['structure', 'lines', 'refresh', 'sample_lines']),
+    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['structure', 'lines', 'refresh', 'sample_lines', 'slides']),
+    (r'web/js/(slide\w+|present|theme)\.js|web/themes/.*', ['slides', 'reading']),
     (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile']),
     (r'web/js/(htmldoc|nav|find|toc|fold)\.js', ['frames', 'reading', 'hostile', 'refresh']),
     (r'web/js/solo\.js|lectern/(windows|native)\.py', ['solo', 'solo_cases']),

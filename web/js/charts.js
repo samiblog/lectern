@@ -344,7 +344,7 @@ function vegaLogger(vega, problems) {
 
 // 그리는 함수: {svg, fluid} — fluid 면 문서 폭을 따른 것이라 폭이 바뀌면 다시 그린다 (renderCharts)
 
-async function drawVega(kind, src, width, ctx) {
+async function drawVega(kind, src, width, ctx, fit = 0) {
   const spec = parseSpec(src);
   const config = vegaConfig(colors());
   let fluid = false;
@@ -354,7 +354,8 @@ async function drawVega(kind, src, width, ctx) {
       spec.width = Math.max(200, width - 110);
       fluid = true;
     }
-    if (spec.height === 'container') spec.height = 300;
+    if (spec.height === 'container' || (fit && spec.height == null)) spec.height = fit ? Math.max(80, fit - 50) : 300;
+    if (fit) spec.config = { axisX: { labelAngle: 0 }, ...spec.config };   // 칸은 좁아 눕히면 읽기 어렵다
   }
   const vega = await LIBS.vega();
   let vgSpec = spec;
@@ -389,11 +390,11 @@ function dropImages(node, depth = 0) {
   }
 }
 
-async function drawECharts(src, width) {
+async function drawECharts(src, width, fit = 0) {
   const option = parseSpec(src);
   if (!option || typeof option !== 'object' || Array.isArray(option)) throw new SpecError(t('설정을 읽지 못했습니다 — JSON 형식을 확인하세요 (블록 {line}행)', { line: 1 }));
   // 크기: 폭은 문서 폭(설정의 width 가 숫자면 그것), 높이는 설정의 height 아니면 360 — ECharts 에는 없는 키라 여기서만 쓴다
-  const height = Number.isFinite(option.height) ? option.height : 360;
+  const height = Number.isFinite(option.height) ? option.height : fit || 360;
   const fluid = !Number.isFinite(option.width);
   const w = fluid ? width : option.width;
   delete option.height;
@@ -402,7 +403,7 @@ async function drawECharts(src, width) {
   const echarts = await LIBS.echarts();
   const chart = echarts.init(null, echartsTheme(colors()), { renderer: 'svg', ssr: true, width: Math.max(200, w), height: Math.max(120, height) });
   try {
-    chart.setOption({ ...option, animation: false });
+    chart.setOption({ ...option, animation: false, ...(fit ? { backgroundColor: 'transparent' } : {}) });   // 칸의 바탕이 보이게
     return { svg: chart.renderToSVGString(), fluid };
   } finally {
     chart.dispose();
@@ -412,7 +413,7 @@ async function drawECharts(src, width) {
 // 인터넷의 지도 자료(나라 경계·지도 타일)가 있어야 하는 Plotly 종류 — 받지 않으므로 그리지 않는다
 const PLOTLY_MAPS = /^(scattergeo|choropleth|scattermapbox|choroplethmapbox|densitymapbox|scattermap|choroplethmap|densitymap)$/;
 
-async function drawPlotly(src, width) {
+async function drawPlotly(src, width, fit = 0) {
   let fig = parseSpec(src);
   if (Array.isArray(fig)) fig = { data: fig };   // 그래프 목록만 적어도 된다
   if (!fig || typeof fig !== 'object' || !Array.isArray(fig.data)) throw new SpecError(t('Plotly 설정은 data(그래프 목록)와 layout 을 가진 JSON 입니다'));
@@ -426,7 +427,7 @@ async function drawPlotly(src, width) {
   // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400
   const fluid = !Number.isFinite(layout.width);
   const w = fluid ? width : layout.width;
-  const h = Number.isFinite(layout.height) ? layout.height : 400;
+  const h = Number.isFinite(layout.height) ? layout.height : fit || 400;
   const Plotly = await LIBS.plotly();
   const url = await Plotly.toImage({ data: fig.data, layout }, { format: 'svg', width: Math.max(200, w), height: Math.max(120, h) });
   return { svg: decodeURIComponent(url.slice(url.indexOf(',') + 1)), fluid };
@@ -476,14 +477,18 @@ async function draw(node, ctx) {
   const width = node.clientWidth || 640;
   // 발표 문서의 슬라이드(D59)에서는 좁게 그려 키운다 — 차트 글자가 슬라이드 글자와 어울리게 (slides.js 의 SLIDE_ZOOM)
   const zoom = node.closest('.lec-slide') ? SLIDE_ZOOM : 1;
+  // 슬라이드의 칸(시제품) 안이면 높이를 정하지 않은 차트를 칸의 남은 높이에 맞춘다
+  const cell = node.closest('.lec-cell');
+  const used = cell ? [...cell.children].filter((el) => el !== node).reduce((sum, el) => sum + el.offsetHeight, 0) : 0;
+  const fit = cell ? Math.max(0, (cell.clientHeight - used - 8) / zoom) : 0;
   const info = drawn.get(node) || { ctx, seq: 0 };
   const seq = ++info.seq;
   let out;
   try {
-    if (kind === 'echarts') out = await drawECharts(src, width / zoom);
-    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom);
+    if (kind === 'echarts') out = await drawECharts(src, width / zoom, fit);
+    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom, fit);
     else if (kind === 'dot') out = await drawDot(src);
-    else out = await drawVega(kind, src, width / zoom, ctx);
+    else out = await drawVega(kind, src, width / zoom, ctx, fit);
   } catch (e) {
     if (drawn.has(node)) return;
     const why = String(e?.message || e).split('\n')[0];

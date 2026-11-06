@@ -135,36 +135,9 @@ Rules:
 
 ## 5. Slide decks
 
-Markdown with `marp: true` in the front matter shows as **slides** — it is the [Marp](https://marp.app) format, so the VS Code Marp extension or marp-cli can also turn it into PDF or PPTX. **Present** in the status bar (Shift+F5) shows one slide at a time in the whole window, and printing gives one slide per page. Example: `samples/guide/08-발표.md`.
+Markdown with `marp: true` in the front matter shows as **slides** — Lectern's presentation format, which starts from Marp. Cells (`::: a card`) and layouts (`<!-- layout: quad -->`) give each slide its own arrangement. People edit the text on a slide line by line.
 
-~~~~md
----
-marp: true
-paginate: true
-footer: Copper market research
----
-
-<!-- _class: lead -->
-# Q2 review
-
----
-
-## Monthly price
-
-```vega-lite
-{ "width": "container", "height": 220, "data": { "url": "../data/월별-가격.csv" }, … }
-```
-
-<!-- Speaker note: start with June being the highest -->
-~~~~
-
-- Separate slides with `---`. The size is 16:9 (1280×720) by default; `size: 4:3` also works.
-- **One heading and five or six short bullets per slide.** Anything longer is cut off at the bottom as in Marp (Lectern marks the slide 'Overflow'). Pictures, diagrams and charts are shrunk to the remaining height; text is not. Keep tables to 4–5 rows.
-- Mermaid, charts, math, code, tables and callouts are written as in any document (Marp itself cannot draw Mermaid or charts; Lectern can). Chart heights around 200–260 — on slides charts are drawn enlarged so their text is bigger.
-- Directives: `paginate`, `header`, `footer`, `class` (`lead` centered, `invert` dark), `backgroundColor`, `color` — in the front matter they apply to every slide, in a comment such as `<!-- class: lead -->` from that slide on, and with `_` as in `<!-- _class: lead -->` to that slide only. `headingDivider: 2` starts a new slide at every `##`.
-- Pictures: `![bg](picture)` background, `![bg right:40%](picture)` on the right with the text on the left (`left`, `contain`, `cover`, `vertical`), `![w:400](picture)` size.
-- An HTML comment `<!-- … -->` that is not a directive is a speaker note (Lectern shows it under the slide, and with N while presenting).
-- CSS in `style: |` applies only to that document's slides (`section`, `h1`, `header`, `footer` and so on). Internet fonts and picture addresses are removed. `theme` (gaia, uncover…) is not read — colors and fonts follow the Lectern style.
+**Before making or changing a deck, read `slides.en.md` next to this file.** It has the syntax, layouts, text sizes and how much fits. Do not make presentations in HTML.
 
 ### Data (CSV and text)
 
@@ -205,6 +178,6 @@ footer: Copper market research
 - Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
 - Code locations as `src/x.py:14`; links and images relative to the document.
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
-- Slide decks in Marp format — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
+- Slide decks in Lectern's format (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
 ```

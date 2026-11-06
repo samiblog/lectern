@@ -25,7 +25,7 @@ _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
 # 스캔 전체가 멈춘다 (점검에서 발견: 공백 1600개에 4초)
 _RE_HEADING = re.compile(r'^\s{0,3}(#{1,6})(?:[ \t]+(.*))?$')
 _RE_FENCE = re.compile(r'^\s{0,3}(```|~~~)')
-_RE_FM_KEY = re.compile(r'^(title|name|description|summary)\s*:\s*(.+?)\s*$', re.IGNORECASE)
+_RE_FM_KEY = re.compile(r'^(title|name|description|summary|marp)\s*:\s*(.+?)\s*$', re.IGNORECASE)
 _RE_QUOTE = re.compile(r'^(?:>\s?)+')
 _RE_LIST = re.compile(r'^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)')
 _SKIP_PREFIXES = ('|', '<', '---', '***', '___', '===', '![', '[^', '$$')
@@ -148,10 +148,13 @@ def extract_info(text: str) -> dict[str, Any]:
             break
     flush()
     summary = summary or meta_fallback
-    return {
+    info = {
         'title': title or first_heading,
         'summary': _truncate(summary) if summary else '',
     }
+    if meta.get('marp', '').lower() == 'true':
+        info['deck'] = True   # 발표 문서 — 트리의 아이콘 (D59)
+    return info
 
 
 class _HtmlInfo(HTMLParser):

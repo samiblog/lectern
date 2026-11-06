@@ -19,6 +19,8 @@
 - 현재 위치·줄 하이라이트(D75)의 줄은 `lineunits.js` 가 그린 DOM 과 `data-lines` 로 센다 — 여러 줄로 나눠 쓴 문단은 markdown-it 이 softbreak 자리에 남긴 글 노드의 `\n` 으로 나누므로, 문단 안의 글 노드를 바꾸는 후처리(박스글 표시 떼기처럼)를 더하면 줄 수가 맞는지 본다 (조각이 모자라면 남는 줄을 붙인다). 블록 렌더러가 `data-lines` 를 빠뜨리면 그 줄은 고를 수 없다. 칸 위에 새 상자를 덮으면 `.lec-spot`·`.lec-here`(z-index 5)와의 순서를 본다 — 코드 화면 머리줄은 6.
 - 한 줄 편집(D76)은 문서 DOM 안에 글 칸을 넣는다 (편집 상자처럼 덮지 않는다) — 편집하는 동안(`pane.lineEdit`) `refreshView` 가 그 칸을 다시 그리지 않으니, 칸을 다시 그리는 새 길을 만들면 `refreshView` 를 거치거나 `pane.lineEdit` 을 본다. 이미 그리던 것은 끝날 때 화면째 바꾸므로 칸은 다시 그리는 중(`pane.pending`·`pane.redrawing`)이 아닐 때만 넣는다. 칸 안의 키는 거품을 막으므로 main.js 의 단축키는 편집 중에 오지 않는다. 저장은 편집 모드와 같은 `/api/save` 만 — 편집이 파일을 고치는 새 길은 `replaceLines` 를 거쳐야 되돌리기 기록에 쌓인다. F2·두 번 누르기는 하이라이트를 만들지 않으니 편집 중 줄을 옮기는 코드는 `followLine` 을 쓴다. 본문의 체크 칸은 `doc.js` 가 `disabled` 를 뗀 것이고 슬라이드·사용설명서는 그대로 표시만이다.
 - 줄 구조 편집(D83)의 새 줄은 글을 쓸 때까지 화면에만 있다 (`session.fresh`, `.lec-new-line` — `data-lines`·`data-line` 이 없어 줄 단위에 들지 않는다). 구조를 바꾸는 새 키는 `lineedit.restructure` 를 거친다 — 고친 글을 저장하고 `lineops` 로 계산해 `commit`(`diffRange` + `replaceLines`) 한 뒤 그 줄에서 편집을 잇는다. `lineops.js` 의 계산은 들여쓰기로 목록을 읽으므로 markdown-it 설정을 바꾸면 `tools/edges/lineops_cases.js` 를 같이 본다. 넘어가는 사이(`pane.lineEditHold`)에는 Ctrl+Z 와 하이라이트 옮기기가 쉰다.
+- 발표 문서의 칸(`:::`)·장(`---`)·지시어 줄은 `lineops.blocksOf` 의 `wall` 이다 (D96) — 줄을 다루는 새 계산은 벽을 넘지 않게 한다. 보통 문서의 `:::` 는 글이므로 `deckOf` 를 본다. 이 줄들은 `lineunits` 의 단위가 아니다 (이웃 단위에 붙이면 첫 줄을 지울 때 함께 지워진다) — 구조 보기의 꼬리표만 단위가 된다.
+- 슬라이드의 칸은 나란히 놓여 같은 높이에 단위가 여럿이다 (D96). 누른 곳에서 줄을 찾는 코드는 높이만 보지 말고 `unitAt` 처럼 칸을 본다.
 - 뒤로 기록의 칸(`pane.history`)은 화면마다 하나이고 같은 문서 안에서 뛴 것도 한 칸이다 (D78). 문서 속 어느 곳으로 '뛰는' 새 길은 뛰기 직전에 `emit('jump')` 를 보내야 Alt+← 로 돌아온다 — 다른 문서를 연 직후의 이동은 보내지 않는다 (이미 기록이 남아 Alt+← 가 두 번 필요해진다). 칸의 자리(`top`·`line`)는 떠날 때 적으므로 기록을 옮기는 코드는 칸을 새로 만들지 말고 `{...h}` 로 잇는다 (`renamePath`).
 - 편집 모드(D54)의 편집 상자(`.lec-editor`)는 칸 위를 덮는다 — 아래의 문서 화면은 그대로 다시 그려지므로 렌더러는 편집 중인지 몰라도 된다. 화면을 옮기는 새 길을 만들면 `navigate` 를 거쳐야 저장하지 않은 편집을 묻는다 (leave guard). 편집 상자 안의 키는 편집기 것이라, 새 앱 단축키를 편집 중에도 쓰게 하려면 `main.js` 의 `inEditor` 거르기에 넣는다. 저장은 `editing.save_source`(새 문서는 `create_source` — `/api/save` 의 `create`)만 — 다른 곳에서 파일에 쓰는 API 를 만들지 않는다.
 - 보내기(D63·D65)는 파일에 바로 쓰지 않는다 — 보내는 것은 `editor.js` 의 `insertIntoDoc` 이 그 문서를 편집 모드로 열어 편집기에 넣는 것까지, 저장은 사용자가. 받는 곳은 문서 탭에 열린 문서(`doctabs.openDocs`)와 새 문서뿐이다. 새 문서는 경로를 정할 때 `newdoc.createDoc` 이 만들고(새로 만들기도 같은 함수) 그 뒤로는 보통 문서다 — 편집 모드는 이미 있는 파일만 연다. 조각은 담는 순간의 원문(`data-lines` 범위)이라 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 담을 수 없다. 함께 갈 캡션·'자료:' 줄은 `toc.js` 의 `partExtent` 가 정한다 (구성 요소를 감싸는 상자를 새로 만들면 같이 본다). 경로·각주·제목을 다듬는 `snippet.js` 는 DOM 을 쓰지 않는다 — 새 링크 문법(차트의 데이터 키 등)을 더하면 `rebase` 에 넣을지 본다.
@@ -35,6 +37,7 @@
 ## 화면 구조·칸·탭
 
 - 문서를 여는 길마다 어디에 열지가 다르다 (D91): 사이드바 목록·빠른 열기는 `util.openHow`(누르기 = 새 문서 탭), 본문의 링크는 `util.linkHow`(누르기 = 지금 탭). 새 여는 길을 만들면 둘 중 하나를 고르고 두 번 누르기의 둘째를 `repeatClick` 으로 거른다. Enter 로 여는 곳은 `clickFromKey` 로 Ctrl·Alt 를 넘긴다. `behind` 로 연 탭은 고르지 않으므로 이어서 그 문서 안으로 가는 코드(찾기·줄로 가기)는 돌리지 않는다. 화면 점검에서 옛 흐름(지금 탭)을 쓰려면 `click(modifiers=['Alt'])`.
+- 발표 문서는 창 모드에서 슬라이드 창으로 연다 (`doctabs.openTarget`, D96) — 판정은 `tab.fileMap` 의 `deck` 이니 막 만든 문서는 `target.deck` 을 넘긴다. 슬라이드 창의 스타일 키는 `theme.js` 의 `themeKey()`.
 - 독립창(D95)은 메인 창과 같은 화면이다 (`solo.js`). 서버의 탭 목록·문서 탭 기록·설정은 메인 창의 것이니, 그것을 바꾸는 새 코드는 `solo` 를 보고 건너뛴다 (`saveConfig`·`rememberPosition`·`closeTab` 이 그렇게 한다). 메인 창에만 있는 것을 여는 새 키는 `main.js` 의 `mainOnlyKey`, 버튼은 `app.css` 의 `.lec-solo` 에 더한다. 숨은 창은 `document.hidden` 이라 감시가 돌지 않는다 — 숨은 동안 해야 하는 일은 서버 쪽 `windows.py` 가 한다.
 - 문서의 요소에 달린 속성은 문서가 원시 HTML 로 심을 수 있다. `data-lec-*` 를 읽어 무엇을 여는 코드는 값을 믿지 말고, 앱이 정한 값은 요소 밖에 둔다 (`util.linkTargets` — 링크의 대상).
 - 메뉴 항목은 `ui.menuGroups` 의 차례로 넣는다 (D91). `hint` 는 단축키만, 설명은 `tip`.
@@ -65,6 +68,7 @@
 - 문서는 화면 밖 무대(`.lec-stage`)에서 그린 뒤 바꿔 끼운다. Mermaid는 DOM에 붙어 있어야 크기를 잴 수 있기 때문이다. 무대를 `display:none` 으로 바꾸면 다이어그램 크기가 0이 된다.
 - 다이어그램은 Mermaid(`pre.mermaid`)와 차트(`pre.lec-chart[data-chart]`, D56) 두 가지이고, 그리지 못한 것은 둘 다 `.diagram-error`(까닭 + 원문)다. 다이어그램을 다루는 코드(목차·모아 보기의 `partKind`, 우클릭 메뉴, 바뀐 곳의 서명, 코드 블록 꾸미기에서 빼기)는 둘을 함께 본다. 차트 SVG 는 라이브러리가 만든 것이라도 `doc.js` 의 `sanitizeHtml`(DOMPurify 와 그림 주소 훅)을 거치고 그림 속 링크는 푼다 — 차트 설정에 링크·인터넷 그림을 넣을 수 있다. ECharts·Plotly 는 그리는 동안 그림을 불러오므로 그 전에 설정에서 data: 가 아닌 그림 주소를 지운다 (`dropImages`, Plotly 의 `layout.images`). ECharts 는 글꼴 이름을 style 속성에 그대로 넣으므로 글꼴 목록에 큰따옴표를 쓰지 않는다. Graphviz 는 글자 폭을 어림해 배치하므로(기본 Times 로는 한글이 상자보다 넓다) Verdana 로 어림하고 앱 글꼴로 그린다.
 - 발표 문서(D59)의 슬라이드는 1280×720(4:3 은 960×720)에 그리고 `transform: scale(var(--slide-scale))` 로 줄여 보인다 — 슬라이드 안에서 크기를 재는 코드는 `getBoundingClientRect`(줄인 크기)와 `clientWidth`·`offsetHeight`(그린 크기)가 다르다는 것을 본다. 화면 밖 무대는 `--slide-scale: 1` 이다 (Mermaid 가 줄인 크기로 글자를 재면 상자보다 글자가 커진다). 다이어그램·차트는 자기 글자가 작아 `SLIDE_ZOOM` 으로 키운다 (Mermaid 는 `fitDeck`, 차트는 `charts.js` 의 `draw`) — 새 그림 종류를 더하면 같이 본다. 칸 본문의 맨 위 자식이 `.lec-slide-wrap` 이라 맨 위 블록을 도는 코드(접기·장 하이라이트·바뀐 곳)는 슬라이드 단위가 된다.
+- 슬라이드의 글자 크기는 `--t-*`(pt)로 스타일과 상관없이 고정이다 (D96). 스타일 css 에서 슬라이드 글자 크기를 바꾸면 스타일마다 넘침이 달라진다. 변수 자신을 쓰는 값(`background: var(--md-heading)` 을 `--md-heading` 을 바꾼 요소에)은 바꾼 값으로 풀린다.
 - 인쇄 규칙(`base.css` 의 `@media print`)은 `app.css` 보다 먼저 읽힌다 — 같은 무게의 앱 레이아웃 규칙(`#lec-app` 격자·`.lec-pane` absolute)을 덮으려면 `!important` 를 쓴다. 칸이 absolute 인 채 인쇄되면 쪽 나누기(`break-before`)·쪽 이름(`page`)이 먹지 않는다 (D59).
 - 앱 아이콘용 SVG 스타일은 `button > svg` 로 한정되어 있다. 전역 `svg` 규칙을 만들면 Mermaid 그림이 깨진다.
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
@@ -75,6 +79,7 @@
 
 - 새 스타일은 `theme.js` 의 `THEMES` 에 `light(이름, 용도, 분위기, 밝기, Mermaid 색)` 또는 `dark(이름, Mermaid 색)` 로 넣는다. 밝은 스타일은 세 묶는 방식 모두의 묶음을 정해야 목록에 나온다 (D30). 머리행을 짙게 칠하는 스타일은 `--md-th-fg` 로 글자색을 준다 (인쇄 때는 검정으로 덮인다). 터미널 색은 스타일의 `--md-code-bg`·`--md-fg`·`--md-link` 와 밝기로 저절로 정해진다 — 이름이 같은 터미널 색표(Solarized 등)가 있는 스타일만 `terminal.js` 의 `PALETTES` 에 더한다.
 - `t()` 를 쓰는 모듈에서 지역 변수 이름을 `t` 로 짓지 않는다 — 함수가 가려져 그 범위의 `t('…')` 가 깨진다 (탭은 `tab`·`tb`, 터미널은 `term`). 화면 언어는 페이지마다 고정이라(바꾸면 다시 불러옴) 모듈 맨 위 상수에도 `t()` 를 쓴다. 영어 복수형이 필요한 개수는 `{n}` 으로 넘긴다 (D46).
+- 슬라이드 문법(칸·배치·글자 크기·분량·점검 문구)을 바꾸면 Claude 가 읽는 `web/help/slides.md`·`slides.en.md` 도 고친다.
 - 문서가 보이는 규칙(보이는 범위·제목·요약·표·박스글·경로 링크·수식·다이어그램·차트·HTML)을 바꾸면 AI 용 작성 안내 `web/help/writing.md`·`writing.en.md` 와 예제 `samples/`(특히 `guide/04-문서-쓰는-법.md`·`CLAUDE.md`)도 고친다 (D57). 예제에는 점검용 함정을 넣지 않고, 점검할 것은 `tests/fixture/` 에 넣는다. 예제는 설치 파일에 들어가므로 `__pycache__` 같은 것이 남지 않게 한다 (pytest 가 본다).
 - 내 스타일(D53)의 규칙·변수를 바꾸면 AI 용 설명서 `web/help/styles.md`·`styles.en.md` 도 고친다 (변수 표·선택자 표·base 로 쓸 id 목록).
 - 앱 UI 색(`--ui-*`)은 문서 스타일의 `--md-*` 에서 만든다 (D28). 새 스타일은 `--md-*` 만 정하면 툴바·사이드바도 따라오니, `app.css` 에 스타일별 UI 색을 따로 넣지 않는다.

@@ -29,7 +29,7 @@
 | `dark` | 어두운 스타일이면 `yes`. 앱 화면(툴바·사이드바), 코드 색(highlight.js), 터미널 색, 다이어그램이 어두운 쪽으로 맞춰집니다 | `no` |
 | `base` | 바탕으로 깔 기본 스타일의 id. Lectern 은 이 스타일을 먼저 입히고 그 위에 이 파일을 얹습니다 — 바꿀 것만 적으면 됩니다 | 밝으면 `default`, 어두우면 `dark` |
 
-`base` 로 쓸 수 있는 id: `default` 기본, `report` 보고서, `office` 사내 문서, `consulting` 컨설팅, `notion` 노션풍, `contrast` 고대비, `paper` 종이(세피아), `book` 책, `academic` 논문, `newsprint` 신문, `magazine` 잡지, `manuscript` 원고(타자기), `github` GitHub, `docsite` 문서 사이트, `solarized-light`, `gruvbox-light`, `dark` 다크, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` 밤 종이, `ink` 먹(완전 검정).
+`base` 로 쓸 수 있는 id: `default` 기본, `report` 보고서, `office` 사내 문서, `consulting` 컨설팅, `deck` 발표, `notion` 노션풍, `contrast` 고대비, `paper` 종이(세피아), `book` 책, `academic` 논문, `newsprint` 신문, `magazine` 잡지, `manuscript` 원고(타자기), `github` GitHub, `docsite` 문서 사이트, `solarized-light`, `gruvbox-light`, `dark` 다크, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` 밤 종이, `ink` 먹(완전 검정).
 `dark: yes` 이면 어두운 바탕(`dark`·`nord` 등)을 고르세요.
 
 ## 3. 먼저 변수를 바꾸세요

@@ -3,7 +3,7 @@
 // 여는 곳: 문서 탭 줄의 + (빠른 열기 맨 위 '새 문서 만들기…'), Ctrl+N, 트리·'코드'·'자료' 목록의 폴더 우클릭 '이 폴더에 새 문서…',
 // 보내기의 '새 문서…'(basket.js — 만든 뒤 조각을 넣는다). 경로를 묻는 창은 basket.js 의 보낼 곳 고르기 창(#lec-insert)을 쓴다.
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { openInNewTab } from './doctabs.js';
 import { openEditor } from './editor.js';
@@ -33,18 +33,24 @@ export function cleanPath(raw) {
 }
 
 /**
- * 새 문서를 만든다 — '# 제목'(파일 이름에서) 한 줄. 먼저 만들 수 있는지 묻고(GET /api/new-doc — 답은 늘 200 이라 고쳐 쓸 이름이
+ * 새 문서를 만든다 — '# 제목'(파일 이름에서) 한 줄, deck 이면 머리 설정과 표지 한 장 (D96). 먼저 만들 수 있는지 묻고(GET /api/new-doc — 답은 늘 200 이라 고쳐 쓸 이름이
  * 실패한 요청으로 남지 않는다) 만든다. 만든 경로 (폴더는 실제 이름). 안 되면 Error (까닭은 서버의 말 — 없는 폴더·같은 이름 등)
  */
-export async function createDoc(path) {
+export async function createDoc(path, { deck = false } = {}) {
   const q = await getJSON(`/api/new-doc?p=${encodeURIComponent(S.tab.id)}&path=${encodeURIComponent(path)}`);
   if (q.error) throw new Error(q.error);
-  const r = await postJSON('/api/save', { p: S.tab.id, path: q.path, text: `# ${titleFromName(q.path)}\n\n`, create: true });
+  const title = titleFromName(q.path);
+  const text = deck ? `---\nmarp: true\ntitle: ${title}\npaginate: true\n---\n\n<!-- _class: lead -->\n<!-- _paginate: false -->\n\n# ${title}\n` : `# ${title}\n\n`;
+  const r = await postJSON('/api/save', { p: S.tab.id, path: q.path, text, create: true });
   return r.path || q.path;
 }
 
 /** 만든 새 문서를 새 문서 탭에서 편집 모드로 연다 — 커서는 제목 아래 */
-export async function openCreated(path) {
+export async function openCreated(path, { deck = false } = {}) {
+  if (deck) {   // 슬라이드 창에서 (D96). 창이 없는 브라우저 개발 모드면 새 문서 탭에
+    emit('open', { type: 'doc', path, deck: true, newTab: true, force: true });
+    return;
+  }
   const pane = await openInNewTab({ type: 'doc', path });
   if (pane) await openEditor(pane, { line: 3 });
 }

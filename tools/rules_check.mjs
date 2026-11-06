@@ -22,6 +22,7 @@ const say = (name, problems, count) => {
 const cases = (file, m) => new Function('m', readFileSync(join(root, file), 'utf-8'))(m);
 
 const lineops = await load('web/js/lineops.js');
+const slideops = await load('web/js/slideops.js');
 const table = await load('web/js/tabledata.js');
 const safe = await load('web/js/html.js');
 const notes = await load('web/js/notesdata.js');
@@ -32,6 +33,14 @@ const notes = await load('web/js/notesdata.js');
 {
   const r = cases('tools/edges/lineops_fuzz.js', lineops);
   say('줄 구조 임의의 문서', r.problems, r.runs);
+}
+{
+  const r = new Function('m', 'lo', readFileSync(join(root, 'tools/edges/slideops_cases.js'), 'utf-8'))(slideops, lineops);
+  say('슬라이드 표 점검', r.fails, r.n);
+}
+{
+  const r = new Function('lo', readFileSync(join(root, 'tools/edges/slideops_fuzz.js'), 'utf-8'))(lineops);
+  say('슬라이드 줄 구조 임의의 편집', r.problems, r.runs);
 }
 {
   const r = cases('tools/edges/tabledata_cases.js', table);

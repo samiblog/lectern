@@ -250,8 +250,8 @@ function update() {
   const query = input().value;
   if (pick.step === 'target') pick.items = targetItems(query);
   else if (pick.step === 'place') pick.items = placeItems(query);
-  else pick.items = [{ type: 'create', label: t('Enter — 이 경로로 새 문서'), sub: t('바로 만듭니다 — 이미 있는 폴더에만, 같은 이름이 있으면 만들지 않습니다') }];
-  pick.sel = 0;
+  else pick.items = [...(pick.snips.length ? [] : [{ type: 'create', deck: true, label: t('이 경로로 새 발표 문서'), sub: t('슬라이드 — 머리 설정과 표지 한 장으로 만듭니다') }]), { type: 'create', label: t('Enter — 이 경로로 새 문서'), sub: t('바로 만듭니다 — 이미 있는 폴더에만, 같은 이름이 있으면 만들지 않습니다') }];
+  pick.sel = pick.step === 'new' ? pick.items.length - 1 : 0;   // 새로 만들기는 보통 문서가 Enter
   renderPick();
 }
 
@@ -305,7 +305,7 @@ async function choose(i) {
     if (!path) return;
     let made;
     try {
-      made = await createDoc(path);
+      made = await createDoc(path, { deck: !!it.deck });
     } catch (e) {   // 없는 폴더·같은 이름·쓸 수 없는 이름 — 고쳐서 다시 Enter
       if (!box().hidden && pick.step === 'new') setMsg(e.message, true);
       return;
@@ -315,7 +315,7 @@ async function choose(i) {
       perform(snips, { path: made, place: { at: 'end' } });
     } else {
       toast(t('새 문서를 만들었습니다: {path}', { path: made }));
-      openCreated(made);
+      openCreated(made, { deck: !!it.deck });
     }
   }
 }

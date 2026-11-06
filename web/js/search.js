@@ -83,7 +83,7 @@ function nameRow(f, q) {
   const has = (s) => (s || '').toLowerCase().includes(q.toLowerCase());
   const label = f.kind && !has(f.name) ? f.title : (f.kind ? labelOf(f) : f.name);   // 문서는 제목이 맞으면 제목
   const tip = f.kind ? [f.title, f.path].filter(Boolean).join('\n') : fileTip(f);
-  return [html`<div class="sr-name" data-file="${f.path}" tabindex="0" title="${tip}">${fileIcon(f.name, f.kind)}`, html`<span class="label">${highlight(label, q)}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+  return [html`<div class="sr-name" data-file="${f.path}" tabindex="0" title="${tip}">${fileIcon(f.name, f.kind, f.deck)}`, html`<span class="label">${highlight(label, q)}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
 }
 
 function render(d, names = null) {

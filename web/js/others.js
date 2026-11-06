@@ -157,7 +157,7 @@ const subHtml = (sub) => (sub ? html`<span class="sub">${sub}</span>` : '');
 function fileRow(o, v, f, depth, sub = '') {
   if (f.doc) {   // 폴더 보기의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조
     const active = S.view?.type === 'doc' && S.view.path === f.path ? ' active' : '';
-    return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind)}<span class="label">${labelOf(f)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
+    return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
   return [html`<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${fileTip(f)}"><span class="caret-space"></span>${fileIcon(f.name)}`, html`<span class="label">${f.name}</span>${subHtml(sub)}</div>`];

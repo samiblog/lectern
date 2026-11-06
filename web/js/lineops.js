@@ -13,6 +13,8 @@ const SETEXT = /^ {0,3}(?:=+|-+)[ \t]*$/;
 const TABLE_SEP = /^[ \t]*\|?[ \t]*:?-+:?[ \t]*(?:\|[ \t]*:?-+:?[ \t]*)*\|?[ \t]*$/;
 const CALLOUT = /^\[![A-Za-z]+\]/;
 const FENCE = /^[ \t]*(`{3,}|~{3,})(.*)$/;
+const CELL_MARK = /^:::(?:[ \t]|$)/;
+const COMMENT_LINE = /^[ \t]*<!--.*-->[ \t]*$/;
 
 const quoteOf = (s) => QUOTE.exec(s)[0];
 const depthOf = (s) => (quoteOf(s).match(/>/g) || []).length;
@@ -74,11 +76,16 @@ function frontEnd(lines) {
   return 0;
 }
 
-/** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'}] (빈 줄 뺌) */
+/** 맨 앞 설정에 marp: true 인 발표 문서인지 */
+const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^marp:[ \t]*true[ \t]*$/.test(s));
+
+/** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'|'wall'}] (빈 줄 뺌). wall: 발표 문서의 칸(:::)·장(---)·지시어 줄 — 글이 넘지 않는다 */
 function blocksOf(lines) {
   const fences = fencesOf(lines);
   const blocks = [];
   const front = frontEnd(lines);
+  const deck = deckOf(lines);
+  const wall = (s) => deck && (CELL_MARK.test(s.trim()) || RULE.test(s) || COMMENT_LINE.test(s));
   if (front) blocks.push({ a: 1, b: front, kind: 'front' });
   let n = front + 1;
   while (n <= lines.length) {
@@ -88,12 +95,15 @@ function blocksOf(lines) {
       blocks.push({ a: f.a, b: f.b, kind: 'fence' });
       n = f.b + 1;
     } else if (isBlank(s)) n += 1;
-    else if (HEADING.test(bodyOf(s))) {
+    else if (wall(s)) {
+      blocks.push({ a: n, b: n, kind: 'wall' });
+      n += 1;
+    } else if (HEADING.test(bodyOf(s))) {
       blocks.push({ a: n, b: n, kind: 'heading' });
       n += 1;
     } else {
       let b = n;
-      while (b < lines.length && !isBlank(lines[b]) && depthOf(lines[b]) === depthOf(s) && !fenceAt(fences, b + 1) && !HEADING.test(bodyOf(lines[b]))) b += 1;
+      while (b < lines.length && !isBlank(lines[b]) && depthOf(lines[b]) === depthOf(s) && !fenceAt(fences, b + 1) && !HEADING.test(bodyOf(lines[b])) && !wall(lines[b])) b += 1;
       blocks.push({ a: n, b, kind: 'text' });
       n = b + 1;
     }
@@ -131,7 +141,7 @@ function itemEnd(lines, n) {
     if (widthOf(body) >= it.content) {
       end = i;
       gap = false;
-    } else if (!gap && !itemOf(s) && !HEADING.test(body) && !RULE.test(body) && !FENCE.test(body)) end = i;   // 들여쓰지 않고 이어 쓴 줄
+    } else if (!gap && !itemOf(s) && !HEADING.test(body) && !RULE.test(body) && !FENCE.test(body) && !(CELL_MARK.test(body.trim()) && deckOf(lines))) end = i;   // 들여쓰지 않고 이어 쓴 줄
     else break;
   }
   return end;
@@ -369,7 +379,8 @@ export function joinLine(lines, n, { split, code = false }) {
   const f = fenceAt(fences, n);
   let p = n - 1;
   if (!code && !f) while (p >= 1 && isBlank(lines[p - 1])) p -= 1;
-  if (p < 1 || (f && p <= f.a)) return { error: 'different' };
+  const fixed = (x) => ['wall', 'front'].includes(blockAt(blocks, x)?.kind);
+  if (p < 1 || (f && p <= f.a) || fixed(p) || fixed(n)) return { error: 'different' };
   if (!code && kindOf(lines, p, fences, blocks) !== kindOf(lines, n, fences, blocks)) return { error: 'different' };
   const up = split(lines[p - 1]);
   const cur = split(lines[n - 1]);
@@ -491,7 +502,7 @@ export function moveLines(lines, a, b, dir, { code = false } = {}) {
     if (moved) return moved;
   }
   const part = blocks.filter((x) => x.b >= a && x.a <= b && x.kind !== 'front');
-  if (!part.length) return { error: 'edge' };
+  if (!part.length || part.some((x) => x.kind === 'wall')) return { error: 'edge' };
   const [first] = part;
   const last = part.at(-1);
   const callout = CALLOUT.test(bodyOf(lines[first.a - 1]).trim());
@@ -504,7 +515,7 @@ export function moveLines(lines, a, b, dir, { code = false } = {}) {
   const i = blocks.indexOf(first);
   const j = blocks.indexOf(last);
   const other = dir < 0 ? blocks[i - 1] : blocks[j + 1];
-  if (!other || other.kind === 'front') return { error: 'edge' };
+  if (!other || other.kind === 'front' || other.kind === 'wall') return { error: 'edge' };
   if (other.a === 1 && dir < 0 && lines[first.a - 1].trim() === '---') return { error: 'edge' };   // 맨 앞의 --- 는 머리 정보로 읽힌다
   if (dir < 0) {
     return { lines: swapped(lines, other.a, other.b, first.a, last.b), a: a - first.a + other.a, b: b - first.a + other.a };
@@ -537,6 +548,7 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   }
   const inFence = !!fenceAt(fences, a) && a > fenceAt(fences, a).a;
   const blocks = blocksOf(lines);
+  if (deckOf(lines) && lines.slice(a - 1, b).filter((s) => CELL_MARK.test(s.trim())).length % 2) return { error: 'edge' };   // 칸의 한쪽 표시만 지우면 칸이 깨진다
   for (const blk of blocks) {
     if (blk.b < a || blk.a > b) continue;
     const table = tableIn(lines, blk);

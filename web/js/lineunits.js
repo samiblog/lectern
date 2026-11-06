@@ -35,7 +35,6 @@ export function collectUnits(view, src = []) {
   if (!view?.parentElement) return [];
   const base = baseOf(view);
   if (view.classList.contains('code-view')) return codeViewUnits(view, base);
-  if (view.classList.contains('lec-deck')) return [];   // 발표 문서(D59)는 슬라이드 단위 (장 하이라이트만)
   const blank = (n) => !String(src[n - 1] ?? '').replace(/^[\s>]*/, '').trim();
 
   const els = [];
@@ -71,6 +70,7 @@ export function collectUnits(view, src = []) {
     }
     const segs = segmentsOf(el);
     if (!segs.length) {
+      if (el.matches('.lec-cell, .lec-slide-wrap')) continue;   // 칸·장의 표시 줄은 어느 글의 것도 아니다
       if (inner) for (const n of lines) orphans.push([n, el]);   // 표의 구분 줄 등 — 이웃 단위에
       else whole(lines[0], lines.at(-1));   // 글 없는 블록 (hr 등)
       continue;
@@ -282,7 +282,9 @@ export function unitAt(units, y, point = null) {
   const hits = [];
   let near = -1;
   let gap = Infinity;
+  const cell = point && document.elementFromPoint(point.x, point.y)?.closest('.lec-cell');   // 슬라이드의 칸은 나란히 놓여 높이만으로는 어느 칸인지 모른다
   units.forEach((u, i) => {
+    if (cell && !cell.contains(u.el)) return;
     if (y >= u.top && y <= u.bottom) hits.push(i);
     else {
       const d = y < u.top ? u.top - y : y - u.bottom;
@@ -398,6 +400,7 @@ export function lineSlot(view, line, src) {
     return range && { kind: 'code', el, ranges: [range], fence: a > span[0] ? String(src[span[0] - 1] ?? '') : '' };
   }
   if (el.tagName === 'TR') return { kind: 'table', el, ranges: [...el.cells].map(contentsOf), whole: true };
+  if (el.matches('.lec-cell, .lec-slide-wrap')) return null;   // 칸·장의 표시 줄
   const lines = ownLines(el, src);
   if (!lines.includes(line) || MARKER_LINE.test(String(src[line - 1] ?? ''))) return null;
   const segs = segmentsOf(el);

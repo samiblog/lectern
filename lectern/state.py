@@ -293,4 +293,5 @@ class AppState:
             # 예제 프로젝트(없으면 None)와 AI 용 작성 안내의 경로 — 시작 화면의 '예제 열기', 설정 창의 요청 글 (D57)
             'samples': str(samples_dir()) if samples_dir().is_dir() else None,
             'writing_guide': str(web_dir() / 'help' / ('writing.en.md' if i18n.language() == 'en' else 'writing.md')),
+            'slides_guide': str(web_dir() / 'help' / ('slides.en.md' if i18n.language() == 'en' else 'slides.md')),
         }

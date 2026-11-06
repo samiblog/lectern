@@ -23,20 +23,22 @@
 // - 편집하는 동안 그 칸은 자동 새로고침·F5 로 다시 그리지 않는다 (nav.refreshView 가 pane.lineEdit 을 본다 — 끝낸 뒤 그린다).
 //   글 칸 안의 키는 칸의 것이다 (앱 단축키는 쉰다), 누르기는 제목 접기·링크로 가지 않는다.
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
-import { lineSlot, editableLines } from './lineunits.js';
+import { lineSlot, editableLines, blockOfLine } from './lineunits.js';
 import { locateLines } from './linefind.js';
 import { isCode } from './icons.js';
 import {
   diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
+import { TEXT_WORDS, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide } from './slideops.js';
+import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
-import { t } from './i18n.js';
+import { t, LANG } from './i18n.js';
 
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
 // 되돌리기 기록 — 파일마다 ('탭 id|경로' → {done, undone}). done 은 저장한 변경(마지막 것이 끝), undone 은 되돌린 변경.
@@ -811,6 +813,73 @@ async function moveLitNow(dir) {
   if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
 }
 
+// ---- 슬라이드 (D96) -----------------------------------------------------------------
+
+const TEXT_LABELS = { title: t('제목'), sub: t('소제목'), body: t('본문'), table: t('표'), box: t('박스글'), code: t('코드') };
+
+/** 현재 줄의 구성 요소 — slideops.TEXT_WORDS 의 안쪽 이름 */
+function textKind(el) {
+  if (el.closest('table')) return 'table';
+  if (el.closest('blockquote')) return 'box';
+  if (el.closest('h1, h2')) return 'title';
+  if (el.closest('h3, h4, h5, h6')) return 'sub';
+  if (el.closest('pre')) return 'code';
+  return 'body';
+}
+
+/**
+ * Ctrl+Shift+> · <: 현재 줄의 구성 요소 글자 크기를 그 장에서 1pt 키우고 줄인다 — 숨은 줄 <!-- text: 표 14 --> 를 고치거나 더한다.
+ * 칸 머리 줄에 크기가 있는 칸(::: b 16)이면 그 수를 고친다. 저장은 줄 편집과 같은 길이라 Ctrl+Z 로 되돌아온다.
+ */
+async function resizeHere(dir) {
+  const pane = S.pane;
+  if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const view = pane.view;
+  const line = pane.here?.line;
+  const el = line && blockOfLine(view, line);
+  const wrap = el?.closest('.lec-slide-wrap');
+  if (!wrap || el.closest('pre.mermaid, pre.lec-chart, .diagram-error, .math-block, .lec-tag')) {
+    toast(t('이 줄은 글자 크기를 바꿀 수 없습니다 — 차트·다이어그램은 칸 크기를 따릅니다'));
+    return;
+  }
+  const kind = textKind(el);
+  const cell = el.closest('.lec-cell');
+  const own = parseFloat(cell?.style.fontSize);
+  const shown = own || parseFloat(getComputedStyle(wrap.querySelector('.lec-slide')).getPropertyValue(`--t-${kind}`)) || 18;
+  const size = Math.max(8, shown + dir);
+  const [a, b] = wrap.dataset.lines.split('-').map(Number);
+  const src = sourceLines();
+  const next = own ? setCellSize(src, parseInt(cell.dataset.lines, 10), size) : setTextSize(src, a, b, LANG === 'en' ? kind : TEXT_WORDS[kind], size);
+  const shift = await commit(pane, pathIn(view), src, next);
+  if (shift == null) return;
+  if (S.pane === pane) followLine(line + (sourceLines().length - src.length));
+  toast(t('{kind} {n}pt — Ctrl+Z 로 되돌립니다', { kind: own ? t('이 칸') : TEXT_LABELS[kind], n: size }));
+}
+
+/** 장 더하기·복제·옮기기·지우기 ({op, dir, index}): index 가 없으면 현재 줄의 장 */
+async function slideOp({ op, dir = 0, index = null }) {
+  const pane = S.pane;
+  if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const { view } = pane;
+  const spans = [...view.querySelectorAll(':scope > .lec-slide-wrap')].map((w) => w.dataset.lines.split('-').map(Number));
+  if (!spans.length) return;
+  const here = pane.here?.line;
+  const found = index ?? spans.findIndex(([a, b]) => here >= a && here <= b);
+  const i = found < 0 ? slideAtTop(pane) : found;
+  const src = sourceLines();
+  const r = { add: () => addSlide(src, spans[i], t('새 장')), copy: () => duplicateSlide(src, spans[i]), move: () => moveSlide(src, spans, i, dir), delete: () => deleteSlide(src, spans, i) }[op]();
+  if (r.error) {
+    toast(r.error === 'only' ? t('장이 하나뿐이라 지우지 않습니다') : t('더 옮길 곳이 없습니다'));
+    return;
+  }
+  if (op === 'delete' && !window.confirm(t('{n}장을 지울까요?', { n: i + 1 }))) return;
+  const shift = await commit(pane, pathIn(view), src, r.lines);
+  if (shift == null || S.pane !== pane) return;
+  followLine(r.line + shift);
+  if (op === 'add') begin(r.line + shift);   // 새 장의 제목을 바로 쓰게
+  else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다') }[op]);
+}
+
 /** Alt+↑·↓ (main.js — 문서 칸에서, 줄 하이라이트 중일 때만): 하이라이트한 줄을 옮긴다. 받았으면 true. 차례로 — 누르고 있어도 쌓이지 않게 */
 export function moveLit(dir) {
   if (!litSpan()) return false;
@@ -832,9 +901,17 @@ function onKey(e) {
   const span = e.currentTarget;
   const mod = e.ctrlKey || e.metaKey;
   const k = e.key;
+  // 구조 보기의 꼬리표(칸 머리 줄·지시어 줄)는 글만 고친다 — 줄을 더하고 옮기는 키가 칸을 깨뜨리지 않게
+  if (span.closest('.lec-tag') && ((k === 'Enter' && mod) || (mod && e.shiftKey) || e.altKey || k === 'Tab' || (k === 'Backspace' && caretOffset(span) === 0))) {
+    e.preventDefault();
+    return;
+  }
   if (k === 'Enter' && mod && !e.altKey) {
     e.preventDefault();
     addLine(!e.shiftKey);
+  } else if (mod && e.shiftKey && !e.altKey && (e.code === 'Period' || e.code === 'Comma') && session.pane.view.classList.contains('lec-deck')) {
+    e.preventDefault();   // 글자 크기 (D96): 고친 글을 저장하고 크기를 바꾼다
+    finish(true).then(() => emit('text-size', { dir: e.code === 'Period' ? 1 : -1 }));
   } else if (mod && e.shiftKey && !e.altKey && e.code === 'KeyK') {
     e.preventDefault();
     deleteHere();
@@ -1011,6 +1088,8 @@ export const redoLineEdit = () => walk(false);
 export function initLineEdit() {
   on('line-edit', (unit) => begin(lineOf(unit)));
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
+  on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
+  on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });
   on('pane', () => {   // 다른 탭을 고르면 고친 것은 저장하고 끝낸다
     if (session && session.pane !== S.pane) finish(true);
   });

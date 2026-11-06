@@ -46,6 +46,7 @@ function show(index) {
   const holder = document.createElement('div');
   holder.className = 'pr-deck md-body lec-deck';
   holder.dataset.deck = wrap.dataset.deck;
+  holder.dataset.slide = wrap.dataset.slide;   // 장별 CSS (<style scoped>)
   const section = wrap.querySelector('.lec-slide').cloneNode(true);
   for (const el of $$('.lec-target, .lec-changed, .lec-picked', section)) el.classList.remove('lec-target', 'lec-changed', 'lec-picked');
   holder.append(section);

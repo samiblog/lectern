@@ -143,6 +143,7 @@ declare global {
     view: PaneView | null;
     samples: string | null;
     writingGuide: string;
+  slidesGuide: string;
 
     root: string | null;
     name: string;

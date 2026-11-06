@@ -434,7 +434,7 @@ function renderFiles(tab) {
   const entries = fileEntries(tab);
   const chips = new Map();   // 'docs:md' → {group, type, n, icon}
   for (const e of entries) {
-    if (!chips.has(e.key)) chips.set(e.key, { group: e.group, type: e.type, n: 0, icon: fileIcon(e.f.name, e.f.kind) });
+    if (!chips.has(e.key)) chips.set(e.key, { group: e.group, type: e.type, n: 0, icon: fileIcon(e.f.name, e.f.kind, e.f.deck) });
     chips.get(e.key).n += 1;
   }
   const reading = !o.data && !o.error ? t('파일 목록을 읽는 중…') : '';
@@ -460,7 +460,7 @@ function renderFiles(tab) {
   const [group, typeKey] = (state.ftype || '').split(':');
   const markup = group === 'others' && PICTURE_EXT.has(typeKey)
     ? html`<div class="pt-grid">${files.map((f) => [html`<div class="ft-thumb" tabindex="0" data-file="${f.path}" title="${fileTip(f)}">`, html`<div class="pt-pic" data-file-src="${f.path}"></div><span class="pt-cap">${f.name}</span></div>`])}</div>`
-    : files.map((f) => [html`<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${f.path}"`, html` title="${f.kind ? tipOf(f) : fileTip(f)}">${fileIcon(f.name, f.kind)}<span class="label">${f.kind ? labelOf(f) : f.name}</span>`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`]);
+    : files.map((f) => [html`<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${f.path}"`, html` title="${f.kind ? tipOf(f) : fileTip(f)}">${fileIcon(f.name, f.kind, f.deck)}<span class="label">${f.kind ? labelOf(f) : f.name}</span>`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`]);
   keepFocus(list, () => { setHtml(list, markup); });
   watchThumbs(tab);
   const total = chips.get(state.ftype)?.n || 0;

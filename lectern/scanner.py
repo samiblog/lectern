@@ -103,7 +103,10 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
             node: Node = {'type': 'file', 'name': name, 'path': path, 'kind': kind,
                           'mtime': st.st_mtime, 'size': st.st_size}
             if with_info:
-                node['title'] = doc_info(Path(entry.path), st)['title']
+                info = doc_info(Path(entry.path), st)
+                node['title'] = info['title']
+                if info.get('deck'):
+                    node['deck'] = True
             files.append(node)
     dirs.sort(key=lambda n: natural_key(n['name']))
     files.sort(key=lambda n: natural_key(n['name']))

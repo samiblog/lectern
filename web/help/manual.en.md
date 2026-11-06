@@ -251,15 +251,50 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 ### Slide decks
 
-Markdown with `marp: true` in the front matter shows as **slides** — the [Marp](https://marp.app) format Claude Code often uses for presentations. To try it, open the samples and the deck in the `guide` folder whose name starts with `08-`.
+Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's presentation format, which starts from Marp. Decks show an orange slide icon in the left list. Open the deck with cells in the `guide` folder of the sample project.
 
-- Each `---` starts a slide, shown in a 16:9 frame. Mermaid, charts, math, code and tables are drawn as in any document, and colors and fonts follow the current style. Pick a slide in the contents on the right; with section focus on, ↑ and ↓ move one slide at a time.
-- When a slide's content is too long, pictures, diagrams and charts shrink to the remaining height; if it still does not fit, the bottom is cut off and the frame is marked **Overflow**.
-- Speaker notes (HTML comments `<!-- … -->` that are not directives) appear under the slide.
-- **Present** in the status bar (Shift+F5), or the ▶ that appears when you point at a slide, shows one slide at a time in the whole window (full screen). Move with → ← Space, PageDown, PageUp, a click or the wheel; **N** shows speaker notes, **F** toggles full screen and **Esc** ends. When you end, the view returns to that slide.
-- **View as document** in the status bar shows the deck as one ordinary document (press it again for slides).
-- Printing or saving as PDF gives one slide per page (at slide size).
-- Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead` (centered), `invert` (dark slide) and background color, background pictures such as `![bg right:40%](picture)`, and the CSS in `style:`. `theme` (gaia and so on) is not read; slides use the Lectern style.
+**Slide window**
+
+- Clicking a deck opens a separate slide window. If it is already open, it comes to the front.
+- The slide window has its own style, **Presentation** by default. The main window's view and style do not change.
+- A slide window is an independent window, so it belongs to its project. It uses the main window's terminal.
+
+**Cells and layouts**
+
+- Each `---` starts a slide. A slide is 1280×720.
+- A cell runs from `::: a card` to `:::`. Text, tables, charts and images go inside.
+- Pick a layout like `<!-- layout: quad -->` or draw one with `<!-- grid: a a b / c d b -->`. `::: a at 100 200 300 120` places a cell yourself.
+- Edit the text on a slide with **line editing**. New lines added with Ctrl+Enter stay in the cell, and moving or deleting lines never breaks cells or slides.
+
+**Text size**
+
+- On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that kind of element on the slide by 1pt — table, callout, title and so on. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z undoes it.
+- In a cell with its own size (`::: b 16`) the cell's size changes. Set the whole deck with `text: title 26, table 12` in the front matter.
+- Defaults: title 30, subheading 20, body 18, table 14, callout 16. They stay the same in every style. Text in charts and diagrams follows the cell size.
+
+**Structure and Check**
+
+- **Structure** in the status bar shows cell heads and directive or note lines as tags. Press F2 or double-click a tag to edit that line. This is how you change a cell's look or a layout.
+- When a slide overflows, images and charts shrink to fit the cell. Text does not shrink; it is cut and marked with a red dashed line.
+- Wrong cell names and missing closing `:::` lines are marked too. **Check** in the status bar lists them, and picking one goes to that line. **Paste the list into the terminal** lets you ask Claude to fix them.
+
+**Managing slides**
+
+- Right-click a slide to add, duplicate, move or delete it. The keys are Ctrl+M, Ctrl+D, Ctrl+Shift+PageUp and PageDown. Ctrl+Z undoes them all.
+- The right panel is a slide list. Slides to check are marked.
+
+**Creating**
+
+- In New (Ctrl+N), type a path and pick **New slide deck at this path** to start with a cover.
+- For an existing document, right-click it in the sidebar and pick **Ask Claude to make slides**. A request goes into the terminal; press Enter and Claude makes a new file in the same folder.
+- The guide Claude reads is `web/help/slides.en.md` in the install folder.
+
+**Viewing and exporting**
+
+- **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** for notes, **F** for full screen, **Esc** to end.
+- **View as document** in the status bar unfolds the cells into an ordinary document.
+- Printing or saving as PDF gives one slide per page.
+- Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. `theme` (gaia and so on) is not read.
 
 ### Auto refresh
 

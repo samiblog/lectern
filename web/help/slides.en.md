@@ -1,0 +1,256 @@
+# Lectern slide deck guide (for AI)
+
+When the user asks for slides, write one `.md` file by this guide. People view it in Lectern's slide window and edit the text in the cells one line at a time.
+
+It starts from Marp but is Lectern's own format. Other apps show the cells as plain text. Do not make presentations in HTML.
+
+## 1. Skeleton
+
+```markdown
+---
+marp: true
+title: Copper market outlook 2026
+paginate: true
+footer: Commodity research · 2026-11
+---
+
+<!-- _class: lead -->
+<!-- _paginate: false -->
+
+# Copper market outlook 2026
+
+Between slower demand and supply disruption
+
+---
+
+<!-- layout: two -->
+
+## Stocks fell and prices rose
+
+::: a card
+### Stocks
+
+Exchange stocks are **192 kt**.
+:::
+
+::: b
+| Quarter | Price |
+|---|---:|
+| Q1 | 8,650 |
+| Q2 | 9,120 |
+:::
+```
+
+- `marp: true` in the front matter makes it a deck.
+- Separate slides with a `---` line, with blank lines around it.
+- A slide is 1280×720.
+- Put the title (`#`, `##`) outside the cells, one per slide.
+- Write directives as HTML comments at the top of the slide.
+- Any other HTML comment is a speaker note. It can go anywhere on the slide and does not count as text outside the cells. After the last cell reads well.
+- Write `lead` slides such as covers and section slides without cells. `footer` from the front matter also shows on `lead` slides.
+- Do not use footnotes. Put sources briefly in a cell or in the notes.
+
+## 2. Cells
+
+A cell runs from a `::: name words…` line to a `:::` line. Inside is ordinary Markdown.
+
+- Tables, lists, callouts, images, math, Mermaid and charts all work.
+- Never leave out the head or the closing line. Do not nest cells.
+- On a slide with a layout, everything except the title goes in a cell.
+
+Style words:
+
+| Word | Look |
+|---|---|
+| `card` | Bordered card |
+| `accent` | Accent box |
+| `dark` | Dark box |
+| `note` | Yellow note |
+| `kpi` | Big number card; the first `**number**` line is large |
+| `center` | Center the text vertically |
+| `text-center` · `text-right` | Center or right-align the text |
+| `cols-2` · `cols-3` | Set the text in 2 or 3 columns |
+
+Words combine (`::: b card center`, `::: a kpi accent`). Use `center` when a cell has little text.
+
+A KPI cell looks like this.
+
+```markdown
+::: a kpi
+**9,120**
+LME price ($/t)
+:::
+```
+
+For a bigger number use a cell size (`::: a kpi 28`). The number is about twice the cell size.
+
+## 3. Layouts
+
+Write `<!-- layout: name -->` on each slide. It does not carry over to the next slide.
+
+| Name | Cells | Shape |
+|---|---|---|
+| `two` | a b | Two halves |
+| `two-left` | a b | Left 2 : right 1 |
+| `two-right` | a b | Left 1 : right 2 |
+| `three` | a b c | Three columns |
+| `quad` | a b c d | 2×2 |
+| `left-stack` | a b c | Big a on the left, b over c on the right |
+| `right-stack` | a b c | a over c on the left, big b on the right |
+| `kpi` | a b c d e | Four small cells on top, wide e below |
+| `kpi-two` | a b c d e | Three small cells on top, wide d and small e below |
+| `stack` | a b | One above the other |
+
+For anything else use a grid. Draw it with cell names; `/` separates rows.
+
+```markdown
+<!-- grid: a a b / c d b -->
+<!-- cols: 1fr 1fr 1.2fr -->
+<!-- rows: 1fr 1fr -->
+```
+
+- Use `t` in a grid for the title area (`t t / a b`). A slide with a title needs `t`. Do not write a title on a grid without `t`.
+- `cols` has one value per column, `rows` one per row. The `t` row counts (`t t / a b / c d` needs three `rows`). `1fr`, `auto` and `200px` all work.
+- You may leave out `cols` and `rows`. Columns are then equal, and rows are equal except the `t` row, which fits its text.
+
+To place a cell yourself, write `at x y width height` in px, from the top left of the slide. Do not use `layout` with it.
+
+```markdown
+::: hub note at 460 250 300 120
+### Steel margin
+
+The spread is the key
+:::
+```
+
+- The usable area is x 56–1224, y 110–660. The title is above and the footer below.
+- Cells that overlap each other or the title show up in Check.
+- Lines between cells cannot be drawn. If you really need lines, use `mermaid` or `dot`; that text cannot be edited line by line. If people must edit the text, put an arrow character (→) in a small cell.
+
+## 4. Text size
+
+Defaults: title 30pt, subheading 20pt, body 18pt, table 14pt, callout 16pt, code 14pt. These match PowerPoint points and do not change with the style.
+
+Change only what you need.
+
+| Scope | How |
+|---|---|
+| Whole deck | `text: title 26, table 12` in the front matter |
+| One slide | `<!-- text: table 12 -->` |
+| One cell | A number in the cell head (`::: b card 14`) |
+
+The kinds are `title` `sub` `body` `table` `box` `code`. A cell size also sets the tables and callouts in that cell.
+
+## 5. How much fits
+
+Text that overflows is cut, not shrunk. You cannot see the screen, so stay within these limits. If a cell goes over, split the slide.
+
+A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line holds cell width ÷ 23 Korean characters, or about ÷ 14 Latin characters. These are rough.
+
+| Layout | Cell | Size (px) | Body lines | Characters (Korean) | Table rows |
+|---|---|---|---:|---:|---:|
+| `two` | a b | 575×555 | 15 | 24 | 12 |
+| `two-left` | a | 767×555 | 15 | 32 | 12 |
+| `two-left` | b | 383×555 | 15 | 16 | 12 (up to 3 columns) |
+| `two-right` | a | 383×555 | 15 | 16 | 12 (up to 3 columns) |
+| `two-right` | b | 767×555 | 15 | 32 | 12 |
+| `three` | a b c | 377×555 | 15 | 16 | 12 (up to 3 columns) |
+| `quad` | a b c d | 575×270 | 7 | 24 | 5 |
+| `left-stack` | a | 690×555 | 15 | 29 | 12 |
+| `left-stack` | b c | 460×270 | 7 | 19 | 5 |
+| `right-stack` | a c | 460×270 | 7 | 19 | 5 |
+| `right-stack` | b | 690×555 | 15 | 29 | 12 |
+| `kpi` | a b c d | 279×144 | Number + 1 line | 11 | Do not use |
+| `kpi` | e | 1168×397 | 11 | 50 | 9 |
+| `kpi-two` | a b c | 377×144 | Number + 1 line | 15 | Do not use |
+| `kpi-two` | d | 773×397 | 11 | 33 | 9 |
+| `kpi-two` | e | 377×397 | 11 | 16 | 9 (up to 3 columns) |
+| `stack` | a b | 1168×270 | 7 | 50 | 5 |
+
+- `card`, `accent`, `dark` and `note` cells have padding that takes 32px of width and 24px of height.
+- For grid, `at` and `cols-2` cells, estimate from the cell size. A grid has 1168 of width and 555 of height below the title.
+- Changing the text size changes these in proportion. At 12pt a table row is 35px.
+- Keep slides short. Short lists beat paragraphs.
+- Charts, diagrams and images shrink to fit the cell. Text does not.
+
+## 6. Charts and images
+
+Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`. Charts in a cell fit its width and the height left. A heading or text in the same cell is fine.
+
+- `vega-lite`: use `"width": "container"` and leave out `height`. Give values with `data.url` or `data.values` in the document.
+- `echarts`: an ECharts option as JSON. Leave out `height` and `width`.
+- `plotly`: `{"data": […], "layout": {…}}` as JSON. No map types.
+- Settings are JSON values only. Functions do not work.
+- Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV so they can be edited as a table.
+
+```vega-lite
+{
+  "width": "container",
+  "data": {"url": "data/monthly.csv"},
+  "mark": "line",
+  "encoding": {
+    "x": {"field": "month", "type": "ordinal", "sort": null},
+    "y": {"field": "price", "type": "quantitative", "scale": {"zero": false}}
+  }
+}
+```
+
+- Paths in `data` and images are relative to **the folder of this md file**.
+- When converting a document from another folder, check the paths. Put the new file next to the original.
+- Data from the internet is not read.
+- Write `$` in amounts as is (`$11,220`, `$/t`). Math needs `$x$` with no space just inside the `$` signs and no digit after the closing `$`.
+
+Image syntax:
+
+- `![w:300 alt text](images/a.png)` image size; alt text may follow.
+- Images in a cell shrink to fit. Text in the same cell takes its space first.
+- `![bg right:40%](images/a.png)` background on the right 40%. Use `left` for the left.
+- Two `![bg](a.png)` lines split the background.
+- `![bg sepia](a.png)` filter (`blur`, `grayscale`, `sepia` and more).
+
+## 7. Directives
+
+| Directive | Meaning |
+|---|---|
+| `<!-- _class: lead -->` | Center this slide like a cover; also for section slides |
+| `<!-- _class: invert -->` | Make this slide dark |
+| `<!-- _backgroundColor: #17293d -->` | This slide's background |
+| `<!-- _paginate: false -->` | No page number on this slide |
+| `<!-- eyebrow: Market summary -->` | Small label above the title |
+
+A leading `_` means this slide only. `class` and `backgroundColor` without `_` carry over. `layout`, `grid`, `text` and `eyebrow` are always this slide only.
+
+## 8. HTML slides
+
+Use HTML and SVG only for what cells cannot do. **People cannot edit such slides line by line**, and chart values are hard to change. First see whether cells and `at` can do it.
+
+- Write per-slide CSS as `<style scoped>`. `section` is the slide.
+- `<style>` applies to the whole deck, as does `style: |` in the front matter.
+- Scripts do not run. Internet CSS and fonts are removed.
+
+## 9. After writing
+
+Lectern collects overflow and mistakes under 'Check' in the status bar. When the user pastes that list into the terminal, fix it like this.
+
+| Message | Fix |
+|---|---|
+| Cell a overflows by 120px | Cut text or split the slide; for a table, reduce the table size on that slide |
+| Cell a overflows sideways by 80px | Use fewer table columns or a wider cell |
+| Cell a overlaps the title | Set the `at` y to 110 or more |
+| Cells a and b overlap | Move the `at` position |
+| Cell a runs off the slide | Keep x+width within 1224 and y+height within 660 |
+| Cell z is not in the layout | Use a cell name from the layout |
+| Cell c is empty | Fill it or change the layout |
+| Cell a has no closing ::: | Add the closing line |
+| There is text outside the cells | Move it into a cell |
+| There is no layout 'x' | Use a name from the table above |
+
+For `Cell a overflows by 120px (cell height 300px)`, cut four body lines or three table rows.
+
+## 10. Good slides
+
+- Make the title the conclusion, not the topic (`Stocks fell and prices rose`).
+- One point per slide. Pick the layout that fits the content.
+- Four numbers: `kpi`. Comparisons: `two`, `three`. Picture with notes: `left-stack`.
+- Start with a `lead` slide, and add one when the topic changes.
+- Put explanations in speaker notes.

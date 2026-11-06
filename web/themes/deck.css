@@ -1,0 +1,44 @@
+/* 발표: 슬라이드 창의 기본 스타일 (D96). 따뜻한 종이 바탕에 남색 글자, 주황 포인트, 흰 카드 */
+:root {
+  --md-bg: #f6f3ec;
+  --md-fg: #1f2933;
+  --md-heading: #17293d;
+  --md-muted: #5c6773;
+  --md-border: #ddd6c8;
+  --md-link: #c2410c;
+  --md-code-bg: #ece7dc;
+  --md-quote-bar: #c2410c;
+  --md-th-bg: #17293d;
+  --md-th-fg: #ffffff;
+  --md-th-rule: #c2410c;
+  --md-stripe: #fbf9f4;
+  --md-strong: #17293d;
+  --md-alert-note: #1d4e89;
+  --md-alert-tip: #2f7d5b;
+  --md-alert-important: #5b3f9e;
+  --md-alert-warning: #b45309;
+  --md-alert-caution: #b3261e;
+  --md-font: "Segoe UI Variable Text", "Segoe UI", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-heading-font: "Segoe UI Variable Display", "Segoe UI", "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif;
+  --md-mono: "Cascadia Mono", Consolas, "D2Coding", "Malgun Gothic", monospace;
+  --md-size: 15.5px;
+  --md-line: 1.7;
+  --md-width: 860px;
+  --md-h1-rule: 0;
+  --md-h2-rule: 0;
+}
+
+.md-body :is(h1, h2) { font-weight: 800; letter-spacing: -.02em; }
+.md-body h3 { color: #c2410c; font-weight: 700; }
+.md-body .table-wrap { border: 0; border-radius: 6px; }
+.md-body table { background: #ffffff; }
+.md-body blockquote:not(.alert) { color: var(--md-heading); background: #ffffff; border-left: 5px solid #c2410c; border-radius: 0 8px 8px 0; padding: .55em 1em; }
+
+/* 슬라이드 */
+.lec-deck .lec-slide :is(h1, h2) { border: 0; }
+.lec-deck .lec-slide.lead { background-color: #17293d; --md-fg: #f6f3ec; --md-heading: #ffffff; --md-strong: #ffffff; color: #e8e4da; }
+.lec-deck .lec-slide.lead.paper { background-color: var(--md-bg); --md-fg: #1f2933; --md-heading: #17293d; color: var(--md-fg); }
+.lec-deck .lec-cell.card, .lec-deck .lec-cell.kpi { background: #ffffff; border-color: var(--md-border); border-radius: 12px; box-shadow: 0 1px 2px rgba(23, 41, 61, .05); }
+.lec-deck .lec-cell.accent { background: #fff1e6; border-left: 5px solid #c2410c; border-radius: 4px 12px 12px 4px; }
+.lec-deck .lec-cell.dark { background: var(--md-heading); border-radius: 12px; }
+.lec-deck .lec-cell.kpi strong { color: #c2410c; }

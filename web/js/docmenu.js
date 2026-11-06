@@ -501,10 +501,27 @@ function openMenu(e, view, x, y) {
   blockMenu(e, view, el, selected, x, y);
 }
 
+/** 슬라이드의 장 다루기 (D96 — 계산은 slideops.js, 저장은 lineedit.js 의 'slide-op'). 슬라이드가 아니거나 고칠 수 없으면 빈 배열 */
+function slideItems(target) {
+  const wrap = target?.closest?.('.lec-slide-wrap');
+  if (!wrap || !linesEditable()) return [];
+  const index = [...wrap.parentElement.children].filter((el) => el.classList.contains('lec-slide-wrap')).indexOf(wrap);
+  const run = (op, dir = 0) => () => emit('slide-op', { op, index, dir });
+  return [
+    { label: t('장 더하기'), hint: 'Ctrl+M', tip: t('이 장 뒤에'), action: run('add') },
+    { label: t('장 복제'), hint: 'Ctrl+D', action: run('copy') },
+    { label: t('장 앞으로 옮기기'), hint: 'Ctrl+Shift+PageUp', action: run('move', -1) },
+    { label: t('장 뒤로 옮기기'), hint: 'Ctrl+Shift+PageDown', action: run('move', 1) },
+    { label: t('장 지우기'), action: run('delete') },
+  ];
+}
+
 /** 우클릭한 블록(없으면 문서)의 보통 메뉴 — 고른 글이 있으면 맨 위에 그 글 */
 function blockMenu(e, view, el, selected, x, y) {
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
   const items = el ? blockItems(el, e.target, spot) : docItems(spot);
+  const slide = slideItems(e.target);   // 슬라이드: 장 다루기 (D96)
+  if (slide.length) items.push('-', ...slide);
   const sel = view.ownerDocument.getSelection();
   if (selected) {
     const range = selectionRange(sel);

@@ -65,7 +65,7 @@ export async function getText(path) {
 /** 설정 일부를 저장한다. 실패해도 화면 동작에는 영향이 없다. */
 export async function saveConfig(patch) {
   Object.assign(S.config, patch);
-  if (solo) return;   // 독립창의 화면 설정은 그 창에서만 (D95 — 설정은 메인 창의 것이다)
+  if (solo && !(solo.deck && 'slide_theme' in patch)) return;   // 독립창의 화면 설정은 그 창에서만 (D95 — 설정은 메인 창의 것이다). 슬라이드 창의 스타일만 저장한다 (D96)
   try {
     await postJSON('/api/config', patch);
   } catch (e) {

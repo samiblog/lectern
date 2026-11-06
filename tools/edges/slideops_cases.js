@@ -1,0 +1,76 @@
+// slideops.js 의 계산과 발표 문서의 줄 구조 벽 점검 (slides.py 가 페이지 안에서, rules_check 가 node 로 돌린다 — m: slideops.js, lo: lineops.js, 끝에서 {n, fails} 를 돌려준다)
+const { textSizes, readCellHead, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide } = m;
+const { planNew, insertLine, joinLine, moveLines, deleteLines } = lo;
+let n = 0;
+const fails = [];
+const L = (s) => s.split('\n');
+const eq = (got, want, name) => {
+  n += 1;
+  const show = (x) => (Array.isArray(x) ? x.join('\n') : JSON.stringify(x));
+  if (show(got) !== show(want)) fails.push(`${name}: ${show(got)} ≠ ${show(want)}`);
+};
+
+// 글자 크기 읽기
+eq(textSizes('표 14, 제목 30'), { table: 14, title: 30 }, '한국어 낱말');
+eq(textSizes('table 12, sub 20'), { table: 12, sub: 20 }, '영어 낱말');
+eq(textSizes('표 14', '표 12'), { table: 12 }, '뒤의 것이 이김');
+eq(textSizes('없는말 14, 표 abc, 표'), {}, '모르는 것은 넘어감');
+eq(textSizes(undefined, 3), {}, '글이 아니면');
+
+// 칸 머리 줄
+eq(readCellHead('a'), { name: 'a', words: [], size: null, at: null }, '이름만');
+eq(readCellHead('b card accent 16'), { name: 'b', words: ['card', 'accent'], size: 16, at: null }, '꾸밈과 크기');
+eq(readCellHead('hub note at 10 20 300 120'), { name: 'hub', words: ['note'], size: null, at: [10, 20, 300, 120] }, '자리');
+eq(readCellHead('hub at 10 20 300 120 14'), { name: 'hub', words: [], size: 14, at: [10, 20, 300, 120] }, '자리 뒤의 크기');
+eq(readCellHead('a at 1 2'), { name: 'a', words: ['at'], size: 2, at: null }, '자리가 모자라면 낱말');
+eq(readCellHead('a <b> "x"').words, [], '낱말이 아닌 것은 버림');
+
+// 글자 크기 고치기
+const D = '---\nmarp: true\n---\n\n## 가\n\n글\n\n---\n\n<!-- layout: two -->\n\n## 나\n';
+eq(setTextSize(L(D), 4, 8, '표', 14), L('---\nmarp: true\n---\n\n<!-- text: 표 14 -->\n\n## 가\n\n글\n\n---\n\n<!-- layout: two -->\n\n## 나\n'), '없으면 장 맨 앞에');
+const T = '## 가\n\n<!-- text: 표 14, 제목 28 -->\n';
+eq(setTextSize(L(T), 1, 3, '표', 13), L('## 가\n\n<!-- text: 제목 28, 표 13 -->\n'), '있으면 그 낱말만');
+eq(setTextSize(L(T), 1, 3, 'table', 12), L('## 가\n\n<!-- text: 제목 28, table 12 -->\n'), '다른 말의 같은 낱말');
+eq(setCellSize(L('::: b card\n글\n:::'), 1, 16), L('::: b card 16\n글\n:::'), '칸 크기 더하기');
+eq(setCellSize(L('::: b card 16\n글\n:::'), 1, 15), L('::: b card 15\n글\n:::'), '칸 크기 고치기');
+eq(setCellSize(L('::: b at 10 20 30 40 16\n:::'), 1, 15), L('::: b at 10 20 30 40 15\n:::'), '자리의 수는 그대로');
+eq(setCellSize(L('::: b at 10 20 30 40\n:::'), 1, 15), L('::: b at 10 20 30 40 15\n:::'), '자리 뒤에 더하기');
+eq(setCellSize(L('::: 12 card\n:::'), 1, 15), L('::: 12 card 15\n:::'), '칸 이름이 수여도');
+
+// 장 다루기 — 앞 설정 3줄, 장 셋
+const S3 = L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 둘\n\n글\n\n---\n\n## 셋\n');
+const spans = [[4, 6], [8, 12], [14, 16]];
+eq(addSlide(S3, spans[0], '새').lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 새\n\n---\n\n## 둘\n\n글\n\n---\n\n## 셋\n'), '장 더하기');
+eq(addSlide(S3, spans[0], '새').line, 12 - 3, '새 제목 줄');
+eq(addSlide(S3, spans[2], '새').lines.slice(-6), ['## 셋', '', '---', '', '## 새', ''], '끝에 더하기');
+eq(duplicateSlide(S3, spans[1]).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 둘\n\n글\n\n---\n\n## 둘\n\n글\n\n---\n\n## 셋\n'), '복제');
+eq(moveSlide(S3, spans, 1, -1).lines, L('---\nmarp: true\n---\n\n## 둘\n\n글\n\n---\n\n# 하나\n\n---\n\n## 셋\n'), '앞으로');
+eq(moveSlide(S3, spans, 1, -1).line, 5, '앞으로 옮긴 줄');
+eq(moveSlide(S3, spans, 1, 1).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 셋\n\n---\n\n## 둘\n\n글\n'), '뒤로');
+eq(moveSlide(S3, spans, 1, 1).line, 13, '뒤로 옮긴 줄');
+eq(moveSlide(S3, spans, 0, -1), { error: 'edge' }, '맨 앞');
+eq(moveSlide(S3, spans, 2, 1), { error: 'edge' }, '맨 뒤');
+eq(deleteSlide(S3, spans, 1).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 셋\n'), '가운데 지우기');
+eq(deleteSlide(S3, spans, 0).lines, L('---\nmarp: true\n---\n\n## 둘\n\n글\n\n---\n\n## 셋\n'), '맨 앞 지우기');
+eq(deleteSlide(S3, spans, 2).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 둘\n\n글\n'), '맨 뒤 지우기');
+eq(deleteSlide(S3, [[4, 16]], 0), { error: 'only' }, '하나뿐');
+
+// 발표 문서의 벽: 칸·장·지시어 줄을 넘거나 깨뜨리지 않는다
+const DK = '---\nmarp: true\n---\n\n<!-- layout: two -->\n\n## 제목\n\n::: a card\n첫 글\n:::\n\n::: b\n- 가\n- 나\n:::\n\n---\n\n## 끝\n';
+const dk = L(DK);
+const add = (at, below, text) => { const p = planNew(dk, at, below); return insertLine(dk, p, text).lines; };
+eq(add(15, true, '다').slice(13, 17), ['- 가', '- 나', '- 다', ':::'], '칸 끝 항목 아래 새 항목');
+eq(moveLines(dk, 10, 10, 1), { error: 'edge' }, '칸의 문단을 아래로');
+eq(moveLines(dk, 10, 10, -1), { error: 'edge' }, '칸의 문단을 위로');
+eq(moveLines(dk, 15, 15, 1).error, 'edge', '칸 끝 항목을 아래로');
+eq(moveLines(dk, 7, 7, -1), { error: 'edge' }, '제목을 지시어 위로');
+eq(joinLine(dk, 10, { split: (l) => ({ head: '', body: l, tail: '' }) }), { error: 'different' }, '칸 첫 줄을 머리 줄과 잇기');
+eq(joinLine(dk, 20, { split: (l) => ({ head: '', body: l, tail: '' }) }), { error: 'different' }, '장 첫 줄을 앞 장과 잇기');
+eq(deleteLines(dk, 9, 10), { error: 'edge' }, '머리 줄만 걸쳐 지우기');
+eq(deleteLines(dk, 10, 11), { error: 'edge' }, '닫는 줄만 걸쳐 지우기');
+eq(deleteLines(dk, 9, 11).error, undefined, '칸째 지우기');
+eq(deleteLines(dk, 10, 10).error, undefined, '칸 안 한 줄 지우기');
+// 발표 문서가 아니면 ::: 는 보통 글이다
+const pl = L('# 글\n\n::: a\n첫 글\n:::\n');
+eq(moveLines(pl, 4, 4, 1).lines, L('# 글\n\n::: a\n:::\n첫 글\n'), '보통 문서의 ::: 는 글');
+return { n, fails };

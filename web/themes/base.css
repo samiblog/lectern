@@ -314,10 +314,57 @@
   position: absolute; left: 0; top: 0; box-sizing: border-box; transform-origin: 0 0; transform: scale(var(--slide-scale, .6));
   display: flex; flex-direction: column; justify-content: safe center; overflow: hidden;
   padding: 64px 84px; background-color: var(--md-bg); color: var(--md-fg);
-  --md-scale: 1.8; font-size: calc(var(--md-size) * 1.8); line-height: 1.45;
+  --md-scale: 1.8; line-height: 1.45;
+  /* 글자 크기는 스타일과 상관없이 pt — 어느 스타일에서도 배치가 같다 (D96). 1280px 슬라이드는 PowerPoint 와이드 화면과 같은 크기다 */
+  --t-title: 30pt; --t-sub: 20pt; --t-body: 18pt; --t-table: 14pt; --t-box: 16pt; --t-code: 14pt;
+  font-size: var(--t-body);
   -webkit-print-color-adjust: exact; print-color-adjust: exact;
 }
 .lec-deck .lec-slide > * { flex: none; }
+.lec-deck .lec-slide.lec-grid { display: grid; gap: 14px 18px; padding: 38px 56px 46px; align-content: stretch; }
+.lec-deck .lec-slide.lec-grid > :is(h1, h2):not(.lec-cell *) { grid-area: t; margin: 0 0 .1em; }
+.lec-deck .lec-cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+.lec-deck .lec-slide > .lec-cell.lec-at { position: absolute; box-sizing: border-box; z-index: 2; }
+.lec-deck .lec-slide.lec-free { justify-content: flex-start; padding: 38px 56px 46px; }
+.lec-deck .lec-slide.lec-free > :is(h1, h2) { margin: 0 0 .1em; }
+.lec-deck .lec-cell.text-center { text-align: center; }
+.lec-deck .lec-cell.text-right { text-align: right; }
+.lec-deck .lec-cell > * { flex: none; }
+.lec-deck .lec-cell > :first-child, .lec-deck .lec-cell > .lec-tag + * { margin-top: 0; }
+.lec-deck .lec-cell > :last-child { margin-bottom: 0; }
+.lec-deck .lec-cell :is(h3, h4) { margin: 0 0 .3em; border: 0; }
+.lec-deck .lec-cell.card { padding: 12px 16px; border: 1px solid var(--md-border); border-radius: 8px; }
+.lec-deck .lec-cell.accent { padding: 12px 16px; border-radius: 8px; background: color-mix(in srgb, var(--md-link, #2a6fb0) 10%, transparent); }
+.lec-deck .lec-cell.kpi { padding: 10px 14px; border: 1px solid var(--md-border); border-radius: 8px; justify-content: center; text-align: center; }
+.lec-deck .lec-cell.kpi strong { display: block; font-size: 1.9em; line-height: 1.15; color: var(--md-link, #2a6fb0); }
+.lec-deck .lec-cell.center { justify-content: center; }
+.lec-deck .lec-cell.dark { padding: 12px 16px; border-radius: 8px; background: var(--md-heading); color: var(--md-bg); --md-fg: var(--md-bg); --md-strong: var(--md-bg); }
+.lec-deck .lec-cell.dark :is(h1, h2, h3, h4, strong, a) { color: inherit; }
+.lec-deck .lec-cell.note { padding: 10px 14px; background: #fde68a; color: #3b3216; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
+.lec-deck .lec-cell.note :is(h3, h4, strong) { color: inherit; }
+.lec-deck .lec-cell.cols-2 { display: block; column-count: 2; column-gap: 28px; }
+.lec-deck .lec-cell.cols-3 { display: block; column-count: 3; column-gap: 24px; }
+.lec-deck .lec-cell pre.lec-chart, .lec-deck .lec-cell pre.mermaid { margin: 0; padding: 0; background: none; border: 0; }
+.lec-deck .lec-cell svg { max-width: 100%; }
+.lec-deck .lec-cell pre.mermaid > svg { width: 100%; max-width: 100% !important; }
+.lec-deck .lec-cell .table-wrap, .lec-deck .lec-cell table { width: 100%; }
+.lec-deck .lec-cell:is(.lec-cell-over, .lec-cell-bad) { outline: 2px dashed #d0342c; outline-offset: -2px; }
+.lec-deck .lec-cell td[style*="right"], .lec-deck .lec-cell th[style*="right"] { white-space: nowrap; }
+.lec-deck .lec-slide h1 { font-size: calc(var(--t-title) * 1.2); }
+.lec-deck .lec-slide.lead h1 { font-size: calc(var(--t-title) * 1.45); }
+.lec-deck .lec-slide h2 { font-size: var(--t-title); }
+.lec-deck .lec-slide :is(h3, h4, h5, h6) { font-size: var(--t-sub); }
+.lec-deck .lec-slide :is(table, table p) { font-size: var(--t-table); }
+.lec-deck .lec-slide :is(blockquote, blockquote p, blockquote li) { font-size: var(--t-box); }
+.lec-deck .lec-slide :is(pre code, pre) { font-size: var(--t-code); }
+.lec-deck .lec-eyebrow { margin: 0 0 .25em; font: 600 11pt var(--md-mono); letter-spacing: .06em; color: var(--md-link, #2a6fb0); }
+.lec-deck .lec-slide:is(.lec-grid, .lec-free) > .lec-eyebrow { position: absolute; left: 56px; top: 18px; margin: 0; }
+/* 구조 보기 (slidetools.js): 칸 머리 줄·주석 줄의 꼬리표 — 발표·인쇄에는 나오지 않는다 */
+.lec-deck .lec-tag, .lec-deck .lec-slide-tags { display: none; }
+.lec-deck.lec-structure .lec-tag { display: block; position: absolute; right: 3px; top: 3px; z-index: 3; max-width: 92%; padding: 1px 7px; border-radius: 5px; font: 12px/1.4 var(--md-mono); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff; background: rgba(40, 60, 90, .78); cursor: text; }
+.lec-deck.lec-structure .lec-slide-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 0 0 4px; }
+.lec-deck.lec-structure .lec-slide-tags .lec-tag { position: static; max-width: 100%; }
+.pr-deck .lec-tag { display: none !important; }
 .lec-deck .lec-slide > :not(.lec-slide-bg, header, footer) { position: relative; z-index: 1; }
 .lec-deck .lec-slide :is(h1, h2, h3, h4, h5, h6) { margin: .45em 0 .4em; }
 .lec-deck .lec-slide p, .lec-deck .lec-slide ul, .lec-deck .lec-slide ol { margin-top: 0; margin-bottom: .6em; }
@@ -413,7 +460,7 @@
   .lec-deck .lec-slide-wrap + .lec-slide-wrap { break-before: page; }
   .lec-deck .lec-slide-frame { width: var(--slide-w); height: var(--slide-h); aspect-ratio: auto !important; border: 0; border-radius: 0; box-shadow: none; }
   .lec-deck .lec-slide { transform: none; }
-  .lec-deck .lec-slide-notes, .lec-deck .lec-slide-play, .lec-deck .lec-slide-frame::after { display: none !important; }
+  .lec-deck .lec-slide-notes, .lec-deck .lec-slide-play, .lec-deck .lec-slide-frame::after, .lec-deck .lec-tag, .lec-deck .lec-slide-tags { display: none !important; }
 }
 @page lec-slide { size: 1280px 720px; margin: 0; }
 @page lec-slide-43 { size: 960px 720px; margin: 0; }

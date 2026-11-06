@@ -19,7 +19,8 @@ const KIND_OF = new Map(Object.entries(KINDS).flatMap(([kind, exts]) => exts.spl
 const svg = (id, extra = '') => html`<svg class="ficon${extra}" aria-hidden="true"><use href="#i-${id}"/></svg>`;
 
 /** 파일 이름 앞의 아이콘. docKind 가 있으면 문서 (scanner 의 kind: markdown | html) */
-export function fileIcon(name, docKind) {
+export function fileIcon(name, docKind, deck = false) {
+  if (deck) return svg('slide', ' doc deck');   // 발표 문서 (맨 앞 설정 marp: true)
   if (docKind === 'markdown') return svg('md', ' doc');
   if (docKind === 'html') return svg('html', ' doc');
   const i = name.lastIndexOf('.');

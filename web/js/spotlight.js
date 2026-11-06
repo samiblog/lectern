@@ -60,7 +60,7 @@ const isMdDoc = () => view().classList.contains('md-body') && !!view().dataset.d
 const isCodeView = () => view().classList.contains('code-view') && !!view().dataset.codePath;
 const isDeck = () => view().classList.contains('lec-deck');
 /** 현재 위치·줄 하이라이트를 쓰는 화면: md 문서(발표 문서 뺌)와 코드 화면 */
-const linesOn = () => (isMdDoc() && !isDeck()) || isCodeView();
+const linesOn = () => isMdDoc() || isCodeView();
 const pathOf = () => (isCodeView() ? view().dataset.codePath : view().dataset.docPath);
 const levelOf = (el) => (/^H([1-6])$/.exec(el.tagName) ? Number(el.tagName[1]) : 0);
 const lit = () => active && (mode === 'range' ? linesOn() : chapters.length > 0);
@@ -286,7 +286,9 @@ function drawHere() {
     sc.append(mark);
   }
   mark.style.setProperty('--here-y', `${Math.round(markOf(us[i], baseOf(root)))}px`);
-  mark.style.setProperty('--here-x', `${Math.round(Math.max(1, textLeft(root) - 12))}px`);
+  const cell = us[i].el.closest?.('.lec-cell');
+  const left = cell ? cell.getBoundingClientRect().left - sc.getBoundingClientRect().left : textLeft(root);
+  mark.style.setProperty('--here-x', `${Math.round(Math.max(1, left - 12))}px`);
 }
 
 /** ↑·↓: 현재 위치를 한 줄 옮기고 그 줄이 보이게. 화면보다 큰 줄은 그쪽의 남은 곳을 먼저 스크롤해 보인다 */
@@ -600,6 +602,10 @@ export const spotlightOn = () => active && mode === 'chapter' && chapters.length
 
 // 한 줄 편집(lineedit.js, D76)이 쓰는 것: 지금 화면의 줄 단위·원문 줄, 그 줄을 하이라이트, 상태줄 다시 쓰기
 export const currentUnits = () => units();
+/** 줄 단위가 달라졌다 — 다시 그리지 않고 화면의 요소를 바꿨을 때 (구조 보기, slidetools.js) */
+export function forgetUnits() {
+  cache = null;
+}
 export const sourceLines = () => srcLines();
 /** 줄 하이라이트의 원문 줄 [a, b] (lineedit.js 의 줄 지우기·옮기기) — 줄 하이라이트가 아니면 null */
 export const litSpan = () => (ranged() ? litLines() : null);
@@ -743,6 +749,16 @@ export function spotKey(e) {
   const k = e.key;
   if (e.ctrlKey) {
     if (e.shiftKey && k === 'ArrowRight') return sendAndGo();
+    if (view().classList.contains('lec-deck')) {   // 슬라이드 (D96): 구성 요소의 글자 크기, 장 더하기·복제
+      if (e.shiftKey && (e.code === 'Period' || e.code === 'Comma')) {
+        emit('text-size', { dir: e.code === 'Period' ? 1 : -1 });
+        return true;
+      }
+      if (!e.shiftKey && (e.code === 'KeyM' || e.code === 'KeyD')) {
+        emit('slide-op', { op: e.code === 'KeyM' ? 'add' : 'copy' });
+        return true;
+      }
+    }
     if (!e.shiftKey && (e.code === 'KeyL' || k.toLowerCase() === 'l')) {   // 현재 줄 하이라이트, 거듭 누르면 아래로 넓힘 (D91)
       if (!linesOn()) return false;
       return ranged() ? extend(1) : highlightHere();
