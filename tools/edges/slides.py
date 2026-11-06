@@ -304,6 +304,38 @@ marp: true
 | 1,000,000,000,000 | 1,000,000,000,000 | 1,000,000,000,000 | 1,000,000,000,000 | 1,000,000,000,000 | 1,000,000,000,000 | 1,000,000,000,000 |
 :::
 """, encoding='utf-8')
+(proj / '악성.md').write_text("""---
+marp: true
+---
+
+<style scoped>
+} #lec-status { display: none; } body { background: red; } section {
+</style>
+
+<!-- layout: x"><img src=x onerror=alert(1)> -->
+<!-- grid: a"><script>alert(2)</script> -->
+<!-- eyebrow: <img src=x onerror=alert(3)> -->
+<!-- text: 표 12; color: red -->
+
+## 악성 장
+
+::: a" onclick="alert(4) card<script>
+글
+:::
+
+::: b at 1 2 3 4" style="position:fixed
+글
+:::
+
+---
+
+<style>
+@import url("https://example.com/a.css");
+#lec-status { display: none; }
+</style>
+
+## 둘째
+""", encoding='utf-8')
 (proj / '보통.md').write_text('# 보통\n\n첫 문단이다.\n\n::: a\n이것은 글이다.\n:::\n', encoding='utf-8')
 config = base / 'config'
 config.mkdir()
@@ -593,6 +625,16 @@ def run():
         check('자리 칸만 있는 장의 제목은 위에', box['top'] < 80, box)
         check('열을 적지 않아도 온 폭', abs(box['a'] - box['b']) < 2 and box['c'] > 1100, box)
 
+        print('[악성 문서]')
+        page.locator('#lec-tree .row.file[data-doc="악성.md"]').click()
+        page.wait_for_function("document.querySelector('#lec-view .lec-slide h2')?.textContent === '악성 장'", timeout=10000)
+        page.wait_for_timeout(700)
+        bad = page.evaluate("""() => { const v = document.querySelector('#lec-view'); const css = [...v.querySelectorAll('.lec-deck-style')].map((s) => s.textContent).join('');
+          return { status: getComputedStyle(document.querySelector('#lec-status')).display, body: getComputedStyle(document.body).backgroundColor, scripts: v.querySelectorAll('script').length, onerr: v.querySelectorAll('[onerror], [onclick]').length, imported: css.includes('example.com') }; }""")
+        check('장별 CSS 가 앱을 건드리지 못한다', bad['status'] != 'none' and bad['body'] != 'rgb(255, 0, 0)', bad)
+        check('스크립트·이벤트 속성이 없다', bad['scripts'] == 0 and bad['onerr'] == 0, bad)
+        check('인터넷 CSS 를 부르지 않는다', not bad['imported'], bad)
+
         print('[보통 문서]')
         page.locator('#lec-tree .row.file[data-doc="보통.md"]').click()
         page.wait_for_selector('#lec-view h1', timeout=8000)
@@ -614,7 +656,7 @@ def run():
         win.wait_for_timeout(1200)
         check('슬라이드 창의 기본 스타일', win.evaluate('document.documentElement.dataset.theme') == 'deck', win.evaluate('document.documentElement.dataset.theme'))
         check('메인 스타일은 그대로', page.evaluate('document.documentElement.dataset.theme') != 'deck')
-        check('스타일을 고를 수 있다', win.locator('#lec-theme').is_visible())
+        check('스타일을 고를 수 있다', win.locator('#lec-theme').is_visible() and win.locator('#lec-theme').input_value() == 'deck', win.locator('#lec-theme').input_value())
         win.select_option('#lec-theme', 'nord')
         win.wait_for_timeout(1500)
         saved = json.loads((config / 'config.json').read_text(encoding='utf-8'))

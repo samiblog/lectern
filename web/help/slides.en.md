@@ -226,6 +226,7 @@ Use HTML and SVG only for what cells cannot do. **People cannot edit such slides
 
 - Write per-slide CSS as `<style scoped>`. `section` is the slide.
 - `<style>` applies to the whole deck, as does `style: |` in the front matter.
+- Slide content is centered vertically by default. To start at the top, use `section { justify-content: flex-start; }`.
 - Scripts do not run. Internet CSS and fonts are removed.
 
 ## 9. After writing

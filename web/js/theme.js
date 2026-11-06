@@ -163,7 +163,7 @@ export function applyTheme() {
   $('#lec-hljs-css').href = `/static/vendor/highlight/${th.dark ? 'github-dark' : 'github'}.min.css`;
   document.documentElement.dataset.ui = th.dark ? 'dark' : 'light';
   document.documentElement.dataset.theme = id;
-  $('#lec-theme').value = themeOf(S.config.theme) ? S.config.theme : 'auto';
+  $('#lec-theme').value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
   updateSteps();
 }
 

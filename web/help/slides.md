@@ -226,6 +226,7 @@ LME 가격 ($/t)
 
 - 장별 CSS 는 `<style scoped>` 로 쓴다. 그 장에만 적용된다. `section` 이 그 슬라이드다.
 - `<style>` 은 문서 전체에 적용된다. 맨 앞 설정의 `style: |` 도 같다.
+- 슬라이드의 내용은 세로 가운데가 기본이다. 위에서 시작하려면 `section { justify-content: flex-start; }` 를 쓴다.
 - 스크립트는 돌지 않는다. 인터넷 CSS·글꼴은 지워진다.
 
 ## 9. 다 쓴 뒤
