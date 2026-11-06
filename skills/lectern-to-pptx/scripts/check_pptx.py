@@ -219,7 +219,7 @@ def main(argv=None):
                 report['slides_missing_text'].append({'slide': i, 'words': sum(miss.values()), 'sample': [w for w, _ in miss.most_common(6)]})
             if s['notes'] and not p['notes'].strip():
                 report['notes_missing'].append(i)
-    report['text_kept_pct'] = round(100 * (total - lost) / max(1, total), 1)
+    report['text_kept_pct'] = round(100 * (total - lost) / total, 1) if total else 100.0   # 모든 쪽이 원본 그대로면 맞춰 볼 글이 없다
     report['low_contrast'] = contrast_issues(args.pptx)
     report['powerpoint'] = open_in_powerpoint(args.pptx, args.render)
     print(json.dumps(report, ensure_ascii=False, indent=1))

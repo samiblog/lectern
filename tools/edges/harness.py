@@ -26,7 +26,7 @@ def serve(proj, config):
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
         port = s.getsockname()[1]
-    server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
+    server = subprocess.Popen([sys.executable, str(ROOT / 'tools' / 'quiet_app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
                               env=os.environ | {'LECTERN_CONFIG_DIR': str(config)}, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = f'http://127.0.0.1:{port}/'
     for _ in range(60):

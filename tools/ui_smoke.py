@@ -30,6 +30,8 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+import close_windows
+
 ROOT = Path(__file__).resolve().parent.parent
 SHOTS = ROOT / 'ui-shots'
 
@@ -169,7 +171,7 @@ def run(headed: bool) -> None:
     shutil.rmtree(work / 'docs' / 'data')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(tmp / 'config')}
-    server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
+    server = subprocess.Popen([sys.executable, str(ROOT / 'tools' / 'quiet_app.py'), '--browser', '--port', str(port), str(work)],
                               cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = f'http://127.0.0.1:{port}/'
     SHOTS.mkdir(exist_ok=True)
@@ -3955,7 +3957,7 @@ def run_english(headed: bool) -> None:
     (cfg / 'config.json').write_text('{"language": "en"}', encoding='utf-8')
     port = free_port()
     env = os.environ | {'LECTERN_CONFIG_DIR': str(cfg)}
-    server = subprocess.Popen([sys.executable, str(ROOT / 'app.py'), '--browser', '--port', str(port), str(work)],
+    server = subprocess.Popen([sys.executable, str(ROOT / 'tools' / 'quiet_app.py'), '--browser', '--port', str(port), str(work)],
                               cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     url = f'http://127.0.0.1:{port}/'
     errors: list[str] = []
@@ -4107,8 +4109,12 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('--headed', action='store_true', help='브라우저 창을 띄워서 실행')
     args = parser.parse_args()
-    run(args.headed)
-    run_english(args.headed)
+    before = close_windows.snapshot()
+    try:
+        run(args.headed)
+        run_english(args.headed)
+    finally:
+        close_windows.close_new(before)
     print()
     if failures:
         print(f'실패 {len(failures)}건. 캡처: {SHOTS}')

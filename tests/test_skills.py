@@ -4,6 +4,7 @@ import importlib
 import io
 import json
 import re
+import struct
 import subprocess
 import sys
 import types
@@ -282,6 +283,50 @@ def test_old_ppt_with_a_zip_tail_is_not_taken_for_pptx(tmp_path):
     assert r.returncode != 0
     assert 'Traceback' not in r.stderr
     assert 'PowerPoint' in r.stdout
+
+
+def figure_png(monkeypatch):
+    monkeypatch.syspath_prepend(str(BACK))
+    return importlib.import_module('figure_png')
+
+
+@pytest.mark.parametrize('tag, size', [
+    ('<svg width="400" height="300">', (400, 300)),
+    ('<svg width="400px" height="300px" viewBox="0 0 8 6">', (400, 300)),
+    ('<svg width="100%" height="100%" viewBox="0 0 800 600">', (800, 600)),
+    ('<svg viewBox="0,0,1280,720" xmlns="http://www.w3.org/2000/svg">', (1280, 720)),
+    ('<svg width="21cm" height="29cm" viewBox="0 0 210 290">', (210, 290)),
+    ('<svg>', None),
+    ('<html>', None),
+])
+def test_svg_size(tmp_path, monkeypatch, tag, size):
+    path = tmp_path / 'a.svg'
+    path.write_text('<?xml version="1.0"?>\n' + tag + '</svg>', encoding='utf-8')
+    assert figure_png(monkeypatch).svg_size(path) == size
+
+
+@pytest.mark.parametrize('w, h', [(800, 400), (120, 900)])
+def test_svg_becomes_png_with_edge_keeping_its_shape(tmp_path, monkeypatch, w, h):
+    """PowerPoint 가 없어도 SVG 그림이 빠지지 않는다. 좁은 그림도 비율이 그대로다."""
+    fig = figure_png(monkeypatch)
+    if fig.edge() is None:
+        pytest.skip('Edge 가 없다')
+    path = tmp_path / '그림 하나.svg'
+    path.write_text(f'<svg xmlns="http://www.w3.org/2000/svg" width="{w}" height="{h}"><rect width="{w}" height="{h}" fill="#c33"/></svg>', encoding='utf-8')
+    out = tmp_path / 'a.png'
+    assert fig.svg(path, out)
+    pw, ph = struct.unpack('>II', out.read_bytes()[16:24])
+    assert abs(pw / ph - w / h) < .02, (pw, ph)
+    assert max(pw, ph) >= 1000
+
+
+def test_check_says_nothing_was_lost_when_every_slide_is_the_original(tmp_path, pptx):
+    out = tmp_path / 'o'
+    assert run(FORWARD / 'convert.py', pptx, out, '--name', 'd', '--no-powerpoint').returncode == 0
+    run(FORWARD / 'verify.py', out / 'd.md', out / '.pptx-work' / 'd', '--seal')
+    assert run(BACK / 'build_pptx.py', out / 'd.md', '--out', out / 'same.pptx').returncode == 0
+    report = json.loads(run(BACK / 'check_pptx.py', out / 'd.md', out / 'same.pptx').stdout)
+    assert report['text_kept_pct'] == 100.0
 
 
 def test_pywin32_without_powerpoint_is_not_taken_for_powerpoint(monkeypatch):

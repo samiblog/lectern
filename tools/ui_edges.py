@@ -12,6 +12,8 @@ import sys
 import time
 from pathlib import Path
 
+import close_windows
+
 ROOT = Path(__file__).resolve().parents[1]
 SUITES = ['deckguard', 'slidecheck', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
@@ -53,7 +55,14 @@ def suites_for(files: list[str]) -> list[str]:
 
 
 def main() -> int:
-    args = sys.argv[1:]
+    before = close_windows.snapshot()
+    try:
+        return run_suites(sys.argv[1:])
+    finally:
+        close_windows.close_new(before)
+
+
+def run_suites(args: list[str]) -> int:
     want = suites_for(changed_files()) if args == ['--changed'] else args or SUITES
     if args == ['--changed']:
         print('고친 파일에 닿는 묶음:', want or '없음', flush=True)

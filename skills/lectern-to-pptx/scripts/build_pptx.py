@@ -241,7 +241,7 @@ def image_size(path):
 
 
 def svg_to_png(paths, folder):
-    """SVG 는 pptx 에 PNG 가 함께 있어야 한다. PowerPoint 가 있으면 그것으로 바꾼다. {svg: png}
+    """SVG 는 pptx 에 PNG 가 함께 있어야 한다. PowerPoint 로 바꾸고 못 바꾼 것은 Edge 로 그린다. {svg: png}
 
     결과는 folder(임시 폴더)에 쓴다. 사용자의 그림 폴더에 아무것도 남기지 않는다.
     """
@@ -258,6 +258,10 @@ def svg_to_png(paths, folder):
         pass
     finally:
         job.unlink(missing_ok=True)
+    for i, path in enumerate(paths):
+        png = Path(folder) / f'svg-edge{i}.png'
+        if str(path) not in out and figure_png.svg(path, png):
+            out[str(path)] = str(png)
     return out
 
 

@@ -31,6 +31,8 @@ python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음�
 
 새 기능을 넣을 때:
 - 서버·스캔 쪽은 `tests/` 에 테스트를 추가한다.
+- 점검 서버는 `tools/quiet_app.py` 로 띄운다. 탐색기·편집기·기본 앱을 부르지 않아 점검 중에 창이 뜨지 않는다. 그래서 '외부 편집기로 열기' 등이 실제로 뜨는지는 수동 점검이다.
+- `ui_smoke`·`ui_edges` 는 끝날 때 점검이 띄운 창을 닫는다 (`tools/close_windows.py`). 실제 앱을 띄우는 점검을 따로 돌릴 때는 앞에 `--mark`, 뒤에 인자 없이 부른다.
 - 새 화면 점검은 `tools/edges/` 의 묶음에 더한다 (`harness.py` 의 `serve`·`check`). `ui_smoke.py` 는 구획끼리 상태를 이어 받으므로 나누지 않고, 있는 점검을 고칠 때만 손댄다. 표를 잘못 읽은 자료는 `tests/corpus/` 에 먼저 넣고 규칙을 고친다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
 
 ## 2. Windows 수동 점검표

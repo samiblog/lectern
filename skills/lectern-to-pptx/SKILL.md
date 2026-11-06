@@ -41,7 +41,7 @@ Lectern 에서 보던 모습을 최대한 유지한 채, PowerPoint 에서 고�
 - 스타일은 사용자가 슬라이드 창에서 고른 것을 설정에서 읽는다. 다른 스타일로 내려면 `--style consulting` 처럼 준다.
 - 고치지 않은 쪽까지 Lectern 모습으로 다시 만들고 싶다고 하면 `--rebuild-all` 을 쓴다. 이때 애니메이션은 사라진다.
 
-스크립트는 표준 라이브러리만 쓴다. PowerPoint 는 없어도 된다. SVG 그림을 넣을 때만 PowerPoint 와 `pywin32` 가 필요하다. 복잡한 차트와 다이어그램을 그림으로 그릴 때는 Windows 의 Edge 와 Lectern 의 라이브러리를 쓴다. 인터넷에는 나가지 않는다.
+스크립트는 표준 라이브러리만 쓴다. PowerPoint 는 없어도 된다. SVG 그림은 PowerPoint 가 있으면 그것으로, 없으면 Edge 로 PNG 를 만든다. 복잡한 차트와 다이어그램을 그림으로 그릴 때는 Windows 의 Edge 와 Lectern 의 라이브러리를 쓴다. 인터넷에는 나가지 않는다.
 
 ### 2. 확인한다
 

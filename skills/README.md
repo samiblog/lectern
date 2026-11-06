@@ -13,7 +13,7 @@ Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 Claude C
 
 Python 을 따로 설치하지 않아도 됩니다. Lectern 설치 폴더의 `lectern-skill.exe` 에 Python, pywin32, Pillow 가 들어 있고 스킬은 이것으로 실행됩니다. PowerPoint 가 있으면 `.ppt`, 띄워 둔 발표, 쪽 그림도 씁니다.
 
-PowerPoint 가 없어도 `.pptx` 파일을 옮기고 내보낼 수 있습니다. 도식은 그림 대신 칸으로 옮겨지고, EMF 그림은 빠지고, 내보낼 때 SVG 그림이 빠집니다. 띄워 둔 발표, `.ppt`, DRM 파일은 PowerPoint 가 있어야 합니다.
+PowerPoint 가 없어도 `.pptx` 파일을 옮기고 내보낼 수 있습니다. 도식은 그림 대신 칸으로 옮겨지고 EMF 그림은 빠집니다. 띄워 둔 발표, `.ppt`, DRM 파일은 PowerPoint 가 있어야 합니다.
 
 `lectern-skill.exe` 를 못 찾으면 시스템의 `python`(3.10 이상)으로 실행됩니다. 이때는 `pip install pywin32 pillow` 까지 해야 위의 기능을 씁니다.
 
