@@ -7,7 +7,7 @@ import { LAYOUTS, SAFE_AREA, SAFE_TRACK, cellHeadOdds, readCellHead, textOdds, t
 import { t } from './i18n.js';
 
 const WORDS = new Set(['card', 'accent', 'dark', 'note', 'kpi', 'center', 'text-center', 'text-right', 'cols-2', 'cols-3']);
-const TYPO_NAMES = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'class', 'paginate', 'header', 'footer', 'color', 'backgroundColor', 'backgroundImage'];
+const TYPO_NAMES = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'class', 'paginate', 'header', 'footer', 'color', 'backgroundColor', 'backgroundImage'];
 const short = (s) => {
   const x = String(s).trim();
   return x.length > 40 ? `${x.slice(0, 40)}…` : x;

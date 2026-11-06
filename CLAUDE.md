@@ -71,6 +71,7 @@ web/
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
 samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 슬라이드 모범 예제 10개와 만드는 과정 — D96)
+skills/                 Claude Code 스킬 (D98 — pptx-to-lectern, lectern-to-pptx. 설치 파일에 들어가고 앱은 경로만 준다. 설치는 사용자가 시킬 때 Claude 가 물은 뒤 한다. 스크립트는 표준 라이브러리, PowerPoint·Pillow 는 있으면 쓴다)
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)

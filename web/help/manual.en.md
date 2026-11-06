@@ -471,6 +471,41 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
 
+### Working with PowerPoint
+
+Lectern includes Claude Code skills for moving between pptx and Lectern slides. They are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button beside it). Claude explains what the skills do and asks before installing. It also asks if you start a pptx task directly.
+
+Example prompts. `@slides.md` comes from `Copy @path` in the tree's right-click menu.
+
+**From pptx to Lectern slides**
+
+```text
+Move this pptx into Lectern slides: D:\docs\report.pptx
+Move the presentation open in PowerPoint into Lectern slides. Put the result in D:\project\slides.
+Just extract D:\docs\report.pptx to md quickly. I'll polish it later.
+```
+
+**From a md document, using a pptx as the reference**
+
+```text
+Using D:\templates\company.pptx as a reference, make Lectern slides from @market.md.
+Using the pptx on screen as a reference, make Lectern slides from @market.md.
+```
+
+**From Lectern slides to pptx**
+
+```text
+Make a pptx from @slides.md, keeping the style as close as you can.
+I edited @report.md, which came from a pptx. Make a pptx again with only my changes.
+Make a pptx from @slides.md on the D:\templates\company.pptx template.
+```
+
+- When moving a pptx in, all text and the slide order are kept. Text slides become cells. Diagrams whose layout carries the meaning stay as pictures, with their text in the notes. Animations and exact fonts are not kept.
+- When exporting, text stays text, tables stay tables, charts stay editable charts and lines become connectors. Colors follow the style chosen in the slide window. Complex charts and Mermaid go in as pictures.
+- A document that came from a pptx reuses the original slides you did not change. Where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep `document-변환기록.json` and the `.pptx-work` folder for that.
+- The original pptx is never changed. An open presentation is not saved or closed.
+- Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
+
 ## Settings
 
 The gear button in the toolbar (Ctrl+,) opens Settings.
@@ -484,6 +519,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
 | Show web images | Load https images in documents. When off, they show as links |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
+| PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Working with PowerPoint') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |

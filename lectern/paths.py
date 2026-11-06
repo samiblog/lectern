@@ -28,6 +28,11 @@ def samples_dir() -> Path:
     return resource_dir() / 'samples'
 
 
+def skills_dir() -> Path:
+    """Claude Code 스킬 (D98) — 개발 중에는 저장소의 skills/, 설치하면 _internal\\skills. 앱은 읽기만 한다"""
+    return resource_dir() / 'skills'
+
+
 def program_dir() -> Path | None:
     """설치된 Lectern 의 프로그램 폴더 (PyInstaller 로 묶었을 때 Lectern.exe 가 있는 곳). 개발 중이면 None"""
     return Path(sys.executable).resolve().parent if getattr(sys, 'frozen', False) else None

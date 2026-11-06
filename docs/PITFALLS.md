@@ -82,7 +82,7 @@
 
 - 새 스타일은 `theme.js` 의 `THEMES` 에 `light(이름, 용도, 분위기, 밝기, Mermaid 색)` 또는 `dark(이름, Mermaid 색)` 로 넣는다. 밝은 스타일은 세 묶는 방식 모두의 묶음을 정해야 목록에 나온다 (D30). 머리행을 짙게 칠하는 스타일은 `--md-th-fg` 로 글자색을 준다 (인쇄 때는 검정으로 덮인다). 터미널 색은 스타일의 `--md-code-bg`·`--md-fg`·`--md-link` 와 밝기로 저절로 정해진다 — 이름이 같은 터미널 색표(Solarized 등)가 있는 스타일만 `terminal.js` 의 `PALETTES` 에 더한다.
 - `t()` 를 쓰는 모듈에서 지역 변수 이름을 `t` 로 짓지 않는다 — 함수가 가려져 그 범위의 `t('…')` 가 깨진다 (탭은 `tab`·`tb`, 터미널은 `term`). 화면 언어는 페이지마다 고정이라(바꾸면 다시 불러옴) 모듈 맨 위 상수에도 `t()` 를 쓴다. 영어 복수형이 필요한 개수는 `{n}` 으로 넘긴다 (D46).
-- 슬라이드 문법(칸·배치·글자 크기·분량·점검 문구)을 바꾸면 Claude 가 읽는 `web/help/slides.md`·`slides.en.md` 도 고친다.
+- 슬라이드 문법(칸·배치·글자 크기·분량·점검 문구)을 바꾸면 Claude 가 읽는 `web/help/slides.md`·`slides.en.md` 도 고친다. 스킬도 이 문법을 읽고 쓴다 — `skills/lectern-to-pptx/scripts/lectern_md.py`(배치 표, 지시어)와 `build_pptx.py`(여백, 틈, 스타일 색), `skills/pptx-to-lectern/scripts/draft_md.py`. 쪽을 나누는 규칙은 `verify.py` 와 `lectern_md.py` 가 같아야 한다 (지문이 그 글로 만들어진다).
 - 문서가 보이는 규칙(보이는 범위·제목·요약·표·박스글·경로 링크·수식·다이어그램·차트·HTML)을 바꾸면 AI 용 작성 안내 `web/help/writing.md`·`writing.en.md` 와 예제 `samples/`(특히 `guide/04-문서-쓰는-법.md`·`CLAUDE.md`)도 고친다 (D57). 예제에는 점검용 함정을 넣지 않고, 점검할 것은 `tests/fixture/` 에 넣는다. 예제는 설치 파일에 들어가므로 `__pycache__` 같은 것이 남지 않게 한다 (pytest 가 본다).
 - 내 스타일(D53)의 규칙·변수를 바꾸면 AI 용 설명서 `web/help/styles.md`·`styles.en.md` 도 고친다 (변수 표·선택자 표·base 로 쓸 id 목록).
 - 앱 UI 색(`--ui-*`)은 문서 스타일의 `--md-*` 에서 만든다 (D28). 새 스타일은 `--md-*` 만 정하면 툴바·사이드바도 따라오니, `app.css` 에 스타일별 UI 색을 따로 넣지 않는다.

@@ -30,6 +30,14 @@ function guidePrompt() {
     { guide: S.writingGuide });
 }
 
+// ---- PowerPoint 스킬 (D98) -------------------------------------------------------
+
+/** Claude Code 에 줄 요청 글: 앱이 설치하지 않는다. Claude 가 설명하고 물은 뒤 사용자가 허락하면 복사한다 */
+function skillsPrompt() {
+  return t('Lectern 에 Claude Code 스킬 두 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 두 폴더를 ~/.claude/skills/ 로 복사해. 이미 있으면 바꿀지 다시 물어봐.',
+    { dir: S.skillsDir });
+}
+
 // ---- 내 스타일 (D53) --------------------------------------------------------------
 
 function renderMyStyles() {
@@ -124,6 +132,13 @@ export function initSettings() {
   $('#lec-aiguide-term').addEventListener('click', () => {
     closeSettings();
     emit('term-paste', guidePrompt());   // 지금 탭의 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-skills-prompt').addEventListener('click', async () => {
+    toast(await copyText(skillsPrompt()) ? t('요청 글을 복사했습니다 — Claude Code 에 붙여 넣으세요') : t('복사하지 못했습니다'));
+  });
+  $('#lec-skills-term').addEventListener('click', () => {
+    closeSettings();
+    emit('term-paste', skillsPrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
   });
   $('#lec-aiguide-samples').addEventListener('click', () => {
     closeSettings();

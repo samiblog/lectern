@@ -144,6 +144,7 @@ declare global {
     samples: string | null;
     writingGuide: string;
   slidesGuide: string;
+  skillsDir: string;
 
     root: string | null;
     name: string;

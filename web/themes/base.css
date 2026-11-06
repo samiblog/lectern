@@ -310,6 +310,8 @@
 /* 발표 문서 (slides.js, D59): 슬라이드마다 본문 폭의 틀(16:9·4:3), 안의 슬라이드(1280×720 등)는 --slide-scale 로 줄여 보인다.
    슬라이드 안의 글자는 스타일의 본문 크기 × 1.8 (px 로 적은 코드·표 글자도 같은 비율 — --md-scale) */
 .md-body.lec-deck { max-width: calc(1060px * var(--md-scale, 1)); }
+.lec-deck .lec-slide-wrap.lec-hidden .lec-slide-frame { opacity: .55; }
+.lec-deck .lec-slide-wrap.lec-hidden::before { content: attr(data-hidden-label); display: block; margin-bottom: 4px; font: 12px var(--ui-font, sans-serif); color: var(--md-muted); }
 .lec-deck .lec-slide-wrap { margin: 0 0 30px; scroll-margin-top: 14px; isolation: isolate; }   /* 문서의 z-index 가 앱의 메뉴를 덮지 않게 */
 .lec-deck .lec-slide-frame {
   position: relative; overflow: hidden; border: 1px solid var(--md-border); border-radius: 6px; background: var(--md-bg);
@@ -318,7 +320,7 @@
 .lec-deck .lec-slide {
   position: absolute; left: 0; top: 0; box-sizing: border-box; transform-origin: 0 0; transform: scale(var(--slide-scale, .6));
   display: flex; flex-direction: column; justify-content: safe center; overflow: hidden;
-  padding: 64px 84px; background-color: var(--md-bg); color: var(--md-fg);
+  padding: 64px 84px; background-color: var(--md-bg); color: var(--md-fg); font-family: var(--md-font);   /* 문서 CSS 가 section 에 준 글꼴 변수가 듣게 */
   --md-scale: 1.8; line-height: 1.45;
   /* 글자 크기는 스타일과 상관없이 pt — 어느 스타일에서도 배치가 같다 (D96). 1280px 슬라이드는 PowerPoint 와이드 화면과 같은 크기다 */
   --t-title: 30pt; --t-sub: 20pt; --t-body: 18pt; --t-table: 14pt; --t-box: 16pt; --t-code: 14pt;
@@ -330,8 +332,8 @@
 .lec-deck .lec-slide.lec-grid > :is(h1, h2):not(.lec-cell *) { grid-area: t; margin: 0 0 .1em; }
 .lec-deck .lec-cell { position: relative; min-width: 0; min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
 .lec-deck .lec-slide > .lec-cell.lec-at { position: absolute; box-sizing: border-box; z-index: 2; }
-.lec-deck .lec-slide > svg.lec-links { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; color: var(--md-muted); }
-.lec-deck svg.lec-links line { stroke: currentColor; stroke-width: 2; }
+.lec-deck .lec-slide > svg.lec-links { position: absolute; left: 0; top: 0; z-index: 1; pointer-events: none; color: var(--lec-link-color, var(--md-muted)); }
+.lec-deck svg.lec-links line { stroke: currentColor; stroke-width: var(--lec-link-width, 2); }
 .lec-deck svg.lec-links polygon { fill: currentColor; }
 .lec-deck .lec-slide.lec-free { justify-content: flex-start; padding: 38px 56px 46px; }
 .lec-deck .lec-slide.lec-free > :is(h1, h2) { margin: 0 0 .1em; }
@@ -383,6 +385,7 @@
 .lec-deck .lec-slide .table-wrap { max-height: none; overflow: visible; }
 .lec-deck .lec-slide .code-tools { display: none; }
 .lec-deck .lec-slide img { max-width: 100%; }
+.lec-deck .lec-slide img.lec-fit { width: auto !important; }   /* 높이만 줄이면 w: 로 준 폭이 남아 그림이 찌그러진다 */
 .lec-deck .lec-slide.lead { text-align: center; }
 .lec-deck .lec-slide.lead :is(h1, h2) { border-bottom: 0; }
 .lec-deck .lec-slide.lead :is(ul, ol) { display: inline-block; text-align: left; }
@@ -484,6 +487,7 @@
   /* 발표 문서 (D59): 한 장에 한 쪽 — 쪽 크기는 슬라이드 크기 (@page lec-slide), 줄이지 않고 그대로 */
   .md-body.lec-deck { max-width: none; padding: 0; }
   .lec-deck .lec-slide-wrap { margin: 0; page: lec-slide; }
+  .lec-deck .lec-slide-wrap.lec-hidden { display: none; }
   .lec-deck .lec-slide-wrap.lec-43 { page: lec-slide-43; }
   .lec-deck .lec-slide-wrap + .lec-slide-wrap { break-before: page; }
   .lec-deck .lec-slide-frame { width: var(--slide-w); height: var(--slide-h); aspect-ratio: auto !important; border: 0; border-radius: 0; box-shadow: none; }

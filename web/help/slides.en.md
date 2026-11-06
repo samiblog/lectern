@@ -82,7 +82,7 @@ LME price ($/t)
 :::
 ```
 
-For a bigger number use a cell size (`::: a kpi 28`). The number is about twice the cell size and the label is the cell size. The default is 18pt with a 34pt number. Word order does not matter (`::: a kpi accent center 24`, `::: b card at 100 200 300 120 16`).
+The number uses the style's accent color. To change it, add `.word strong { color: #… }` to your own word. For a bigger number use a cell size (`::: a kpi 28`). The number is about twice the cell size and the label is the cell size. The default is 18pt with a 34pt number. Word order does not matter (`::: a kpi accent center 24`, `::: b card at 100 200 300 120 16`).
 
 ## 3. Layouts
 
@@ -141,6 +141,8 @@ Draw lines between cells with `links`. The text in the cells can still be edited
 
 - `a>b` is an arrow, `a<>b` has two heads, `a--b` is a plain line. Lines cannot carry text.
 - It works on `at` cells and grid cells. A line joins the cell centers and stops at the cell edges.
+- There is one line per pair of cells. If two cells need several lines, keep the diagram as a picture.
+- Change line color and width in the document CSS (`section { --lec-link-color: #c2410c; --lec-link-width: 3; }`).
 - Leave some space between the cells, or the line will not show.
 
 ## 4. Text size
@@ -235,7 +237,7 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 
 Image syntax:
 
-- `![w:300 alt text](images/a.png)` image size; alt text may follow.
+- `![w:300 alt text](images/a.png)` image size; alt text may follow. An image wider than its cell shrinks and keeps its proportions.
 - Images in a cell shrink to fit. Text in the same cell takes its space first.
 - `![bg right:40%](images/a.png)` background on the right 40%. Use `left` for the left. Cells and grids shrink to the width left. Add `contain` to keep the whole image.
 - Several `![bg](a.png)` lines split the background side by side. They do not overlap. `![bg vertical](a.png)` splits top to bottom.
@@ -250,11 +252,12 @@ Image syntax:
 |---|---|
 | `<!-- _class: lead -->` | Center this slide like a cover; also for section slides |
 | `<!-- _class: invert -->` | Make this slide dark |
-| `<!-- _color: #ffd27f -->` | Text color of this slide |
+| `<!-- _color: #ffd27f -->` | Text color of this slide, including the title, bold text and links |
 | `<!-- _footer: '' -->` | Drop the footer on this slide (`_header` too) |
 | `<!-- _backgroundColor: #17293d -->` | This slide's background |
 | `<!-- _paginate: false -->` | No page number on this slide |
 | `<!-- eyebrow: Market summary -->` | Small label above the title |
+| `<!-- hidden: true -->` | Hidden slide: left out of the presentation and PDF, and hidden in an exported pptx |
 
 A leading `_` means this slide only. `class` and `backgroundColor` without `_` carry over. `layout`, `grid`, `text` and `eyebrow` are always this slide only.
 
@@ -312,3 +315,9 @@ The sample project has ten model decks and how each was built, in `slides/README
 - Four numbers: `kpi`. Comparisons: `two`, `three`. Picture with notes: `left-stack`.
 - Start with a `lead` slide, and add one when the topic changes.
 - Put explanations in speaker notes.
+
+## 11. Working with PowerPoint
+
+When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the Claude Code skills `pptx-to-lectern` and `lectern-to-pptx`. They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
+
+If the skills are not installed yet, ask the user first. If they agree, copy both folders to `~/.claude/skills/`. If not, read `SKILL.md` in that folder and run its scripts from there.

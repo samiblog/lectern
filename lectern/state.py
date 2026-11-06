@@ -16,7 +16,7 @@ from . import __version__, i18n
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
-from .paths import is_protected, samples_dir, web_dir
+from .paths import is_protected, samples_dir, skills_dir, web_dir
 from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
 from .search import TextCache
 from .terminal import Terminals
@@ -294,4 +294,5 @@ class AppState:
             'samples': str(samples_dir()) if samples_dir().is_dir() else None,
             'writing_guide': str(web_dir() / 'help' / ('writing.en.md' if i18n.language() == 'en' else 'writing.md')),
             'slides_guide': str(web_dir() / 'help' / ('slides.en.md' if i18n.language() == 'en' else 'slides.md')),
+            'skills_dir': str(skills_dir()),
         }

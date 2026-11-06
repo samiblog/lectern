@@ -41,7 +41,17 @@ function show(index) {
     stopPresent();
     return;
   }
-  state.index = Math.max(0, Math.min(wraps.length - 1, index));
+  // 숨긴 장은 가던 쪽으로 건너뛴다. 그쪽 끝까지 숨겼으면 반대쪽의 가장 가까운 장으로. 숨긴 장의 ▶ 로 시작하면 그 장을 보인다
+  const target = Math.max(0, Math.min(wraps.length - 1, index));
+  const step = Math.sign(target - state.index);
+  const seek = (dir) => {
+    let i = target;
+    while (wraps[i]?.classList.contains('lec-hidden')) i += dir;
+    return wraps[i] ? i : -1;
+  };
+  const found = step ? seek(step) : target;
+  const back = found < 0 ? seek(-step) : found;
+  state.index = back < 0 ? state.index : back;
   const wrap = wraps[state.index];
   const holder = document.createElement('div');
   holder.className = 'pr-deck md-body lec-deck';
@@ -63,9 +73,10 @@ function show(index) {
 export function startPresent(pane = S.pane, index = null) {
   if (!pane?.view.classList.contains('lec-deck') || !wrapsOf(pane).length) return;
   if (state) stopPresent();
-  state = { pane, index: 0, notes: false, full: false };
+  const first = index ?? slideAtTop(pane);
+  state = { pane, index: first, notes: false, full: false };
   box().hidden = false;
-  show(index ?? slideAtTop(pane));
+  show(first);
   box().focus({ preventScroll: true });
   setFullscreen(true);
   nudge();

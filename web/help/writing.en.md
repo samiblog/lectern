@@ -180,4 +180,5 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
 - Slide decks in Lectern's format (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
+- Moving between pptx and slides uses the skills `pptx-to-lectern` and `lectern-to-pptx`. If they are missing, ask before installing, as in `slides.en.md` section 11.
 ```

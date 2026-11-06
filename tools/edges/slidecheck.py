@@ -15,6 +15,11 @@ proj = base / 'proj'
 B = '본문글'
 FENCE = '```'
 HEAD = '---\nmarp: true\n---\n\n## 앞장\n\n앞장글\n\n---\n\n'
+(proj / 'images' / 'wide.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="900" height="300"><rect width="900" height="300" fill="#c33"/></svg>', encoding='utf-8')
+(proj / '큰그림폭.md').write_text(HEAD + '<!-- grid: t t / a b -->\n<!-- rows: auto 120px -->\n\n## 제목\n\n::: a\n![w:1140](images/wide.svg)\n:::\n\n::: b\n![w:900](images/wide.svg)\n:::\n\n---\n\n## 뒷장\n\n뒷장글\n', encoding='utf-8')
+(proj / '글자색전체.md').write_text(HEAD + '<!-- _backgroundColor: #103050 -->\n<!-- _color: #ffffff -->\n\n## 제목\n\n**굵은 글** 과 [링크](https://example.com) 입니다\n\n---\n\n## 뒷장\n\n뒷장글\n', encoding='utf-8')
+(proj / '문서글꼴선색.md').write_text('---\nmarp: true\nstyle: |\n  section { --md-font: Georgia, serif; --lec-link-color: #ff0000; --lec-link-width: 5; }\n---\n\n## 앞장\n\n앞장글\n\n---\n\n<!-- grid: t t / a b -->\n<!-- links: a>b -->\n\n## 제목\n\n::: a card\n글\n:::\n\n::: b card\n글\n:::\n', encoding='utf-8')
+(proj / '숨긴장.md').write_text(HEAD + '<!-- hidden: true -->\n\n## 숨김\n\n글\n\n---\n\n## 셋째\n\n글\n\n---\n\n<!-- hidden: true -->\n\n## 끝의 숨김\n\n글\n', encoding='utf-8')
 TAIL = '\n---\n\n## 뒷장\n\n뒷장글\n'
 # 이름: (원문, 점검에 나와야 할 글)
 MISTAKES = {
@@ -252,6 +257,46 @@ def run():
         check('칸의 글자색을 굵은 글이 따른다', page.locator('#lec-view .lec-cell.deep strong').evaluate('(e) => getComputedStyle(e).color') == 'rgb(255, 255, 255)')
         show('묶음')
         check('여러 블록에 걸친 묶음은 그대로다', page.locator('#lec-view .columns > div').count() == 1, page.locator('#lec-view .columns').count())
+
+        print('[pptx 스킬이 드러낸 곳]')
+        show('큰그림폭')
+        ratios = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-slide')[1].querySelectorAll('.lec-cell img')].map((m) => { const r = m.getBoundingClientRect(); return +(r.width / r.height).toFixed(1); })""")
+        check('칸보다 큰 w: 그림이 찌그러지지 않는다', ratios and all(abs(x - 3) < .15 for x in ratios), ratios)
+        show('글자색전체')
+        tones = page.evaluate("""(() => { const s = document.querySelectorAll('#lec-view .lec-slide')[1]; const c = (q) => getComputedStyle(s.querySelector(q)).color; return [c('h2'), c('strong'), c('a')]; })()""")
+        check('_color 를 제목·굵은 글·링크가 따른다', tones == ['rgb(255, 255, 255)'] * 3, tones)
+        show('문서글꼴선색')
+        look = page.evaluate("""(() => { const s = document.querySelectorAll('#lec-view .lec-slide')[1]; const l = s.querySelector('svg.lec-links line'); return [getComputedStyle(s.querySelector('.lec-cell')).fontFamily, getComputedStyle(l).stroke, getComputedStyle(l).strokeWidth]; })()""")
+        check('문서 CSS 의 글꼴 변수가 칸에 듣는다', look[0].startswith('Georgia'), look)
+        check('선의 색과 굵기를 문서 CSS 로 바꾼다', look[1:] == ['rgb(255, 0, 0)', '5px'], look)
+        show('숨긴장')
+        check('숨긴 장에 표시가 붙는다', page.locator('#lec-view .lec-slide-wrap.lec-hidden').count() == 2)
+        check('숨긴 장이 점검에 걸리지 않는다', not page.evaluate(ISSUES), page.evaluate(ISSUES))
+        page.evaluate("() => import('/static/js/present.js').then(({ startPresent }) => startPresent(undefined, 0))")
+        page.wait_for_timeout(200)
+        count = lambda: page.locator('.pr-count').text_content().split('/')[0].strip()
+        page.keyboard.press('ArrowRight')
+        page.wait_for_timeout(120)
+        check('발표에서 숨긴 장을 건너뛴다', count() == '3', count())
+        page.keyboard.press('End')
+        page.wait_for_timeout(120)
+        check('끝이 숨긴 장이면 앞의 장에 머문다', count() == '3', count())
+        page.keyboard.press('ArrowLeft')
+        page.wait_for_timeout(120)
+        check('뒤로도 건너뛴다', count() == '1', count())
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(150)
+
+        print('[PowerPoint 스킬 설치는 사용자가 시킨다]')
+        page.context.grant_permissions(['clipboard-read', 'clipboard-write'])
+        page.keyboard.press('Control+,')
+        page.wait_for_selector('#lec-settings:not([hidden])')
+        page.click('#lec-skills-prompt')
+        page.wait_for_timeout(150)
+        ask = page.evaluate('navigator.clipboard.readText()')
+        check('요청 글이 스킬 폴더를 알려 준다', 'skills' in ask and 'pptx-to-lectern' in ask and 'lectern-to-pptx' in ask, ask[:120])
+        check('요청 글이 먼저 묻게 한다', '설치할지 나에게 물어봐' in ask, ask[:160])
+        page.click('#lec-settings-close')
 
         print('[틀리지 않은 것은 조용하다]')
         for name in QUIET:

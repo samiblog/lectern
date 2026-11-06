@@ -26,9 +26,9 @@ const SIZES = { '16:9': [1280, 720], '4:3': [960, 720] };
 const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords', 'reading',
   'url', 'marp', 'lang', 'transition']);
 const LOCAL = ['paginate', 'header', 'footer', 'class', 'backgroundColor', 'backgroundImage', 'backgroundPosition',
-  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];
+  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden'];
 const LOCAL_SET = new Set(LOCAL);
-const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
+const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
 const SAFE_CSS = /^[#\w\s(),.%+-]{1,120}$/;   // 색·크기·그라데이션 — 따옴표·세미콜론·url() 은 받지 않는다
 const FIGS = 'pre.mermaid > svg, .lec-chart svg:not(svg svg), img';
 /** 슬라이드 안의 다이어그램·차트를 키우는 배율 — 그 글자(12~16px)가 슬라이드 글자(본문 × 1.8)와 어울리게. charts.js 도 쓴다 */
@@ -162,7 +162,7 @@ function slideStyle(eff, deck) {
   const bg = cssValue(eff.backgroundColor);
   if (bg) css.push(`background-color:${bg}`);
   const fg = cssValue(eff.color);
-  if (fg) css.push(`color:${fg}`, `--md-fg:${fg}`, `--md-heading:${fg}`);
+  if (fg) css.push(`color:${fg}`, `--md-fg:${fg}`, `--md-heading:${fg}`, `--md-strong:${fg}`, `--md-link:${fg}`);   // 글자색이면 굵은 글·링크도 — 어두운 바탕에서 사라지지 않게
   const image = typeof eff.backgroundImage === 'string' ? eff.backgroundImage.trim() : '';
   if (image && !/url\s*\(/i.test(image) && SAFE_CSS.test(image)) css.push(`background-image:${image}`);   // 그라데이션
   for (const [key, prop] of [['backgroundPosition', 'background-position'], ['backgroundRepeat', 'background-repeat'], ['backgroundSize', 'background-size']]) {
@@ -356,7 +356,8 @@ export function slideRule(state) {
     const bgUrl = /^\s*url\(\s*(['"]?)(.*?)\1\s*\)\s*$/i.exec(typeof eff.backgroundImage === 'string' ? eff.backgroundImage : '');
     const bgImg = bgUrl ? `<p><img src="${attr(bgUrl[2])}" alt="bg"></p>` : '';
     const wide = deck.w / deck.h > 1.5 ? '' : ' lec-43';   // 인쇄 쪽 크기 (base.css 의 @page)
-    out.push(html(`<div class="lec-slide-wrap${wide}" data-key="${deck.key}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
+    const skip = eff.hidden === true ? ` lec-hidden" data-hidden-label="${attr(t('숨긴 장 — 발표와 PDF 에서 빠집니다'))}` : '';   // pptx 의 숨긴 슬라이드 (D98)
+    out.push(html(`<div class="lec-slide-wrap${wide}${skip}" data-key="${deck.key}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
       + ` style="--slide-w:${deck.w}px;--slide-h:${deck.h}px">`
       + `<div class="lec-slide-frame" style="aspect-ratio:${deck.w} / ${deck.h}">`
       + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${reading}${warned} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
