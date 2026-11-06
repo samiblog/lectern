@@ -198,7 +198,17 @@ export function cellRule(state, startLine, endLine, silent) {
   const m = /^:::\s+(\S.*)$/.exec(line(startLine));
   if (!m) return false;
   let close = startLine + 1;
-  while (close < endLine && line(close) !== ':::') close += 1;
+  let fence = '';   // 코드 블록 안의 ::: 는 칸 표시가 아니다
+  let unclosed = false;   // 닫는 줄을 빠뜨리면 다음 칸의 머리 줄이 안에 든다
+  for (; close < endLine; close += 1) {
+    const s = line(close);
+    const f = /^(`{3,}|~{3,})(.*)$/.exec(s);
+    if (fence) {
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = '';
+    } else if (f) fence = f[1];
+    else if (s === ':::') break;
+    else if (/^:::\s+\S/.test(s)) unclosed = true;
+  }
   if (close >= endLine) return false;
   if (silent) return true;
   const { name, words, size, at } = readCellHead(m[1]);
@@ -207,9 +217,7 @@ export function cellRule(state, startLine, endLine, silent) {
   open.map = [startLine, close + 1];
   open.attrSet('class', ['lec-cell', ...words, ...(at ? ['lec-at'] : [])].join(' '));
   open.attrSet('data-cell', safe);
-  for (let n = startLine + 1; n < close; n++) {
-    if (/^:::\s+\S/.test(line(n))) open.attrSet('data-unclosed', '1');   // 닫는 줄을 빠뜨리면 다음 칸의 머리 줄이 안에 든다
-  }
+  if (unclosed) open.attrSet('data-unclosed', '1');
   const css = [];
   if (at) css.push(`left:${at[0]}px`, `top:${at[1]}px`, `width:${at[2]}px`, `height:${at[3]}px`);
   else if (safe) css.push(`grid-area:${safe}`);
@@ -470,7 +478,7 @@ function checkSlide(section) {
     if ($$(':scope > :is(h1, h2)', section).length > 1) add(t('이 장에 제목이 둘입니다 — 제목은 하나만 씁니다'));
   }
   for (const p of $$('p', section)) {
-    if (/^:::(\s|$)/.test(p.textContent.trim())) add(t('짝이 맞지 않는 ::: 가 있습니다'), p);
+    if (p.firstChild?.nodeType === Node.TEXT_NODE && /^\s*:::(\s|$)/.test(p.firstChild.nodeValue)) add(t('짝이 맞지 않는 ::: 가 있습니다'), p);
   }
   checkPlaced(section, cells.filter((c) => c.classList.contains('lec-at')), add);
   checkSmall(section, add);

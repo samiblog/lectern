@@ -440,12 +440,13 @@
      쪽 나누기(break-before)·쪽 이름(page)이 먹지 않는다 (발표 문서의 한 장에 한 쪽, D59) */
   #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content { display: block !important; position: static !important; height: auto !important; overflow: visible !important; border: 0; }
   body { overflow: visible !important; background: #fff; }
-  :root {
+  /* 문서는 잉크를 아끼는 흰 바탕으로. 슬라이드는 화면과 같게 — PDF 가 전달하는 결과물이다 (D96) */
+  :root:not(.lec-deck-shown) {
     --md-bg: #ffffff !important; --md-fg: #111111 !important; --md-heading: #000000 !important; --md-muted: #444444 !important;
     --md-link: #0b3d91 !important; --md-border: #bbbbbb !important; --md-code-bg: #f4f4f4 !important; --md-quote-bar: #999999 !important;
     --md-th-bg: #eeeeee !important; --md-th-fg: #000000 !important; --md-th-rule: #555555 !important; --md-stripe: #fafafa !important; --md-strong: #000000 !important;
   }
-  :root[data-ui="dark"] .md-body pre code.hljs, :root[data-ui="dark"] .md-body pre code.hljs * { color: #222222 !important; }
+  :root[data-ui="dark"]:not(.lec-deck-shown) .md-body pre code.hljs, :root[data-ui="dark"]:not(.lec-deck-shown) .md-body pre code.hljs * { color: #222222 !important; }
   .md-body { max-width: none; padding: 0; font-size: 11pt; }
   .md-body .lec-fold-hidden { display: revert !important; }   /* 접어 둔 절도 인쇄 */
   .md-body .lec-fold::before, .md-body .lec-folded::after, .md-body .code-tools { display: none !important; }

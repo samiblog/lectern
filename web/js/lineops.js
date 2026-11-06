@@ -548,7 +548,7 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   }
   const inFence = !!fenceAt(fences, a) && a > fenceAt(fences, a).a;
   const blocks = blocksOf(lines);
-  if (deckOf(lines) && lines.slice(a - 1, b).filter((s) => CELL_MARK.test(s.trim())).length % 2) return { error: 'edge' };   // 칸의 한쪽 표시만 지우면 칸이 깨진다
+  if (deckOf(lines) && lines.slice(a - 1, b).filter((s, i) => CELL_MARK.test(s.trim()) && !fenceAt(fences, a + i)).length % 2) return { error: 'edge' };   // 칸의 한쪽 표시만 지우면 칸이 깨진다
   for (const blk of blocks) {
     if (blk.b < a || blk.a > b) continue;
     const table = tableIn(lines, blk);

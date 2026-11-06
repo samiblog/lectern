@@ -297,7 +297,7 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 
 - **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** for notes, **F** for full screen, **Esc** to end.
 - **View as document** in the status bar unfolds the cells into an ordinary document.
-- Printing or saving as PDF gives one slide per page.
+- Printing or saving as PDF gives one slide per page, in the same colors as on screen.
 - Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. `theme` (gaia and so on) is not read.
 
 ### Auto refresh

@@ -43,6 +43,7 @@ function issuesOf(view) {
 
 function updateButtons() {
   const deck = isDeck();
+  document.documentElement.classList.toggle('lec-deck-shown', deck);   // 인쇄가 스타일의 색을 지키게 (base.css)
   const toggle = $('#lec-st-structure');
   toggle.hidden = !deck;
   toggle.classList.toggle('on', structure);

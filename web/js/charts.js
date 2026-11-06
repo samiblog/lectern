@@ -355,7 +355,7 @@ async function drawVega(kind, src, width, ctx, fit = 0) {
       fluid = true;
     }
     if (spec.height === 'container' || (fit && spec.height == null)) spec.height = fit ? Math.max(80, fit - 50) : 300;
-    if (fit) spec.config = { axisX: { labelAngle: 0 }, ...spec.config };   // 칸은 좁아 눕히면 읽기 어렵다
+    if (fit) spec.config = { axisX: { labelAngle: 0, labelOverlap: true }, ...spec.config };   // 칸은 좁아 눕히면 읽기 어렵다 — 겹치는 글자는 건너뛴다
   }
   const vega = await LIBS.vega();
   let vgSpec = spec;
