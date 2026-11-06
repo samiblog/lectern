@@ -238,14 +238,17 @@ def image_size(path):
     return 800, 600
 
 
-def svg_to_png(paths):
-    """SVG 는 pptx 에 PNG 가 함께 있어야 한다. PowerPoint 가 있으면 그것으로 바꾼다. {svg: png}"""
+def svg_to_png(paths, folder):
+    """SVG 는 pptx 에 PNG 가 함께 있어야 한다. PowerPoint 가 있으면 그것으로 바꾼다. {svg: png}
+
+    결과는 folder(임시 폴더)에 쓴다. 사용자의 그림 폴더에 아무것도 남기지 않는다.
+    """
     if not paths:
         return {}
-    job = Path(paths[0]).parent / '.svg-job.json'
+    job = Path(folder) / 'svg-job.json'
     out = {}
     try:
-        job.write_text(json.dumps([str(p) for p in paths], ensure_ascii=False), encoding='utf-8')
+        job.write_text(json.dumps({'folder': str(folder), 'paths': [str(p) for p in paths]}, ensure_ascii=False), encoding='utf-8')
         r = subprocess.run([sys.executable, '-I', str(HERE / 'svg_png.py'), str(job)], capture_output=True, text=True, encoding='utf-8', timeout=120 + 5 * len(paths))
         if r.returncode == 0:
             out = json.loads(r.stdout.strip().split('\n')[-1])
@@ -1767,7 +1770,7 @@ class Build:
                 p = self.resolve(src)
                 if p and p.suffix.lower() == '.svg':
                     paths.append(str(p))
-        self.svg = {k: Path(v) for k, v in svg_to_png(sorted(set(paths))).items()}
+        self.svg = {k: Path(v) for k, v in svg_to_png(sorted(set(paths)), self.tmp.name).items()}
         known = self.known_slides() if self.reuse else {}
         # 지문이 같으면 원본 쪽이다. 나머지는 쓰이지 않은 원본 쪽과 차례로 짝지어 고친 쪽으로 보고, 짝이 없으면 새 쪽이다
         matched = {}

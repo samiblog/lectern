@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """SVG 를 PNG 로. pptx 의 그림에는 PNG 가 있어야 한다. PowerPoint 가 있을 때만 된다.
 
-    python svg_png.py 목록.json      목록은 svg 경로의 배열이다. 출력은 {svg: png} JSON 한 줄
+    python svg_png.py 목록.json      목록은 {folder, paths} 다. PNG 는 folder 에 쓴다. 출력은 {svg: png} JSON 한 줄
 
 새 빈 발표를 창 없이 만들어 쓰고 닫는다. 사용자의 발표에는 손대지 않는다. 이미 떠 있던 PowerPoint 는 닫지 않는다.
 """
@@ -14,7 +14,8 @@ import win32com.client as wc
 
 
 def main():
-    paths = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+    job = json.loads(Path(sys.argv[1]).read_text(encoding='utf-8'))
+    folder, paths = Path(job['folder']), job['paths']
     try:
         app = wc.GetActiveObject('PowerPoint.Application')
         running = True
@@ -25,9 +26,9 @@ def main():
     out = {}
     try:
         slide = pres.Slides.Add(1, 12)
-        for p in paths:
+        for i, p in enumerate(paths):
             src = Path(p)
-            target = src.with_suffix('.svg.png')
+            target = folder / f'svg{i}.png'
             sh = slide.Shapes.AddPicture(str(src), False, True, 0, 0)
             sh.Export(str(target), 2, round(sh.Width * 3), round(sh.Height * 3), 4)
             sh.Delete()
