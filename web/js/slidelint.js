@@ -3,7 +3,7 @@
 // 그린 뒤에만 아는 것(바탕과 비슷한 글자, 옆으로 잘린 코드, 없는 그림). 결과는 [{text, line}] 또는 add(text, el).
 
 import { $$ } from './util.js';
-import { LAYOUTS, SAFE_TRACK, cellHeadOdds, readCellHead, textOdds, textSizes } from './slideops.js';
+import { LAYOUTS, SAFE_AREA, SAFE_TRACK, cellHeadOdds, readCellHead, textOdds, textSizes } from './slideops.js';
 import { t } from './i18n.js';
 
 const WORDS = new Set(['card', 'accent', 'dark', 'note', 'kpi', 'center', 'text-center', 'text-right', 'cols-2', 'cols-3']);
@@ -91,6 +91,7 @@ export function gridSlips(eff) {
   const layout = String(eff.layout || '').trim();
   const source = typeof eff.grid === 'string' ? eff.grid : (Object.hasOwn(LAYOUTS, layout) ? LAYOUTS[layout][0] : '');
   if (!source) return out;
+  if (!SAFE_AREA.test(source)) return [t('격자를 읽지 못했습니다 — 칸 이름은 글자와 숫자로, 빈 자리는 점(.)으로 씁니다')];
   const rows = source.split('/').map((row) => row.trim().split(/\s+/));
   const width = rows[0].length;
   if (rows.some((row) => row.length !== width)) out.push(t('격자의 줄마다 칸 수가 같아야 합니다'));
@@ -163,7 +164,7 @@ export function checkContrast(section, add) {
     if (!back) continue;
     const a = light(text[3] < 1 ? over(text, back) : text);
     const b = light(back);
-    if ((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 2) continue;
+    if ((Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05) >= 3) continue;   // 큰 글자의 WCAG 기준
     add(t("글자가 바탕과 비슷해 보이지 않습니다: '{text}'", { text: short(el.textContent) }), el.closest('[data-lines]') || undefined);
     return;
   }

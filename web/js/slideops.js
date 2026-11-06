@@ -20,7 +20,9 @@ export const LAYOUTS = {
 
 const KINDS = Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]]));
 const SIZE = /^\d{1,3}(?:\.\d)?$/;
-export const SAFE_TRACK = /^[\w\s.%()-]{1,120}$/;   // 열·행 값 (style 속성에 들어간다)
+// 격자·열·행 값 (style 속성에 들어간다). 13열 간트처럼 큰 격자도 쓴다 — 길이는 그것을 막지 않을 만큼만
+export const SAFE_AREA = /^[\p{L}\p{N}_\s/.-]{1,4000}$/u;
+export const SAFE_TRACK = /^[\w\s.,%()-]{1,600}$/;
 
 /** text 값('표 14, 제목 30')들을 뒤의 것이 이기게 합친다 {table: 14, title: 30}. 모르는 낱말은 넘어간다 */
 export function textSizes(...values) {

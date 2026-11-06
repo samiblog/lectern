@@ -350,6 +350,8 @@
 .lec-deck .lec-cell.dark :is(h1, h2, h3, h4, strong, a) { color: inherit; }
 .lec-deck .lec-cell.note { padding: 10px 14px; background: #fde68a; color: #3b3216; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
 .lec-deck .lec-cell.note :is(h3, h4, strong) { color: inherit; }
+.lec-deck .lec-cell { --md-strong: currentColor; }   /* 칸에 글자색을 주면 굵은 글도 따른다 */
+.lec-deck .lec-cell:is(.cols-2, .cols-3) > * { break-inside: avoid; }   /* 문단 가운데서 단이 끊기지 않게 */
 .lec-deck .lec-cell.cols-2 { display: block; column-count: 2; column-gap: 28px; }
 .lec-deck .lec-cell.cols-3 { display: block; column-count: 3; column-gap: 24px; }
 .lec-deck .lec-cell pre.lec-chart, .lec-deck .lec-cell pre.mermaid { margin: 0; padding: 0; background: none; border: 0; }

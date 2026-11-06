@@ -115,6 +115,10 @@ For anything else use a grid. Draw it with cell names; `/` separates rows.
 - `cols` has one value per column, `rows` one per row. The `t` row counts (`t t / a b / c d` needs three `rows`). `1fr`, `auto` and `200px` all work.
 - You may leave out `cols` and `rows`. Columns are then equal, and rows are equal except the `t` row, which fits its text.
 - To fill a slide with one cell, use `<!-- grid: t / a -->`.
+- `.` is an empty spot (`<!-- grid: t t t / a . b / . c . -->`). It needs no cell and the check stays quiet.
+- Rows and columns have no limit. A 13-column Gantt or a 35-cell calendar works. Use `px`, `fr` and `repeat()`: `<!-- cols: 120px repeat(12, 1fr) -->`.
+- Color a cell with your own word and CSS: `.risk { background: #c0392b; color: #fff; }`. Bold text follows the cell color. Add `.risk h3 { color: inherit; }` for headings.
+- For vertical text use `writing-mode: vertical-rl; text-orientation: sideways; transform: rotate(180deg);`.
 
 To place a cell yourself, write `at x y width height` in px, from the top left of the slide. Do not use `layout` with it.
 
@@ -206,7 +210,8 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - In a `vega-lite` `layer`, repeat the axis `scale` and `sort` on every layer. On one layer alone they do not apply. Give the order as an array (`"sort": ["Jan", "Feb"]`).
 - Only `vega-lite` reads `data.url`. For `echarts` and `plotly`, put the values in the settings.
 - The ECharts legend defaults to the bottom. Move it up with `"legend": {"top": 0}` or keep `grid.bottom` at 56 or more.
-- A donut's `innerRadius` is in px. In a small cell it turns into a thin ring, so keep it under a fifth of the cell height.
+- A donut's `innerRadius` is in px. In a small cell it turns into a thin ring, so keep it near a sixth of the cell height.
+- Inside a cell, `vega-lite` draws axes and legends to fit the cell. Lots of text in the same cell makes the chart shorter.
 - In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
 - `center` on a cell also works for charts and diagrams.
 - Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV. The CSV view in Lectern is read-only, so edit it in a spreadsheet or ask Claude. Press F5 afterwards to redraw the chart.
@@ -283,6 +288,7 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 | Cell a has an unknown word 'x' | Fix the word. For your own CSS word, write a `.x` rule |
 | 'x' is not a directive, so it was read as a note | Fix the directive name |
 | Every grid row needs the same number of cells | Use the same count in each row |
+| Could not read the grid | Use letters and numbers for names and a dot for an empty spot |
 | Grid cell a is not a rectangle | Keep each name in one rectangle |
 | A comment is not closed | Add `-->` |
 | A code block is not closed | Add the closing line |

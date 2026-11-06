@@ -17,7 +17,7 @@ import { S, on, emit } from './store.js';
 import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
-import { LAYOUTS, SAFE_TRACK, textSizes, readCellHead } from './slideops.js';
+import { LAYOUTS, SAFE_AREA, SAFE_TRACK, textSizes, readCellHead } from './slideops.js';
 import { cellSlips, checkClipped, checkContrast, checkDiagrams, checkImages, checkMarks, commentSlip, gridSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
 import { confinedCss } from './csssafe.js';
 import { raw, setHtml } from './html.js';
@@ -27,7 +27,6 @@ const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'tit
   'url', 'marp', 'lang', 'transition']);
 const LOCAL = ['paginate', 'header', 'footer', 'class', 'backgroundColor', 'backgroundImage', 'backgroundPosition',
   'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];
-const SAFE_AREA = /^[\p{L}\p{N}_\s/-]{1,200}$/u;
 const LOCAL_SET = new Set(LOCAL);
 const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
 const SAFE_CSS = /^[#\w\s(),.%+-]{1,120}$/;   // 색·크기·그라데이션 — 따옴표·세미콜론·url() 은 받지 않는다

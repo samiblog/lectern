@@ -349,6 +349,14 @@ async function drawVega(kind, src, width, ctx, fit = 0) {
   const config = vegaConfig(colors());
   let fluid = false;
   if (spec && typeof spec === 'object') {
+    const single = !['facet', 'repeat', 'concat', 'hconcat', 'vconcat'].some((k) => k in spec);
+    // 슬라이드의 칸: 축·범례까지 칸 크기에 맞춰 그린다. 크게 그려 통째로 줄이면 글자까지 작아져 뭉개진다
+    if (fit && kind === 'vega-lite' && single && spec.width === 'container' && spec.height == null && !spec.autosize) {
+      spec.width = Math.max(200, width);
+      spec.height = Math.max(80, fit);
+      spec.autosize = { type: 'fit', contains: 'padding' };
+      fluid = true;
+    }
     // 'container' 크기는 문서 폭에 맞춘다 (그릴 틀이 따로 없다). 축·범례 자리를 뺀 그림 폭이다
     if (spec.width === 'container') {
       spec.width = Math.max(200, width - 110);
@@ -479,7 +487,9 @@ async function draw(node, ctx) {
   const zoom = node.closest('.lec-slide') ? SLIDE_ZOOM : 1;
   // 높이가 정해진 칸(배치·자리 칸) 안이면 높이를 정하지 않은 차트를 칸의 남은 높이에 맞춘다
   const cell = node.closest('.lec-slide.lec-grid > .lec-cell, .lec-cell.lec-at');
-  const used = cell ? [...cell.children].filter((el) => el !== node).reduce((sum, el) => sum + el.offsetHeight, 0) : 0;
+  const px = (st, ...keys) => keys.reduce((sum, k) => sum + (parseFloat(st[k]) || 0), 0);
+  const used = cell ? [...cell.children].filter((el) => el !== node)
+    .reduce((sum, el) => sum + el.offsetHeight + px(getComputedStyle(el), 'marginTop', 'marginBottom'), px(getComputedStyle(cell), 'paddingTop', 'paddingBottom')) : 0;
   const fit = cell ? Math.max(0, (cell.clientHeight - used - 8) / zoom) : 0;
   const info = drawn.get(node) || { ctx, seq: 0 };
   const seq = ++info.seq;

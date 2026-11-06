@@ -1048,5 +1048,6 @@ export default {
 "칸 {name} 이(가) 두 번 나옵니다 — 칸 이름은 장마다 하나만 씁니다": "Cell {name} appears twice. Use each cell name once per slide",
 "그림을 그리지 못했습니다: {why}": "Could not draw a chart or diagram: {why}",
 "굵게로 읽지 못한 별표가 있습니다: '{text}' — 닫는 ** 뒤에 빈칸을 두세요": "Asterisks were not read as bold: '{text}'. Add a space after the closing **",
+"격자를 읽지 못했습니다 — 칸 이름은 글자와 숫자로, 빈 자리는 점(.)으로 씁니다": "Could not read the grid. Use letters and numbers for cell names and a dot (.) for an empty spot",
 "{m}월 {d}일": "{mon} {d}"
 };

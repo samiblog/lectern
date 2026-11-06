@@ -36,6 +36,7 @@ MISTAKES = {
     '크기꼬리': (f'## 제목\n\n::: a 16pt\n{B}\n:::\n', "'16pt'"),
     '자리모자람': (f'## 제목\n\n::: a at 10 20 300\n{B}\n:::\n', "'at 10 20 300'"),
     '격자길이다름': (f'<!-- grid: t t / a b / c -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '줄마다 칸 수'),
+    '격자이상한글자': (f'<!-- grid: t t / a <b> -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '격자를 읽지 못했습니다'),
     '격자네모아님': (f'<!-- grid: t t / a b / b a -->\n\n## 제목\n\n::: a\n{B}\n:::\n\n::: b\n글\n:::\n', '네모가 아닙니다'),
     '열수다름': (f'<!-- grid: t t t / a b c -->\n<!-- cols: 1fr -->\n\n## 제목\n\n::: a\n{B}\n:::\n', '3개를 씁니다'),
     '열값글': (f'<!-- grid: t t / a b -->\n<!-- cols: 넓게 좁게 -->\n\n## 제목\n\n::: a\n{B}\n:::\n', "cols 값 '넓게 좁게'"),
@@ -63,6 +64,9 @@ QUIET = {
     '글속콜론': f'## 제목\n\n{B} `:::` 와 a::b 는 글이다\n',
     '두배경이어쓰기': f'![bg](<images/있는 그림 (1).svg>)\n![bg](<images/있는 그림 (1).svg>)\n\n## 제목\n\n{B}\n',
     '가운데칸의긴그림': f'<!-- layout: two -->\n\n## 제목\n\n::: a card center\n{FENCE}mermaid\nsequenceDiagram\n' + ''.join(f'  A->>B: 단계 {i}\n  B-->>A: 응답 {i}\n' for i in range(1, 9)) + f'{FENCE}\n:::\n\n::: b\n{B}\n:::\n',
+    '격자의빈자리': f'<!-- grid: t t t / a . b / . c . -->\n\n## 제목\n\n::: a\n{B}\n:::\n\n::: b\n글\n:::\n\n::: c\n글\n:::\n',
+    '큰격자': '<!-- grid: ' + ' / '.join([' '.join(['t'] * 13)] + [' '.join(f'c{r}x{c}' for c in range(13)) for r in range(8)]) + ' -->\n<!-- cols: 120px repeat(12, 1fr) -->\n<!-- text: 본문 14 -->\n\n## 제목\n\n' + ''.join(f'::: c{r}x{c}\n{r}\n:::\n\n' for r in range(8) for c in range(13)),
+    '칸색굵은글': f'<style scoped>\n.deep {{ background: #1f5a8c; color: #fff; }}\n</style>\n\n## 제목\n\n::: a deep\n**굵은 글** {B}\n:::\n',
     '사용자낱말': f'<style>\n.mine {{ color: rgb(1, 2, 3); }}\n</style>\n\n## 제목\n\n::: a mine\n{B}\n:::\n',
     '빈칸이름그림': f'## 제목\n\n![그림](<images/있는 그림 (1).svg>)\n\n{B}\n',
 }
@@ -194,6 +198,7 @@ def 함수(값):
 :::
 """
 (proj / '어두운장.md').write_text(DARK, encoding='utf-8', newline='\n')
+(proj / '꼬리표.md').write_text('---\nmarp: true\n---\n\n<!-- grid: t t / a b -->\n<!-- cols: 1fr 2fr -->\n<!-- rows: auto 1fr -->\n\n## 제목\n\n::: a\n글\n:::\n\n::: b\n글\n:::\n\n<!-- 노트 -->\n', encoding='utf-8', newline='\n')
 config = base / 'config'
 config.mkdir()
 server, url, port = serve(proj, config)
@@ -234,6 +239,14 @@ def run():
             check(f'{name}: 앞뒤 장의 글', '앞장글' in r['text'] and '뒷장글' in r['text'])
         show('두배경이어쓰기')
         check('이어 쓴 배경이 빈 문단을 남기지 않는다', page.locator('#lec-view .lec-slide').nth(1).locator(':scope > p').count() == 1, page.locator('#lec-view .lec-slide').nth(1).locator(':scope > p').count())
+        show('격자의빈자리')
+        place = page.evaluate("""() => { const s = document.querySelectorAll('#lec-view .lec-slide')[1]; return [...s.querySelectorAll('.lec-cell')].map((c) => [c.dataset.cell, c.offsetLeft, c.offsetTop]); }""")
+        check('빈 자리가 있는 격자가 듣는다', place[0][1] < place[2][1] < place[1][1] and place[0][2] < place[2][2], place)
+        show('큰격자')
+        wide = page.evaluate("""() => { const s = document.querySelectorAll('#lec-view .lec-slide')[1]; const c = [...s.querySelectorAll('.lec-cell')]; return [s.classList.contains('lec-grid'), c.length, new Set(c.map((x) => x.offsetLeft)).size, new Set(c.map((x) => x.offsetTop)).size]; }""")
+        check('13열 8줄 격자가 듣는다', wide == [True, 104, 13, 8], wide)
+        show('칸색굵은글')
+        check('칸의 글자색을 굵은 글이 따른다', page.locator('#lec-view .lec-cell.deep strong').evaluate('(e) => getComputedStyle(e).color') == 'rgb(255, 255, 255)')
         show('묶음')
         check('여러 블록에 걸친 묶음은 그대로다', page.locator('#lec-view .columns > div').count() == 1, page.locator('#lec-view .columns').count())
 
@@ -242,6 +255,21 @@ def run():
             show(name)
             got = page.evaluate(ISSUES)
             check(name, not got, [x['text'] for x in got])
+
+        print('[나란한 꼬리표]')
+        show('꼬리표')
+        page.locator('#lec-st-structure').click()
+        page.wait_for_timeout(400)
+        tags = page.locator('#lec-view .lec-slide-tags .lec-tag')
+        for i, want in enumerate(('grid', 'cols', 'rows', '노트')):
+            tags.nth(i).dblclick()
+            page.wait_for_selector('#lec-view .lec-line-edit', timeout=3000)
+            got = page.locator('#lec-view .lec-line-edit').first.text_content()
+            check(f'{want} 꼬리표를 누르면 그 줄이 열린다', want in got, got)
+            page.keyboard.press('Escape')
+            page.wait_for_timeout(200)
+        page.locator('#lec-st-structure').click()
+        page.wait_for_timeout(200)
 
         print('[어두운 장의 글이 모든 스타일에서 보인다]')
         themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && !v.startsWith('user:'))")

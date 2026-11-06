@@ -282,7 +282,10 @@ export function unitAt(units, y, point = null) {
   const hits = [];
   let near = -1;
   let gap = Infinity;
-  const cell = point && document.elementFromPoint(point.x, point.y)?.closest('.lec-cell');   // 슬라이드의 칸은 나란히 놓여 높이만으로는 어느 칸인지 모른다
+  const under = point && document.elementFromPoint(point.x, point.y);
+  const tag = under?.closest('.lec-tag');   // 구조 보기의 꼬리표는 한 줄에 나란하다 — 누른 그것
+  if (tag && units.some((u) => u.el === tag)) return units.findIndex((u) => u.el === tag);
+  const cell = under?.closest('.lec-cell');   // 슬라이드의 칸은 나란히 놓여 높이만으로는 어느 칸인지 모른다
   units.forEach((u, i) => {
     if (cell && !cell.contains(u.el)) return;
     if (y >= u.top && y <= u.bottom) hits.push(i);
