@@ -42,6 +42,10 @@ MISTAKES = {
     '없는그림': (f'## 제목\n\n![그림](images/없는.png)\n\n{B}\n', '그림을 찾을 수 없습니다'),
     '없는배경': (f'![bg](images/없는배경.png)\n\n## 제목\n\n{B}\n', '그림을 찾을 수 없습니다'),
     '긴코드': (f'## 제목\n\n{FENCE}sh\n{"curl --header value " * 12}\n{FENCE}\n\n{B}\n', '코드가 옆으로'),
+    '별표남음': (f'## 제목\n\n값이 **8.0%**로 올랐다\n\n{B}\n', '굵게로 읽지 못한 별표'),
+    '틀린차트': (f'<!-- layout: two -->\n\n## 제목\n\n::: a\n{FENCE}vega-lite\n{{"mark": "bar",\n{FENCE}\n:::\n\n::: b\n{B}\n:::\n', '그림을 그리지 못했습니다'),
+    '틀린다이어그램': (f'## 제목\n\n{FENCE}mermaid\nflowchart TD\n  A --> \n  (((\n{FENCE}\n\n{B}\n', '그림을 그리지 못했습니다'),
+    '없는자료': (f'## 제목\n\n{FENCE}vega-lite\n{{"data":{{"url":"없음.csv"}},"mark":"bar","encoding":{{"x":{{"field":"a"}}}}}}\n{FENCE}\n', '그림을 그리지 못했습니다'),
     '안보이는글': (f'<style scoped>\np {{ color: #123456; background: #123457; }}\n</style>\n\n## 제목\n\n{B}\n', '글자가 바탕과 비슷해'),
 }
 # 틀이 벗어나면 안 되는 것 — 앞뒤 장이 그대로이고 슬라이드 수가 맞아야 한다
@@ -57,6 +61,8 @@ QUIET = {
     '출처노트': f'## 제목\n\n{B}\n\n<!-- 출처: 통계청 -->\n<!-- note: 천천히 말한다 -->\n<!-- TODO: 수치 확인 -->\n',
     '코드속칸': f'## 제목\n\n{FENCE}md\n::: a\n:::a\n<!-- layot: two -->\n{FENCE}\n\n{B}\n',
     '글속콜론': f'## 제목\n\n{B} `:::` 와 a::b 는 글이다\n',
+    '두배경이어쓰기': f'![bg](<images/있는 그림 (1).svg>)\n![bg](<images/있는 그림 (1).svg>)\n\n## 제목\n\n{B}\n',
+    '가운데칸의긴그림': f'<!-- layout: two -->\n\n## 제목\n\n::: a card center\n{FENCE}mermaid\nsequenceDiagram\n' + ''.join(f'  A->>B: 단계 {i}\n  B-->>A: 응답 {i}\n' for i in range(1, 9)) + f'{FENCE}\n:::\n\n::: b\n{B}\n:::\n',
     '사용자낱말': f'<style>\n.mine {{ color: rgb(1, 2, 3); }}\n</style>\n\n## 제목\n\n::: a mine\n{B}\n:::\n',
     '빈칸이름그림': f'## 제목\n\n![그림](<images/있는 그림 (1).svg>)\n\n{B}\n',
 }
@@ -226,6 +232,8 @@ def run():
             check(f'{name}: 장이 그대로', r['wraps'] == 3 and r['slides'] == 3, r['wraps'])
             check(f'{name}: 틀 밖에 아무것도 없다', not r['stray'], r['stray'])
             check(f'{name}: 앞뒤 장의 글', '앞장글' in r['text'] and '뒷장글' in r['text'])
+        show('두배경이어쓰기')
+        check('이어 쓴 배경이 빈 문단을 남기지 않는다', page.locator('#lec-view .lec-slide').nth(1).locator(':scope > p').count() == 1, page.locator('#lec-view .lec-slide').nth(1).locator(':scope > p').count())
         show('묶음')
         check('여러 블록에 걸친 묶음은 그대로다', page.locator('#lec-view .columns > div').count() == 1, page.locator('#lec-view .columns').count())
 

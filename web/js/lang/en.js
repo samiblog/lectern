@@ -1046,5 +1046,7 @@ export default {
 "표가 옆으로 {n}px 잘렸습니다 — 열을 줄이세요": "A table is cut off by {n}px at the side. Use fewer columns",
 "그림을 찾을 수 없습니다: {src}": "Image not found: {src}",
 "칸 {name} 이(가) 두 번 나옵니다 — 칸 이름은 장마다 하나만 씁니다": "Cell {name} appears twice. Use each cell name once per slide",
+"그림을 그리지 못했습니다: {why}": "Could not draw a chart or diagram: {why}",
+"굵게로 읽지 못한 별표가 있습니다: '{text}' — 닫는 ** 뒤에 빈칸을 두세요": "Asterisks were not read as bold: '{text}'. Add a space after the closing **",
 "{m}월 {d}일": "{mon} {d}"
 };

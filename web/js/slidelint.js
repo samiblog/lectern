@@ -171,10 +171,25 @@ export function checkContrast(section, add) {
 
 /** 옆으로 잘린 코드·표 — 슬라이드는 밀어 볼 수 없다 */
 export function checkClipped(section, add) {
-  for (const el of $$('pre:not(.mermaid, .lec-chart), .table-wrap', section)) {
+  for (const el of $$('pre:not(.mermaid, .lec-chart, .diagram-error pre), .table-wrap', section)) {
     const wide = el.scrollWidth - el.clientWidth;
     if (wide <= 1) continue;
     add(el.matches('pre') ? t('코드가 옆으로 {n}px 잘렸습니다 — 줄을 나누세요', { n: wide }) : t('표가 옆으로 {n}px 잘렸습니다 — 열을 줄이세요', { n: wide }), el.closest('[data-lines]') || undefined);
+  }
+}
+
+/** 그리지 못한 차트·다이어그램 — 원문이 대신 나와 있어도 Claude 는 화면을 보지 못한다 */
+export function checkDiagrams(section, add) {
+  for (const el of $$('.diagram-error', section)) add(t('그림을 그리지 못했습니다: {why}', { why: short(el.querySelector('p')?.textContent ?? '') }), el.closest('[data-lines]') || undefined);
+}
+
+/** 풀리지 않은 ** — 문장부호 뒤에 글자를 바로 붙이면(**8.0%**로) 굵게가 되지 않고 별표가 보인다. 한 장에 하나만 */
+export function checkMarks(section, add) {
+  const walker = document.createTreeWalker(section, NodeFilter.SHOW_TEXT);
+  for (let n = walker.nextNode(); n; n = walker.nextNode()) {
+    if (!n.nodeValue.includes('**') || n.parentElement.closest('code, pre, svg, .katex, .lec-tag, .lec-slide-tags, style')) continue;
+    add(t("굵게로 읽지 못한 별표가 있습니다: '{text}' — 닫는 ** 뒤에 빈칸을 두세요", { text: short(n.nodeValue) }), n.parentElement.closest('[data-lines]') || undefined);
+    return;
   }
 }
 

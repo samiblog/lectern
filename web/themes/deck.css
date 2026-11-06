@@ -45,6 +45,7 @@
 /* 어두운 장의 칸 (invert 는 base.css 의 규칙을 이 스타일의 상자 뒤에서 다시 건다) */
 .lec-deck .lec-slide:is(.invert, .lead:not(.paper)) .lec-cell:is(.card, .kpi, .accent, .dark) { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .28); box-shadow: none; color: inherit; --md-fg: #eef0f3; --md-strong: #ffffff; }
 .lec-deck .lec-slide:is(.invert, .lead:not(.paper)) .lec-cell.kpi strong { color: var(--md-link); }
+.lec-deck .lec-slide:is(.invert, .lead:not(.paper)) .lec-cell.dark { background: rgba(0, 0, 0, .55); border-color: transparent; }
 .lec-deck .lec-slide.lead:not(.paper) :is(h3, h4, h5, h6) { color: var(--md-heading); }
 .lec-deck .lec-slide.lead:not(.paper) .lec-cell.note { --md-heading: #3b3216; --md-fg: #3b3216; --md-strong: #3b3216; --md-link: #7a4a00; }
 .lec-deck .lec-slide.lead:not(.paper) :is(pre, :not(pre) > code) { background: var(--md-code-bg); color: #eef0f3; }

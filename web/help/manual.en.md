@@ -280,7 +280,9 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 
 - **Structure** in the status bar shows cell heads and directive or note lines as tags. Press F2 or double-click a tag to edit that line. This is how you change a cell's look or a layout.
 - When a slide overflows, images and charts shrink to fit the cell. Text does not shrink; it is cut and marked with a red dashed line.
-- Wrong cell names and missing closing `:::` lines are marked too. **Check** in the status bar lists them, and picking one goes to that line. **Paste the list into the terminal** lets you ask Claude to fix them.
+- Syntax slips are marked too: cell names, a missing `:::`, typos in directives and words, broken grids, unclosed comments and code blocks, text right above `---`, and stray `**`.
+- Some things are measured on screen: text too close to its background, code or tables cut off at the side, missing images, and charts that could not be drawn. Text over a photo cannot be measured, so look at it yourself.
+- **Check** in the status bar lists them, and picking one goes to that line. **Paste the list into the terminal** lets you ask Claude to fix them.
 
 **Managing slides**
 
@@ -293,11 +295,16 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 - For an existing document, right-click it in the sidebar and pick **Ask Claude to make slides**. A request goes into the terminal; press Enter and Claude makes a new file in the same folder.
 - The guide Claude reads is `web/help/slides.en.md` in the install folder.
 
+**Best practice examples**
+
+`slides/README.md` in the project opened by **Open samples** has ten model decks, one per situation (`slides/README.en.md` in English). Each finished deck comes with a process document in `slides/과정/` that builds it from scratch in seven steps: decide, ask Claude, write the titles, fill the cells, fix the check, polish by hand, present and share. The request text can be pasted straight into the terminal. The installed samples are read-only, so follow along in your own project.
+
 **Viewing and exporting**
 
 - **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** for notes, **F** for full screen, **Esc** to end.
 - **View as document** in the status bar unfolds the cells into an ordinary document.
-- Printing or saving as PDF gives one slide per page, in the same colors as on screen.
+- Printing or saving as PDF gives one slide per page, in the same colors as on screen. Speaker notes are left out.
+- Pressing a checkbox on a slide changes `[ ]` or `[x]` in the source. It does nothing during a presentation.
 - Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. `theme` (gaia and so on) is not read.
 
 ### Auto refresh

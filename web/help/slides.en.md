@@ -203,12 +203,13 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - `echarts`: an ECharts option as JSON. Leave out `height` and `width`.
 - `plotly`: `{"data": […], "layout": {…}}` as JSON. No map types.
 - Settings are JSON values only. Functions do not work.
+- In a `vega-lite` `layer`, repeat the axis `scale` and `sort` on every layer. On one layer alone they do not apply. Give the order as an array (`"sort": ["Jan", "Feb"]`).
 - Only `vega-lite` reads `data.url`. For `echarts` and `plotly`, put the values in the settings.
 - The ECharts legend defaults to the bottom. Move it up with `"legend": {"top": 0}` or keep `grid.bottom` at 56 or more.
 - A donut's `innerRadius` is in px. In a small cell it turns into a thin ring, so keep it under a fifth of the cell height.
 - In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
 - `center` on a cell also works for charts and diagrams.
-- Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV so they can be edited as a table.
+- Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV. The CSV view in Lectern is read-only, so edit it in a spreadsheet or ask Claude. Press F5 afterwards to redraw the chart.
 
 ```vega-lite
 {
@@ -235,7 +236,8 @@ Image syntax:
 - Several `![bg](a.png)` lines split the background side by side. They do not overlap. `![bg vertical](a.png)` splits top to bottom.
 - `![bg sepia](a.png)` filter: `blur`, `brightness:.6`, `contrast`, `grayscale`, `hue-rotate`, `invert`, `opacity`, `saturate`, `sepia:50%`.
 - Wrap file names with spaces or brackets: `![Flow](<images/process flow (final).svg>)`.
-- The check cannot measure text over a photo. Darken the photo and use `invert` (`![bg brightness:.5](a.png)`).
+- The check cannot measure text over a photo. Darken the photo and use `invert` (`![bg brightness:.5](a.png)`). For longer text use a `dark` cell. On a dark slide it is a translucent black backing.
+- When bold text ends in punctuation, do not attach a letter right after the closing `**`. Add a space.
 
 ## 7. Directives
 
@@ -288,10 +290,14 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 | Text is too close to its background | Change the text color or the background |
 | Code is cut off at the side | Split the line |
 | Image not found | Fix the path. It is relative to this md file |
+| Could not draw a chart or diagram | Fix the settings or the data path. The reason is in the text |
+| Asterisks were not read as bold | Add a space after the closing `**` |
 | There is text outside the cells | Move it into a cell |
 | There is no layout 'x' | Use a name from the table above |
 
 For `Cell a overflows by 120px (cell height 300px)`, cut four body lines or three table rows.
+
+The sample project has ten model decks and how each was built, in `slides/README.md` (`samples/slides/` in the install folder). In a similar situation, follow how that example uses cells.
 
 ## 10. Good slides
 

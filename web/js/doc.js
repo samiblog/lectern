@@ -514,7 +514,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   try {
     enhance(stage, path, Date.now(), tab);
     if (deck) prepareDeck(stage, deck, text);   // 배경 그림·그림 크기·style: CSS·구조 보기 꼬리표
-    else for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
+    for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
     await renderMermaid(stage);
     await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)
     await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)

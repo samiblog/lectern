@@ -18,7 +18,7 @@ import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
 import { LAYOUTS, SAFE_TRACK, textSizes, readCellHead } from './slideops.js';
-import { cellSlips, checkClipped, checkContrast, checkImages, commentSlip, gridSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
+import { cellSlips, checkClipped, checkContrast, checkDiagrams, checkImages, checkMarks, commentSlip, gridSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
 import { confinedCss } from './csssafe.js';
 import { raw, setHtml } from './html.js';
 
@@ -420,7 +420,7 @@ function moveBackgrounds(section) {
       img.style.height = o.size;
     }
     box.append(img);
-    if (p && p.tagName === 'P' && !p.textContent.trim() && !p.children.length) p.remove();
+    if (p && p.tagName === 'P' && !p.textContent.trim() && !p.querySelector(':not(br)')) p.remove();   // 빈 줄 없이 이어 쓴 ![bg] 사이의 <br> 만 남은 문단
   }
   section.prepend(box);
 }
@@ -448,7 +448,8 @@ function fitCells(section) {
       el.style.maxHeight = '';
       el.classList.remove('lec-fit');
     }
-    let over = cell.scrollHeight - cell.clientHeight;
+    const both = cell.classList.contains('center') ? 2 : 1;   // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다
+    let over = (cell.scrollHeight - cell.clientHeight) * both;
     if (over > 1) {
       const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
       const height = (el) => el.getBoundingClientRect().height / scale;
@@ -456,7 +457,7 @@ function fitCells(section) {
         const want = Math.max(48, height(el) - over - 2);
         el.style.maxHeight = `${Math.round(want)}px`;
         el.classList.add('lec-fit');
-        over = cell.scrollHeight - cell.clientHeight;
+        over = (cell.scrollHeight - cell.clientHeight) * both;
         if (over <= 1) break;
       }
     }
@@ -506,7 +507,9 @@ function checkSlide(section) {
   checkSmall(section, add);
   checkContrast(section, add);
   checkClipped(section, add);
+  checkDiagrams(section, add);
   checkImages(section, add);
+  checkMarks(section, add);
   drawLinks(section, add);
   return out;
 }

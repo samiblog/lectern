@@ -70,7 +70,7 @@ web/
   help/writing.md       Lectern 에서 잘 보이는 문서를 쓰는 AI 용 작성 안내 (D57 — 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 글이 경로를 준다). 영어판은 writing.en.md
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
-samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다)
+samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 슬라이드 모범 예제 10개와 만드는 과정 — D96)
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
@@ -105,7 +105,7 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 | `lineedit`·`lineops`·`slideops`·`spotlight`·`editor`·`basket`·`notes`·뒤로 기록 | 한 줄 편집·줄 구조·편집 모드·보내기 |
 | `csvview`·`tabledata`·`codeview`·`others`·`sheet.py` | 데이터 보기·코드 화면·파일 목록 |
 | `panes`·`doctabs`·`tabs`·`spread`·`nav` | 화면 구조·칸·탭 |
-| `doc`·`markdown`·`toc`·`parts`·`charts`·`slides`·`slidetools`·`htmldoc` | 문서 그리기 |
+| `doc`·`markdown`·`toc`·`parts`·`charts`·`slides`·`slidelint`·`csssafe`·`slidetools`·`htmldoc` | 문서 그리기 |
 | 스타일·`t()`·`writing.md`·예제 | 스타일·문구·예제 |
 | `server.py`·`scanner.py`·`config.py`·`app.py`·`index.html`·설치 | 서버·설정·설치 |
 

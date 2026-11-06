@@ -206,6 +206,7 @@
 .md-body .task-list-item-checkbox:not(:disabled) { cursor: pointer; }
 /* 슬라이드는 멀리서 본다 — 고칠 수 없는 칸의 흐린 회색으로 두지 않는다 */
 .lec-deck .lec-slide .task-list-item-checkbox { appearance: none; width: .8em; height: .8em; box-sizing: border-box; display: inline-grid; place-content: center; border: 2px solid var(--md-fg); border-radius: 3px; background: transparent; }
+#lec-present .task-list-item-checkbox { pointer-events: none; }   /* 발표 중의 복사본 — 눌러도 저장되지 않는다 */
 .lec-deck .lec-slide .task-list-item-checkbox:checked { background: var(--md-link); border-color: var(--md-link); }
 .lec-deck .lec-slide .task-list-item-checkbox:checked::before { content: ''; width: .42em; height: .22em; border-left: 2px solid #fff; border-bottom: 2px solid #fff; transform: translateY(-.05em) rotate(-45deg); }
 
@@ -388,6 +389,7 @@
 }
 /* 어두운 장의 칸·표·인용: 스타일의 밝은 상자에 장의 밝은 글자가 얹히면 보이지 않는다 — 장의 색을 따른다 (노란 note 칸은 제 글자색이 있다) */
 .lec-deck .lec-slide.invert .lec-cell:is(.card, .kpi, .accent, .dark) { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .28); box-shadow: none; color: inherit; --md-fg: #eef0f3; --md-strong: #ffffff; }
+.lec-deck .lec-slide.invert .lec-cell.dark { background: rgba(0, 0, 0, .55); border-color: transparent; }   /* 사진 위의 글 받침 */
 .lec-deck .lec-slide.invert .lec-cell.note { --md-heading: #3b3216; --md-fg: #3b3216; --md-strong: #3b3216; --md-link: #7a4a00; }
 .lec-deck .lec-slide.invert :is(h1, h2, h3, h4, h5, h6) { color: var(--md-heading); }
 .lec-deck .lec-slide.invert table { background: transparent; }
@@ -401,6 +403,9 @@
 }
 .lec-deck .lec-slide > header { top: 24px; }
 .lec-deck .lec-slide > footer { bottom: 22px; }
+.lec-deck .lec-slide.lec-bg-left > :is(header, footer) { left: calc(var(--bg-pad, 640px) + 56px); }   /* 나눈 배경 그림 위에 놓이지 않게 */
+.lec-deck .lec-slide.lec-bg-right > :is(header, footer) { right: calc(var(--bg-pad, 640px) + 34px); }
+.lec-deck .lec-slide.lec-bg-right.lec-paginate::after { right: calc(var(--bg-pad, 640px) + 34px); }
 .lec-deck .lec-slide.lec-paginate::after {
   content: attr(data-page); position: absolute; right: 34px; bottom: 20px; z-index: 2; font-size: .55em; color: var(--md-muted);
 }
