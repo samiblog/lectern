@@ -228,7 +228,7 @@ function restoreNote() {
 
 async function goToSource(note) {
   const type = isMd(note.path) || isHtml(note.path) ? 'doc' : 'code';
-  if (!(await openTarget({ type, path: note.path, newTab: true }))) return;
+  if (!(await openTarget({ type, path: note.path, newTab: true, deckLine: note.line }))) return;
   if (note.line) emit('go-line', { line: note.line });
 }
 

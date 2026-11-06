@@ -91,7 +91,7 @@ async function syncUserStyles() {
   if (!(await loadUserStyles()) || JSON.stringify(userStyles) === before) return;
   fillPicker();
   emit('user-styles');
-  if ((S.config.theme || '').startsWith('user:')) {
+  if ((S.config[themeKey()] || '').startsWith('user:')) {
     applyTheme();
     redrawAfterLoad();
   }

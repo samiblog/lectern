@@ -25,7 +25,8 @@ _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
 # 스캔 전체가 멈춘다 (점검에서 발견: 공백 1600개에 4초)
 _RE_HEADING = re.compile(r'^\s{0,3}(#{1,6})(?:[ \t]+(.*))?$')
 _RE_FENCE = re.compile(r'^\s{0,3}(```|~~~)')
-_RE_FM_KEY = re.compile(r'^(title|name|description|summary|marp)\s*:\s*(.+?)\s*$', re.IGNORECASE)
+_RE_FM_KEY = re.compile(r'^(title|name|description|summary)\s*:\s*(.+?)\s*$', re.IGNORECASE)
+_RE_MARP = re.compile(r'^marp[ \t]*:[ \t]+(?i:true|yes|on)[ \t]*$')   # 화면의 readYaml 과 같게 (web/js/slides.js)
 _RE_QUOTE = re.compile(r'^(?:>\s?)+')
 _RE_LIST = re.compile(r'^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)')
 _SKIP_PREFIXES = ('|', '<', '---', '***', '___', '===', '![', '[^', '$$')
@@ -78,6 +79,8 @@ def split_front_matter(text: str) -> tuple[dict[str, str], str]:
         if lines[i].strip() in ('---', '...'):
             meta: dict[str, str] = {}
             for line in lines[1:i]:
+                if _RE_MARP.match(line):
+                    meta['marp'] = 'true'
                 m = _RE_FM_KEY.match(line)
                 if m and m.group(1).lower() not in meta:
                     value = m.group(2).strip().strip('"\'')
@@ -152,7 +155,7 @@ def extract_info(text: str) -> dict[str, Any]:
         'title': title or first_heading,
         'summary': _truncate(summary) if summary else '',
     }
-    if meta.get('marp', '').lower() == 'true':
+    if 'marp' in meta:
         info['deck'] = True   # 발표 문서 — 트리의 아이콘 (D59)
     return info
 

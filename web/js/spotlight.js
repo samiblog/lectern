@@ -486,12 +486,15 @@ function litBox() {
   };
 }
 
-/** 화면 좌표 y 가 하이라이트한 곳 안인지 */
-function insideLit(y) {
+/** 화면 좌표 y 가 하이라이트한 곳 안인지. target: 누른 요소 — 슬라이드의 칸은 나란해서 같은 높이의 다른 칸은 밖이다 */
+function insideLit(y, target = null) {
   const r = lit() && painted === view() ? litBox() : null;
   if (!r) return false;
   const base = baseOf(view());
-  return y >= r.top + base - r.padTop && y <= r.bottom + base + r.padBottom;
+  if (y < r.top + base - r.padTop || y > r.bottom + base + r.padBottom) return false;
+  const cell = target?.closest?.('.lec-cell');
+  const own = cell && ranged() ? blockOfLine(view(), litLines()[0])?.closest?.('.lec-cell') : null;
+  return !own || cell === own;
 }
 
 /** 칸의 스크롤 상자에 겹친 덮개 (make: 없으면 만든다) */
@@ -694,8 +697,8 @@ export function stopSpotlight() {
  * 우클릭한 세로 위치(화면 좌표 y)가 하이라이트한 곳 안이면 그곳 {path, range, ref, text, code, chapter} (litInfo).
  * 우클릭 메뉴(docmenu.js)가 그 범위의 선택 상자를 띄운다
  */
-export function litAt(y) {
-  return linesOn() || isMdDoc() ? (insideLit(y) ? litInfo() : null) : null;
+export function litAt(y, target = null) {
+  return linesOn() || isMdDoc() ? (insideLit(y, target) ? litInfo() : null) : null;
 }
 
 /** 본문 우클릭 메뉴(docmenu.js)의 항목: 우클릭한 곳의 장 하이라이트 / 하이라이트 해제. 쓸 수 없는 화면이면 빈 목록 */
@@ -851,7 +854,7 @@ function onMouseDown(e) {
   if (e.button !== 0 || e.ctrlKey || e.altKey || e.metaKey) return;
   const root = view();
   if (!root?.contains(e.target) || !linesOn() || noPick(e.target)) return;
-  if (!e.shiftKey && ranged() && insideLit(e.clientY)) return;
+  if (!e.shiftKey && ranged() && insideLit(e.clientY, e.target)) return;
   const us = units();
   const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
   if (i < 0) return;
@@ -942,7 +945,7 @@ export function initSpotlight() {
   $('#lec-panes').addEventListener('click', (e) => {
     if (!lit() || !view().contains(e.target) || e.shiftKey || noPick(e.target) || window.getSelection()?.toString()) return;
     if (mode === 'range') {
-      if (insideLit(e.clientY)) return;
+      if (insideLit(e.clientY, e.target)) return;
       e.preventDefault();
       e.stopPropagation();
       toggleSpotlight(false);

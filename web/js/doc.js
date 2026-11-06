@@ -52,6 +52,7 @@ function installPurifyHook() {
   if (purifyHookInstalled) return;
   purifyHookInstalled = true;
   window.DOMPurify.addHook('afterSanitizeAttributes', (node) => {
+    if (typeof node.id === 'string' && node.id.startsWith('lec-')) node.removeAttribute('id');   // 앱의 요소인 척 — $('#lec-…') 가 문서의 것을 잡지 않게
     if (node.nodeType !== Node.ELEMENT_NODE) return;
     if (MEDIA_TAGS.test(node.nodeName) && node.hasAttribute('src')) {
       node.setAttribute('data-src', node.getAttribute('src'));
@@ -73,7 +74,7 @@ function installPurifyHook() {
       }
     }
     for (const { name, value } of [...node.attributes]) {
-      if ((name === 'style' || isSvg) && URL_REF.test(value)) node.removeAttribute(name);
+      if ((name === 'style' || isSvg) && (URL_REF.test(value) || value.includes('\\'))) node.removeAttribute(name);   // 이스케이프(u\\72l)는 해석기가 풀어 글자로 찾지 못한다
     }
   });
 }

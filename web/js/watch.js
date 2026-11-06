@@ -7,7 +7,7 @@ import { getJSON } from './api.js';
 import { loadTree } from './project.js';
 import { knownTabsSeq, resyncTabs } from './tabs.js';
 import { paneShown } from './panes.js';
-import { windowName } from './doctabs.js';
+import { windowName, windowDecks } from './doctabs.js';
 import { solo } from './solo.js';
 
 const INTERVAL_MS = 1000;
@@ -16,7 +16,7 @@ let busy = false;
 
 /** 탭(tab)에 변경 기록(d)을 반영한다 */
 async function apply(tab, d) {
-  if (d.reset || d.structure || d.others) {   // 문서 외 파일 목록 (others.js — 보일 때만 다시 읽는다)
+  if (d.reset || d.structure || d.others || (d.touched && S.config.side_sort === 'time')) {   // 문서 외 파일 목록 (others.js — 보일 때만 다시 읽는다. 시간순이면 고친 시각도 필요하다, D97)
     tab.others.stale = true;
     if (tab === S.tab) emit('others', tab);
   }
@@ -64,7 +64,7 @@ async function tick() {
   try {
     const tabs = S.tabs.filter((t) => !t.loading);   // 처음 그리는 중인 탭은 다음 주기에
     const since = tabs.map((t) => `${t.id}:${t.seq}`).join(',');
-    const me = `&wt=${encodeURIComponent(windowName())}${solo ? `&w=${solo.id}&wp=${solo.project}` : ''}`;   // 창끼리 서로 알게 (D95)
+    const me = `&wt=${encodeURIComponent(windowName())}${solo ? `&w=${solo.id}&wp=${solo.project}&wd=${encodeURIComponent(JSON.stringify(windowDecks()))}` : ''}`;   // 창끼리 서로 알게 (D95)
     const d = await getJSON(`/api/changes?since=${encodeURIComponent(since)}${me}`);
     emit('window-news', d);
     if (d.tabs_seq !== knownTabsSeq()) {

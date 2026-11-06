@@ -29,12 +29,25 @@ class WindowBoard:
 
     def __init__(self) -> None:
         self._seen: dict[str, dict[str, str]] = {}
+        self._decks: dict[str, list[str]] = {}   # 창이 지금 연 발표들 — 한 번이라도 알려 온 창만 (불러오기 전의 빈 목록은 모르는 것)
         self._inbox: dict[str, list[dict[str, Any]]] = {}
         self._lock = threading.Lock()
 
-    def seen(self, wid: str, project: str, title: str) -> None:
+    def seen(self, wid: str, project: str, title: str, decks: list[str] | None = None) -> None:
         with self._lock:
             self._seen[wid] = {'id': wid, 'project': project, 'title': title[:80]}
+            if decks or wid in self._decks:
+                self._decks[wid] = decks or []
+
+    def told(self, wid: str) -> bool:
+        """이 창이 연 발표를 알려 왔는지 — 그 뒤로는 처음 연 문서가 아니라 알려 온 목록을 믿는다"""
+        with self._lock:
+            return wid in self._decks
+
+    def holder(self, project: str, path: str) -> str | None:
+        """이 발표를 지금 연 창 (D96 — 창이 알려 온 것. 처음 연 문서가 아니라 지금 문서라야 그 창이 보여 줄 수 있다)"""
+        with self._lock:
+            return next((k for k, decks in self._decks.items() if path in decks and self._seen.get(k, {}).get('project') == project), None)
 
     def others(self, wid: str) -> list[dict[str, str]]:
         with self._lock:
@@ -55,6 +68,7 @@ class WindowBoard:
     def forget(self, wid: str) -> None:
         with self._lock:
             self._seen.pop(wid, None)
+            self._decks.pop(wid, None)
             self._inbox.pop(wid, None)
 
 
@@ -65,6 +79,7 @@ class Solo:
     window: Any = None
     visible: bool = True
     deck: str = ''   # 슬라이드 창이면 그 발표 문서의 경로 (D96)
+    minimized: bool = False
 
 
 class SoloWindows:
@@ -101,13 +116,19 @@ class SoloWindows:
         if self._state.get(pid) is None or not WINDOW_ID.fullmatch(wid):
             return False
         deck = fields.get('path', [''])[0] if fields.get('deck', [''])[0] == '1' else ''
+        board = self._state.board
+        held = board.holder(pid, deck) if deck and 'fresh' not in fields else None
         with self._lock:
-            same = next((s for s in self._solos.values() if deck and s.deck == deck and s.project == pid), None)
+            same = self._solos.get(held) if held else None
+            if same is None and deck and 'fresh' not in fields:   # 막 띄워 아직 알려 오지 않은 창
+                same = next((s for s in self._solos.values() if s.deck == deck and s.project == pid and not board.told(s.id)), None)
             if same is None:
                 if len(self._solos) >= MAX_WINDOWS or wid in self._solos:
                     return False
                 solo = self._solos[wid] = Solo(wid, pid, deck=deck)
-        if same is not None:   # 이 발표의 슬라이드 창이 이미 있다 — 그 창을 앞으로
+        if same is not None:   # 이 발표의 슬라이드 창이 이미 있다 — 그 문서를 보이고 창을 앞으로
+            jump = {k: fields[k][0] for k in ('hash', 'line') if k in fields}
+            board.send(same.id, {'type': 'doc', 'path': deck, **({'line': int(jump['line'])} if jump.get('line', '').isdigit() else {}), **({'hash': jump['hash']} if 'hash' in jump else {})})
             self.front(same.id)
             return True
         start = {k: fields[k][0] for k in START_KEYS if k in fields}
@@ -116,6 +137,11 @@ class SoloWindows:
         except Exception:
             self.forget(wid)
             return False
+        events = getattr(solo.window, 'events', None)
+        if events:   # 창이 스스로 알려 주지 않는다 (app.py 의 메인 창과 같다)
+            events.minimized += lambda: setattr(solo, 'minimized', True)
+            events.maximized += lambda: setattr(solo, 'minimized', False)
+            events.restored += lambda: setattr(solo, 'minimized', False)
         return True
 
     def forget(self, wid: str) -> None:
@@ -129,7 +155,14 @@ class SoloWindows:
         """문서를 받는 창을 앞으로 — 요청을 붙들지 않게 따로"""
         with self._lock:
             solo = self._solos.get(wid)
-        show = self.bring_main if wid == MAIN else (solo.window.show if solo and solo.window else None)
+        window = solo.window if solo else None
+
+        def bring() -> None:
+            if solo.minimized:   # 보이기만으로는 돌아오지 않는다. 최대화한 창에 restore 를 부르면 줄어든다
+                window.restore()
+            window.show()
+
+        show = self.bring_main if wid == MAIN else (bring if window else None)
         if show:
             threading.Thread(target=show, name='lectern-windows-front', daemon=True).start()
 

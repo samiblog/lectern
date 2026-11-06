@@ -331,7 +331,7 @@ export default {
 "코드 블록의 ``` 줄만 지우면 블록이 깨집니다 — 코드 블록 전체를 하이라이트하면 블록째 지웁니다": "Deleting only a ``` line would break the code block — highlight the whole block to delete it",
 "이 줄은 그렇게 고칠 수 없습니다 — 편집 모드(Ctrl+E)에서 고칩니다": "This line can't be changed that way — use edit mode (Ctrl+E)",
 "글을 쓴 뒤 Tab 을 누르세요": "Type some text, then press Tab",
-"{n}줄을 지울까요? 제목이 들어 있거나 10줄이 넘습니다.": ["Delete {n} line? It is a heading.", "Delete {n} lines? They include a heading or are more than 10 lines."],
+"{n}줄을 지울까요? 제목이나 지시어가 들어 있거나 10줄이 넘습니다.": ["Delete {n} line? It is a heading.", "Delete {n} lines? They include a heading or are more than 10 lines."],
 "표의 머리행이나 구분 줄만 지우면 표가 깨집니다 — 표 전체를 하이라이트하면 표째 지웁니다": "Deleting only the header or divider row would break the table — highlight the whole table to delete it",
 "{n}줄을 지웠습니다 — Ctrl+Z 로 되돌립니다": ["Deleted {n} line — Ctrl+Z to undo", "Deleted {n} lines — Ctrl+Z to undo"],
 "{n}줄을 잘라 냈습니다 — Ctrl+Z 로 되돌립니다": ["Cut {n} line — Ctrl+Z to undo", "Cut {n} lines — Ctrl+Z to undo"],
@@ -1025,5 +1025,6 @@ export default {
 "숫자 넷 + 넓은 칸": "Four numbers + wide cell",
 "숫자 셋 + 두 칸": "Three numbers + two cells",
 "위아래": "One above the other",
+"칸이나 장의 경계를 넘어 지울 수 없습니다 — 칸은 통째로 고르고, 장은 우클릭의 장 지우기를 쓰세요": "Cannot delete across a cell or slide edge. Select the whole cell, or use Delete slide from the right-click menu",
 "{m}월 {d}일": "{mon} {d}"
 };

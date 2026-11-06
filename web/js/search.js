@@ -191,7 +191,7 @@ async function openHit(path, line, code = false, how = {}) {
     if (!here) await openTarget({ type: 'doc', path, ...how });
     return;
   }
-  if (!here && !(await openTarget({ type: 'doc', path, ...how }))) return;
+  if (!here && !(await openTarget({ type: 'doc', path, ...how, deckLine: line }))) return;
   if (isHtml(path)) {
     findText(query, { scroll: true });   // html 은 원문 줄과 화면 위치를 이을 수 없어 첫 결과로 간다
   } else {

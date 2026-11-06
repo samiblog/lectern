@@ -155,7 +155,9 @@ const holdsDoc = (pane) => {
 export async function openTarget(target) {
   const tab = S.tab;
   if (tab && !solo && target.type === 'doc' && native.has('open_window') && (target.deck || tab.fileMap.get(target.path)?.deck)) {
-    return openWindow(tab, target);   // 발표 문서는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다)
+    // 발표 문서는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다). 이 칸에는 열리지 않았으니 false — 부르는 쪽이 이 칸에서 이어서 하지 않게
+    await openWindow(tab, target.deckLine ? { ...target, line: target.deckLine } : target);
+    return false;
   }
   if (tab && (target.type === 'doc' || target.type === 'code')) {
     const open = docPaneOf(tab, target);
@@ -247,21 +249,33 @@ export async function sendToWindow(pane, to) {
 }
 
 /** 다른 창이 보낸 것을 받는다: 문서는 새 문서 탭에서, 터미널로 보낼 글·메모는 고른 프로젝트의 것일 때만 */
-async function receive({ type, path, top, term, note, p, stay }) {
+async function receive({ type, path, top, term, note, p, stay, hash, line }) {
   if (term != null || note) {
     if (p !== S.tab?.id) toast(t('메인 창이 다른 프로젝트를 보고 있어 받지 않았습니다'), 'error');
     else if (note) emit('new-note', note);
     else emit(stay ? 'term-paste-stay' : 'term-paste', term);
     return;
   }
-  const pane = await openInNewTab({ type, path });
+  const open = docPaneOf(S.tab, { type, path });   // 슬라이드 창이 이미 연 발표 (D96)
+  if (open) {
+    await selectDocTab(open);
+    if (hash || line) navigate({ type, path, hash, line }, { pane: open });
+    return;
+  }
+  const pane = await openInNewTab({ type, path, hash, line });
   if (pane && top) pane.scroller.scrollTop = top;
 }
 
-/** 문서를 독립창에서 연다 (D95). 띄웠으면 true */
-async function openWindow(tab, target, top = 0) {
+/** 이 창이 지금 연 발표 문서들 (D96) — 서버가 '이 발표의 창'을 찾는 데 쓴다 */
+export function windowDecks() {
+  const tab = S.tab;
+  return tab ? openDocs(tab).filter((path) => tab.fileMap.get(path)?.deck) : [];
+}
+
+/** 문서를 독립창에서 연다 (D95). 띄웠으면 true. fresh: 이 발표의 창이 있어도 새 창으로 (탭을 옮길 때) */
+async function openWindow(tab, target, top = 0, fresh = false) {
   const deck = target.deck || !!tab.fileMap.get(target.path)?.deck;
-  const done = await native.openWindow(soloQuery(tab.id, target, top, deck));
+  const done = await native.openWindow(soloQuery(tab.id, target, top, deck, fresh));
   if (!done) toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
   return done;
 }
@@ -282,7 +296,7 @@ export async function moveToWindow(pane = S.pane) {
     return false;
   }
   if (pane.editor && !closeEditor(pane, { sync: false })) return false;
-  if (!await openWindow(pane.tab, v, pane.scroller.scrollTop)) return false;
+  if (!await openWindow(pane.tab, v, pane.scroller.scrollTop, true)) return false;
   await leavePane(pane);
   return true;
 }

@@ -46,7 +46,7 @@ Exchange stocks are **192 kt**.
 - A slide is 1280×720.
 - Put the title (`#`, `##`) outside the cells, one per slide.
 - Write directives as HTML comments at the top of the slide.
-- Any other HTML comment is a speaker note. It can go anywhere on the slide and does not count as text outside the cells. After the last cell reads well.
+- Any other HTML comment is a speaker note. It can go anywhere on the slide and does not count as text outside the cells. After the last cell reads well. A colon is fine (`<!-- Source: statistics office -->`); only a directive name (`layout`, `text`, `class` and so on) makes it a directive. Comments in code blocks are code.
 - Write `lead` slides such as covers and section slides without cells. `footer` from the front matter also shows on `lead` slides.
 - Do not use footnotes. Put sources briefly in a cell or in the notes.
 
@@ -82,7 +82,7 @@ LME price ($/t)
 :::
 ```
 
-For a bigger number use a cell size (`::: a kpi 28`). The number is about twice the cell size.
+For a bigger number use a cell size (`::: a kpi 28`). The number is about twice the cell size and the label is the cell size. The default is 18pt with a 34pt number. Word order does not matter (`::: a kpi accent center 24`, `::: b card at 100 200 300 120 16`).
 
 ## 3. Layouts
 
@@ -101,6 +101,8 @@ Write `<!-- layout: name -->` on each slide. It does not carry over to the next 
 | `kpi-two` | a b c d e | Three small cells on top, wide d and small e below |
 | `stack` | a b | One above the other |
 
+Leaving a card out of `kpi` leaves a gap. With three cards, use `kpi-two` or a grid (`<!-- grid: t t t / a b c / e e e -->`, `<!-- rows: auto auto 1fr -->`).
+
 For anything else use a grid. Draw it with cell names; `/` separates rows.
 
 ```markdown
@@ -112,6 +114,7 @@ For anything else use a grid. Draw it with cell names; `/` separates rows.
 - Use `t` in a grid for the title area (`t t / a b`). A slide with a title needs `t`. Do not write a title on a grid without `t`.
 - `cols` has one value per column, `rows` one per row. The `t` row counts (`t t / a b / c d` needs three `rows`). `1fr`, `auto` and `200px` all work.
 - You may leave out `cols` and `rows`. Columns are then equal, and rows are equal except the `t` row, which fits its text.
+- To fill a slide with one cell, use `<!-- grid: t / a -->`.
 
 To place a cell yourself, write `at x y width height` in px, from the top left of the slide. Do not use `layout` with it.
 
@@ -123,7 +126,7 @@ The spread is the key
 :::
 ```
 
-- The usable area is x 56–1224, y 110–660. The title is above and the footer below.
+- The usable area is x 56–1224, y 110–660. The title is above and the footer below. `eyebrow` does not change this.
 - Cells that overlap each other or the title show up in Check.
 
 Draw lines between cells with `links`. The text in the cells can still be edited line by line. Join cell names with commas.
@@ -132,7 +135,7 @@ Draw lines between cells with `links`. The text in the cells can still be edited
 <!-- links: cost>hub, freight>hub, hub<>demand, hub--note -->
 ```
 
-- `a>b` is an arrow, `a<>b` has two heads, `a--b` is a plain line.
+- `a>b` is an arrow, `a<>b` has two heads, `a--b` is a plain line. Lines cannot carry text.
 - It works on `at` cells and grid cells. A line joins the cell centers and stops at the cell edges.
 - Leave some space between the cells, or the line will not show.
 
@@ -178,8 +181,11 @@ A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line
 | `kpi-two` | e | 377×397 | 11 | 16 | 9 (up to 3 columns) |
 | `stack` | a b | 1168×270 | 7 | 50 | 5 |
 
-- `card`, `accent`, `dark` and `note` cells have padding that takes 32px of width and 24px of height.
-- For grid, `at` and `cols-2` cells, estimate from the cell size. A grid has 1168 of width and 555 of height below the title.
+- `card`, `accent`, `dark`, `note` and `kpi` cells have padding that takes 32px of width and 24px of height.
+- A heading or text in the same cell leaves fewer table rows.
+- For grid, `at` and `cols-2` cells, estimate from the cell size. A grid has 1168 of width and 555 of height below the title. The gap between cells is 18px across and 14px down.
+- A title fits about 30 Korean characters per line, and a subheading fits cell width ÷ 26. Lists lose about 40px of width to the indent.
+- `eyebrow` sits in the empty space above the title and does not reduce the cell height.
 - Changing the text size changes these in proportion. At 12pt a table row is 35px.
 - Keep slides short. Short lists beat paragraphs.
 - Charts, diagrams and images shrink to fit the cell. Text does not.
@@ -192,6 +198,8 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - `echarts`: an ECharts option as JSON. Leave out `height` and `width`.
 - `plotly`: `{"data": […], "layout": {…}}` as JSON. No map types.
 - Settings are JSON values only. Functions do not work.
+- In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
+- `center` on a cell also works for charts and diagrams.
 - Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV so they can be edited as a table.
 
 ```vega-lite
@@ -215,7 +223,7 @@ Image syntax:
 
 - `![w:300 alt text](images/a.png)` image size; alt text may follow.
 - Images in a cell shrink to fit. Text in the same cell takes its space first.
-- `![bg right:40%](images/a.png)` background on the right 40%. Use `left` for the left.
+- `![bg right:40%](images/a.png)` background on the right 40%. Use `left` for the left. Cells and grids shrink to the width left. Add `contain` to keep the whole image.
 - Two `![bg](a.png)` lines split the background.
 - `![bg sepia](a.png)` filter (`blur`, `grayscale`, `sepia` and more).
 
@@ -238,7 +246,7 @@ Use HTML and SVG only for what cells cannot do. **People cannot edit such slides
 - Write per-slide CSS as `<style scoped>`. `section` is the slide.
 - `<style>` applies to the whole deck, as does `style: |` in the front matter.
 - Slide content is centered vertically by default. To start at the top, use `section { justify-content: flex-start; }`.
-- Scripts do not run. Internet CSS and fonts are removed.
+- Scripts do not run. `@import`, `@font-face`, `@keyframes`, nested rules, `position: fixed` and `url()` (except data images) are removed. A shorthand that holds both `url()` and a variable removes the whole rule.
 
 ## 9. After writing
 

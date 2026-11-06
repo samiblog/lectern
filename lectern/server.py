@@ -9,6 +9,7 @@ API 명세는 docs/ARCHITECTURE.md 에 있다. 바꾸면 문서도 함께 고친
 """
 from __future__ import annotations
 
+import json
 import mimetypes
 import posixpath
 import re
@@ -277,7 +278,11 @@ def create_app(state: AppState) -> Flask:
                 projects[pid] = project.log.since(int(seq))
         # 창들이 서로 알고 문서를 받는 곳이기도 하다 (D95): w 창 id(메인은 빈 값), wp 그 창의 프로젝트, wt 그 창의 이름
         window = request.args.get('w', '')
-        state.board.seen(window, request.args.get('wp', ''), request.args.get('wt', ''))
+        try:
+            decks = json.loads(request.args.get('wd', '[]'))
+        except ValueError:
+            decks = []
+        state.board.seen(window, request.args.get('wp', ''), request.args.get('wt', ''), [d for d in decks if isinstance(d, str)] if isinstance(decks, list) else [])
         news = {'windows': state.board.others(window), 'inbox': state.board.take(window)}
         return jsonify(tabs_seq=state.tabs_seq, projects=projects, **{k: v for k, v in news.items() if v})
 

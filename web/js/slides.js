@@ -18,6 +18,7 @@ import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
 import { LAYOUTS, textSizes, readCellHead } from './slideops.js';
+import { confinedCss } from './csssafe.js';
 
 const SIZES = { '16:9': [1280, 720], '4:3': [960, 720] };
 const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords', 'reading',
@@ -111,9 +112,12 @@ export function readDeck(frontMatter) {
   if (!frontMatter) return null;
   const fm = readYaml(frontMatter);
   if (fm.marp !== true) return null;
-  const [w, h] = SIZES[String(fm.size || '16:9').trim()] || SIZES['16:9'];
+  const size = String(fm.size || '16:9').trim();
+  const [w, h] = Object.hasOwn(SIZES, size) ? SIZES[size] : SIZES['16:9'];
   const divider = Array.isArray(fm.headingDivider) ? Math.max(...fm.headingDivider) : Number(fm.headingDivider) || 0;
-  return { id: ++deckSeq, w, h, style: typeof fm.style === 'string' ? fm.style : '', slideCss: {}, divider, fm };
+  // key: 앱이 만든 슬라이드의 표시 — 문서는 원시 HTML 로 같은 class·data 속성을 심을 수 있지만 그릴 때마다 새로 뽑는 이 값은 모른다
+  const key = crypto.getRandomValues(new Uint32Array(2)).join('');
+  return { id: ++deckSeq, key, w, h, style: typeof fm.style === 'string' ? fm.style : '', slideCss: {}, divider, fm };
 }
 
 /** 칸(pane)의 이 문서를 슬라이드로 그릴지 — 발표 문서이고 '문서로 보기'를 고르지 않았으면 */
@@ -177,7 +181,8 @@ function slideStyle(eff, deck) {
 
 /** 이 장의 칸 배치 {areas, cols, rows} — layout 이름이나 grid 글자에서. 없으면 null */
 function gridOf(eff) {
-  const preset = LAYOUTS[String(eff.layout || '').trim()];
+  const layout = String(eff.layout || '').trim();
+  const preset = Object.hasOwn(LAYOUTS, layout) ? LAYOUTS[layout] : null;
   const areas = typeof eff.grid === 'string' && SAFE_AREA.test(eff.grid) ? eff.grid : preset?.[0];
   if (!areas) return null;
   const track = (value, fallback) => (typeof value === 'string' && SAFE_TRACK.test(value) ? value : fallback);
@@ -191,25 +196,36 @@ function gridOf(eff) {
   };
 }
 
+/** 칸의 닫는 줄 {close, unclosed(사이에 다음 칸의 머리 줄이 있다 — 닫는 줄을 빠뜨린 것)}. fences: 코드 블록 안의 ::: 는 건너뛴다 (닫지 않은 코드 블록이면 찾지 못한다) */
+function closeOf(line, from, end, fences) {
+  let fence = '';
+  let unclosed = false;
+  for (let n = from; n < end; n++) {
+    const s = line(n);
+    const f = fences ? /^(`{3,}|~{3,})(.*)$/.exec(s) : null;
+    if (fence) {
+      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = '';
+    } else if (f && !(f[1][0] === '`' && f[2].includes('`'))) fence = f[1];
+    else if (s === ':::') return { close: n, unclosed };
+    else if (/^:::\s+\S/.test(s)) unclosed = true;
+  }
+  return null;
+}
+
 /** ::: 이름 낱말…  부터 ::: 까지가 슬라이드의 칸이다 (markdown-it 블록 규칙 — 발표 문서에서만). 이름은 칸 자리, 낱말은 꾸밈 (card·kpi·accent…) */
 export function cellRule(state, startLine, endLine, silent) {
   if (!state.env.deck && !state.env.cells) return false;
   const line = (n) => state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]).trim();
   const m = /^:::\s+(\S.*)$/.exec(line(startLine));
   if (!m) return false;
-  let close = startLine + 1;
-  let fence = '';   // 코드 블록 안의 ::: 는 칸 표시가 아니다
-  let unclosed = false;   // 닫는 줄을 빠뜨리면 다음 칸의 머리 줄이 안에 든다
-  for (; close < endLine; close += 1) {
-    const s = line(close);
-    const f = /^(`{3,}|~{3,})(.*)$/.exec(s);
-    if (fence) {
-      if (f && f[1][0] === fence[0] && f[1].length >= fence.length && !f[2].trim()) fence = '';
-    } else if (f) fence = f[1];
-    else if (s === ':::') break;
-    else if (/^:::\s+\S/.test(s)) unclosed = true;
+  const { env } = state;
+  if (env.cellMiss && env.cellMiss.end === endLine && startLine >= env.cellMiss.from) return false;   // 뒤에 닫는 줄이 없다고 이미 안다 (머리 줄이 수만 개여도 멈추지 않게)
+  const found = closeOf(line, startLine + 1, endLine, true) ?? closeOf(line, startLine + 1, endLine, false);
+  if (!found) {
+    env.cellMiss = { from: startLine, end: endLine };
+    return false;
   }
-  if (close >= endLine) return false;
+  const { close, unclosed } = found;
   if (silent) return true;
   const { name, words, size, at } = readCellHead(m[1]);
   const safe = /^[\p{L}\p{N}_-]+$/u.test(name) ? name : '';
@@ -246,7 +262,9 @@ export function slideRule(state) {
     slides.push(cur);
     cur = fresh(next);
   };
+  let inCell = false;
   for (const tok of state.tokens) {
+    if (tok.type === 'lec_cell_open' || tok.type === 'lec_cell_close') inCell = tok.nesting > 0;
     if (tok.level === 0 && tok.type === 'hr') {
       split(tok.map[0], tok.map[1]);
       continue;
@@ -254,7 +272,7 @@ export function slideRule(state) {
     if (tok.level === 0 && tok.type === 'heading_open' && deck.divider && +tok.tag[1] <= deck.divider && cur.tokens.length) {
       split(tok.map[0], tok.map[0]);
     }
-    if (tok.level === 0 && tok.type === 'html_block') {
+    if (tok.type === 'html_block' && tok.level === (inCell ? 1 : 0)) {   // 칸 바로 안의 노트·지시어·<style> 도 장의 것
       const texts = commentsOnly(tok.content);
       if (texts) {
         for (const text of texts) {
@@ -292,11 +310,11 @@ export function slideRule(state) {
     inherit = { ...inherit, ...s.local };
     const eff = { ...inherit, ...s.spot };
     for (const key of PER_SLIDE) delete inherit[key];
-    const classes = String(eff.class || '').split(/\s+/).filter((c) => /^[\w-]+$/.test(c));
+    const classes = String(eff.class || '').split(/\s+/).filter((c) => /^[\w-]+$/.test(c) && !c.startsWith('lec-'));
     if (eff.paginate === true) classes.push('lec-paginate');
     const grid = gridOf(eff);
     if (grid) classes.push('lec-grid');
-    const missing = eff.layout && !LAYOUTS[String(eff.layout).trim()] && typeof eff.grid !== 'string' ? ` data-layout-miss="${attr(eff.layout)}"` : '';
+    const missing = eff.layout && !Object.hasOwn(LAYOUTS, String(eff.layout).trim()) && typeof eff.grid !== 'string' ? ` data-layout-miss="${attr(eff.layout)}"` : '';
     const areas = grid ? ` data-areas="${attr([...new Set(grid.areas.replace(/'/g, ' ').trim().split(/\s+/))].filter((x) => x !== 't' && x !== '.').join(' '))}"` : '';
     const links = typeof eff.links === 'string' && eff.links.trim() ? ` data-links="${attr(eff.links)}"` : '';
     const reading = deck.fm.reading === true ? ' data-reading="1"' : '';
@@ -309,10 +327,10 @@ export function slideRule(state) {
     const bgUrl = /^\s*url\(\s*(['"]?)(.*?)\1\s*\)\s*$/i.exec(typeof eff.backgroundImage === 'string' ? eff.backgroundImage : '');
     const bgImg = bgUrl ? `<p><img src="${attr(bgUrl[2])}" alt="bg"></p>` : '';
     const wide = deck.w / deck.h > 1.5 ? '' : ' lec-43';   // 인쇄 쪽 크기 (base.css 의 @page)
-    out.push(html(`<div class="lec-slide-wrap${wide}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
+    out.push(html(`<div class="lec-slide-wrap${wide}" data-key="${deck.key}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
       + ` style="--slide-w:${deck.w}px;--slide-h:${deck.h}px">`
       + `<div class="lec-slide-frame" style="aspect-ratio:${deck.w} / ${deck.h}">`
-      + `<section class="lec-slide ${classes.join(' ')}" data-page="${i + 1}"${missing}${areas}${links}${reading} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
+      + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${reading} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
     out.push(...s.tokens);
     out.push(html(`${footer}</section></div>${s.notes.length ? `<div class="lec-slide-notes">${md.utils.escapeHtml(s.notes.join('\n\n'))}</div>` : ''}</div>\n`));
   });
@@ -321,38 +339,8 @@ export function slideRule(state) {
 
 // ---- 그린 뒤 다듬기 (doc.js 가 화면 밖 무대에서 부른다) ------------------------------------------------------
 
-/** 짝이 맞지 않는 } 를 뺀다 — 감싼 중첩 규칙을 일찍 닫고 앱 전체에 규칙을 거는 길을 막는다 (따옴표 안의 괄호는 세지 않는다) */
-function balanceBraces(css) {
-  let out = '';
-  let depth = 0;
-  let quote = '';
-  for (const ch of css) {
-    if (quote) {
-      if (ch === quote) quote = '';
-    } else if (ch === '"' || ch === "'") {
-      quote = ch;
-    } else if (ch === '{') {
-      depth += 1;
-    } else if (ch === '}') {
-      if (!depth) continue;
-      depth -= 1;
-    }
-    out += ch;
-  }
-  return out + (quote || '') + '}'.repeat(depth);
-}
-
-/** 문서의 style: CSS 를 이 문서의 슬라이드 안에만 — 중첩 규칙으로 감싸고, 바깥에서 불러오는 길(@import·url()·@font-face)은 지운다. page: 그 장에만 (<style scoped>) */
-function scopedCss(css, id, page = 0) {
-  const clean = String(css)
-    .replace(/\/\*[\s\S]*?\*\//g, '')
-    .replace(/@import[^;]*;?/gi, '')
-    .replace(/@font-face\s*\{[^}]*\}/gi, '')
-    .replace(/url\(\s*(?!['"]?data:)[^)]*\)/gi, 'none')
-    .replace(/image-set\([^)]*\)/gi, 'none')
-    .replace(/<\/?style/gi, '');
-  return `:is(#lec-panes, #lec-present, .lec-stage) [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''} {\n${balanceBraces(clean)}\n}`;
-}
+/** 문서의 CSS 를 이 문서의 슬라이드 안에만 (csssafe.js). page: 그 장에만 (<style scoped>) */
+const scopedCss = (css, id, page = 0) => confinedCss(css, `:is(#lec-panes, #lec-present, .lec-stage) [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''}`);
 
 /** ![bg …](…) 의 낱말 → 배경 자리 */
 function bgOptions(words) {
@@ -491,7 +479,7 @@ function checkSmall(section, add) {
   const min = section.dataset.reading ? { table: 10, body: 12 } : { table: 12, body: 14 };
   const smallest = (els) => Math.round(Math.min(Infinity, ...els.map((el) => parseFloat(getComputedStyle(el).fontSize) * 0.75)) * 10) / 10;
   const table = smallest($$(':scope > .table-wrap table, .lec-cell table', section));
-  const body = smallest($$(':scope > :is(p, ul, ol), .lec-cell :is(p, li)', section).filter((el) => !el.closest('table, blockquote') && el.textContent.trim()));
+  const body = smallest($$(':scope > :is(p, ul, ol), .lec-cell :is(p, li)', section).filter((el) => !el.closest('table, blockquote, pre, svg') && el.textContent.trim()));   // Mermaid 의 글은 그림이다
   if (table < min.table) add(t('표가 {n}pt 로 작습니다 (기준 {min}pt)', { n: table, min: min.table }));
   if (body < min.body) add(t('본문이 {n}pt 로 작습니다 (기준 {min}pt)', { n: body, min: min.body }));
 }
@@ -651,6 +639,11 @@ function addTags(root, text) {
 
 /** 렌더링 뒤 다듬기 (그림은 enhance 가 불러오기 시작한 뒤): 배경 그림, 그림 크기, style: CSS, 구조 보기 꼬리표 자리, 이 장부터 발표 버튼 */
 export function prepareDeck(root, deck, text = '') {
+  // 문서가 심은 슬라이드 틀·꼬리표는 앱의 것이 아니다 — 장 범위·점검 글·저장할 줄을 그것에서 읽지 않게 표시를 뗀다
+  for (const el of $$('.lec-slide-wrap, .lec-slide', root)) {
+    if (el.dataset.key !== deck.key) el.classList.remove('lec-slide-wrap', 'lec-slide');
+  }
+  for (const el of $$('.lec-tag, .lec-slide-tags, .lec-links', root)) el.remove();
   const addCss = (css, page = 0) => {
     const st = document.createElement('style');
     st.className = 'lec-deck-style';

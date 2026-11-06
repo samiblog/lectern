@@ -719,9 +719,13 @@ function duplicateHere() {
 }
 
 /** 물어볼 줄 지우기면 묻는다 */
-const sureToDelete = (r) => !r.ask || window.confirm(t('{n}줄을 지울까요? 제목이 들어 있거나 10줄이 넘습니다.', { n: r.b - r.a + 1 }));
+const sureToDelete = (r) => !r.ask || window.confirm(t('{n}줄을 지울까요? 제목이나 지시어가 들어 있거나 10줄이 넘습니다.', { n: r.b - r.a + 1 }));
 
-const deleteWhy = (error) => (error === 'table-head' ? t('표의 머리행이나 구분 줄만 지우면 표가 깨집니다 — 표 전체를 하이라이트하면 표째 지웁니다') : whyNot(error));
+const deleteWhy = (error) => {
+  if (error === 'table-head') return t('표의 머리행이나 구분 줄만 지우면 표가 깨집니다 — 표 전체를 하이라이트하면 표째 지웁니다');
+  if (error === 'wall') return t('칸이나 장의 경계를 넘어 지울 수 없습니다 — 칸은 통째로 고르고, 장은 우클릭의 장 지우기를 쓰세요');
+  return whyNot(error);
+};
 
 /** Ctrl+Shift+K: 이 줄을 지우고 편집을 끝낸다 (고치던 글도 함께 — Ctrl+Z 로는 고치기 전의 줄이 돌아온다) */
 async function deleteHere() {

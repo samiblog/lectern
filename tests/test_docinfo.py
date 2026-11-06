@@ -5,6 +5,14 @@ import time
 from lectern.docinfo import doc_info, extract_html_info, extract_info, read_text, split_front_matter, strip_inline
 
 
+def test_deck_is_read_like_the_screen_reads_it():
+    def deck(line):
+        return extract_info(f'---\n{line}\n---\n\n# 표지\n').get('deck', False)
+
+    assert deck('marp: true') and deck('marp: yes') and deck('marp: On') and deck('marp : TRUE')
+    assert not deck('marp: "true"') and not deck('Marp: true') and not deck('marp: false') and not deck('marp:true')
+
+
 def test_title_from_h1_and_summary_from_first_paragraph():
     info = extract_info('# 제목\n\n첫 문단 **굵게** 와 [링크](a.md).\n\n둘째 문단\n')
     assert info == {'title': '제목', 'summary': '첫 문단 굵게 와 링크.'}

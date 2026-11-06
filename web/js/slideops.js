@@ -27,7 +27,7 @@ export function textSizes(...values) {
   for (const value of values) {
     for (const part of typeof value === 'string' ? value.split(',') : []) {
       const m = /^\s*(\S+)\s+(\d{1,3}(?:\.\d)?)\s*$/.exec(part);
-      if (m && KINDS[m[1]]) out[KINDS[m[1]]] = Number(m[2]);
+      if (m && Object.hasOwn(KINDS, m[1])) out[KINDS[m[1]]] = Number(m[2]);
     }
   }
   return out;
@@ -46,24 +46,49 @@ export function readCellHead(head) {
       at = box.map(Number);
       i += 4;
     } else if (SIZE.test(w)) size = Number(w);
-    else if (/^[A-Za-z][\w-]*$/.test(w)) words.push(w);
+    else if (/^[A-Za-z][\w-]*$/.test(w) && !w.startsWith('lec-')) words.push(w);
   }
   return { name, words, size, at };
+}
+
+const RULE_LINE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;
+
+/** 줄마다 코드 블록 안(여닫는 줄 포함)인지 — 코드 속의 지시어·칸 표시는 코드다 */
+function fencedLines(lines) {
+  let open = '';
+  return lines.map((s) => {
+    const f = /^[ \t]*(`{3,}|~{3,})(.*)$/.exec(s);
+    if (open) {
+      if (f && f[1][0] === open[0] && f[1].length >= open.length && !f[2].trim()) open = '';
+      return true;
+    }
+    if (f && !(f[1][0] === '`' && f[2].includes('`'))) open = f[1];
+    return !!open;
+  });
+}
+
+/** 장 a~b 에 지시어를 넣을 줄. 제목으로 갈리는 장(headingDivider)은 첫 줄이 제목이고 그 앞은 앞 장이라 제목 다음 줄에 */
+function slideTop(lines, a, b) {
+  let at = a;
+  while (at <= b && (!lines[at - 1]?.trim() || RULE_LINE.test(lines[at - 1]))) at += 1;
+  let before = at - 1;
+  while (before > 0 && !lines[before - 1].trim()) before -= 1;
+  return before > 0 && !RULE_LINE.test(lines[before - 1]) && /^#{1,6}\s/.test(lines[at - 1] ?? '') ? at + 1 : at;
 }
 
 /** 장(줄 a~b)의 지시어 <!-- text: 표 14 --> 에서 word 의 크기를 size 로 — 없으면 그 장 맨 앞에 넣는다. 바뀐 줄 배열 */
 export function setTextSize(lines, a, b, word, size) {
   const next = lines.slice();
   const kind = KINDS[word];
+  const fenced = fencedLines(lines);
   for (let n = a; n <= b; n++) {
-    const m = /^<!--\s*text:\s*(.*?)\s*-->\s*$/.exec(lines[n - 1]);
+    const m = fenced[n - 1] ? null : /^<!--\s*(_?text):\s*(.*?)\s*-->\s*$/.exec(lines[n - 1]);
     if (!m) continue;
-    const parts = m[1].split(',').map((x) => x.trim()).filter((x) => x && KINDS[x.split(/\s+/)[0]] !== kind);
-    next[n - 1] = `<!-- text: ${[...parts, `${word} ${size}`].join(', ')} -->`;
+    const parts = m[2].split(',').map((x) => x.trim()).filter((x) => x && KINDS[x.split(/\s+/)[0]] !== kind);
+    next[n - 1] = `<!-- ${m[1]}: ${[...parts, `${word} ${size}`].join(', ')} -->`;
     return next;
   }
-  let at = a;
-  while (at <= b && (!lines[at - 1]?.trim() || /^-{3,}\s*$/.test(lines[at - 1]))) at += 1;
+  const at = slideTop(lines, a, b);
   next.splice(at - 1, 0, `<!-- text: ${word} ${size} -->`, ...(lines[at - 1]?.trim() ? [''] : []));
   return next;
 }
@@ -102,16 +127,22 @@ const NOTE_LINE = /^\s*<!--.*-->\s*$/;
 export function setLayout(lines, span, name, words) {
   const names = [...new Set(LAYOUTS[name][0].split(/[\s/]+/))].filter((x) => x !== 't');
   const [start, end] = trimmed(lines, span);
-  let fence = false;
+  const top = slideTop(lines, start, end);   // 제목으로 갈리는 장이면 제목은 그 자리에 두고 다음 줄부터
+  const fenced = fencedLines(lines);
   let cells = 0;
-  const body = lines.slice(start - 1, end).filter((s) => !/^<!--\s*(?:layout|grid|cols|rows):.*-->\s*$/.test(s)).map((s) => {
-    if (/^\s*(?:`{3,}|~{3,})/.test(s)) fence = !fence;
-    if (fence || !CELL_HEAD.test(s.trim())) return s;
+  const body = [];
+  for (let n = top; n <= end; n++) {
+    const s = lines[n - 1];
+    if (fenced[n - 1] || !CELL_HEAD.test(s.trim())) {
+      if (fenced[n - 1] || !/^<!--\s*_?(?:layout|grid|cols|rows):.*-->\s*$/.test(s)) body.push(s);
+      continue;
+    }
     const parts = s.trim().split(/\s+/);
     if (names[cells]) parts[1] = names[cells];
     cells += 1;
-    return parts.join(' ');
-  });
+    body.push(parts.join(' '));
+  }
+  while (top > start && blank(body[0]) && body.length) body.shift();
   if (!cells) {
     const content = (s) => s.trim() && !NOTE_LINE.test(s) && !/^#{1,2}\s/.test(s);
     const first = body.findIndex(content);
@@ -128,10 +159,10 @@ export function setLayout(lines, span, name, words) {
     if (body.at(-1)?.trim()) body.push('');
     body.push(`::: ${cell} ${number ? 'kpi' : 'card'}`, ...(number ? [`**${words.number}**`, words.label] : [words.body]), ':::');
   }
-  const out = [`<!-- layout: ${name} -->`, '', ...body];
+  const out = [...(top > start ? [''] : []), `<!-- layout: ${name} -->`, '', ...body];
   const next = lines.slice();
-  next.splice(start - 1, end - start + 1, ...out);
-  return { lines: next, line: start + out.findIndex((s) => CELL_HEAD.test(s)) + 1 };
+  next.splice(top - 1, Math.max(0, end - top + 1), ...out);
+  return { lines: next, line: top + out.findIndex((s) => CELL_HEAD.test(s)) + 1 };
 }
 
 /** 장 [a, b] 뒤에 제목만 있는 새 장을 넣는다. {lines, line(새 제목 줄)} */
@@ -156,6 +187,10 @@ export function moveSlide(lines, spans, i, dir) {
   const [front, back] = dir < 0 ? [spans[i + dir], spans[i]] : [spans[i], spans[i + dir]];
   const [x1, x2] = trimmed(lines, front);
   const [y1, y2] = trimmed(lines, back);
+  // 구분 줄 없이 제목으로 갈리는 장은 제목이 있어야 다른 장에 붙지 않는다. 빈 장은 옮길 글이 없다
+  const ruled = lines.slice(x2, y1 - 1).some((s) => RULE_LINE.test(s));
+  const headed = (n) => /^#{1,6}\s/.test(lines[n - 1]);
+  if (blank(lines[x1 - 1]) || blank(lines[y1 - 1]) || (!ruled && !(headed(x1) && headed(y1)))) return { error: 'edge' };
   const next = [...lines.slice(0, x1 - 1), ...lines.slice(y1 - 1, y2), ...lines.slice(x2, y1 - 1), ...lines.slice(x1 - 1, x2), ...lines.slice(y2)];
   return { lines: next, line: dir < 0 ? x1 : x1 + (y2 - y1 + 1) + (y1 - 1 - x2) };
 }

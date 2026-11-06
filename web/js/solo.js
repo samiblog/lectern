@@ -15,11 +15,12 @@ export const solo = q.get('solo') ? {
 } : null;
 
 /** 독립창을 여는 주소의 뒤쪽 */
-export function soloQuery(project, target, top = 0, deck = false) {
+export function soloQuery(project, target, top = 0, deck = false, fresh = false) {
   const id = [...crypto.getRandomValues(new Uint8Array(8))].map((b) => b.toString(16).padStart(2, '0')).join('');
   const fields = { solo: project, w: id, type: target.type, path: target.path, top: String(Math.round(top)) };
   if (target.hash) fields.hash = target.hash;
   if (target.line) fields.line = String(target.line);
   if (deck) fields.deck = '1';
+  if (fresh) fields.fresh = '1';
   return `?${new URLSearchParams(fields)}`;
 }

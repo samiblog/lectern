@@ -36,8 +36,8 @@
 
 /* 슬라이드 */
 .lec-deck .lec-slide :is(h1, h2) { border: 0; }
-.lec-deck .lec-slide.lead { background-color: #17293d; --md-fg: #f6f3ec; --md-heading: #ffffff; --md-strong: #ffffff; color: #e8e4da; }
-.lec-deck .lec-slide.lead.paper { background-color: var(--md-bg); --md-fg: #1f2933; --md-heading: #17293d; color: var(--md-fg); }
+.lec-deck .lec-slide.lead { background-color: #17293d; --md-fg: #f6f3ec; --md-heading: #ffffff; --md-strong: #ffffff; --md-link: #fdba74; color: #e8e4da; }
+.lec-deck .lec-slide.lead.paper { background-color: var(--md-bg); --md-fg: #1f2933; --md-heading: #17293d; --md-link: #c2410c; color: var(--md-fg); }
 .lec-deck .lec-cell.card, .lec-deck .lec-cell.kpi { background: #ffffff; border-color: var(--md-border); border-radius: 12px; box-shadow: 0 1px 2px rgba(23, 41, 61, .05); }
 .lec-deck .lec-cell.accent { background: #fff1e6; border-left: 5px solid #c2410c; border-radius: 4px 12px 12px 4px; }
 .lec-deck .lec-cell.dark { background: var(--md-heading); border-radius: 12px; }

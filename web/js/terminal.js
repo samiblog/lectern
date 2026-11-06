@@ -208,7 +208,7 @@ async function copySelection(term) {
 
 async function pasteFromClipboard(term) {
   try {
-    term.xterm.paste(await navigator.clipboard.readText());
+    term.xterm.paste(plainText(await navigator.clipboard.readText()));
   } catch {
     toast(t('붙여 넣지 못했습니다. Ctrl+V 로 붙여 넣으세요'));
   }
@@ -590,8 +590,15 @@ export function disposeTerminal(tab) {
   emit('terms');
 }
 
+/**
+ * 터미널에 붙여 넣을 글: 제어 문자를 뺀다. 터미널에서 글자는 곧 키 입력이라, ESC 로 시작하는 순서는 Enter 없이 명령을 돌리고
+ * 붙여넣기의 끝 표시를 흉내 낸다 — 문서의 글이 사용자가 고른 '붙여 넣기'를 타고 올 수 있다 (D96). 탭과 줄바꿈만 남긴다
+ */
+export const plainText = (text) => String(text).replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
+
 /** 고른 터미널에 글을 넣는다 — 사용자의 Ctrl+V 와 같은 길 (xterm 의 paste → onData → POST /api/term/input). Enter 는 누르지 않는다 */
-async function pasteInto(term, text) {
+async function pasteInto(term, raw) {
+  const text = plainText(raw);
   if (term.starting) await term.starting;
   if (!term.alive) {
     toast(t('터미널 셸이 끝나 있습니다. 터미널에서 Enter 를 누르면 다시 시작합니다'), 'error');

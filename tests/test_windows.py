@@ -21,6 +21,9 @@ class FakeWindow:
     def show(self):
         self.calls.append('show')
 
+    def restore(self):
+        self.calls.append('restore')
+
     def hide(self):
         self.calls.append('hide')
 
@@ -220,6 +223,51 @@ def test_closing_a_window_leaves_the_board(setup):
     state.board.seen('a' * 16, first.id, '가.md')
     solos.forget('a' * 16)
     assert state.board.others('') == []
+
+
+def test_a_deck_opens_once_until_the_window_says_otherwise(setup):
+    state, solos, first, _, made, *_ = setup
+    a, b, c, d = 'a' * 16, 'b' * 16, 'c' * 16, 'd' * 16
+
+    def deck(wid, path='a.md', **extra):
+        return solos.open(query(first.id, wid, type='doc', path=path, deck='1', **extra))
+
+    assert deck(a) and deck(b)
+    assert list(made) == [a], '막 띄워 아직 알려 오지 않은 창도 같은 발표의 창이다'
+    state.board.seen(a, first.id, '창', [])
+    assert deck(b) and list(made) == [a], '문서를 불러오기 전의 빈 목록은 아직 모르는 것이다'
+    state.board.seen(a, first.id, '창', ['다른.md'])
+    assert deck(c) and list(made) == [a, c], '다른 문서로 갔으면 이 발표의 창은 없다'
+    state.board.seen(c, first.id, '창', ['a.md', 'b.md'])
+    assert deck(d, 'b.md', line='12') and list(made) == [a, c], '창이 알려 온 문서면 그 창으로'
+    assert state.board.take(c) == [{'type': 'doc', 'path': 'b.md', 'line': 12}]
+
+
+def test_moving_a_deck_tab_opens_a_new_window(setup):
+    state, solos, first, _, made, *_ = setup
+    assert solos.open(query(first.id, 'a' * 16, type='doc', path='a.md', deck='1'))
+    state.board.seen('a' * 16, first.id, '창', ['a.md'])
+    assert solos.open(query(first.id, 'b' * 16, type='doc', path='a.md', deck='1', fresh='1'))
+    assert len(made) == 2
+
+
+def test_front_restores_only_a_minimized_window(setup):
+    _, solos, first, _, made, *_ = setup
+    wid = 'a' * 16
+    solos.open(query(first.id, wid))
+
+    def brought(minimized):
+        made[wid].calls.clear()
+        solos._solos[wid].minimized = minimized
+        solos.front(wid)
+        for _ in range(100):
+            if 'show' in made[wid].calls:
+                break
+            time.sleep(0.01)
+        return made[wid].calls
+
+    assert brought(True) == ['restore', 'show']
+    assert brought(False) == ['show'], '최대화한 창이 줄어들지 않게 restore 는 최소화한 창에만'
 
 
 def test_front_brings_the_receiving_window(setup):

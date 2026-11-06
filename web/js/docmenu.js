@@ -492,7 +492,7 @@ function openMenu(e, view, x, y) {
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74). '이 블록의 메뉴…' 로 아래의 보통 메뉴
-  const hl = view === $('#lec-view') ? litAt(e.clientY) : null;
+  const hl = view === $('#lec-view') ? litAt(e.clientY, e.target) : null;
   const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y), el ? uniqueItems(el, e.target) : []);
   if (lit) {
     showMenu(x, y, lit);

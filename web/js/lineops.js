@@ -76,8 +76,16 @@ function frontEnd(lines) {
   return 0;
 }
 
-/** 맨 앞 설정에 marp: true 인 발표 문서인지 */
-const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^marp:[ \t]*true[ \t]*$/.test(s));
+/** 맨 앞 설정에 marp: true 인 발표 문서인지 — 값을 읽는 법은 slides.js 의 readYaml 과 같게 (yes·on 도, 따옴표는 글) */
+const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.startsWith('marp'));
+
+/** 발표 문서에서 장을 가르는 줄인지. 바로 위가 글이면 구분 줄이 아니라 그 글의 밑줄 제목이다 (제목\n---) */
+function slideBreak(lines, n, fences) {
+  if (!RULE.test(lines[n - 1])) return false;
+  const p = lines[n - 2];
+  return n < 2 || !SETEXT.test(lines[n - 1]) || isBlank(p) || !!fenceAt(fences, n - 1) || !!itemOf(p) || depthOf(p) > 0
+    || HEADING.test(p) || RULE.test(p) || CELL_MARK.test(p.trim()) || COMMENT_LINE.test(p);
+}
 
 /** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'|'wall'}] (빈 줄 뺌). wall: 발표 문서의 칸(:::)·장(---)·지시어 줄 — 글이 넘지 않는다 */
 function blocksOf(lines) {
@@ -85,7 +93,7 @@ function blocksOf(lines) {
   const blocks = [];
   const front = frontEnd(lines);
   const deck = deckOf(lines);
-  const wall = (s) => deck && (CELL_MARK.test(s.trim()) || RULE.test(s) || COMMENT_LINE.test(s));
+  const wall = (n) => deck && (CELL_MARK.test(lines[n - 1].trim()) || COMMENT_LINE.test(lines[n - 1]) || slideBreak(lines, n, fences));
   if (front) blocks.push({ a: 1, b: front, kind: 'front' });
   let n = front + 1;
   while (n <= lines.length) {
@@ -95,7 +103,7 @@ function blocksOf(lines) {
       blocks.push({ a: f.a, b: f.b, kind: 'fence' });
       n = f.b + 1;
     } else if (isBlank(s)) n += 1;
-    else if (wall(s)) {
+    else if (wall(n)) {
       blocks.push({ a: n, b: n, kind: 'wall' });
       n += 1;
     } else if (HEADING.test(bodyOf(s))) {
@@ -103,7 +111,7 @@ function blocksOf(lines) {
       n += 1;
     } else {
       let b = n;
-      while (b < lines.length && !isBlank(lines[b]) && depthOf(lines[b]) === depthOf(s) && !fenceAt(fences, b + 1) && !HEADING.test(bodyOf(lines[b])) && !wall(lines[b])) b += 1;
+      while (b < lines.length && !isBlank(lines[b]) && depthOf(lines[b]) === depthOf(s) && !fenceAt(fences, b + 1) && !HEADING.test(bodyOf(lines[b])) && !wall(b + 1)) b += 1;
       blocks.push({ a: n, b, kind: 'text' });
       n = b + 1;
     }
@@ -150,6 +158,9 @@ function itemEnd(lines, n) {
 /** 줄 n 이 든 목록 항목의 줄. 목록 밖이면 0 */
 function ownerItem(lines, n) {
   if (itemOf(lines[n - 1])) return n;
+  const deck = deckOf(lines);
+  const wall = (s) => deck && (CELL_MARK.test(s.trim()) || RULE.test(s));   // 앞 칸·앞 장의 목록은 이 줄의 주인이 아니다
+  if (wall(lines[n - 1])) return 0;
   const depth = depthOf(lines[n - 1]);
   const width = widthOf(bodyOf(lines[n - 1]));
   let gap = false;
@@ -159,7 +170,7 @@ function ownerItem(lines, n) {
       gap = true;
       continue;
     }
-    if (depthOf(s) !== depth || HEADING.test(bodyOf(s))) return 0;
+    if (depthOf(s) !== depth || HEADING.test(bodyOf(s)) || wall(s)) return 0;
     const it = itemOf(s);
     if (it && (!gap || width >= it.content)) return i;
     if (it && it.width === 0) return 0;
@@ -315,7 +326,8 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
     const at = split ? n : blk?.b ?? n;
     const inside = split && blk && n < blk.b;   // 나눈 뒤 글이 그 문단의 다음 줄과 이어진다
     const after = lines[at];
-    return { ...para, at, pre: [sep], post: !inside && after != null && !isBlank(after) ? [sep] : [] };
+    const closing = after != null && deckOf(lines) && CELL_MARK.test(after.trim());   // 칸의 끝 — 닫는 줄 앞에 빈 줄을 두지 않는다
+    return { ...para, at, pre: [sep], post: !inside && !closing && after != null && !isBlank(after) ? [sep] : [] };
   }
   const a = blk?.a ?? n;
   if (CALLOUT.test(bodyOf(lines[a - 1]).trim())) return { ...para, at: a, pre: [], post: [sep] };   // 박스글의 [!NOTE] 줄은 맨 앞에 남는다
@@ -548,7 +560,17 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   }
   const inFence = !!fenceAt(fences, a) && a > fenceAt(fences, a).a;
   const blocks = blocksOf(lines);
-  if (deckOf(lines) && lines.slice(a - 1, b).filter((s, i) => CELL_MARK.test(s.trim()) && !fenceAt(fences, a + i)).length % 2) return { error: 'edge' };   // 칸의 한쪽 표시만 지우면 칸이 깨진다
+  const deck = deckOf(lines);
+  if (deck) {   // 칸을 통째로가 아니면 칸 표시를 지우지 않는다 (앞 칸의 끝과 다음 칸의 머리를 함께 지우면 두 칸이 붙는다). 장의 구분 줄도
+    let depth = 0;
+    for (let n = a; n <= b; n++) {
+      if (fenceAt(fences, n)) continue;
+      const s = lines[n - 1].trim();
+      if (CELL_MARK.test(s)) depth += s === ':::' ? -1 : 1;
+      if (depth < 0 || slideBreak(lines, n, fences)) return { error: 'wall' };
+    }
+    if (depth) return { error: 'wall' };
+  }
   for (const blk of blocks) {
     if (blk.b < a || blk.a > b) continue;
     const table = tableIn(lines, blk);
@@ -558,7 +580,7 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   for (let n = a; n <= b && !ask; n++) {
     if (fenceAt(fences, n)) continue;
     const body = bodyOf(lines[n - 1]);
-    ask = HEADING.test(body) || (n > 1 && SETEXT.test(body) && !isBlank(lines[n - 2]) && !itemOf(lines[n - 2]) && !RULE.test(body));
+    ask = HEADING.test(body) || (n > 1 && SETEXT.test(body) && !isBlank(lines[n - 2]) && !itemOf(lines[n - 2]) && !RULE.test(body)) || (deck && COMMENT_LINE.test(lines[n - 1]));   // 발표의 주석은 지시어·노트
   }
   const after = (() => {   // 범위 뒤의 첫 글 줄 (번호를 다시 매길 목록)
     let n = b + 1;

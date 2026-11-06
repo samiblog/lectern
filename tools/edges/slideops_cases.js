@@ -78,10 +78,49 @@ eq(moveLines(dk, 15, 15, 1).error, 'edge', '칸 끝 항목을 아래로');
 eq(moveLines(dk, 7, 7, -1), { error: 'edge' }, '제목을 지시어 위로');
 eq(joinLine(dk, 10, { split: (l) => ({ head: '', body: l, tail: '' }) }), { error: 'different' }, '칸 첫 줄을 머리 줄과 잇기');
 eq(joinLine(dk, 20, { split: (l) => ({ head: '', body: l, tail: '' }) }), { error: 'different' }, '장 첫 줄을 앞 장과 잇기');
-eq(deleteLines(dk, 9, 10), { error: 'edge' }, '머리 줄만 걸쳐 지우기');
-eq(deleteLines(dk, 10, 11), { error: 'edge' }, '닫는 줄만 걸쳐 지우기');
+eq(deleteLines(dk, 9, 10), { error: 'wall' }, '머리 줄만 걸쳐 지우기');
+eq(deleteLines(dk, 10, 11), { error: 'wall' }, '닫는 줄만 걸쳐 지우기');
 eq(deleteLines(dk, 9, 11).error, undefined, '칸째 지우기');
 eq(deleteLines(dk, 10, 10).error, undefined, '칸 안 한 줄 지우기');
+// 제목으로 갈리는 문서 — 제목 앞은 앞 장이다
+const dv = L('---\nmarp: true\nheadingDivider: 2\n---\n\n## 하나\n\n첫 글\n\n## 둘\n\n둘째 글\n');
+const dvs = [[6, 9], [10, 13]];
+eq(setTextSize(dv, 10, 13, '표', 14).slice(9, 13), ['## 둘', '<!-- text: 표 14 -->', '', '둘째 글'], '지시어는 제목 다음에');
+eq(setTextSize(dv, 6, 9, '표', 14).slice(5, 8), ['<!-- text: 표 14 -->', '', '## 하나'], '첫 장은 맨 앞에');
+eq(setLayout(dv, dvs[1], 'two', W).lines.slice(9, 15), ['## 둘', '', '<!-- layout: two -->', '', '::: a', '둘째 글'], '배치도 제목 다음에');
+eq(setLayout(dv, dvs[1], 'two', W).line, 15, '배치의 첫 칸 줄');
+eq(moveSlide(dv, dvs, 0, 1).lines.slice(5, 13), ['## 둘', '', '둘째 글', '', '## 하나', '', '첫 글', ''], '제목으로 갈린 장 옮기기');
+const headless = L('---\nmarp: true\nheadingDivider: 2\n---\n\n머리 없는 글\n\n## 둘\n\n글\n');
+eq(moveSlide(headless, [[6, 7], [8, 11]], 0, 1), { error: 'edge' }, '제목 없는 장은 옮기면 앞 장에 붙는다');
+const empty = L('---\nmarp: true\n---\n\n## 하나\n\n---\n\n---\n\n## 셋\n');
+eq(moveSlide(empty, [[4, 6], [8, 8], [10, 12]], 0, 1), { error: 'edge' }, '빈 장과는 맞바꾸지 않는다');
+
+// 코드 속의 지시어·칸 표시는 코드다
+const fc = L('---\nmarp: true\n---\n\n## 코드\n\n```md\n<!-- text: 표 9 -->\n<!-- layout: quad -->\n::: z\n:::\n```\n');
+eq(setTextSize(fc, 4, 12, '표', 14).slice(3, 6), ['', '<!-- text: 표 14 -->', ''], '코드 속 지시어를 고치지 않는다');
+eq(setTextSize(fc, 4, 12, '표', 14).includes('<!-- text: 표 9 -->'), true, '코드 속 지시어가 남는다');
+eq(setLayout(fc, [4, 12], 'two', W).lines.includes('<!-- layout: quad -->'), true, '코드 속 배치를 지우지 않는다');
+eq(setLayout(fc, [4, 12], 'two', W).lines.includes('::: z'), true, '코드 속 칸 이름을 바꾸지 않는다');
+
+// 한 장만의 지시어 _text, _layout
+const sp = L('---\nmarp: true\n---\n\n<!-- _text: 표 12 -->\n<!-- _layout: quad -->\n\n## 글\n');
+eq(setTextSize(sp, 4, 8, '제목', 28)[4], '<!-- _text: 표 12, 제목 28 -->', '_text 를 고친다');
+eq(setLayout(sp, [4, 8], 'two', W).lines.some((s) => s.includes('_layout')), false, '_layout 을 갈아 끼운다');
+
+// 칸·장의 경계
+const wl = L('---\nmarp: true\n---\n\n::: a\n- 항목\n:::\n\n::: b\n글\n:::\n\n---\n\n## 다음\n\n<!-- 노트 -->\n');
+eq(deleteLines(wl, 7, 9), { error: 'wall' }, '앞 칸의 끝과 다음 칸의 머리를 함께 지우지 않는다');
+eq(deleteLines(wl, 11, 15), { error: 'wall' }, '구분 줄을 지우지 않는다');
+eq(deleteLines(wl, 5, 11).error, undefined, '두 칸을 통째로 지운다');
+eq(deleteLines(wl, 17, 17).ask, true, '주석은 묻고 지운다');
+eq(lo.indentItem(wl, 10).error, 'not-list', '앞 칸의 목록은 이 줄의 주인이 아니다');
+const st = L('---\nmarp: true\n---\n\n밑줄 제목\n---\n\n글\n');
+eq(deleteLines(st, 6, 6).error, undefined, '밑줄 제목의 --- 는 구분 줄이 아니다');
+const yes = L('---\nmarp: yes\n---\n\n::: a\n글\n:::\n');
+eq(deleteLines(yes, 5, 6), { error: 'wall' }, 'marp: yes 도 발표 문서');
+const quoted = L('---\nmarp: "true"\n---\n\n::: a\n글\n:::\n');
+eq(deleteLines(quoted, 5, 6).error, undefined, '따옴표를 쓰면 글이라 발표 문서가 아니다');
+
 // 발표 문서가 아니면 ::: 는 보통 글이다
 const pl = L('# 글\n\n::: a\n첫 글\n:::\n');
 eq(moveLines(pl, 4, 4, 1).lines, L('# 글\n\n::: a\n:::\n첫 글\n'), '보통 문서의 ::: 는 글');

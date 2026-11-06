@@ -8,6 +8,7 @@ import { S, on, emit } from './store.js';
 import { $, $$, copyText, toast } from './util.js';
 import { showMenu } from './ui.js';
 import { followLine, forgetUnits } from './spotlight.js';
+import { plainText } from './terminal.js';
 import { t } from './i18n.js';
 
 let structure = false;   // 구조 보기 — 앱을 켜 둔 동안 창마다 하나
@@ -36,9 +37,11 @@ function toggleStructure() {
   updateButtons();
 }
 
-/** 지금 화면의 고칠 것들 [{page, text, line}] */
+/** 지금 화면의 고칠 것들 [{page, text, line}]. 글에 문서가 쓴 이름이 섞이므로 한 줄로, 제어 문자 없이 (메뉴·붙여 넣기·복사 뒤 Ctrl+V 모두) */
 function issuesOf(view) {
-  return $$(':scope > .lec-slide-wrap', view).flatMap((wrap, i) => (wrap.dataset.issues ? JSON.parse(wrap.dataset.issues).map((it) => ({ ...it, page: i + 1 })) : []));
+  return $$(':scope > .lec-slide-wrap', view).flatMap((wrap, i) => (wrap.dataset.issues
+    ? JSON.parse(wrap.dataset.issues).map((it) => ({ ...it, text: plainText(it.text).replace(/\s+/g, ' '), page: i + 1 }))
+    : []));
 }
 
 function updateButtons() {
@@ -84,7 +87,13 @@ export function initSlideTools() {
     applyStructure(pane);
     if (pane === S.pane) updateButtons();
   });
-  on('pane', updateButtons);
+  on('pane', () => {
+    applyStructure(S.pane);   // 탭마다 칸이 달라 꼬리표도 다시 맞춘다
+    updateButtons();
+  });
   on('deck-shown', updateButtons);
-  on('deck-checked', updateButtons);
+  on('deck-checked', () => {
+    forgetUnits();   // 그림이 늦게 불려 칸 안의 자리가 달라졌다
+    updateButtons();
+  });
 }

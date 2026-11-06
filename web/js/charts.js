@@ -477,8 +477,8 @@ async function draw(node, ctx) {
   const width = node.clientWidth || 640;
   // 발표 문서의 슬라이드(D59)에서는 좁게 그려 키운다 — 차트 글자가 슬라이드 글자와 어울리게 (slides.js 의 SLIDE_ZOOM)
   const zoom = node.closest('.lec-slide') ? SLIDE_ZOOM : 1;
-  // 슬라이드의 칸(시제품) 안이면 높이를 정하지 않은 차트를 칸의 남은 높이에 맞춘다
-  const cell = node.closest('.lec-cell');
+  // 높이가 정해진 칸(배치·자리 칸) 안이면 높이를 정하지 않은 차트를 칸의 남은 높이에 맞춘다
+  const cell = node.closest('.lec-slide.lec-grid > .lec-cell, .lec-cell.lec-at');
   const used = cell ? [...cell.children].filter((el) => el !== node).reduce((sum, el) => sum + el.offsetHeight, 0) : 0;
   const fit = cell ? Math.max(0, (cell.clientHeight - used - 8) / zoom) : 0;
   const info = drawn.get(node) || { ctx, seq: 0 };
