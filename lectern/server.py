@@ -589,7 +589,9 @@ def create_app(state: AppState) -> Flask:
             target = editing.rename_file(project.root, rel, name, project.exclude)
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
-        return jsonify(path=target.relative_to(project.root).as_posix())
+        path = target.relative_to(project.root).as_posix()
+        state.board.renamed(data.get('p'), rel, path)
+        return jsonify(path=path)
 
     @app.post('/api/editing')
     def api_editing() -> Any:

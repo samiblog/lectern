@@ -133,6 +133,7 @@ paginate: true
 
 <style scoped>
 section { background-color: rgb(1, 2, 3); }
+h2 { color: rgb(240, 240, 240); }
 @import url("https://example.com/x.css");
 h2 { background-image: url("https://example.com/y.png"); }
 </style>

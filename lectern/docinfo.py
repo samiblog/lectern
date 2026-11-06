@@ -26,7 +26,7 @@ _CACHE: dict[str, tuple[tuple[int, int], dict[str, Any]]] = {}
 _RE_HEADING = re.compile(r'^\s{0,3}(#{1,6})(?:[ \t]+(.*))?$')
 _RE_FENCE = re.compile(r'^\s{0,3}(```|~~~)')
 _RE_FM_KEY = re.compile(r'^(title|name|description|summary)\s*:\s*(.+?)\s*$', re.IGNORECASE)
-_RE_MARP = re.compile(r'^marp[ \t]*:[ \t]+(?i:true|yes|on)[ \t]*$')   # 화면의 readYaml 과 같게 (web/js/slides.js)
+_RE_MARP = re.compile(r'^[ \t]*marp[ \t]*:[ \t]+(?i:true|yes|on)[ \t]*$')   # 화면의 readYaml 과 같게 (web/js/slides.js)
 _RE_QUOTE = re.compile(r'^(?:>\s?)+')
 _RE_LIST = re.compile(r'^(?:[-*+]\s+(?:\[[ xX]\]\s+)?|\d+[.)]\s+)')
 _SKIP_PREFIXES = ('|', '<', '---', '***', '___', '===', '![', '[^', '$$')

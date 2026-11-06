@@ -249,7 +249,12 @@ export async function sendToWindow(pane, to) {
 }
 
 /** 다른 창이 보낸 것을 받는다: 문서는 새 문서 탭에서, 터미널로 보낼 글·메모는 고른 프로젝트의 것일 때만 */
-async function receive({ type, path, top, term, note, p, stay, hash, line }) {
+async function receive({ type, path, top, term, note, p, stay, hash, line, to }) {
+  if (type === 'renamed') {
+    const tab = S.tabs.find((x) => x.id === p);
+    if (tab) emit('file-renamed', { tab, path, to });
+    return;
+  }
   if (term != null || note) {
     if (p !== S.tab?.id) toast(t('메인 창이 다른 프로젝트를 보고 있어 받지 않았습니다'), 'error');
     else if (note) emit('new-note', note);

@@ -1,5 +1,5 @@
 // slideops.js 의 계산과 발표 문서의 줄 구조 벽 점검 (slides.py 가 페이지 안에서, rules_check 가 node 로 돌린다 — m: slideops.js, lo: lineops.js, 끝에서 {n, fails} 를 돌려준다)
-const { textSizes, readCellHead, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } = m;
+const { textSizes, readCellHead, cellHeadOdds, textOdds, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } = m;
 const { planNew, insertLine, joinLine, moveLines, deleteLines } = lo;
 let n = 0;
 const fails = [];
@@ -22,7 +22,11 @@ eq(readCellHead('a'), { name: 'a', words: [], size: null, at: null }, '이름만
 eq(readCellHead('b card accent 16'), { name: 'b', words: ['card', 'accent'], size: 16, at: null }, '꾸밈과 크기');
 eq(readCellHead('hub note at 10 20 300 120'), { name: 'hub', words: ['note'], size: null, at: [10, 20, 300, 120] }, '자리');
 eq(readCellHead('hub at 10 20 300 120 14'), { name: 'hub', words: [], size: 14, at: [10, 20, 300, 120] }, '자리 뒤의 크기');
-eq(readCellHead('a at 1 2'), { name: 'a', words: ['at'], size: 2, at: null }, '자리가 모자라면 낱말');
+eq(readCellHead('a at 1 2'), { name: 'a', words: [], size: null, at: null }, '자리가 모자라면 글자 크기로 읽지 않는다');
+eq(cellHeadOdds('a at 1 2 card'), ['at 1 2'], '모자란 자리를 알린다');
+eq(cellHeadOdds('a 16pt 9999 0 card 16'), ['16pt', '9999', '0'], '읽지 못한 낱말');
+eq(textOdds('표 14, 제목 30'), [], '맞는 글자 크기');
+eq(textOdds('표표 14, 본문 크게'), ['표표 14', '본문 크게'], '읽지 못한 글자 크기');
 eq(readCellHead('a <b> "x"').words, [], '낱말이 아닌 것은 버림');
 
 // 글자 크기 고치기

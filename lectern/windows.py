@@ -61,6 +61,13 @@ class WindowBoard:
             self._inbox.setdefault(to, []).append(item)
             return True
 
+    def renamed(self, project: str, path: str, to: str) -> None:
+        """파일 이름이 바뀌었다 — 그 파일을 연 다른 창이 '없는 파일'이 되지 않게 모든 창에 알린다 (바꾼 창에는 할 일이 없다)"""
+        item = {'type': 'renamed', 'path': path, 'to': to, 'p': project}
+        with self._lock:
+            for wid in {MAIN, *(k for k, w in self._seen.items() if w['project'] == project)}:
+                self._inbox.setdefault(wid, []).append(item)
+
     def take(self, wid: str) -> list[dict[str, Any]]:
         with self._lock:
             return self._inbox.pop(wid, [])

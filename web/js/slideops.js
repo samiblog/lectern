@@ -20,6 +20,7 @@ export const LAYOUTS = {
 
 const KINDS = Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]]));
 const SIZE = /^\d{1,3}(?:\.\d)?$/;
+export const SAFE_TRACK = /^[\w\s.%()-]{1,120}$/;   // 열·행 값 (style 속성에 들어간다)
 
 /** text 값('표 14, 제목 30')들을 뒤의 것이 이기게 합친다 {table: 14, title: 30}. 모르는 낱말은 넘어간다 */
 export function textSizes(...values) {
@@ -33,22 +34,48 @@ export function textSizes(...values) {
   return out;
 }
 
-/** 칸 머리 줄의 ::: 뒤: 이름 다음에 꾸밈 낱말, 글자 크기(수), 자리(at x y 너비 높이). {name, words, size, at} */
-export function readCellHead(head) {
+/** 칸 머리 줄을 낱말로: {name, words, size, at, odd(읽지 못한 것들)} */
+function parseHead(head) {
   const [name = '', ...rest] = String(head).trim().split(/\s+/);
   const words = [];
+  const odd = [];
   let size = null;
   let at = null;
   for (let i = 0; i < rest.length; i++) {
     const w = rest[i];
-    const box = rest.slice(i + 1, i + 5);
-    if (w === 'at' && box.length === 4 && box.every((x) => /^\d{1,4}$/.test(x))) {
-      at = box.map(Number);
-      i += 4;
-    } else if (SIZE.test(w)) size = Number(w);
+    if (w === 'at') {
+      const box = rest.slice(i + 1, i + 5);
+      if (box.length === 4 && box.every((x) => /^\d{1,4}$/.test(x))) {
+        at = box.map(Number);
+        i += 4;
+      } else {   // 뒤의 수를 글자 크기로 읽지 않는다
+        let n = i + 1;
+        while (n < rest.length && /^-?\d/.test(rest[n])) n += 1;
+        odd.push(rest.slice(i, n).join(' '));
+        i = n - 1;
+      }
+    } else if (SIZE.test(w) && Number(w) > 0) size = Number(w);
     else if (/^[A-Za-z][\w-]*$/.test(w) && !w.startsWith('lec-')) words.push(w);
+    else odd.push(w);
   }
+  return { name, words, size, at, odd };
+}
+
+/** 칸 머리 줄의 ::: 뒤: 이름 다음에 꾸밈 낱말, 글자 크기(수), 자리(at x y 너비 높이). {name, words, size, at} */
+export function readCellHead(head) {
+  const { name, words, size, at } = parseHead(head);
   return { name, words, size, at };
+}
+
+/** 칸 머리 줄에서 읽지 못한 낱말들 (점검이 알린다 — slidelint.js) */
+export const cellHeadOdds = (head) => parseHead(head).odd;
+
+/** text 값에서 읽지 못한 부분들 */
+export function textOdds(value) {
+  return (typeof value === 'string' ? value.split(',') : []).map((x) => x.trim()).filter((part) => {
+    const m = /^(\S+)\s+(\d{1,3}(?:\.\d)?)$/.exec(part);
+    return part && !(m && Object.hasOwn(KINDS, m[1]));
+  });
 }
 
 const RULE_LINE = /^ {0,3}([-*_])(?:[ \t]*\1){2,}[ \t]*$/;

@@ -36,9 +36,18 @@
 
 /* 슬라이드 */
 .lec-deck .lec-slide :is(h1, h2) { border: 0; }
-.lec-deck .lec-slide.lead { background-color: #17293d; --md-fg: #f6f3ec; --md-heading: #ffffff; --md-strong: #ffffff; --md-link: #fdba74; color: #e8e4da; }
+.lec-deck .lec-slide.lead { background-color: #17293d; --md-fg: #f6f3ec; --md-heading: #ffffff; --md-strong: #ffffff; --md-link: #fdba74; --md-muted: #b8c2cf; --md-stripe: rgba(255, 255, 255, .06); --md-code-bg: #22344a; color: #e8e4da; }
 .lec-deck .lec-slide.lead.paper { background-color: var(--md-bg); --md-fg: #1f2933; --md-heading: #17293d; --md-link: #c2410c; color: var(--md-fg); }
 .lec-deck .lec-cell.card, .lec-deck .lec-cell.kpi { background: #ffffff; border-color: var(--md-border); border-radius: 12px; box-shadow: 0 1px 2px rgba(23, 41, 61, .05); }
 .lec-deck .lec-cell.accent { background: #fff1e6; border-left: 5px solid #c2410c; border-radius: 4px 12px 12px 4px; }
 .lec-deck .lec-cell.dark { background: var(--md-heading); border-radius: 12px; }
 .lec-deck .lec-cell.kpi strong { color: #c2410c; }
+/* 어두운 장의 칸 (invert 는 base.css 의 규칙을 이 스타일의 상자 뒤에서 다시 건다) */
+.lec-deck .lec-slide:is(.invert, .lead:not(.paper)) .lec-cell:is(.card, .kpi, .accent, .dark) { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .28); box-shadow: none; color: inherit; --md-fg: #eef0f3; --md-strong: #ffffff; }
+.lec-deck .lec-slide:is(.invert, .lead:not(.paper)) .lec-cell.kpi strong { color: var(--md-link); }
+.lec-deck .lec-slide.lead:not(.paper) :is(h3, h4, h5, h6) { color: var(--md-heading); }
+.lec-deck .lec-slide.lead:not(.paper) .lec-cell.note { --md-heading: #3b3216; --md-fg: #3b3216; --md-strong: #3b3216; --md-link: #7a4a00; }
+.lec-deck .lec-slide.lead:not(.paper) :is(pre, :not(pre) > code) { background: var(--md-code-bg); color: #eef0f3; }
+.lec-deck .lec-slide.lead:not(.paper) pre :is(code, code *) { background: transparent; color: inherit; }
+.lec-deck .lec-slide:is(.invert, .lead:not(.paper)) table { background: transparent; }
+.lec-deck .lec-slide:is(.invert, .lead:not(.paper)) blockquote:not(.alert) { background: rgba(255, 255, 255, .1); color: inherit; }

@@ -77,7 +77,7 @@ function frontEnd(lines) {
 }
 
 /** 맨 앞 설정에 marp: true 인 발표 문서인지 — 값을 읽는 법은 slides.js 의 readYaml 과 같게 (yes·on 도, 따옴표는 글) */
-const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.startsWith('marp'));
+const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^[ \t]*marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.trim().startsWith('marp'));
 
 /** 발표 문서에서 장을 가르는 줄인지. 바로 위가 글이면 구분 줄이 아니라 그 글의 밑줄 제목이다 (제목\n---) */
 function slideBreak(lines, n, fences) {

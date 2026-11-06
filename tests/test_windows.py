@@ -243,6 +243,16 @@ def test_a_deck_opens_once_until_the_window_says_otherwise(setup):
     assert state.board.take(c) == [{'type': 'doc', 'path': 'b.md', 'line': 12}]
 
 
+def test_a_rename_reaches_the_windows_of_that_project(setup):
+    state, _, first, second, *_ = setup
+    state.board.seen('a' * 16, first.id, '창')
+    state.board.seen('b' * 16, second.id, '창')
+    state.board.renamed(first.id, 'a.md', 'b.md')
+    item = {'type': 'renamed', 'path': 'a.md', 'to': 'b.md', 'p': first.id}
+    assert state.board.take('a' * 16) == [item] and state.board.take('') == [item]
+    assert state.board.take('b' * 16) == [], '다른 프로젝트의 창에는 가지 않는다'
+
+
 def test_moving_a_deck_tab_opens_a_new_window(setup):
     state, solos, first, _, made, *_ = setup
     assert solos.open(query(first.id, 'a' * 16, type='doc', path='a.md', deck='1'))

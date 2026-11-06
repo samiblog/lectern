@@ -43,11 +43,11 @@ Exchange stocks are **192 kt**.
 
 - `marp: true` in the front matter makes it a deck.
 - Separate slides with a `---` line, with blank lines around it.
-- A slide is 1280×720.
+- A slide is 1280×720. For 4:3 add `size: 4:3` to the front matter. It is then 960×720 with 848 of usable width, so scale the widths in section 5 by 0.7.
 - Put the title (`#`, `##`) outside the cells, one per slide.
 - Write directives as HTML comments at the top of the slide.
 - Any other HTML comment is a speaker note. It can go anywhere on the slide and does not count as text outside the cells. After the last cell reads well. A colon is fine (`<!-- Source: statistics office -->`); only a directive name (`layout`, `text`, `class` and so on) makes it a directive. Comments in code blocks are code.
-- Write `lead` slides such as covers and section slides without cells. `footer` from the front matter also shows on `lead` slides.
+- Write `lead` slides such as covers and section slides without cells. `footer` and `header` from the front matter also show on `lead` slides. To drop one on a slide, write `<!-- _footer: '' -->`.
 - Do not use footnotes. Put sources briefly in a cell or in the notes.
 
 ## 2. Cells
@@ -120,7 +120,7 @@ To place a cell yourself, write `at x y width height` in px, from the top left o
 
 ```markdown
 ::: hub note at 460 250 300 120
-### Steel margin
+### Product margin
 
 The spread is the key
 :::
@@ -185,6 +185,11 @@ A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line
 - A heading or text in the same cell leaves fewer table rows.
 - For grid, `at` and `cols-2` cells, estimate from the cell size. A grid has 1168 of width and 555 of height below the title. The gap between cells is 18px across and 14px down.
 - A title fits about 30 Korean characters per line, and a subheading fits cell width ÷ 26. Lists lose about 40px of width to the indent.
+- Latin text fits about 1.6 times as much (at 18pt, cell width ÷ 14). A word longer than the cell breaks in the middle.
+- Code lines do not wrap. At 14pt a line holds cell width ÷ 11 characters and is 29px high. Overflow shows in the check, so split the line.
+- Table rows include the header row.
+- Cells share the slide height. For a cell with little text or a short table, use `center`.
+- On dark slides (`invert`, `lead`) cells, tables and code follow the slide colors. Only `note` stays a yellow box.
 - `eyebrow` sits in the empty space above the title and does not reduce the cell height.
 - Changing the text size changes these in proportion. At 12pt a table row is 35px.
 - Keep slides short. Short lists beat paragraphs.
@@ -198,6 +203,9 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - `echarts`: an ECharts option as JSON. Leave out `height` and `width`.
 - `plotly`: `{"data": […], "layout": {…}}` as JSON. No map types.
 - Settings are JSON values only. Functions do not work.
+- Only `vega-lite` reads `data.url`. For `echarts` and `plotly`, put the values in the settings.
+- The ECharts legend defaults to the bottom. Move it up with `"legend": {"top": 0}` or keep `grid.bottom` at 56 or more.
+- A donut's `innerRadius` is in px. In a small cell it turns into a thin ring, so keep it under a fifth of the cell height.
 - In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
 - `center` on a cell also works for charts and diagrams.
 - Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV so they can be edited as a table.
@@ -224,8 +232,10 @@ Image syntax:
 - `![w:300 alt text](images/a.png)` image size; alt text may follow.
 - Images in a cell shrink to fit. Text in the same cell takes its space first.
 - `![bg right:40%](images/a.png)` background on the right 40%. Use `left` for the left. Cells and grids shrink to the width left. Add `contain` to keep the whole image.
-- Two `![bg](a.png)` lines split the background.
-- `![bg sepia](a.png)` filter (`blur`, `grayscale`, `sepia` and more).
+- Several `![bg](a.png)` lines split the background side by side. They do not overlap. `![bg vertical](a.png)` splits top to bottom.
+- `![bg sepia](a.png)` filter: `blur`, `brightness:.6`, `contrast`, `grayscale`, `hue-rotate`, `invert`, `opacity`, `saturate`, `sepia:50%`.
+- Wrap file names with spaces or brackets: `![Flow](<images/process flow (final).svg>)`.
+- The check cannot measure text over a photo. Darken the photo and use `invert` (`![bg brightness:.5](a.png)`).
 
 ## 7. Directives
 
@@ -233,6 +243,8 @@ Image syntax:
 |---|---|
 | `<!-- _class: lead -->` | Center this slide like a cover; also for section slides |
 | `<!-- _class: invert -->` | Make this slide dark |
+| `<!-- _color: #ffd27f -->` | Text color of this slide |
+| `<!-- _footer: '' -->` | Drop the footer on this slide (`_header` too) |
 | `<!-- _backgroundColor: #17293d -->` | This slide's background |
 | `<!-- _paginate: false -->` | No page number on this slide |
 | `<!-- eyebrow: Market summary -->` | Small label above the title |
@@ -264,6 +276,18 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 | Cell z is not in the layout | Use a cell name from the layout |
 | Cell c is empty | Fill it or change the layout |
 | Cell a has no closing ::: | Add the closing line |
+| Could not read this as a cell mark | Start the line with `::: name`: three colons and a space |
+| Cell a appears twice | Use each cell name once per slide |
+| Cell a has an unknown word 'x' | Fix the word. For your own CSS word, write a `.x` rule |
+| 'x' is not a directive, so it was read as a note | Fix the directive name |
+| Every grid row needs the same number of cells | Use the same count in each row |
+| Grid cell a is not a rectangle | Keep each name in one rectangle |
+| A comment is not closed | Add `-->` |
+| A code block is not closed | Add the closing line |
+| Text sits right above --- | Add a blank line above `---` |
+| Text is too close to its background | Change the text color or the background |
+| Code is cut off at the side | Split the line |
+| Image not found | Fix the path. It is relative to this md file |
 | There is text outside the cells | Move it into a cell |
 | There is no layout 'x' | Use a name from the table above |
 

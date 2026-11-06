@@ -17,8 +17,10 @@ import { S, on, emit } from './store.js';
 import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
-import { LAYOUTS, textSizes, readCellHead } from './slideops.js';
+import { LAYOUTS, SAFE_TRACK, textSizes, readCellHead } from './slideops.js';
+import { cellSlips, checkClipped, checkContrast, checkImages, commentSlip, gridSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
 import { confinedCss } from './csssafe.js';
+import { raw, setHtml } from './html.js';
 
 const SIZES = { '16:9': [1280, 720], '4:3': [960, 720] };
 const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords', 'reading',
@@ -26,7 +28,6 @@ const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'tit
 const LOCAL = ['paginate', 'header', 'footer', 'class', 'backgroundColor', 'backgroundImage', 'backgroundPosition',
   'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];
 const SAFE_AREA = /^[\p{L}\p{N}_\s/-]{1,200}$/u;
-const SAFE_TRACK = /^[\w\s.%()-]{1,120}$/;
 const LOCAL_SET = new Set(LOCAL);
 const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
 const SAFE_CSS = /^[#\w\s(),.%+-]{1,120}$/;   // 색·크기·그라데이션 — 따옴표·세미콜론·url() 은 받지 않는다
@@ -231,6 +232,7 @@ export function cellRule(state, startLine, endLine, silent) {
   const safe = /^[\p{L}\p{N}_-]+$/u.test(name) ? name : '';
   const open = state.push('lec_cell_open', 'div', 1);
   open.map = [startLine, close + 1];
+  open.meta = { head: m[1] };
   open.attrSet('class', ['lec-cell', ...words, ...(at ? ['lec-at'] : [])].join(' '));
   open.attrSet('data-cell', safe);
   if (unclosed) open.attrSet('data-unclosed', '1');
@@ -255,7 +257,8 @@ export function slideRule(state) {
   const offset = state.env.lineOffset || 0;
   const total = (state.src.match(/\n/g) || []).length + (state.src.endsWith('\n') ? 0 : 1);
   const slides = [];
-  const fresh = (start) => ({ tokens: [], start, local: {}, spot: {}, notes: [], css: [] });
+  const lines = state.src.split('\n');
+  const fresh = (start) => ({ tokens: [], start, local: {}, spot: {}, notes: [], css: [], warn: [], heads: [], skip: new Set() });
   let cur = fresh(0);
   const split = (end, next) => {
     cur.end = end;
@@ -272,6 +275,18 @@ export function slideRule(state) {
     if (tok.level === 0 && tok.type === 'heading_open' && deck.divider && +tok.tag[1] <= deck.divider && cur.tokens.length) {
       split(tok.map[0], tok.map[0]);
     }
+    if (tok.map && (tok.type === 'fence' || tok.type === 'html_block')) {   // 그 안의 ::: 는 칸 표시로 쓴 것이 아니다
+      for (let n = tok.map[0]; n < tok.map[1]; n++) cur.skip.add(n);
+    }
+    if (tok.type === 'lec_cell_open') {
+      cur.skip.add(tok.map[0]);
+      cur.skip.add(tok.map[1] - 1);
+      cur.heads.push(tok);
+    }
+    if (tok.type === 'fence' && openFence(lines, tok)) cur.warn.push({ text: t('코드 블록이 닫히지 않아 뒤의 글이 코드가 됐습니다 — 닫는 ``` 를 쓰세요'), n: tok.map[0] });
+    if (tok.type === 'heading_open' && tok.markup === '-' && /^\s*-{3,}\s*$/.test(lines[tok.map[1] - 1] ?? '')) {
+      cur.warn.push({ text: t('--- 바로 위에 글이 있어 구분 줄이 아니라 제목으로 읽었습니다 — 위에 빈 줄을 넣으세요'), n: tok.map[1] - 1 });
+    }
     if (tok.type === 'html_block' && tok.level === (inCell ? 1 : 0)) {   // 칸 바로 안의 노트·지시어·<style> 도 장의 것
       const texts = commentsOnly(tok.content);
       if (texts) {
@@ -282,10 +297,14 @@ export function slideRule(state) {
             Object.assign(cur.spot, dirs.spot);
           } else if (text.trim()) {
             cur.notes.push(text.trim());
+            const slip = commentSlip(text);
+            if (slip) cur.warn.push({ text: slip, n: tok.map[0] });
           }
         }
         continue;
       }
+      const open = openBlock(tok.content);
+      if (open) cur.warn.push({ text: open, n: tok.map[0] });
       const style = STYLE_BLOCK.exec(tok.content);
       if (style) {   // 장별 CSS — scoped 면 이 장만, 아니면 문서 전체 (Marp 와 같다)
         if (style[1]) cur.css.push(style[2]);
@@ -318,6 +337,17 @@ export function slideRule(state) {
     const areas = grid ? ` data-areas="${attr([...new Set(grid.areas.replace(/'/g, ' ').trim().split(/\s+/))].filter((x) => x !== 't' && x !== '.').join(' '))}"` : '';
     const links = typeof eff.links === 'string' && eff.links.trim() ? ` data-links="${attr(eff.links)}"` : '';
     const reading = deck.fm.reading === true ? ' data-reading="1"' : '';
+    const css = `${deck.style}\n${Object.values(deck.slideCss).join('\n')}\n${slides.flatMap((x) => x.css).join('\n')}`;
+    const whole = (text) => ({ text, line: s.start + 1 + offset });
+    const warn = [
+      ...s.warn.map((w) => ({ text: w.text, line: w.n + 1 + offset })),
+      ...strayLines(lines, s.start, s.end, s.skip).map((w) => ({ text: w.text, line: w.n + 1 + offset })),
+      ...s.heads.flatMap((tok) => cellSlips(tok.meta.head, css).map((text) => ({ text, line: tok.map[0] + 1 + offset }))),
+      ...[s.local.text, s.spot.text, i === 0 ? deck.fm.text : ''].flatMap(textSlips).map(whole),
+      ...gridSlips(eff).map(whole),
+    ];
+    // > 를 JSON 이스케이프로: 값에 --> 나 </style> 이 있으면 DOMPurify 가 속성째 지운다 (주석 안의 속성 공격을 막는 규칙)
+    const warned = warn.length ? ` data-warn="${attr(JSON.stringify(warn).replace(/[<>]/g, (c) => `\\u00${c.charCodeAt(0).toString(16)}`))}"` : '';
     if (s.css.length) deck.slideCss[i + 1] = s.css.join('\n');
     const a = s.start + 1 + offset;
     const b = Math.max(s.start + 1, s.end) + offset;
@@ -330,8 +360,13 @@ export function slideRule(state) {
     out.push(html(`<div class="lec-slide-wrap${wide}" data-key="${deck.key}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
       + ` style="--slide-w:${deck.w}px;--slide-h:${deck.h}px">`
       + `<div class="lec-slide-frame" style="aspect-ratio:${deck.w} / ${deck.h}">`
-      + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${reading} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
-    out.push(...s.tokens);
+      + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${reading}${warned} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
+    // 문서의 HTML 은 장 안에서 닫는다: 남은 </section> 이 틀을 닫거나 닫지 않은 <div> 가 다음 장을 삼키지 않게 (Marp 의 <div> 묶음은 여러 블록에 걸쳐 있어 장째로)
+    if (s.tokens.some((tok) => tok.type === 'html_block' || tok.children?.some((c) => c.type === 'html_inline'))) {
+      const box = document.createElement('template');   // 그리지도 돌리지도 않는 틀 — 글은 뒤에서 문서 전체와 함께 DOMPurify 를 거친다
+      setHtml(box, raw(md.renderer.render(s.tokens, md.options, state.env)));
+      out.push(html(box.innerHTML));
+    } else out.push(...s.tokens);
     out.push(html(`${footer}</section></div>${s.notes.length ? `<div class="lec-slide-notes">${md.utils.escapeHtml(s.notes.join('\n\n'))}</div>` : ''}</div>\n`));
   });
   state.tokens = out;
@@ -440,6 +475,7 @@ const lineOf = (el) => parseInt(el.dataset.lines || '', 10) || 0;
 function checkSlide(section) {
   const out = [];
   const add = (text, el = section.closest('.lec-slide-wrap')) => out.push({ text, line: lineOf(el) });
+  if (section.dataset.warn) out.push(...JSON.parse(section.dataset.warn));
   if (section.dataset.layoutMiss) add(t("배치 '{name}' 이(가) 없습니다", { name: section.dataset.layoutMiss }));
   const cells = $$('.lec-cell', section).filter((c) => !c.closest('.lec-cell .lec-cell') || c.parentElement === section);
   for (const cell of cells) {
@@ -454,6 +490,7 @@ function checkSlide(section) {
     const names = new Set();
     for (const cell of cells) {
       if (cell.classList.contains('lec-at')) continue;
+      if (names.has(cell.dataset.cell)) add(t('칸 {name} 이(가) 두 번 나옵니다 — 칸 이름은 장마다 하나만 씁니다', { name: cell.dataset.cell }), cell);
       names.add(cell.dataset.cell);
       if (!areas.includes(cell.dataset.cell)) {
         cell.classList.add('lec-cell-bad');
@@ -465,11 +502,11 @@ function checkSlide(section) {
     if (stray.length) add(t('칸 밖에 글이 있습니다 — 칸 안으로 옮기세요'), stray[0]);
     if ($$(':scope > :is(h1, h2)', section).length > 1) add(t('이 장에 제목이 둘입니다 — 제목은 하나만 씁니다'));
   }
-  for (const p of $$('p', section)) {
-    if (p.firstChild?.nodeType === Node.TEXT_NODE && /^\s*:::(\s|$)/.test(p.firstChild.nodeValue)) add(t('짝이 맞지 않는 ::: 가 있습니다'), p);
-  }
   checkPlaced(section, cells.filter((c) => c.classList.contains('lec-at')), add);
   checkSmall(section, add);
+  checkContrast(section, add);
+  checkClipped(section, add);
+  checkImages(section, add);
   drawLinks(section, add);
   return out;
 }
@@ -659,7 +696,10 @@ export function prepareDeck(root, deck, text = '') {
     sizeImages(section);
     for (const img of $$('img', section)) {
       img.loading = 'eager';   // 화면 밖 무대에서도 불러와야 넘침을 잴 수 있다
-      if (!img.complete) img.addEventListener('load', () => fitSlide(section), { once: true });
+      if (!img.complete) {
+        img.addEventListener('load', () => fitSlide(section), { once: true });
+        img.addEventListener('error', () => fitSlide(section), { once: true });
+      }
     }
   }
   for (const notes of $$('.lec-slide-notes', root)) notes.dataset.label = t('발표자 노트');

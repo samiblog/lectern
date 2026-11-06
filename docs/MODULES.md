@@ -60,6 +60,7 @@
 | sideorder.js | 사이드바 목록의 차례 (D97): 폴더 먼저, 그 안은 이름순·시간순·형식순 (설정 side_sort) |
 | slideops.js | 슬라이드의 원문 계산 (D96, DOM 없음): 칸 머리 줄·글자 크기 지시어, 장 더하기·복제·옮기기·지우기 |
 | csssafe.js | 문서가 준 CSS 거르기 (D96): 브라우저 해석기로 읽고 정규화한 규칙만 슬라이드 틀 안에 가둔다 — 바깥 요청·앱을 건드리는 선택자·고정 위치를 뺀다 |
+| slidelint.js | 슬라이드 점검의 앞단 (D96): 닫지 않은 주석·코드, 칸·구분 줄로 읽지 못한 줄, 지시어·칸 머리의 오타, 잘못된 격자, 바탕과 비슷한 글자, 옆으로 잘린 코드, 없는 그림 |
 | slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록) |
 | slides.js | 발표 문서 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide`), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |
 | present.js | 발표 모드 (D59) — `#lec-present` 에 슬라이드를 복제해 창 전체에, 넘기기·N 노트·F 전체 화면·Esc (키는 main.js 가 맨 먼저 `presentKey` 로) |

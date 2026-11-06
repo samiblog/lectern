@@ -83,7 +83,7 @@ async function submit() {
 }
 
 /** 바뀐 이름을 화면에 옮긴다 — 그 파일을 보던 칸은 새 이름으로 다시 연다 (편집 중이었으면 편집도) */
-async function moved(tab, from, to) {
+async function moved(tab, from, to, remote = false) {
   for (const sn of tab.basket || []) if (sn.path === from) sn.path = to;   // 담은 조각 (D63)
   // 확장자가 같으면 보던 종류 그대로 (앱 소스 폴더의 html 은 코드 화면 — 원칙 4), 바뀌면 새 확장자로. 읽을 수 없는 종류면 그 폴더 개요
   const sameExt = extOf(basename(from)) === extOf(basename(to));
@@ -93,6 +93,7 @@ async function moved(tab, from, to) {
     return next ? { type: next, path: to } : { type: 'overview', path: dirname(to) };
   };
   for (const pane of renamePath(tab, from, targetOf)) {
+    if (remote && pane.editor) continue;   // 다른 창이 바꿨다 — 이 창의 저장하지 않은 편집은 닫지 않는다
     const next = targetOf(pane.current.type);
     const editing = !!pane.editor && next.type !== 'overview';
     if (pane.editor) closeEditor(pane, { ask: false, sync: false });   // 저장하지 않은 편집은 없다 (askRename·submit)
@@ -101,6 +102,7 @@ async function moved(tab, from, to) {
 }
 
 export function initRename() {
+  on('file-renamed', ({ tab, path, to }) => moved(tab, path, to, true));
   input().addEventListener('input', () => setMsg(''));
   input().addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
