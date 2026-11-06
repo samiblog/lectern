@@ -67,6 +67,8 @@ def luminance(c):
 def theme_file(style):
     """스타일 css 를 찾는다: 이 스킬이 앱 안에 있을 때, 저장소, 설치본 차례."""
     roots = [HERE.parents[2] / 'web' / 'themes']
+    if getattr(sys, 'frozen', False):   # 스킬 실행기로 돌면 그 설치본의 것을 쓴다 (D99)
+        roots.insert(0, Path(sys.executable).parent / '_internal' / 'web' / 'themes')
     local = os.environ.get('LOCALAPPDATA')
     if local:
         roots.append(Path(local) / 'Programs' / 'Lectern' / '_internal' / 'web' / 'themes')

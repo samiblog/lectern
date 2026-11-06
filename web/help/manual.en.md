@@ -505,6 +505,8 @@ Make a pptx from @slides.md on the D:\templates\company.pptx template.
 - When exporting, text stays text, tables stay tables, charts stay editable charts and lines become connectors. Colors follow the style chosen in the slide window. Complex charts and Mermaid go in as pictures.
 - A document that came from a pptx reuses the original slides you did not change. Where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
 - The original pptx is never changed. An open presentation is not saved or closed.
+- You do not need to install Python. The skills run on `lectern-skill.exe` in the program folder.
+- `.pptx` files can be moved and exported without PowerPoint. An open presentation, `.ppt` files and DRM files need PowerPoint.
 - Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
 
 ## Settings

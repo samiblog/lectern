@@ -8,6 +8,7 @@ PowerPoint 가 있으면 실제로 열어 보고 --render 폴더에 쪽 그림�
 """
 import argparse
 import json
+import os
 import re
 import subprocess
 import sys
@@ -133,34 +134,45 @@ def contrast_issues(path):
     return out[:20]
 
 
-def open_in_powerpoint(path, render):
-    code = f'''
-import os, sys
-import pythoncom
-import win32com.client as wc
-path, out = sys.argv[1], sys.argv[2]
-try:
-    app = wc.GetActiveObject("PowerPoint.Application"); running = True
-except pythoncom.com_error:
-    app = wc.Dispatch("PowerPoint.Application"); running = False
-saved = app.AutomationSecurity
-app.AutomationSecurity = 3
-pres = app.Presentations.Open(path, True, False, False)
-n = pres.Slides.Count
-if out:
-    os.makedirs(out, exist_ok=True)
-    w = round(720 * pres.PageSetup.SlideWidth / pres.PageSetup.SlideHeight)
-    for s in pres.Slides:
-        s.Export(os.path.join(out, f"{{s.SlideIndex:03d}}.png"), "PNG", w, 720)
-pres.Close()
-app.AutomationSecurity = saved
-if not running and app.Presentations.Count == 0:
-    app.Quit()
-print(n)
-'''
+def open_child(path, out):
+    """PowerPoint 로 열어 쪽 수를 찍는다. 멈출 수 있어 자식 프로세스에서 돈다."""
+    import pythoncom
+    import win32com.client as wc
+    try:
+        app = wc.GetActiveObject('PowerPoint.Application')
+        running = True
+    except pythoncom.com_error:
+        app = wc.Dispatch('PowerPoint.Application')
+        running = False
+    saved = app.AutomationSecurity
+    app.AutomationSecurity = 3
+    pres = app.Presentations.Open(path, True, False, False)
+    n = pres.Slides.Count
+    if out:
+        os.makedirs(out, exist_ok=True)
+        w = round(720 * pres.PageSetup.SlideWidth / pres.PageSetup.SlideHeight)
+        for s in pres.Slides:
+            s.Export(os.path.join(out, f'{s.SlideIndex:03d}.png'), 'PNG', w, 720)
+    pres.Close()
+    app.AutomationSecurity = saved
+    if not running and app.Presentations.Count == 0:
+        app.Quit()
+    print(n)
+
+
+def has_powerpoint():
+    """실행기에는 pywin32 가 늘 있으니 PowerPoint 가 깔렸는지까지 본다."""
     try:
         import win32com.client  # noqa: F401
-    except ImportError:
+        import winreg
+        winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, 'PowerPoint.Application').Close()
+        return True
+    except (ImportError, OSError):
+        return False
+
+
+def open_in_powerpoint(path, render):
+    if not has_powerpoint():
         return None
     # 같은 파일이 열려 있으면 그 발표를 돌려받아 닫게 되니 복사본을 연다
     import shutil
@@ -169,7 +181,7 @@ print(n)
         copy = Path(tmp) / 'check-copy.pptx'
         shutil.copyfile(path, copy)
         try:
-            r = subprocess.run([sys.executable, '-I', '-c', code, str(copy), str(Path(render).resolve()) if render else ''], capture_output=True, text=True, encoding='utf-8', timeout=180)
+            r = subprocess.run([sys.executable, '-I', str(Path(__file__).resolve()), '--open-child', str(copy), str(Path(render).resolve()) if render else ''], capture_output=True, text=True, encoding='utf-8', timeout=180)
         except subprocess.TimeoutExpired:
             return {'opened': False, 'error': 'PowerPoint 가 제한 시간 안에 끝내지 못했습니다. 복구 창이 떠 있을 수 있습니다'}
     if r.returncode == 0:
@@ -178,6 +190,9 @@ print(n)
 
 
 def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    if argv[:1] == ['--open-child']:
+        return open_child(*argv[1:3])
     ap = argparse.ArgumentParser(description=__doc__.split('\n')[0])
     ap.add_argument('md')
     ap.add_argument('pptx')

@@ -14,6 +14,16 @@ description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를
 - **옮기기**: "이 pptx 를 Lectern 슬라이드로". 아래 순서를 따른다.
 - **참고해 만들기**: "이 pptx 를 참고해서 이 md 를 슬라이드로". 맨 아래 장을 따른다.
 
+## 스크립트 돌리기
+
+아래의 `<실행기>` 는 이 차례로 고른다. 사용자가 Python 을 설치하지 않아도 된다.
+
+1. Lectern 스킬 실행기 `%LOCALAPPDATA%\Programs\Lectern\lectern-skill.exe`. Python, pywin32, Pillow 가 들어 있다. Bash 에서는 `"$LOCALAPPDATA/Programs/Lectern/lectern-skill.exe"`, PowerShell 에서는 `& "$env:LOCALAPPDATA\Programs\Lectern\lectern-skill.exe"` 로 부른다.
+2. 없으면 `python` (3.10 이상).
+3. 둘 다 없으면 Lectern 을 어디에 설치했는지 사용자에게 묻는다. 그 폴더에 `lectern-skill.exe` 가 있다.
+
+실행기는 스킬의 `scripts` 폴더 안 파일만 돌린다. 다른 Python 코드는 돌리지 못한다.
+
 ## 무엇을 지키고 무엇을 버리나
 
 | 수준 | 대상 | 어떻게 |
@@ -41,13 +51,13 @@ description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를
 ### 1. 초안을 만든다
 
 ```bash
-python <이 스킬>/scripts/convert.py 원본.pptx 출력폴더 --name 문서이름
+<실행기> <이 스킬>/scripts/convert.py 원본.pptx 출력폴더 --name 문서이름
 ```
 
 사용자가 **PowerPoint 에 띄워 둔 발표**를 말하면 ("지금 열어 둔 ppt", "화면에 띄운 발표") 파일 경로 없이 이렇게 한다.
 
 ```bash
-python <이 스킬>/scripts/convert.py --active 출력폴더
+<실행기> <이 스킬>/scripts/convert.py --active 출력폴더
 ```
 
 앞쪽 창의 발표를 옮긴다. 저장하지 않은 수정도 들어가고, 띄워 둔 발표는 저장하지도 닫지도 않는다. 출력의 `log` 에 다른 발표가 열려 있다고 나오면 어느 것을 옮겼는지 알린다. 다른 것이면 `--pick 이름의일부` 로 다시 돈다. 출력폴더를 모르면 사용자에게 묻는다. `source` 가 비어 있으면 저장한 적 없는 발표다.
@@ -58,7 +68,7 @@ python <이 스킬>/scripts/convert.py --active 출력폴더
 - ZIP 으로 못 여는 파일(.ppt, DRM)은 PowerPoint 로 pptx 사본을 받아 읽고, 사본이 막히면 PowerPoint 에서 직접 읽는다. `pywin32` 가 필요하다. 파일이 DRM 으로 안 열리면 PowerPoint 에 띄워 놓고 `--active` 로 옮기는 길도 있다.
 - PowerPoint 가 있으면 쪽 그림을 뽑고 EMF 를 PNG 로 받는다. 도식을 그림으로 자르려면 `Pillow` 도 필요하다.
 
-없으면 `pip install pywin32 pillow` 를 제안한다. 설치가 안 되는 환경이면 없이 돌리고, 도식이 칸으로만 옮겨진다고 알린다. PowerPoint 는 읽기 전용, 창 없이, 매크로를 끄고 쓴다. 이미 떠 있던 PowerPoint 는 닫지 않는다.
+둘 다 실행기에 들어 있다. `python` 으로 돌릴 때 없으면 `pip install pywin32 pillow` 를 제안한다. 설치가 안 되는 환경이면 없이 돌리고, 도식이 칸으로만 옮겨진다고 알린다. PowerPoint 는 읽기 전용, 창 없이, 매크로를 끄고 쓴다. 이미 떠 있던 PowerPoint 는 닫지 않는다.
 
 출력의 `log` 가 비어 있지 않으면 먼저 읽는다. 쪽 그림을 못 뽑았다면 다시 돌린다. 그래도 안 되면 PowerPoint 가 보이지 않는 확인 창에서 멈춰 있을 수 있다. 사용자에게 PowerPoint 창을 봐 달라고 하고, 프로세스를 직접 끄지 않는다. 사용자의 작업일 수 있다. 암호가 걸린 파일은 사용자에게 암호를 풀어 달라고 한다.
 
@@ -76,7 +86,7 @@ python <이 스킬>/scripts/convert.py --active 출력폴더
 
 초안은 글을 정확히 옮겼지만 배치 판단은 기계적이다. 사람이 고칠 수 있는 글이 많아지고 원본 인상이 살아나는 곳만 손댄다. 모든 쪽을 다시 쓰지 않는다.
 
-`python <이 스킬>/scripts/sheet.py .pptx-work/문서이름/ref .pptx-work/문서이름/sheets` 로 원본을 몇 장에 모아 훑고, 출력의 `review` 차례로 본다:
+`<실행기> <이 스킬>/scripts/sheet.py .pptx-work/문서이름/ref .pptx-work/문서이름/sheets` 로 원본을 몇 장에 모아 훑고, 출력의 `review` 차례로 본다:
 
 1. **표지·장 구분.** 제목이 길어 넘치지 않는지, 배경과 로고가 맞는지 본다.
 2. **그림으로 둔 쪽.** `outline.md` 에서 그 쪽의 글과 자리를 본다.
@@ -93,7 +103,7 @@ python <이 스킬>/scripts/convert.py --active 출력폴더
 ### 3. 검증하고 봉한다
 
 ```bash
-python <이 스킬>/scripts/verify.py 문서이름.md .pptx-work/문서이름 --seal
+<실행기> <이 스킬>/scripts/verify.py 문서이름.md .pptx-work/문서이름 --seal
 ```
 
 `errors` 와 `slides_missing_text` 가 비어야 한다. 빠진 낱말이 있으면 다듬다가 잃은 것이니 되돌린다. `warnings` 의 '넘칠 듯합니다'는 약값이니 그 칸을 살펴 글자 크기를 줄인다. `text_editable_pct` 는 그림 쪽의 글이 빠진 값이다. 다듬기 전보다 올랐는지 본다.
@@ -119,8 +129,8 @@ python <이 스킬>/scripts/verify.py 문서이름.md .pptx-work/문서이름 --
 ### 1. 양식을 읽는다
 
 ```bash
-python <이 스킬>/scripts/reference.py 양식.pptx 출력폴더 --name 양식이름
-python <이 스킬>/scripts/reference.py --active 출력폴더 --name 양식이름      # 화면에 띄운 pptx
+<실행기> <이 스킬>/scripts/reference.py 양식.pptx 출력폴더 --name 양식이름
+<실행기> <이 스킬>/scripts/reference.py --active 출력폴더 --name 양식이름      # 화면에 띄운 pptx
 ```
 
 `<양식이름>-양식.md` 에 맨 앞 설정, 칸 색, 표지 만드는 법, 쪽 종류별 칸 자리가 나온다. 쪽 그림을 `sheet.py` 로 모아 보고 양식의 분위기를 잡는다. 맨 앞 설정의 `style` 은 `.pptx-work/<양식이름>-양식/style.txt` 의 전체 글을 쓴다. 쪽마다 있는 로고는 그 안에 있고, 표지에만 있는 로고는 양식 안내의 표지 장식을 보고 넣는다.
@@ -142,7 +152,7 @@ Lectern 의 작성 안내를 읽고 md 내용으로 발표 문서를 쓴다. 옮
 ### 3. 맞춰 본다
 
 ```bash
-python <이 스킬>/scripts/from_md.py 원본.md 슬라이드.md
+<실행기> <이 스킬>/scripts/from_md.py 원본.md 슬라이드.md
 ```
 
 `errors` 와 `numbers_added` 는 비어 있어야 한다. `numbers_added` 는 md 에 없는 숫자가 슬라이드에 생겼다는 뜻이다 (쪽 번호나 표의 순위처럼 스스로 붙인 것은 빼도 된다). `numbers_missing` 과 `headings_missing` 은 줄이면서 뺀 것이다. 중요한 것이 빠졌는지 보고, 뺀 것을 보고에 적는다. 그리고 Lectern 의 점검을 부탁한다.

@@ -7,6 +7,7 @@ Edge 나 라이브러리가 없으면 None 을 돌려주고 부른 쪽이 설정
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 
@@ -22,6 +23,8 @@ LIBS = {
 
 def vendor_dir():
     roots = [HERE.parents[2] / 'web' / 'vendor']
+    if getattr(sys, 'frozen', False):   # 스킬 실행기로 돌면 그 설치본의 것을 쓴다 (D99)
+        roots.insert(0, Path(sys.executable).parent / '_internal' / 'web' / 'vendor')
     local = os.environ.get('LOCALAPPDATA')
     if local:
         roots.append(Path(local) / 'Programs' / 'Lectern' / '_internal' / 'web' / 'vendor')

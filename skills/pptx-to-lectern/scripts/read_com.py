@@ -454,7 +454,10 @@ def pick_open(want=''):
         app = wc.GetActiveObject('PowerPoint.Application')
     except pythoncom.com_error:
         raise RuntimeError('PowerPoint 가 떠 있지 않습니다. 발표를 연 뒤 다시 하거나 파일 경로를 주세요') from None
-    names = [p.Name for p in app.Presentations]
+    try:
+        names = [p.Name for p in app.Presentations]
+    except (AttributeError, pythoncom.com_error):     # 대화상자가 떠 있으면 호출을 받지 않는다
+        raise RuntimeError('PowerPoint 가 응답하지 않습니다. PowerPoint 에 떠 있는 안내 창을 닫은 뒤 다시 하세요') from None
     if not names:
         if safe(lambda: app.ProtectedViewWindows.Count, 0):
             raise RuntimeError("제한된 보기로 열린 발표입니다. PowerPoint 에서 '편집 사용'을 누른 뒤 다시 하세요")

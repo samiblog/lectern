@@ -106,3 +106,8 @@
 - 창 하나(`instance.py`)는 이름 있는 파이프로 JSON 바이트만 주고받는다 (`send_bytes`·`recv_bytes`). pickle 을 쓰는 `send`·`recv` 로 바꾸지 않는다 — 받은 바이트로 코드가 돌 수 있다. 파이프 이름이 설정 폴더를 따르므로 점검 스크립트는 `LECTERN_CONFIG_DIR` 을 바꿔 설치된 Lectern 창과 섞이지 않게 한다.
 - `index.html` 에서 시작할 때 꼭 필요한 스크립트에는 `data-boot` 를 단다 (D81) — 그것을 못 받으면 `bootguard.js` 가 다시 불러온다.
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.
+- 스킬 스크립트가 자식을 띄울 때는 `sys.executable -I 스크립트` 로만 한다. 실행기(`lectern-skill.exe`, D99)는 `-c`·`-m` 을 받지 않고, 코드 글자나 `importlib` 로 부른 모듈은 빌드가 찾지 못해 실행기에서만 빠진다 (시험이 잡는다).
+- PowerPoint 가 있는지는 `import win32com` 으로 모른다 — 실행기에는 pywin32 가 늘 있다. `convert.has_com`·`check_pptx.has_powerpoint` 처럼 등록까지 본다.
+- pptx 판정은 `convert.is_pptx` 로 한다. `zipfile.is_zipfile` 은 안 된다 — PowerPoint 가 저장한 `.ppt` 도 끝에 ZIP 조각이 있어 참이 나온다.
+- `skillrun.main` 이 예외를 직접 찍는다. PyInstaller 에 맡기면 stderr 마지막 줄이 `Failed to execute script` 가 되어 `convert.py` 가 까닭을 읽지 못한다.
+- PowerPoint 에 대화상자가 떠 있으면 COM 호출이 `AttributeError` 로 돌아온다. Office 의 첫 실행 개인정보 안내도 그렇다. 동의를 묻는 창이니 시험에서 대신 누르지 않는다.

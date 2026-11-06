@@ -2,5 +2,8 @@
 -r requirements.txt
 pytest==9.1.1
 pyinstaller==6.22.3
+# 스킬 실행기(lectern-skill.exe)에 묶는다 (D99). 앱은 쓰지 않아 빌드 쪽에만 둔다
+pillow==13.0.0
+pywin32==312; sys_platform == 'win32'
 # 화면 회귀 점검(tools/ui_smoke.py)용. 설치 후 'python -m playwright install chromium' 필요 (인터넷)
 playwright==1.63.0

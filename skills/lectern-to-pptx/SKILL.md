@@ -19,24 +19,34 @@ Lectern 에서 보던 모습을 최대한 유지한 채, PowerPoint 에서 고�
 
 사용자가 "회사 양식으로", "이 pptx 양식으로"라고 하면 `--template` 이다. 양식을 pptx-to-lectern 의 참고 길로 읽었으면 `.pptx-work/<이름>-양식/source.pptx` 가 그 양식이다.
 
+## 스크립트 돌리기
+
+아래의 `<실행기>` 는 이 차례로 고른다. 사용자가 Python 을 설치하지 않아도 된다.
+
+1. Lectern 스킬 실행기 `%LOCALAPPDATA%\Programs\Lectern\lectern-skill.exe`. Python, pywin32, Pillow 가 들어 있다. Bash 에서는 `"$LOCALAPPDATA/Programs/Lectern/lectern-skill.exe"`, PowerShell 에서는 `& "$env:LOCALAPPDATA\Programs\Lectern\lectern-skill.exe"` 로 부른다.
+2. 없으면 `python` (3.10 이상).
+3. 둘 다 없으면 Lectern 을 어디에 설치했는지 사용자에게 묻는다. 그 폴더에 `lectern-skill.exe` 가 있다.
+
+실행기는 스킬의 `scripts` 폴더 안 파일만 돌린다. 다른 Python 코드는 돌리지 못한다.
+
 ## 순서
 
 ### 1. 만든다
 
 ```bash
-python <이 스킬>/scripts/build_pptx.py 문서.md [--out 결과.pptx] [--template 양식.pptx] [--style 스타일id]
+<실행기> <이 스킬>/scripts/build_pptx.py 문서.md [--out 결과.pptx] [--template 양식.pptx] [--style 스타일id]
 ```
 
 - 결과는 문서 옆의 `문서.pptx` 다. 이미 있으면 멈춘다. 덮어써도 되는지 사용자에게 물은 뒤 `--force` 를 준다. 원본 pptx 와 경로가 같으면 스크립트가 `문서-수정.pptx` 로 바꾼다. 원본을 덮어쓰지 않기 위해서다.
 - 스타일은 사용자가 슬라이드 창에서 고른 것을 설정에서 읽는다. 다른 스타일로 내려면 `--style consulting` 처럼 준다.
 - 고치지 않은 쪽까지 Lectern 모습으로 다시 만들고 싶다고 하면 `--rebuild-all` 을 쓴다. 이때 애니메이션은 사라진다.
 
-Python 표준 라이브러리만 쓴다. PowerPoint 는 없어도 된다. SVG 그림을 넣을 때만 PowerPoint 와 `pywin32` 가 필요하다. 복잡한 차트와 다이어그램을 그림으로 그릴 때는 Windows 의 Edge 와 Lectern 의 라이브러리를 쓴다. 인터넷에는 나가지 않는다.
+스크립트는 표준 라이브러리만 쓴다. PowerPoint 는 없어도 된다. SVG 그림을 넣을 때만 PowerPoint 와 `pywin32` 가 필요하다. 복잡한 차트와 다이어그램을 그림으로 그릴 때는 Windows 의 Edge 와 Lectern 의 라이브러리를 쓴다. 인터넷에는 나가지 않는다.
 
 ### 2. 확인한다
 
 ```bash
-python <이 스킬>/scripts/check_pptx.py 문서.md 결과.pptx --render 쪽그림폴더
+<실행기> <이 스킬>/scripts/check_pptx.py 문서.md 결과.pptx --render 쪽그림폴더
 ```
 
 `broken_xml`, `slides_missing_text`, `low_contrast` 가 비어야 한다. `powerpoint.opened` 가 true 면 PowerPoint 가 파일을 열었다는 뜻이다. PowerPoint 가 없으면 null 이다.

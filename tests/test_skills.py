@@ -1,9 +1,12 @@
 """스킬 시험: Lectern 문서 → pptx → Lectern 문서 → pptx. PowerPoint 없이 돈다 (실제로 여는 시험은 docs/TESTING.md)."""
 import hashlib
+import importlib
+import io
 import json
 import re
 import subprocess
 import sys
+import types
 import zipfile
 from pathlib import Path
 
@@ -265,6 +268,42 @@ td:nth-child(2) { color: #AA0000; }
     assert 'FFF1E6' in slide and 'AA0000' in slide
     sizes = {text.strip(): int(size) for size, text in re.findall(r'<a:r><a:rPr[^>]*\bsz="(\d+)".*?<a:t>([^<]*)</a:t></a:r>', slide, flags=re.S)}
     assert sizes['96%'] > sizes['달성'], '앱처럼 굵은 글만 크게'
+
+
+def test_old_ppt_with_a_zip_tail_is_not_taken_for_pptx(tmp_path):
+    """PowerPoint 가 저장한 .ppt 는 끝에 ZIP 조각이 있어 zipfile.is_zipfile 이 참이다."""
+    fake = tmp_path / '옛형식.ppt'
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, 'w') as z:
+        z.writestr('theme/theme1.xml', '<a/>')
+    fake.write_bytes(bytes.fromhex('d0cf11e0a1b11ae1') + b'\0' * 600 + buf.getvalue())
+    assert zipfile.is_zipfile(fake)
+    r = run(FORWARD / 'convert.py', fake, tmp_path / 'o', '--no-powerpoint')
+    assert r.returncode != 0
+    assert 'Traceback' not in r.stderr
+    assert 'PowerPoint' in r.stdout
+
+
+def test_pywin32_without_powerpoint_is_not_taken_for_powerpoint(monkeypatch):
+    """실행기에는 pywin32 가 늘 있다. Office 가 없는 PC 에서 PowerPoint 를 부르다 실패하지 않는다."""
+    win32com = types.ModuleType('win32com')
+    win32com.client = types.ModuleType('win32com.client')
+    winreg = types.ModuleType('winreg')
+    winreg.HKEY_CLASSES_ROOT = 0
+
+    def missing(*_):
+        raise OSError('없는 키')
+
+    winreg.OpenKey = missing
+    monkeypatch.setitem(sys.modules, 'win32com', win32com)
+    monkeypatch.setitem(sys.modules, 'win32com.client', win32com.client)
+    monkeypatch.setitem(sys.modules, 'winreg', winreg)
+    monkeypatch.syspath_prepend(str(FORWARD))
+    monkeypatch.syspath_prepend(str(BACK))
+    convert = importlib.import_module('convert')
+    check_pptx = importlib.import_module('check_pptx')
+    assert convert.has_com() is False
+    assert check_pptx.open_in_powerpoint('x.pptx', None) is None
 
 
 def test_skill_files_are_complete():

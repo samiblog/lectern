@@ -12,7 +12,7 @@ Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 �
 2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). html 문서도 같다 — 서버가 `/doc/*.html` 에 붙이는 CSP가 스크립트·연결·인터넷 CSS·글꼴을 막고 그림만 `external_images` 를 따르게 한다 (D27). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다. 이 함수는 `resolve()` 전에 글자만으로 root 안인지 먼저 본다 — `\\서버\공유` 를 `resolve()` 하면 Windows 가 그 서버에 접속해 로그인 정보(NTLM)를 건넨다 (D29).
 4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. 제외 폴더는 사이드바 '자료' 목록에만 흐린 접힌 폴더로 나오고 펼칠 때 안을 읽는다 (D49 — 숨김은 거기에도 없다). html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
-5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29). 터미널은 사용자가 친 명령만 돌린다 (D38) — 셸은 전체 경로로 띄우고, 셸에 글자를 보내는 API 는 사용자의 키 입력을 받는 `POST /api/term/input` 하나뿐이다 (우클릭 메뉴의 '터미널에 붙여 넣기'도 이 길로, Enter 없이 — D51. 독립창의 것은 메인 창에 맡겨 이 길로 — D95).
+5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29). 터미널은 사용자가 친 명령만 돌린다 (D38) — 셸은 전체 경로로 띄우고, 셸에 글자를 보내는 API 는 사용자의 키 입력을 받는 `POST /api/term/input` 하나뿐이다 (우클릭 메뉴의 '터미널에 붙여 넣기'도 이 길로, Enter 없이 — D51. 독립창의 것은 메인 창에 맡겨 이 길로 — D95). `lectern-skill.exe` 는 사용자가 시킨 Claude 가 부르는 별도 프로그램이고 스킬의 `scripts` 안 파일만 돌린다 (D99 — 앱은 부르지 않는다).
 6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나 (툴바 아래 프로젝트 탭 막대, D34 — 문서 칸 위에는 그 프로젝트의 문서 탭 줄, 20개까지, D64·D67. 오른쪽 터미널은 열 때만, D38 — 창이 세로로 길면 문서 아래에, D52. 툴바의 '터미널 모음'은 탭이 아니라 화면을 덮는 보기다, D40. 문서 탭 줄의 '모두 펼치기'는 선택된 프로젝트의 문서 칸들과 터미널을 창 전체 격자에 놓는 보기다 — 칸을 옮기지 않고 CSS 만, D73. 사용설명서(F1)·발표 모드(D59)도 같은 방식, D45. 메모는 오른쪽에서 문서 위를 덮는 패널이다, D92. 독립창은 프로젝트에 속한 별도 창이고 문서 탭 줄과 문서가 기본이다, D95. 발표 문서는 독립창의 하나인 슬라이드 창에서 별도 스타일로 본다, D96. 탭 막대 오른쪽 끝에는 '편집'·'메모'와 오른쪽 패널을 보이고 감추는 '목차'·'터미널' 버튼 — 이 순서로). 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
 
 ## 실행과 확인
@@ -38,6 +38,7 @@ Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열�
 
 ```
 app.py                  진입점: 인자 처리, 서버 스레드, pywebview 창
+skillrun.py             스킬 실행기 진입점 — lectern-skill.exe (D99, 스킬의 scripts 안 파일만 돌린다)
 lectern/
   state.py              열린 프로젝트들(탭마다 Project — 감시·변경 기록·스캔 캐시)·설정을 묶는 AppState
   instance.py           창 하나: 또 실행하면 이름 있는 파이프로 떠 있는 창에 폴더를 넘김
@@ -71,7 +72,7 @@ web/
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
 samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 슬라이드 모범 예제 10개와 만드는 과정 — D96)
-skills/                 Claude Code 스킬 (D98 — pptx-to-lectern, lectern-to-pptx. 설치 파일에 들어가고 앱은 경로만 준다. 설치는 사용자가 시킬 때 Claude 가 물은 뒤 한다. 스크립트는 표준 라이브러리, PowerPoint·Pillow 는 있으면 쓴다)
+skills/                 Claude Code 스킬 (D98 — pptx-to-lectern, lectern-to-pptx. 설치 파일에 들어가고 앱은 경로만 준다. 설치는 사용자가 시킬 때 Claude 가 물은 뒤 한다. 스크립트는 표준 라이브러리, PowerPoint·Pillow 는 있으면 쓴다. 설치 폴더의 lectern-skill.exe 로 돌아 Python 없이 된다 — D99)
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)

@@ -853,6 +853,21 @@
 - **하지 않은 것**: 글이 실제로 바뀌면 고른 글은 풀린다. 다시 그린 뒤 고른 곳을 되살리려면 바뀐 문서에서 같은 자리를 찾아야 해서 일이 크다. html 문서는 원문을 들고 있지 않아 전처럼 늘 그린다.
 - **`docs/VISION.md`**: 바탕 작업 — Claude 가 문서를 고치는 동안 사람이 읽고 고르는 일이 끊기지 않게 한다.
 
+## D99. 스킬 실행기 — Python 이 없는 PC 에서 스킬을 돌린다
+
+- **결정 (사용자 선택, 2026-11-07)**: `lectern-skill.exe` 를 설치 폴더에 넣는다. Python, pywin32, Pillow 를 묶은 콘솔 프로그램이다. 회사 PC 에 Python 이 없을 수 있고, DRM 파일을 띄워 놓고 옮기는 길이 pywin32 를 쓰기 때문이다.
+- **라이브러리만 앱에 넣는 것으로는 안 된다**: 스킬은 앱 밖에서 돈다. `Lectern.exe` 안의 Python 은 밖에서 불러올 수 없다. 컴파일된 모듈은 Python 판에 묶여 있어 wheel 을 같이 넣어도 사용자의 Python 판과 맞아야 한다.
+- **Python 처럼 받는다**: 스크립트가 자식을 `sys.executable -I 스크립트` 로 띄우므로 실행기가 `-I`·`-B` 를 받아 넘긴다. 그래서 스크립트는 거의 그대로다. `check_pptx.py` 의 `-c` 만 `--open-child` 로 바꿨다.
+- **아무 코드나 돌리지 않는다**: `SKILL.md` 가 있는 스킬의 `scripts` 안 파일만 받고 `-c`·`-m` 은 받지 않는다. 사용자 PC 에 범용 Python 을 하나 더 까는 일이 되지 않게 하려는 것이다. 보안 경계는 아니다.
+- **앱은 부르지 않는다**: D98 그대로다. 사용자가 시킨 Claude 가 부른다.
+- **모듈은 빌드가 찾는다**: `lectern.spec` 이 `skills/*/scripts` 를 분석해 쓰는 모듈을 묶고 스크립트 코드는 뺀다 (`b.pure`). 설치된 스킬 폴더의 스크립트가 돌아야 하기 때문이다. 새 import 를 더해도 spec 을 고칠 일이 없다.
+- **의존성은 빌드 쪽에 둔다**: `pillow`·`pywin32` 는 앱이 쓰지 않아 `requirements-dev.txt` 에 있다. 없으면 스크립트의 `except ImportError` 때문에 말없이 반쪽 실행기가 나오므로 `lectern.spec` 이 맨 위에서 import 해 멈춘다. `PIL._avif`(7.7MB), `win32ui`, `pywin`, 빌드 환경에 우연히 있는 `defusedxml` 은 뺀다.
+- **찾는 차례**: 기본 설치 위치의 실행기, 시스템 `python`, 사용자에게 묻기 (`SKILL.md`). 실행기로 돌면 앱의 `web/vendor`·`web/themes` 는 실행기 곁에서 찾는다.
+- **UTF-8**: 한국어 Windows 의 파이프는 cp949 라서 `utf8_mode` 를 켠다.
+- **Office 가 없어도 된다**: `.pptx` 옮기기와 내보내기는 XML 만으로 된다. 실행기에는 pywin32 가 늘 있어 import 로는 PowerPoint 를 알 수 없으니 등록(`HKCR\PowerPoint.Application`)까지 본다.
+- **크기**: 설치 파일이 18.5MB 에서 21.3MB 로, `_internal` 이 40MB 에서 46MB 로 늘었다. `lectern-skill.exe` 는 3.0MB 다.
+- **`docs/VISION.md`**: 바탕 작업 — 자료를 다루는 도구가 사용자의 PC 설정에 기대지 않게 한다.
+
 ## D98. PowerPoint 스킬 — 옮기기, 참고해 만들기, 내보내기
 
 - **결정 (사용자 선택, 2026-11-06)**: pptx 와 Lectern 슬라이드를 오가는 Claude Code 스킬 두 개를 앱에 넣는다 (`skills/`). 앱이 설치하지 않는다. 사용자가 시키면 Claude 가 무엇인지 알리고 물은 뒤 복사한다 — 설정 창의 요청 글과 `slides.md` 13장이 그 길이다. 앱은 스킬 폴더를 읽지도 쓰지도 않고 경로만 준다.

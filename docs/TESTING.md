@@ -123,6 +123,8 @@ PowerPoint 와 Claude Code 가 있는 PC 에서. 시험용 발표를 쓴다 (받
 | S4 | 회사 DRM 파일을 PowerPoint 에 띄워 두고 S3 처럼 한다 | 옮겨진다. 사본 저장이 막히면 원본 쪽을 쓸 수 없다고 보고에 나온다 |
 | S5 | 옮긴 문서의 글을 고치고 pptx 로 만들어 달라고 한다 | `-수정.pptx` 가 생기고 원본은 그대로다. 고친 쪽만 글이 바뀌고 나머지 쪽은 애니메이션까지 원본과 같다 |
 | S6 | 암호가 걸린 pptx 를 옮겨 달라고 한다 | 멈추지 않고 암호를 풀어 달라고 안내한다 |
+| S7 | 명령 창에서 `lectern-skill.exe --version` | 판, Python, Pillow, pywin32 가 나온다 |
+| S8 | Python 이 없는 PC 에서 S2·S3·S5 | 같게 동작한다. Claude 가 `lectern-skill.exe` 로 돌린다 |
 
 ### 패키징 점검
 ```bat

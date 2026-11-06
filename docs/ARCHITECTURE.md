@@ -571,4 +571,5 @@ WebView2 런타임은 Windows 11과 대부분의 Windows 10에 있다.
 - `samples/` 는 사람·AI 용 예제 프로젝트다. `lectern.spec` 의 datas 로 `_internal\samples` 에 들어가고(`paths.samples_dir()`), `/api/state` 의 `samples` 로 화면에 알린다. 시작 화면·탭 막대 ∨ 메뉴·설정 창의 '예제 열기'가 `tabs.js` 의 `openSamples()` 로 그 폴더를 탭으로 열고, 처음 열면(폴더 개요면) `README.md` 로 간다.
 - `web/help/writing.md`(영어판 `writing.en.md`)는 AI 용 작성 안내다. 설정 창의 'Claude Code 에 Lectern 알려 주기'가 그 경로(`/api/state` 의 `writing_guide, slides_guide`)를 넣은 요청 글을 복사하거나 지금 탭의 터미널에 붙인다 (`settings.js` 의 `guidePrompt`, D51 의 `term-paste`).
 - `skills/` 는 Claude Code 스킬이다 (D98). `lectern.spec` 의 datas 로 `_internal\skills` 에 들어가고(`paths.skills_dir()`), `/api/state` 의 `skills_dir` 로 그 경로를 화면에 준다. 앱은 스킬을 돌리지 않는다 — 설정 창의 요청 글이 경로를 주고, 사용자가 시킬 때 Claude 가 물은 뒤 설치한다.
+- `lectern-skill.exe`(`skillrun.py`, D99)는 `Lectern.exe` 옆의 두 번째 콘솔 프로그램이다. 같은 `_internal` 을 쓰고 Python·pywin32·Pillow 를 묶어 스킬을 돌린다. Claude 가 부르고 앱은 부르지 않는다.
 - 화면 점검은 `tests/fixture/`(점검용 프로젝트)를 쓰고, '[예제]' 점검만 `samples/` 를 열어 본다. pytest 는 예제에 숨김·제외 폴더(`__pycache__` 등)가 없는지 본다.

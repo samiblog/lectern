@@ -37,10 +37,22 @@ PPTX_FORMAT = 24       # ppSaveAsOpenXMLPresentation
 
 
 def has_com():
+    """PowerPoint 를 부를 수 있는가. 실행기에는 pywin32 가 늘 있으니 PowerPoint 가 깔렸는지까지 본다."""
     try:
         import win32com.client  # noqa: F401
+        import winreg
+        winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, 'PowerPoint.Application').Close()
         return True
-    except ImportError:
+    except (ImportError, OSError):
+        return False
+
+
+def is_pptx(path):
+    """pptx 인가. is_zipfile 로는 모른다 — .ppt 도 끝에 ZIP 조각을 달고 있어 참이 나온다."""
+    try:
+        with zipfile.ZipFile(path) as z:
+            return 'ppt/presentation.xml' in z.namelist()
+    except (OSError, zipfile.BadZipFile):
         return False
 
 
@@ -248,7 +260,7 @@ def main(argv=None):
         if len(args.paths) != 1:
             return stop('--active 에는 출력폴더 하나만 줍니다')
         if not com:
-            return stop('띄워 둔 발표를 읽으려면 PowerPoint 와 pywin32 가 필요합니다')
+            return stop('띄워 둔 발표를 읽으려면 PowerPoint 가 있어야 합니다')
         deck, out = None, Path(args.paths[0]).resolve()
     else:
         if len(args.paths) != 2:
@@ -289,13 +301,13 @@ def main(argv=None):
     log = []
     live = False
     if deck is not None:
-        if zipfile.is_zipfile(deck):
+        if is_pptx(deck):
             shutil.copyfile(deck, source)
         elif com:
             temp = work / f'.input{deck.suffix}'     # 같은 파일이 열려 있어도 그 발표를 돌려받지 않게
             shutil.copyfile(deck, temp)
             problem = run_com('copy', work, temp)
-            if problem or not zipfile.is_zipfile(source):
+            if problem or not is_pptx(source):
                 remove(source)
                 problem = run_com('read', work, temp)
                 if problem:
@@ -305,8 +317,8 @@ def main(argv=None):
                 log.append('pptx 사본을 받지 못해 PowerPoint 에서 직접 읽었습니다. 되돌릴 때 원본 쪽을 다시 쓸 수 없습니다')
             remove(temp)
         else:
-            return stop('ZIP 으로 열 수 없습니다. .ppt 나 DRM 이 걸린 파일이면 PowerPoint 와 pywin32 가 필요합니다')
-    elif not source.exists() or not zipfile.is_zipfile(source):
+            return stop('pptx 로 열 수 없습니다. .ppt 나 DRM 이 걸린 파일은 PowerPoint 가 있어야 옮길 수 있습니다')
+    elif not is_pptx(source):
         remove(source)
         problem = run_com('active-read', work, pick=args.pick)
         if problem:
