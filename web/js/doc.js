@@ -342,7 +342,9 @@ function decorateAlerts(root) {
     if (!m) continue;
     const kind = m[1].toUpperCase();
     first.nodeValue = first.nodeValue.slice(m[0].length);
+    if (!first.nodeValue) first.remove();   // 문단 줄바꿈(D93)이면 머리표 뒤가 <br> 이다 — 빈 글 노드를 먼저 치워야 그 줄이 지워진다
     if (p.firstChild?.nodeName === 'BR') p.firstChild.remove();
+    if (p.firstChild?.nodeType === Node.TEXT_NODE) p.firstChild.nodeValue = p.firstChild.nodeValue.replace(/^\s+/, '');
     if (!p.textContent.trim() && !p.querySelector('img')) p.remove();
     bq.classList.add('alert', `alert-${kind.toLowerCase()}`);
   }

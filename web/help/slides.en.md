@@ -125,7 +125,16 @@ The spread is the key
 
 - The usable area is x 56–1224, y 110–660. The title is above and the footer below.
 - Cells that overlap each other or the title show up in Check.
-- Lines between cells cannot be drawn. If you really need lines, use `mermaid` or `dot`; that text cannot be edited line by line. If people must edit the text, put an arrow character (→) in a small cell.
+
+Draw lines between cells with `links`. The text in the cells can still be edited line by line. Join cell names with commas.
+
+```markdown
+<!-- links: cost>hub, freight>hub, hub<>demand, hub--note -->
+```
+
+- `a>b` is an arrow, `a<>b` has two heads, `a--b` is a plain line.
+- It works on `at` cells and grid cells. A line joins the cell centers and stops at the cell edges.
+- Leave some space between the cells, or the line will not show.
 
 ## 4. Text size
 
@@ -140,6 +149,8 @@ Change only what you need.
 | One cell | A number in the cell head (`::: b card 14`) |
 
 The kinds are `title` `sub` `body` `table` `box` `code`. A cell size also sets the tables and callouts in that cell.
+
+**Do not go below 12pt for tables or 14pt for body text.** When something overflows, cut text or split the slide rather than only shrinking it. For a document that is read rather than shown, write `reading: true` in the front matter; the limits are then 10pt and 12pt. Anything below the limit shows up in Check.
 
 ## 5. How much fits
 
@@ -240,6 +251,8 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 | Cell a overlaps the title | Set the `at` y to 110 or more |
 | Cells a and b overlap | Move the `at` position |
 | Cell a runs off the slide | Keep x+width within 1224 and y+height within 660 |
+| The table is small at 10pt (limit 12pt) | Cut text or split the slide; for a reading document use `reading: true` |
+| There is no cell x for this link | Fix the cell name in `links` |
 | Cell z is not in the layout | Use a cell name from the layout |
 | Cell c is empty | Fill it or change the layout |
 | Cell a has no closing ::: | Add the closing line |

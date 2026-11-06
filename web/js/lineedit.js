@@ -31,7 +31,7 @@ import { isCode } from './icons.js';
 import {
   diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
-import { TEXT_WORDS, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide } from './slideops.js';
+import { TEXT_WORDS, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } from './slideops.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
@@ -856,8 +856,8 @@ async function resizeHere(dir) {
   toast(t('{kind} {n}pt — Ctrl+Z 로 되돌립니다', { kind: own ? t('이 칸') : TEXT_LABELS[kind], n: size }));
 }
 
-/** 장 더하기·복제·옮기기·지우기 ({op, dir, index}): index 가 없으면 현재 줄의 장 */
-async function slideOp({ op, dir = 0, index = null }) {
+/** 장 더하기·복제·옮기기·지우기·배치 넣기 ({op, dir, index, layout}): index 가 없으면 현재 줄의 장 */
+async function slideOp({ op, dir = 0, index = null, layout = '' }) {
   const pane = S.pane;
   if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
   const { view } = pane;
@@ -867,7 +867,13 @@ async function slideOp({ op, dir = 0, index = null }) {
   const found = index ?? spans.findIndex(([a, b]) => here >= a && here <= b);
   const i = found < 0 ? slideAtTop(pane) : found;
   const src = sourceLines();
-  const r = { add: () => addSlide(src, spans[i], t('새 장')), copy: () => duplicateSlide(src, spans[i]), move: () => moveSlide(src, spans, i, dir), delete: () => deleteSlide(src, spans, i) }[op]();
+  const r = {
+    add: () => addSlide(src, spans[i], t('새 장')),
+    copy: () => duplicateSlide(src, spans[i]),
+    move: () => moveSlide(src, spans, i, dir),
+    delete: () => deleteSlide(src, spans, i),
+    layout: () => setLayout(src, spans[i], layout, { body: t('글'), number: '0', label: t('설명') }),
+  }[op]();
   if (r.error) {
     toast(r.error === 'only' ? t('장이 하나뿐이라 지우지 않습니다') : t('더 옮길 곳이 없습니다'));
     return;
@@ -877,7 +883,7 @@ async function slideOp({ op, dir = 0, index = null }) {
   if (shift == null || S.pane !== pane) return;
   followLine(r.line + shift);
   if (op === 'add') begin(r.line + shift);   // 새 장의 제목을 바로 쓰게
-  else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다') }[op]);
+  else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다'), layout: t('배치를 넣었습니다 — F2 로 글을 채웁니다') }[op]);
 }
 
 /** Alt+↑·↓ (main.js — 문서 칸에서, 줄 하이라이트 중일 때만): 하이라이트한 줄을 옮긴다. 받았으면 true. 차례로 — 누르고 있어도 쌓이지 않게 */

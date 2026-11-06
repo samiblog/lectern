@@ -94,6 +94,7 @@ The **Files** tab is split into three groups.
 
 - Click a group header ('Documents 10', 'Code 3', 'Other files 4') to collapse that group. Drag the divider between groups to resize them, and double-click it to reset.
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
+- **Sort** picks the list order: by name, time or type. Folders always come first, then files. By time puts the newest on top, and a folder follows its newest file. By type goes by file extension.
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
 - Documents that changed since you last looked get an amber dot.
 - The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
@@ -203,7 +204,7 @@ In Markdown documents and the code view (including csv and txt), lines are count
 - **Current line**: the small triangle to the left of the line you are reading. Click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. Each document tab keeps its own.
 - **Line focus**: **Shift+click** focuses that line, **Shift+drag** the lines you drag over, and **Shift+Enter** the current line (press again to turn it off). **Ctrl+L** focuses the current line, and pressing it again extends down. The focused part stays sharp (with a bar on its left) and the rest gets a grey background and faded text. Dragging to the top or bottom edge scrolls.
 - **Grow and shrink**: **Shift+↑ ↓** move the last line of the focus up or down — the first line stays, so the focus grows or shrinks. With a focus, Shift+click extends it to that line. Without one, Shift+↑ ↓ start from the current line.
-- **Send to Claude**: **Shift+→** puts the location of the focused part, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus stays in the document, so you can add several places in a row. To go on typing your request straight away, press **Ctrl+Shift+→** — focus moves to the terminal too (the current line if nothing is focused). **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While focusing, the status bar shows the line range.
+- **Send to Claude**: **Shift+→** puts the location of the focused part, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away (the current line if nothing is focused). To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While focusing, the status bar shows the line range.
 - **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section at your current position (the small arrow) sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn it into a line focus you can grow and shrink. In documents without sections and in the code view, the button focuses the current line.
 - **Right-click**: right-clicking inside the focused part opens a selection box — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, Edit here (for one line), Clear focus, and Delete lines at the bottom. Hover over an item for its description.
 - Click a dimmed area or press Esc or the button to turn it off. Moving the current line with ↑ ↓ also clears a line focus. You can also right-click the text and choose 'Focus this section'.
@@ -264,6 +265,8 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 - Each `---` starts a slide. A slide is 1280×720.
 - A cell runs from `::: a card` to `:::`. Text, tables, charts and images go inside.
 - Pick a layout like `<!-- layout: quad -->` or draw one with `<!-- grid: a a b / c d b -->`. `::: a at 100 200 300 120` places a cell yourself.
+- Right-click a slide and pick **Set layout…** to add that layout's empty cells. A slide with cells only has them renamed, and text on a slide without cells goes into the first cell. Fill in the text with F2.
+- `<!-- links: a>b, c--d -->` draws arrows and lines between cells. The text in the cells stays editable.
 - Edit the text on a slide with **line editing**. New lines added with Ctrl+Enter stay in the cell, and moving or deleting lines never breaks cells or slides.
 
 **Text size**
@@ -271,6 +274,7 @@ Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's
 - On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that kind of element on the slide by 1pt — table, callout, title and so on. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z undoes it.
 - In a cell with its own size (`::: b 16`) the cell's size changes. Set the whole deck with `text: title 26, table 12` in the front matter.
 - Defaults: title 30, subheading 20, body 18, table 14, callout 16. They stay the same in every style. Text in charts and diagrams follows the cell size.
+- Tables below 12pt and body text below 14pt show up in Check. For a document that is read rather than shown, write `reading: true` in the front matter (limits 10pt and 12pt).
 
 **Structure and Check**
 

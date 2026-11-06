@@ -9,6 +9,7 @@ import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd } from './util.js';
 import { t } from './i18n.js';
+import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
 let panel = 'files';   // 사이드바 탭: files | recent | search | parts
@@ -48,7 +49,7 @@ function fileRow(f, depth, extra = null) {
 
 function nodesHtml(nodes, depth) {
   const markup = [];
-  for (const n of nodes) {
+  for (const n of sideOrder(nodes)) {
     if (n.type === 'file') {
       markup.push(fileRow(n, depth));
       continue;
@@ -96,6 +97,24 @@ function render() {
   keepFocus($('#lec-tree'), renderTree);
   renderCount();
   $('#lec-btn-titles').classList.toggle('on', showTitles());
+  $('#lec-btn-sort').classList.toggle('on', sortWay() !== 'name');
+}
+
+const sortWay = () => (['time', 'type'].includes(S.config.side_sort) ? S.config.side_sort : 'name');
+
+/** 목록의 차례 메뉴 (D97) — 문서·코드·자료를 함께 */
+function openSort(e) {
+  const r = e.currentTarget.getBoundingClientRect();
+  const item = (way, label) => ({
+    label,
+    current: sortWay() === way,
+    action: async () => {
+      await saveConfig({ side_sort: way });
+      render();
+      emit('side-sort');
+    },
+  });
+  showMenu(r.left, r.bottom + 2, [{ header: t('폴더 먼저, 그 안의 차례') }, item('name', t('이름순')), item('time', t('시간순')), item('type', t('형식순'))]);
 }
 
 /** 지금 보는 항목의 상위 폴더를 펼치고 트리에서 보이게 한다. */
@@ -261,6 +280,7 @@ export function initTree() {
     render();
     emit('titles');   // 최근 변경·검색·폴더 보기의 문서 행도
   });
+  $('#lec-btn-sort').addEventListener('click', openSort);
   for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
   on('tree', render);

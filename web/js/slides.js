@@ -17,30 +17,17 @@ import { S, on, emit } from './store.js';
 import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
-import { textSizes, readCellHead } from './slideops.js';
+import { LAYOUTS, textSizes, readCellHead } from './slideops.js';
 
 const SIZES = { '16:9': [1280, 720], '4:3': [960, 720] };
-const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords',
+const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords', 'reading',
   'url', 'marp', 'lang', 'transition']);
 const LOCAL = ['paginate', 'header', 'footer', 'class', 'backgroundColor', 'backgroundImage', 'backgroundPosition',
-  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow'];
-// 칸 배치: 이름 → [칸 자리(줄은 /), 열, 행]. t 는 제목 자리
-const LAYOUTS = {
-  two: ['t t / a b', '1fr 1fr', 'auto 1fr'],
-  'two-left': ['t t / a b', '2fr 1fr', 'auto 1fr'],
-  'two-right': ['t t / a b', '1fr 2fr', 'auto 1fr'],
-  three: ['t t t / a b c', '1fr 1fr 1fr', 'auto 1fr'],
-  quad: ['t t / a b / c d', '1fr 1fr', 'auto 1fr 1fr'],
-  'left-stack': ['t t / a b / a c', '3fr 2fr', 'auto 1fr 1fr'],
-  'right-stack': ['t t / a b / c b', '2fr 3fr', 'auto 1fr 1fr'],
-  kpi: ['t t t t / a b c d / e e e e', '1fr 1fr 1fr 1fr', 'auto auto 1fr'],
-  'kpi-two': ['t t t / a b c / d d e', '1fr 1fr 1fr', 'auto auto 1fr'],
-  stack: ['t / a / b', '1fr', 'auto 1fr 1fr'],
-};
+  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];
 const SAFE_AREA = /^[\p{L}\p{N}_\s/-]{1,200}$/u;
 const SAFE_TRACK = /^[\w\s.%()-]{1,120}$/;
 const LOCAL_SET = new Set(LOCAL);
-const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
+const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
 const SAFE_CSS = /^[#\w\s(),.%+-]{1,120}$/;   // 색·크기·그라데이션 — 따옴표·세미콜론·url() 은 받지 않는다
 const FIGS = 'pre.mermaid > svg, .lec-chart svg:not(svg svg), img';
 /** 슬라이드 안의 다이어그램·차트를 키우는 배율 — 그 글자(12~16px)가 슬라이드 글자(본문 × 1.8)와 어울리게. charts.js 도 쓴다 */
@@ -303,6 +290,8 @@ export function slideRule(state) {
     if (grid) classes.push('lec-grid');
     const missing = eff.layout && !LAYOUTS[String(eff.layout).trim()] && typeof eff.grid !== 'string' ? ` data-layout-miss="${attr(eff.layout)}"` : '';
     const areas = grid ? ` data-areas="${attr([...new Set(grid.areas.replace(/'/g, ' ').trim().split(/\s+/))].filter((x) => x !== 't' && x !== '.').join(' '))}"` : '';
+    const links = typeof eff.links === 'string' && eff.links.trim() ? ` data-links="${attr(eff.links)}"` : '';
+    const reading = deck.fm.reading === true ? ' data-reading="1"' : '';
     if (s.css.length) deck.slideCss[i + 1] = s.css.join('\n');
     const a = s.start + 1 + offset;
     const b = Math.max(s.start + 1, s.end) + offset;
@@ -315,7 +304,7 @@ export function slideRule(state) {
     out.push(html(`<div class="lec-slide-wrap${wide}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
       + ` style="--slide-w:${deck.w}px;--slide-h:${deck.h}px">`
       + `<div class="lec-slide-frame" style="aspect-ratio:${deck.w} / ${deck.h}">`
-      + `<section class="lec-slide ${classes.join(' ')}" data-page="${i + 1}"${missing}${areas} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
+      + `<section class="lec-slide ${classes.join(' ')}" data-page="${i + 1}"${missing}${areas}${links}${reading} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
     out.push(...s.tokens);
     out.push(html(`${footer}</section></div>${s.notes.length ? `<div class="lec-slide-notes">${md.utils.escapeHtml(s.notes.join('\n\n'))}</div>` : ''}</div>\n`));
   });
@@ -476,7 +465,7 @@ function checkSlide(section) {
       }
     }
     for (const area of areas) if (!names.has(area)) add(t('칸 {name} 이(가) 비어 있습니다', { name: area }));
-    const stray = [...section.children].filter((el) => !el.matches('.lec-cell, h1, h2, header, footer, .lec-slide-bg, .lec-eyebrow, style, script'));
+    const stray = [...section.children].filter((el) => !el.matches('.lec-cell, h1, h2, header, footer, .lec-slide-bg, .lec-eyebrow, .lec-links, style, script'));
     if (stray.length) add(t('칸 밖에 글이 있습니다 — 칸 안으로 옮기세요'), stray[0]);
     if ($$(':scope > :is(h1, h2)', section).length > 1) add(t('이 장에 제목이 둘입니다 — 제목은 하나만 씁니다'));
   }
@@ -484,7 +473,75 @@ function checkSlide(section) {
     if (/^:::(\s|$)/.test(p.textContent.trim())) add(t('짝이 맞지 않는 ::: 가 있습니다'), p);
   }
   checkPlaced(section, cells.filter((c) => c.classList.contains('lec-at')), add);
+  checkSmall(section, add);
+  drawLinks(section, add);
   return out;
+}
+
+/** 넘치지 않게 글자를 줄이다 읽을 수 없게 되는 것을 알린다. 읽는 자료(맨 앞 설정 reading: true)는 기준이 낮다. HTML 장의 글은 보지 않는다 */
+function checkSmall(section, add) {
+  const min = section.dataset.reading ? { table: 10, body: 12 } : { table: 12, body: 14 };
+  const smallest = (els) => Math.round(Math.min(Infinity, ...els.map((el) => parseFloat(getComputedStyle(el).fontSize) * 0.75)) * 10) / 10;
+  const table = smallest($$(':scope > .table-wrap table, .lec-cell table', section));
+  const body = smallest($$(':scope > :is(p, ul, ol), .lec-cell :is(p, li)', section).filter((el) => !el.closest('table, blockquote') && el.textContent.trim()));
+  if (table < min.table) add(t('표가 {n}pt 로 작습니다 (기준 {min}pt)', { n: table, min: min.table }));
+  if (body < min.body) add(t('본문이 {n}pt 로 작습니다 (기준 {min}pt)', { n: body, min: min.body }));
+}
+
+const LINK = /^\s*([\p{L}\p{N}_-]+?)\s*(<>|>|--)\s*([\p{L}\p{N}_-]+)\s*$/u;
+const SVG = 'http://www.w3.org/2000/svg';
+
+/** 칸 a 의 가운데에서 칸 b 의 가운데로 가는 선이 a 의 테두리를 나가는 곳 */
+function edgeOf(a, b) {
+  const [cx, cy] = [a.x + a.w / 2, a.y + a.h / 2];
+  const [dx, dy] = [b.x + b.w / 2 - cx, b.y + b.h / 2 - cy];
+  const k = Math.min(dx ? a.w / 2 / Math.abs(dx) : Infinity, dy ? a.h / 2 / Math.abs(dy) : Infinity);
+  return [cx + dx * k, cy + dy * k];
+}
+
+/** 화살촉: 끝 tip 에서 from 쪽으로 */
+function arrowHead(tip, from) {
+  const size = 11;
+  const len = Math.hypot(tip[0] - from[0], tip[1] - from[1]) || 1;
+  const [ux, uy] = [(tip[0] - from[0]) / len, (tip[1] - from[1]) / len];
+  const [bx, by] = [tip[0] - ux * size, tip[1] - uy * size];
+  const head = document.createElementNS(SVG, 'polygon');
+  head.setAttribute('points', `${tip[0]},${tip[1]} ${bx - uy * size * 0.5},${by + ux * size * 0.5} ${bx + uy * size * 0.5},${by - ux * size * 0.5}`);
+  return head;
+}
+
+/** <!-- links: a>hub, b<>c, d--e --> — 칸 사이의 선. 칸의 글은 그대로 한 줄 편집이 된다. 칸의 자리가 정해진 뒤에 그린다 */
+function drawLinks(section, add) {
+  section.querySelector(':scope > .lec-links')?.remove();
+  const spec = section.dataset.links;
+  if (!spec) return;
+  const svg = document.createElementNS(SVG, 'svg');
+  svg.classList.add('lec-links');
+  svg.setAttribute('width', String(section.offsetWidth));
+  svg.setAttribute('height', String(section.offsetHeight));
+  const boxOf = (name) => {
+    const cell = $$('.lec-cell', section).find((c) => c.dataset.cell === name);
+    return cell && { x: cell.offsetLeft, y: cell.offsetTop, w: cell.offsetWidth, h: cell.offsetHeight };
+  };
+  for (const part of spec.split(',').filter((x) => x.trim())) {
+    const m = LINK.exec(part);
+    if (!m) {
+      add(t('선을 읽지 못했습니다: {text}', { text: part.trim() }));
+      continue;
+    }
+    const [from, to] = [boxOf(m[1]), boxOf(m[3])];
+    if (!from || !to) {
+      add(t('선의 칸 {name} 이(가) 없습니다', { name: from ? m[3] : m[1] }));
+      continue;
+    }
+    const [p, q] = [edgeOf(from, to), edgeOf(to, from)];
+    const line = document.createElementNS(SVG, 'line');
+    for (const [key, value] of [['x1', p[0]], ['y1', p[1]], ['x2', q[0]], ['y2', q[1]]]) line.setAttribute(key, String(value));
+    svg.append(line);
+    if (m[2] !== '--') svg.append(arrowHead(q, p));
+    if (m[2] === '<>') svg.append(arrowHead(p, q));
+  }
+  section.prepend(svg);
 }
 
 /** 두 상자가 겹친 넓이 ÷ 작은 상자의 넓이 */

@@ -35,7 +35,7 @@
 //   terms            어느 탭의 셸이 생기거나 끝나거나 화면이 치워짐         (terminal → gather)
 //   term-panel       오른쪽 터미널 패널을 열거나 감춤 (open)                (terminal → spread, D73)
 //   term-paste       글(text)을 선택된 탭의 터미널에 붙여 넣음 — 우클릭 메뉴의 터미널 버튼 (ui → terminal, D51)
-//   term-paste-stay  term-paste 와 같고 초점은 문서에 둠 — Shift+→ (spotlight → terminal, D79)
+//   term-paste-stay  term-paste 와 같고 초점은 문서에 둠 — Ctrl+Shift+→ (spotlight → terminal, D79·D97)
 //   line-edit        F2·한 줄 하이라이트에서 Shift+Enter — 그 단위(unit)를 한 줄 편집 (spotlight → lineedit, D76)
 //   jump             같은 문서 안에서 뛰기 직전 — 뒤로 기록에 남김 (toc·doc·find·parts·search → nav, D78)
 //   go-line          Ctrl+G 의 줄로 가기 {line} (palette·notes → search, D91)

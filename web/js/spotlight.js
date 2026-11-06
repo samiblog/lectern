@@ -424,27 +424,24 @@ function litInfo() {
 
 const noLit = () => toast(t('하이라이트한 곳이 없습니다 — Shift+Enter 로 현재 줄을, Shift+↑·↓ 로 여러 줄을 하이라이트합니다'));
 
-/**
- * Shift+→ · 메뉴 'Claude 로 보내기': 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal).
- * stay: 초점은 문서에 둔다 (Shift+→ — 여러 곳을 이어서 넣게, D79). 메뉴에서 고르면 터미널로
- */
-export function sendLit(stay = false) {
+/** 메뉴 'Claude 로 보내기': 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal), 초점도 터미널로 */
+export function sendLit() {
   const info = litInfo();
   if (!info) noLit();
-  else emit(stay ? 'term-paste-stay' : 'term-paste', `${info.ref} `);
+  else emit('term-paste', `${info.ref} `);
 }
 
-/** Ctrl+Shift+→: 위치를 맨 앞 터미널에 넣고 초점도 그 터미널로 (D79) — 하이라이트가 없으면 현재 줄 */
-function sendAndGo() {
+/**
+ * Shift+→: 하이라이트한 곳(없으면 현재 줄)의 위치를 맨 앞 터미널에 넣고 초점도 그 터미널로 (D97).
+ * stay (Ctrl+Shift+→): 초점은 문서에 둔다 — 여러 곳을 이어서 넣게 (D79)
+ */
+function sendHere(stay = false) {
   const info = litInfo();
-  if (info) {
-    emit('term-paste', `${info.ref} `);
-    return true;
-  }
-  const us = units();
-  const i = hereIndex(us);
-  if (i < 0) return false;
-  emit('term-paste', `${lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '')} `);
+  const us = info ? [] : units();
+  const i = info ? -1 : hereIndex(us);
+  if (!info && i < 0) return false;
+  const ref = info ? info.ref : lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '');
+  emit(stay ? 'term-paste-stay' : 'term-paste', `${ref} `);
   return true;
 }
 
@@ -748,7 +745,7 @@ export function spotKey(e) {
   if (e.defaultPrevented || e.altKey || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
   const k = e.key;
   if (e.ctrlKey) {
-    if (e.shiftKey && k === 'ArrowRight') return sendAndGo();
+    if (e.shiftKey && k === 'ArrowRight') return sendHere(true);
     if (view().classList.contains('lec-deck')) {   // 슬라이드 (D96): 구성 요소의 글자 크기, 장 더하기·복제
       if (e.shiftKey && (e.code === 'Period' || e.code === 'Comma')) {
         emit('text-size', { dir: e.code === 'Period' ? 1 : -1 });
@@ -779,8 +776,8 @@ export function spotKey(e) {
       return true;
     }
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
-    if (k === 'ArrowRight') sendLit(true);
-    else if (k === 'ArrowLeft') copyLitRef();
+    if (k === 'ArrowRight') return sendHere();
+    if (k === 'ArrowLeft') copyLitRef();
     else return false;
     return true;
   }

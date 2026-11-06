@@ -30,6 +30,7 @@ import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
+import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
 const MIN_HEIGHT = 64;   // 분리선을 끌어 줄일 수 있는 높이 (머리줄 + 두 줄쯤)
@@ -168,7 +169,7 @@ const noteHtml = (depth, text) => html`<p class="side-note" style="--d:${depth}"
 
 function nodesHtml(o, v, nodes, depth, inside = false) {
   const markup = [];
-  for (const n of nodes) {
+  for (const n of sideOrder(nodes)) {
     if (n.type === 'file') {
       markup.push(fileRow(o, v, n, depth));
       continue;
@@ -684,5 +685,6 @@ export function initOthers() {
   on('tree', () => { if (folderView()) render(); else renderHead(); });
   on('changed', () => { if (folderView()) render(); });
   on('titles', () => { if (folderView()) render(); });
+  on('side-sort', render);   // 목록의 차례 (D97)
   on('view', revealCurrent);
 }

@@ -57,6 +57,7 @@
 | newdoc.js | 새 문서 (D65) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`), 새 문서 탭에서 편집 모드로(`openCreated`) |
 | snippet.js | 담은 조각 다듬기 (D63, DOM 없음) — 상대경로를 넣을 문서 기준으로(`rebase`), 각주 정의·이름(`noteDefs`), 제목 수준(`shiftHeadings`), 넣을 자리(`placeLine`·`levelAt`·`placeText`), 담은 곳 주석(`buildBody`) |
 | theme.js | 문서 스타일 목록(THEMES)과 전환, 내 스타일(D53 — 3초마다 목록, 바탕 스타일 위에 #lec-user-css). 스타일 선택 목록도 이 표로 만들고, 설정 `theme_groups` 에 따라 용도별·분위기별·밝기별로 묶는다(GROUPINGS) |
+| sideorder.js | 사이드바 목록의 차례 (D97): 폴더 먼저, 그 안은 이름순·시간순·형식순 (설정 side_sort) |
 | slideops.js | 슬라이드의 원문 계산 (D96, DOM 없음): 칸 머리 줄·글자 크기 지시어, 장 더하기·복제·옮기기·지우기 |
 | slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록) |
 | slides.js | 발표 문서 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide`), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |

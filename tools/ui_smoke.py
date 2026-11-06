@@ -3442,14 +3442,17 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)
             check(term_btns >= 2 and pasted and in_term and told and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
                   f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
-            # Shift+→ (D75): 하이라이트한 곳의 위치를 맨 앞 터미널에 Enter 없이 — 초점은 터미널로
+            # Shift+→ (D75·D97): 하이라이트한 곳의 위치를 맨 앞 터미널에 Enter 없이 — 초점도 터미널로
             page.locator('#lec-view h1').first.click()
             page.keyboard.press('Shift+Enter')
             h1_at = page.locator('#lec-view h1').first.get_attribute('data-lines').split('-')[0]
             page.keyboard.press('Shift+ArrowRight')
             sent = term_has(f'@{doc_path} {h1_at}행 ')
             in_term_js = "!!document.activeElement?.closest('#lec-term')"
-            sent_stay = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
+            sent_go = wait_until(page, in_term_js, 3000)
+            page.keyboard.press('Escape')   # 셸의 입력 줄 지우기 (PSReadLine)
+            page.keyboard.press('Shift+F6')   # 터미널 → 문서
+            wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
             head_shadow = "getComputedStyle(document.querySelector('.term-head')).boxShadow"
             tabs_shadow = "getComputedStyle(document.querySelector('#lec-doctabs')).boxShadow"
             mark_doc = [page.evaluate(head_shadow), page.evaluate(tabs_shadow)]
@@ -3460,15 +3463,17 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+F6')   # 터미널 → 문서
             hop_doc = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
             page.keyboard.press('Escape')   # 하이라이트 끄기
-            check(sent and sent_stay, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점은 문서에 ({sent}, {sent_stay})")
+            check(sent and sent_go, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점도 터미널로 ({sent}, {sent_go})")
             check(to_term and hop_doc and mark_doc[0] == 'none' and mark_doc[1] != 'none' and mark_term[0] != 'none' and mark_term[1] == 'none',
                   f"F6·Shift+F6 은 문서 ↔ 터미널, 초점이 있는 쪽을 강조색으로 보임 ({to_term}, {hop_doc}, {mark_doc}, {mark_term})")
             page.locator('#lec-view h1').first.click()
             page.keyboard.press('Control+Shift+ArrowRight')   # 하이라이트 없이 — 현재 줄
             go_sent = term_has(f'@{doc_path} {h1_at}행 ')
-            go_focus = wait_until(page, in_term_js, 3000)
-            page.keyboard.press('Escape')
-            check(go_sent and go_focus, f"Ctrl+Shift+→ 는 현재 줄의 위치를 넣고 초점도 터미널로 ({go_sent}, {go_focus})")
+            go_focus = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
+            check(go_sent and go_focus, f"Ctrl+Shift+→ 는 현재 줄의 위치를 넣고 초점은 문서에 ({go_sent}, {go_focus})")
+            page.keyboard.press('F6')
+            wait_until(page, in_term_js, 3000)
+            page.keyboard.press('Escape')   # 셸의 입력 줄 지우기
             page.keyboard.press('Control+Backquote')   # 패널을 닫고
             wait_until(page, "document.querySelector('#lec-term').hidden", 3000)
             page.locator('#lec-btn-spot').focus()   # 툴바를 누른 뒤처럼 — 읽는 중이니 터미널로

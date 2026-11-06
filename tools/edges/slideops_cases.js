@@ -1,5 +1,5 @@
 // slideops.js 의 계산과 발표 문서의 줄 구조 벽 점검 (slides.py 가 페이지 안에서, rules_check 가 node 로 돌린다 — m: slideops.js, lo: lineops.js, 끝에서 {n, fails} 를 돌려준다)
-const { textSizes, readCellHead, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide } = m;
+const { textSizes, readCellHead, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } = m;
 const { planNew, insertLine, joinLine, moveLines, deleteLines } = lo;
 let n = 0;
 const fails = [];
@@ -54,6 +54,18 @@ eq(deleteSlide(S3, spans, 1).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n
 eq(deleteSlide(S3, spans, 0).lines, L('---\nmarp: true\n---\n\n## 둘\n\n글\n\n---\n\n## 셋\n'), '맨 앞 지우기');
 eq(deleteSlide(S3, spans, 2).lines, L('---\nmarp: true\n---\n\n# 하나\n\n---\n\n## 둘\n\n글\n'), '맨 뒤 지우기');
 eq(deleteSlide(S3, [[4, 16]], 0), { error: 'only' }, '하나뿐');
+
+// 배치 넣기
+const W = { body: '글', number: '0', label: '설명' };
+const lay = (s, name) => setLayout(L(s), [1, L(s).length], name, W);
+eq(lay('## 제목', 'two').lines, L('<!-- layout: two -->\n\n## 제목\n\n::: a card\n글\n:::\n\n::: b card\n글\n:::'), '빈 장에 뼈대');
+eq(lay('## 제목', 'two').line, 6, '첫 칸의 글 줄');
+eq(lay('## 제목\n\n- 가\n- 나\n\n<!-- 노트 -->', 'two').lines, L('<!-- layout: two -->\n\n## 제목\n\n::: a\n- 가\n- 나\n:::\n\n<!-- 노트 -->\n\n::: b card\n글\n:::'), '칸 없는 장의 글은 첫 칸으로');
+eq(lay('<!-- layout: quad -->\n\n## 제목\n\n::: a card\n가\n:::\n\n::: b\n나\n:::\n\n::: c\n다\n:::', 'two').lines, L('<!-- layout: two -->\n\n\n## 제목\n\n::: a card\n가\n:::\n\n::: b\n나\n:::\n\n::: c\n다\n:::'), '남는 칸은 지우지 않는다');
+eq(lay('<!-- grid: x y -->\n<!-- cols: 1fr 1fr -->\n\n::: x\n가\n:::\n\n::: y\n나\n:::', 'quad').lines, L('<!-- layout: quad -->\n\n\n::: a\n가\n:::\n\n::: b\n나\n:::\n\n::: c card\n글\n:::\n\n::: d card\n글\n:::'), '격자를 배치로, 칸 이름을 차례대로');
+eq(lay('## 제목', 'kpi').lines.slice(4, 8), ['::: a kpi', '**0**', '설명', ':::'], 'KPI 뼈대');
+eq(lay('## 제목', 'kpi').lines.at(-3), '::: e card', 'KPI 의 넓은 칸');
+eq(lay('## 제목\n\n```\n::: 코드\n```', 'two').lines.includes('::: 코드'), true, '코드 블록 안의 ::: 는 칸이 아니다');
 
 // 발표 문서의 벽: 칸·장·지시어 줄을 넘거나 깨뜨리지 않는다
 const DK = '---\nmarp: true\n---\n\n<!-- layout: two -->\n\n## 제목\n\n::: a card\n첫 글\n:::\n\n::: b\n- 가\n- 나\n:::\n\n---\n\n## 끝\n';

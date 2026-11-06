@@ -262,6 +262,48 @@ marp: true
 
 :::
 """, encoding='utf-8')
+(proj / '선.md').write_text("""---
+marp: true
+---
+
+<!-- links: a>hub, b<>hub, hub--c, hub>없는칸, 이상한줄 -->
+
+## 관계도
+
+::: a card at 80 200 200 100
+가
+:::
+
+::: b card at 80 400 200 100
+나
+:::
+
+::: hub accent at 520 300 240 120
+가운데
+:::
+
+::: c card at 980 300 200 100
+다
+:::
+
+---
+
+<!-- text: 표 10, 본문 12 -->
+<!-- layout: two -->
+
+## 작은 글
+
+::: a
+| 가 | 나 |
+|---|---|
+| 1 | 2 |
+:::
+
+::: b
+본문이다
+:::
+""", encoding='utf-8')
+(proj / '읽는자료.md').write_text('---\nmarp: true\nreading: true\n---\n\n<!-- text: 표 10, 본문 12 -->\n<!-- layout: two -->\n\n## 작은 글\n\n::: a\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n:::\n\n::: b\n본문이다\n:::\n', encoding='utf-8')
 (proj / '겹침.md').write_text("""---
 marp: true
 ---
@@ -336,7 +378,7 @@ marp: true
 
 ## 둘째
 """, encoding='utf-8')
-(proj / '보통.md').write_text('# 보통\n\n첫 문단이다.\n\n::: a\n이것은 글이다.\n:::\n', encoding='utf-8')
+(proj / '보통.md').write_text('# 보통\n\n첫 문단이다.\n\n::: a\n이것은 글이다.\n:::\n\n> [!NOTE]\n> 박스글이다.\n', encoding='utf-8')
 config = base / 'config'
 config.mkdir()
 server, url, port = serve(proj, config)
@@ -610,6 +652,68 @@ def run():
         here = page.evaluate("import('/static/js/store.js').then((m) => m.S.pane.here.line)")
         check('고르면 그 줄로 간다', here == (proj / '잘못.md').read_text(encoding='utf-8').split('\n').index('::: z') + 1 or here > 0, here)
 
+        print('[선과 작은 글]')
+        page.locator('#lec-tree .row.file[data-doc="선.md"]').click()
+        page.wait_for_function("document.querySelector('#lec-view .lec-slide h2')?.textContent === '관계도'", timeout=10000)
+        page.wait_for_timeout(800)
+        ln = page.evaluate("""() => { const s = document.querySelector('#lec-view .lec-slide'); const v = s.querySelector('.lec-links'); const l = [...v.querySelectorAll('line')].map((e) => [+e.getAttribute('x1'), +e.getAttribute('y1'), +e.getAttribute('x2'), +e.getAttribute('y2')]);
+          return { lines: l, heads: v.querySelectorAll('polygon').length, w: v.getAttribute('width') }; }""")
+        check('선 셋, 화살촉 셋', len(ln['lines']) == 3 and ln['heads'] == 3 and ln['w'] == '1280', ln)
+        check('선은 칸 테두리에서 끝난다', abs(ln['lines'][0][0] - 280) < 1 and abs(ln['lines'][0][2] - 520) < 1, ln['lines'][0])
+        page.locator('#lec-st-check').click()
+        page.wait_for_timeout(200)
+        menu = page.locator('#lec-menu').inner_text()
+        for want in ('선의 칸 없는칸 이(가) 없습니다', '선을 읽지 못했습니다: 이상한줄', '표가 10pt 로 작습니다 (기준 12pt)', '본문이 12pt 로 작습니다 (기준 14pt)'):
+            check(f'목록: {want}', want in menu, menu[:300])
+        page.keyboard.press('Escape')
+        t = page.locator('#lec-view .lec-slide').first.locator('.lec-cell').nth(2).locator('p')
+        t.click()
+        page.keyboard.press('F2')
+        page.wait_for_selector(cell_edit, timeout=3000)
+        check('선이 있는 칸의 글도 한 줄 편집', open_text() == ['가운데'], open_text())
+        page.keyboard.press('Escape')
+        page.locator('#lec-tree .row.file[data-doc="읽는자료.md"]').click()
+        page.wait_for_function("document.querySelector('#lec-st-path')?.textContent.includes('읽는자료')", timeout=10000)
+        page.wait_for_timeout(700)
+        check('읽는 자료는 기준이 낮다', page.locator('#lec-st-check').is_hidden(), page.text_content('#lec-st-check'))
+
+        print('[배치 넣기]')
+        (proj / '배치.md').write_text('---\nmarp: true\n---\n\n## 첫 장\n\n- 있던 글\n\n---\n\n## 빈 장\n', encoding='utf-8')
+        page.wait_for_selector('#lec-tree .row.file[data-doc="배치.md"]', timeout=8000)
+        page.locator('#lec-tree .row.file[data-doc="배치.md"]').click()
+        page.wait_for_function("document.querySelector('#lec-view .lec-slide h2')?.textContent === '첫 장'", timeout=10000)
+        page.wait_for_timeout(500)
+        lay = proj / '배치.md'
+
+        def set_layout(n, name):
+            t = page.locator('#lec-view .lec-slide').nth(n).locator('h2')
+            t.scroll_into_view_if_needed()
+            t.click(button='right')
+            page.wait_for_timeout(150)
+            page.locator('#lec-menu button', has_text='배치 넣기').click()
+            page.wait_for_timeout(150)
+            page.locator('#lec-menu button', has_text=name).first.click()
+            page.wait_for_timeout(1000)
+
+        set_layout(1, '네 칸')
+        check('빈 장에 칸 넷', page.locator('#lec-view .lec-slide').nth(1).locator('.lec-cell').count() == 4, lay.read_text(encoding='utf-8')[-120:])
+        check('점검이 없다', page.locator('#lec-st-check').is_hidden(), page.text_content('#lec-st-check'))
+        page.keyboard.press('F2')
+        page.wait_for_selector(cell_edit, timeout=3000)
+        check('F2 로 첫 칸의 글을 연다', open_text() == ['글'], open_text())
+        page.keyboard.press('Control+a')
+        page.keyboard.type('첫 칸 글')
+        page.keyboard.press('Enter')
+        page.wait_for_timeout(900)
+        check('채운 글이 칸에 있다', '::: a card\n첫 칸 글\n:::' in lay.read_text(encoding='utf-8'))
+        set_layout(0, '두 칸')
+        check('있던 글은 첫 칸으로', '::: a\n- 있던 글\n:::' in lay.read_text(encoding='utf-8') and page.locator('#lec-view .lec-slide').first.locator('.lec-cell').count() == 2, lay.read_text(encoding='utf-8')[:140])
+        set_layout(1, '두 칸')
+        check('칸을 줄여도 글은 남고 점검에 나온다', '첫 칸 글' in lay.read_text(encoding='utf-8') and page.locator('#lec-st-check').is_visible(), lay.read_text(encoding='utf-8')[-140:])
+        page.keyboard.press('Control+z')
+        page.wait_for_timeout(900)
+        check('Ctrl+Z 로 돌아온다', '<!-- layout: quad -->' in lay.read_text(encoding='utf-8'))
+
         print('[겹침]')
         page.locator('#lec-tree .row.file[data-doc="겹침.md"]').click()
         page.wait_for_function("document.querySelector('#lec-view .lec-slide h2')?.textContent === '자리 칸만 있는 장'", timeout=10000)
@@ -640,6 +744,8 @@ def run():
         page.wait_for_selector('#lec-view h1', timeout=8000)
         page.wait_for_timeout(500)
         check('보통 문서의 ::: 는 글이다', ':::' in page.locator('#lec-view').text_content())
+        box = page.evaluate("document.querySelector('#lec-view blockquote.alert p').innerHTML")
+        check('박스글 맨 위에 빈 줄이 없다', box == '박스글이다.', box)
         check('슬라이드 도구가 없다', page.locator('#lec-st-structure').is_hidden() and page.locator('#lec-st-check').is_hidden())
         page.locator('#lec-view p').first.click()
         page.keyboard.press('Control+Shift+Period')

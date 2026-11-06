@@ -43,6 +43,7 @@ DEFAULTS: dict[str, Any] = {
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'toc_width': None,       # 목차 폭(px, 160~560). None 이면 기본 폭 — 경계를 끌어 바꾸고 두 번 누르면 기본 (D47)
+    'side_sort': 'name',     # 사이드바 목록의 차례: name | time | type (D97 — 폴더가 먼저)
     'files_view': 'kind',    # 사이드바 파일 탭을 보는 방법: kind(종류별 — 문서 트리 위, 파일 목록 아래) | folder(폴더 구조 그대로 한 트리)
     'docs_visible': True,    # 종류별 보기의 '문서' 묶음을 펼쳐 둠 (머리줄을 눌러 접기)
     'others_visible': True,  # 종류별 보기의 '자료' 묶음을 펼쳐 둠 (D48 — 안쪽 이름은 others)
@@ -78,7 +79,7 @@ DEFAULTS: dict[str, Any] = {
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks'})

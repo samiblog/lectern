@@ -613,7 +613,7 @@ async function pasteInto(term, text) {
  * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
- * stay: 초점은 문서에 둔다 (Shift+→ — D79). 아니면 터미널로
+ * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로
  */
 export async function pasteToTerminal(text, { stay = false } = {}) {
   const tab = S.tab;
@@ -791,7 +791,7 @@ export function initTerminal() {
   $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
   on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
-  on('term-paste-stay', (text) => pasteToTerminal(text, { stay: true }));   // Shift+→ (spotlight.js, D79)
+  on('term-paste-stay', (text) => pasteToTerminal(text, { stay: true }));   // Ctrl+Shift+→ (spotlight.js, D79·D97)
   applyColors();
   renderHead();
 }

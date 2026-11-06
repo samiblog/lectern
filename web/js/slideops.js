@@ -4,6 +4,20 @@
 
 /** 글자 크기를 정하는 구성 요소: 안쪽 이름 → 문서에 쓰는 한국어 낱말 (영어 낱말은 안쪽 이름 그대로) */
 export const TEXT_WORDS = { title: '제목', sub: '소제목', body: '본문', table: '표', box: '박스글', code: '코드' };   // i18n-ok (문서의 문법)
+/** 칸 배치: 이름 → [칸 자리(줄은 /), 열, 행]. t 는 제목 자리 */
+export const LAYOUTS = {
+  two: ['t t / a b', '1fr 1fr', 'auto 1fr'],
+  'two-left': ['t t / a b', '2fr 1fr', 'auto 1fr'],
+  'two-right': ['t t / a b', '1fr 2fr', 'auto 1fr'],
+  three: ['t t t / a b c', '1fr 1fr 1fr', 'auto 1fr'],
+  quad: ['t t / a b / c d', '1fr 1fr', 'auto 1fr 1fr'],
+  'left-stack': ['t t / a b / a c', '3fr 2fr', 'auto 1fr 1fr'],
+  'right-stack': ['t t / a b / c b', '2fr 3fr', 'auto 1fr 1fr'],
+  kpi: ['t t t t / a b c d / e e e e', '1fr 1fr 1fr 1fr', 'auto auto 1fr'],
+  'kpi-two': ['t t t / a b c / d d e', '1fr 1fr 1fr', 'auto auto 1fr'],
+  stack: ['t / a / b', '1fr', 'auto 1fr 1fr'],
+};
+
 const KINDS = Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]]));
 const SIZE = /^\d{1,3}(?:\.\d)?$/;
 
@@ -75,6 +89,49 @@ function trimmed(lines, [a, b]) {
   while (x < y && blank(lines[x - 1])) x += 1;
   while (y > x && blank(lines[y - 1])) y -= 1;
   return [x, y];
+}
+
+const CELL_HEAD = /^:::\s+\S/;
+const NOTE_LINE = /^\s*<!--.*-->\s*$/;
+
+/**
+ * 장 [a, b] 에 배치를 넣는다 — 사람이 키만으로 칸을 만드는 길 (D96). 배치 지시어를 쓰고(있던 배치·격자 지시어는 지운다),
+ * 있는 칸은 차례대로 새 이름으로 바꾸고, 모자라는 칸은 뼈대로 더한다. 남는 칸은 그대로 둔다 (글을 지우지 않는다 — 점검에 나온다).
+ * 칸이 없는 장의 글은 첫 칸에 넣는다. words: 뼈대의 글 {body, number, label}. {lines, line(첫 칸의 첫 줄)}
+ */
+export function setLayout(lines, span, name, words) {
+  const names = [...new Set(LAYOUTS[name][0].split(/[\s/]+/))].filter((x) => x !== 't');
+  const [start, end] = trimmed(lines, span);
+  let fence = false;
+  let cells = 0;
+  const body = lines.slice(start - 1, end).filter((s) => !/^<!--\s*(?:layout|grid|cols|rows):.*-->\s*$/.test(s)).map((s) => {
+    if (/^\s*(?:`{3,}|~{3,})/.test(s)) fence = !fence;
+    if (fence || !CELL_HEAD.test(s.trim())) return s;
+    const parts = s.trim().split(/\s+/);
+    if (names[cells]) parts[1] = names[cells];
+    cells += 1;
+    return parts.join(' ');
+  });
+  if (!cells) {
+    const content = (s) => s.trim() && !NOTE_LINE.test(s) && !/^#{1,2}\s/.test(s);
+    const first = body.findIndex(content);
+    if (first >= 0) {
+      const last = body.length - 1 - [...body].reverse().findIndex(content);
+      body.splice(last + 1, 0, ':::');
+      body.splice(first, 0, `::: ${names[0]}`);
+      cells = 1;
+    }
+  }
+  for (const [i, cell] of names.entries()) {
+    if (i < cells) continue;
+    const number = name.startsWith('kpi') && i < (name === 'kpi' ? 4 : 3);
+    if (body.at(-1)?.trim()) body.push('');
+    body.push(`::: ${cell} ${number ? 'kpi' : 'card'}`, ...(number ? [`**${words.number}**`, words.label] : [words.body]), ':::');
+  }
+  const out = [`<!-- layout: ${name} -->`, '', ...body];
+  const next = lines.slice();
+  next.splice(start - 1, end - start + 1, ...out);
+  return { lines: next, line: start + out.findIndex((s) => CELL_HEAD.test(s)) + 1 };
 }
 
 /** 장 [a, b] 뒤에 제목만 있는 새 장을 넣는다. {lines, line(새 제목 줄)} */

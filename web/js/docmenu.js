@@ -501,13 +501,17 @@ function openMenu(e, view, x, y) {
   blockMenu(e, view, el, selected, x, y);
 }
 
+const LAYOUT_NAMES = () => [['two', t('두 칸')], ['two-left', t('두 칸 — 왼쪽 넓게')], ['two-right', t('두 칸 — 오른쪽 넓게')], ['three', t('세 칸')], ['quad', t('네 칸')],
+  ['left-stack', t('왼쪽 큰 칸 + 오른쪽 둘')], ['right-stack', t('오른쪽 큰 칸 + 왼쪽 둘')], ['kpi', t('숫자 넷 + 넓은 칸')], ['kpi-two', t('숫자 셋 + 두 칸')], ['stack', t('위아래')]];
+
 /** 슬라이드의 장 다루기 (D96 — 계산은 slideops.js, 저장은 lineedit.js 의 'slide-op'). 슬라이드가 아니거나 고칠 수 없으면 빈 배열 */
-function slideItems(target) {
+function slideItems(target, x, y) {
   const wrap = target?.closest?.('.lec-slide-wrap');
   if (!wrap || !linesEditable()) return [];
   const index = [...wrap.parentElement.children].filter((el) => el.classList.contains('lec-slide-wrap')).indexOf(wrap);
   const run = (op, dir = 0) => () => emit('slide-op', { op, index, dir });
   return [
+    { label: t('배치 넣기…'), tip: t('칸의 뼈대를 씁니다 — 있는 칸은 이름만 바꿉니다'), action: () => showMenu(x, y, [{ header: t('이 장의 배치') }, ...LAYOUT_NAMES().map(([layout, label]) => ({ label, action: () => emit('slide-op', { op: 'layout', index, layout }) }))]) },
     { label: t('장 더하기'), hint: 'Ctrl+M', tip: t('이 장 뒤에'), action: run('add') },
     { label: t('장 복제'), hint: 'Ctrl+D', action: run('copy') },
     { label: t('장 앞으로 옮기기'), hint: 'Ctrl+Shift+PageUp', action: run('move', -1) },
@@ -520,7 +524,7 @@ function slideItems(target) {
 function blockMenu(e, view, el, selected, x, y) {
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
   const items = el ? blockItems(el, e.target, spot) : docItems(spot);
-  const slide = slideItems(e.target);   // 슬라이드: 장 다루기 (D96)
+  const slide = slideItems(e.target, x, y);   // 슬라이드: 장 다루기 (D96)
   if (slide.length) items.push('-', ...slide);
   const sel = view.ownerDocument.getSelection();
   if (selected) {
