@@ -503,7 +503,7 @@ Make a pptx from @slides.md on the D:\templates\company.pptx template.
 
 - When moving a pptx in, all text and the slide order are kept. Text slides become cells. Diagrams whose layout carries the meaning stay as pictures, with their text in the notes. Animations and exact fonts are not kept.
 - When exporting, text stays text, tables stay tables, charts stay editable charts and lines become connectors. Colors follow the style chosen in the slide window. Complex charts and Mermaid go in as pictures.
-- A document that came from a pptx reuses the original slides you did not change. Where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep `document-변환기록.json` and the `.pptx-work` folder for that.
+- A document that came from a pptx reuses the original slides you did not change. Where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
 - The original pptx is never changed. An open presentation is not saved or closed.
 - Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
 

@@ -44,6 +44,8 @@ a = Analysis(
     excludes=['tkinter', 'pytest', 'playwright'],
     noarchive=False,
 )
+# 시험이 skills/ 에 남긴 바이트코드는 설치 파일에 넣지 않는다
+a.datas = [d for d in a.datas if '__pycache__' not in d[0]]
 pyz = PYZ(a.pure)
 exe = EXE(
     pyz,
