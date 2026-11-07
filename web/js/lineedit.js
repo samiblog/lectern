@@ -58,6 +58,7 @@ let session = null;   // 편집 중 {pane, tab, path, line, kind, original, part
 const records = new Map();
 const MAX_UNDO = 50;
 let turn = Promise.resolve();   // 되돌리기·다시 하기는 차례로 — 앞의 것이 저장을 마치기 전에 다음 것이 파일을 보면 '바뀌었다'고 잘못 안다
+const saving = new Set();   // 기록에 쌓이기 전인 저장 — 되돌리기는 이것들을 기다린다 (칸의 Enter 바로 뒤 Ctrl+Z 가 기록을 버리지 않게)
 let opening = 0;     // 두 번 누른 뒤 칸을 열 때까지의 타이머 — 세 번째 누르기(문단 고르기)면 열지 않는다
 let taskSaving = false;
 let moves = 0;       // 차례를 기다리는 줄 옮기기 — 키를 누르고 있으면 쌓이지 않게
@@ -648,7 +649,15 @@ async function writeLines(tab, path, start, before, after) {
  * 원문 줄 범위를 바꿔 저장하고 되돌리기 기록에 쌓고 칸을 다시 그린다 — 편집이 파일을 고치는 길은 이것 하나다.
  * before 는 한 줄 이상 (넣기는 앞 줄을 before·after 양쪽에). {hash, at} — 자리를 찾지 못해 저장하지 않았으면 null. 보기만 하는 프로젝트(D71)는 부르는 쪽이 막는다
  */
-export async function replaceLines(pane, path, start, before, after) {
+export function replaceLines(pane, path, start, before, after) {
+  const job = saveRecorded(pane, path, start, before, after);
+  saving.add(job);
+  const done = () => saving.delete(job);
+  job.then(done, done);
+  return job;
+}
+
+async function saveRecorded(pane, path, start, before, after) {
   const { tab } = pane;
   const r = await writeLines(tab, path, start, before, after);
   if (!r) return null;
@@ -2188,10 +2197,12 @@ async function replay(pane, path, rec, undoing) {
 function walk(undoing) {
   const view = $('#lec-view');
   const path = pathIn(view);
-  const rec = S.tab && path ? records.get(`${S.tab.id}|${path}`) : null;
-  if (session || S.pane?.lineEditHold || !(undoing ? rec?.done : rec?.undone)?.length) return false;
+  const key = S.tab && path ? `${S.tab.id}|${path}` : null;
+  const ready = () => (undoing ? records.get(key)?.done : records.get(key)?.undone)?.length;
+  if (!key || session || S.pane?.lineEditHold || (!ready() && !saving.size)) return false;
   const pane = S.pane;
-  turn = turn.then(() => replay(pane, path, rec, undoing));
+  // 저장 중인 편집이 기록에 쌓인 뒤에 — 앞서 보면 방금 저장한 파일을 '그사이 바뀌었다'고 여겨 기록을 버린다
+  turn = turn.then(() => Promise.allSettled([...saving])).then(() => (ready() ? replay(pane, path, records.get(key), undoing) : null));
   return true;
 }
 

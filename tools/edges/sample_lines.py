@@ -65,7 +65,7 @@ try:
             settle(200)
             if '찾지 못했습니다' in (page.text_content('#lec-toast') or ''):
                 bad.append(text)
-        check(f'사례 표의 링크 {count}개가 모두 그 절로 간다', count == 13 and not bad, [count, bad])
+        check(f'사례 표의 링크 {count}개가 모두 그 절로 간다', count == 17 and not bad, [count, bad])
         page.evaluate("document.querySelector('#lec-content').scrollTop = 0")
 
         # 1. 오타: 두 번 눌러 그 자리에서

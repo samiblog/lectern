@@ -1434,6 +1434,42 @@ try:
         page.keyboard.press('Escape')
         page.wait_for_timeout(250)
 
+        print('[Enter 바로 뒤의 Ctrl+Z]')
+        start = '# 글\n\n첫째\n\n둘째\n'
+        put(start)
+
+        def edit_line(word, add):
+            page.locator('#lec-view p', has_text=word).dblclick()
+            page.wait_for_selector('.lec-line-edit', timeout=3000)
+            page.keyboard.press('End')
+            page.keyboard.type(add)
+            page.keyboard.press('Enter')
+
+        def until_src(want, ms=4000):
+            for _ in range(ms // 100):
+                if src() == want:
+                    return True
+                page.wait_for_timeout(100)
+            return False
+
+        edit_line('첫째', ' 하나')
+        one = '# 글\n\n첫째 하나\n\n둘째\n'
+        check('첫 편집을 저장한다', until_src(one), src())
+        page.wait_for_timeout(500)
+        # 서버는 바로 저장하고 응답만 늦게 온다 (route 처리기는 키 입력까지 붙잡아서 브라우저 안에서 늦춘다)
+        page.evaluate("""() => { const real = window.fetch; window.__lecRealFetch = real;
+          window.fetch = async (u, o) => { const r = await real(u, o); if (String(u).includes('/api/save')) await new Promise((ok) => setTimeout(ok, 500)); return r; }; }""")
+        edit_line('둘째', ' 둘')
+        page.wait_for_timeout(60)
+        page.keyboard.press('Control+z')
+        page.wait_for_timeout(2000)
+        said = page.text_content('#lec-toast') or ''
+        check('저장 응답 전의 Ctrl+Z 도 방금 저장한 것을 되돌린다', until_src(one), [src(), said])
+        page.evaluate('() => { window.fetch = window.__lecRealFetch; }')
+        page.locator('#lec-content').focus()
+        page.keyboard.press('Control+z')
+        check('기록이 남아 한 번 더 되돌린다', until_src(start), src())
+
         for rel, want in (('code.py', 400), ('data.csv', 400), ('없는.md', 404), ('../밖.md', 400)):
             got = post('/api/delete-doc', {'p': tid, 'path': rel})
             check(f'서버가 막는다: {rel}', got == want, got)

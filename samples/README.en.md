@@ -15,7 +15,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 6. Edit mode (**Ctrl+E**, then **Ctrl+S** to save and **Esc** to close) works in your own projects and in a copy of this folder — the samples themselves are view-only (see the note below).
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
 8. Lectern slides samples [slides/README.en.md](slides/README.en.md) — basics, model decks by situation and complex layouts, from templates to converting to pptx
-9. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — press **F2** or double-click to fix a line in place
+9. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — fix lines in place and save at once: pick lines with **Insert**, move and delete them, insert elements with **/**, keep writing past the last line
 
 ## For AI (Claude Code)
 
