@@ -2,6 +2,8 @@
 
 The order for learning Lectern slides, from the top. The full guide is the 'Lectern slides' chapter of the **F1** manual.
 
+New to slides? Read the short guide [guide/09-Lectern-슬라이드.md](../guide/09-Lectern-슬라이드.md) first (in Korean) — how slides differ from md documents, and making, editing, presenting and converting to pptx on one page. The full order of the samples is on [the first page](../README.en.md).
+
 > [!TIP]
 > The installed samples are read-only. To follow along, make new Lectern slides in your own project with **New** (Ctrl+N), or copy this folder and open the copy.
 

@@ -14,8 +14,8 @@ An example project for looking around Lectern. Think of it as a **copper market 
 5. Right-click a table and choose **Copy location for Claude** — in your own project, paste it into Claude Code in the terminal (**Ctrl+\`** — the key left of 1).
 6. Edit mode (**Ctrl+E**, then **Ctrl+S** to save and **Esc** to close) works in your own projects and in a copy of this folder — the samples themselves are view-only (see the note below).
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
-8. Lectern slides samples [slides/README.en.md](slides/README.en.md) — basics, model decks by situation and complex layouts, from templates to converting to pptx
-9. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — fix lines in place and save at once: pick lines with **Insert**, move and delete them, insert elements with **/**, keep writing past the last line
+8. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — fix lines in place and save at once: pick lines with **Insert**, move and delete them, insert elements with **/**, keep writing past the last line
+9. Lectern slides: start with the short guide [guide/09-Lectern-슬라이드.md](guide/09-Lectern-슬라이드.md) — how slides differ from md documents, making, editing, presenting and converting to pptx — then the samples [slides/README.en.md](slides/README.en.md): basics, model decks by situation and complex layouts
 
 ## For AI (Claude Code)
 
