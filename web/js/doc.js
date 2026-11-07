@@ -410,8 +410,7 @@ function decorateCode(root) {
 /** 박스글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
 /** 표·그림 바로 아래의 자료·주 줄은 작게 (D109) — 본문의 글이 아니라 그 표·그림에 딸린 줄이다 */
 function decorateSources(root) {
-  if (root.classList.contains('lec-deck')) return;
-  for (const p of root.querySelectorAll(':scope > p')) {
+  for (const p of [...root.children].filter((el) => el.tagName === 'P')) {   // root 는 문서 조각일 수 있다 (모아 보기) — :scope 가 없다
     const prev = p.previousElementSibling;
     if (!prev || !SOURCE.test(p.textContent)) continue;
     if (prev.matches('.table-wrap, table, figure, pre.lec-chart, pre.mermaid, .lec-source') || prev.querySelector?.(':scope > img')) p.classList.add('lec-source');
