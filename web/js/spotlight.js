@@ -346,7 +346,9 @@ function moveHere(step, repeat = false) {
       return true;
     }
   }
-  const j = Math.max(0, Math.min(us.length - 1, i + step));
+  let j = Math.max(0, Math.min(us.length - 1, i + step));
+  const inNotes = (n) => !!us[n].el.closest?.('.footnotes');
+  if (step > 0 && !inNotes(i) && inNotes(j)) j = i;   // 본문 마지막 줄 — 각주로 내려가지 않고 새 줄을 연다 (D106)
   if (j === i) vp.sc.scrollTop += step * 40;   // 첫 줄·마지막 줄: 문서의 위·아래 여백까지
   setHere(us[j].a, { scroll: true });
   if (j === i && step > 0 && !repeat) emit('line-end');

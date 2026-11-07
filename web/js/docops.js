@@ -4,7 +4,7 @@
 // - 표시는 사람이 고치지 않는다: setKind 가 줄의 표시를 떼고 새 표시를 단다.
 // - 제목 줄은 절의 손잡이다: 수준 바꾸기(shiftHeadings)는 하위 절까지, 옮기기(moveSection)·지우기(sectionSpan)는 본문까지 함께.
 
-import { quoteOf, itemOf, isBlank, fencesOf, fenceAt, frontEnd, blocksOf, blockAt, tableIn, deckOf } from './lineops.js';
+import { quoteOf, itemOf, isBlank, fencesOf, fenceAt, frontEnd, blocksOf, blockAt, tableIn, deckOf, bodyEnd, notesStart } from './lineops.js';
 
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
 
@@ -89,7 +89,7 @@ export function setKind(lines, a, b, kind, { bare = (s) => s } = {}) {
 export function sectionEnd(lines, n) {
   const level = headLevel(lines[n - 1]);
   const next = headsOf(lines).find((h) => h.n > n && h.level <= level);
-  let end = next ? next.n - 1 : lines.length;
+  let end = next ? next.n - 1 : Math.max(n, bodyEnd(lines));   // 마지막 절은 문서 끝의 각주 앞까지
   while (end > n && !lines[end - 1].trim()) end -= 1;
   return end;
 }
@@ -108,7 +108,8 @@ export function shiftHeadings(lines, n, dir) {
 /** 절의 범위 [첫 줄, 다음 절 앞 줄] — 뒤의 빈 줄까지 */
 function sectionBlock(lines, heads, h) {
   const next = heads.find((x) => x.n > h.n && x.level <= h.level);
-  return [h.n, next ? next.n - 1 : lines.length];
+  const notes = notesStart(lines);
+  return [h.n, next ? next.n - 1 : notes > h.n ? notes - 1 : lines.length];   // 마지막 절을 지우거나 옮겨도 각주는 문서 끝에 남는다 — 그 앞의 빈 줄까지가 절
 }
 
 /** 제목 줄 n 의 절을 같은 수준의 앞뒤 절과 바꾼다 — 본문과 하위 절까지 함께 (D107) */
@@ -431,7 +432,7 @@ export function addAttachment(lines, text, heading) {
   }
   let last = lines.length;
   while (last && !lines[last - 1].trim()) last -= 1;
-  const r = insertBlock(lines, last, [`## ${heading}`, '', `1. ${text}`]);
+  const r = insertBlock(lines, bodyEnd(lines, last), [`## ${heading}`, '', `1. ${text}`]);   // 문서 끝의 각주 앞에
   return { lines: r.lines, line: r.line + 2 };
 }
 

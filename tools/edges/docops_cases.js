@@ -169,6 +169,14 @@ eq(m.addAttachment(L('## 붙임\n'), 'a', '붙임').lines, L('## 붙임\n\n1. a\
 eq(m.nextAppendix(L('글\n')), 'A', '첫 부록');
 eq(m.nextAppendix(L('## 부록 A. 자료\n\n## 부록 B. 표\n')), 'C', '다음 부록');
 
+// 문서 끝의 각주는 절에 들지 않는다
+const NOTED = '# 글\n\n## 첫째\n\n가[^1]\n\n## 둘째\n\n나\n\n[^1]: 주\n';
+eq(sectionEnd(L(NOTED), 7), 9, '마지막 절의 끝은 각주 앞');
+eq(deleteSection(L(NOTED), 7).lines, L('# 글\n\n## 첫째\n\n가[^1]\n\n[^1]: 주\n'), '마지막 절을 지워도 각주는 남는다');
+eq(moveSection(L(NOTED), 7, -1).lines, L('# 글\n\n## 둘째\n\n나\n\n## 첫째\n\n가[^1]\n\n[^1]: 주\n'), '마지막 절을 올려도 각주는 끝에');
+eq(m.addAttachment(L(NOTED), '[a](a.xlsx)', '붙임').lines, L('# 글\n\n## 첫째\n\n가[^1]\n\n## 둘째\n\n나\n\n## 붙임\n\n1. [a](a.xlsx)\n\n[^1]: 주\n'), '붙임은 각주 앞에');
+eq(m.addAttachment(L('# 글\n\n## 붙임\n\n1. [a](a)\n\n[^1]: 주\n'), '[b](b)', '붙임').lines, L('# 글\n\n## 붙임\n\n1. [a](a)\n2. [b](b)\n\n[^1]: 주\n'), '있는 붙임에 더해도 각주 앞');
+
 // 붙여 넣기
 eq(m.pasteAfter(L('가\n나\n'), 1, ['x', '', 'y']).lines, L('가\nx\n\ny\n나\n'), '줄 뒤에 넣는다');
 eq(m.pasteAfter(L('- 가\n'), 1, ['x', '', '- y'], '- ').lines, L('- 가\n- x\n- y\n'), '목록은 항목으로');

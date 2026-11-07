@@ -252,7 +252,8 @@ function update() {
   if (pick.step === 'target') pick.items = targetItems(query);
   else if (pick.step === 'place') pick.items = placeItems(query);
   else pick.items = [{ type: 'create', label: t('Enter — 이 경로로 새 문서'), sub: t('바로 만듭니다 — 이미 있는 폴더에만, 같은 이름이 있으면 만들지 않습니다') }];
-  pick.sel = pick.step === 'new' ? pick.items.length - 1 : 0;   // 새로 만들기는 보통 문서가 Enter
+  // 새로 만들기는 보통 문서가 Enter. 자리는 '맨 끝'이 Enter — 맨 위의 '다른 곳 고르기'로 돌아가지 않게
+  pick.sel = pick.step === 'new' ? pick.items.length - 1 : pick.step === 'place' && pick.items[0]?.type === 'back' ? 1 : 0;
   renderPick();
 }
 

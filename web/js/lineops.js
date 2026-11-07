@@ -339,9 +339,31 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
  * 문서 끝의 새 줄 계획 (D106 — 마지막 줄에서 ↓, 빈 문서): 끝이 목록·인용이면 planNew 처럼 같은 레벨, 아니면 마지막 글 뒤의 빈 문단.
  * 표·코드 블록·수식·구분선 뒤에도 문단을 연다. 끝의 빈 줄은 건너뛴다
  */
+/** 문서 끝에 모인 각주 정의(와 들여 쓴 뒷줄)가 시작하는 줄 — 없으면 0. 주는 문서 맨 끝에 모인다 (D110) */
+export function notesStart(lines) {
+  let start = 0;
+  for (let n = lines.length; n >= 1; n--) {
+    const s = lines[n - 1];
+    if (!s.trim() || /^(?: {2,}|\t)/.test(s)) continue;   // 빈 줄·주의 뒷줄
+    if (!/^\[\^[^\]]+\]:/.test(s)) break;
+    start = n;
+  }
+  return start;
+}
+
+/** 끝의 각주를 뺀 본문의 끝 글 줄 (last 까지만 본다) — 끝에 쓰는 새 줄·붙임이 그 뒤에 들어간다 */
+export function bodyEnd(lines, last = lines.length) {
+  const start = notesStart(lines);
+  if (!start || start > last) return last;
+  let end = start - 1;
+  while (end && !lines[end - 1].trim()) end -= 1;
+  return end;
+}
+
 export function planEnd(lines, after = 0) {
   let last = lines.length;
   while (last && !lines[last - 1].trim()) last -= 1;
+  if (!after) last = bodyEnd(lines, last);   // 끝에 쓰는 글은 각주 앞에
   if (after) last = blockAt(blocksOf(lines), after)?.b ?? after;   // 그 블록 뒤에 — 슬라이드의 칸, 표·그림 뒤
   const para = { head: '', fill: '', kind: 'para', list: null, post: [] };
   if (!last) return { ...para, at: 0, pre: [] };

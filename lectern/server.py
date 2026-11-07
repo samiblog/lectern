@@ -117,7 +117,7 @@ def create_app(state: AppState) -> Flask:
         if not isinstance(rel, str):
             abort(400)
         target = resolve_inside(root, rel)
-        if target is None or not target.exists():
+        if target is None or not editing.present(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
         return target
 
@@ -345,7 +345,7 @@ def create_app(state: AppState) -> Flask:
         if not isinstance(rel, str) or (docs is not None and (not isinstance(docs, list) or len(docs) > MAX_DOC_TABS)):
             abort(400)
         target = resolve_inside(root, rel)
-        if target is None or not target.exists():
+        if target is None or not editing.present(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
         if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
             abort(400)
@@ -828,7 +828,7 @@ def create_app(state: AppState) -> Flask:
     def doc(pid: str, rel: str) -> Response:
         root = project_of(pid).root
         target = resolve_inside(root, rel)
-        if target is None or not target.is_file():
+        if target is None or not editing.present(target) or not target.is_file():
             abort(404)
         kind = doc_kind(target.name)
         if kind == 'markdown':

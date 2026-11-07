@@ -476,7 +476,7 @@ function growEnd() {
   const pane = S.pane;
   if (!canGrow(pane)) return;
   const line = pane.here?.line || 0;
-  if (pane.unfold || (line && blockOfLine(pane.view, line)?.closest('.footnotes'))) return;
+  if (pane.unfold || (line && blockOfLine(pane.view, line)?.closest('.footnotes'))) return;   // 주 내용 줄에서는 더하지 않는다 (D106)
   beginNew(line, true, { end: true, after: pane.view.classList.contains('lec-deck') });   // 슬라이드는 그 칸 안에 (문서 끝은 닫는 ::: 뒤다)
 }
 
@@ -732,7 +732,9 @@ function neighbor(line, dir) {
   const fold = S.pane?.unfold;
   if (fold?.a) return line + dir >= fold.a && line + dir <= fold.b ? line + dir : undefined;   // 패널 안에서만 (D112)
   const src = sourceLines();
-  const order = currentUnits().flatMap((u) => editableLines(u, src));
+  // 본문에서는 각주로 내려가지 않는다 — 본문 마지막 줄의 ↓ 가 새 줄을 열게 (D106). 각주 안에서는 각주끼리, ↑ 로 본문으로
+  const notes = !!blockOfLine(S.pane.view, line)?.closest?.('.footnotes');
+  const order = currentUnits().filter((u) => notes || !u.el.closest?.('.footnotes')).flatMap((u) => editableLines(u, src));
   const i = order.indexOf(line);
   return i >= 0 ? order[i + dir] : dir > 0 ? order.find((n) => n > line) : order.findLast((n) => n < line);
 }
@@ -1668,7 +1670,7 @@ function menuOp(op, after = null) {
 
 /** 메뉴의 '여기에 넣기…'·'이 줄 바꾸기…' 를 칸 없이 쓸 때: 그 줄 아래에 새 줄을 열고 고른다 */
 async function putBelow(line, target) {
-  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img`), after: true });
+  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table`), after: true });   // 표의 행이면 표 아래에 — 행을 더하는 것은 표 메뉴
   if (session) await openPut();
 }
 

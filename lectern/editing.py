@@ -53,9 +53,20 @@ def _protect(path: Path) -> None:
         raise EditError(403, t('Lectern 프로그램 폴더 안의 파일은 고치지 않습니다 — 고쳐 보려면 그 폴더를 다른 곳에 복사해 여세요'))
 
 
+def present(path: Path) -> bool:
+    """path 가 있는지. 저장이 바꿔 끼우는 순간(ReplaceFileW — _swap)에는 원래 이름이 잠깐 없으니, 없으면 조금 기다려 본다.
+    그 순간에 들어온 읽기(문서 그리기·위치 기억·다른 창의 저장)가 '파일이 없습니다'를 받지 않게. 정말 없으면 0.1초쯤 늦게 False"""
+    for attempt in range(7):
+        if path.exists():
+            return True
+        if attempt < 6:
+            time.sleep(0.015)
+    return False
+
+
 def _check(path: Path) -> os.stat_result:
     _protect(path)
-    if not path.exists():
+    if not present(path):
         raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
     if not path.is_file() or not can_edit(path.name):
         raise EditError(400, t('문서와 코드 파일만 편집할 수 있습니다'))
