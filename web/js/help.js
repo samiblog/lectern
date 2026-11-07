@@ -83,9 +83,9 @@ export const SHORTCUTS = [
     ['Ctrl+Shift+K', t('이 줄 지우기')],
     ['Ctrl+Shift+D', t('이 줄 복제')],
   ]],
-  [t('발표 문서 (marp: true)'), [
+  [t('Lectern 슬라이드 (marp: true)'), [
     ['Ctrl+Shift+> / <', t('이 구성 요소의 글자 크기 키우기·줄이기 (슬라이드)')],
-    ['Ctrl+M', t('이 장 뒤에 장 더하기 (슬라이드)')],
+    ['Ctrl+M', t('템플릿을 골라 이 장 뒤에 새 장 (Lectern 슬라이드)')],
     ['Ctrl+D', t('이 장 복제 (슬라이드)')],
     ['Ctrl+Shift+PageUp / PageDown', t('이 장을 앞·뒤로 옮기기 (슬라이드)')],
     ['Shift+F5', t('발표 — 지금 보는 슬라이드부터 창 전체에 한 장씩')],

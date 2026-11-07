@@ -216,9 +216,9 @@ export const renameItem = (path) => ({ label: t('이름 바꾸기…'), hint: 'F
 /** 폴더 우클릭의 새로 만들기 (D65): 이 폴더에 새 문서 — 경로를 정하면 바로 만들어 새 탭에서 편집 */
 export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), action: () => emit('new-doc', { dir }) });
 
-/** 문서를 발표 문서로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
+/** 문서를 Lectern 슬라이드로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
 function slideRequest(path) {
-  const ask = t('@{path} 를 Lectern 발표 문서로 만들어 주세요. 원본은 고치지 말고 같은 폴더에 새 파일로 만드세요.', { path });
+  const ask = t('@{path} 를 Lectern 슬라이드로 만들어 주세요. 원본은 고치지 말고 같은 폴더에 새 파일로 만드세요.', { path });
   return S.slidesGuide ? `${ask} ${t('작성 방법은 {path} 를 읽으세요.', { path: S.slidesGuide })}` : ask;
 }
 
@@ -233,7 +233,7 @@ export function docMenuItems(path, type = 'doc') {
   opens.push({ label: t('새 창에서 열기'), action: () => emit('open-window', { type, path }) });
   /** @type {MenuItem[]} */
   const asks = type === 'doc' && isMd(path) && !S.tab?.fileMap.get(path)?.deck
-    ? [{ label: t('발표로 바꾸기 요청'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', slideRequest(path)) }]
+    ? [{ label: t('Lectern 슬라이드로 바꾸기 요청'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', slideRequest(path)) }]
     : [];
   return menuGroups([{ header: path }], opens, asks, pathMenuItems(path, true), [renameItem(path)]);
 }

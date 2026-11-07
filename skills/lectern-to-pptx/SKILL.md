@@ -1,6 +1,6 @@
 ---
 name: lectern-to-pptx
-description: Lectern 발표 문서(marp: true 인 Markdown 슬라이드)를 PowerPoint pptx 로 만든다. 사용자가 Lectern 슬라이드를 pptx·ppt·파워포인트로 내보내거나 바꿔 달라고 하거나, md 슬라이드를 회사 양식 pptx 로 만들어 달라고 하거나, pptx 에서 옮겨 온 문서를 고친 뒤 다시 pptx 로 돌려 달라고 할 때 반드시 쓴다. 일반 문서를 pptx 로 새로 기획하는 일에는 쓰지 않는다.
+description: Lectern 슬라이드(marp: true 인 Markdown 슬라이드)를 PowerPoint pptx 로 만든다. 사용자가 Lectern 슬라이드를 pptx·ppt·파워포인트로 내보내거나 바꿔 달라고 하거나, md 슬라이드를 회사 양식 pptx 로 만들어 달라고 하거나, pptx 에서 옮겨 온 문서를 고친 뒤 다시 pptx 로 돌려 달라고 할 때 반드시 쓴다. 일반 문서를 pptx 로 새로 기획하는 일에는 쓰지 않는다.
 ---
 
 # Lectern 슬라이드 → pptx

@@ -1,4 +1,4 @@
-// 발표 문서에서 줄 구조 편집을 아무렇게나 해도 칸과 장이 깨지지 않는지 (rules_check 가 돌린다 — lo: lineops.js, 끝에서 {problems, runs} 를 돌려준다)
+// Lectern 슬라이드에서 줄 구조 편집을 아무렇게나 해도 칸과 장이 깨지지 않는지 (rules_check 가 돌린다 — lo: lineops.js, 끝에서 {problems, runs} 를 돌려준다)
 const { planNew, insertLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines } = lo;
 const DECK = `---
 marp: true

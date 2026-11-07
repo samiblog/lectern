@@ -1,4 +1,4 @@
-"""Lectern 발표 문서를 쪽·칸·블록으로 읽는다. 표준 라이브러리만 쓴다.
+"""Lectern 슬라이드를 쪽·칸·블록으로 읽는다. 표준 라이브러리만 쓴다.
 
 문법은 앱의 web/help/slides.md 를 따른다. 쪽을 나누는 규칙은 pptx-to-lectern 의 verify.py 와 같아야 한다.
 지문(sha1)이 그 나눈 글로 만들어지기 때문이다.
@@ -408,7 +408,7 @@ def read_deck(path):
     md = path.read_text(encoding='utf-8')
     fm, css, body = split_front(md)
     if fm.get('marp') is not True:
-        raise ValueError('맨 앞 설정에 marp: true 가 없습니다. Lectern 발표 문서가 아닙니다')
+        raise ValueError('맨 앞 설정에 marp: true 가 없습니다. Lectern 슬라이드가 아닙니다')
     parts = split_slides(body)
     inherited = {k: fm[k] for k in DIRECTIVES if k in fm and k not in PER_SLIDE}
     slides = [read_slide(p, inherited) for p in parts]

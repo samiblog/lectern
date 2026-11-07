@@ -76,10 +76,10 @@ function frontEnd(lines) {
   return 0;
 }
 
-/** 맨 앞 설정에 marp: true 인 발표 문서인지 — 값을 읽는 법은 slides.js 의 readYaml 과 같게 (yes·on 도, 따옴표는 글) */
+/** 맨 앞 설정에 marp: true 인 Lectern 슬라이드인지 — 값을 읽는 법은 slides.js 의 readYaml 과 같게 (yes·on 도, 따옴표는 글) */
 const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^[ \t]*marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.trim().startsWith('marp'));
 
-/** 발표 문서에서 장을 가르는 줄인지. 바로 위가 글이면 구분 줄이 아니라 그 글의 밑줄 제목이다 (제목\n---) */
+/** Lectern 슬라이드에서 장을 가르는 줄인지. 바로 위가 글이면 구분 줄이 아니라 그 글의 밑줄 제목이다 (제목\n---) */
 function slideBreak(lines, n, fences) {
   if (!RULE.test(lines[n - 1])) return false;
   const p = lines[n - 2];
@@ -87,7 +87,7 @@ function slideBreak(lines, n, fences) {
     || HEADING.test(p) || RULE.test(p) || CELL_MARK.test(p.trim()) || COMMENT_LINE.test(p);
 }
 
-/** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'|'wall'}] (빈 줄 뺌). wall: 발표 문서의 칸(:::)·장(---)·지시어 줄 — 글이 넘지 않는다 */
+/** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'|'wall'}] (빈 줄 뺌). wall: Lectern 슬라이드의 칸(:::)·장(---)·지시어 줄 — 글이 넘지 않는다 */
 function blocksOf(lines) {
   const fences = fencesOf(lines);
   const blocks = [];

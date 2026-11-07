@@ -512,7 +512,9 @@ function slideItems(target, x, y) {
   const run = (op, dir = 0) => () => emit('slide-op', { op, index, dir });
   return [
     { label: t('배치 넣기…'), tip: t('칸의 뼈대를 씁니다 — 있는 칸은 이름만 바꿉니다'), action: () => showMenu(x, y, [{ header: t('이 장의 배치') }, ...LAYOUT_NAMES().map(([layout, label]) => ({ label, action: () => emit('slide-op', { op: 'layout', index, layout }) }))]) },
-    { label: t('장 더하기'), hint: 'Ctrl+M', tip: t('이 장 뒤에'), action: run('add') },
+    { label: t('템플릿 바꾸기…'), tip: t('이 장의 글은 새 칸으로 옮겨 담습니다'), action: run('template') },
+    { label: t('이 장을 템플릿으로 저장…'), tip: t('Lectern 전체에서 쓰는 템플릿이 됩니다'), action: run('save-template') },
+    { label: t('새 장…'), hint: 'Ctrl+M', tip: t('템플릿을 골라 이 장 뒤에'), action: run('add') },
     { label: t('장 복제'), hint: 'Ctrl+D', action: run('copy') },
     { label: t('장 앞으로 옮기기'), hint: 'Ctrl+Shift+PageUp', action: run('move', -1) },
     { label: t('장 뒤로 옮기기'), hint: 'Ctrl+Shift+PageDown', action: run('move', 1) },

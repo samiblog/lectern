@@ -396,7 +396,7 @@ try:
         menu('차트로 보기')
         page.wait_for_function("!!window.echarts?.getInstanceByDom(document.querySelector('#lec-chart-plot'))", timeout=15000)
         settle(200)
-        check('발표 문서의 표', page.evaluate(OPTION)['x'] == ['2023', '2024'])
+        check('Lectern 슬라이드의 표', page.evaluate(OPTION)['x'] == ['2023', '2024'])
         press('Escape')
 
         data('report.xlsx')

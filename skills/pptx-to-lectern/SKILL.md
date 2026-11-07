@@ -1,11 +1,11 @@
 ---
 name: pptx-to-lectern
-description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를 Lectern 발표 문서(Markdown 슬라이드)로 옮기고, pptx 를 양식으로 참고해 md 문서를 Lectern 슬라이드로 만든다. 사용자가 pptx·ppt·파워포인트를 Lectern 슬라이드로, md 슬라이드로 바꿔 달라고 하거나, 발표 자료를 Lectern 에서 고치고 싶다고 하거나, 파일 경로만 주고 "lectern 으로"라고 하거나, "이 pptx 를 참고해서 이 md 를 슬라이드로"라고 할 때 반드시 쓴다. 회사 DRM 이 걸린 파일도 다룬다. Lectern 슬라이드를 pptx 로 내보내는 일은 lectern-to-pptx 스킬이 한다.
+description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를 Lectern 슬라이드(Markdown 슬라이드)로 옮기고, pptx 를 양식으로 참고해 md 문서를 Lectern 슬라이드로 만든다. 사용자가 pptx·ppt·파워포인트를 Lectern 슬라이드로, md 슬라이드로 바꿔 달라고 하거나, 발표 자료를 Lectern 에서 고치고 싶다고 하거나, 파일 경로만 주고 "lectern 으로"라고 하거나, "이 pptx 를 참고해서 이 md 를 슬라이드로"라고 할 때 반드시 쓴다. 회사 DRM 이 걸린 파일도 다룬다. Lectern 슬라이드를 pptx 로 내보내는 일은 lectern-to-pptx 스킬이 한다.
 ---
 
-# pptx → Lectern 발표 문서
+# pptx → Lectern 슬라이드
 
-사람이 Lectern 에서 읽고 한 줄씩 고칠 수 있는 발표 문서를 만든다. 원본과 똑같이 만드는 것이 목적이 아니다. **내용은 빠짐없이, 구조는 살려서, 모양은 인상만.**
+사람이 Lectern 에서 읽고 한 줄씩 고칠 수 있는 Lectern 슬라이드를 만든다. 원본과 똑같이 만드는 것이 목적이 아니다. **내용은 빠짐없이, 구조는 살려서, 모양은 인상만.**
 
 원본 pptx 는 그대로 남고, 변환기록이 쪽마다 원본과 이어 준다. 그래서 md 가 pptx 의 모든 것을 들고 있을 필요가 없다. 나중에 pptx 로 되돌릴 때 고치지 않은 쪽은 원본 쪽을 그대로 쓸 수 있다.
 
@@ -74,7 +74,7 @@ description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를
 
 ```text
 출력폴더/
-  문서이름.md                 발표 문서
+  문서이름.md                 Lectern 슬라이드
   문서이름-그림/              쓰는 그림
   문서이름-변환기록.json      쪽마다 어떻게 옮겼는지. 되돌릴 때 쓴다
   .pptx-work/문서이름/        source.pptx 이때의 원본, deck.json, outline.md, draft.md, ref/001.png 쪽 그림, media/ 원본 그림
@@ -139,7 +139,7 @@ description: PowerPoint 파일(.pptx, .ppt)이나 화면에 띄워 둔 발표를
 
 ### 2. md 를 읽고 슬라이드를 쓴다
 
-Lectern 의 작성 안내를 읽고 md 내용으로 발표 문서를 쓴다. 옮기기와 달리 이 일은 내용을 슬라이드로 **다시 짜는 것**이다. 줄이고 쪽을 나눠도 된다. 양식의 쪽 종류를 내용에 맞춰 고르고, 표지는 양식의 표지 지시어를 따른다.
+Lectern 의 작성 안내를 읽고 md 내용으로 Lectern 슬라이드를 쓴다. 옮기기와 달리 이 일은 내용을 슬라이드로 **다시 짜는 것**이다. 줄이고 쪽을 나눠도 된다. 양식의 쪽 종류를 내용에 맞춰 고르고, 표지는 양식의 표지 지시어를 따른다.
 
 대신 이것은 지킨다.
 

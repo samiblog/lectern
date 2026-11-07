@@ -9,6 +9,7 @@ import { openInNewTab } from './doctabs.js';
 import { openEditor } from './editor.js';
 import { dirname } from './util.js';
 import { titleFromName } from './snippet.js';
+import { templateLines } from './slideops.js';
 import { t } from './i18n.js';
 
 /** 새 문서 경로의 처음 값: dir(없으면 지금 보는 문서·폴더 개요의 폴더)에 '새 문서.md' — 있으면 번호를 붙여 */
@@ -34,14 +35,15 @@ export function cleanPath(raw) {
 }
 
 /**
- * 새 문서를 만든다 — '# 제목'(파일 이름에서) 한 줄, deck 이면 머리 설정과 표지 한 장 (D96). 먼저 만들 수 있는지 묻고(GET /api/new-doc — 답은 늘 200 이라 고쳐 쓸 이름이
+ * 새 문서를 만든다 — '# 제목'(파일 이름에서) 한 줄, deck 이면 머리 설정과 고른 템플릿의 첫 장 (D96·D101). 먼저 만들 수 있는지 묻고(GET /api/new-doc — 답은 늘 200 이라 고쳐 쓸 이름이
  * 실패한 요청으로 남지 않는다) 만든다. 만든 경로 (폴더는 실제 이름). 안 되면 Error (까닭은 서버의 말 — 없는 폴더·같은 이름 등)
  */
-export async function createDoc(path, { deck = false } = {}) {
+export async function createDoc(path, { deck = false, template = null } = {}) {
   const q = await getJSON(`/api/new-doc?p=${encodeURIComponent(S.tab.id)}&path=${encodeURIComponent(path)}`);
   if (q.error) throw new Error(q.error);
   const title = titleFromName(q.path);
-  const text = deck ? `---\nmarp: true\ntitle: ${title}\npaginate: true\n---\n\n<!-- _class: lead -->\n<!-- _paginate: false -->\n\n# ${title}\n` : `# ${title}\n\n`;
+  const first = template ? templateLines(template.text, title).join('\n') : `<!-- _class: lead -->\n<!-- _paginate: false -->\n\n# ${title}`;
+  const text = deck ? `---\nmarp: true\ntitle: ${title}\npaginate: true\n---\n\n${first}\n` : `# ${title}\n\n`;
   const r = await postJSON('/api/save', { p: S.tab.id, path: q.path, text, create: true });
   return r.path || q.path;
 }

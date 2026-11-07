@@ -2769,7 +2769,7 @@ def run(headed: bool) -> None:
             guide_prompt = page.evaluate('navigator.clipboard.readText()')
             page.click('#lec-settings-close')
 
-            print('[슬라이드]')   # D59 — marp: true 인 발표 문서 (예제의 guide/08-발표.md)
+            print('[슬라이드]')   # D59 — marp: true 인 Lectern 슬라이드 (예제의 guide/08-발표.md)
             page.locator('#lec-tree .row.file[data-doc="guide/08-발표.md"]').click(modifiers=['Alt'])
             deck_ok = wait_until(page, '''(() => { const v = document.querySelector('#lec-view');
               return v.classList.contains('lec-deck') && v.querySelector('pre.mermaid.mermaid-ok') && v.querySelector('pre.lec-chart.chart-ok'); })()''', 30000)
@@ -2787,7 +2787,7 @@ def run(headed: bool) -> None:
             check(deck_ok and deck['slides'] == 8 and not deck['over'] and deck['bg'] == 1 and deck['notes'] == 2 and deck['page'] == '2'
                   and not deck['fm'] and deck['scale'] and deck['fit'] and deck['lead'] and deck['styled'] == 'rgb(107, 114, 128)'
                   and deck['chartText'] >= 7 and deck['toggle'] == '문서로 보기' and deck['present'] == '발표',
-                  f"발표 문서(marp: true)는 16:9 슬라이드 8장 — 다이어그램·차트(키워 그림)·배경 그림·노트·쪽 번호·lead·style: CSS, 상태줄 '문서로 보기'·'발표' ({deck})")
+                  f"Lectern 슬라이드(marp: true)는 16:9 슬라이드 8장 — 다이어그램·차트(키워 그림)·배경 그림·노트·쪽 번호·lead·style: CSS, 상태줄 '문서로 보기'·'발표' ({deck})")
             shot('20-slides')
             pr = lambda: page.evaluate('''() => { const b = document.querySelector('#lec-present'); const h = b.querySelector('.pr-deck');
               return { shown: !b.hidden, count: b.querySelector('.pr-count').textContent, notes: !b.querySelector('.pr-notes').hidden,

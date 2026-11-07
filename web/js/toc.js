@@ -516,6 +516,6 @@ export function initToc() {
       return;
     }
     unfoldTo(h);
-    (h.closest('.lec-slide-wrap') || h).scrollIntoView({ block: 'start' });   // 발표 문서(D59)면 그 슬라이드째
+    (h.closest('.lec-slide-wrap') || h).scrollIntoView({ block: 'start' });   // Lectern 슬라이드(D59)면 그 슬라이드째
   });
 }

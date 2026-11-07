@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""pptx 하나를 Lectern 발표 문서 초안으로 바꾼다: 읽기 → 쪽 그림 → 초안 → 검증.
+"""pptx 하나를 Lectern 슬라이드 초안으로 바꾼다: 읽기 → 쪽 그림 → 초안 → 검증.
 
     python convert.py 원본.pptx 출력폴더 [--name 이름] [--level 3] [--no-powerpoint] [--force]
     python convert.py --active 출력폴더 [--pick 이름] [--name 이름]     PowerPoint 에 띄워 둔 발표

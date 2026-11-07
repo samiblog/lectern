@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""deck.json 을 Lectern 발표 문서 초안으로 바꾼다. 글은 원문 그대로 옮기고 배치는 도형 좌표에서 뽑는다.
+"""deck.json 을 Lectern 슬라이드 초안으로 바꾼다. 글은 원문 그대로 옮기고 배치는 도형 좌표에서 뽑는다.
 
     python draft_md.py 읽은폴더 출력.md [--level 1|2|3] [--ref 쪽그림폴더]
 

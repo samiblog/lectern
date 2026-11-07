@@ -155,7 +155,7 @@ const holdsDoc = (pane) => {
 export async function openTarget(target) {
   const tab = S.tab;
   if (tab && !solo && target.type === 'doc' && native.has('open_window') && (target.deck || tab.fileMap.get(target.path)?.deck)) {
-    // 발표 문서는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다). 이 칸에는 열리지 않았으니 false — 부르는 쪽이 이 칸에서 이어서 하지 않게
+    // Lectern 슬라이드는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다). 이 칸에는 열리지 않았으니 false — 부르는 쪽이 이 칸에서 이어서 하지 않게
     await openWindow(tab, target.deckLine ? { ...target, line: target.deckLine } : target);
     return false;
   }
@@ -273,7 +273,7 @@ async function receive({ type, path, top, term, note, p, stay, hash, line, to })
   if (line && type === 'doc') emit('go-line', { line });   // 문서 화면은 navigate 의 line 을 듣지 않는다 (코드 화면만)
 }
 
-/** 이 창이 지금 연 발표 문서들 (D96) — 서버가 '이 발표의 창'을 찾는 데 쓴다 */
+/** 이 창이 지금 연 Lectern 슬라이드들 (D96) — 서버가 '이 발표의 창'을 찾는 데 쓴다 */
 export function windowDecks() {
   const tab = S.tab;
   return tab ? openDocs(tab).filter((path) => tab.fileMap.get(path)?.deck) : [];

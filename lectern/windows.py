@@ -85,7 +85,7 @@ class Solo:
     project: str
     window: Any = None
     visible: bool = True
-    deck: str = ''   # 슬라이드 창이면 그 발표 문서의 경로 (D96)
+    deck: str = ''   # 슬라이드 창이면 그 Lectern 슬라이드의 경로 (D96)
     minimized: bool = False
 
 

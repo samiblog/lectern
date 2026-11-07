@@ -156,7 +156,7 @@ def extract_info(text: str) -> dict[str, Any]:
         'summary': _truncate(summary) if summary else '',
     }
     if 'marp' in meta:
-        info['deck'] = True   # 발표 문서 — 트리의 아이콘 (D59)
+        info['deck'] = True   # Lectern 슬라이드 — 트리의 아이콘 (D59)
     return info
 
 

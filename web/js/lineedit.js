@@ -31,7 +31,9 @@ import { isCode } from './icons.js';
 import {
   diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
-import { TEXT_WORDS, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } from './slideops.js';
+import {
+  TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
+} from './slideops.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
@@ -860,8 +862,29 @@ async function resizeHere(dir) {
   toast(t('{kind} {n}pt — Ctrl+Z 로 되돌립니다', { kind: own ? t('이 칸') : TEXT_LABELS[kind], n: size }));
 }
 
-/** 장 더하기·복제·옮기기·지우기·배치 넣기 ({op, dir, index, layout}): index 가 없으면 현재 줄의 장 */
-async function slideOp({ op, dir = 0, index = null, layout = '' }) {
+/** 템플릿을 고르는 창을 띄운다 (slidegallery.js). 고른 템플릿, 아니면 null */
+const pickTemplate = (title, start) => new Promise((resolve) => { emit('pick-template', { title, resolve, start }); });
+
+/** 어느 템플릿에든 있는 안내 글 — 고치지 않은 안내 글은 다른 템플릿으로 옮기지 않는다 */
+async function placeholders() {
+  const { templates } = await getJSON('/api/slide-templates');
+  return new Set(templates.flatMap((x) => templateLines(x.text, t('제목')).map((s) => s.trim()).filter(Boolean)));
+}
+
+/** 이 장을 템플릿으로 저장 (D101): 장의 글 그대로 Lectern 전체의 템플릿 폴더에 새 파일 하나를 만든다 */
+async function saveTemplate(src, [a, b]) {
+  const name = await new Promise((resolve) => { emit('ask-template-name', { resolve }); });
+  if (!name) return;
+  try {
+    const { template } = await postJSON('/api/slide-templates', { name, text: src.slice(a - 1, b).join('\n') });
+    toast(t('템플릿 {n}번 {name} 으로 저장했습니다', { n: template.number, name: template.name }));
+  } catch (e) {
+    toast(e.message);
+  }
+}
+
+/** 장 더하기·복제·옮기기·지우기·배치 넣기·템플릿 ({op, dir, index, layout, style}): index 가 없으면 현재 줄의 장 */
+async function slideOp({ op, dir = 0, index = null, layout = '', style = '' }) {
   const pane = S.pane;
   if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
   const { view } = pane;
@@ -871,8 +894,22 @@ async function slideOp({ op, dir = 0, index = null, layout = '' }) {
   const found = index ?? spans.findIndex(([a, b]) => here >= a && here <= b);
   const i = found < 0 ? slideAtTop(pane) : found;
   const src = sourceLines();
+  if (op === 'save-template') {
+    await saveTemplate(src, spans[i]);
+    return;
+  }
+  if (op === 'pptx-style') {   // pptx 로 전환에서 고른 스타일을 문서에 적는다 (D102)
+    await commit(pane, pathIn(view), src, setFrontKey(src, 'pptxStyle', style));
+    return;
+  }
+  const chosen = op === 'add' ? await pickTemplate(t('새 장 — 템플릿을 고르세요'), 2) : op === 'template' ? await pickTemplate(t('이 장의 템플릿을 고르세요'), 2) : null;
+  if ((op === 'add' || op === 'template') && !chosen) return;
+  if (S.pane !== pane) return;
+  const body = chosen && templateLines(chosen.text, t('제목'));
+  const samples = op === 'template' ? await placeholders() : null;
   const r = {
-    add: () => addSlide(src, spans[i], t('새 장')),
+    add: () => addTemplate(src, spans[i], body),
+    template: () => applyTemplate(src, spans[i], body, samples),
     copy: () => duplicateSlide(src, spans[i]),
     move: () => moveSlide(src, spans, i, dir),
     delete: () => deleteSlide(src, spans, i),
@@ -886,7 +923,7 @@ async function slideOp({ op, dir = 0, index = null, layout = '' }) {
   const shift = await commit(pane, pathIn(view), src, r.lines);
   if (shift == null || S.pane !== pane) return;
   followLine(r.line + shift);
-  if (op === 'add') begin(r.line + shift);   // 새 장의 제목을 바로 쓰게
+  if (op === 'add' || op === 'template') begin(r.line + shift);   // 새 장의 제목을 바로 쓰게
   else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다'), layout: t('배치를 넣었습니다 — F2 로 글을 채웁니다') }[op]);
 }
 

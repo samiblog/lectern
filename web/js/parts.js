@@ -343,7 +343,7 @@ function render() {
 
 // ---- 문서 정보 (D62) ----------------------------------------------------------
 // 맨 앞 설정(frontmatter)의 키마다 값으로 문서를 묶는다. 위 단추는 키(그 키가 있는 문서 수), 목록은 값마다 문서들 —
-// 그 키가 없는 문서(맨 앞 설정은 있는)는 끝에 '값 없음'. 발표 문서의 Marp 설정과 제목·요약처럼 문서마다 다른 긴 값은 키로 보이지 않는다.
+// 그 키가 없는 문서(맨 앞 설정은 있는)는 끝에 '값 없음'. Lectern 슬라이드의 Marp 설정과 제목·요약처럼 문서마다 다른 긴 값은 키로 보이지 않는다.
 
 const META_SKIP = new Set(['marp', 'style', 'theme', 'size', 'headingDivider', 'paginate', 'header', 'footer', 'class', 'backgroundColor',
   'backgroundImage', 'backgroundPosition', 'backgroundRepeat', 'backgroundSize', 'color', 'math', 'title', 'name', 'description', 'lang']);
@@ -354,7 +354,7 @@ const metaValues = (v) => (Array.isArray(v) ? v : [v]).map((x) => String(x ?? ''
 function renderMeta(tab) {
   const docs = tab.files.filter((f) => inScope(f.path, state.scope) && tab.partsCache?.get(f.path)?.meta)
     .map((f) => ({ file: f, meta: tab.partsCache.get(f.path).meta }))
-    .filter((d) => Object.keys(d.meta).some((k) => !META_SKIP.has(k)));   // 발표 문서의 Marp 설정뿐인 것 등은 빼고
+    .filter((d) => Object.keys(d.meta).some((k) => !META_SKIP.has(k)));   // Lectern 슬라이드의 Marp 설정뿐인 것 등은 빼고
   if (state.order === 'recent') docs.sort((a, b) => b.file.mtime - a.file.mtime);
   const counts = new Map();
   for (const d of docs) {

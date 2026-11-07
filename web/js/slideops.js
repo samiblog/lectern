@@ -194,6 +194,113 @@ export function setLayout(lines, span, name, words) {
   return { lines: next, line: top + out.findIndex((s) => CELL_HEAD.test(s)) + 1 };
 }
 
+const CELL_END = /^:::\s*$/;
+const COMMENT_OPEN = /^\s*<!--/;
+const SLIDE_SHAPE = /^<!--\s*_?(?:layout|grid|cols|rows|class|paginate):.*-->\s*$/;
+
+/** 템플릿 글을 줄로. {{제목}} 을 title 로 바꾸고 앞뒤 빈 줄을 뗀다 */
+export function templateLines(text, title) {
+  const lines = String(text).replace(/\{\{(제목|title)\}\}/g, title).split('\n');   // i18n-ok (템플릿의 문법)
+  while (lines.length && blank(lines[0])) lines.shift();
+  while (lines.length && blank(lines.at(-1))) lines.pop();
+  return lines;
+}
+
+/** 고칠 첫 줄: 지시어·빈 줄이 아닌 첫 줄 (0부터) */
+const firstText = (lines) => Math.max(0, lines.findIndex((s) => s.trim() && !COMMENT_OPEN.test(s)));
+
+/** 장 [a, b] 뒤에 템플릿으로 새 장을 넣는다. {lines, line(고칠 첫 줄)} */
+export function addTemplate(lines, span, template) {
+  const [, end] = trimmed(lines, span);
+  const next = lines.slice();
+  next.splice(end, 0, '', '---', '', ...template);
+  return { lines: next, line: end + 4 + firstText(template) };
+}
+
+/** 장의 줄을 나눈다: 제목, 칸들, 칸 밖의 글, 남길 지시어·노트. 코드 블록 안은 글이다 */
+function slideParts(lines) {
+  const fenced = fencedLines(lines);
+  const parts = { title: null, cells: [], loose: [], kept: [] };
+  let cell = null;
+  for (let i = 0; i < lines.length; i++) {
+    const s = lines[i];
+    if (cell && !fenced[i] && CELL_END.test(s)) {
+      parts.cells.push(cell);
+      cell = null;
+    } else if (cell) cell.body.push(s);
+    else if (!fenced[i] && CELL_HEAD.test(s.trim())) cell = { head: s.trim(), body: [] };
+    else if (!fenced[i] && COMMENT_OPEN.test(s)) {
+      const start = i;
+      while (i < lines.length - 1 && !lines[i].includes('-->')) i += 1;
+      if (!SLIDE_SHAPE.test(lines[start])) parts.kept.push(...lines.slice(start, i + 1));
+    } else if (!fenced[i] && !parts.title && /^#{1,2}\s/.test(s)) parts.title = s;
+    else parts.loose.push(s);
+  }
+  if (cell) parts.cells.push(cell);
+  return parts;
+}
+
+const trimBlank = (body) => {
+  const out = body.slice();
+  while (out.length && blank(out[0])) out.shift();
+  while (out.length && blank(out.at(-1))) out.pop();
+  return out;
+};
+
+/**
+ * 장 [a, b] 를 템플릿으로 바꾼다 (D101). 글은 지우지 않는다: 제목은 제목 자리에, 칸의 글은 차례대로 새 칸에, 칸 밖의 글은 다음 칸에,
+ * 못 담는 글은 맨 아래 칸(칸이 없는 템플릿이면 본문)에 남는다. 지시어는 템플릿의 것을 쓰고 노트는 남긴다.
+ * samples: 어느 템플릿에든 있는 안내 글 — 고치지 않은 안내 글은 옮기지 않는다. {lines, line(고칠 첫 줄)}
+ */
+export function applyTemplate(lines, span, template, samples = new Set()) {
+  const [start, end] = trimmed(lines, span);
+  const top = slideTop(lines, start, end);
+  const old = slideParts(lines.slice(top - 1, end));
+  const own = (body) => trimBlank(body).filter((s) => s.trim() && !samples.has(s.trim())).length > 0;
+  const blocks = [...(own(old.loose) ? [trimBlank(old.loose)] : []), ...old.cells.filter((c) => own(c.body)).map((c) => trimBlank(c.body))];
+  const headMark = /^#{1,2}\s/;
+  const titled = old.title && !samples.has(old.title.trim());
+  const shape = template.filter((s) => SLIDE_SHAPE.test(s));
+  const out = [...shape, ...old.kept.filter((s) => /^<!--\s*_?\w+:/.test(s) || !COMMENT_OPEN.test(s)).filter((s) => !shape.includes(s))];
+  if (out.length) out.push('');
+  const fresh = slideParts(template);
+  const title = fresh.title ?? template.find((s) => headMark.test(s));
+  if (title) out.push(titled ? `${title.split(/\s/)[0]} ${old.title.replace(headMark, '').trim()}` : title, '');
+  else if (titled) out.push(old.title, '');
+  if (fresh.cells.length) {
+    const body = trimBlank(fresh.loose);
+    if (body.length) out.push(...body, '');
+    fresh.cells.forEach((cell, i) => {
+      const last = i === fresh.cells.length - 1;
+      const mine = last ? blocks.slice(i) : blocks.slice(i, i + 1);
+      out.push(cell.head, ...(mine.length ? mine.flatMap((b, n) => (n ? ['', ...b] : b)) : trimBlank(cell.body)), ':::', '');
+    });
+    out.pop();
+  } else {
+    const body = blocks.length ? blocks.flatMap((b, n) => (n ? ['', ...b] : b)) : trimBlank(fresh.loose);
+    out.push(...body);
+  }
+  const notes = old.kept.filter((s) => !/^<!--\s*_?\w+:/.test(s) && COMMENT_OPEN.test(s));
+  if (notes.length) out.push('', ...notes);
+  while (out.length && blank(out.at(-1))) out.pop();
+  const lead = top > start ? [''] : [];
+  const next = lines.slice();
+  next.splice(top - 1, end - top + 1, ...lead, ...out);
+  return { lines: next, line: top + lead.length + firstText(out) };
+}
+
+/** 맨 앞 설정의 key 를 value 로 — 없으면 끝에 넣는다. 맨 앞 설정이 없으면 그대로 */
+export function setFrontKey(lines, key, value) {
+  if (lines[0]?.trim() !== '---') return lines;
+  const end = lines.findIndex((s, i) => i > 0 && s.trim() === '---');
+  if (end < 0) return lines;
+  const next = lines.slice();
+  const at = lines.slice(1, end).findIndex((s) => s.startsWith(`${key}:`));
+  if (at >= 0) next[at + 1] = `${key}: ${value}`;
+  else next.splice(end, 0, `${key}: ${value}`);
+  return next;
+}
+
 /** 장 [a, b] 뒤에 제목만 있는 새 장을 넣는다. {lines, line(새 제목 줄)} */
 export function addSlide(lines, span, title) {
   const [, end] = trimmed(lines, span);

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Lectern 발표 문서를 pptx 로 만든다. 표준 라이브러리만 쓴다 (SVG 그림만 PowerPoint 가 있어야 바꾼다).
+"""Lectern 슬라이드를 pptx 로 만든다. 표준 라이브러리만 쓴다 (SVG 그림만 PowerPoint 가 있어야 바꾼다).
 
     python build_pptx.py 문서.md [--out 결과.pptx] [--template 양식.pptx] [--style deck] [--force] [--rebuild-all]
 
@@ -78,13 +78,30 @@ def theme_file(style):
     return None
 
 
-def chosen_style():
-    """사용자가 슬라이드 창에서 고른 스타일. 읽기만 한다."""
-    base = os.environ.get('APPDATA')
+def config_folder():
+    """Lectern 설정 폴더. 읽기만 한다."""
+    if os.environ.get('LECTERN_CONFIG_DIR'):
+        return Path(os.environ['LECTERN_CONFIG_DIR'])
+    return Path(os.environ['APPDATA']) / 'Lectern' if os.environ.get('APPDATA') else None
+
+
+def lectern_config():
     try:
-        return json.loads((Path(base) / 'Lectern' / 'config.json').read_text(encoding='utf-8')).get('slide_theme', 'deck') if base else 'deck'
-    except (OSError, ValueError):
-        return 'deck'
+        return json.loads((config_folder() / 'config.json').read_text(encoding='utf-8'))
+    except (OSError, TypeError, ValueError):
+        return {}
+
+
+def chosen_style():
+    """사용자가 슬라이드 창에서 고른 스타일."""
+    return lectern_config().get('slide_theme', 'deck')
+
+
+def shared_style(name):
+    """Lectern 전체의 pptx 스타일 보관소에서 이름의 파일을 찾는다 (D102)."""
+    folder = config_folder()
+    path = folder / 'pptx-styles' / f'{name}.pptx' if folder and name and not re.search(r'[/\\\\:]', str(name)) else None
+    return path if path and path.is_file() else None
 
 
 def css_vars(css):
@@ -1574,8 +1591,14 @@ class Build:
         record = self.md.with_name(self.md.stem + '-변환기록.json')
         self.record = json.loads(record.read_text(encoding='utf-8')) if record.exists() else None
         self.base = None
-        if template:
-            self.base = Path(template).resolve()
+        # 적용 차례 (D102): 이번에 말한 양식, 문서의 스타일, 원본 pptx, 기본 스타일, Lectern 스타일
+        named = self.deck['fm'].get('pptxStyle')
+        kept = shared_style(named)
+        if named and not kept:
+            self.notes_log.append(f"문서의 pptx 스타일 '{named}' 이 보관소에 없어 다음 차례로 만듭니다")
+        chosen = template or kept
+        if chosen:
+            self.base = Path(chosen).resolve()
             self.template = True
         elif self.record and self.record.get('snapshot'):
             snap = self.md.parent / self.record['snapshot']
@@ -1584,7 +1607,11 @@ class Build:
                 self.template = True
             else:
                 self.notes_log.append('변환기록의 원본 사본이 없어 Lectern 스타일로 새로 만듭니다')
-        self.reuse = bool(self.record and self.base and not template and not force_all)
+        if not self.base and (default := shared_style(lectern_config().get('pptx_style'))):
+            self.base = default.resolve()
+            self.template = True
+            chosen = default
+        self.reuse = bool(self.record and self.base and not chosen and not force_all)
         self.style = Style(style or chosen_style(), self.deck['css'])
         self.svg = {}
         self.figures = {}

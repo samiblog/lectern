@@ -58,7 +58,7 @@ export const S = /** @type {AppState} */ ({
   view: null,          // 선택된 칸의 화면 {type, path}
   samples: null,       // 예제 프로젝트 폴더 (/api/state — 없으면 null, D57)
   writingGuide: '',    // AI 용 작성 안내 파일 (web/help/writing.md, 화면 언어에 맞춘 것)
-  slidesGuide: '',     // AI 용 발표 문서 작성 안내 (web/help/slides.md — D96)
+  slidesGuide: '',     // AI 용 Lectern 슬라이드 작성 안내 (web/help/slides.md — D96)
   skillsDir: '',       // Claude Code 스킬이 든 폴더 (skills/ — D98)
 });
 

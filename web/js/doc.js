@@ -500,7 +500,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   if (id !== pane.renderId) return false;
 
   installPurifyHook();
-  // 발표 문서(맨 앞 설정에 marp: true — D59)는 슬라이드로. 상태줄의 '문서로 보기'를 골랐으면 보통 문서처럼
+  // Lectern 슬라이드(맨 앞 설정에 marp: true — D59)는 슬라이드로. 상태줄의 '문서로 보기'를 골랐으면 보통 문서처럼
   const marp = readDeck(splitFrontMatter(text).frontMatter);
   const deck = marp && slidesWanted(pane, path) ? marp : null;
   const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false, deck, cells: !!marp });

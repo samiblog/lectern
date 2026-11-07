@@ -59,6 +59,17 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    '템플릿 이름과 글이 올바르지 않습니다': 'The template name or text is not valid',
+    '템플릿 이름은 {n}자까지입니다 — 점으로 시작하거나 : * ? " < > | / \\ 를 쓸 수 없습니다': 'A template name is at most {n} characters and cannot start with a dot or use : * ? " < > | / \\',
+    '템플릿으로 저장할 글이 없거나 너무 깁니다': 'There is nothing to save as a template, or it is too long',
+    '같은 이름의 템플릿이 있습니다 — 다른 이름으로 저장하세요': 'A template with this name exists — save under another name',
+    '템플릿을 저장하지 못했습니다: {why}': 'Could not save the template: {why}',
+    '같은 이름의 pptx 가 너무 많습니다 — 정리한 뒤 다시 하세요': 'Too many pptx files with this name — tidy them up and try again',
+    "pptx 스타일 '{name}' 이 보관소에 없습니다 — 다른 스타일을 고르세요": "The pptx style '{name}' is not in the library — pick another style",
+    '제한 시간 안에 끝내지 못했습니다 — 차트가 많으면 Claude 에게 전환을 맡기세요': 'It did not finish in time — with many charts, ask Claude to convert it',
+    '전환 프로그램을 띄우지 못했습니다: {why}': 'Could not start the converter: {why}',
+    'pptx 를 만들지 못했습니다: {why}': 'Could not make the pptx: {why}',
+    '보기만 하는 프로젝트라 pptx 를 만들지 않습니다 — 폴더를 복사해서 여세요': 'This project is view-only, so no pptx is made — copy the folder and open the copy',
     'Lectern 프로그램 폴더 안에서는 메모를 쓰지 않습니다 — 고쳐 보려면 그 폴더를 복사해 여세요': 'Notes are not written inside the Lectern program folder — copy that folder and open the copy',
     '메모 폴더가 링크라 쓰지 않았습니다 — .lectern 을 보통 폴더로 바꾸세요': 'The notes folder is a link, so nothing was written — make .lectern a normal folder',
     '메모 폴더를 만들지 못했습니다: {error}': 'Could not create the notes folder: {error}',

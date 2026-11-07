@@ -212,7 +212,7 @@ function create(math, breaks) {
   if (math) md.use(mathPlugin);
   md.use(sourceLines);
   md.block.ruler.before('fence', 'lec_cell', cellRule, { alt: ['paragraph', 'reference', 'blockquote', 'list'] });   // 슬라이드의 칸 ::: 이름
-  md.core.ruler.push('lec_slides', slideRule);   // 발표 문서면 줄(---)마다 슬라이드로 (slides.js, D59 — env.deck 이 있을 때만)
+  md.core.ruler.push('lec_slides', slideRule);   // Lectern 슬라이드면 줄(---)마다 슬라이드로 (slides.js, D59 — env.deck 이 있을 때만)
 
   // ```mermaid 와 차트(```vega-lite·```vega·```echarts·```dot — charts.js, D56)는 코드 하이라이트 대신 다이어그램 자리표시로
   const fence = md.renderer.rules.fence;
@@ -233,7 +233,7 @@ export function splitFrontMatter(text) {
   return { frontMatter: m[1], body: text.slice(m[0].length), lineOffset: (m[0].match(/\n/g) || []).length };
 }
 
-/** deck: 발표 문서의 설정 (slides.js 의 readDeck) — 있으면 슬라이드로 감싸 그린다 */
+/** deck: Lectern 슬라이드의 설정 (slides.js 의 readDeck) — 있으면 슬라이드로 감싸 그린다 */
 export function renderMarkdown(text, { math = true, deck = null, cells = false } = {}) {
   const { frontMatter, body, lineOffset } = splitFrontMatter(text);
   const breaks = S.config?.md_breaks !== false;   // 문단 안의 줄바꿈 (D93 — Word 의 Shift+Enter 처럼 보인다)

@@ -23,7 +23,7 @@
 //   문서 DOM 은 그대로이고 장의 블록에 lec-lit 만 붙인다. 위치는 블록의 화면 위치로 재므로, 문서의 크기가 바뀌면(그림을 불러옴·접기·칸 폭·
 //   글자 크기 — ResizeObserver) 다시 잰다. 덮개는 누르기를 막지 않는다 (pointer-events: none).
 //   한 줄 편집 중(lineedit.js, D76)에는 회색을 걷고 막대만 둔다 (.lec-spot.editing — 위아래 글을 읽으며 고치게, ↑·↓ 로 이어 고치는 동안도).
-// - html 문서(iframe)는 원문 줄을 몰라 쓰지 않는다. 슬라이드로 보는 발표 문서(D59)는 슬라이드 하나가 한 장 (장 하이라이트만).
+// - html 문서(iframe)는 원문 줄을 몰라 쓰지 않는다. 슬라이드로 보는 Lectern 슬라이드(D59)는 슬라이드 하나가 한 장 (장 하이라이트만).
 // - 선택된 탭의 칸(#lec-view)의 화면에 한다. 다른 탭을 고르면 하이라이트는 꺼지고, 현재 위치는 그 칸의 것이 보인다.
 
 import { S, on, emit } from './store.js';
@@ -59,7 +59,7 @@ const lineEditing = () => !!(S.pane?.lineEdit || S.pane?.lineEditHold);
 const isMdDoc = () => view().classList.contains('md-body') && !!view().dataset.docPath && !view().querySelector('.doc-missing');
 const isCodeView = () => view().classList.contains('code-view') && !!view().dataset.codePath;
 const isDeck = () => view().classList.contains('lec-deck');
-/** 현재 위치·줄 하이라이트를 쓰는 화면: md 문서(발표 문서 뺌)와 코드 화면 */
+/** 현재 위치·줄 하이라이트를 쓰는 화면: md 문서(Lectern 슬라이드 뺌)와 코드 화면 */
 const linesOn = () => isMdDoc() || isCodeView();
 const pathOf = () => (isCodeView() ? view().dataset.codePath : view().dataset.docPath);
 const levelOf = (el) => (/^H([1-6])$/.exec(el.tagName) ? Number(el.tagName[1]) : 0);
@@ -123,7 +123,7 @@ function chapterLevel(blocks) {
 }
 
 function build() {
-  if (isDeck()) {   // 발표 문서: 슬라이드마다 한 장 (slides.js)
+  if (isDeck()) {   // Lectern 슬라이드: 슬라이드마다 한 장 (slides.js)
     chapters = [...view().querySelectorAll(':scope > .lec-slide-wrap')].map((el) => [el]);
     if (chapters.length < 2) chapters = [];
     return;

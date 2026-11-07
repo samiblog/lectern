@@ -1,4 +1,4 @@
-// 발표 문서 (D59·D96): 맨 앞 설정에 marp: true 가 있는 md 를 16:9 슬라이드로 그린다 — Marp 에서 출발한 Lectern 의 발표 형식.
+// Lectern 슬라이드 (D59·D96): 맨 앞 설정에 marp: true 가 있는 md 를 16:9 슬라이드로 그린다 — Marp 에서 출발한 Lectern 의 발표 형식.
 //
 // - 그리는 것은 문서 화면과 같은 렌더러다 (markdown.js·doc.js) — Mermaid·차트·수식·코드 색·표·박스글이 그대로 된다.
 //   markdown-it 의 줄(---)마다 나눈다 (slideRule — headingDivider 면 그 수준까지의 제목 앞에서도). 슬라이드 하나 =
@@ -35,7 +35,7 @@ const FIGS = 'pre.mermaid > svg, .lec-chart svg:not(svg svg), img';
 export const SLIDE_ZOOM = 1.7;
 
 let deckSeq = 0;
-const asDocument = new Set();   // '문서로 보기'를 고른 발표 문서 (탭 id + 경로) — 앱을 다시 켜면 다시 슬라이드
+const asDocument = new Set();   // '문서로 보기'를 고른 Lectern 슬라이드 (탭 id + 경로) — 앱을 다시 켜면 다시 슬라이드
 
 // ---- 맨 앞 설정·주석 지시어 읽기 (YAML 의 작은 부분: key: 값, 따옴표, true/false/숫자, | > 블록 글) ----------------
 
@@ -50,7 +50,7 @@ function scalar(value) {
 }
 
 /**
- * key: 값 줄들을 읽는다 (발표 문서의 설정, 모아 보기의 문서 정보 D62). 키는 한글도 된다.
+ * key: 값 줄들을 읽는다 (Lectern 슬라이드의 설정, 모아 보기의 문서 정보 D62). 키는 한글도 된다.
  * 값: 따옴표 글, true/false, 숫자, `|`·`>` 블록 글, 목록(`[a, b]` 또는 아래 줄의 `- a`). 아래에 들여 쓴 `키: 값` 은
  * 점으로 이은 키로 (`author:` 아래의 `name: 김` → `author.name`). 그 밖의 들여 쓴 줄(목록 항목의 이어진 줄 등)은 건너뛴다.
  * 읽을 수 없는 줄이 있으면 strict 일 때 null (주석이 지시어인지 노트인지 가를 때)
@@ -107,7 +107,7 @@ export function readYaml(raw, strict = false) {
   return out;
 }
 
-/** 맨 앞 설정(frontmatter 원문)이 Marp 발표 문서면 그 설정, 아니면 null */
+/** 맨 앞 설정(frontmatter 원문)이 Lectern 슬라이드면 그 설정, 아니면 null */
 export function readDeck(frontMatter) {
   if (!frontMatter) return null;
   const fm = readYaml(frontMatter);
@@ -120,7 +120,7 @@ export function readDeck(frontMatter) {
   return { id: ++deckSeq, key, w, h, style: typeof fm.style === 'string' ? fm.style : '', slideCss: {}, divider, fm };
 }
 
-/** 칸(pane)의 이 문서를 슬라이드로 그릴지 — 발표 문서이고 '문서로 보기'를 고르지 않았으면 */
+/** 칸(pane)의 이 문서를 슬라이드로 그릴지 — Lectern 슬라이드이고 '문서로 보기'를 고르지 않았으면 */
 export const slidesWanted = (pane, path) => !asDocument.has(`${pane.tab.id}:${path}`);
 
 /** 주석 하나: 모든 줄이 Marp 지시어면 {local, spot}, 아니면 null (발표자 노트) */
@@ -212,7 +212,7 @@ function closeOf(line, from, end, fences) {
   return null;
 }
 
-/** ::: 이름 낱말…  부터 ::: 까지가 슬라이드의 칸이다 (markdown-it 블록 규칙 — 발표 문서에서만). 이름은 칸 자리, 낱말은 꾸밈 (card·kpi·accent…) */
+/** ::: 이름 낱말…  부터 ::: 까지가 슬라이드의 칸이다 (markdown-it 블록 규칙 — Lectern 슬라이드에서만). 이름은 칸 자리, 낱말은 꾸밈 (card·kpi·accent…) */
 export function cellRule(state, startLine, endLine, silent) {
   if (!state.env.deck && !state.env.cells) return false;
   const line = (n) => state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]).trim();
@@ -375,7 +375,7 @@ export function slideRule(state) {
 // ---- 그린 뒤 다듬기 (doc.js 가 화면 밖 무대에서 부른다) ------------------------------------------------------
 
 /** 문서의 CSS 를 이 문서의 슬라이드 안에만 (csssafe.js). page: 그 장에만 (<style scoped>) */
-const scopedCss = (css, id, page = 0) => confinedCss(css, `:is(#lec-panes, #lec-present, .lec-stage) [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''}`);
+const scopedCss = (css, id, page = 0) => confinedCss(css, `:is(#lec-panes, #lec-present, .lec-stage, .lec-tpl-view) [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''}`);
 
 /** ![bg …](…) 의 낱말 → 배경 자리 */
 function bgOptions(words) {
@@ -780,8 +780,9 @@ function updateButtons() {
   const toggle = $('#lec-st-slides');
   toggle.hidden = !marp;
   toggle.querySelector('span').textContent = deck ? t('문서로 보기') : t('슬라이드로 보기');
-  toggle.title = deck ? t('보통 문서처럼 이어서 보기') : t('슬라이드로 보기 — Marp 발표 문서 (marp: true)');
+  toggle.title = deck ? t('보통 문서처럼 이어서 보기') : t('슬라이드로 보기 — Lectern 슬라이드 (marp: true)');
   $('#lec-st-present').hidden = !deck;
+  $('#lec-st-pptx').hidden = !deck;
   emit('deck-shown', deck);
 }
 

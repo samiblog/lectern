@@ -1,4 +1,4 @@
-// slideops.js 의 계산과 발표 문서의 줄 구조 벽 점검 (slides.py 가 페이지 안에서, rules_check 가 node 로 돌린다 — m: slideops.js, lo: lineops.js, 끝에서 {n, fails} 를 돌려준다)
+// slideops.js 의 계산과 Lectern 슬라이드의 줄 구조 벽 점검 (slides.py 가 페이지 안에서, rules_check 가 node 로 돌린다 — m: slideops.js, lo: lineops.js, 끝에서 {n, fails} 를 돌려준다)
 const { textSizes, readCellHead, cellHeadOdds, textOdds, setTextSize, setCellSize, addSlide, duplicateSlide, moveSlide, deleteSlide, setLayout } = m;
 const { planNew, insertLine, joinLine, moveLines, deleteLines } = lo;
 let n = 0;
@@ -71,7 +71,7 @@ eq(lay('## 제목', 'kpi').lines.slice(4, 8), ['::: a kpi', '**0**', '설명', '
 eq(lay('## 제목', 'kpi').lines.at(-3), '::: e card', 'KPI 의 넓은 칸');
 eq(lay('## 제목\n\n```\n::: 코드\n```', 'two').lines.includes('::: 코드'), true, '코드 블록 안의 ::: 는 칸이 아니다');
 
-// 발표 문서의 벽: 칸·장·지시어 줄을 넘거나 깨뜨리지 않는다
+// Lectern 슬라이드의 벽: 칸·장·지시어 줄을 넘거나 깨뜨리지 않는다
 const DK = '---\nmarp: true\n---\n\n<!-- layout: two -->\n\n## 제목\n\n::: a card\n첫 글\n:::\n\n::: b\n- 가\n- 나\n:::\n\n---\n\n## 끝\n';
 const dk = L(DK);
 const add = (at, below, text) => { const p = planNew(dk, at, below); return insertLine(dk, p, text).lines; };
@@ -121,12 +121,43 @@ eq(lo.indentItem(wl, 10).error, 'not-list', '앞 칸의 목록은 이 줄의 주
 const st = L('---\nmarp: true\n---\n\n밑줄 제목\n---\n\n글\n');
 eq(deleteLines(st, 6, 6).error, undefined, '밑줄 제목의 --- 는 구분 줄이 아니다');
 const yes = L('---\nmarp: yes\n---\n\n::: a\n글\n:::\n');
-eq(deleteLines(yes, 5, 6), { error: 'wall' }, 'marp: yes 도 발표 문서');
+eq(deleteLines(yes, 5, 6), { error: 'wall' }, 'marp: yes 도 Lectern 슬라이드');
 const quoted = L('---\nmarp: "true"\n---\n\n::: a\n글\n:::\n');
-eq(deleteLines(quoted, 5, 6).error, undefined, '따옴표를 쓰면 글이라 발표 문서가 아니다');
+eq(deleteLines(quoted, 5, 6).error, undefined, '따옴표를 쓰면 글이라 Lectern 슬라이드가 아니다');
+
+// 템플릿 (D101)
+const { templateLines, addTemplate, applyTemplate, setFrontKey } = m;
+eq(templateLines('\n# {{제목}}\n\n글\n\n', '보고'), ['# 보고', '', '글'], '템플릿 줄: 제목을 넣고 앞뒤 빈 줄을 뗀다');
+eq(templateLines('# {{title}}\n', 'Report'), ['# Report'], '템플릿 줄: 영어 표시');
+const TWO = L('<!-- layout: two -->\n\n## 결론\n\n::: a card\n왼쪽\n:::\n\n::: b card\n오른쪽\n:::');
+const ONE = L('## 제목\n\n- 내용');
+const base = L('---\nmarp: true\n---\n\n## 첫 장\n\n글\n');
+{
+  const r = addTemplate(base, [5, 8], TWO);
+  eq(r.lines.join('\n'), '---\nmarp: true\n---\n\n## 첫 장\n\n글\n\n---\n\n<!-- layout: two -->\n\n## 결론\n\n::: a card\n왼쪽\n:::\n\n::: b card\n오른쪽\n:::\n', '새 장을 템플릿으로');
+  eq(r.lines[r.line - 1], '## 결론', '새 장의 고칠 첫 줄은 제목');
+}
+const applied = (text, tpl, samples) => {
+  const lines = L(`---\nmarp: true\n---\n\n${text}`);
+  const r = applyTemplate(lines, [5, lines.length], tpl, new Set(samples));
+  return { text: r.lines.slice(4).join('\n'), first: r.lines[r.line - 1] };
+};
+eq(applied('## 내 제목\n\n내 글', TWO).text, '<!-- layout: two -->\n\n## 내 제목\n\n::: a card\n내 글\n:::\n\n::: b card\n오른쪽\n:::', '칸 없는 장의 글은 첫 칸에');
+eq(applied('## 내 제목\n\n내 글', TWO).first, '## 내 제목', '고칠 첫 줄');
+eq(applied('<!-- layout: three -->\n\n## 내 제목\n\n::: a card\n하나\n:::\n\n::: b card\n둘\n:::\n\n::: c card\n셋\n:::', TWO).text,
+  '<!-- layout: two -->\n\n## 내 제목\n\n::: a card\n하나\n:::\n\n::: b card\n둘\n\n셋\n:::', '못 담는 글은 맨 아래 칸에');
+eq(applied('<!-- layout: two -->\n\n## 내 제목\n\n::: a card\n하나\n:::\n\n::: b card\n둘\n:::', ONE).text, '## 내 제목\n\n하나\n\n둘', '칸 없는 템플릿이면 본문에');
+eq(applied('## 결론\n\n::: a card\n왼쪽\n:::', ONE, ['## 결론', '왼쪽']).text, '## 제목\n\n- 내용', '안내 글은 옮기지 않는다');
+eq(applied('## 내 제목\n\n::: a\n```js\n::: b\n```\n:::', ONE).text, '## 내 제목\n\n```js\n::: b\n```', '코드 속 ::: 는 글');
+eq(applied('## 내 제목\n\n글\n\n<!-- 발표자 노트 -->', ONE).text, '## 내 제목\n\n글\n\n<!-- 발표자 노트 -->', '노트는 남는다');
+eq(applied('<!-- hidden: true -->\n\n## 내 제목\n\n글', ONE).text, '<!-- hidden: true -->\n\n## 내 제목\n\n글', '숨긴 장은 그대로');
+eq(applied('<!-- _class: lead -->\n\n# 표지 글', ONE).text, '## 표지 글\n\n- 내용', '표지의 지시어는 빠지고 제목 수준은 템플릿을 따른다');
+eq(setFrontKey(L('---\nmarp: true\n---\n\n# 글'), 'pptxStyle', '회사').join('\n'), '---\nmarp: true\npptxStyle: 회사\n---\n\n# 글', '맨 앞 설정에 넣는다');
+eq(setFrontKey(L('---\nmarp: true\npptxStyle: 옛것\n---'), 'pptxStyle', '새것').join('\n'), '---\nmarp: true\npptxStyle: 새것\n---', '있으면 바꾼다');
+eq(setFrontKey(L('# 글'), 'pptxStyle', '회사').join('\n'), '# 글', '맨 앞 설정이 없으면 그대로');
 
 // 새 문서 이름의 확장자를 두 번 쓰지 않는다 (cleanPath 는 화면에서 시험)
-// 발표 문서가 아니면 ::: 는 보통 글이다
+// Lectern 슬라이드가 아니면 ::: 는 보통 글이다
 const pl = L('# 글\n\n::: a\n첫 글\n:::\n');
 eq(moveLines(pl, 4, 4, 1).lines, L('# 글\n\n::: a\n:::\n첫 글\n'), '보통 문서의 ::: 는 글');
 return { n, fails };

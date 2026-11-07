@@ -18,7 +18,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, notes, osutil, sheet, styles, terminal
+from . import __version__, editing, i18n, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -603,6 +603,15 @@ def create_app(state: AppState) -> Flask:
         state.set_unsaved(window[:32], [str(p) for p in dirty if isinstance(p, str)][:20])
         return jsonify(ok=True)
 
+    def open_folder(folder: Path) -> Any:
+        """설정 폴더 안의 폴더를 탐색기로 연다 (없으면 빈 폴더 하나를 만든다)"""
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            osutil.open_default(folder)
+        except OSError as exc:
+            return jsonify(error=str(exc), path=str(folder)), 500
+        return jsonify(path=str(folder))
+
     # ---- 내 스타일 (D53): 설정 폴더의 styles\*.css ----------------------------------------
 
     @app.get('/api/styles')
@@ -624,13 +633,58 @@ def create_app(state: AppState) -> Flask:
     @app.post('/api/styles/folder')
     def api_styles_folder() -> Any:
         """스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '스타일 폴더 열기'"""
-        folder = styles.styles_dir()
+        return open_folder(styles.styles_dir())
+
+    # ---- Lectern 슬라이드 템플릿 (D101): web/templates 와 설정 폴더의 templates ---------------------
+
+    @app.get('/api/slide-templates')
+    def api_slide_templates() -> Any:
+        """고를 수 있는 템플릿 — 기본 템플릿 다음에 사용자의 것"""
+        return jsonify(templates=slidetemplates.list_templates(), dir=str(slidetemplates.templates_dir()))
+
+    @app.post('/api/slide-templates')
+    def api_slide_template_save() -> Any:
+        """{name, text} — '이 장을 템플릿으로 저장'. 새 파일 하나만 만든다"""
+        data = body()
         try:
-            folder.mkdir(parents=True, exist_ok=True)
-            osutil.open_default(folder)
-        except OSError as exc:
-            return jsonify(error=str(exc), path=str(folder)), 500
-        return jsonify(path=str(folder))
+            return jsonify(template=slidetemplates.save_template(data.get('name'), data.get('text')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/slide-templates/folder')
+    def api_slide_templates_folder() -> Any:
+        """템플릿 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나)"""
+        return open_folder(slidetemplates.templates_dir())
+
+    # ---- pptx 전환 (D102): 설정 폴더의 pptx-styles ----------------------------------------------
+
+    @app.get('/api/pptx-styles')
+    def api_pptx_styles() -> Any:
+        """?p=&path= — 고를 수 있는 pptx 스타일과 이 문서가 기억하는 것"""
+        project = arg_project()
+        target = resolve_inside(project.root, request.args.get('path', ''))
+        if target is None or not target.is_file():
+            abort(404)
+        return jsonify(styles=pptxexport.list_styles(), dir=str(pptxexport.styles_dir()), default=state.config.get('pptx_style') or '',
+                       memory=pptxexport.doc_memory(target), out=pptxexport.free_path(target).name, readonly=project.readonly)
+
+    @app.post('/api/pptx-styles/folder')
+    def api_pptx_styles_folder() -> Any:
+        """pptx 스타일 보관소를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나)"""
+        return open_folder(pptxexport.styles_dir())
+
+    @app.post('/api/pptx-export')
+    def api_pptx_export() -> Any:
+        """{p, path, style} — 문서 옆에 새 pptx 를 만든다. 사용자가 'pptx 로 전환' 을 누를 때만"""
+        data = body()
+        project = project_of(data.get('p'))
+        if project.readonly:   # Lectern 프로그램 폴더 안 (D71)
+            return jsonify(error=t('보기만 하는 프로젝트라 pptx 를 만들지 않습니다 — 폴더를 복사해서 여세요')), 403
+        target = path_from_body()
+        try:
+            return jsonify(pptxexport.export(target, data.get('style') or ''))
+        except pptxexport.ExportError as exc:
+            return jsonify(error=exc.message), exc.status
 
     @app.post('/api/open-external')
     def api_open_external() -> Any:
