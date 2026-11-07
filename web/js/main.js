@@ -7,7 +7,7 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint } from './spotlight.js';
+import { initSpotlight, spotKey, escSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
 import { initQuickChart, closeChart } from './quickchart.js';
@@ -344,7 +344,7 @@ function bindKeys() {
       e.preventDefault();
     } else if (e.key === 'Escape') {
       if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
-        || stopSpotlight()) e.preventDefault();
+        || escSpotlight()) e.preventDefault();
     }
   });
   // 마우스 뒤로/앞으로 버튼

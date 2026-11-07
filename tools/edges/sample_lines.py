@@ -186,7 +186,7 @@ try:
         page.keyboard.press('Shift+Enter')
         settle(200)
         page.keyboard.press('Delete')
-        check('사례 11: 하이라이트하고 Delete', until(lambda: '지워도 되는 메모' not in read().split('## 사례 12')[0].split('## 사례 11')[1]))
+        check('사례 11: 고르고 Delete', until(lambda: '지워도 되는 메모' not in read().split('## 사례 12')[0].split('## 사례 11')[1]))
         settle(500)
 
         # 12. 코드 블록

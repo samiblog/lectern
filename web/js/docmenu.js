@@ -12,7 +12,7 @@ import { S, emit } from './store.js';
 import { showMenu, menuGroups } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
+import { spotlightItems, litAt, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
@@ -245,7 +245,7 @@ function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…
 }
 
 /**
- * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, 줄 하이라이트의 줄들) 안에서 우클릭하면 나오는 선택 상자 (D74·D75).
+ * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, 고른 줄) 안에서 우클릭하면 나오는 선택 상자 (D74·D75).
  * 맨 위 'Claude로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
  * 그 밖에 위치·원문 복사, 담기·문서로 보내기(md 만), 그 블록(코드 화면은 그 줄)의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄.
  * 보내기·복사는 키(Shift+→·Shift+←·Ctrl+C)와 같은 함수다. 하이라이트로 할 일이 늘면 이 상자에 더한다.
@@ -254,7 +254,7 @@ function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…
 function litMenu(hl, selected, blockMenu, own = []) {
   const { range, ref, text } = hl;
   const chart = hl.chapter ? null : litChart(range);
-  const name = t('하이라이트한 곳');
+  const name = hl.chapter ? t('하이라이트한 곳') : t('고른 줄');
   /** @type {MenuItem[]} */
   const uniques = own.filter((it) => !(chart && it !== '-' && 'label' in it && it.label === t('차트로 보기')));
   if (chart) uniques.push(chart);
@@ -270,8 +270,8 @@ function litMenu(hl, selected, blockMenu, own = []) {
   if (!hl.chapter && linesEditable()) edits.push(...pickedItems());
   /** @type {MenuItem[]} */
   const views = [];
-  if (blockMenu) views.push({ label: hl.code ? t('이 줄의 메뉴…') : t('이 블록의 메뉴…'), tip: t('하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 메뉴를 닫은 뒤에 연다
-  views.push({ label: t('하이라이트 해제'), hint: 'Esc', action: () => stopSpotlight() });
+  if (blockMenu) views.push({ label: hl.code ? t('이 줄의 메뉴…') : t('이 블록의 메뉴…'), tip: t('이 범위 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 메뉴를 닫은 뒤에 연다
+  views.push(releaseItem());
   /** @type {MenuItem[]} */
   const danger = !hl.chapter && linesEditable() ? [{ label: t('줄 지우기'), hint: 'Delete', tip: rangeText(range), action: () => emit('line-delete', {}) }] : [];
   return menuGroups([{ header: `${name} · ${rangeText(range)}` }], uniques,
@@ -287,11 +287,11 @@ function chartTable(table, range = null) {
 /** 하이라이트한 곳이 표 하나의 행이면 '차트로 보기' 항목 (그 행만). 데이터 보기는 그 행들을, md 문서는 그 표의 행들을 */
 function litChart(range) {
   const view = $('#lec-view');
-  if (view.csv && view.classList.contains('csv-view')) return { label: t('차트로 보기'), tip: t('하이라이트한 행'), action: () => chartRange(view, range) };
+  if (view.csv && view.classList.contains('csv-view')) return { label: t('차트로 보기'), tip: t('고른 행'), action: () => chartRange(view, range) };
   if (view.classList.contains('code-view')) return null;
   const hit = [...view.querySelectorAll('table')].filter((table) => domTable(table, range).rows.length);
   if (hit.length !== 1) return null;
-  return { label: t('차트로 보기'), tip: t('하이라이트한 행'), action: () => chartTable(hit[0], range) };
+  return { label: t('차트로 보기'), tip: t('고른 행'), action: () => chartTable(hit[0], range) };
 }
 
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */

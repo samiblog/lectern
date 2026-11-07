@@ -523,9 +523,9 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             page.mouse.click(a[0], a[1] - 260 if a[1] > 400 else a[1] + 320)   # 흐린 곳을 누르면 끈다
             cleared = page.evaluate("!document.querySelector('#lec-view').classList.contains('lec-spotlight') && document.querySelector('#lec-content > .lec-spot')?.hidden !== false")
-            check(band and band['lit'] == ['구리', '알루미늄', '니켈'] and band['on'] and not band['sel']
-                  and alt_first[0] == '하이라이트한 곳 · 11~13행' and alt_first[1] == '표 복사' and 'Claude로 보내기' in alt_menu and '@docs/01-기능-점검.md 11~13행' in alt_menu
-                  and '이 블록의 메뉴…' in alt_menu and '하이라이트 해제' in alt_menu and no_term_btn and cleared,
+            check(band and band['lit'] == ['구리', '알루미늄', '니켈'] and not band['on'] and not band['sel']
+                  and alt_first[0] == '고른 줄 · 11~13행' and alt_first[1] == '표 복사' and 'Claude로 보내기' in alt_menu and '@docs/01-기능-점검.md 11~13행' in alt_menu
+                  and '이 블록의 메뉴…' in alt_menu and '고른 줄 풀기' in alt_menu and no_term_btn and cleared,
                   f"Shift+끌기: 끈 표의 행만 하이라이트(원문 11~13행), 우클릭은 선택 상자 — Claude로 보내기·위치 복사·블록 메뉴·해제, 흐린 곳을 누르면 끔 ({band}, {alt_first}, {cleared})")
             para = page.locator('#lec-view p', has_text='숫자가 대부분인 열은')
             head = menu(para).split('\n')[0]
@@ -610,8 +610,8 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+Enter')
             moved = page.evaluate(lit_status)
             check(here_on and unit_list == '1-1 3-3 5-5 6-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
-                  and s1 == '하이라이트 3행 · 1줄' and steps == ['하이라이트 3~5행 · 3줄', '하이라이트 3~6행 · 4줄', '하이라이트 3~8행 · 6줄', '하이라이트 3~6행 · 4줄']
-                  and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '하이라이트 8행 · 1줄',
+                  and s1 == '고른 줄 3행 · 1줄' and steps == ['고른 줄 3~5행 · 3줄', '고른 줄 3~6행 · 4줄', '고른 줄 3~8행 · 6줄', '고른 줄 3~6행 · 4줄']
+                  and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '고른 줄 8행 · 1줄',
                   f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+Enter·Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
                   f"↓ 는 하이라이트를 풀고 다음 줄로 ({released}, {moved})")
             page.keyboard.press('Escape')
@@ -661,7 +661,8 @@ def run(headed: bool) -> None:
             chapter = page.evaluate(lit_status)
             page.keyboard.press('Shift+ArrowDown')
             from_chapter = page.evaluate(lit_status)
-            page.keyboard.press('Escape')
+            page.keyboard.press('Escape')   # 하이라이트를 끄고
+            page.keyboard.press('Escape')   # 고른 줄을 푼다 (D118)
             check(followed and down_scrolled and chapter == '하이라이트 1~27행 · 27줄' and from_chapter == '하이라이트 1~29행 · 29줄',
                   f"스크롤하면 현재 위치가 화면 안으로 따라오고, ↓ 로 옮기면 화면이 따라감 ({followed}, {down_scrolled}); "
                   f"툴바 버튼은 장, Shift+↓ 로 그 장을 줄 범위로 ({chapter}, {from_chapter})")
@@ -702,7 +703,8 @@ def run(headed: bool) -> None:
 
             def start(locator, **kw):
                 """줄을 Shift+누르기로 고르고 하이라이트한 뒤 F2 — 글 칸이 생길 때까지 (D108 — 고른 줄은 흐리지 않는다)"""
-                page.keyboard.press('Escape')
+                page.keyboard.press('Escape')   # 하이라이트를 끄고
+                page.keyboard.press('Escape')   # 고른 줄을 푼다 (D118)
                 locator.click(modifiers=['Shift'], **kw)
                 page.keyboard.press('Shift+Enter')
                 page.keyboard.press('F2')
@@ -2007,8 +2009,8 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')   # 메뉴
             page.keyboard.press('Escape')   # 하이라이트
             code_off = page.evaluate(lit_status)
-            check(code_lit == '하이라이트 5~7행 · 3줄' and code_ref == '@code/example.py 5~7행' and code_here
-                  and code_menu.startswith('하이라이트한 곳 · 5~7행') and '이 줄의 메뉴…' in code_menu and '담기' not in code_menu and code_off is None,
+            check(code_lit == '고른 줄 5~7행 · 3줄' and code_ref == '@code/example.py 5~7행' and code_here
+                  and code_menu.startswith('고른 줄 · 5~7행') and '이 줄의 메뉴…' in code_menu and '담기' not in code_menu and code_off is None,
                   f"코드 화면의 현재 위치·줄 하이라이트: 줄 누르기·Shift+Enter·Shift+↓, Shift+← 위치 복사, 우클릭은 선택 상자(담기 없이), Esc 로 풂 "
                   f"({code_lit}, {code_ref!r}, {code_menu[:30]!r})")
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
