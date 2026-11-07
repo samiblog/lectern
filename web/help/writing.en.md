@@ -1,6 +1,6 @@
 # Writing documents that read well in Lectern — guide for AI
 
-This guide is for AI such as Claude Code. People read the project folder's documents with **Lectern** (a Windows document viewer). Follow these rules and tables, contents, diagrams and charts show correctly, and the locations people pick in Lectern (`@path lines 12-20`) can be handed back to the AI.
+This guide is for AI such as Claude Code. People read and edit in place the project folder's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules and tables, contents, diagrams and charts show correctly, and the locations people pick in Lectern (`@path lines 12-20`) can be handed back to the AI.
 
 If the task is "put these rules into this project's CLAUDE.md", trim the **Summary for CLAUDE.md** at the end to fit that project. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
 

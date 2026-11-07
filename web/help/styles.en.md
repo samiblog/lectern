@@ -1,6 +1,6 @@
 # Making your own Lectern style
 
-This guide is for an AI such as Claude Code that is asked to make a **custom style** for Lectern, a document viewer for Windows. People can read it too.
+This guide is for an AI such as Claude Code that is asked to make a **custom style** for Lectern, an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI. People can read it too.
 A custom style is one CSS file. It sets the fonts, colors and spacing Lectern uses to show Markdown and HTML documents.
 
 ## 1. Where to save it, and when it shows up

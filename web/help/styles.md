@@ -1,6 +1,6 @@
 # Lectern 내 스타일 만드는 법
 
-이 글은 Claude Code 같은 AI 가 Lectern(Windows 용 문서 뷰어)의 **내 스타일**을 만들 때 읽는 설명서입니다. 사람이 읽어도 됩니다.
+이 글은 Claude Code 같은 AI 가 Lectern(Markdown을 중심으로 AI와 함께 작업하는 Windows용 통합 리서치 작업 환경)의 **내 스타일**을 만들 때 읽는 설명서입니다. 사람이 읽어도 됩니다.
 내 스타일은 CSS 파일 하나입니다. Lectern 이 Markdown·HTML 문서를 보여 줄 때 글꼴·색·간격을 정합니다.
 
 ## 1. 저장할 곳과 반영

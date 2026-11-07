@@ -1,6 +1,6 @@
 # 이 프로젝트의 문서 규칙 (Claude Code 용)
 
-이 프로젝트의 문서는 사람이 **Lectern**(Windows 문서 뷰어)으로 읽는다. 문서를 쓰거나 고칠 때 아래를 따른다. 자세한 규칙은 Lectern 의 작성 안내(`web/help/writing.md` — Lectern 설정 창의 'Claude Code 에 Lectern 알려 주기'가 경로를 알려 준다)에 있다.
+이 프로젝트의 문서는 사람이 **Lectern**(Markdown을 중심으로 AI와 함께 작업하는 Windows용 통합 리서치 작업 환경)으로 읽고 그 자리에서 고친다. 문서를 쓰거나 고칠 때 아래를 따른다. 자세한 규칙은 Lectern 의 작성 안내(`web/help/writing.md` — Lectern 설정 창의 'Claude Code 에 Lectern 알려 주기'가 경로를 알려 준다)에 있다.
 
 ## 파일
 

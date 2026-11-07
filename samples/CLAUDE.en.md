@@ -1,6 +1,6 @@
 # Document rules for this project (for Claude Code)
 
-People read this project's documents with **Lectern** (a Windows document viewer). Follow these rules when writing or editing documents. The full rules are in Lectern's writing guide (`web/help/writing.en.md` — 'Teach Claude Code about Lectern' in Lectern's settings shows the path).
+People read and edit in place this project's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules when writing or editing documents. The full rules are in Lectern's writing guide (`web/help/writing.en.md` — 'Teach Claude Code about Lectern' in Lectern's settings shows the path).
 
 ## Files
 

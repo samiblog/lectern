@@ -1,6 +1,6 @@
 # Lectern 에서 잘 보이는 문서 쓰기 — AI 용 작성 안내
 
-이 안내는 Claude Code 같은 AI 가 읽는다. 사람은 **Lectern**(Windows 문서 뷰어)으로 프로젝트 폴더의 문서를 읽는다. 아래 규칙대로 쓰면 표·목차·다이어그램·차트가 제대로 보이고, 사람이 Lectern 에서 고른 위치(`@경로 12~20행`)를 AI 에게 다시 건넬 수 있다.
+이 안내는 Claude Code 같은 AI 가 읽는다. 사람은 **Lectern**(Markdown을 중심으로 AI와 함께 작업하는 Windows용 통합 리서치 작업 환경)으로 프로젝트 폴더의 문서를 읽고 그 자리에서 고친다. 아래 규칙대로 쓰면 표·목차·다이어그램·차트가 제대로 보이고, 사람이 Lectern 에서 고른 위치(`@경로 12~20행`)를 AI 에게 다시 건넬 수 있다.
 
 해야 할 일이 '이 프로젝트의 CLAUDE.md 에 규칙을 정리해 넣기'라면, 맨 끝의 **CLAUDE.md 에 넣을 요약**을 그 프로젝트에 맞게 줄여 넣는다. 예제는 Lectern 설치 폴더의 `samples` (Lectern 에서 '예제 열기') — 특히 `samples/CLAUDE.md` 와 `samples/guide/04-문서-쓰는-법.md`.
 

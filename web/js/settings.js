@@ -26,7 +26,7 @@ export function openSettings() {
 
 /** Claude Code 에 줄 요청 글: 작성 안내(web/help/writing.md)를 읽고 그 프로젝트의 CLAUDE.md 에 규칙을 정리하게 */
 function guidePrompt() {
-  return t("이 프로젝트의 문서는 사람이 Lectern(문서 뷰어)으로 읽어. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 'CLAUDE.md 에 넣을 요약'을 이 프로젝트에 맞게 다듬어 이 프로젝트의 CLAUDE.md 에 넣어 줘. 앞으로 문서는 그 규칙대로 써.",
+  return t("이 프로젝트의 문서는 사람이 Lectern(Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경)으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 'CLAUDE.md 에 넣을 요약'을 이 프로젝트에 맞게 다듬어 이 프로젝트의 CLAUDE.md 에 넣어 줘. 앞으로 문서는 그 규칙대로 써.",
     { guide: S.writingGuide });
 }
 
@@ -50,7 +50,7 @@ function renderMyStyles() {
 /** Claude Code 에 줄 요청 글: 설명서 위치와 저장할 폴더 (원하는 모양은 사용자가 이어서 적는다) */
 function stylePrompt() {
   const { dir, guide } = userStyleInfo();
-  return t('Lectern 문서 뷰어의 내 스타일(CSS)을 만들어 줘. 먼저 설명서 {guide} 를 읽고, 그 규칙대로 {dir} 폴더에 CSS 파일 하나로 저장해. 원하는 모양: ',
+  return t('Lectern 의 내 스타일(CSS)을 만들어 줘. 먼저 설명서 {guide} 를 읽고, 그 규칙대로 {dir} 폴더에 CSS 파일 하나로 저장해. 원하는 모양: ',
     { guide, dir });
 }
 
