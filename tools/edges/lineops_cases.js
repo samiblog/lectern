@@ -176,4 +176,42 @@ eq(diffRange(L('a\nb\nc'), L('a\nx\nc')), { start: 2, before: ['b'], after: ['x'
 eq(diffRange(L('a\nc'), L('a\nb\nc')), { start: 1, before: ['a'], after: ['a', 'b'] }, '넣기');
 eq(diffRange(L('c'), L('b\nc')), { start: 1, before: ['c'], after: ['b', 'c'] }, '맨 앞에 넣기');
 eq(diffRange(L('a\n\n\nb'), L('a\n\nb')), { start: 1, before: ['a', '', ''], after: ['a', ''] }, '빈 줄뿐이면 앞 글 줄까지');
+// 문서 끝의 새 줄 (D106)
+const { planEnd, shiftPlan } = m;
+const atEnd = (s, text) => insertLine(L(s), planEnd(L(s)), text).lines;
+eq(atEnd('', 'x'), L('x\n'), '빈 문서');
+eq(atEnd('# 제목\n\n', 'x'), L('# 제목\n\nx\n\n'), '제목 뒤');
+eq(atEnd('글\n', 'x'), L('글\n\nx\n'), '문단 뒤');
+eq(atEnd('글', 'x'), L('글\n\nx'), '끝에 줄바꿈이 없는 문서');
+eq(atEnd('- a\n- b\n', 'x'), L('- a\n- b\n- x\n'), '목록은 같은 레벨');
+eq(atEnd('- a\n  - b\n', 'x'), L('- a\n  - b\n  - x\n'), '하위 목록은 같은 레벨');
+eq(atEnd('1. a\n2. b\n', 'x'), L('1. a\n2. b\n3. x\n'), '번호 목록');
+eq(atEnd('> [!NOTE]\n> 글\n', 'x'), L('> [!NOTE]\n> 글\n>\n> x\n'), '박스글은 박스 안');
+eq(atEnd('| a |\n|---|\n| 1 |\n', 'x'), L('| a |\n|---|\n| 1 |\n\nx\n'), '표 뒤는 문단');
+eq(atEnd('```\ncode\n```\n', 'x'), L('```\ncode\n```\n\nx\n'), '코드 블록 뒤는 문단');
+eq(atEnd('$$\nx^2\n$$\n', 'y'), L('$$\nx^2\n$$\n\ny\n'), '수식 뒤는 문단');
+eq(atEnd('글\n\n---\n', 'x'), L('글\n\n---\n\nx\n'), '구분선 뒤');
+eq(atEnd('---\ntitle: a\n---\n', 'x'), L('---\ntitle: a\n---\n\nx\n'), '머리 설정만 있는 문서');
+eq(atEnd('글\n\n\n\n', 'x'), L('글\n\nx\n\n\n\n'), '끝의 빈 줄은 건너뛴다');
+
+// 빈 새 줄의 레벨 (D106)
+const shifted = (s, at, dirs, text) => {
+  const l = L(s);
+  let p = planNew(l, at, true);
+  for (const d of dirs) p = shiftPlan(l, p, d) ?? p;
+  return insertLine(l, p, text).lines;
+};
+eq(shifted('- a\n', 1, [-1], 'x'), L('- a\n\nx\n'), '맨 바깥 항목은 문단이 된다');
+eq(shifted('- a\n', 1, [1], 'x'), L('- a\n  - x\n'), '윗 항목의 하위로');
+eq(shifted('- a\n', 1, [1, 1], 'x'), L('- a\n  - x\n'), '더 들어갈 수 없으면 그대로');
+eq(shifted('- a\n  - b\n', 2, [-1], 'x'), L('- a\n  - b\n- x\n'), '한 레벨 밖으로');
+eq(shifted('- a\n  - b\n', 2, [-1, -1], 'x'), L('- a\n  - b\n\nx\n'), '두 번이면 목록이 끝난다');
+eq(shifted('1. a\n', 1, [1], 'x'), L('1. a\n   1. x\n'), '번호 항목의 하위');
+eq(shifted('1. a\n   1. b\n', 2, [-1], 'x'), L('1. a\n   1. b\n2. x\n'), '번호 목록 밖으로');
+eq(shifted('- a\n- b\n', 1, [-1], 'x'), L('- a\n\nx\n\n- b\n'), '목록 가운데서 끝내면 앞뒤로 빈 줄');
+eq(shifted('> 글\n', 1, [-1], 'x'), L('> 글\n\nx\n'), '인용 밖으로');
+eq(shifted('> - a\n', 1, [-1], 'x'), L('> - a\n>\n> x\n'), '인용 안 목록을 끝낸다');
+eq(shifted('> - a\n', 1, [-1, -1], 'x'), L('> - a\n\nx\n'), '인용 밖까지');
+eq(shifted('글\n', 1, [-1], 'x'), L('글\n\nx\n'), '보통 문단은 그대로');
+
 return { n, fails };

@@ -73,7 +73,14 @@ try:
         settle = lambda ms=250: page.wait_for_timeout(ms)
         cell = '.lec-line-edit'
         editing = lambda: page.locator(cell).count() > 0
-        gone = lambda: page.wait_for_function(f"!document.querySelector('{cell}')", timeout=4000) and True
+
+        def gone():
+            # 이어 쓰기 (D106): 새 줄의 Enter 는 다음 새 줄을 연다 — 빈 칸이면 걷는다
+            page.wait_for_function(f"!document.querySelector('{cell}') || !document.querySelector('{cell}').textContent.trim()", timeout=4000)
+            if editing():
+                page.keyboard.press('Escape')
+            return page.wait_for_function(f"!document.querySelector('{cell}')", timeout=4000) and True
+
         toast_has = lambda s: page.wait_for_function('(s) => document.querySelector("#lec-toast").textContent.includes(s)', arg=s, timeout=3000) and True
         clear_toast = lambda: page.evaluate("document.querySelector('#lec-toast').textContent = ''")
         press = page.keyboard.press

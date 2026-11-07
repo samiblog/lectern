@@ -335,6 +335,68 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
   return { ...para, at: a - 1, pre: before != null && !isBlank(before) ? [sep] : [], post: [sep] };
 }
 
+/**
+ * 문서 끝의 새 줄 계획 (D106 — 마지막 줄에서 ↓, 빈 문서): 끝이 목록·인용이면 planNew 처럼 같은 레벨, 아니면 마지막 글 뒤의 빈 문단.
+ * 표·코드 블록·수식·구분선 뒤에도 문단을 연다. 끝의 빈 줄은 건너뛴다
+ */
+export function planEnd(lines) {
+  let last = lines.length;
+  while (last && !lines[last - 1].trim()) last -= 1;
+  const para = { head: '', fill: '', kind: 'para', list: null, post: [] };
+  if (!last) return { ...para, at: 0, pre: [] };
+  const blk = blockAt(blocksOf(lines), last);
+  if (blk?.kind === 'text' && !fenceAt(fencesOf(lines), last) && !tableIn(lines, blk) && (ownerItem(lines, last) || quoteOf(lines[last - 1]))) return planNew(lines, last, true);
+  return { ...para, at: last, pre: [''] };
+}
+
+/** 항목 줄 위쪽에서 test 에 맞는 항목을 찾는다 {n, it} — 목록이 끝나는 곳에서 멈춘다 */
+function itemAbove(lines, from, depth, test) {
+  for (let n = from; n >= 1; n--) {
+    const s = lines[n - 1];
+    if (isBlank(s) && depthOf(s) === depth) continue;
+    const it = depthOf(s) === depth ? itemOf(s) : null;
+    if (it && test(it)) return { n, it };
+    if (!it && (depthOf(s) !== depth || widthOf(bodyOf(s)) === 0)) return null;
+  }
+  return null;
+}
+
+/** 문단 계획 — quote 안에서, at 앞뒤로 빈 줄을 둔다 */
+function paraAt(lines, at, quote) {
+  const sep = quote.trimEnd();
+  const after = lines[at];
+  return { at, pre: [sep], post: after != null && !isBlank(after) ? [sep] : [], head: quote, fill: '', kind: 'para', list: null };
+}
+
+/**
+ * 아직 파일에 없는 빈 새 줄의 레벨을 바꾼다 (D106 — Tab·Shift+Tab·↓). 바뀐 계획, 더 갈 곳이 없으면 null.
+ * dir > 0: 윗 항목의 하위로. dir < 0: 한 레벨 밖으로 — 맨 바깥 항목은 문단이 되어 목록이 끝나고, 인용 안의 문단은 인용 밖으로 나간다
+ */
+export function shiftPlan(lines, plan, dir) {
+  const quote = quoteOf(plan.head);
+  const depth = depthOf(plan.head);
+  if (plan.kind === 'item') {
+    const it = itemOf(`${plan.head}x`);
+    const mark = (o) => (o.ordered ? `${o.num + 1}${o.delim}` : o.marker);
+    if (dir > 0) {
+      const prev = itemAbove(lines, plan.at, depth, (o) => o.width === it.width);
+      if (!prev) return null;
+      const marker = it.ordered ? `1${it.delim}` : it.marker;
+      return { ...plan, head: `${quote}${' '.repeat(prev.it.content)}${marker}${it.gap || ' '}${it.task}`, list: null };
+    }
+    const parent = itemAbove(lines, plan.at, depth, (o) => o.width < it.width);
+    if (parent) {
+      const o = parent.it;
+      return { ...plan, at: itemEnd(lines, parent.n), pre: [], post: [], head: `${quote}${o.lead}${mark(o)}${o.gap || ' '}${it.task}`, list: listInfo(lines, parent.n) };
+    }
+    return paraAt(lines, plan.at, quote);
+  }
+  if (plan.kind !== 'para' || dir > 0 || !depth) return null;
+  let at = plan.at;
+  while (at < lines.length && depthOf(lines[at]) >= depth) at += 1;   // 이 인용이 끝나는 줄 뒤로
+  return paraAt(lines, at, quote.replace(/[ \t]*>[ \t]?$/, ''));
+}
+
 /** 계획대로 글 text 를 넣는다 {lines, line(새 줄)} */
 export function insertLine(lines, plan, text) {
   const next = lines.slice();

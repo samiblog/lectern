@@ -330,7 +330,6 @@ export default {
 "종류가 다른 줄은 합치지 않습니다": "Lines of different kinds are not joined",
 "코드 블록의 ``` 줄만 지우면 블록이 깨집니다 — 코드 블록 전체를 하이라이트하면 블록째 지웁니다": "Deleting only a ``` line would break the code block — highlight the whole block to delete it",
 "이 줄은 그렇게 고칠 수 없습니다 — 편집 모드(Ctrl+E)에서 고칩니다": "This line can't be changed that way — use edit mode (Ctrl+E)",
-"글을 쓴 뒤 Tab 을 누르세요": "Type some text, then press Tab",
 "{n}줄을 지울까요? 제목이나 지시어가 들어 있거나 10줄이 넘습니다.": ["Delete {n} line? It is a heading.", "Delete {n} lines? They include a heading or are more than 10 lines."],
 "표의 머리행이나 구분 줄만 지우면 표가 깨집니다 — 표 전체를 하이라이트하면 표째 지웁니다": "Deleting only the header or divider row would break the table — highlight the whole table to delete it",
 "{n}줄을 지웠습니다 — Ctrl+Z 로 되돌립니다": ["Deleted {n} line — Ctrl+Z to undo", "Deleted {n} lines — Ctrl+Z to undo"],

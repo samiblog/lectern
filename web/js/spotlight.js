@@ -285,15 +285,31 @@ function drawHere() {
     mark.setAttribute('aria-hidden', 'true');
     sc.append(mark);
   }
-  mark.style.setProperty('--here-y', `${Math.round(markOf(us[i], baseOf(root)))}px`);
+  // 아직 파일에 없는 새 줄을 쓰는 동안은 그 줄에 (D106 — 줄 단위가 아니다). 스크롤로 다시 그려도 그대로
+  const fresh = S.pane?.lineEdit?.fresh ? S.pane.lineEdit.el : null;
+  mark.style.setProperty('--here-y', `${Math.round(fresh ? freshY(fresh, baseOf(root)) : markOf(us[i], baseOf(root)))}px`);
   const cell = us[i].el.closest?.('.lec-cell');
   const left = cell ? cell.getBoundingClientRect().left - sc.getBoundingClientRect().left : textLeft(root);
   mark.style.setProperty('--here-x', `${Math.round(Math.max(1, left - 12))}px`);
 }
 
-/** ↑·↓: 현재 위치를 한 줄 옮기고 그 줄이 보이게. 화면보다 큰 줄은 그쪽의 남은 곳을 먼저 스크롤해 보인다 */
-function moveHere(step) {
+/** 새 줄의 첫 화면 줄 가운데 (스크롤 상자 안 좌표) */
+function freshY(el, base) {
+  const r = el.getBoundingClientRect();
+  const line = parseFloat(getComputedStyle(el).lineHeight) || r.height;
+  return r.top - base + Math.min(r.height, line) / 2;
+}
+
+/** 새 줄을 열었을 때 화살표를 그리로 (lineedit.js, D106) */
+export const hereAtNew = () => drawHere();
+
+/** ↑·↓: 현재 위치를 한 줄 옮기고 그 줄이 보이게. 화면보다 큰 줄은 그쪽의 남은 곳을 먼저 스크롤해 보인다. 마지막 줄의 ↓ 는 새 줄을 연다 (D106) */
+function moveHere(step, repeat = false) {
   const us = units();
+  if (!us.length && step > 0) {   // 빈 문서
+    emit('line-end');
+    return true;
+  }
   const i = hereIndex(us);
   if (i < 0) return false;
   const vp = viewport();
@@ -312,6 +328,7 @@ function moveHere(step) {
   const j = Math.max(0, Math.min(us.length - 1, i + step));
   if (j === i) vp.sc.scrollTop += step * 40;   // 첫 줄·마지막 줄: 문서의 위·아래 여백까지
   setHere(us[j].a, { scroll: true });
+  if (j === i && step > 0 && !repeat) emit('line-end');
   return true;
 }
 
@@ -361,6 +378,10 @@ export function editHere() {
   const ix = ranged() ? litIndexes(us) : null;
   if (ix && ix[0] !== ix[1]) {
     toast(t('한 줄 편집은 한 줄만 고칩니다 — 하이라이트를 풀고 F2 를 누르세요'));
+    return true;
+  }
+  if (!us.length) {   // 빈 문서 — 처음 줄을 연다 (D106)
+    emit('line-end');
     return true;
   }
   const i = ix ? ix[0] : hereIndex(us);
@@ -796,7 +817,7 @@ export function spotKey(e) {
   if (spotlightOn()) return moveSpotlight(step);
   if (k.startsWith('Page') || !linesOn()) return false;   // PageUp·PageDown 은 보통 스크롤 (현재 위치가 따라온다)
   if (ranged()) toggleSpotlight(false);   // 편집기처럼 줄 하이라이트를 풀고 옮긴다
-  return moveHere(step);
+  return moveHere(step, e.repeat);
 }
 
 // ---- 누르기·Shift+끌기 -----------------------------------------------------------

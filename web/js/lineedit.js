@@ -29,7 +29,7 @@ import { lineSlot, editableLines, blockOfLine } from './lineunits.js';
 import { locateLines } from './linefind.js';
 import { isCode } from './icons.js';
 import {
-  diffRange, planNew, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
+  diffRange, planNew, planEnd, shiftPlan, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
@@ -38,7 +38,7 @@ import { applyScheme } from './headstyle.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
@@ -292,14 +292,40 @@ async function begin(line, { cell = 0, at = null, offset = null, select = false 
   showLineEdit();
 }
 
-/** 아직 파일에 없는 새 줄의 자리를 화면에 만든다 {span, el, remove} — slot: 기준 줄의 자리 */
-function plantLine(slot, plan, below) {
+/** 새 줄의 글 칸 */
+function newCell(fill) {
   const span = document.createElement('span');
   span.className = 'lec-line-edit whole';
   span.contentEditable = 'plaintext-only';
   span.spellcheck = false;
   span.dataset.i = '0';
-  span.textContent = plan.fill;
+  span.textContent = fill;
+  return span;
+}
+
+/** 문서 맨 위 블록 — 표·그림·구분선처럼 줄의 자리가 없는 것의 뒤에 새 줄을 놓을 때 */
+function topBlock(view, el) {
+  let top = el;
+  while (top && top.parentElement !== view) top = top.parentElement;
+  return top;
+}
+
+/** 새 문단을 블록 el 의 앞뒤에 놓는다. el 이 없으면 본문의 끝에 (빈 문서도) {span, el, remove} */
+function plantBeside(view, el, below) {
+  const span = newCell('');
+  const p = document.createElement('p');
+  p.className = 'lec-new-line';
+  p.append(span);
+  const body = [...view.children].filter((x) => !x.matches('.footnotes-sep, .footnotes'));
+  const top = el ? topBlock(view, el) : body.at(-1);
+  if (top) top[below ? 'after' : 'before'](p);
+  else view.append(p);
+  return { span, el: p, remove: () => p.remove() };
+}
+
+/** 아직 파일에 없는 새 줄의 자리를 화면에 만든다 {span, el, remove} — slot: 기준 줄의 자리 */
+function plantLine(slot, plan, below) {
+  const span = newCell(plan.fill);
   const side = below ? 'after' : 'before';
   if (plan.kind === 'code' && !slot.el.classList.contains('cv-line')) {   // 코드 블록: 그 줄의 앞뒤에
     span.classList.remove('whole');
@@ -343,34 +369,83 @@ function plantLine(slot, plan, below) {
   return { span, el, remove: () => el.remove() };
 }
 
-/** 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew) */
-async function beginNew(base, below) {
+/**
+ * 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew).
+ * end: 문서 끝에 (D106 — 마지막 줄의 ↓, 빈 문서). 구분선·그림처럼 줄의 자리가 없는 곳은 그 블록의 앞뒤에 문단을 연다
+ */
+async function beginNew(base, below, { end = false } = {}) {
   const pane = S.pane;
   const ready = await settled(pane);
   if (S.pane !== pane || session || !ready) return;
   const view = $('#lec-view');
   const src = sourceLines();
-  const slot = lineSlot(view, base, src);
-  if (!slot) {
+  const plan = end ? planEnd(src) : null;
+  const at = plan ? plan.at || base : base;
+  const slot = (!plan || plan.kind === 'item' || plan.head) && at ? lineSlot(view, at, src) : null;
+  const code = isCodeView(view);
+  const next = plan ?? planNew(src, base, below, { code, parts: slot?.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null });
+  if (next.error) {
+    toast(whyNot(next.error));
+    return;
+  }
+  if (!slot && code) {
     toast(t('이 줄에는 새 줄을 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다'));
     return;
   }
-  const plan = planNew(src, base, below, { code: isCodeView(view), parts: slot.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null });
-  if (plan.error) {
-    toast(whyNot(plan.error));
-    return;
-  }
-  const made = plantLine(slot, plan, below);
+  const made = slot ? plantLine(slot, next, below) : plantBeside(view, at ? blockOfLine(view, at) : null, below);
   session = {
-    pane, tab: pane.tab, path: pathIn(view), line: base, kind: plan.kind === 'code' ? 'code' : 'text', original: '', parts: { head: '', body: '', tail: '' },
-    places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot.fence || '', fresh: { plan, lines: src.slice(), remove: made.remove },
+    pane, tab: pane.tab, path: pathIn(view), line: base, kind: next.kind === 'code' ? 'code' : 'text', original: '', parts: { head: '', body: '', tail: '' },
+    places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot?.fence || '', fresh: { plan: next, lines: src.slice(), remove: made.remove },
   };
   pane.lineEdit = session;
   bind(made.span);
   document.addEventListener('mousedown', onOutside, true);
   focusPlace(0);
   made.span.scrollIntoView({ block: 'nearest' });
+  hereAtNew();
   showLineEdit();
+}
+
+/** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서만. 코드 파일과 Lectern 슬라이드는 그대로 (D106) */
+function canGrow(pane) {
+  const view = pane?.view;
+  return !!view?.dataset.docPath && !isCodeView(view) && !view.classList.contains('lec-deck') && linesEditable() && !session;
+}
+
+/** 마지막 줄의 ↓·빈 문서의 F2: 문서 끝에 새 줄을 연다. 각주는 문서 끝에 모인 것이라 그 뒤에는 더하지 않는다 */
+function growEnd() {
+  const pane = S.pane;
+  if (!canGrow(pane)) return;
+  const line = pane.here?.line || 0;
+  if (line && blockOfLine(pane.view, line)?.closest('.footnotes')) return;
+  beginNew(line, true, { end: true });
+}
+
+/** 빈 새 줄의 레벨을 바꾸고 화면의 자리를 맞춘다 (D106 — 계산은 lineops.shiftPlan). 바뀌었으면 true */
+function shiftFresh(s, dir) {
+  const plan = shiftPlan(s.fresh.lines, s.fresh.plan, dir);
+  if (!plan) return false;
+  const was = s.fresh.plan.kind;
+  s.fresh.plan = plan;
+  if (plan.kind === 'item') {
+    s.fresh.indent = (s.fresh.indent || 0) + dir;
+    s.el.style.marginInlineStart = `${s.fresh.indent * 1.6}em`;
+    return true;
+  }
+  const span = s.places[0].span;
+  const p = document.createElement('p');
+  p.className = 'lec-new-line';
+  p.append(span);
+  let top = s.el;
+  if (was === 'item') while (top.parentElement.closest('ul, ol')) top = top.parentElement.closest('ul, ol');
+  else top = s.el.closest('blockquote') ?? s.el;
+  (was === 'item' ? top.closest('ul, ol') ?? top : top).after(p);
+  s.el.remove();
+  s.el = p;
+  s.fresh.remove = () => p.remove();
+  focusPlace(0);
+  hereAtNew();
+  return true;
 }
 
 function focusPlace(i, atEnd = true) {
@@ -445,6 +520,7 @@ async function finishNew(s, save) {
   if (!save || !text.trim()) {
     s.fresh.remove();
     showLineEdit();
+    if (s.line) followLine(s.line);   // 화살표를 기준 줄로 되돌린다
     if (s.pane.lineEditMissed) {
       s.pane.lineEditMissed = false;
       refreshView(s.pane);
@@ -468,6 +544,7 @@ async function finishNew(s, save) {
       return { ok: false, saved: false };
     }
     s.line = made.line + r.at - d.start;
+    if (S.pane === s.pane) followLine(s.line);
     toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${s.path} ${rangeText([s.line, s.line])}` }));
     return { ok: true, saved: true };
   } catch (e) {
@@ -569,25 +646,36 @@ function caretOnEdge(span, dir) {
   return dir < 0 ? mid < Math.min(...lines.map((r) => r.bottom)) : mid > Math.max(...lines.map((r) => r.top));
 }
 
-/** ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례). 넘어가는 사이에도 하이라이트의 회색은 걷어 둔다 (lineEditHold) */
-async function step(dir) {
+/** 고칠 수 있는 줄의 차례에서 line 의 앞뒤 줄 — 고칠 수 없는 줄이 됐으면(글을 지운 목록 항목 등) 그 줄의 다음·앞 줄로 */
+function neighbor(line, dir) {
+  const src = sourceLines();
+  const order = currentUnits().flatMap((u) => editableLines(u, src));
+  const i = order.indexOf(line);
+  return i >= 0 ? order[i + dir] : dir > 0 ? order.find((n) => n > line) : order.findLast((n) => n < line);
+}
+
+/**
+ * ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례). 넘어가는 사이에도 하이라이트의 회색은 걷어 둔다 (lineEditHold).
+ * 마지막 줄의 ↓ 는 새 줄을 연다 (D106 — repeat: 누르고 있는 키는 마지막 줄에서 멈춘다). 빈 새 항목의 ↓ 는 한 레벨 밖으로 — 목록이 끝난다
+ */
+async function step(dir, repeat = false) {
   const s = session;
+  if (dir > 0 && s.fresh && !read(s.places[0]).trim()) {
+    if (repeat || shiftFresh(s, -1) || (s.line ? neighbor(s.line, 1) == null : true)) return;
+  }
   s.pane.lineEditHold = true;
   try {
     const res = await finish(true);
     if (!res.ok || S.pane !== s.pane) return;
-    if (s.fresh && !res.saved) {   // 빈 새 줄을 떠나면 기준 줄로
+    if (s.fresh && !res.saved && dir < 0) {   // 빈 새 줄을 떠나면 기준 줄로
       followLine(s.line);
       await begin(s.line);
       return;
     }
-    const src = sourceLines();
-    const order = currentUnits().flatMap((u) => editableLines(u, src));
-    const i = order.indexOf(s.line);
-    // 고칠 수 없는 줄이 됐으면(글을 지운 목록 항목 등) 그 줄의 다음·앞 줄로 — 저장은 줄 수를 바꾸지 않는다
-    const next = i >= 0 ? order[i + dir] : dir > 0 ? order.find((n) => n > s.line) : order.findLast((n) => n < s.line);
+    const next = neighbor(s.line, dir);
     if (next == null) {
       followLine(s.line);
+      if (dir > 0 && !repeat && !s.fresh?.plan.error) growEnd();
       return;
     }
     followLine(next);
@@ -696,9 +784,12 @@ function joinUp() {
 function levelHere(dir) {
   const s = session;
   const op = (lines) => (dir > 0 ? indentItem : outdentItem)(lines, s.line);
+  if (s.fresh && !read(s.places[0]).trim()) {   // 아직 없는 줄 — 쓰기 전에 레벨을 정한다 (D106)
+    shiftFresh(s, dir);
+    return;
+  }
   if (s.fresh ? s.fresh.plan.kind !== 'item' : op(sourceLines()).error === 'not-list') return;
-  if (s.fresh && !read(s.places[0]).trim()) toast(t('글을 쓴 뒤 Tab 을 누르세요'));
-  else restructure(op);
+  restructure(op);
 }
 
 /** Alt+↑·↓: 이 줄을 옮긴다 (lineops.moveLines) */
@@ -1001,6 +1092,10 @@ function onKey(e) {
     }
     e.preventDefault();
     joinUp();
+  } else if (k === 'Enter' && !mod && !e.altKey && !e.shiftKey && session.fresh) {   // 이어 쓰기 (D106): 새 줄의 Enter 는 저장하고 다음 새 줄로, 빈 줄이면 끝낸다
+    e.preventDefault();
+    if (read(session.places[0]).trim()) addLine(true);
+    else finish(false);
   } else if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
     e.preventDefault();
     finish(true);
@@ -1011,7 +1106,7 @@ function onKey(e) {
     const dir = k === 'ArrowUp' ? -1 : 1;
     if (!caretOnEdge(span, dir)) return;   // 꺾인 글의 안쪽 줄: 칸 안에서 위·아래로 (기본 동작)
     e.preventDefault();
-    step(dir);
+    step(dir, e.repeat);
   } else if (k === 'Tab' && !mod && !e.altKey) {
     e.preventDefault();
     if (session.kind === 'table') focusPlace(Math.max(0, Math.min(session.places.length - 1, Number(span.dataset.i) + (e.shiftKey ? -1 : 1))), false);
@@ -1055,6 +1150,10 @@ function onDoubleClick(e) {
   const pane = S.pane;
   if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.altKey || e.metaKey || session || !pane?.tab || pane.tab.readonly || pane.editor) return;
   if (firstOnLink || e.target.closest(NO_OPEN)) return;
+  if (!currentUnits().length) {   // 빈 문서 — 처음 줄을 연다 (D106)
+    growEnd();
+    return;
+  }
   const unit = unitAtPoint(e);
   if (!unit) return;
   const view = $('#lec-view');
@@ -1163,6 +1262,7 @@ export function initLineEdit() {
     if (below) beginNew(line, true);
     else begin(line, { select });
   });
+  on('line-end', growEnd);   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });
