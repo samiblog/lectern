@@ -68,6 +68,13 @@ class WindowBoard:
             for wid in {MAIN, *(k for k, w in self._seen.items() if w['project'] == project)}:
                 self._inbox.setdefault(wid, []).append(item)
 
+    def deleted(self, project: str, path: str) -> None:
+        """문서를 휴지통으로 보냈다 — 그 문서를 연 다른 창이 칸을 닫게 모든 창에 알린다 (보낸 창은 이미 닫았으니 받아도 할 일이 없다)"""
+        item = {'type': 'deleted', 'path': path, 'p': project}
+        with self._lock:
+            for wid in {MAIN, *(k for k, w in self._seen.items() if w['project'] == project)}:
+                self._inbox.setdefault(wid, []).append(item)
+
     def take(self, wid: str) -> list[dict[str, Any]]:
         with self._lock:
             return self._inbox.pop(wid, [])

@@ -2728,7 +2728,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+e')
             no_edit = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000) and not page.locator('.lec-editor').count()
             page.keyboard.press('Control+n')
-            no_new = page.evaluate("document.querySelector('#lec-insert').hidden")
+            no_new = page.evaluate("document.querySelector('#lec-newdoc').hidden")
             page.evaluate("import('/static/js/store.js').then(m => m.emit('rename', { path: 'README.md' }))")
             no_rename = page.evaluate("document.querySelector('#lec-rename').hidden")
             st_edit = page.evaluate("document.querySelector('#lec-st-edit').hidden")
@@ -3090,45 +3090,44 @@ def run(headed: bool) -> None:
                   and inserted > 0 and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
                   f'담기: 문서 탭에 없는 문서는 받는 곳에 없고(안내 줄), 탭으로 열면 맨 끝으로 보내 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({not_open}, {inserted}, {len(asked)})')
 
-            print('[새로 만들기]')   # D65 — 폴더 우클릭·Ctrl+N·문서 탭 줄의 + : 경로를 정하면 바로 '# 제목'으로 만들어 새 문서 탭에서 편집
+            print('[새로 만들기]')   # D65·D105 — 폴더 우클릭·Ctrl+N·문서 탭 줄의 + : 제목과 스타일을 정해 만들고 md 문서 화면에서 바로 쓴다
             page.click('.side-tabs button[data-tab="files"]')
             page.wait_for_selector('#lec-tree .row[data-dir="data"]')   # data/모음.md 를 만들어 트리에 나온 폴더
             page.locator('#lec-tree .row[data-dir="data"]').click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])')
-            page.locator('#lec-menu button[data-i]', has_text='이 폴더에 새 문서').click()
-            page.wait_for_selector('#lec-insert:not([hidden])')
-            guess = page.input_value('#lec-insert-input')
-            page.keyboard.type('메모')   # 이름 부분을 골라 두었다 — 바로 고쳐 쓴다
+            page.locator('#lec-menu button[data-i]', has_text='새 문서 만들기').click()
+            page.wait_for_selector('#lec-newdoc:not([hidden])')
+            guess = [page.input_value('#lec-newdoc-title'), page.text_content('#lec-newdoc-where')]
+            page.keyboard.type('메모')   # 제목을 골라 두었다 — 바로 고쳐 쓴다
             page.keyboard.press('Enter')
             memo = tables / 'data' / '메모.md'
             on_memo = wait_until(page, '''document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === 'data/메모.md'
-              && !!document.querySelector('.lec-pane.active .lec-editor .CodeMirror')''', 10000)
+              && !!document.querySelector('.lec-pane.active .lec-line-edit') && !document.querySelector('.lec-pane.active .lec-editor')''', 10000)
             memo_text = memo.read_text(encoding='utf-8') if memo.exists() else None
-            cursor = page.evaluate("document.querySelector('.lec-pane.active .lec-editor .CodeMirror')?.CodeMirror.getCursor().line")
-            focused = page.evaluate("!!document.activeElement?.closest('.lec-pane.active .lec-editor')")
+            focused = page.evaluate("!!document.activeElement?.classList.contains('lec-line-edit')")
             in_tree = wait_until(page, "!!document.querySelector('#lec-tree .row[data-doc=\"data/메모.md\"]')", 10000)
-            page.keyboard.press('Escape')   # 고치지 않았으니 묻지 않고 닫힌다
-            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.keyboard.press('Escape')   # 쓴 글이 없으니 새 줄을 걷는다
+            wait_until(page, "!document.querySelector('.lec-pane.active .lec-line-edit')", 3000)
             page.keyboard.press('Control+n')
-            page.wait_for_selector('#lec-insert:not([hidden])')
-            ctrl_n = [page.text_content('#lec-insert-title'), page.input_value('#lec-insert-input')]
+            page.wait_for_selector('#lec-newdoc:not([hidden])')
+            ctrl_n = [page.text_content('#lec-newdoc-head'), page.input_value('#lec-newdoc-title')]
             page.keyboard.type('메모')
             page.keyboard.press('Enter')   # 같은 이름 — 만들지 않고 까닭을 보인다
-            dup = wait_until(page, "!document.querySelector('#lec-insert-msg').hidden && document.querySelector('#lec-insert-msg').classList.contains('bad')", 5000)
+            dup = wait_until(page, "!document.querySelector('#lec-newdoc-msg').hidden", 5000)
             page.keyboard.press('Escape')
-            closed_pick = wait_until(page, "document.querySelector('#lec-insert').hidden", 2000)
+            closed_pick = wait_until(page, "document.querySelector('#lec-newdoc').hidden", 2000)
             page.click('#lec-doctab-new')
             page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li.new-doc')
             first_new = page.evaluate("document.querySelector('#lec-palette-list li[data-i]')?.classList.contains('new-doc')")
             page.click('#lec-palette-list li.new-doc')
-            plus_pick = wait_until(page, "!document.querySelector('#lec-insert').hidden && document.querySelector('#lec-insert-title').textContent === '새 문서 만들기'", 3000)
+            plus_pick = wait_until(page, "!document.querySelector('#lec-newdoc').hidden", 3000)
             page.keyboard.press('Escape')
             page.keyboard.press('Control+p')
             page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li[data-i]')
             plain_palette = page.locator('#lec-palette-list li.new-doc').count() == 0
             page.keyboard.press('Escape')
-            check(guess == 'data/새 문서.md' and on_memo and memo_text == '# 메모\n\n' and cursor == 2 and focused and in_tree
-                  and ctrl_n == ['새 문서 만들기', 'data/새 문서.md'] and dup and closed_pick and first_new and plus_pick and plain_palette,
+            check(guess == ['새 문서', '위치: data/'] and on_memo and memo_text == '# 메모\n\n' and focused and in_tree
+                  and ctrl_n == ['새 문서 만들기', '새 문서'] and dup and closed_pick and first_new and plus_pick and plain_palette,
                   f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {cursor}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')
 

@@ -213,8 +213,11 @@ export function pathMenuItems(path, isDoc) {
 /** 파일 우클릭의 이름 바꾸기 (D66 — rename.js): 같은 폴더 안에서 이름만. F2 도 (트리·'코드'·'자료' 목록·최근 변경·검색) */
 export const renameItem = (path) => ({ label: t('이름 바꾸기…'), hint: 'F2', action: () => emit('rename', { path }) });
 
-/** 폴더 우클릭의 새로 만들기 (D65): 이 폴더에 새 문서 — 경로를 정하면 바로 만들어 새 탭에서 편집 */
-export const newDocItem = (dir) => ({ label: t('이 폴더에 새 문서…'), action: () => emit('new-doc', { dir }) });
+/** 문서 삭제 (D104 — deletedoc.js): 이 트리의 문서만. 코드·자료 목록과 최근 변경·검색에는 넣지 않는다 */
+const deleteItem = (path) => ({ label: t('문서 삭제…'), tip: t('휴지통으로 보냅니다'), action: () => emit('delete-doc', { path }) });
+
+/** 우클릭의 새로 만들기 (D65·D105): 이 폴더에 새 문서 — 제목과 스타일을 묻고 만들어 바로 쓴다 */
+export const newDocItem = (dir) => ({ label: t('새 문서 만들기…'), hint: 'Ctrl+N', action: () => emit('new-doc', { dir }) });
 
 /** 문서를 Lectern 슬라이드로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
 function slideRequest(path) {
@@ -240,9 +243,16 @@ export function docMenuItems(path, type = 'doc') {
 
 function onContextMenu(e) {
   const row = e.target.closest('.row');
-  if (!row) return;
   e.preventDefault();
-  if (row.dataset.doc != null) showMenu(e.clientX, e.clientY, docMenuItems(row.dataset.doc));
+  if (!row) {   // 목록의 빈 곳
+    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem('')]);
+    return;
+  }
+  if (row.dataset.doc != null) {
+    const path = row.dataset.doc;
+    const items = docMenuItems(path);
+    showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), deleteItem(path)]);
+  }
   else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 

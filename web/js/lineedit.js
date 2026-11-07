@@ -205,7 +205,7 @@ function caretIn(ranges, bodies, at) {
 }
 
 /** 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳), offset: 커서를 둘 글 안의 자리 */
-async function begin(line, { cell = 0, at = null, offset = null } = {}) {
+async function begin(line, { cell = 0, at = null, offset = null, select = false } = {}) {
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
@@ -285,8 +285,8 @@ async function begin(line, { cell = 0, at = null, offset = null } = {}) {
   pane.lineEdit = session;
   for (const p of places) bind(p.span);
   document.addEventListener('mousedown', onOutside, true);
-  focusPlace(session.cell);
-  const spot = caret ?? (offset != null ? { cell: session.cell, offset } : null);
+  focusPlace(session.cell, !select);
+  const spot = select ? null : caret ?? (offset != null ? { cell: session.cell, offset } : null);
   const text = spot && places[spot.cell].span.firstChild;
   if (text) getSelection().collapse(text, Math.min(spot.offset, text.length));
   showLineEdit();
@@ -1158,6 +1158,11 @@ export const redoLineEdit = () => walk(false);
 
 export function initLineEdit() {
   on('line-edit', (unit) => begin(lineOf(unit)));
+  on('line-open', ({ line, below = false, select = false }) => {   // 새 문서를 열면 바로 쓴다 (newdoc.js, D105)
+    followLine(line);
+    if (below) beginNew(line, true);
+    else begin(line, { select });
+  });
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });

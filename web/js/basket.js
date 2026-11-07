@@ -9,7 +9,6 @@
 // - 보낼 곳 고르기 창(#lec-insert): 받는 곳은 편집 중인 곳(커서)·새 문서·문서 탭에 열린 문서뿐 (D65) → 자리(맨 끝·맨 앞·절 끝).
 //   새 문서는 경로를 적으면 바로 만든다 (newdoc.js — '# 제목' 한 줄). 보내는 것은 editor.js 의 insertIntoDoc — 그 문서를 편집 모드로 열어
 //   넣고, 저장은 사용자가 한다(Ctrl+S). 다듬는 것(경로·각주·제목 수준·담은 곳 주석)은 snippet.js.
-// - 새로 만들기(askNewDoc — 문서 탭 줄의 +·Ctrl+N·폴더 우클릭)도 이 창의 '새 문서' 단계를 쓴다.
 
 import { S, on, emit } from './store.js';
 import { getText } from './api.js';
@@ -18,7 +17,7 @@ import { openTarget, openDocs } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
-import { newDocGuess, cleanPath, createDoc, openCreated } from './newdoc.js';
+import { newDocGuess, cleanPath, createDoc } from './newdoc.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
 import { t } from './i18n.js';
@@ -168,18 +167,6 @@ export function sendSnippets(snips) {
   showStep();
 }
 
-/** 새로 만들기 (D65 — 문서 탭 줄의 +·Ctrl+N·폴더 우클릭): 경로를 묻고 바로 만들어 새 문서 탭에서 편집 모드로. dir: 처음 값의 폴더 (없으면 지금 문서의) */
-export function askNewDoc(dir = null) {
-  if (!S.tab) {
-    toast(t('먼저 폴더를 여세요'));
-    return;
-  }
-  if (blockedReadOnly(S.tab)) return;
-  Object.assign(pick, { snips: [], step: 'new', doc: null });
-  box().hidden = false;
-  showStep(newDocGuess(dir));
-}
-
 function closePick() {
   if (box().hidden) return false;
   box().hidden = true;
@@ -250,7 +237,7 @@ function update() {
   const query = input().value;
   if (pick.step === 'target') pick.items = targetItems(query);
   else if (pick.step === 'place') pick.items = placeItems(query);
-  else pick.items = [...(pick.snips.length ? [] : [{ type: 'create', deck: true, label: t('이 경로로 새 Lectern 슬라이드'), sub: t('슬라이드 — 머리 설정과 표지 한 장으로 만듭니다') }]), { type: 'create', label: t('Enter — 이 경로로 새 문서'), sub: t('바로 만듭니다 — 이미 있는 폴더에만, 같은 이름이 있으면 만들지 않습니다') }];
+  else pick.items = [{ type: 'create', label: t('Enter — 이 경로로 새 문서'), sub: t('바로 만듭니다 — 이미 있는 폴더에만, 같은 이름이 있으면 만들지 않습니다') }];
   pick.sel = pick.step === 'new' ? pick.items.length - 1 : 0;   // 새로 만들기는 보통 문서가 Enter
   renderPick();
 }
@@ -303,25 +290,15 @@ async function choose(i) {
   } else if (it.type === 'create') {
     const path = cleanPath(input().value);
     if (!path) return;
-    const template = it.deck ? await new Promise((resolve) => { emit('pick-template', { title: t('첫 장의 템플릿을 고르세요'), resolve }); }) : null;
-    if (it.deck && !template) {   // 취소 — 경로를 고쳐 다시 고를 수 있게
-      input().focus();
-      return;
-    }
     let made;
     try {
-      made = await createDoc(path, { deck: !!it.deck, template });
+      made = await createDoc(path);
     } catch (e) {   // 없는 폴더·같은 이름·쓸 수 없는 이름 — 고쳐서 다시 Enter
       if (!box().hidden && pick.step === 'new') setMsg(e.message, true);
       return;
     }
     closePick();
-    if (snips.length) {   // 새 문서로 보내기 — 제목 아래에 (## 로)
-      perform(snips, { path: made, place: { at: 'end' } });
-    } else {
-      toast(t('새 문서를 만들었습니다: {path}', { path: made }));
-      openCreated(made, { deck: !!it.deck });
-    }
+    perform(snips, { path: made, place: { at: 'end' } });   // 새 문서로 보내기 — 제목 아래에 (## 로)
   }
 }
 
@@ -440,7 +417,6 @@ export function initBasket() {
     render();
   });
   on('editor', render);   // 편집을 열고 닫으면 항목의 '보내기'
-  on('new-doc', ({ dir }) => askNewDoc(dir));   // 폴더 우클릭 '이 폴더에 새 문서…' (tree·others)
   render();
 }
 

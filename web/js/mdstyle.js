@@ -34,6 +34,17 @@ export function canStyle() {
 
 const row = (id, kind, name) => ({ id, kind, name, use: USES()[kind][id] || '', sub: id === 'plain' ? t('개요 · 시장 현황') : sample(id) });
 
+/** 새 문서 창의 묶음 (newdialog.js, D105): 최근 쓴 것, 서술식, 개조식, 내 스타일. [[머리말, 줄들]] */
+export function styleGroups(mine, recentIds) {
+  const names = BASE_NAMES();
+  const prose = STYLES.prose.map((id) => row(id, 'prose', names[id]));
+  const outline = STYLES.outline.filter((id) => !STYLES.prose.includes(id)).map((id) => row(id, 'outline', names[id]));
+  const own = mine.map((x) => row(`own:${x.name}`, x.kind, x.name));
+  const all = [...prose, ...outline, ...own];
+  const recent = recentIds.map((id) => all.find((r) => r.id === id)).filter(Boolean).slice(0, RECENT);
+  return [[t('최근 쓴 것'), recent], [t('서술식'), prose], [t('개조식'), outline], [t('내 스타일'), own]].filter(([, rows]) => rows.length);
+}
+
 /** 고를 수 있는 모든 줄. 찾을 때는 두 방식을 함께 본다 */
 function rowsOf(kind) {
   const names = BASE_NAMES();

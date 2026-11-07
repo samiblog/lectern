@@ -39,8 +39,10 @@ import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, focusTerminal } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
-import { initBasket, closeInsert, askNewDoc } from './basket.js';
+import { initBasket, closeInsert } from './basket.js';
+import { initNewDialog, askNewDocument, closeNewDocument } from './newdialog.js';
 import { initRename, closeRename } from './rename.js';
+import { initDeleteDoc, closeDelete } from './deletedoc.js';
 import { initGallery, closeGallery } from './slidegallery.js';
 import { initPptx, closePptx } from './pptxdialog.js';
 import { initMdStyle, closeMdStyle } from './mdstyle.js';
@@ -248,7 +250,7 @@ function bindKeys() {
     }
     if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
       e.preventDefault();
-      askNewDoc();
+      askNewDocument();
     } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95)
       e.preventDefault();
       moveToWindow();
@@ -335,7 +337,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -413,6 +415,8 @@ async function boot() {
   initNotes();
   initBasket();
   initRename();
+  initDeleteDoc();
+  initNewDialog();
   initGallery();
   initPptx();
   initMdStyle();

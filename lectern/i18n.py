@@ -160,4 +160,11 @@ EN: dict[str, str] = {
         'Settings will not be saved until the file is fixed: {path}',
     # app.py
     '폴더를 열 수 없습니다: {error}': 'Cannot open the folder: {error}',
+    '이 컴퓨터에서는 휴지통으로 보낼 수 없습니다 — 파일은 그대로입니다': 'This computer has no Recycle Bin to send it to — the file is unchanged.',
+    '이 드라이브에는 휴지통이 없어 지우지 않았습니다 — 탐색기에서 지우세요': 'This drive has no Recycle Bin, so nothing was deleted — delete it in File Explorer.',
+    '휴지통으로 보내지 못했습니다: {error}': 'Could not send it to the Recycle Bin: {error}',
+    '지우기를 그만두었습니다 — 파일은 그대로입니다': 'Delete was cancelled — the file is unchanged.',
+    '휴지통으로 보내지 못했습니다 — 다른 프로그램이 이 파일을 쓰고 있으면 그 프로그램에서 닫은 뒤 다시 하세요': 'Could not send it to the Recycle Bin — if another program is using this file, close it there and try again.',
+    '문서만 지웁니다 — 코드와 자료는 지우지 않습니다': 'Only documents can be deleted — code and other files are not.',
+    '제외 폴더 안의 문서는 지우지 않습니다': 'Documents inside an excluded folder are not deleted.',
 }

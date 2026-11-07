@@ -593,6 +593,21 @@ def create_app(state: AppState) -> Flask:
         state.board.renamed(data.get('p'), rel, path)
         return jsonify(path=path)
 
+    @app.post('/api/delete-doc')
+    def api_delete_doc() -> Any:
+        """{p, path} — 문서 하나를 휴지통으로 (D104 — 문서만, 코드와 자료는 400). 휴지통이 없는 드라이브·다른 프로그램이 쓰면 409"""
+        data = body()
+        rel = data.get('path')
+        if not isinstance(rel, str):
+            abort(400)
+        project = project_of(data.get('p'))
+        try:
+            editing.delete_doc(project.root, rel, project.exclude, project.html_exclude)
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        state.board.deleted(data.get('p'), rel)
+        return jsonify(ok=True)
+
     @app.post('/api/editing')
     def api_editing() -> Any:
         """{dirty: [경로…]} — 저장하지 않은 편집이 있는 파일. 창을 닫을 때 묻는 데 쓴다 (app.py)"""

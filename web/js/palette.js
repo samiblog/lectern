@@ -5,7 +5,6 @@
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
-import { askNewDoc } from './basket.js';
 import { fileIcon } from './icons.js';
 import { html, setHtml } from './html.js';
 import { $, timeAgo, middleClickOpens, openHow } from './util.js';
@@ -90,7 +89,7 @@ function choose(i, e) {
   if (!f) return;
   closePalette();
   if (f.goto) emit('go-line', { line: f.goto });
-  else if (f.newDoc) askNewDoc();   // 새로 만들기 (D65)
+  else if (f.newDoc) emit('new-doc', {});   // 새로 만들기 (D65)
   else emit('open', { type: f.code ? 'code' : 'doc', path: f.path, ...openHow(e), force: asNewTab });
 }
 

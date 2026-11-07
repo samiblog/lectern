@@ -158,6 +158,7 @@
         <section id="lec-docs" class="side-sec" aria-label="문서">
           <button type="button" id="lec-docs-head" class="side-head" aria-expanded="true" title="문서 목록 펼치기/접기 (Markdown·HTML 문서)">
             <span class="caret open" aria-hidden="true"></span><span>문서</span><span id="lec-docs-count" class="n"></span></button>
+          <button type="button" id="lec-docs-new" class="side-new" title="새 문서 만들기 (Ctrl+N)">만들기</button>
           <nav id="lec-tree" class="side-list" aria-label="문서"></nav>
         </section>
         <div id="lec-code-split" class="side-split" role="separator" aria-orientation="horizontal" title="끌어서 높이 조절 (두 번 누르면 기본 높이)"></div>
@@ -346,6 +347,33 @@
     <input id="lec-rename-input" type="text" spellcheck="false" autocomplete="off" aria-label="새 이름">
     <p id="lec-rename-msg" class="insert-msg" role="alert" hidden></p>
     <p class="insert-msg rename-keys">Enter — 바꾸기 · Esc — 그대로 두기</p>
+  </div>
+</div>
+<!-- 새 문서 만들기 (newdialog.js, D105): 제목과 스타일을 정해 선택된 폴더에 -->
+<div id="lec-newdoc" class="overlay" hidden>
+  <div class="palette-box insert-box mdstyle-box" role="dialog" aria-labelledby="lec-newdoc-head">
+    <div class="gallery-head"><span id="lec-newdoc-head">새 문서 만들기</span><span id="lec-newdoc-where" class="gallery-keys"></span></div>
+    <div class="newdoc-title"><label for="lec-newdoc-title">제목</label><input id="lec-newdoc-title" type="text" spellcheck="false" autocomplete="off"></div>
+    <p id="lec-newdoc-msg" class="insert-msg bad" role="alert" hidden></p>
+    <div class="mdstyle-kinds"><span>종류</span><button id="lec-newdoc-md" type="button">md 문서</button><button id="lec-newdoc-deck" type="button">Lectern 슬라이드</button></div>
+    <div id="lec-newdoc-styles" class="mdstyle-body">
+      <ul id="lec-newdoc-list" role="listbox" aria-label="스타일"></ul>
+      <ul id="lec-newdoc-preview" aria-label="미리보기"></ul>
+    </div>
+    <p id="lec-newdoc-note" class="insert-msg" hidden>만들기를 누르면 첫 장의 템플릿을 고릅니다.</p>
+    <div class="gallery-foot"><span class="gallery-keys">↑·↓ 스타일 · Enter 만들기 · Esc 그만두기</span><button id="lec-newdoc-go" type="button" class="primary">만들기</button><button id="lec-newdoc-no" type="button">그만두기</button></div>
+  </div>
+</div>
+<!-- 문서 삭제 (deletedoc.js, D104): 트리의 문서 하나를 휴지통으로 — 늘 묻는다 -->
+<div id="lec-delete" class="overlay" hidden>
+  <div class="palette-box insert-box" role="alertdialog" aria-labelledby="lec-delete-title" aria-describedby="lec-delete-text">
+    <div id="lec-delete-title" class="insert-title"></div>
+    <p id="lec-delete-text" class="insert-msg">휴지통으로 보냅니다. 휴지통에서 되살릴 수 있습니다. 다른 문서 속 이 문서의 링크는 끊어집니다.</p>
+    <p id="lec-delete-msg" class="insert-msg bad" role="alert" hidden></p>
+    <div class="delete-actions">
+      <button id="lec-delete-yes" type="button" class="danger">휴지통으로 보내기</button>
+      <button id="lec-delete-no" type="button">그만두기</button>
+    </div>
   </div>
 </div>
 <div id="lec-settings" class="overlay" hidden>

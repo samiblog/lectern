@@ -17,7 +17,7 @@ RAW_USES = {'slidegallery': 1, 'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 
 ESC_USES = {'codeview', 'help'}
 # 이미 있는 import 순환. 풀면 여기서 지운다 — 새로 생기거나 커지면 test_no_new_import_cycle 이 실패한다 (D88)
 KNOWN_CYCLES = [
-    {'basket', 'codeview', 'csvview', 'doc', 'docmenu', 'doctabs', 'editor', 'htmldoc', 'lineedit', 'nav', 'newdoc', 'palette'},
+    {'basket', 'codeview', 'csvview', 'doc', 'docmenu', 'doctabs', 'editor', 'htmldoc', 'lineedit', 'nav', 'newdoc', },
     {'gather', 'tabs'},
 ]
 

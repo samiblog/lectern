@@ -496,6 +496,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   border: 0; background: none; color: var(--ui-muted); font-size: 12px; font-weight: 700; text-align: left;
 }
 .side-head:hover { color: var(--ui-fg); }
+#lec-docs { position: relative; }
+.side-new { position: absolute; top: 3px; right: 34px; height: 22px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 5px; background: var(--ui-bg); color: var(--ui-muted); font-size: 11.5px; font-weight: 600; cursor: pointer; }   /* 새 문서 만들기 (newdialog.js, D105) */
+.side-new:hover { color: var(--ui-fg); border-color: var(--ui-accent); }
 .side-head .n { margin-left: auto; color: var(--ui-faint); font-weight: 400; font-variant-numeric: tabular-nums; }
 /* 탐색기처럼 (파일·코드 목록): 누르면 고른 행(포커스가 목록에 있으면 짙게) */
 .explorer .row:focus { outline: none; }
@@ -868,18 +871,24 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .mdstyle-body { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: 240px; border-top: 1px solid var(--ui-border); }
 #lec-mdstyle-find { width: 190px; height: 28px; padding: 0 9px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: inherit; font-size: 13px; font-weight: 400; outline: none; }
 #lec-mdstyle-find:focus { border-color: var(--ui-accent); }
-#lec-mdstyle-list { list-style: none; margin: 0; padding: 6px; border-right: 1px solid var(--ui-border); outline: none; max-height: 46vh; overflow: auto; }
-#lec-mdstyle-list li.head { padding: 8px 10px 3px; color: var(--ui-faint); font-size: 11.5px; font-weight: 650; cursor: default; }
+#lec-mdstyle-list, #lec-newdoc-list { list-style: none; margin: 0; padding: 6px; border-right: 1px solid var(--ui-border); outline: none; max-height: 46vh; overflow: auto; }
+#lec-mdstyle-list li, #lec-newdoc-list li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
+#lec-mdstyle-list li.head, #lec-newdoc-list li.head { padding: 8px 10px 3px; color: var(--ui-faint); font-size: 11.5px; font-weight: 650; cursor: default; }
 #lec-mdstyle-list li.none { padding: 18px 10px; color: var(--ui-faint); cursor: default; }
-#lec-mdstyle-list li { padding: 8px 10px; border-radius: 6px; cursor: pointer; }
-#lec-mdstyle-list li.sel { background: var(--ui-active-bg); }
-#lec-mdstyle-list .t { display: block; font-weight: 600; }
-#lec-mdstyle-list .t em { color: var(--ui-muted); font-style: normal; font-size: 12px; font-weight: 400; margin-left: 4px; }
+#lec-mdstyle-list li.sel, #lec-newdoc-list li.sel { background: var(--ui-active-bg); }
+#lec-mdstyle-list .t, #lec-newdoc-list .t { display: block; font-weight: 600; }
+#lec-mdstyle-list .t em, #lec-newdoc-list .t em { color: var(--ui-muted); font-style: normal; font-size: 12px; font-weight: 400; margin-left: 4px; }
 #lec-mdstyle-list .t i { color: var(--ui-accent); font-style: normal; font-size: 12px; font-weight: 500; margin-left: 4px; }
-#lec-mdstyle-list .p { display: block; color: var(--ui-muted); font-size: 12px; white-space: pre; }
-#lec-mdstyle-preview { list-style: none; margin: 0; padding: 12px 16px; max-height: 44vh; overflow: auto; font-size: 13.5px; }
-#lec-mdstyle-preview li { padding: 3px 0 3px calc(var(--d, 0) * 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lec-mdstyle-list .p, #lec-newdoc-list .p { display: block; color: var(--ui-muted); font-size: 12px; white-space: pre; }
+#lec-mdstyle-preview, #lec-newdoc-preview { list-style: none; margin: 0; padding: 12px 16px; max-height: 44vh; overflow: auto; font-size: 13.5px; }
+#lec-mdstyle-preview li, #lec-newdoc-preview li { padding: 3px 0 3px calc(var(--d, 0) * 18px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lec-mdstyle-preview li.none { color: var(--ui-faint); }
+#lec-newdoc-preview li.doc { padding-bottom: 8px; font-size: 16px; font-weight: 700; }
+.newdoc-title { display: flex; align-items: center; gap: 10px; padding: 12px 16px 2px; font-size: 13px; color: var(--ui-muted); }
+#lec-newdoc-title { flex: 1; min-width: 0; height: 34px; padding: 0 10px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: inherit; font-size: 15px; font-weight: 600; }
+#lec-newdoc-title:focus { border-color: var(--ui-accent); outline: none; }
+#lec-newdoc-note { padding: 8px 16px 14px; }
+#lec-newdoc .gallery-foot .gallery-keys { margin-right: auto; }
 #lec-mdstyle-question { padding: 14px 16px; font-size: 14px; }
 
 /* 보낼 곳 고르기 (basket.js, D63·D65): 머리말(무엇을 — 어디에), 입력(거르기·새 문서 경로), 알림, 목록 (끝의 안내 줄은 고를 수 없다) */
@@ -889,6 +898,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .insert-msg.bad { color: var(--ui-danger); font-weight: 600; }
 #lec-insert-list .ins-new .t, #lec-insert-list .ins-cursor .t, #lec-insert-list .ins-create .t { color: var(--ui-accent); }
 #lec-insert-list .ins-back .t { color: var(--ui-muted); font-weight: 500; }
+.delete-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; }   /* 문서 삭제 (deletedoc.js, D104) */
+.delete-actions button { height: 32px; padding: 0 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-text); font: inherit; }
+.delete-actions button.danger { border-color: var(--ui-danger); color: var(--ui-danger); font-weight: 600; }
 .insert-msg.rename-keys { padding: 6px 16px 12px; color: var(--ui-faint); font-size: 12px; }   /* 이름 바꾸기 (rename.js, D66) */
 #lec-insert-list li.note { display: block; margin-top: 4px; padding: 8px 10px 4px; border-top: 1px solid var(--ui-border); border-radius: 0;
   color: var(--ui-faint); font-size: 12px; cursor: default; }

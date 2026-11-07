@@ -17,6 +17,8 @@
 //   open-window      문서를 독립창에서 엶 {type, path, hash?, line?} (tree·docmenu → doctabs, D95)
 //   window-news      다른 창들과 받은 문서 {windows?, inbox?} (watch → doctabs, D95)
 //   file-renamed     다른 창에서 바뀐 이름 {tab, path, to} (doctabs → rename, D96)
+//   file-deleted     다른 창에서 지운 문서 {tab, path} (doctabs → deletedoc, D104)
+//   delete-doc       트리의 우클릭 '문서 삭제…' {path} (tree → deletedoc, D104)
 //   refresh-auto     감시가 알린 칸(pane) — 글이 같으면 그대로, 끄는 중이면 놓을 때 (watch → nav, D94)
 //   rendered         칸(pane)의 문서/개요 렌더링 완료                     (doc·htmldoc·overview → find·spotlight·position)
 //   synced           변경 확인 주기 완료                                  (watch → status)

@@ -3,7 +3,7 @@
 보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드 파일만.
 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — create_source: 사용자의 '새로 만들기'·'새 문서로 보내기'에서 경로를 정할 때,
 프로젝트 안의 이미 있는 폴더에, 같은 이름이 있으면 만들지 않는다). 파일 이름 바꾸기는 사이드바에서 고른 파일 하나를 같은 폴더 안에서만
-(D66 — rename_file). 지우기·옮기기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
+(D66 — rename_file). 문서 삭제는 휴지통으로만 (D104 — delete_doc). 옮기기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
 - 원문의 줄바꿈(CRLF/LF)과 BOM 은 저장할 때 그 파일의 것을 되살린다 (편집기는 LF 로만 다룬다). 섞여 있으면 많은 쪽으로.
 - 그사이 다른 곳(Claude Code 등)이 고쳤으면 덮어쓰지 않는다 — 원문을 줄 때의 내용(SHA-256)과 지금 파일의 내용을 맞춰 보고
   다르면 409. 수정 시각·크기만으로는 같은 순간에 같은 크기로 바뀐 것을 놓친다. 화면이 물어서 덮어쓰기로 하면 force.
@@ -22,7 +22,7 @@ import time
 from pathlib import Path
 from typing import Any
 
-from . import paths
+from . import paths, trash
 from .docinfo import WINDOWS_TEXT_EXT
 from .i18n import t
 from .scanner import doc_kind, is_code, resolve_inside
@@ -216,6 +216,28 @@ def create_source(path: Path, text: str) -> dict[str, Any]:
     except OSError as exc:
         raise EditError(500, t('새 문서를 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
     return {'hash': _digest(data), 'size': len(data)}
+
+
+def delete_doc(root: Path, rel: str, exclude: frozenset[str], html_exclude: frozenset[str]) -> None:
+    """문서 하나를 휴지통으로 보낸다 (D104 — 사이드바 '문서' 목록의 우클릭). 트리에 나오는 문서만: 코드와 자료, 제외 폴더,
+    링크, 숨김, 프로그램 폴더 안은 받지 않는다. 되살릴 수 없게 지우는 길은 없다 (trash.py). 안 되면 EditError — 파일은 그대로다"""
+    parts = rel.replace('\\', '/').strip('/').split('/')
+    if any(p in ('', '.', '..') for p in parts):
+        raise EditError(400, t('파일 경로가 올바르지 않습니다'))
+    folders = [f.lower() for f in parts[:-1]]
+    kind = doc_kind(parts[-1])
+    if not kind or (kind == 'html' and any(f in html_exclude for f in folders)):
+        raise EditError(400, t('문서만 지웁니다 — 코드와 자료는 지우지 않습니다'))
+    if any(f in exclude for f in folders):
+        raise EditError(400, t('제외 폴더 안의 문서는 지우지 않습니다'))
+    source = resolve_inside(root, '/'.join(parts))
+    if source is None or not source.is_file() or os.path.normcase(source) != os.path.normcase(os.path.join(root, *parts)):
+        raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
+    _protect(source)
+    try:
+        trash.send(source)
+    except trash.TrashError as exc:
+        raise EditError(409, exc.message) from exc
 
 
 def rename_file(root: Path, rel: str, name: str, exclude: frozenset[str]) -> Path:
