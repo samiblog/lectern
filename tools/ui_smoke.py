@@ -2493,7 +2493,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
             boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
-            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'external_images=false',
+            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'vi_keys=false', 'external_images=false',
                                                    'terminal_follow_style=true'],
                   f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
             shot('07-settings')

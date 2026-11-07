@@ -314,7 +314,7 @@ On an empty line, press **/** to open the insert box. Type to filter. On a line 
 - **Attachments**: pick a project file and it is added with a number and a link to the `## Attachments` section at the end (before the notes), which is created if needed. The file is not copied.
 - **Appendix**: adds `## Appendix A. Title` with the next letter. It stays out of the body numbering.
 - **Cross-reference**: pick a table or figure caption, or a section, to insert a link like `[Table 3](#table-3)`. Clicking it jumps there. In the middle of a sentence, open it with **Ctrl+Shift+/**.
-- **Citation**: pick a source from the list under `## References` (or `## 참고문헌`) to insert `(Kim & Lee, 2024)`. The window shows how often each source is cited and how many are not cited yet. Ask Claude to format the list (APA and so on).
+- **Citation**: pick a source from the list under `## References` (or the Korean heading for references) to insert `(Kim & Lee, 2024)`. The window shows how often each source is cited and how many are not cited yet. Ask Claude to format the list (APA and so on).
 - **Contents, list of tables, list of figures**: a `[TOC]` line draws a table of contents of the headings in its place (without the document title, three levels deep). The lists of tables and figures collect numbered captions. They are for printing and PDF; the contents on the right stays as it is.
 - **Page break**: shows as a dashed line with 'Page break' on screen and starts a new page when printed. Other viewers don't show it.
 
@@ -544,7 +544,7 @@ More examples are in `skills\README.md` in the program folder. The guide Claude 
 
 ### Samples
 
-`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read the guide `guide/09-Lectern-슬라이드.md` before it (in Korean) — the content of the slide samples written out as a detailed plain md document, ending with links to the samples. Then go through them in this order.
+`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read guide 09 in the `guide` folder before it (in Korean) — the content of the slide samples written out as a detailed plain md document, ending with links to the samples. Then go through them in this order.
 
 | Order | Folder | What |
 |---|---|---|
