@@ -1,6 +1,6 @@
 # Lectern — Claude Code 작업 지침
 
-Lectern(렉턴, 독서대)은 Markdown 파일을 중심으로 사람과 AI가 함께 리서치하는 Windows용 로컬 통합 작업 환경(Integrated Research Work Environment)을 지향한다. 장기 지향점은 마름모형 리서치 방법의 구조화이고 지금은 구현하지 않는다 (`docs/VISION.md`, D87). 지금의 중심은 Claude Code·Claude가 프로젝트 폴더에 만든 문서와 자료를 **기계가 아닌 사람이** 읽고 살피고 그 자리에서 고치는 것이다.
+Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경(Integrated Research Work Environment)을 지향한다. 지금은 Windows용 로컬 앱이다. 장기 지향점은 마름모형 리서치 방법의 구조화이고 지금은 구현하지 않는다 (`docs/VISION.md`, D87). 지금의 중심은 Claude Code·Claude가 프로젝트 폴더에 만든 문서와 자료를 **기계가 아닌 사람이** 읽고 살피고 그 자리에서 고치는 것이다.
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 

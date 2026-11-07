@@ -1,12 +1,12 @@
 # Lectern (렉턴)
 
-Lectern(렉턴, 독서대)은 Markdown 파일을 중심으로 **사람과 AI가 함께 리서치하는** Windows용 로컬 작업 환경을 지향합니다 ([방향](docs/VISION.md)). 지금은 Claude Code나 Claude가 프로젝트 폴더에 만든 문서와 자료를 읽고, 살피고, 그 자리에서 고칠 수 있습니다.
+Lectern(렉턴, 독서대)은 Markdown을 중심으로 **AI와 함께 작업하는 통합 리서치 작업 환경**(Integrated Research Work Environment)을 지향합니다 ([방향](docs/VISION.md)). 지금은 Windows용 로컬 앱으로, Claude Code나 Claude가 프로젝트 폴더에 만든 문서와 자료를 읽고, 살피고, 그 자리에서 고칠 수 있습니다.
 읽기가 중심이라 문서는 편집 모드에서 직접 저장할 때만 고치고, 스스로 인터넷에 연결하지 않으며(문서 속 인터넷 그림만 예외, 설정으로 끌 수 있음), 고른 프로젝트 폴더 안만 봅니다.
 Markdown과 HTML 문서를 봅니다. HTML 문서는 보기만 하고 스크립트는 돌리지 않습니다.
 
 ![문서 화면](docs/images/doc.png)
 
-> **English**: Lectern aims to be a local, Markdown-centred research workspace where people and AI work together. Today it is a Windows app for reading, exploring and editing in place the documents and data that Claude Code writes into a project folder. Its interface is available in English — it follows the Windows display language, or choose **Settings (Ctrl+,) → Language → English**. Press **F1** in the app for the English user guide. Download the installer from [Releases](https://github.com/samiblog/lectern/releases/latest). MIT licensed.
+> **English**: Lectern aims to be an Integrated Research Work Environment centred on Markdown, where you work together with AI. Today it is a local Windows app for reading, exploring and editing in place the documents and data that Claude Code writes into a project folder. Its interface is available in English — it follows the Windows display language, or choose **Settings (Ctrl+,) → Language → English**. Press **F1** in the app for the English user guide. Download the installer from [Releases](https://github.com/samiblog/lectern/releases/latest). MIT licensed.
 
 ## 내려받기
 

@@ -1,6 +1,6 @@
 # Lectern 의 방향
 
-Lectern 은 Markdown 파일을 중심으로 사람과 AI가 함께 리서치하는 로컬 통합 작업 환경(Integrated Research Work Environment)을 지향한다.
+Lectern은 Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경(Integrated Research Work Environment)을 지향한다. 지금은 Windows용 로컬 앱이다.
 
 - 정한 날: 2026-11-05
 - 장기 지향점: 마름모형 리서치 방법을 구조화한다. **지금 구현하지 않는다.**
