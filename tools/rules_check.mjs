@@ -47,6 +47,10 @@ const notes = await load('web/js/notesdata.js');
   say('md 문서 스타일 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/chartops_cases.js', await load('web/js/chartops.js'));
+  say('차트 값 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/docops_cases.js', await load('web/js/docops.js'));
   say('문서 구성 요소 표 점검', r.fails, r.n);
 }

@@ -160,4 +160,59 @@ eq(setFrontKey(L('# 글'), 'pptxStyle', '회사').join('\n'), '# 글', '맨 앞 
 // Lectern 슬라이드가 아니면 ::: 는 보통 글이다
 const pl = L('# 글\n\n::: a\n첫 글\n:::\n');
 eq(moveLines(pl, 4, 4, 1).lines, L('# 글\n\n::: a\n:::\n첫 글\n'), '보통 문서의 ::: 는 글');
+// 칸 다루기 (D116)
+{
+  const { cellAt, cellsOf, setCellLook, swapCell, clearCell, splitCell, noteOf, setNote, setImageWidth, imageWidth } = m;
+  const D = '---\nmarp: true\n---\n\n<!-- layout: two -->\n\n## 제목\n\n::: a\n가\n나\n:::\n\n::: b card center\n다\n:::\n\n---\n\n## 끝\n';
+  const span = [4, 17];
+  eq(cellAt(L(D), 10), { head: 9, end: 12 }, '칸 안의 줄');
+  eq(cellAt(L(D), 9), { head: 9, end: 12 }, '머리 줄');
+  eq(cellAt(L(D), 7), null, '칸 밖의 제목');
+  eq(cellAt(L(D), 20), null, '다른 장');
+  eq(cellsOf(L(D), span), [{ head: 9, end: 12 }, { head: 14, end: 16 }], '장의 칸들');
+  eq(cellAt(L('::: a\n```\n:::\n```\n:::\n'), 2), { head: 1, end: 5 }, '코드 속 ::: 는 칸의 끝이 아니다');
+
+  eq(setCellLook(L(D), 10, 'accent').lines[8], '::: a accent', '꾸밈 넣기');
+  eq(setCellLook(L(D), 15, 'note').lines[13], '::: b note center', '꾸밈 바꾸기 — 나머지 낱말은 남는다');
+  eq(setCellLook(L(D), 15, '').lines[13], '::: b center', '꾸밈 떼기');
+  eq(setCellLook(L(D), 7, 'card'), { error: 'not-cell' }, '칸 밖');
+
+  eq(swapCell(L(D), span, 10, 1).lines.slice(8, 15), ['::: a', '다', ':::', '', '::: b card center', '가', '나'], '뒤 칸과 맞바꾼다');
+  eq(swapCell(L(D), span, 15, -1).lines.slice(8, 15), ['::: a', '다', ':::', '', '::: b card center', '가', '나'], '앞 칸과 맞바꾼다');
+  eq(swapCell(L(D), span, 10, -1), { error: 'edge' }, '첫 칸');
+  eq(swapCell(L(D), span, 15, 1), { error: 'edge' }, '끝 칸');
+  eq(swapCell(L(D), span, 7, 1), { error: 'not-cell' }, '칸 밖에서');
+  eq(swapCell(L(D), span, 10, 1).line, 14, '옮긴 글을 따라간다');
+  eq(swapCell(L(D), span, 15, -1).line, 10, '앞으로 옮긴 글');
+
+  eq(clearCell(L(D), 10).lines.slice(8, 11), ['::: a', ':::', ''], '칸 비우기');
+  eq(clearCell(L(D), 7), { error: 'not-cell' }, '칸 밖');
+
+  const sp = splitCell(L(D), span, 11, '(이어서)');
+  const text = sp.lines.join('\n');
+  eq(text.includes('::: a\n가\n:::'), true, '남는 글');
+  eq(text.includes('## 제목 (이어서)'), true, '새 장의 제목');
+  eq(text.includes('::: a\n나\n:::'), true, '옮긴 글');
+  eq(text.includes('<!-- layout: two -->\n\n## 제목 (이어서)'), true, '같은 배치');
+  eq(text.split('::: b card center').length, 3, '다른 칸도 같은 이름으로');
+  eq(sp.lines[sp.line - 1], '나', '옮긴 글의 첫 줄');
+  eq(sp.lines.join('\n').endsWith('## 끝\n'), true, '뒤 장은 그대로');
+  eq(splitCell(L(D), span, 9, 'x'), { error: 'not-cell' }, '머리 줄에서는 나누지 않는다');
+
+  const N = '## 장\n\n글\n\n<!-- 노트 글 -->\n\n---\n\n## 다음\n';
+  eq(noteOf(L(N), [1, 6]), { n: 5, text: '노트 글' }, '노트 읽기');
+  eq(noteOf(L('<!-- layout: two -->\n<!-- text: 표 14 -->\n'), [1, 2]), null, '지시어는 노트가 아니다');
+  eq(setNote(L(N), [1, 6], '새 글').lines[4], '<!-- 새 글 -->', '노트 고치기');
+  eq(setNote(L(N), [1, 6], '').lines.includes('<!-- 노트 글 -->'), false, '노트 지우기');
+  eq(setNote(L('## 장\n\n글\n'), [1, 3], '처음').lines, L('## 장\n\n글\n\n<!-- 처음 -->\n'), '노트 더하기');
+  eq(setNote(L('## 장\n'), [1, 1], 'a --> b').lines[2], '<!-- a → b -->', '주석을 닫는 글');
+
+  eq(setImageWidth('![설명](a.png)', 300), '![w:300 설명](a.png)', '그림 폭');
+  eq(setImageWidth('![w:200 설명](a.png)', 300), '![w:300 설명](a.png)', '그림 폭 바꾸기');
+  eq(setImageWidth('![](a.png)', 300), '![w:300](a.png)', '설명 없는 그림');
+  eq(setImageWidth('글', 300), null, '그림이 아니다');
+  eq(imageWidth('![w:200 설명](a.png)'), 200, '적힌 폭');
+  eq(imageWidth('![설명](a.png)'), 0, '폭이 없다');
+}
+
 return { n, fails };

@@ -393,7 +393,7 @@ try:
         page.wait_for_timeout(200)
         page.keyboard.press('ArrowDown')
         page.wait_for_timeout(300)
-        check('Lectern 슬라이드는 그대로', cells() == [], cells())
+        check('Lectern 슬라이드는 그 칸에 새 줄', cells() == [''], cells())
         page.keyboard.press('Escape')
 
         print('[줄 종류와 레벨]')

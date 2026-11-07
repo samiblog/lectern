@@ -51,8 +51,12 @@ const BLOCK_ITEMS = () => [
   { id: 'rule', group: t('쪽'), name: t('구분선'), words: '--- rule line' },
 ];
 
+/** 슬라이드에 넣지 않는 것: 각주를 쓰지 않고, 첨부·부록은 문서의 것이고, --- 는 장을 가른다 */
+const NOT_IN_DECK = new Set(['note', 'tablenote', 'attach', 'appendix', 'rule']);
+const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표자 노트'), words: 'speaker note 노트 메모' });   // i18n-ok (찾는 말)
+
 /** 넣을 수 있는 것 */
-export const putItems = () => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS()];
+export const putItems = (deck = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS().filter((x) => !deck || !NOT_IN_DECK.has(x.id)), ...(deck ? [SPEAKER()] : [])];
 /** 줄을 바꿀 수 있는 것 */
 export const changeItems = () => [...TEXT_ITEMS(), ...BOX_ITEMS()];
 

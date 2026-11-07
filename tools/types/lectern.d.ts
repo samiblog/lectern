@@ -61,7 +61,7 @@ declare global {
   /** 문서 칸 (panes.js 의 makePane). 뒤쪽은 다른 모듈이 나중에 붙이는 것 */
   interface Pane {
     /** 펼친 블록 (lineblock.js, D112) */
-    unfold?: { path: string; line?: number; a?: number; front?: boolean } | null;
+    unfold?: { path: string; line?: number; a?: number; b?: number; front?: boolean; raw?: boolean; values?: boolean; focus?: { r: number; c: number }; panel?: HTMLElement | null; refocus?: () => void } | null;
     el: HTMLElement;
     tab: Tab | null;
     scroller: HTMLElement;

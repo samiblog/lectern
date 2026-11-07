@@ -117,7 +117,7 @@ function go(index, scroll = true) {
 /** Ctrl+H: 찾아 바꾸기 — md 문서에서 (D109). 편집할 수 없는 화면이면 false */
 export function openReplace() {
   const view = S.pane?.view;
-  if (!view?.dataset.docPath || !isMd(view.dataset.docPath) || view.classList.contains('lec-deck') || S.tab?.readonly) return false;
+  if (!view?.dataset.docPath || !isMd(view.dataset.docPath) || S.tab?.readonly) return false;
   $('#lec-replace').hidden = false;
   openFind();
   return true;

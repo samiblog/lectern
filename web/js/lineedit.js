@@ -33,6 +33,7 @@ import {
 } from './lineops.js';
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
+  cellAt, setCellLook, swapCell, clearCell, splitCell, noteOf, setNote as setSlideNote, setImageWidth, imageWidth,
 } from './slideops.js';
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
@@ -41,6 +42,7 @@ import {
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
+import { writeValues, setChartKind, chartFromTable } from './chartops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
@@ -63,7 +65,7 @@ let moves = 0;       // 차례를 기다리는 줄 옮기기 — 키를 누르�
 const OPEN_WAIT = 250;
 let firstOnLink = false;   // 두 번 누르기의 첫 누름이 링크 등에 떨어졌는지 — 첫 누르기가 화면을 옮기면 둘째가 다른 곳에 떨어진다
 // 두 번 눌러도 열지 않는 곳: 링크·그림·다이어그램·차트·수식, 머리 정보, 코드 블록의 도구
-const NO_OPEN = 'a, img, svg, input, button, select, textarea, summary, video, .math-block, .katex, pre.mermaid, pre.lec-chart, .diagram-error, .image-off, .front-matter, .code-tools, .lec-line-edit';
+const NO_OPEN = 'a, img, svg, input, button, select, textarea, summary, video, .math-block, .katex, pre.mermaid, pre.lec-chart, .diagram-error, .image-off, .front-matter, .code-tools, .lec-line-edit, .lec-unfold';
 const TASK_BOX = '.task-list-item-checkbox';
 // 할 일 줄의 [ ] — 앞의 인용 >·목록 표시(겹친 것도) 뒤
 const TASK_LINE = /^((?:[ \t]*>[ \t]?|[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+)*\[)([ xX])\]/;
@@ -229,7 +231,8 @@ function caretIn(ranges, bodies, at) {
  * select: true 면 글 전체를, 숫자면 그 자리부터 끝까지 골라 둔다
  * @param {number} line @param {{cell?: number, at?: any, offset?: number | null, select?: boolean | number}} [o]
  */
-async function begin(line, { cell = 0, at = null, offset = null, select = false } = {}) {
+async function begin(line, { cell = 0, at = null, offset = null, select: pick_ = false } = {}) {
+  let select = pick_;
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
@@ -278,6 +281,7 @@ async function begin(line, { cell = 0, at = null, offset = null, select = false 
   const slot = lineSlot(view, line, shown);
   if (!slot) return;
   const original = src.text.split('\n')[line - 1];
+  if (samples && select === false && view.classList.contains('lec-deck') && samples.has(original?.trim())) select = true;   // 고치지 않은 안내 글 — 치면 바뀐다 (D116)
   if (original == null || original !== shown[line - 1]) {   // 화면이 원문보다 늦다 (자동 새로고침 전)
     toast(t('화면이 원문과 달라 다시 그렸습니다 — F2 를 누르면 다시 시작합니다'));
     refreshView(pane);
@@ -331,8 +335,9 @@ function newCell(fill) {
 
 /** 문서 맨 위 블록 — 표·그림·구분선처럼 줄의 자리가 없는 것의 뒤에 새 줄을 놓을 때 */
 function topBlock(view, el) {
+  const stop = el.closest?.('.lec-cell') ?? el.closest?.('.lec-slide') ?? view;   // 슬라이드는 칸·장 안에서
   let top = el;
-  while (top && top.parentElement !== view) top = top.parentElement;
+  while (top && top.parentElement !== stop) top = top.parentElement;
   return top;
 }
 
@@ -399,13 +404,13 @@ function plantLine(slot, plan, below) {
  * 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew).
  * end: 문서 끝에 (D106 — 마지막 줄의 ↓, 빈 문서). 구분선·그림처럼 줄의 자리가 없는 곳은 그 블록의 앞뒤에 문단을 연다
  */
-async function beginNew(base, below, { end = false } = {}) {
+async function beginNew(base, below, { end = false, after = false } = {}) {
   const pane = S.pane;
   const ready = await settled(pane);
   if (S.pane !== pane || session || !ready) return;
   const view = $('#lec-view');
   const src = sourceLines();
-  const plan = end ? planEnd(src) : null;
+  const plan = end ? planEnd(src, after ? base : 0) : null;
   const at = plan ? plan.at || base : base;
   const slot = (!plan || plan.kind === 'item' || plan.head) && at ? lineSlot(view, at, src) : null;
   const code = isCodeView(view);
@@ -432,10 +437,10 @@ async function beginNew(base, below, { end = false } = {}) {
   showLineEdit();
 }
 
-/** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서만. 코드 파일과 Lectern 슬라이드는 그대로 (D106) */
+/** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서와 Lectern 슬라이드. 코드 파일은 그대로 (D106) */
 function canGrow(pane) {
   const view = pane?.view;
-  return !!view?.dataset.docPath && !isCodeView(view) && !view.classList.contains('lec-deck') && linesEditable() && !session;
+  return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session;
 }
 
 /** 마지막 줄의 ↓·빈 문서의 F2: 문서 끝에 새 줄을 연다. 각주는 문서 끝에 모인 것이라 그 뒤에는 더하지 않는다 */
@@ -443,8 +448,8 @@ function growEnd() {
   const pane = S.pane;
   if (!canGrow(pane)) return;
   const line = pane.here?.line || 0;
-  if (line && blockOfLine(pane.view, line)?.closest('.footnotes')) return;
-  beginNew(line, true, { end: true });
+  if (pane.unfold || (line && blockOfLine(pane.view, line)?.closest('.footnotes'))) return;
+  beginNew(line, true, { end: true, after: pane.view.classList.contains('lec-deck') });   // 슬라이드는 그 칸 안에 (문서 끝은 닫는 ::: 뒤다)
 }
 
 /** 빈 새 줄의 레벨을 바꾸고 화면의 자리를 맞춘다 (D106 — 계산은 lineops.shiftPlan). 바뀌었으면 true */
@@ -695,6 +700,8 @@ function caretOnEdge(span, dir) {
 
 /** 고칠 수 있는 줄의 차례에서 line 의 앞뒤 줄 — 고칠 수 없는 줄이 됐으면(글을 지운 목록 항목 등) 그 줄의 다음·앞 줄로 */
 function neighbor(line, dir) {
+  const fold = S.pane?.unfold;
+  if (fold?.a) return line + dir >= fold.a && line + dir <= fold.b ? line + dir : undefined;   // 패널 안에서만 (D112)
   const src = sourceLines();
   const order = currentUnits().flatMap((u) => editableLines(u, src));
   const i = order.indexOf(line);
@@ -744,6 +751,8 @@ function whyNot(error) {
     case 'not-table': return t('표 안에서 누르세요');
     case 'last-column': return t('하나뿐인 열은 지우지 않습니다 — 표를 지우세요');
     case 'not-box': return t('박스글 안에서 누르세요');
+    case 'not-cell': return t('칸 안에서 누르세요');
+    case 'not-numeric': return t('값 열이 수가 아니라 차트로 바꾸지 못했습니다 — 첫 열은 항목, 다음 열들은 수여야 합니다');
     case 'first-item': return t('목록의 맨 앞 항목은 더 안으로 옮기지 못합니다');
     case 'top-level': return t('맨 바깥 항목은 더 밖으로 옮기지 못합니다');
     case 'different': return t('종류가 다른 줄은 합치지 않습니다');
@@ -850,16 +859,39 @@ function levelHere(dir) {
 
 /** 제목 줄을 옮길 때 절째 옮기는 화면인지 — md 문서만 (Lectern 슬라이드는 장으로 옮긴다) */
 const sectionsOn = (view) => !isCodeView(view) && !view.classList.contains('lec-deck');
+/** 구성 요소를 넣고 서식 키를 쓰는 화면인지 — md 문서와 Lectern 슬라이드 */
+const textOn = (view) => !isCodeView(view);
+const deckOn = (view) => view.classList.contains('lec-deck');
 
 /** Alt+↑·↓: 이 줄을 옮긴다 (lineops.moveLines). 제목 줄이면 그 절을 본문과 함께 (D107) */
 function moveHere(dir) {
   const s = session;
   const code = isCodeView(s.pane.view);
+  if (deckOn(s.pane.view) && s.kind === 'text' && !s.fresh) {   // 장의 제목 줄: 그 장을 옮긴다 — md 의 절째 옮기기와 같은 규칙 (D116)
+    const lines = sourceLines();
+    if (headLevel(lines[s.line - 1]) && !cellAt(lines, s.line)) {
+      moveSlideHere(s, dir);
+      return;
+    }
+  }
   restructure((lines) => {
     if (sectionsOn(s.pane.view) && s.kind === 'text' && headLevel(lines[s.line - 1])) return moveSection(lines, s.line, dir);
     const r = moveLines(lines, s.line, s.line, dir, { code });
     return r.error ? r : { lines: r.lines, line: r.a };
   });
+}
+
+/** 칸을 닫고 그 장을 옮긴 뒤 제목 줄을 다시 연다 */
+async function moveSlideHere(s, dir) {
+  const res = await finish(true);
+  if (!res.ok || S.pane !== s.pane) return;
+  await slideOp({ op: 'move', dir });
+  const at = s.pane.here?.line ?? 1;
+  const n = sourceLines().findIndex((x, i) => i >= at - 1 && headLevel(x)) + 1;
+  if (n) {
+    followLine(n);
+    await begin(n);
+  }
 }
 
 /** 제목의 번호를 떼는 함수 — 번호가 있는 문서에서 제목을 다른 종류로 바꿀 때 */
@@ -1070,6 +1102,15 @@ async function resizeHere(dir) {
     toast(t('이 줄은 글자 크기를 바꿀 수 없습니다 — 차트·다이어그램은 칸 크기를 따릅니다'));
     return;
   }
+  const src0 = sourceLines();
+  if (/^\s*!\[/.test(src0[line - 1] ?? '')) {   // 그림 줄: 폭을 20px 씩 (D116)
+    const width = Math.max(40, (imageWidth(src0[line - 1]) || el.querySelector('img')?.offsetWidth || 400) + dir * 20);
+    const lines = src0.slice();
+    lines[line - 1] = setImageWidth(src0[line - 1], width);
+    const moved = await commit(pane, pathIn(view), src0, lines);
+    if (moved != null) toast(t('그림 폭 {n}px — Ctrl+Z 로 되돌립니다', { n: width }));
+    return;
+  }
   const kind = textKind(el);
   const cell = el.closest('.lec-cell');
   const own = parseFloat(cell?.style.fontSize);
@@ -1107,6 +1148,17 @@ function groupOf(src) {
   const end = src[0]?.trim() === '---' ? src.findIndex((s, i) => i > 0 && s.trim() === '---') : -1;
   const m = src.slice(1, Math.max(0, end)).map((s) => /^templates:\s*(.+?)\s*$/.exec(s)).find(Boolean);
   return m ? m[1].replace(/^['"]|['"]$/g, '') : '';
+}
+
+let samples = null;   // 템플릿의 안내 글들 — 슬라이드에서 이 글을 열면 전체를 골라 둔다 (D116)
+
+/** 슬라이드를 처음 그릴 때 안내 글을 받아 둔다 */
+async function loadSamples(pane) {
+  if (samples || !pane.view?.classList.contains('lec-deck')) return;
+  samples = new Set();
+  try {
+    samples = await placeholders();
+  } catch { /* 없어도 칸은 열린다 */ }
 }
 
 /** 어느 템플릿에든 있는 안내 글 — 고치지 않은 안내 글은 다른 템플릿으로 옮기지 않는다 */
@@ -1167,7 +1219,7 @@ async function slideOp({ op, dir = 0, index = null, layout = '', style = '' }) {
   const shift = await commit(pane, pathIn(view), src, r.lines);
   if (shift == null || S.pane !== pane) return;
   followLine(r.line + shift);
-  if (op === 'add' || op === 'template') begin(r.line + shift);   // 새 장의 제목을 바로 쓰게
+  if (op === 'add' || op === 'template') begin(r.line + shift, { select: true });   // 새 장의 제목을 바로 쓰게 — 안내 글은 치면 바뀐다
   else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다'), layout: t('배치를 넣었습니다 — F2 로 글을 채웁니다') }[op]);
 }
 
@@ -1241,6 +1293,7 @@ const captionPick = (word, n) => `${word} ${n}. `.length;
 
 /** 그림 줄과 캡션 */
 const imageBlock = (src, at, ref, alt) => {
+  if (deckOn(S.pane.view)) return insertBlock(src, at, [`![w:400 ${alt}](${ref})`]);   // 슬라이드는 칸이 캡션 자리까지 정한다
   const n = nextCaption(src, t('그림'));
   const r = insertBlock(src, at, [`![${alt}](${ref})`, '', captionOf(t('그림'), n)]);
   return { lines: r.lines, line: r.line + 2, select: captionPick(t('그림'), n) };
@@ -1261,6 +1314,7 @@ async function putTable(s) {
     return;
   }
   await putBlock(s, (src, line) => {
+    if (deckOn(s.pane.view)) return insertBlock(src, line, makeTable(+m[1], +m[2]));
     const n = nextCaption(src, t('표'));
     const r = insertBlock(src, line, [captionOf(t('표'), n), '', ...makeTable(+m[1], +m[2])]);
     return { ...r, select: captionPick(t('표'), n) };
@@ -1306,7 +1360,7 @@ const fencedBlock = (body) => (src, line) => {
 };
 
 const SAMPLES = {
-  chart: () => ['```vega-lite', '{', '  "data": {"values": [{"a": "A", "b": 3}, {"a": "B", "b": 5}]},', '  "mark": "bar",', '  "encoding": {', '    "x": {"field": "a", "type": "nominal"},', '    "y": {"field": "b", "type": "quantitative"}', '  }', '}', '```'],
+  chart: () => chartFromTable([t('항목'), t('값')], [['A', '3'], ['B', '5'], ['C', '4']]).lines,
   diagram: () => ['```mermaid', 'graph TD', '  A --> B', '```'],
   math: () => ['$$', 'x^2', '$$'],
 };
@@ -1323,12 +1377,13 @@ function showSource() {
 /** 줄 line 이 든 블록을 펼치고 첫 줄을 연다 (D112) */
 async function unfold(line) {
   const pane = S.pane;
-  const first = openBlock(pane, line);
-  if (!first) return;
+  if (!openBlock(pane, line)) return;
+  await nap();
   await settled(pane);
-  const again = pane.unfold?.a ?? first;
-  followLine(again);
-  await begin(again);
+  const fold = pane.unfold;
+  if (!fold?.a || fold.values) return;   // 값 표는 칸이 스스로 초점을 받는다
+  followLine(fold.a);
+  await begin(fold.a);
 }
 
 /** 찾아 바꾸기 (Ctrl+H — find.js): 원문에서 글자 그대로 찾아 바꾼다. all: 모두 (되돌리기 한 걸음), 아니면 현재 줄 뒤의 첫 곳 */
@@ -1341,8 +1396,10 @@ async function replaceNow({ find, to, all }) {
   const next = src.slice();
   let count = 0;
   let line = 0;
+  const wall = deckOn(pane.view) ? (s) => /^\s*(?:<!--|:::)/.test(s) : () => false;
   if (all) {
     for (let i = start; i < next.length; i++) {
+      if (wall(next[i])) continue;
       next[i] = next[i].replace(re, () => {
         count += 1;
         line ||= i + 1;
@@ -1352,7 +1409,7 @@ async function replaceNow({ find, to, all }) {
   } else {
     const from = Math.max(start, (pane.here?.line ?? 1) - 1);
     const order = [...Array(next.length - start).keys()].map((k) => start + ((k + from - start) % (next.length - start)));
-    const i = order.find((n) => next[n].search(re) >= 0);
+    const i = order.find((n) => !wall(next[n]) && next[n].search(re) >= 0);
     if (i != null) {
       re.lastIndex = 0;
       next[i] = next[i].replace(new RegExp(re.source, 'i'), () => to);
@@ -1395,6 +1452,7 @@ async function putItem(s, id) {
   else if (id === 'image') await putImage(s);
   else if (id === 'attach') await putAttach(s);
   else if (id === 'note') await noteHere();
+  else if (id === 'speaker') await speakerNote(s);
   else if (id === 'link') await linkHere();
   else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
@@ -1417,7 +1475,7 @@ async function putItem(s, id) {
 async function openPut() {
   const s = session;
   const keep = keepCaret();
-  const chosen = await pick({ items: putItems(), title: t('넣기'), at: s.places[s.cell].span });
+  const chosen = await pick({ items: putItems(deckOn(s.pane.view)), title: t('넣기'), at: s.places[s.cell].span });
   if (session !== s) return;
   if (chosen) await putItem(s, chosen.id);
   else backTo(s, keep);
@@ -1571,9 +1629,101 @@ function menuOp(op, after = null) {
 }
 
 /** 메뉴의 '여기에 넣기…'·'이 줄 바꾸기…' 를 칸 없이 쓸 때: 그 줄 아래에 새 줄을 열고 고른다 */
-async function putBelow(line) {
-  await beginNew(line, true);
+async function putBelow(line, target) {
+  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img`), after: true });
   if (session) await openPut();
+}
+
+/** 지금 칸이 든 장의 줄 범위 */
+function slideSpan(line) {
+  const wrap = blockOfLine(S.pane.view, line)?.closest?.('.lec-slide-wrap');
+  return wrap?.dataset.lines?.split('-').map(Number) ?? null;
+}
+
+/** 발표자 노트를 쓴다 (D116) — 장 끝의 주석 한 줄. pptx 의 노트로 간다 */
+async function speakerNote(s) {
+  const span = slideSpan(s.line);
+  if (!span) return;
+  const old = noteOf(sourceLines(), span)?.text ?? '';
+  const text = await askText({ title: t('발표자 노트'), at: s.places[0].span, value: old, placeholder: t('노트를 쓰고 Enter') });
+  if (text == null || session !== s) return;
+  await hold(s, async () => {
+    await finish(!s.fresh);
+    const src = sourceLines();
+    const shift = await commit(s.pane, s.path, src, setSlideNote(src, slideSpan(s.line) ?? span, text).lines);
+    if (shift != null) toast(t('노트를 저장했습니다 — 구조 보기에서 봅니다'));
+  });
+}
+
+/** 메뉴의 노트 쓰기 — 칸 없이 */
+async function noteMenu(wrap) {
+  const span = wrap.dataset.lines.split('-').map(Number);
+  const text = await askText({ title: t('발표자 노트'), at: wrap, value: noteOf(sourceLines(), span)?.text ?? '', placeholder: t('노트를 쓰고 Enter') });
+  if (text != null) menuOp((src) => setSlideNote(src, span, text));
+}
+
+/** 패널의 차트 원문에 op(글 → 글)을 한다 (D115) */
+function fenceOp(pane, op) {
+  turn = turn.then(async () => {
+    const u = pane.unfold;
+    if (!u?.a || S.pane !== pane || !await settled(pane) || !linesEditable()) return;
+    const src = sourceLines();
+    const next = op(src.slice(u.a - 1, u.b).join('\n'));
+    if (next == null) {
+      toast(t('이 차트는 바꿀 수 없습니다 — 원문으로 고치세요'));
+      return;
+    }
+    await commit(pane, pathIn(pane.view), src, [...src.slice(0, u.a - 1), ...next.split('\n'), ...src.slice(u.b)]);
+  });
+}
+
+/** 칸의 표를 같은 값의 차트로 바꾼다 (D115) */
+function tableToChart(line, table) {
+  const [headers, ...rows] = [...table.rows].map((r) => [...r.cells].map((c) => c.textContent.trim()));
+  const made = chartFromTable(headers, rows, { series: t('구분'), value: t('값') });
+  menuOp((src) => {
+    if (made.error) return made;
+    const span = tableSpan(src, line);
+    return span ? { lines: [...src.slice(0, span[0] - 1), ...made.lines, ...src.slice(span[1])], line: span[0] } : { error: 'not-table' };
+  });
+}
+
+/** 칸에서 넘친 첫 줄 — 칸 아래로 나간 줄 단위 */
+function overflowLine(cell) {
+  const bottom = cell.getBoundingClientRect().bottom;
+  return currentUnits().find((u) => cell.contains(u.el) && (u.range ?? u.el).getBoundingClientRect().bottom > bottom + 1)?.a ?? 0;
+}
+
+const LOOKS = () => [['', t('없음')], ['card', t('상자')], ['accent', t('강조')], ['dark', t('어두운 상자')], ['note', t('메모')], ['kpi', t('큰 숫자')]];
+
+/** 슬라이드의 칸 메뉴 (D116) */
+function cellItems(target, line) {
+  const cell = target.closest?.('.lec-cell');
+  const wrap = target.closest?.('.lec-slide-wrap');
+  if (!wrap) return [];
+  const span = wrap.dataset.lines.split('-').map(Number);
+  /** @type {MenuItem[]} */
+  const items = [];
+  if (cell && line) {
+    const run = (op) => () => menuOp(op);
+    items.push({ label: t('칸 꾸밈…'), tip: t('상자, 강조, 메모 같은 모양'), action: async () => {
+      const chosen = await pick({ items: LOOKS().map(([id, name]) => ({ id: id || 'none', name })), title: t('칸 꾸밈'), at: cell });
+      if (chosen) menuOp((src) => setCellLook(src, line, chosen.id === 'none' ? '' : chosen.id));
+    } },
+    { label: t('이 칸을 앞으로'), tip: t('글을 앞 칸과 맞바꿉니다'), action: run((x) => swapCell(x, span, line, -1)) },
+    { label: t('이 칸을 뒤로'), tip: t('글을 뒤 칸과 맞바꿉니다'), action: run((x) => swapCell(x, span, line, 1)) },
+    { label: t('칸 비우기'), action: run((x) => {
+      const r = clearCell(x, line);
+      return r.error ? r : { ...r, ask: t('이 칸의 글을 지울까요?') };
+    }) });
+    if (cell.classList.contains('lec-cell-over')) {
+      const at = overflowLine(cell);
+      if (at) items.push({ label: t('넘친 줄을 다음 장으로'), tip: t('같은 배치의 새 장으로 옮깁니다'), action: run((x) => splitCell(x, span, at, t('(이어서)'))) });
+      items.push({ label: t('이 칸 줄이기 요청'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', t('@{path} {line}행의 칸 글이 넘칩니다. 뜻을 지키며 칸에 맞게 줄여 주세요. 고치기 전에 어떻게 바꿀지 먼저 보여 주세요.', { path: S.pane.view.dataset.docPath, line })) });
+    }
+  }
+  items.push({ label: t('발표자 노트 쓰기…'), tip: t('pptx 의 노트로 갑니다'), action: () => noteMenu(wrap) });
+  return items;
 }
 
 async function changeLine(line, at) {
@@ -1588,7 +1738,7 @@ async function changeLine(line, at) {
 }
 
 /** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·박스글로 */
-export const pickedItems = () => (litSpan() && S.pane?.view && sectionsOn(S.pane.view) ? [{ label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
+export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [{ label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
 
 async function changeLit() {
   const span = litSpan();
@@ -1610,7 +1760,8 @@ const lineOfEl = (el) => Number(/^\d+/.exec(el?.closest?.('[data-lines]')?.datas
 export function lineMenuItems(target) {
   const pane = S.pane;
   const view = pane?.view;
-  if (!view?.dataset.docPath || !sectionsOn(view) || !linesEditable() || session) return [];
+  if (!view?.dataset.docPath || !textOn(view) || !linesEditable() || session) return [];
+  const deck = deckOn(view);
   /** @type {MenuItem[]} */
   const items = [];
   if (target.closest?.('.front-matter')) {
@@ -1621,9 +1772,19 @@ export function lineMenuItems(target) {
     return items;
   }
   const line = lineOfEl(target);
-  if (!line) return items;
-  if (target.closest?.(ATOMIC)) items.push({ label: t('원문 펼치기'), hint: 'F2', tip: t('줄마다 고칩니다'), action: () => unfold(line) });
-  items.push({ label: t('여기에 넣기…'), hint: '/', tip: t('표·박스글·그림·주 같은 구성 요소를 아래에'), action: () => putBelow(line) });
+  if (!line) return deck ? cellItems(target, 0) : items;
+  const chart = target.closest?.('pre.lec-chart');
+  if (target.closest?.(ATOMIC)) items.push({ label: chart ? t('차트 값 고치기') : t('원문 펼치기'), hint: 'F2', tip: t('줄마다 고칩니다'), action: () => unfold(line) });
+  if (chart) {
+    items.push({ label: t('차트 종류…'), action: async () => {
+      const kinds = [['bar', t('막대')], ['line', t('선')], ['area', t('영역')], ['arc', t('원')]];
+      const chosen = await pick({ items: kinds.map(([id, name]) => ({ id, name })), title: t('차트 종류'), at: chart });
+      if (!chosen) return;
+      await unfold(line);
+      fenceOp(pane, (text) => setChartKind(text, chosen.id));
+    } });
+  }
+  items.push({ label: t('여기에 넣기…'), hint: '/', tip: deck ? t('표·박스글·그림·차트 같은 구성 요소를 아래에') : t('표·박스글·그림·주 같은 구성 요소를 아래에'), action: () => putBelow(line, target) });
   const src = sourceLines();
   const cell = target.closest?.('td, th');
   if (cell) {
@@ -1639,11 +1800,12 @@ export function lineMenuItems(target) {
       { label: t('이 열 가운데 맞춤'), action: run((x) => alignColumn(x, line, col, 'center')) },
       { label: t('이 열 오른쪽 맞춤'), action: run((x) => alignColumn(x, line, col, 'right')) },
       { label: t('이 열 지우기'), action: run((x) => removeColumn(x, line, col)) },
+      { label: t('이 표를 차트로'), tip: t('첫 열이 항목, 다음 열들이 값입니다'), action: () => tableToChart(line, cell.closest('table')) },
       { label: t('표 지우기'), action: run((x) => {
         const span = tableSpan(x, line);
         return span ? { ...deleteLines(x, span[0], span[1]), ask: t('표를 지울까요?') } : { error: 'not-table' };
       }) });
-    return items;
+    return deck ? [...items, ...cellItems(target, line)] : items;
   }
   if (boxAt(src, line)) {
     const run = (op) => () => menuOp(op);
@@ -1653,11 +1815,12 @@ export function lineMenuItems(target) {
         const box = boxAt(x, line);
         return box ? { ...deleteLines(x, box.a, box.b), ask: t('박스글을 지울까요?') } : { error: 'not-box' };
       }) });
-    return items;
+    return deck ? [...items, ...cellItems(target, line)] : items;
   }
   if (!target.closest?.('pre, .math-block, .front-matter, img')) {
     items.push({ label: t('이 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: () => changeLine(line, target) });
   }
+  if (deck) return [...items, ...cellItems(target, line)];
   if (headLevel(src[line - 1] ?? '')) {
     items.push({ label: t('절 지우기'), tip: t('본문과 하위 절까지'), action: () => menuOp((x) => {
       const r = deleteSection(x, line);
@@ -1750,7 +1913,7 @@ function onKey(e) {
     e.preventDefault();
     return;
   }
-  const typing = sectionsOn(session.pane.view) && session.kind === 'text';
+  const typing = textOn(session.pane.view) && session.kind === 'text' && !span.closest('.lec-tag');
   if (k === '/' && !mod && !e.altKey && typing && session.fresh && !span.textContent) {   // 넣기 창 (D109)
     e.preventDefault();
     openPut();
@@ -1845,7 +2008,7 @@ function bind(span) {
   span.addEventListener('paste', (e) => {   // 글 칸(plaintext-only)은 beforeinput 에 붙여 넣은 글을 주지 않는다
     if (!session) return;
     const file = imageIn(e.clipboardData);
-    if (file && sectionsOn(session.pane.view)) {
+    if (file && textOn(session.pane.view)) {
       e.preventDefault();
       putImageFile(file);
       return;
@@ -1853,7 +2016,7 @@ function bind(span) {
     const text = e.clipboardData?.getData('text/plain');
     if (!text || !/[\r\n]/.test(text)) return;
     e.preventDefault();
-    if (!session.fence && session.kind !== 'table' && !session.pane.view.classList.contains('lec-deck')) pasteHere(text);   // 줄마다 나눠 넣는다 (D109)
+    if (!session.fence && session.kind !== 'table' && !span.closest('.lec-tag')) pasteHere(text);   // 줄마다 나눠 넣는다 (D109)
     else document.execCommand('insertText', false, text.replace(/\r\n?|\n/g, ' '));
   });
   // 칸 안을 누르는 것은 제목 접기·링크·현재 위치로 가지 않는다
@@ -1990,6 +2153,9 @@ export function initLineEdit() {
   });
   on('replace', (op) => { turn = turn.then(() => replaceNow(op)); });
   on('rendered', showSource);
+  on('rendered', loadSamples);
+  on('chart-values', ({ pane, fields, rows }) => fenceOp(pane, (text) => writeValues(text, fields, rows)));
+  on('chart-kind', ({ pane, kind }) => fenceOp(pane, (text) => setChartKind(text, kind)));
   on('pane', showSource);
   $('#lec-st-source').addEventListener('click', () => {
     const { view } = S.pane;
@@ -2010,7 +2176,7 @@ export function initLineEdit() {
     if (session && session.pane !== S.pane) finish(true);
   });
   const panes = $('#lec-panes');
-  const canPutImage = () => canGrow(S.pane) || (session && sectionsOn(session.pane.view));
+  const canPutImage = () => canGrow(S.pane) || (session && textOn(session.pane.view));
   document.addEventListener('paste', (e) => {   // 읽는 화면에서 Ctrl+V: 현재 줄 뒤에 그림 (D111)
     const file = imageIn(e.clipboardData);
     if (!file || session || !docKeyTarget(e) || !canPutImage()) return;

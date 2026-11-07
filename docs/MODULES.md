@@ -56,8 +56,9 @@
 | rename.js | 이름 바꾸기 (D66) — 사이드바 파일의 우클릭 '이름 바꾸기…'·F2 (`rename` 이벤트), 이름을 묻는 창(`#lec-rename`), `POST /api/rename`, 바뀐 뒤 보던 문서 탭·뒤로 기록(`nav.renamePath`)·담은 조각을 새 이름으로 |
 | newdoc.js | 새 문서 (D65·D105) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`과 스타일의 보기 머리글), 새 문서 탭의 md 문서 화면에서 바로 쓰기(`openCreated`) |
 | docops.js | 문서 구성 요소의 계산 (D107, DOM 없음) — 줄 종류(`setKind`), 제목 수준(`shiftHeadings`), 절 옮기기·지우기(`moveSection`·`deleteSection`) |
+| chartops.js | 차트의 계산 (D115, DOM 없음) — 값 표로 읽고 쓰기(`readValues`·`writeValues`), 종류 바꾸기(`setChartKind`), 표에서 차트(`chartFromTable`) |
 | putmenu.js | 넣기 창 (D109) — 구성 요소·파일을 고르거나 글을 묻는 작은 창 (`pick`·`askText`). 고르는 일만 하고 넣는 것은 lineedit.js |
-| lineblock.js | 블록 펼치기 (D112) — 수식·다이어그램·차트·머리 설정의 원문을 코드 줄로 펼쳐 줄마다 고친다 (`openBlock`·`openFront`·`closeBlock`) |
+| lineblock.js | 블록 펼치기 (D112·D115) — 화면 옆 패널에 수식·다이어그램·차트·머리 설정의 원문을 줄마다, 값이 문서 안에 있는 차트는 값 표로 (`openBlock`·`openFront`·`closeBlock`) |
 | newdialog.js | 새 문서 만들기 창 (D105) — 제목과 스타일을 정해 선택된 폴더에. 최근 스타일이 처음 값 |
 | deletedoc.js | 문서 삭제 (D104) — 트리의 문서 하나를 휴지통으로. 늘 묻고, 그 문서를 보던 칸을 닫는다 |
 | snippet.js | 담은 조각 다듬기 (D63, DOM 없음) — 상대경로를 넣을 문서 기준으로(`rebase`), 각주 정의·이름(`noteDefs`), 제목 수준(`shiftHeadings`), 넣을 자리(`placeLine`·`levelAt`·`placeText`), 담은 곳 주석(`buildBody`) |

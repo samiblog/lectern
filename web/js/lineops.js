@@ -339,14 +339,15 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
  * 문서 끝의 새 줄 계획 (D106 — 마지막 줄에서 ↓, 빈 문서): 끝이 목록·인용이면 planNew 처럼 같은 레벨, 아니면 마지막 글 뒤의 빈 문단.
  * 표·코드 블록·수식·구분선 뒤에도 문단을 연다. 끝의 빈 줄은 건너뛴다
  */
-export function planEnd(lines) {
+export function planEnd(lines, after = 0) {
   let last = lines.length;
   while (last && !lines[last - 1].trim()) last -= 1;
+  if (after) last = blockAt(blocksOf(lines), after)?.b ?? after;   // 그 블록 뒤에 — 슬라이드의 칸, 표·그림 뒤
   const para = { head: '', fill: '', kind: 'para', list: null, post: [] };
   if (!last) return { ...para, at: 0, pre: [] };
   const blk = blockAt(blocksOf(lines), last);
   if (blk?.kind === 'text' && !fenceAt(fencesOf(lines), last) && !tableIn(lines, blk) && (ownerItem(lines, last) || quoteOf(lines[last - 1]))) return planNew(lines, last, true);
-  return { ...para, at: last, pre: [''] };
+  return { ...para, at: last, pre: [''], post: after && lines[last] != null && !isBlank(lines[last]) && !CELL_MARK.test(lines[last].trim()) ? [''] : [] };
 }
 
 /** 항목 줄 위쪽에서 test 에 맞는 항목을 찾는다 {n, it} — 목록이 끝나는 곳에서 멈춘다 */

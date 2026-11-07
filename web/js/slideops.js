@@ -344,3 +344,147 @@ export function deleteSlide(lines, spans, i) {
   next.splice(from, lines.length - from, '');
   return { lines: next, line: trimmed(next, spans[i - 1])[0] };
 }
+
+// ---- 칸 다루기 (D116) ----------------------------------------------------------------
+
+/** 칸 머리 줄의 꾸밈 낱말 가운데 상자의 모양을 정하는 것 — 하나만 쓴다. center 같은 나머지는 그대로 둔다 */
+export const CELL_LOOKS = ['card', 'accent', 'dark', 'note', 'kpi'];
+
+/** 줄 n 이 든 칸 {head, end} (머리 줄과 닫는 줄). 칸 밖이면 null */
+export function cellAt(lines, n) {
+  const fenced = fencedLines(lines);
+  let head = 0;
+  for (let i = n; i >= 1; i--) {
+    if (fenced[i - 1]) continue;
+    const s = lines[i - 1].trim();
+    if (CELL_HEAD.test(s)) {
+      head = i;
+      break;
+    }
+    if (CELL_END.test(s) && i !== n) return null;
+    if (RULE_LINE.test(s) && !lines[i - 2]?.trim()) return null;
+  }
+  if (!head) return null;
+  for (let i = head + 1; i <= lines.length; i++) {
+    if (!fenced[i - 1] && CELL_END.test(lines[i - 1].trim())) return { head, end: i };
+  }
+  return null;
+}
+
+/** 장 [a, b] 의 칸들 [{head, end}] */
+export function cellsOf(lines, [a, b]) {
+  const fenced = fencedLines(lines);
+  const out = [];
+  for (let n = a; n <= b; n++) {
+    if (!fenced[n - 1] && CELL_HEAD.test(lines[n - 1].trim())) {
+      const cell = cellAt(lines, n);
+      if (cell) out.push(cell);
+    }
+  }
+  return out;
+}
+
+/** 칸의 꾸밈을 look 으로 바꾼다 (빈 글자면 뗀다). 머리 줄 한 줄만 고친다 */
+export function setCellLook(lines, n, look) {
+  const cell = cellAt(lines, n);
+  if (!cell) return { error: 'not-cell' };
+  const parts = lines[cell.head - 1].trim().split(/\s+/);
+  const kept = parts.filter((w, i) => i < 2 || !CELL_LOOKS.includes(w));
+  const next = lines.slice();
+  next[cell.head - 1] = [...kept.slice(0, 2), ...(look ? [look] : []), ...kept.slice(2)].join(' ');
+  return { lines: next, line: n };
+}
+
+/** 칸의 글을 앞(-1)·뒤(+1) 칸과 맞바꾼다 — 칸 이름과 꾸밈은 그 자리에 둔다 */
+export function swapCell(lines, span, n, dir) {
+  const cells = cellsOf(lines, span);
+  const i = cells.findIndex((c) => n >= c.head && n <= c.end);
+  const other = cells[i + dir];
+  if (i < 0) return { error: 'not-cell' };
+  if (!other) return { error: 'edge' };
+  const [x, y] = dir < 0 ? [other, cells[i]] : [cells[i], other];
+  const body = (c) => lines.slice(c.head, c.end - 1);
+  const next = [...lines.slice(0, x.head), ...body(y), ...lines.slice(x.end - 1, y.head), ...body(x), ...lines.slice(y.end - 1)];
+  const before = dir < 0 ? x : x;
+  const line = dir < 0 ? x.head + 1 : x.head + 1 + body(y).length + (y.head - (x.end - 1)) ;
+  return { lines: next, line: Math.max(before.head + 1, line) };
+}
+
+/** 칸을 비운다 — 머리 줄과 닫는 줄은 남는다 */
+export function clearCell(lines, n) {
+  const cell = cellAt(lines, n);
+  if (!cell) return { error: 'not-cell' };
+  return { lines: [...lines.slice(0, cell.head), ...lines.slice(cell.end - 1)], line: cell.head };
+}
+
+/**
+ * 칸의 줄 at 부터 칸 끝까지를 같은 배치의 새 장으로 옮긴다 (넘친 칸 — 사용자가 고를 때만, D116). 새 장의 다른 칸은 비어 있고 제목은 '제목 (이어서)' 처럼.
+ * {lines, line(옮긴 글의 첫 줄)}
+ */
+export function splitCell(lines, span, at, more) {
+  const cell = cellAt(lines, at);
+  if (!cell || at <= cell.head) return { error: 'not-cell' };
+  const [start, end] = trimmed(lines, span);
+  const moved = lines.slice(at - 1, cell.end - 1);
+  while (moved.length && blank(moved[0])) moved.shift();
+  while (moved.length && blank(moved.at(-1))) moved.pop();
+  if (!moved.length) return { error: 'not-cell' };
+  const cells = cellsOf(lines, span);
+  const copy = [];
+  let n = start;
+  let first = 0;
+  for (const c of cells) {
+    copy.push(...lines.slice(n - 1, c.head));
+    if (c.head === cell.head) {
+      first = copy.length + 1;
+      copy.push(...moved);
+    }
+    copy.push(lines[c.end - 1]);
+    n = c.end + 1;
+  }
+  copy.push(...lines.slice(n - 1, end).filter((s) => !NOTE_LINE.test(s) || SLIDE_SHAPE.test(s)));
+  const title = copy.findIndex((s) => /^#{1,6}\s/.test(s));
+  if (title >= 0) copy[title] = `${copy[title]} ${more}`;
+  while (copy.length && blank(copy.at(-1))) copy.pop();
+  let keep = at - 1;
+  while (keep > cell.head && blank(lines[keep - 1])) keep -= 1;
+  const next = [...lines.slice(0, keep), ...lines.slice(cell.end - 1, end), '', '---', '', ...copy, ...lines.slice(end)];
+  return { lines: next, line: keep + (end - cell.end + 1) + 3 + first };
+}
+
+/** 장 [a, b] 의 발표자 노트 (지시어가 아닌 주석 줄). 줄 번호와 글, 없으면 null */
+export function noteOf(lines, [a, b]) {
+  const fenced = fencedLines(lines);
+  for (let n = a; n <= b; n++) {
+    const s = lines[n - 1] ?? '';
+    if (fenced[n - 1] || !NOTE_LINE.test(s) || SLIDE_SHAPE.test(s.trim()) || /^<!--\s*_?[\w-]+:/.test(s.trim())) continue;
+    return { n, text: s.trim().replace(/^<!--\s*/, '').replace(/\s*-->$/, '') };
+  }
+  return null;
+}
+
+/** 장의 노트를 쓴다. 빈 글자면 지운다. 없으면 장 끝에 더한다 */
+export function setNote(lines, span, text) {
+  const body = text.replace(/--+>/g, '→').trim();
+  const found = noteOf(lines, span);
+  const next = lines.slice();
+  if (found) {
+    if (body) next[found.n - 1] = `<!-- ${body} -->`;
+    else next.splice(found.n - 1, 1);
+    return { lines: next, line: found.n };
+  }
+  if (!body) return { lines: next, line: span[0] };
+  const [, end] = trimmed(lines, span);
+  next.splice(end, 0, '', `<!-- ${body} -->`);
+  return { lines: next, line: end + 2 };
+}
+
+/** 그림 줄의 폭을 바꾼다. 그림 줄이 아니면 null */
+export function setImageWidth(line, width) {
+  const m = /^(\s*!\[)(?:w:\d+\s*)?(.*)$/.exec(line);
+  if (!m) return null;
+  return `${m[1]}w:${width}${m[2].startsWith(']') ? '' : ' '}${m[2]}`;
+}
+
+/** 그림 줄에 적힌 폭. 없으면 0 */
+export const imageWidth = (line) => Number(/^\s*!\[w:(\d+)/.exec(line)?.[1] ?? 0);
