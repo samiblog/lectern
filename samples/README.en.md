@@ -14,10 +14,8 @@ An example project for looking around Lectern. Think of it as a **copper market 
 5. Right-click a table and choose **Copy location for Claude** — in your own project, paste it into Claude Code in the terminal (**Ctrl+`**).
 6. Edit mode (**Ctrl+E**, then **Ctrl+S** to save and **Esc** to close) works in your own projects and in a copy of this folder — the samples themselves are view-only (see the note below).
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
-8. Open the slide deck [guide/08-발표.md](guide/08-발표.md) (`marp: true`) — it shows as slides; **Present** in the status bar (Shift+F5) shows one slide at a time, and printing gives one slide per page.
-9. Slides with cells [guide/10-슬라이드-칸.md](guide/10-슬라이드-칸.md) — a different layout on each slide, the slide window, Structure and text size.
-10. Slide best practices [slides/README.en.md](slides/README.en.md) — ten model decks and how each was built from scratch.
-11. Line editing [guide/09-한-줄-편집.md](guide/09-한-줄-편집.md) — press **F2** or double-click to fix a line where it is: typos, table cells, adding, moving and deleting lines. It works in your own projects and in a copy of this folder.
+8. Lectern slides samples [slides/README.en.md](slides/README.en.md) — basics, model decks by situation and complex layouts, from templates to converting to pptx
+9. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — press **F2** or double-click to fix a line in place
 
 ## For AI (Claude Code)
 

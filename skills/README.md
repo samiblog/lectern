@@ -17,6 +17,8 @@ PowerPoint 가 없어도 `.pptx` 파일을 옮기고 내보낼 수 있습니다.
 
 `lectern-skill.exe` 를 못 찾으면 시스템의 `python`(3.10 이상)으로 실행됩니다. 이때는 `pip install pywin32 pillow` 까지 해야 위의 기능을 씁니다.
 
+앱의 **pptx 로 전환** 버튼은 이 스킬 없이도 Lectern 슬라이드를 pptx 로 만듭니다. pptx 를 옮기거나 참고해 만드는 일은 스킬이 합니다.
+
 ## 프롬프트 예제
 
 ### pptx → Lectern

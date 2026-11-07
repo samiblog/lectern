@@ -108,9 +108,7 @@ try:
         pick('7')
         after = text()
         check('제목이 그대로다', '## 매출이 늘었다' in after, after[-300:])
-        check('새 배치가 된다', '<!-- layout: two -->' in after.split('
----
-')[-1] and '<!-- layout: two-left -->' not in after, after[-300:])
+        check('새 배치가 된다', '<!-- layout: two -->' in after.split('\n---\n')[-1] and '<!-- layout: two-left -->' not in after, after[-300:])
         check('표가 칸에 옮겨진다', after.count('| 항목 | 값 | 비고 |') == 1 and '::: a card\n| 항목' in after, after[-300:])
         check('고치지 않은 안내 글은 옮기지 않는다', '표에서 볼 곳을 씁니다' not in after, after[-300:])
         page.keyboard.press('Escape')

@@ -13,8 +13,9 @@ from harness import ROOT, check, fails, report, serve, stop
 base = Path(tempfile.mkdtemp(prefix='lec-sampledecks-'))
 proj = base / 'proj'
 shutil.copytree(ROOT / 'samples', proj)
+shutil.copytree(ROOT / 'tests' / 'corpus' / 'slides', proj / 'slides' / '시험-배치')   # 시험에서 나온 문서 — 예제는 아니지만 계속 그린다
 slides = proj / 'slides'
-decks = sorted(slides.glob('[0-9][0-9]-*.md'))
+decks = sorted((slides / '상황별').glob('[0-9][0-9]-*.md'))
 config = base / 'config'
 config.mkdir()
 server, url, port = serve(proj, config)
@@ -64,7 +65,7 @@ def run():
         page.wait_for_selector('#lec-tree .row')
         for deck in decks:
             print(f'[{deck.stem}]')
-            rel = f'slides/{deck.name}'
+            rel = f'slides/상황별/{deck.name}'
             page.evaluate(OPEN, rel)
             page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=10000)
             page.wait_for_timeout(1800)
@@ -75,7 +76,7 @@ def run():
             check('그림을 모두 불렀다', not r['broken'], r['broken'][:2])
             check('글을 모두 한 줄 편집으로 연다', r['ok'] == r['text'] and r['text'] > 0, [r['ok'], r['text']])
             check('내용 장마다 노트', r['plain'] == 0, r['plain'])
-            process = slides / '과정' / f'{deck.stem}-과정.md'
+            process = slides / '상황별' / '과정' / f'{deck.stem}-과정.md'
             check('과정 문서가 있다', process.is_file())
             if process.is_file():
                 text = process.read_text(encoding='utf-8')
@@ -88,11 +89,18 @@ def run():
             for target, path in links_of(deck):
                 check(f'링크 {target}', path.exists())
         print('[복잡한 배치]')
-        folder = slides / '복잡한-배치'
-        complex_decks = sorted(folder.glob('[0-9][0-9]-*.md'))
-        check('복잡한 배치 스무 개', len(complex_decks) == 20, len(complex_decks))
-        for deck in complex_decks:
-            rel = f'slides/복잡한-배치/{deck.name}'
+        complex_decks = sorted((slides / '복잡한-배치').glob('[0-9][0-9]-*.md'))
+        check('복잡한 배치 열 개', len(complex_decks) == 10, len(complex_decks))
+        basics = sorted((slides / '기초').glob('[0-9][0-9]-*.md'))
+        check('기초 여섯 개', len(basics) == 6, len(basics))
+        tested = sorted((slides / '시험-배치').glob('[0-9][0-9]-*.md'))
+        check('시험 문서 일곱 개', len(tested) == 7, len(tested))
+        for doc in (slides / 'README.md', slides / 'README.en.md'):
+            text = doc.read_text(encoding='utf-8')
+            for deck in basics:
+                check(f'{doc.name} 가 {deck.stem} 을 잇는다', f'기초/{deck.name}' in text)
+        for deck in [*basics, *complex_decks, *tested]:
+            rel = deck.relative_to(proj).as_posix()
             page.evaluate(OPEN, rel)
             page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=10000)
             page.wait_for_timeout(1300)
@@ -100,7 +108,7 @@ def run():
             check(f'{deck.stem}: 점검 0건', not r['issues'], r['issues'][:3])
             check(f'{deck.stem}: 차트·그림 오류 없음', not r['errors'] and not r['broken'], [r['errors'][:2], r['broken'][:2]])
             check(f'{deck.stem}: 글을 모두 한 줄 편집으로 연다', r['ok'] == r['text'], [r['ok'], r['text']])
-        for doc in (slides / 'README.md', slides / 'README.en.md', folder / 'README.md', folder / 'README.en.md'):
+        for doc in (slides / 'README.md', slides / 'README.en.md', slides / '복잡한-배치' / 'README.md', slides / '복잡한-배치' / 'README.en.md'):
             for target, path in links_of(doc):
                 check(f'{doc.name} 의 링크 {target}', path.exists())
         check('화면 오류 없음', not extra, extra[:3])

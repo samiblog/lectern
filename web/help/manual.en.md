@@ -250,64 +250,6 @@ While editing a line you can also change the structure around it. Any text you c
 
 HTML reports written by Claude appear in the tree marked `HTML`. Their own styles are kept, while scripts and stylesheets from the internet are blocked (so charts drawn by scripts do not appear). HTML files inside app source folders such as `src`, `public` or `web` are not treated as documents.
 
-### Slide decks
-
-Markdown with `marp: true` in the front matter is a **slide deck** — Lectern's presentation format, which starts from Marp. Decks show an orange slide icon in the left list. Open the deck with cells in the `guide` folder of the sample project.
-
-**Slide window**
-
-- Clicking a deck opens a separate slide window. If it is already open, it comes to the front.
-- The slide window has its own style, **Presentation** by default. The main window's view and style do not change.
-- A slide window is an independent window, so it belongs to its project. It uses the main window's terminal.
-
-**Cells and layouts**
-
-- Each `---` starts a slide. A slide is 1280×720.
-- A cell runs from `::: a card` to `:::`. Text, tables, charts and images go inside.
-- Pick a layout like `<!-- layout: quad -->` or draw one with `<!-- grid: a a b / c d b -->`. `::: a at 100 200 300 120` places a cell yourself.
-- Right-click a slide and pick **Set layout…** to add that layout's empty cells. A slide with cells only has them renamed, and text on a slide without cells goes into the first cell. Fill in the text with F2.
-- `<!-- links: a>b, c--d -->` draws arrows and lines between cells. The text in the cells stays editable.
-- Edit the text on a slide with **line editing**. New lines added with Ctrl+Enter stay in the cell, and moving or deleting lines never breaks cells or slides.
-
-**Text size**
-
-- On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that kind of element on the slide by 1pt — table, callout, title and so on. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z undoes it.
-- In a cell with its own size (`::: b 16`) the cell's size changes. Set the whole deck with `text: title 26, table 12` in the front matter.
-- Defaults: title 30, subheading 20, body 18, table 14, callout 16. They stay the same in every style. Text in charts and diagrams follows the cell size.
-- Tables below 12pt and body text below 14pt show up in Check. For a document that is read rather than shown, write `reading: true` in the front matter (limits 10pt and 12pt).
-
-**Structure and Check**
-
-- **Structure** in the status bar shows cell heads and directive or note lines as tags. Press F2 or double-click a tag to edit that line. This is how you change a cell's look or a layout.
-- When a slide overflows, images and charts shrink to fit the cell. Text does not shrink; it is cut and marked with a red dashed line.
-- Syntax slips are marked too: cell names, a missing `:::`, typos in directives and words, broken grids, unclosed comments and code blocks, text right above `---`, and stray `**`.
-- Some things are measured on screen: text too close to its background, code or tables cut off at the side, missing images, and charts that could not be drawn. Text over a photo cannot be measured, so look at it yourself.
-- **Check** in the status bar lists them, and picking one goes to that line. **Paste the list into the terminal** lets you ask Claude to fix them.
-
-**Managing slides**
-
-- Right-click a slide to add, duplicate, move or delete it. The keys are Ctrl+M, Ctrl+D, Ctrl+Shift+PageUp and PageDown. Ctrl+Z undoes them all.
-- The right panel is a slide list. Slides to check are marked.
-
-**Creating**
-
-- In New (Ctrl+N), type a path and pick **New slide deck at this path** to start with a cover.
-- For an existing document, right-click it in the sidebar and pick **Ask Claude to make slides**. A request goes into the terminal; press Enter and Claude makes a new file in the same folder.
-- The guide Claude reads is `web/help/slides.en.md` in the install folder.
-
-**Best practice examples**
-
-`slides/README.md` in the project opened by **Open samples** has ten model decks, one per situation (`slides/README.en.md` in English). Each finished deck comes with a process document, linked from that page, that builds it from scratch in seven steps: decide, ask Claude, write the titles, fill the cells, fix the check, polish by hand, present and share. The request text can be pasted straight into the terminal. The installed samples are read-only, so follow along in your own project. That page also links to twenty complex layouts such as dashboards, process maps and Gantt charts.
-
-**Viewing and exporting**
-
-- **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** for notes, **F** for full screen, **Esc** to end.
-- **View as document** in the status bar unfolds the cells into an ordinary document.
-- Printing or saving as PDF gives one slide per page, in the same colors as on screen. Speaker notes are left out.
-- Pressing a checkbox on a slide changes `[ ]` or `[x]` in the source. It does nothing during a presentation.
-- A slide with `<!-- hidden: true -->` is hidden. It shows faded on screen and is left out of presentations and PDF.
-- Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. `theme` (gaia and so on) is not read.
-
 ### Auto refresh
 
 - While Claude writes a document, changes appear within a second and your reading position stays where it was.
@@ -339,6 +281,151 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - The file starts with one `# Title` line made from its name and opens in edit mode in a new document tab (the cursor below the title). Save with **Ctrl+S** when you have written something.
 - It is created only in a folder that already exists and only if the name is free. If it cannot be created, the reason is shown — fix the path and press Enter again. Esc closes the box.
 - The file stays even if you close it without saving (Lectern never deletes files — delete it in File Explorer if you do not need it).
+
+## Lectern slides
+
+Lectern tells three things apart.
+
+| Term | What it is |
+|---|---|
+| **md document** | An ordinary Markdown document |
+| **Lectern slides** | Markdown with `marp: true` in the front matter. It shows as slides with a different layout on each one, and has an orange icon in the sidebar |
+| **pptx** | A PowerPoint file |
+
+The work goes in this order.
+
+1. In **New**, pick a template to make the first slide.
+2. Replace the placeholder text, and press **Ctrl+M** to pick the next slide's template.
+3. Present, or pick a pptx style and **Convert to pptx**.
+
+### Creating
+
+- In **New** (Ctrl+N), type a path and pick **New Lectern slides at this path**. Pick the first slide in the template gallery and the document is made.
+- For an existing md document, right-click it in the sidebar and pick **Ask Claude to make Lectern slides**. A request goes into the terminal; press Enter and Claude makes a new file in the same folder.
+- Moving a pptx into Lectern slides is in [Asking Claude](#asking-claude).
+
+### Templates
+
+A template is a slide skeleton with a title, text, boxes and chart spots. All of Lectern shares them, not one project.
+
+- **Gallery:** Preview and pick a template. Click it, type its number, or move with the arrows and press Enter. Twelve templates are built in.
+- **New slide:** **Ctrl+M** opens the gallery and puts the template after this slide. The title opens for typing.
+- **Change template:** Right-click a slide and pick **Change template…**. Your text moves into the new cells, and text that does not fit stays in the last cell. Placeholder text you did not change does not move. Ctrl+Z undoes it.
+- **Your own templates:** Right-click a slide, pick **Save this slide as a template…** and type a name. It shows after the built-in templates. You can also ask Claude to make one.
+- **Removing your templates:** Use **Open templates folder** in the gallery (`%APPDATA%\Lectern\templates`) and delete the file. One file is one template.
+
+A slide saved with a picture keeps the picture's path. A document in another folder may not find the picture.
+
+### Writing and managing slides
+
+- Edit text on a slide with **line editing**. A line added with Ctrl+Enter at the end of a cell stays in the cell, and moving or deleting lines does not break cells or slides.
+- Right-click a slide to add, duplicate, move or delete it. The keys are Ctrl+M, Ctrl+D, Ctrl+Shift+PageUp and PageDown. Ctrl+Z undoes them all.
+- The right panel is a slide list. Slides to check are marked.
+- Pressing a checkbox on a slide changes `[ ]` or `[x]` in the source. It does nothing during a presentation.
+- A slide with `<!-- hidden: true -->` is hidden. It shows faded on screen and is left out of presentations and PDF.
+
+### Cells and layouts
+
+When the templates are not enough, build the cells yourself.
+
+- Each `---` starts a slide. The size is 1280×720.
+- `::: a card` to `:::` is a cell. Put text, tables, charts and pictures in cells.
+- Pick a layout like `<!-- layout: quad -->` or draw one with `<!-- grid: a a b / c d b -->`. `::: a at 100 200 300 120` places a cell directly.
+- Right-click a slide and pick **Insert layout…** to add that layout's empty cells. Existing cells only get new names, and text on a slide with no cells goes into the first cell. Fill them with F2.
+- `<!-- links: a>b, c--d -->` draws arrows and lines between cells. The text in the cells stays editable.
+- Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. It does not read `theme` (gaia and so on).
+
+### Text size
+
+- On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that slide's tables, boxes, titles and so on by 1pt. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z brings it back.
+- In a cell with its own size (`::: b 16`) the cell's size changes. Set the whole document with `text: title 26, table 12` in the front matter.
+- The defaults are title 30, subtitle 20, body 18, table 14, box 16. Changing style keeps these sizes. Text inside charts and diagrams follows the cell size.
+- Tables below 12pt and body text below 14pt show up in Check. For slides that are read rather than shown, write `reading: true` in the front matter (limits 10pt and 12pt).
+
+### Structure and Check
+
+- **Structure** in the status bar shows cell head lines and directive and note lines as tags. Press F2 on a tag or double-click it to edit that line. This is how to change a cell's look or the layout.
+- When content overflows, pictures and charts shrink to fit the cell. Text does not shrink; it is cut off and gets a red dotted line.
+- Grammar slips are marked too: cell names, a missing `:::`, typos in directives and words, bad grids, unclosed comments and code blocks, text right above `---`, and unresolved `**`.
+- Some things are measured on screen: text close to its background, code and tables cut off at the side, missing pictures, charts that could not be drawn. Text over a photo cannot be measured, so look at it yourself.
+- **Check** in the status bar lists them, and picking one goes to that line. **Paste the list into the terminal** lets you ask Claude to fix them.
+
+### Viewing and presenting
+
+- Clicking Lectern slides opens a separate slide window. If it is already open, it comes to the front. The terminal is the main window's.
+- The slide window has its own style, **Presentation** by default. This style is how the slides look on screen. It does not change the pptx style.
+- **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** shows speaker notes, **F** full screen, **Esc** ends.
+- **View as document** in the status bar opens the cells and reads on like an ordinary document.
+- Printing or saving as PDF gives one slide per page in the screen's colors. Speaker notes are left out.
+
+### Convert to pptx
+
+Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file appears next to the document. You do not need Claude or Python.
+
+- **pptx styles:** Shared by all of Lectern. **Open library folder** opens the folder (`%APPDATA%\Lectern\pptx-styles`); put your company's pptx there and it shows in the list.
+- **Memory:** The style's name goes into the front matter as `pptxStyle: Company report`, and that style comes first next time. If you move only the document to another PC, the style may be missing; Lectern tells you and you pick again.
+- **Default style:** Turn on **Make this the default** when converting, and documents with no style use it.
+- **Order:** The style picked now, the document's style, the original pptx, the default style, then the Lectern style.
+- **Result:** Cell positions follow the Lectern slides; colors, fonts, logo and footer follow the pptx style. Text stays text, tables stay tables, charts stay charts you can edit, and lines become connectors. Complex charts and Mermaid become pictures.
+- **Documents moved from a pptx:** If you pick no style, slides you did not change reuse the original slide, and where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
+- A pptx of the same name is never overwritten. A new name like `Report 2.pptx` is used.
+
+### Asking Claude
+
+Claude Code skills move a pptx into Lectern slides and build slides from a pptx. They come with Lectern and are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button next to it). Claude explains the skills and asks before installing.
+
+Here is how to ask. `@document.md` is **Copy @path** from a right-click in the tree.
+
+**pptx to Lectern slides**
+
+```text
+Move this pptx into Lectern slides: D:\project\report.pptx
+Move the presentation open in PowerPoint into Lectern slides. Put the result in D:\project\slides.
+Quickly pull D:\project\report.pptx into md for now. I'll polish it later.
+```
+
+**An md document into Lectern slides, using a pptx as a model**
+
+```text
+Use D:\templates\company.pptx as a model and make @market.md into Lectern slides.
+Use the pptx open on screen as a model and make @market.md into Lectern slides.
+Use only the colors and cover of D:\templates\company.pptx and make @weekly.md into at most 10 Lectern slides. Keep the numbers.
+```
+
+**Making pptx styles and templates**
+
+```text
+Add D:\templates\company.pptx as a pptx style.
+Make a template with a table and a box, like this slide.
+```
+
+**Lectern slides to pptx**
+
+```text
+Make @deck.md into a pptx, keeping the style as much as you can.
+I edited @report.md, which came from a pptx. Make the pptx again with just my changes.
+Make @deck.md into a pptx using D:\templates\company.pptx.
+```
+
+- Moving keeps all the text and every slide. Text-centered slides are rebuilt as cells, and diagrams where position matters stay as pictures with their text in the notes. Animations and exact fonts are not moved.
+- The original pptx is not changed. An open presentation is not saved or closed.
+- You do not need to install Python. The skills run on `lectern-skill.exe` in the program folder.
+- `.pptx` files can be moved and exported without PowerPoint. An open presentation, `.ppt` files and DRM files need PowerPoint.
+- Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
+
+More examples are in `skills\README.md` in the program folder. The guide Claude reads is `web/help/slides.en.md` there.
+
+### Samples
+
+`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). Go through them in this order.
+
+| Order | Folder | What |
+|---|---|---|
+| 1 | `slides/기초/` | First look, cells and layouts, making slides from templates, key practice |
+| 2 | `slides/상황별/` | Ten model decks for situations like an executive report, comparing options and market analysis. Each finished deck has a process document |
+| 3 | `slides/복잡한-배치/` | Ten layouts with many cells, like dashboards, magazine pages, process maps and Gantt charts |
+
+The installed samples are read-only, so follow along in your own project.
 
 ## Reading code
 
@@ -472,43 +559,6 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
 
-### Working with PowerPoint
-
-Lectern includes Claude Code skills for moving between pptx and Lectern slides. They are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button beside it). Claude explains what the skills do and asks before installing. It also asks if you start a pptx task directly.
-
-Example prompts. `@slides.md` comes from `Copy @path` in the tree's right-click menu.
-
-**From pptx to Lectern slides**
-
-```text
-Move this pptx into Lectern slides: D:\docs\report.pptx
-Move the presentation open in PowerPoint into Lectern slides. Put the result in D:\project\slides.
-Just extract D:\docs\report.pptx to md quickly. I'll polish it later.
-```
-
-**From a md document, using a pptx as the reference**
-
-```text
-Using D:\templates\company.pptx as a reference, make Lectern slides from @market.md.
-Using the pptx on screen as a reference, make Lectern slides from @market.md.
-```
-
-**From Lectern slides to pptx**
-
-```text
-Make a pptx from @slides.md, keeping the style as close as you can.
-I edited @report.md, which came from a pptx. Make a pptx again with only my changes.
-Make a pptx from @slides.md on the D:\templates\company.pptx template.
-```
-
-- When moving a pptx in, all text and the slide order are kept. Text slides become cells. Diagrams whose layout carries the meaning stay as pictures, with their text in the notes. Animations and exact fonts are not kept.
-- When exporting, text stays text, tables stay tables, charts stay editable charts and lines become connectors. Colors follow the style chosen in the slide window. Complex charts and Mermaid go in as pictures.
-- A document that came from a pptx reuses the original slides you did not change. Where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
-- The original pptx is never changed. An open presentation is not saved or closed.
-- You do not need to install Python. The skills run on `lectern-skill.exe` in the program folder.
-- `.pptx` files can be moved and exported without PowerPoint. An open presentation, `.ppt` files and DRM files need PowerPoint.
-- Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
-
 ## Settings
 
 The gear button in the toolbar (Ctrl+,) opens Settings.
@@ -522,7 +572,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
 | Show web images | Load https images in documents. When off, they show as links |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
-| PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Working with PowerPoint') |
+| PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |

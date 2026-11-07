@@ -192,6 +192,12 @@ flowchart LR
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
+| `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 (D101) `{templates:[{number, id, name, text, own}], dir}`. 기본 템플릿 다음에 사용자의 것 |
+| `POST /api/slide-templates` | `{name, text}` | 설정 폴더 templates 에 새 파일 하나. `{template}`. 같은 이름이면 409 |
+| `POST /api/slide-templates/folder` | `{}` | 템플릿 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
+| `GET /api/pptx-styles` | `?p=&path=` | pptx 스타일 (D102) `{styles:[{name, colors}], dir, default, memory:{style, original}, out, readonly}` |
+| `POST /api/pptx-styles/folder` | `{}` | 보관소 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
+| `POST /api/pptx-export` | `{p, path, style}` | 문서 옆에 새 pptx. style 이 빈 글자면 문서가 기억한 것으로. `{path, slides, reused, patched, rebuilt, new, base, style, notes}`. 보기만 하는 프로젝트는 403 |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll, docs?}` | 그 탭에서 보는 문서와 스크롤 위치, 열어 둔 문서 탭들의 문서(`docs` — 탭 차례, 20개까지, 없어진 것·밖·숨김은 빼고 기록, D64·D67) 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값·문서 6개 이상 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |
@@ -571,5 +577,5 @@ WebView2 런타임은 Windows 11과 대부분의 Windows 10에 있다.
 - `samples/` 는 사람·AI 용 예제 프로젝트다. `lectern.spec` 의 datas 로 `_internal\samples` 에 들어가고(`paths.samples_dir()`), `/api/state` 의 `samples` 로 화면에 알린다. 시작 화면·탭 막대 ∨ 메뉴·설정 창의 '예제 열기'가 `tabs.js` 의 `openSamples()` 로 그 폴더를 탭으로 열고, 처음 열면(폴더 개요면) `README.md` 로 간다.
 - `web/help/writing.md`(영어판 `writing.en.md`)는 AI 용 작성 안내다. 설정 창의 'Claude Code 에 Lectern 알려 주기'가 그 경로(`/api/state` 의 `writing_guide, slides_guide`)를 넣은 요청 글을 복사하거나 지금 탭의 터미널에 붙인다 (`settings.js` 의 `guidePrompt`, D51 의 `term-paste`).
 - `skills/` 는 Claude Code 스킬이다 (D98). `lectern.spec` 의 datas 로 `_internal\skills` 에 들어가고(`paths.skills_dir()`), `/api/state` 의 `skills_dir` 로 그 경로를 화면에 준다. 앱은 스킬을 돌리지 않는다 — 설정 창의 요청 글이 경로를 주고, 사용자가 시킬 때 Claude 가 물은 뒤 설치한다.
-- `lectern-skill.exe`(`skillrun.py`, D99)는 `Lectern.exe` 옆의 두 번째 콘솔 프로그램이다. 같은 `_internal` 을 쓰고 Python·pywin32·Pillow 를 묶어 스킬을 돌린다. Claude 가 부르고 앱은 부르지 않는다.
+- `lectern-skill.exe`(`skillrun.py`, D99)는 `Lectern.exe` 옆의 두 번째 콘솔 프로그램이다. 같은 `_internal` 을 쓰고 Python·pywin32·Pillow 를 묶어 스킬을 돌린다. 사용자가 시킨 Claude 와 사용자가 누른 'pptx 로 전환'(`pptxexport.py`, D102)이 부른다.
 - 화면 점검은 `tests/fixture/`(점검용 프로젝트)를 쓰고, '[예제]' 점검만 `samples/` 를 열어 본다. pytest 는 예제에 숨김·제외 폴더(`__pycache__` 등)가 없는지 본다.

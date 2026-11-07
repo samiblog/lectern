@@ -1,6 +1,6 @@
 # Complex layouts
 
-Twenty examples of dense, asymmetric layouts, in Korean. See the basic examples first. All pass the check with no issues, and their text can be edited in place.
+Ten examples of dense, asymmetric layouts, in Korean. See the basic examples first. All pass the check with no issues, and their text can be edited in place.
 
 | No. | Deck | Look for |
 |---|---|---|
@@ -14,13 +14,3 @@ Twenty examples of dense, asymmetric layouts, in Korean. See the basic examples 
 | 8 | [Learn by editing](08-고치며-배우는-격자.md) | Editing grids, columns and positions in Structure view |
 | 9 | [Many cells](09-칸이-많은-장.md) | 35-cell calendar, 13-cell map, a cell on top |
 | 10 | [Same everywhere](10-어디서-봐도-같은-장.md) | 4:3 mixed layouts |
-| 11 | [Random grids](11-무작위-격자-모음.md) | Eight machine-cut grids |
-| 12 | [Measured grids](12-자로-잰-격자.md) | What `fr` and `px` become in pixels |
-| 13 | [Sturdy documents](13-튼튼한-문서.md) | Common mistakes and fixes |
-| 14 | [Key practice](14-키-연습장.md) | Editing lines, sizes and slides by key |
-| 15 | [Extremes](15-극단-배치.md) | 20 columns, a 12×12 grid, dotted grids |
-| 16 | [Built by keyboard](16-키보드로-만든-격자.md) | Steps without a mouse |
-| 17 | [Print reference](17-인쇄-기준-장.md) | Comparing screen, presentation and PDF |
-| 18 | [Edited together](18-함께-고친-일정.md) | Two windows and Claude on one document |
-| 19 | [Text size chart](19-글자-크기-기준표.md) | Cell sizes and default sizes |
-| 20 | [Rebuilt from pictures](20-그림-보고-다시-그린-장.md) | Four slides rebuilt from pictures alone |

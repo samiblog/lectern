@@ -1,4 +1,4 @@
-# Lectern slide deck guide (for AI)
+# Lectern slides guide (for AI)
 
 When the user asks for slides, write one `.md` file by this guide. People view it in Lectern's slide window and edit the text in the cells one line at a time.
 
@@ -316,7 +316,15 @@ The sample project has ten model decks and how each was built, in `slides/README
 - Start with a `lead` slide, and add one when the topic changes.
 - Put explanations in speaker notes.
 
-## 11. Working with PowerPoint
+## 11. Templates
+
+The user picks templates in the gallery, slide by slide. If asked to make a template, write one slide's text to `templates` in the Lectern settings folder as `number-name.md` (`%APPDATA%\Lectern\templates`). Leave out the front matter and `---`. Use the next number, and never overwrite a file.
+
+- Write cells as usual, like `::: a card`, with placeholder text that says what goes there.
+- Use `{{title}}` for the document's name. It becomes the file name when the document is made.
+- For a chart spot, use a small chart with its values in the text, so it draws in any document.
+
+## 12. Working with PowerPoint
 
 When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the Claude Code skills `pptx-to-lectern` and `lectern-to-pptx`. They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
 

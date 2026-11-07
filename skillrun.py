@@ -1,7 +1,7 @@
 """Lectern 스킬 실행기 — lectern-skill.exe (D99).
 
 Python 이 없는 PC 에서 PowerPoint 스킬을 돌린다. Python 과 pywin32, Pillow 를 묶은 콘솔 프로그램이다.
-사용자가 시킨 Claude 가 부른다. 앱은 부르지 않는다.
+사용자가 시킨 Claude 와, 사용자가 누른 'pptx 로 전환'(pptxexport.py, D102)이 부른다.
 
     lectern-skill.exe <스킬>/scripts/이름.py 인자…
     lectern-skill.exe --version

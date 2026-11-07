@@ -133,7 +133,7 @@ Rules:
 ```
 ~~~~
 
-## 5. Slide decks
+## 5. Lectern slides
 
 Markdown with `marp: true` in the front matter shows as **slides** — Lectern's presentation format, which starts from Marp. Cells (`::: a card`) and layouts (`<!-- layout: quad -->`) give each slide its own arrangement. People edit the text on a slide line by line.
 
@@ -178,7 +178,7 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
 - Code locations as `src/x.py:14`; links and images relative to the document.
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
-- Slide decks in Lectern's format (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
+- Lectern slides (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
 - Moving between pptx and slides uses the skills `pptx-to-lectern` and `lectern-to-pptx`. If they are missing, ask before installing, as in `slides.en.md` section 11.
 ```

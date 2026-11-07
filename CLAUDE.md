@@ -8,11 +8,11 @@ Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 �
 
 ## 반드시 지킬 원칙
 
-1. **파일은 사용자가 고를 때만, 그 파일만 바꾼다.** 앱이 스스로 사용자 파일을 만들거나 고치거나 지우지 않는다. 바꾸는 길은 아래의 것뿐이다 — **편집 모드(D54)**: 사용자가 저장할 때만 이미 있는 문서·코드 파일 하나를 고친다 (`lectern/editing.py` — UTF-8 글만, 줄바꿈·BOM 그대로, 그사이 바뀌었으면 묻기). 한 줄 편집(D76)과 줄 구조 편집(D83 — 줄 더하기·나누기·합치기·레벨·옮기기·지우기·복제)도 같은 저장 길(`/api/save`)로 사용자가 고른 줄과 그 번호 목록만 (할 일 체크 칸도 — `lineedit.replaceLines`). 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — 사용자가 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 한 줄로, 새 Lectern 슬라이드면 머리 설정과 표지 한 장으로 — D96. `.md`, 이미 있는 폴더에, 같은 이름이 있으면 만들지 않음). 프로젝트 메모는 사용자가 메모를 쓸 때만 그 프로젝트의 `.lectern/notes.md` 하나에 쓴다 (D92 — `lectern/notes.py`, 경로는 고정, 링크면 쓰지 않음). 이름 바꾸기는 사용자가 사이드바에서 고른 파일 하나를 같은 폴더 안에서만 (D66 — `editing.rename_file`, 덮어쓰지 않음). 지우기·옮기기·폴더 만들기는 여전히 없다. Lectern 프로그램 폴더 안(설치된 예제 등)의 파일은 이 예외로도 고치지 않고, 그 안을 프로젝트로 열면 터미널도 열지 않는다 (D71 — `paths.is_protected`). 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다 (그 옆 `styles` 폴더는 '스타일 폴더 열기'가 비어 있을 때 만들기만 한다 — 내 스타일 파일은 읽기만, D53). **예외는 오른쪽 터미널(D38)이다**: 사용자가 직접 친 명령이 하는 일은 Lectern 이 한 것이 아니다. 대신 문서·링크·다른 기능이 셸로 명령을 보내는 길은 만들지 않는다 — 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'만 Ctrl+V 와 같은 길로, Enter 없이 넣는다 (D51).
+1. **파일은 사용자가 고를 때만, 그 파일만 바꾼다.** 앱이 스스로 사용자 파일을 만들거나 고치거나 지우지 않는다. 바꾸는 길은 아래의 것뿐이다 — **편집 모드(D54)**: 사용자가 저장할 때만 이미 있는 문서·코드 파일 하나를 고친다 (`lectern/editing.py` — UTF-8 글만, 줄바꿈·BOM 그대로, 그사이 바뀌었으면 묻기). 한 줄 편집(D76)과 줄 구조 편집(D83 — 줄 더하기·나누기·합치기·레벨·옮기기·지우기·복제)도 같은 저장 길(`/api/save`)로 사용자가 고른 줄과 그 번호 목록만 (할 일 체크 칸도 — `lineedit.replaceLines`). 새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — 사용자가 새로 만들기·새 문서로 보내기에서 경로를 정할 때 `# 제목` 한 줄로, 새 Lectern 슬라이드면 머리 설정과 표지 한 장으로 — D96. `.md`, 이미 있는 폴더에, 같은 이름이 있으면 만들지 않음). 프로젝트 메모는 사용자가 메모를 쓸 때만 그 프로젝트의 `.lectern/notes.md` 하나에 쓴다 (D92 — `lectern/notes.py`, 경로는 고정, 링크면 쓰지 않음). 'pptx 로 전환' 은 사용자가 누를 때 Lectern 슬라이드 옆에 새 pptx 하나를 만든다 (D102 — `lectern/pptxexport.py`, 덮어쓰지 않음). '이 장을 템플릿으로 저장' 은 사용자가 고를 때 설정 폴더의 `templates` 에 새 파일 하나를 만든다 (D101 — `lectern/slidetemplates.py`, 고치거나 지우지 않음). 이름 바꾸기는 사용자가 사이드바에서 고른 파일 하나를 같은 폴더 안에서만 (D66 — `editing.rename_file`, 덮어쓰지 않음). 지우기·옮기기·폴더 만들기는 여전히 없다. Lectern 프로그램 폴더 안(설치된 예제 등)의 파일은 이 예외로도 고치지 않고, 그 안을 프로젝트로 열면 터미널도 열지 않는다 (D71 — `paths.is_protected`). 디스크에 쓰는 것은 `%APPDATA%\Lectern\config.json` 하나뿐이다 (그 옆 `styles`·`pptx-styles`·`templates` 폴더는 폴더 열기가 비어 있을 때 만들기만 한다 — 내 스타일과 pptx 스타일 파일은 읽기만, D53·D102). **예외는 오른쪽 터미널(D38)이다**: 사용자가 직접 친 명령이 하는 일은 Lectern 이 한 것이 아니다. 대신 문서·링크·다른 기능이 셸로 명령을 보내는 길은 만들지 않는다 — 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'만 Ctrl+V 와 같은 길로, Enter 없이 넣는다 (D51).
 2. **로컬 전용.** 앱이 스스로 외부에 요청하지 않는다 (CDN·웹폰트·분석·업데이트 확인 모두 금지). html 문서도 같다 — 서버가 `/doc/*.html` 에 붙이는 CSP가 스크립트·연결·인터넷 CSS·글꼴을 막고 그림만 `external_images` 를 따르게 한다 (D27). JS 라이브러리는 `web/vendor/` 에 들어 있다. **예외는 문서 속 외부 이미지 하나뿐**이다: 설정 `external_images`(기본 켜짐)가 켜져 있으면 `http(s)` 이미지를 referrer 없이 불러오고, 실패·15초 초과면 링크로 바꾼다 (D19). `doc.js` 의 DOMPurify 훅이 모든 `src` 를 떼어 두었다가 허용된 이미지에만 다시 주고, 그 밖에 그림을 부르는 길(`srcset`·`poster`·표의 `background`·SVG `image` 의 href·style 과 SVG 속성의 `url()`·`image-set()`)은 지운다. 놓친 길은 서버가 `/` 에 붙이는 CSP(`img-src`, D20)가 막는다. `tools/ui_smoke.py` 가 외부 요청이 `<img>` 뿐인지 확인한다.
 3. **선택한 폴더와 그 하위만.** 서버는 프로젝트 밖 경로와 숨김 경로를 404로 막는다. 경로 검사는 반드시 `lectern/scanner.py` 의 `resolve_inside()` 를 거친다. 이 함수는 `resolve()` 전에 글자만으로 root 안인지 먼저 본다 — `\\서버\공유` 를 `resolve()` 하면 Windows 가 그 서버에 접속해 로그인 정보(NTLM)를 건넨다 (D29).
 4. **숨김 제외.** 이름이 `.`으로 시작 / Windows 숨김·시스템 속성 / 심볼릭 링크·정션 / 제외 폴더(`node_modules` 등) / 문서가 없는 폴더는 트리에 나오지 않는다. 제외 폴더는 사이드바 '자료' 목록에만 흐린 접힌 폴더로 나오고 펼칠 때 안을 읽는다 (D49 — 숨김은 거기에도 없다). html 은 앱 소스·빌드 폴더(`src`·`public`·`static`·`templates`·`web`·`www`·`frontend`·`out`) 안에서는 문서로 보지 않는다.
-5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29). 터미널은 사용자가 친 명령만 돌린다 (D38) — 셸은 전체 경로로 띄우고, 셸에 글자를 보내는 API 는 사용자의 키 입력을 받는 `POST /api/term/input` 하나뿐이다 (우클릭 메뉴의 '터미널에 붙여 넣기'도 이 길로, Enter 없이 — D51. 독립창의 것은 메인 창에 맡겨 이 길로 — D95). `lectern-skill.exe` 는 사용자가 시킨 Claude 가 부르는 별도 프로그램이고 스킬의 `scripts` 안 파일만 돌린다 (D99 — 앱은 부르지 않는다).
+5. **코드 파일을 실행하지 않는다.** `os.startfile` 은 `.py`, `.js`, `.bat` 등을 실행해 버린다. 문서 속 링크는 `lectern/osutil.py` 의 `open_path()` 만 쓴다 (안전한 형식만 기본 앱, 나머지는 편집기나 탐색기). 프로그램은 이름만으로 띄우지 않는다 — Windows 는 현재 폴더에서 먼저 찾는데, `run.bat .`·탐색기 우클릭으로 띄우면 현재 폴더가 열린 프로젝트다 (D29). 터미널은 사용자가 친 명령만 돌린다 (D38) — 셸은 전체 경로로 띄우고, 셸에 글자를 보내는 API 는 사용자의 키 입력을 받는 `POST /api/term/input` 하나뿐이다 (우클릭 메뉴의 '터미널에 붙여 넣기'도 이 길로, Enter 없이 — D51. 독립창의 것은 메인 창에 맡겨 이 길로 — D95). `lectern-skill.exe` 는 스킬의 `scripts` 안 파일만 돌리는 별도 프로그램이다 (D99). 사용자가 시킨 Claude 와 사용자가 누른 'pptx 로 전환' 만 부른다 (D102).
 6. **단순함 유지.** 레이아웃은 왼쪽 트리 하나 (툴바 아래 프로젝트 탭 막대, D34 — 문서 칸 위에는 그 프로젝트의 문서 탭 줄, 20개까지, D64·D67. 오른쪽 터미널은 열 때만, D38 — 창이 세로로 길면 문서 아래에, D52. 툴바의 '터미널 모음'은 탭이 아니라 화면을 덮는 보기다, D40. 문서 탭 줄의 '모두 펼치기'는 선택된 프로젝트의 문서 칸들과 터미널을 창 전체 격자에 놓는 보기다 — 칸을 옮기지 않고 CSS 만, D73. 사용설명서(F1)·발표 모드(D59)도 같은 방식, D45. 메모는 오른쪽에서 문서 위를 덮는 패널이다, D92. 독립창은 프로젝트에 속한 별도 창이고 문서 탭 줄과 문서가 기본이다, D95. Lectern 슬라이드는 독립창의 하나인 슬라이드 창에서 별도 스타일로 본다, D96. 탭 막대 오른쪽 끝에는 '편집'·'메모'와 오른쪽 패널을 보이고 감추는 '목차'·'터미널' 버튼 — 이 순서로). 번들러·프레임워크(React, Vite 등)를 들이지 않는다. `docs/ROADMAP.md` 의 "하지 않기로 한 것"은 사용자가 다시 요청하기 전에는 넣지 않는다.
 
 ## 실행과 확인
@@ -51,6 +51,8 @@ lectern/
   sheet.py              엑셀 보기 — xlsx·xlsm 의 시트 목록과 값을 zipfile·ElementTree 로 (/api/sheet, D77 — 보기만)
   editing.py            편집 모드 — 원문 주기·저장 (/api/source, /api/save, D54), 새 문서 만들기 (create, /api/new-doc, D63·D65)
   notes.py              프로젝트 메모 — .lectern/notes.md 하나 (/api/notes, D92)
+  slidetemplates.py     Lectern 슬라이드 템플릿 — 기본 템플릿과 설정 폴더 templates (/api/slide-templates, D101)
+  pptxexport.py         pptx 로 전환 — 설정 폴더 pptx-styles 목록, lectern-skill.exe 로 새 pptx (/api/pptx-styles, /api/pptx-export, D102)
   styles.py             내 스타일 — 설정 폴더 styles\*.css 목록·머리 주석·인터넷 길 지우기 (/api/styles, /userstyle/*, D53)
   i18n.py               서버 문구의 언어 — t()·N_()·EN 사전, 설정 language(auto 는 Windows 표시 언어)
   osutil.py             링크 대상 열기 (기본 앱 / 편집기 / 탐색기)
@@ -65,13 +67,14 @@ web/
   css/app.css           앱 UI 스타일
   css/frame.css         html 문서(iframe) 안에 넣는 찾기·바뀐 곳·우클릭 표시
   themes/               문서 본문 스타일: base.css + 스타일마다 <id>.css (목록은 theme.js 의 THEMES)
+  templates/            기본 Lectern 슬라이드 템플릿 (ko·en, 번호-이름.md — D101)
   help/manual.md        사용설명서 (F1 — help.js 가 그린다). 영어판은 manual.en.md
   help/styles.md        내 스타일을 만드는 AI 용 설명서 (D53 — 설정 창의 요청 글이 이 파일의 경로를 준다). 영어판은 styles.en.md
   help/slides.md        Lectern 슬라이드를 쓰는 AI 용 작성 안내 (D96 — 문법·배치·분량 기준. 영어판은 slides.en.md)
   help/writing.md       Lectern 에서 잘 보이는 문서를 쓰는 AI 용 작성 안내 (D57 — 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 글이 경로를 준다). 영어판은 writing.en.md
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
-samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 슬라이드 모범 예제 10개와 만드는 과정 — D96)
+samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 Lectern 슬라이드 예제의 입구 — 기초, 상황별 모범 예제 10개와 만드는 과정, 복잡한 배치. 시험에서 나온 문서는 tests/corpus/slides — D96)
 skills/                 Claude Code 스킬 (D98 — pptx-to-lectern, lectern-to-pptx. 설치 파일에 들어가고 앱은 경로만 준다. 설치는 사용자가 시킬 때 Claude 가 물은 뒤 한다. 스크립트는 표준 라이브러리, PowerPoint·Pillow 는 있으면 쓴다. 설치 폴더의 lectern-skill.exe 로 돌아 Python 없이 된다 — D99)
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
@@ -93,7 +96,7 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 - 앱의 데이터 모양은 `tools/types/lectern.d.ts` 에 적는다 (`tsc` 가 개발할 때만 읽는다). 새 import 순환을 만들지 않는다 (시험이 잡는다).
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
 - UI 문구는 한국어로 쓰고 `t()` 로 감싼다 (JS 는 `t('…')`, 템플릿 글자 안이면 `${t('…')}`, 값은 `t('문서 {n}개', { n })` — Python 은 `i18n.t`). 영어는 `web/js/lang/en.js`·`lectern/i18n.py` 의 `EN` 에 같이 넣는다 (`tests/test_i18n.py` 가 감싸지 않은 한국어와 빠진 영어를 잡는다, D46). 한국어 문구는 짧은 평서문. 오류 메시지는 무엇이 안 됐고 어떻게 하면 되는지 말한다 ('F5 를 누르면 다시 불러옵니다'처럼 — 'F5 로 다시 불러옵니다'는 저절로 되는 것처럼 읽힌다).
-- 같은 것은 같은 이름으로 (v0.13.1 점검): 그림(이미지 아님 — 인터넷 그림), 박스글(콜아웃·인용 상자), 누르기(클릭 아님), 거르기, 장 하이라이트·하이라이트 해제, '자료' 목록(사이드바 '파일' 탭 안의 문서도 코드도 아닌 파일 — D48, 안쪽 이름은 others·files), 터미널 모음, 모아 보기. 툴바의 Ctrl+P 버튼은 '문서 열기'(이름·제목으로 열기)이고, '검색'은 본문 검색, '문서에서 찾기'는 Ctrl+F 다. 말줄임은 '…' 한 글자.
+- 같은 것은 같은 이름으로 (v0.13.1 점검): md 문서·Lectern 슬라이드·pptx 를 구분해 쓴다 — 'Lectern 슬라이드'가 공식 용어이고 '발표 문서'로 부르지 않는다 (영어 Lectern slides), 그림(이미지 아님 — 인터넷 그림), 박스글(콜아웃·인용 상자), 누르기(클릭 아님), 거르기, 장 하이라이트·하이라이트 해제, '자료' 목록(사이드바 '파일' 탭 안의 문서도 코드도 아닌 파일 — D48, 안쪽 이름은 others·files), 터미널 모음, 모아 보기. 툴바의 Ctrl+P 버튼은 '문서 열기'(이름·제목으로 열기)이고, '검색'은 본문 검색, '문서에서 찾기'는 Ctrl+F 다. 말줄임은 '…' 한 글자.
 - API를 추가·변경하면 `docs/ARCHITECTURE.md` 의 API 표를 같이 고친다. 설계 판단은 `docs/DECISIONS.md` 에 한 항목으로 남긴다.
 - 단축키는 `help.js` 의 `SHORTCUTS` 하나에 적는다 (단축키 표와 설명서의 '단축키' 장이 이것으로 만들어진다).
 
@@ -107,7 +110,7 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 | `lineedit`·`lineops`·`slideops`·`spotlight`·`editor`·`basket`·`notes`·뒤로 기록 | 한 줄 편집·줄 구조·편집 모드·보내기 |
 | `csvview`·`tabledata`·`codeview`·`others`·`sheet.py` | 데이터 보기·코드 화면·파일 목록 |
 | `panes`·`doctabs`·`tabs`·`spread`·`nav` | 화면 구조·칸·탭 |
-| `doc`·`markdown`·`toc`·`parts`·`charts`·`slides`·`slidelint`·`csssafe`·`slidetools`·`htmldoc` | 문서 그리기 |
+| `doc`·`markdown`·`toc`·`parts`·`charts`·`slides`·`slidelint`·`slidegallery`·`csssafe`·`slidetools`·`htmldoc` | 문서 그리기 |
 | 스타일·`t()`·`writing.md`·예제 | 스타일·문구·예제 |
 | `server.py`·`scanner.py`·`config.py`·`app.py`·`index.html`·설치 | 서버·설정·설치 |
 

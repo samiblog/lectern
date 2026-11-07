@@ -1,4 +1,4 @@
-"""예제 guide/09-한-줄-편집.md 를 적힌 대로 따라 한다: 복사한 예제 폴더에서 사례마다 실제로 고치고 파일을 본다. 문서의 설명이 틀리면 여기서 잡힌다"""
+"""예제 guide/08-한-줄-편집.md 를 적힌 대로 따라 한다: 복사한 예제 폴더에서 사례마다 실제로 고치고 파일을 본다. 문서의 설명이 틀리면 여기서 잡힌다"""
 import shutil
 import tempfile
 import time
@@ -12,7 +12,7 @@ from harness import ROOT, check, fails, report, serve, stop
 base = Path(tempfile.mkdtemp(prefix='lec-sample-'))
 proj = base / 'copy'
 shutil.copytree(ROOT / 'samples', proj)
-doc = proj / 'guide' / '09-한-줄-편집.md'
+doc = proj / 'guide' / '08-한-줄-편집.md'
 config = base / 'config'
 config.mkdir()
 server, url, port = serve(proj, config)
@@ -44,7 +44,7 @@ try:
         page.on('pageerror', lambda e: errors.append(str(e)[:160]))
         page.goto(url)
         page.wait_for_selector('#lec-tree .row.file')
-        page.evaluate("import('/static/js/store.js').then(({ emit }) => emit('open', { type: 'doc', path: 'guide/09-한-줄-편집.md' }))")
+        page.evaluate("import('/static/js/store.js').then(({ emit }) => emit('open', { type: 'doc', path: 'guide/08-한-줄-편집.md' }))")
         page.wait_for_selector('#lec-view h1:has-text("한 줄 편집")')
         page.wait_for_timeout(800)
         settle = lambda ms=400: page.wait_for_timeout(ms)

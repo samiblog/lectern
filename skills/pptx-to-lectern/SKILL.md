@@ -160,3 +160,7 @@ Lectern 의 작성 안내를 읽고 md 내용으로 Lectern 슬라이드를 쓴�
 ### 4. pptx 로도 내달라고 하면
 
 lectern-to-pptx 스킬로 `--template .pptx-work/<양식이름>-양식/source.pptx` 를 준다. 같은 양식의 pptx 가 나온다.
+
+### 5. pptx 스타일로 등록해 달라고 하면
+
+사용자가 "이 pptx 를 pptx 스타일로 등록해 줘" 라고 하면 그 파일을 `%APPDATA%\Lectern\pptx-styles\이름.pptx` 로 복사한다. 있는 파일은 묻기 전에 덮어쓰지 않는다. 폴더가 없으면 만든다. Lectern 전체가 함께 쓰고, 'pptx 로 전환' 창의 목록에 나온다. 문서에 그 스타일을 쓰려면 맨 앞 설정에 `pptxStyle: 이름` 을 적는다.

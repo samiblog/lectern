@@ -596,7 +596,7 @@ def run():
         t.click(button='right')
         page.wait_for_timeout(200)
         menu = page.locator('#lec-menu').inner_text()
-        check('우클릭 메뉴', all(x in menu for x in ('장 더하기', '장 복제', '장 앞으로 옮기기', '장 뒤로 옮기기', '장 지우기')), menu[:200])
+        check('우클릭 메뉴', all(x in menu for x in ('새 장…', '템플릿 바꾸기…', '이 장을 템플릿으로 저장…', '장 복제', '장 앞으로 옮기기', '장 뒤로 옮기기', '장 지우기')), menu[:200])
         page.locator('#lec-menu').get_by_text('장 지우기').click()
         page.wait_for_timeout(1000)
         check('장 지우기는 묻고 지운다', answers == ['4장을 지울까요?'] and page.locator('#lec-view .lec-slide').count() == 6 and '## 표 장' not in TEXT(), answers)
