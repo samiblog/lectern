@@ -194,6 +194,14 @@ eq(atEnd('글\n\n---\n', 'x'), L('글\n\n---\n\nx\n'), '구분선 뒤');
 eq(atEnd('---\ntitle: a\n---\n', 'x'), L('---\ntitle: a\n---\n\nx\n'), '머리 설정만 있는 문서');
 eq(atEnd('글\n\n\n\n', 'x'), L('글\n\nx\n\n\n\n'), '끝의 빈 줄은 건너뛴다');
 
+// 블록의 앞뒤 (D117)
+const { planBefore } = m;
+const before = (s, n, text) => insertLine(L(s), planBefore(L(s), n), text).lines;
+eq(before('글\n\n$$\nx\n$$\n', 3, 'y'), L('글\n\ny\n\n$$\nx\n$$\n'), '수식 위');
+eq(before('$$\nx\n$$\n', 2, 'y'), L('y\n\n$$\nx\n$$\n'), '문서 맨 앞의 수식 위');
+eq(insertLine(L('글\n\n$$\nx\n$$\n\n뒤\n'), planEnd(L('글\n\n$$\nx\n$$\n\n뒤\n'), 4), 'y').lines, L('글\n\n$$\nx\n$$\n\ny\n\n뒤\n'), '수식 아래');
+eq(before('::: a\n```mermaid\ngraph TD\n```\n:::\n', 3, 'y'), L('::: a\ny\n\n```mermaid\ngraph TD\n```\n:::\n'), '칸 안의 블록 위');
+
 // 빈 새 줄의 레벨 (D106)
 const shifted = (s, at, dirs, text) => {
   const l = L(s);

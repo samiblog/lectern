@@ -803,6 +803,10 @@ export function spotKey(e) {
   if (e.defaultPrevented || e.altKey || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
   const k = e.key;
   if (e.ctrlKey) {
+    if (k === 'Enter' && linesOn()) {   // 칸 안과 같은 키: 현재 줄의 아래·위에 새 줄 (D117 — 글을 쓸 때 파일에 들어간다)
+      emit('line-add', { below: !e.shiftKey });
+      return true;
+    }
     if (e.shiftKey && k === 'ArrowRight') return sendHere(true);
     if (view().classList.contains('lec-deck')) {   // 슬라이드 (D96): 구성 요소의 글자 크기, 장 더하기·복제
       if (e.shiftKey && (e.code === 'Period' || e.code === 'Comma')) {
@@ -838,6 +842,10 @@ export function spotKey(e) {
     return true;
   }
   if (k === 'F2') return editHere();
+  if (ranged() && (e.code === 'KeyA' || e.code === 'KeyB')) {   // 고른 줄의 위·아래에 새 줄 (D117 — 노트북의 a·b, 고른 줄에서만. 자리로 받아 한글 입력 상태에서도 된다)
+    emit('line-add', { below: e.code === 'KeyB' });
+    return true;
+  }
   if (k === 'Delete' && ranged()) {   // 줄 지우기 (lineedit.js, D83)
     emit('line-delete', {});
     return true;

@@ -29,7 +29,7 @@ import { lineSlot, editableLines, blockOfLine } from './lineunits.js';
 import { locateLines } from './linefind.js';
 import { isCode } from './icons.js';
 import {
-  diffRange, planNew, planEnd, shiftPlan, paraAt, quoteOf, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
+  diffRange, planNew, planEnd, planBefore, shiftPlan, paraAt, quoteOf, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
@@ -404,15 +404,15 @@ function plantLine(slot, plan, below) {
  * 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew).
  * end: 문서 끝에 (D106 — 마지막 줄의 ↓, 빈 문서). 구분선·그림처럼 줄의 자리가 없는 곳은 그 블록의 앞뒤에 문단을 연다
  */
-async function beginNew(base, below, { end = false, after = false } = {}) {
+async function beginNew(base, below, { end = false, after = false, around = false } = {}) {
   const pane = S.pane;
   const ready = await settled(pane);
   if (S.pane !== pane || session || !ready) return;
   const view = $('#lec-view');
   const src = sourceLines();
-  const plan = end ? planEnd(src, after ? base : 0) : null;
-  const at = plan ? plan.at || base : base;
-  const slot = (!plan || plan.kind === 'item' || plan.head) && at ? lineSlot(view, at, src) : null;
+  const plan = around ? (below ? planEnd(src, base) : planBefore(src, base)) : end ? planEnd(src, after ? base : 0) : null;
+  const at = plan && !around ? plan.at || base : base;
+  const slot = !around && (!plan || plan.kind === 'item' || plan.head) && at ? lineSlot(view, at, src) : null;
   const code = isCodeView(view);
   const next = plan ?? planNew(src, base, below, { code, parts: slot?.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null });
   if (next.error) {
@@ -435,6 +435,32 @@ async function beginNew(base, below, { end = false, after = false } = {}) {
   made.span.scrollIntoView({ block: 'nearest' });
   hereAtNew();
   showLineEdit();
+}
+
+/**
+ * 칸 없이 새 줄을 연다 (D117): 현재 줄의 Ctrl+Enter·Ctrl+Shift+Enter, 고른 줄의 a·b. 고른 줄이면 첫 줄 위·끝 줄 아래에 열고 고르기를 푼다.
+ * 표의 행은 새 행을, 차트·수식은 그 블록의 앞뒤 문단을 연다
+ */
+function addHere(below) {
+  const pane = S.pane;
+  const view = pane?.view;
+  if (!view || session || pane.lineEditHold || pane.unfold) return;
+  if (pane.tab && blockedReadOnly(pane.tab)) return;
+  if (!linesEditable()) return;
+  const span = litSpan();
+  const base = span ? span[below ? 1 : 0] : pane.here?.line;
+  stopSpotlight();
+  if (!base) {
+    growEnd();
+    return;
+  }
+  const el = blockOfLine(view, base);
+  if (tableAt(sourceLines(), base)) {   // 줄로 본다 — 화면에서는 tbody 가 그 줄을 맡기도 한다
+    menuOp((src) => addRow(src, base, below), (line) => begin(line, { cell: 0 }));
+    return;
+  }
+  followLine(base);
+  beginNew(base, below, { around: !!el?.closest?.(ATOMIC) });
 }
 
 /** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서와 Lectern 슬라이드. 코드 파일은 그대로 (D106) */
@@ -2168,6 +2194,7 @@ export function initLineEdit() {
     else begin(line, { select });
   });
   on('line-end', growEnd);   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
+  on('line-add', ({ below }) => addHere(below));   // 칸 없이 새 줄 (spotlight.js, D117)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });

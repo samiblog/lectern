@@ -350,6 +350,13 @@ export function planEnd(lines, after = 0) {
   return { ...para, at: last, pre: [''], post: after && lines[last] != null && !isBlank(lines[last]) && !CELL_MARK.test(lines[last].trim()) ? [''] : [] };
 }
 
+/** 블록 앞의 새 문단 계획 (D117 — 차트·수식처럼 줄 안에 새 줄을 넣을 수 없는 블록의 위에) */
+export function planBefore(lines, n) {
+  const a = blockAt(blocksOf(lines), n)?.a ?? n;
+  const prev = lines[a - 2];
+  return { head: '', fill: '', kind: 'para', list: null, at: a - 1, pre: prev != null && !isBlank(prev) && !CELL_MARK.test(prev.trim()) ? [''] : [], post: [''] };
+}
+
 /** 항목 줄 위쪽에서 test 에 맞는 항목을 찾는다 {n, it} — 목록이 끝나는 곳에서 멈춘다 */
 function itemAbove(lines, from, depth, test) {
   for (let n = from; n >= 1; n--) {

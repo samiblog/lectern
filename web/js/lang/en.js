@@ -1307,5 +1307,7 @@ export default {
 "첫 열이 항목, 다음 열들이 값입니다": "The first column is the item, the next columns are values",
 "칸 안에서 누르세요": "Press this inside a cell.",
 "값 열이 수가 아니라 차트로 바꾸지 못했습니다 — 첫 열은 항목, 다음 열들은 수여야 합니다": "The value columns are not numbers, so no chart was made — the first column is the item and the next columns must be numbers.",
-"그림 폭 {n}px — Ctrl+Z 로 되돌립니다": "Figure width {n}px — Ctrl+Z undoes it"
+"그림 폭 {n}px — Ctrl+Z 로 되돌립니다": "Figure width {n}px — Ctrl+Z undoes it",
+"현재 줄의 아래 / 위에 새 줄 — 줄을 골랐으면 그 앞뒤에": "New line below / above the current line — around the picked lines if any",
+"고른 줄의 위 / 아래에 새 줄": "New line above / below the picked lines"
 };
