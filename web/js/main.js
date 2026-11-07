@@ -7,7 +7,7 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold } from './fold.js';
-import { initSpotlight, spotKey, escSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint } from './spotlight.js';
+import { initSpotlight, spotKey, escSpotlight, docKeyTarget, lightBlocks, overlayOpen, spotButton, herePoint } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
 import { initQuickChart, closeChart } from './quickchart.js';
@@ -287,7 +287,7 @@ function bindKeys() {
       else if (S.tab) openPalette({ newTab: true });
     } else if (mod && e.shiftKey && !e.altKey && (e.key === 'PageDown' || e.key === 'PageUp') && !typing(e) && $('#lec-view')?.classList.contains('lec-deck')) {   // 슬라이드: 장 옮기기 (D96)
       e.preventDefault();
-      emit('slide-op', { op: 'move', dir: e.key === 'PageUp' ? -1 : 1 });
+      if (!lightBlocks()) emit('slide-op', { op: 'move', dir: e.key === 'PageUp' ? -1 : 1 });
     } else if (mod && !e.altKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 문서 탭 (D91)
       e.preventDefault();
       cycleDocTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
@@ -308,10 +308,10 @@ function bindKeys() {
     } else if (mod && e.key === 'F4') {   // 문서 탭 닫기 (Ctrl+W 와 같다)
       e.preventDefault();
       closeDocTabKey();
-    } else if (e.altKey && e.key === 'ArrowLeft') {
+    } else if (e.altKey && !e.shiftKey && e.key === 'ArrowLeft') {   // Alt+Shift+←·→ 는 레벨 (litKey)
       e.preventDefault();
       back();
-    } else if (e.altKey && e.key === 'ArrowRight') {
+    } else if (e.altKey && !e.shiftKey && e.key === 'ArrowRight') {
       e.preventDefault();
       forward();
     } else if (e.key === 'F5' && e.shiftKey && !mod) {   // 발표 — 지금 보는 슬라이드부터 (Lectern 슬라이드를 슬라이드로 볼 때, D59)

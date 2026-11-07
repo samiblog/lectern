@@ -1310,7 +1310,8 @@ export default {
 "한 줄 편집은 한 줄만 고칩니다 — 고른 줄을 풀고 F2 를 누르세요": "Line edit works on one line — release the picked lines, then press F2",
 "이 범위 밖에서 우클릭할 때의 메뉴": "The menu you get when you right-click outside this range",
 "고른 행": "Picked rows",
-"Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter·Esc 하이라이트 끄기": "Delete remove · Alt+↑·↓ move · Tab level · Shift+→ send to Claude · Shift+← copy location · Ctrl+C copy source · Shift+Enter or Esc turn off focus",
 "현재 줄 고르기 — 고른 줄이면 하이라이트 켜기·끄기 (나머지를 흐리게, 끄면 고른 줄로)": "Pick the current line — on picked lines, turn focus on or off (dims the rest, off returns to picked lines)",
-"현재 줄 고르기": "Pick the current line"
+"현재 줄 고르기": "Pick the current line",
+"하이라이트 중입니다 — Shift+Enter 로 끄면 고른 줄로 돌아갑니다": "Focus is on — press Shift+Enter to turn it off and return to the picked lines",
+"Shift+Enter·Esc 하이라이트 끄기 — 끄면 고른 줄로": "Shift+Enter or Esc turn off focus — back to the picked lines"
 };

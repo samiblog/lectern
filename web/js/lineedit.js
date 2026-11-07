@@ -46,7 +46,7 @@ import { writeValues, setChartKind, chartFromTable } from './chartops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget,
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly, isMd } from './util.js';
@@ -466,7 +466,7 @@ function addHere(below) {
 /** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서와 Lectern 슬라이드. 코드 파일은 그대로 (D106) */
 function canGrow(pane) {
   const view = pane?.view;
-  return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session;
+  return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session && !lightOn();
 }
 
 /** 마지막 줄의 ↓·빈 문서의 F2: 문서 끝에 새 줄을 연다. 각주는 문서 끝에 모인 것이라 그 뒤에는 더하지 않는다 */
@@ -2092,7 +2092,7 @@ async function onTaskClick(e) {
   e.preventDefault();
   const pane = S.panes.find((p) => p.view.contains(e.target));
   if (!pane?.tab || e.detail > 1 || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || session || taskSaving) return;
-  if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
+  if (blockedReadOnly(pane.tab) || lightBlocks()) return;   // Lectern 프로그램 폴더 안 (D71), 하이라이트 중 (D118)
   const line = Number(/^\d+/.exec(e.target.closest('li')?.dataset.lines || '')?.[0]);
   const before = pane.source?.lines[line - 1];
   const m = before == null ? null : TASK_LINE.exec(before);

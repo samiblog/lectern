@@ -12,7 +12,7 @@ import { S, emit } from './store.js';
 import { showMenu, menuGroups } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems, litAt, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
+import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
@@ -487,6 +487,11 @@ function codeLineMenu(e, view, x, y) {
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
 function openMenu(e, view, x, y) {
+  if (lightOn()) {   // 하이라이트는 끄기만 (D118)
+    e.preventDefault();
+    showMenu(x, y, [releaseItem()]);
+    return;
+  }
   if (view.classList?.contains('code-view')) {
     codeMenu(e, view, x, y);
     return;

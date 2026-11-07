@@ -10,7 +10,7 @@
 //   반대쪽으로), ↑·↓ 는 풀고 현재 위치를 옮긴다. 없을 때 Shift+↑·↓ 는 현재 줄부터.
 //   범위는 원문 줄로 남겨 다시 그려도 같은 곳이다 (그 줄이 없어졌거나 다른 문서면 푼다).
 // - 줄 하이라이트 (D118): 고른 줄의 라이트다 (dimmed). 고른 줄에서만 켜고, 끄면 고른 줄로 돌아간다 — Shift+Enter·Esc·버튼·흐린 곳 누르기.
-//   그 밖의 키는 고른 줄과 같다.
+//   켜 있는 동안은 보기만 한다 — 고른 줄의 키와 줄을 고치는 일은 듣지 않고 (lineKey), ↑·↓ 는 화면만 스크롤한다.
 // - 장 하이라이트: 툴바 버튼·Alt+H (줄을 골랐으면 그 줄의 라이트). 장은 문서의 맨 위 수준 절이다. H1 이 하나뿐이면(문서 제목)
 //   그 아래 수준(보통 H2) 절, 아니면 H1 절. 첫 장 앞의 제목·머리말도 한 장이다. 장의 범위는 그 장 제목을 눌러 접을 때 숨는 범위와 같다
 //   (다음 같은 수준 이상의 제목 앞까지, 각주 제외 — fold.js 와 같은 규칙). ↑·↓·PageUp·PageDown·버튼 옆 ∧∨ 로 앞뒤 장, 흐린 곳을 누르면 그 장,
@@ -53,7 +53,7 @@ let followRaf = 0;
 let revealing = 0;      // 'reveal' 뒤 현재 위치를 그곳으로 옮기기 전 — 그사이의 스크롤로 따라오지 않게
 let revealLine = null; // 다음 'reveal' 에서 현재 위치로 삼을 원문 줄 — 여러 줄 블록 안의 자리로 돌아갈 때 (뒤로·앞으로, nav.js)
 
-let dimmed = false;     // 고른 줄의 라이트를 켰는지 (D108·D118) — 나머지를 흐리게 볼 뿐 할 수 있는 일은 고른 줄과 같다
+let dimmed = false;     // 고른 줄의 라이트를 켰는지 (D108·D118) — 켜 있는 동안은 보기만 한다
 
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
 const view = () => $('#lec-view');
@@ -69,6 +69,8 @@ const pathOf = () => (isCodeView() ? view().dataset.codePath : view().dataset.do
 const levelOf = (el) => (/^H([1-6])$/.exec(el.tagName) ? Number(el.tagName[1]) : 0);
 const lit = () => active && (mode === 'range' ? linesOn() : chapters.length > 0);
 const ranged = () => lit() && mode === 'range';
+/** 줄 하이라이트 중인지 — 끄기 전에는 고른 줄의 일을 하지 않는다 (D118) */
+export const lightOn = () => ranged() && dimmed;
 // 누르기로 줄을 고르지 않는 곳 — 코드 화면의 머리줄·csv 의 거르기 칸 등
 const NO_PICK = 'input, button, select, textarea, .cv-head, .csv-bar, .csv-filter, .csv-head';
 // 본문의 할 일 체크박스는 글처럼 — 누르면 그 줄이 현재 위치, 흐린 곳이면 하이라이트만 끈다 (lineedit.js 의 onTaskClick 이 받기 전에)
@@ -416,7 +418,7 @@ function extend(step) {
   if (!us.length) return false;
   if (!ranged()) {
     const ch = spotlightOn() ? chapterIndexes(us) : null;
-    dimmed = !!ch;
+    dimmed = false;
     if (ch) {
       active = true;
       mode = 'range';
@@ -647,7 +649,7 @@ function updateStatus() {
   const pick = ranged() && !dimmed;
   el.textContent = `${pick ? t('고른 줄') : t('하이라이트')} ${rangeText(r)} · ${t('{n}줄', { n: r[1] - r[0] + 1 })}`;
   if (pick) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기');
-  else if (ranged()) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter·Esc 하이라이트 끄기');
+  else if (ranged()) el.title = t('Shift+Enter·Esc 하이라이트 끄기 — 끄면 고른 줄로');
   else el.title = t('Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제');
 }
 
@@ -663,8 +665,8 @@ export function forgetUnits() {
   cache = null;
 }
 export const sourceLines = () => srcLines();
-/** 줄 하이라이트의 원문 줄 [a, b] (lineedit.js 의 줄 지우기·옮기기) — 줄 하이라이트가 아니면 null */
-export const litSpan = () => (ranged() ? litLines() : null);
+/** 고른 줄의 원문 줄 [a, b] (lineedit.js 의 줄 지우기·옮기기) — 고른 줄이 아니거나 하이라이트 중이면 null */
+export const litSpan = () => (ranged() && !dimmed ? litLines() : null);
 /** 옮긴 줄들로 줄 하이라이트를 옮긴다 (lineedit.js) */
 export function setLitSpan(a, b) {
   if (!ranged()) return;
@@ -695,7 +697,7 @@ export const revealAt = (line) => { revealLine = line; };
 /** 두 번 누른 곳(e)의 줄 단위 (lineedit.js) — 본문의 글이 아니거나 줄을 고르지 않는 곳이면 null */
 export function unitAtPoint(e) {
   const root = view();
-  if (!root?.contains(e.target) || e.target === root || !linesOn() || noPick(e.target)) return null;
+  if (!root?.contains(e.target) || e.target === root || !linesOn() || noPick(e.target) || lightOn()) return null;
   const us = units();
   const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
   return i < 0 ? null : us[i];
@@ -812,7 +814,31 @@ function keyPlace(el) {
 export const overlayOpen = () => !!document.querySelector(OVERLAYS);
 
 /** 하이라이트 키를 받을 곳인지 — 문서 칸·툴바·목차·상태줄 (main.js 의 Ctrl+Z 되돌리기도 — lineedit.js) */
-export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
+export const docKeyTarget = (e) => !e.defaultPrevented && !lightOn() && keyPlace(e.target);
+
+/** 하이라이트 중이면 알리고 true — 줄에 하는 일은 끄고 나서 (D118) */
+export function lightBlocks() {
+  if (!lightOn()) return false;
+  toast(t('하이라이트 중입니다 — Shift+Enter 로 끄면 고른 줄로 돌아갑니다'));
+  return true;
+}
+
+/** 고른 줄이나 현재 줄에 하는 키인지 — 하이라이트 중에는 듣지 않고 알린다. 글을 골랐으면 Ctrl+C·X 는 브라우저의 것이다 */
+function lineKey(e) {
+  const k = e.key;
+  if (e.altKey) {
+    if (e.ctrlKey) return /^Digit[0-6]$/.test(e.code);
+    return e.shiftKey ? k === 'ArrowLeft' || k === 'ArrowRight' : k === 'ArrowUp' || k === 'ArrowDown';
+  }
+  if (e.ctrlKey) {
+    if (k === 'Enter' || (e.shiftKey && k === 'ArrowRight')) return true;
+    if (e.shiftKey) return isDeck() && (e.code === 'Period' || e.code === 'Comma');
+    if (e.code === 'KeyC' || e.code === 'KeyX') return !getSelection()?.toString();
+    return ['KeyL', 'KeyZ', 'KeyY', 'KeyH'].includes(e.code) || (isDeck() && (e.code === 'KeyM' || e.code === 'KeyD'));
+  }
+  if (e.shiftKey) return k.startsWith('Arrow');
+  return k === 'F2' || k === 'Insert' || k === 'Delete' || e.code === 'KeyA' || e.code === 'KeyB';
+}
 
 /**
  * 문서·코드 화면의 현재 위치·하이라이트 키 (main.js 의 keydown 이 부른다). 다뤘으면 true — 부른 쪽이 기본 동작(스크롤 등)을 막는다.
@@ -820,7 +846,14 @@ export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
  * Shift+↑·↓ 넓히기·줄이기, Shift+→ Claude 로 보내기, Shift+← 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때)
  */
 export function spotKey(e) {
-  if (e.defaultPrevented || e.altKey || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
+  if (e.defaultPrevented || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
+  if (lightOn()) {   // 끄는 키만 받는다 — ↑·↓·PageUp·PageDown 은 브라우저의 스크롤로 (D118)
+    if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey) setLight(false);
+    else if (lineKey(e)) lightBlocks();
+    else return false;
+    return true;
+  }
+  if (e.altKey) return false;
   const k = e.key;
   if (e.ctrlKey) {
     if (k === 'Enter' && linesOn()) {   // 칸 안과 같은 키: 현재 줄의 아래·위에 새 줄 (D117 — 글을 쓸 때 파일에 들어간다)
@@ -925,14 +958,15 @@ function endDrag() {
 }
 
 /**
- * 본문 누르기: 누른 줄이 현재 위치 (고른 줄이 있으면 끝 줄이 현재 위치이므로 그 밖 — 누르면 풀리는 곳 — 을 누를 때만. 하이라이트는 흐린 곳을 눌러도
- * 고른 줄이 남아 옮기지 않는다). Shift+누르기: 그 줄을 고르고 끌면 넓힌다 — 고른 줄이 있으면 처음 줄은 두고 거기까지 (글 고르기·끌어 놓기 대신)
+ * 본문 누르기: 누른 줄이 현재 위치 (고른 줄이 있으면 끝 줄이 현재 위치이므로 그 밖 — 누르면 풀리는 곳 — 을 누를 때만).
+ * Shift+누르기: 그 줄을 고르고 끌면 넓힌다 — 고른 줄이 있으면 처음 줄은 두고 거기까지 (글 고르기·끌어 놓기 대신)
  */
 function onMouseDown(e) {
   if (e.button !== 0 || e.ctrlKey || e.altKey || e.metaKey) return;
   const root = view();
   if (!root?.contains(e.target) || !linesOn() || noPick(e.target)) return;
-  if (!e.shiftKey && ranged() && (dimmed || insideLit(e.clientY, e.target))) return;
+  if (lightOn()) return;   // 보기만 한다 — 현재 위치도 고른 줄도 그대로 (D118). 흐린 곳의 누르기는 아래 click 이 끈다
+  if (!e.shiftKey && ranged() && insideLit(e.clientY, e.target)) return;
   const us = units();
   const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
   if (i < 0) return;
