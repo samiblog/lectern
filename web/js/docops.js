@@ -143,6 +143,41 @@ export function moveSection(lines, n, dir) {
   return { lines: next, line };
 }
 
+/**
+ * 제목 줄 n 의 절을 제목 줄 to 앞으로 옮긴다 — 본문과 하위 절까지 함께, 수준은 그대로 (목차에서 끌기 — D121).
+ * to 가 null 이면 본문 끝(각주 앞)으로. 자기 절 안으로는 옮기지 않는다 ({error: 'inside'}). {lines, line(옮긴 제목 줄)}
+ */
+export function moveSectionTo(lines, n, to) {
+  if (deckOf(lines)) return { error: 'edge' };
+  const heads = headsOf(lines);
+  const me = heads.find((h) => h.n === n);
+  if (!me) return { error: 'not-heading' };
+  if (to != null && !heads.some((h) => h.n === to)) return { error: 'not-heading' };
+  const [a, b] = sectionBlock(lines, heads, me);
+  if (to != null && to >= a && to <= b + 1) return to === a || to === b + 1 ? { error: 'same' } : { error: 'inside' };
+  const end = to == null ? bodyEnd(lines) : null;
+  if (to == null && b >= end) return { error: 'same' };
+  const trim = (x) => {
+    const out = x.slice();
+    while (out.length && !out.at(-1).trim()) out.pop();
+    return out;
+  };
+  const moving = trim(lines.slice(a - 1, b));
+  const rest = [...lines.slice(0, a - 1), ...lines.slice(b)];
+  // 넣을 자리 (rest 의 0부터): to 앞, 또는 본문 끝 뒤
+  let at = to == null ? end - (b - a + 1) : (to > b ? to - (b - a + 1) : to) - 1;
+  if (to == null) {
+    while (at > 0 && !rest[at - 1].trim()) at -= 1;
+  }
+  const before = rest.slice(0, at);
+  const after = rest.slice(at);
+  while (before.length && !before.at(-1).trim()) before.pop();
+  const lead = before.length ? [''] : [];
+  const gap = after.length && after[0].trim() ? [''] : [];
+  const next = [...before, ...lead, ...moving, ...gap, ...after];
+  return { lines: next, line: before.length + lead.length + 1 };
+}
+
 /** 절을 지울 범위 [a, b] — 뒤의 빈 줄까지 (지운 뒤 빈 줄이 겹치지 않게) */
 export function sectionSpan(lines, n) {
   const heads = headsOf(lines);

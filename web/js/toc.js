@@ -394,12 +394,13 @@ function buildToc(view) {
   }
   heads = [];
   parts = [];
+  const movable = sectionsMovable(view);
   let lv = -1;   // 바로 앞 제목의 수준 (첫 제목 앞이면 -1)
   const items = rows.map((r) => {
     if (r.head) {
       lv = +r.head.tagName[1] - top;
       heads.push(r.head);
-      return html`<li class="lv${lv}"><a href="#${r.head.id}" data-i="${heads.length - 1}">${r.head.textContent.trim()}</a></li>`;
+      return html`<li class="lv${lv}"><a href="#${r.head.id}" data-i="${heads.length - 1}" draggable="${movable ? 'true' : 'false'}">${r.head.textContent.trim()}</a></li>`;
     }
     if (hidden.has(r.kind)) return '';
     parts.push(r.el);
@@ -417,6 +418,74 @@ function buildToc(view) {
   active = -1;
   spy();
   updateTocVisibility();
+}
+
+// ---- 목차에서 절 끌기 (D121) ---------------------------------------------------------------
+// 제목을 끌어 다른 제목 앞에 놓으면 그 절을 본문과 하위 절까지 옮긴다 (계산은 docops.moveSectionTo, 저장은 lineedit.js 가 'section-move' 로).
+// 마지막 제목의 아래쪽 절반에 놓으면 문서 끝으로. 고칠 수 있는 md 문서에서만 (슬라이드·코드 화면·읽기 전용·편집 모드는 아니다)
+
+let drag = null;   // {from(옮길 제목 줄), a(끄는 항목)}
+
+/** 이 화면의 절을 목차에서 끌어 옮길 수 있는지 */
+function sectionsMovable(view) {
+  const path = view?.dataset.docPath;
+  return !!path && /\.md$/i.test(path) && !view.classList.contains('lec-deck') && !S.tab?.readonly && !S.pane?.editor;
+}
+
+const lineOfHead = (h) => parseInt(h?.dataset.lines ?? '', 10) || null;
+
+function clearDrop() {
+  for (const el of $$('#lec-toc .drop-before, #lec-toc .drop-end, #lec-toc .dragging')) el.classList.remove('drop-before', 'drop-end', 'dragging');
+}
+
+/** 끄는 동안 놓을 자리: {to(제목 줄, 끝이면 null), li} — 놓을 수 없으면 null */
+function dropAt(e) {
+  const a = e.target.closest?.('a[data-i]');
+  if (!a || !drag) return null;
+  const h = heads[+a.dataset.i];
+  const line = lineOfHead(h);
+  if (!line) return null;
+  const last = a === links.at(-1);
+  const r = a.getBoundingClientRect();
+  if (last && e.clientY > r.top + r.height / 2) return { to: null, li: a.closest('li'), end: true };
+  return { to: line, li: a.closest('li'), end: false };
+}
+
+function bindDrag(box) {
+  box.addEventListener('dragstart', (e) => {
+    const a = e.target.closest?.('a[data-i]');
+    const line = a && lineOfHead(heads[+a.dataset.i]);
+    if (!a || !line || a.getAttribute('draggable') !== 'true') return;
+    drag = { from: line, a };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', a.textContent);
+    a.closest('li')?.classList.add('dragging');
+  });
+  box.addEventListener('dragover', (e) => {
+    const at = dropAt(e);
+    if (!at) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    for (const el of $$('#lec-toc .drop-before, #lec-toc .drop-end')) if (el !== at.li) el.classList.remove('drop-before', 'drop-end');
+    at.li.classList.toggle('drop-end', at.end);
+    at.li.classList.toggle('drop-before', !at.end);
+  });
+  box.addEventListener('dragleave', (e) => {
+    if (!box.contains(/** @type {Node} */ (e.relatedTarget))) for (const el of $$('#lec-toc .drop-before, #lec-toc .drop-end')) el.classList.remove('drop-before', 'drop-end');
+  });
+  box.addEventListener('drop', (e) => {
+    const at = dropAt(e);
+    const from = drag?.from;
+    clearDrop();
+    drag = null;
+    if (!at || from == null) return;
+    e.preventDefault();
+    emit('section-move', { from, to: at.to });
+  });
+  box.addEventListener('dragend', () => {
+    clearDrop();
+    drag = null;
+  });
 }
 
 /** '지금 읽는 위치'를 다시 정한다 — 편집 모드가 편집기의 지금 보는 곳을 바꿀 때 (editor.js) */
@@ -484,6 +553,7 @@ export function initToc() {
     if (e.target === S.pane?.scroller && !raf) raf = requestAnimationFrame(spy);
   }, { capture: true, passive: true });
   on('pane', showPaneToc);
+  bindDrag($('#lec-toc'));
   $('#lec-toc').addEventListener('click', (e) => {
     const btn = e.target.closest('.toc-parts button[data-part]');
     if (btn) {

@@ -46,13 +46,19 @@ const BLOCK_ITEMS = () => [
   { id: 'source', group: t('주·참조'), name: t('출처 줄'), words: 'source 자료 출처' },   // i18n-ok (찾는 말)
   { id: 'tablenote', group: t('주·참조'), name: t('표 주'), words: 'table note 주석' },   // i18n-ok (찾는 말)
   { id: 'link', group: t('주·참조'), name: t('링크'), hint: 'Ctrl+K', words: 'link url' },
+  { id: 'ref', group: t('주·참조'), name: t('상호 참조'), words: 'cross reference 참조 표 그림 절 링크' },   // i18n-ok (찾는 말)
+  { id: 'cite', group: t('주·참조'), name: t('본문 인용'), words: 'citation cite 인용 문헌 참고문헌' },   // i18n-ok (찾는 말)
   { id: 'attach', group: t('주·참조'), name: t('첨부'), words: 'attachment 붙임 별첨 파일' },   // i18n-ok (찾는 말)
   { id: 'appendix', group: t('주·참조'), name: t('부록'), words: 'appendix' },
   { id: 'rule', group: t('쪽'), name: t('구분선'), words: '--- rule line' },
+  { id: 'pagebreak', group: t('쪽'), name: t('쪽 나눔'), words: 'page break 페이지 나누기 인쇄' },   // i18n-ok (찾는 말)
+  { id: 'toc', group: t('쪽'), name: t('목차'), words: 'toc contents 차례' },   // i18n-ok (찾는 말)
+  { id: 'tables', group: t('쪽'), name: t('표 목차'), words: 'list of tables 표 차례' },   // i18n-ok (찾는 말)
+  { id: 'figures', group: t('쪽'), name: t('그림 목차'), words: 'list of figures 그림 차례' },   // i18n-ok (찾는 말)
 ];
 
-/** 슬라이드에 넣지 않는 것: 각주를 쓰지 않고, 첨부·부록은 문서의 것이고, --- 는 장을 가른다 */
-const NOT_IN_DECK = new Set(['note', 'tablenote', 'attach', 'appendix', 'rule']);
+/** 슬라이드에 넣지 않는 것: 각주를 쓰지 않고, 첨부·부록·목차·쪽 나눔·참조·인용은 문서의 것이고, --- 는 장을 가른다 */
+const NOT_IN_DECK = new Set(['note', 'tablenote', 'attach', 'appendix', 'rule', 'pagebreak', 'toc', 'tables', 'figures', 'ref', 'cite']);
 const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표자 노트'), words: 'speaker note 노트 메모' });   // i18n-ok (찾는 말)
 
 /** 넣을 수 있는 것 */

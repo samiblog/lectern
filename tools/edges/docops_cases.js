@@ -1,5 +1,5 @@
 // docops.js 의 계산 점검 (rules_check.mjs 가 돌린다 — m: docops.js, 끝에서 {n, fails} 를 돌려준다).
-const { setKind, shiftHeadings, moveSection, deleteSection, sectionEnd, bareText, headLevel } = m;
+const { setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, sectionEnd, bareText, headLevel } = m;
 let n = 0;
 const fails = [];
 const L = (s) => s.split('\n');
@@ -85,6 +85,21 @@ eq(move(DOC, 5, 1), { error: 'not-heading' }, '본문');
 eq(moveSection(L(DOC), 11, -1).line, 3, '옮긴 제목의 줄');
 eq(moveSection(L(DOC), 3, 1).line, 7, '내린 제목의 줄');
 eq(move('---\nmarp: true\n---\n\n## a\n\n## b\n', 7, -1), { error: 'edge' }, 'Lectern 슬라이드는 장으로 옮긴다');
+
+// 목차에서 끌어 절 옮기기 (D121)
+const moveTo = (s, at, to) => {
+  const r = moveSectionTo(L(s), at, to);
+  return r.error ? r : r.lines;
+};
+eq(moveTo(DOC, 15, 3), L('# 글\n\n## 셋째\n\n셋 내용\n\n## 첫째\n\n첫 내용\n\n### 세부\n\n세부 내용\n\n## 둘째\n\n둘 내용\n'), '끝 절을 맨 앞 절 앞으로');
+eq(moveTo(DOC, 3, 15), L('# 글\n\n## 둘째\n\n둘 내용\n\n## 첫째\n\n첫 내용\n\n### 세부\n\n세부 내용\n\n## 셋째\n\n셋 내용\n'), '절을 아래 절 앞으로 — 하위 절까지');
+eq(moveTo(DOC, 3, null), L('# 글\n\n## 둘째\n\n둘 내용\n\n## 셋째\n\n셋 내용\n\n## 첫째\n\n첫 내용\n\n### 세부\n\n세부 내용\n'), '절을 끝으로');
+eq(moveSectionTo(L(DOC), 3, 15).line, 7, '옮긴 제목의 줄');
+eq(moveTo(DOC, 3, 7), { error: 'inside' }, '자기 절 안으로는 못 옮긴다');
+eq(moveTo(DOC, 3, 11), { error: 'same' }, '바로 뒤 절 앞은 제자리');
+eq(moveTo(DOC, 15, null), { error: 'same' }, '끝 절을 끝으로');
+eq(moveTo(DOC, 5, 3), { error: 'not-heading' }, '본문은 절이 아니다');
+eq(moveTo('# 글\n\n## 첫째\n\n가[^1]\n\n## 둘째\n\n나\n\n[^1]: 주\n', 3, null), L('# 글\n\n## 둘째\n\n나\n\n## 첫째\n\n가[^1]\n\n[^1]: 주\n'), '끝으로 옮겨도 각주는 끝에');
 
 // 절 지우기
 const del = (s, at) => {

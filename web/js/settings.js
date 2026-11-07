@@ -97,6 +97,7 @@ async function onChange(e) {
   }
   await saveConfig({ [key]: e.target.checked });
   if (key === 'md_breaks') emit('refresh-view');   // 문서를 새 규칙으로 다시 그린다 (D93)
+  if (key === 'vi_keys') emit('vi-keys');   // 상태줄의 vi 표시와 열린 편집기의 키맵 (D122)
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
   else if (key === 'terminal_follow_style') emit('term-colors');

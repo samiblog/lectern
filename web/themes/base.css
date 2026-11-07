@@ -463,6 +463,16 @@
   /* 표 칸의 낱말을 글자마다 끊지 않는다 ('구/리') — 넓으면 표 상자가 가로로 스크롤한다 */
   .md-body th, .md-body td { overflow-wrap: break-word; }
 }
+/* 문서 안의 목차 줄과 쪽 나눔 줄 (D121 — markdown.js·doc.js) */
+.md-body .lec-doctoc { margin: 1.2em 0; padding: .7em 1.1em; border: 1px solid var(--md-border); border-radius: 6px; }
+.md-body .lec-doctoc-title { font-weight: 600; color: var(--md-heading); margin-bottom: .35em; }
+.md-body .lec-doctoc ul { list-style: none; margin: 0; padding: 0; }
+.md-body .lec-doctoc li { margin: .15em 0; }
+.md-body .lec-doctoc li.d1 { padding-left: 1.3em; }
+.md-body .lec-doctoc li.d2 { padding-left: 2.6em; font-size: .95em; }
+.md-body .lec-doctoc-none { margin: 0; color: var(--md-muted); font-size: .9em; }
+.md-body .lec-pagebreak { position: relative; height: 0; margin: 2em 0; border-top: 1px dashed var(--md-border); text-align: center; }
+.md-body .lec-pagebreak span { position: relative; top: -.75em; padding: 0 .7em; background: var(--md-bg); color: var(--md-muted); font-size: .75em; }
 /* 인쇄·PDF (문서 우클릭 → '인쇄 / PDF로 저장'). 화면 UI는 빼고, 어두운 스타일도 종이에는 흰 바탕·검은 글자로 —
    브라우저는 기본으로 바탕색을 인쇄하지 않으므로 밝은 글자가 흰 종이에 묻힌다 */
 @media print {
@@ -487,6 +497,9 @@
   .md-body pre, .md-body table, .md-body img, .md-body pre.mermaid, .md-body .math-block, .md-body blockquote { break-inside: avoid; }
   .md-body .table-wrap { max-height: none; overflow: visible; }
   .md-body thead th { position: static; }
+  .md-body .lec-pagebreak { break-after: page; border: 0; margin: 0; }   /* 쪽 나눔 줄 (D121) — 종이에서는 쪽이 바뀌고 줄은 보이지 않는다 */
+  .md-body .lec-pagebreak span { display: none; }
+  .md-body .lec-doctoc { border: 0; padding: 0; }
   .md-body a.ext::after { content: " (" attr(href) ")"; font-size: .82em; vertical-align: baseline; opacity: 1; }
   .md-body .lec-changed, .md-body .lec-picked, .md-body .lec-target { outline: none !important; animation: none !important; }
   .lec-spot, .lec-here { display: none !important; }   /* 하이라이트 중이어도 모두 그대로 인쇄, 현재 위치 표시도 빼고 */

@@ -30,6 +30,7 @@ import { locateLines } from './linefind.js';
 import { isCode } from './icons.js';
 import {
   diffRange, planNew, planEnd, planBefore, shiftPlan, paraAt, quoteOf, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
+  blocksOf, blockAt, itemOf, fencesOf, fenceAt,
 } from './lineops.js';
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
@@ -37,10 +38,11 @@ import {
 } from './slideops.js';
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
-  setKind, shiftHeadings, moveSection, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
+  setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
   moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
+import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, PAGE_BREAK } from './refs.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { writeValues, setChartKind, chartFromTable } from './chartops.js';
 import { slugify } from './markdown.js';
@@ -606,6 +608,7 @@ async function finishNew(s, save) {
   try {
     s.pane.lineEditMissed = false;
     const r = await replaceLines(s.pane, s.path, d.start, d.before, d.after);
+    if (r) noteCaptions();
     if (!r) {
       s.fresh.remove();
       await copyText(text);
@@ -670,13 +673,33 @@ async function saveRecorded(pane, path, start, before, after) {
   return r;
 }
 
-/** 제목이 바뀌면 번호를 다시 맞춘다 (D107) — 번호가 있던 md 문서만. 같은 저장에 묶여 되돌리기 한 걸음이다 */
+let captionNote = null;   // 캡션 번호를 맞춘 저장이 남긴 알림 {plain, dangling} — 저장한 뒤에 띄운다 (noteCaptions)
+
+/**
+ * 제목이 바뀌면 제목 번호를 다시 맞춘다 (D107) — 번호가 있던 md 문서만. 표·그림을 더하거나 빼거나 옮기면 캡션 번호와 그 참조도 (D121 — refs.js).
+ * 같은 저장에 묶여 되돌리기 한 걸음이다
+ */
 function withNumbers(pane, old, next) {
   const { view } = pane;
+  if (!view.dataset.docPath || view.classList.contains('lec-deck')) return next;
   const heads = (lines) => lines.filter((s) => headLevel(s)).join('\n');
-  if (!view.dataset.docPath || view.classList.contains('lec-deck') || (sameHeads(old, next) && heads(old) === heads(next))) return next;   // 번호만 떨어졌어도 다시 붙인다
-  const id = numberScheme(old);
-  return id ? applyScheme(next, id, slugify).lines : next;
+  let out = next;
+  if (!sameHeads(old, next) || heads(old) !== heads(next)) {   // 번호만 떨어졌어도 다시 붙인다
+    const id = numberScheme(old);
+    if (id) out = applyScheme(next, id, slugify).lines;
+  }
+  const c = renumberCaptions(old, out);
+  captionNote = c.plain || c.dangling ? c : null;
+  return c.lines;
+}
+
+/** 캡션 번호를 맞춘 뒤 고치지 않은 곳을 알린다 — 링크가 아닌 '표 3' 글자, 없어진 표를 가리키는 참조 */
+function noteCaptions() {
+  const c = captionNote;
+  captionNote = null;
+  if (!c) return;
+  if (c.dangling) toast(t('없어진 표·그림을 가리키는 참조가 {n}곳 남았습니다 — 링크를 고치거나 지우세요', { n: c.dangling }));
+  else toast(t('표·그림 번호를 다시 매겼습니다. 링크가 아닌 \'표 3\' 같은 글자 {n}곳은 고치지 않았습니다 — Ctrl+F 로 찾아보세요', { n: c.plain }));
 }
 
 /**
@@ -687,7 +710,10 @@ async function commit(pane, path, old, next, { numbers = true } = {}) {
   const d = diffRange(old, numbers ? withNumbers(pane, old, next) : next);
   try {
     const r = await replaceLines(pane, path, d.start, d.before, d.after);
-    if (r) return r.at - d.start;
+    if (r) {
+      noteCaptions();
+      return r.at - d.start;
+    }
     toast(t('다른 곳에서 이 줄이 바뀌어 저장하지 않았습니다 — 화면을 다시 그렸습니다'), 'error');
     refreshView(pane);
   } catch (e) {
@@ -1122,6 +1148,75 @@ async function moveLitNow(dir) {
   if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
 }
 
+/**
+ * vi 키의 p·P (D122 — vikeys.js): dd·yy 로 담아 둔 줄을 현재 줄의 블록 아래(above 면 위)에 넣는다. 목록 항목은 목록 안에 바로,
+ * 나머지는 앞뒤에 빈 줄을 두는 블록으로. 되돌리기 한 걸음
+ */
+export function putLinesHere(lines, above = false) {
+  turn = turn.then(async () => {
+    const pane = S.pane;
+    if (!lines.length) {
+      toast(t('담아 둔 줄이 없습니다 — dd·yy 로 줄을 담습니다'));
+      return;
+    }
+    if (session) await finish(true);
+    if (!await settled(pane) || S.pane !== pane || blockedReadOnly(pane.tab) || !pathIn(pane.view)) return;
+    const src = sourceLines();
+    const here = Math.min(Math.max(1, pane.here?.line ?? 1), Math.max(1, src.length));
+    let r;
+    if (itemOf(src[here - 1] ?? '') && lines.every((s) => itemOf(s))) {   // 목록 항목을 목록 안에 — 빈 줄 없이
+      const at = above ? here - 1 : here;
+      r = { lines: [...src.slice(0, at), ...lines, ...src.slice(at)], line: at + 1 };
+    } else {
+      const b = blockAt(blocksOf(src), here);
+      r = insertBlock(src, above ? (b ? b.a - 1 : here - 1) : (b ? b.b : here), lines);
+    }
+    const shift = await commit(pane, pathIn(pane.view), src, r.lines);
+    if (shift == null || S.pane !== pane) return;
+    followLine(r.line + shift);
+    toast(t('{n}줄을 넣었습니다 — Ctrl+Z 로 되돌립니다', { n: lines.length }));
+  });
+}
+
+/** vi 키의 J (D122): 고른 줄을 한 줄로 합친다 (한 줄만 골랐으면 다음 줄과). 뒤 줄의 앞 공백을 떼고 빈칸 하나로 잇는다 — 한 문단 안의 줄만 */
+export function joinPicked() {
+  turn = turn.then(async () => {
+    const pane = S.pane;
+    const span = litSpan();
+    if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+    const src = sourceLines();
+    const a = span[0];
+    const b = span[1] > span[0] ? span[1] : span[0] + 1;
+    const fences = fencesOf(src);
+    const part = src.slice(a - 1, b);
+    if (b > src.length || part.some((s) => !s.trim() || /^\s*\|/.test(s)) || fenceAt(fences, a) || fenceAt(fences, b)) {
+      toast(t('한 문단 안의 이어진 줄만 합칩니다'));
+      return;
+    }
+    const joined = [part[0].replace(/\s+$/, ''), ...part.slice(1).map((s) => s.trim())].join(' ');
+    const next = [...src.slice(0, a - 1), joined, ...src.slice(b)];
+    const shift = await commit(pane, pathIn(pane.view), src, next);
+    if (shift != null && S.pane === pane) setLitSpan(a + shift, a + shift);
+  });
+}
+
+/** 목차에서 끈 절을 옮긴다 (D121 — toc.js 의 'section-move'): 제목 줄 from 의 절을 제목 줄 to 앞으로, to 가 null 이면 문서 끝으로 */
+async function moveSectionNow({ from, to }) {
+  const pane = S.pane;
+  if (session) await finish(true);
+  if (!await settled(pane) || S.pane !== pane || blockedReadOnly(pane.tab)) return;
+  const src = sourceLines();
+  const m = moveSectionTo(src, from, to);
+  if (m.error) {
+    if (m.error !== 'same') toast(m.error === 'inside' ? t('절을 자기 안으로는 옮기지 못합니다') : whyNot(m.error));
+    return;
+  }
+  const shift = await commit(pane, pathIn(pane.view), src, m.lines);
+  if (shift == null || S.pane !== pane) return;
+  followLine(m.line + shift);
+  toast(t('절을 옮겼습니다 — Ctrl+Z 로 되돌립니다'));
+}
+
 // ---- 슬라이드 (D96) -----------------------------------------------------------------
 
 const TEXT_LABELS = { title: t('제목'), sub: t('소제목'), body: t('본문'), table: t('표'), box: t('박스글'), code: t('코드') };
@@ -1507,6 +1602,10 @@ async function putItem(s, id) {
   else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
   else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
+  else if (id === 'pagebreak') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, [PAGE_BREAK]), then: (at) => beginNew(at, true) }));
+  else if (id === 'toc' || id === 'tables' || id === 'figures') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, [tocLine(id, LANG === 'en')]), then: (at) => beginNew(at, true) }));
+  else if (id === 'ref') await putRef(s);
+  else if (id === 'cite') await putCite(s);
   else if (id === 'appendix') {
     await putBlock(s, (src, line) => {
       const head = `${t('부록 {x}.', { x: nextAppendix(src) })} `;
@@ -1519,6 +1618,46 @@ async function putItem(s, id) {
       focusPlace(0);
     });
   } else await onEmptyLine(s, (x) => freshKind(x, id));
+}
+
+/** 상호 참조 (D121): 표·그림의 캡션이나 절을 골라 그 자리에 링크를 넣는다 — '[표 3](#표-3)'. 번호가 바뀌면 저장할 때 함께 고친다 */
+async function putRef(s) {
+  const at = s.places[s.cell].span;
+  const keep = keepCaret();
+  const all = refTargets(sourceLines(), slugify);
+  const caps = all.filter((x) => x.kind === 'caption').sort((a, b) => a.word.localeCompare(b.word) || a.n - b.n);
+  const targets = [...caps, ...all.filter((x) => x.kind === 'section')];
+  if (!targets.length) {
+    backTo(s, keep);
+    toast(t('가리킬 표·그림·절이 없습니다 — 캡션(표 1. 제목)이나 제목을 먼저 쓰세요'));
+    return;
+  }
+  const items = targets.map((x, i) => ({ id: String(i), name: x.name, group: x.kind === 'caption' ? t('표·그림') : t('절'), sub: t('{n}행', { n: x.line }) }));
+  const chosen = await pick({ items, title: t('상호 참조'), at });
+  backTo(s, keep);
+  if (!chosen || session !== s) return;
+  document.execCommand('insertText', false, targets[Number(chosen.id)].text);
+}
+
+/** 본문 인용 (D121): 참고문헌 절의 문헌을 골라 '(김영삼, 2026)' 을 넣는다. 본문에 아직 안 쓴 문헌을 함께 보인다 */
+async function putCite(s) {
+  const at = s.places[s.cell].span;
+  const keep = keepCaret();
+  const src = sourceLines();
+  const refs = referencesIn(src);
+  if (!refs.length) {
+    backTo(s, keep);
+    toast(t('참고문헌 절이 없습니다 — \'## 참고문헌\' 아래에 문헌을 목록으로 쓰면 고를 수 있습니다'));
+    return;
+  }
+  const used = refs.map((r) => citedCount(src, r.text));
+  const items = refs.map((r, i) => ({ id: String(i), name: r.text, sub: `${citeOf(r.text).cite} · ${used[i] ? t('본문 {n}곳', { n: used[i] }) : t('아직 안 씀')}` }));
+  const unused = used.filter((x) => !x).length;
+  const title = unused ? t('본문 인용 — 문헌 {n}개 가운데 {m}개는 본문에 아직 없습니다', { n: refs.length, m: unused }) : t('본문 인용');
+  const chosen = await pick({ items, title, at });
+  backTo(s, keep);
+  if (!chosen || session !== s) return;
+  document.execCommand('insertText', false, citeOf(refs[Number(chosen.id)].text).cite);
 }
 
 /** `/`·Ctrl+Shift+/: 넣기 창 (D109). 고른 것을 넣고, 그만두면 칸으로 돌아온다 */
@@ -2037,7 +2176,7 @@ function onKey(e) {
     finish(true);
   } else if (k === 'Escape') {
     e.preventDefault();
-    finish(false);
+    finish(S.config?.vi_keys === true);   // vi 키(D122)를 켰으면 vi 처럼 저장하고 나온다 — 아니면 그만두기
   } else if ((k === 'ArrowUp' || k === 'ArrowDown') && !mod && !e.altKey && !e.shiftKey) {
     const dir = k === 'ArrowUp' ? -1 : 1;
     if (!caretOnEdge(span, dir)) return;   // 꺾인 글의 안쪽 줄: 칸 안에서 위·아래로 (기본 동작)
@@ -2236,6 +2375,7 @@ export function initLineEdit() {
   on('line-end', growEnd);   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
   on('line-add', ({ below }) => addHere(below));   // 칸 없이 새 줄 (spotlight.js, D117)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
+  on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });
   on('md-headings', (op) => { turn = turn.then(() => restyle(op)); });

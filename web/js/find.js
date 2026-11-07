@@ -114,6 +114,17 @@ function go(index, scroll = true) {
   }
 }
 
+/** vi 키의 n·N (D122): 마지막에 찾은 말로 다음·이전 곳 — 찾기 막대가 닫혀 있으면 초점은 문서에 둔 채 다시 연다. 찾은 말이 없으면 false */
+export function findStep(dir) {
+  if (!input().value.trim()) return false;
+  if (bar().hidden) {
+    bar().hidden = false;
+    search(true);
+  }
+  if (ranges.length) go(current + dir);
+  return true;
+}
+
 /** Ctrl+H: 찾아 바꾸기 — md 문서에서 (D109). 편집할 수 없는 화면이면 false */
 export function openReplace() {
   const view = S.pane?.view;

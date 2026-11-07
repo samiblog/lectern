@@ -4,6 +4,8 @@
 
 import { S } from './store.js';
 import { slideRule, cellRule } from './slides.js';
+import { tocKind, isPageBreak } from './refs.js';
+import { t } from './i18n.js';
 
 const instances = new Map();
 
@@ -199,6 +201,27 @@ function sourceLines(md) {
   });
 }
 
+/**
+ * 문서 안의 목차 줄 (D121): 맨 바깥의 '[목차]'·'[표 목차]'·'[그림 목차]' 한 줄 단락을 빈 <nav class="lec-doctoc"> 로 바꾼다 — 채우는 것은 doc.js.
+ * Lectern 슬라이드에서는 하지 않는다
+ */
+function docMarks(state) {
+  if (state.env.deck) return;
+  const offset = state.env.lineOffset || 0;
+  const toks = state.tokens;
+  for (let i = 0; i + 2 < toks.length; i++) {
+    const open = toks[i];
+    if (open.type !== 'paragraph_open' || open.level !== 0 || !open.map || toks[i + 1].type !== 'inline' || toks[i + 2].type !== 'paragraph_close') continue;
+    const kind = tocKind(toks[i + 1].content);
+    if (!kind) continue;
+    const tok = new state.Token('html_block', '', 0);
+    tok.block = true;
+    tok.map = open.map;
+    tok.content = `<nav class="lec-doctoc" data-toc="${kind}" data-lines="${open.map[0] + 1 + offset}-${open.map[1] + offset}"></nav>\n`;
+    toks.splice(i, 3, tok);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 function create(math, breaks) {
@@ -211,6 +234,12 @@ function create(math, breaks) {
     .use(window.markdownItAnchor, { slugify, tabIndex: false });
   if (math) md.use(mathPlugin);
   md.use(sourceLines);
+  md.core.ruler.push('lec_doc_marks', docMarks);   // 문서 안 목차 줄 (D121) — source_lines 뒤에 (줄 범위는 스스로 단다)
+  // 쪽 나눔 줄 (D121): 화면에는 점선과 '쪽 나눔', 인쇄에서는 쪽이 바뀐다 (base.css). 다른 뷰어에서는 빈 div 라 보이지 않는다
+  const htmlBlock = md.renderer.rules.html_block;
+  md.renderer.rules.html_block = (tokens, i, options, env, self) => (!env.deck && isPageBreak(tokens[i].content)
+    ? `<div class="lec-pagebreak" role="separator"${self.renderAttrs(tokens[i])}><span>${md.utils.escapeHtml(t('쪽 나눔'))}</span></div>\n`
+    : htmlBlock(tokens, i, options, env, self));
   md.block.ruler.before('fence', 'lec_cell', cellRule, { alt: ['paragraph', 'reference', 'blockquote', 'list'] });   // 슬라이드의 칸 ::: 이름
   md.core.ruler.push('lec_slides', slideRule);   // Lectern 슬라이드면 줄(---)마다 슬라이드로 (slides.js, D59 — env.deck 이 있을 때만)
 

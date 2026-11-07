@@ -21,6 +21,7 @@ import {
   $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow, linkTargets,
 } from './util.js';
 import { t } from './i18n.js';
+import { captionAt, captionId } from './refs.js';
 
 const PURIFY = {
   SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
@@ -445,8 +446,48 @@ function frontMatterHtml(raw) {
   return html`<details class="front-matter" open><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
 }
 
+/**
+ * 캡션 단락에 id 를 단다 — 상호 참조 '[표 3](#표-3)' 이 가는 곳 (D121, refs.js). 같은 id 가 이미 있으면(같은 이름의 제목 등) 두지 않는다.
+ * 캡션 [{word, n, title, el}] 을 돌려준다 (표 목차·그림 목차)
+ */
+function markCaptions(root) {
+  const caps = [];
+  for (const p of $$('p', root)) {
+    if (p.closest('li, td, th, nav')) continue;
+    const c = captionAt(p.textContent);
+    if (!c) continue;
+    const id = captionId(c.word, c.n);
+    if (!p.id && !root.querySelector(`[id="${CSS.escape(id)}"]`)) p.id = id;
+    caps.push({ ...c, el: p });
+  }
+  return caps;
+}
+
+/** 문서 안의 목차 줄(markdown.js 의 docMarks)을 채운다 — 제목, 또는 표·그림 캡션의 링크. 문서 제목(맨 앞의 h1 하나)은 빼고 세 단계까지 */
+function fillDocToc(root, caps) {
+  const navs = $$('nav.lec-doctoc', root);
+  if (!navs.length) return;
+  const level = (h) => Number(h.tagName[1]);
+  const heads = $$('h1, h2, h3, h4, h5, h6', root).filter((h) => h.id && !h.closest('nav'));
+  const titles = heads.filter((h) => h.tagName === 'H1');
+  const list = titles.length === 1 && heads[0] === titles[0] ? heads.slice(1) : heads;
+  const top = list.length ? Math.min(...list.map(level)) : 1;
+  for (const nav of navs) {
+    const kind = nav.dataset.toc;
+    const words = kind === 'tables' ? ['표', 'Table'] : ['그림', 'Figure'];   // i18n-ok (캡션 낱말)
+    const items = kind === 'toc'
+      ? list.filter((h) => level(h) <= top + 2).map((h) => ({ id: h.id, text: h.textContent.trim(), depth: level(h) - top }))
+      : caps.filter((c) => words.includes(c.word) && c.el.id).map((c) => ({ id: c.el.id, text: c.el.textContent.trim(), depth: 0 }));
+    const title = { toc: t('목차'), tables: t('표 목차'), figures: t('그림 목차') }[kind] ?? t('목차');
+    setHtml(nav, [html`<div class="lec-doctoc-title">${title}</div>`, items.length
+      ? html`<ul>${items.map((x) => html`<li class="d${x.depth}"><a href="#${x.id}">${x.text}</a></li>`)}</ul>`
+      : html`<p class="lec-doctoc-none">${kind === 'toc' ? t('제목이 아직 없습니다') : t('번호가 붙은 캡션이 아직 없습니다')}</p>`]);
+  }
+}
+
 function enhance(root, docPath, stamp, tab) {
   const baseUrl = new URL(docUrl(tab, docPath), location.origin);
+  fillDocToc(root, markCaptions(root));   // 링크를 잇기 전에 — 목차의 링크도 문서 안 이동으로
   for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp, tab);
   for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath, tab);   // 이미지 맵의 area 도 링크
   decorateAlerts(root);

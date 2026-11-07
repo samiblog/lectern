@@ -93,6 +93,57 @@ async function loadLib(group) {
   if (typeof window.CodeMirror !== 'function') throw new Error(t('편집기를 불러오지 못했습니다'));
   for (const name of ADDONS) await load(`${LIB}/addon/${name}.js`);
   for (const name of MODE_FILES[group] || []) await load(`${LIB}/mode/${name}.js`);
+  if (S.config?.vi_keys) await loadVim();
+}
+
+/**
+ * vi 키 (D122): CodeMirror 의 vim 키맵 (설정 vi_keys 를 켰을 때만 불러온다). :w 저장, :q 닫기, :wq·:x 저장하고 닫기.
+ * Esc 는 vim 의 것이 된다 (Normal 모드로) — 편집을 닫는 것은 :q·Ctrl+E·닫기 버튼
+ */
+async function loadVim() {
+  await load(`${LIB}/keymap/vim.js`);
+  const Vim = window.CodeMirror?.Vim;
+  if (!Vim || Vim.lecternReady) return;
+  Vim.lecternReady = true;
+  const edOf = (cm) => cm.lecternEd;
+  Vim.defineEx('write', 'w', (cm) => { if (edOf(cm)) save(edOf(cm)); });
+  Vim.defineEx('quit', 'q', (cm) => { if (edOf(cm)) closeEditor(edOf(cm).pane); });
+  const saveClose = async (cm) => {
+    const ed = edOf(cm);
+    if (!ed) return;
+    await save(ed);
+    if (!ed.dirty) closeEditor(ed.pane);
+  };
+  Vim.defineEx('wq', 'wq', saveClose);
+  Vim.defineEx('xit', 'x', saveClose);
+}
+
+/** 편집기의 키 — vi 키를 켜면 Esc 는 vim 의 것 (Normal 모드로) */
+function editorKeys(pane) {
+  const keys = {
+    'Ctrl-S': () => save(pane.editor),
+    Esc: () => closeEditor(pane),
+    'Ctrl-H': 'replace',
+    'Ctrl-G': 'jumpToLine',   // VS Code·Word 와 같게 (D91 — 다음 찾기는 F3)
+    F3: 'findNext',
+    'Shift-F3': 'findPrev',
+    // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다
+    Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
+    'Shift-Tab': (cm) => cm.indentSelection('subtract'),
+  };
+  if (S.config?.vi_keys) delete keys.Esc;
+  return keys;
+}
+
+/** 설정에서 vi 키를 켜고 끄면 열린 편집기에도 (settings.js 의 'vi-keys') */
+async function applyViKeys() {
+  const eds = S.panes.map((p) => p.editor).filter((ed) => ed?.cm);
+  if (!eds.length) return;
+  if (S.config?.vi_keys) await loadVim();
+  for (const ed of eds) {
+    ed.cm.setOption('keyMap', S.config?.vi_keys && window.CodeMirror?.Vim ? 'vim' : 'default');
+    ed.cm.setOption('extraKeys', editorKeys(ed.pane));
+  }
 }
 
 // ---- 위치 잇기 (D55) -------------------------------------------------------------
@@ -274,18 +325,10 @@ function build(pane, path, src, mode, line) {
     // autofocus 는 쓰지 않는다 — CodeMirror 가 처리기를 달기 전에 입력 칸에 초점을 주고 20ms 뒤에야 받은 것으로 치며 칸을 비워,
     // 열자마자 친 글자를 잃는다. 아래 build 끝의 cm.focus() 가 처리기를 단 뒤에 준다
     indentUnit: indent, tabSize: 4, indentWithTabs: false, spellcheck: false,
-    extraKeys: {
-      'Ctrl-S': () => save(ed),
-      Esc: () => closeEditor(pane),
-      'Ctrl-H': 'replace',
-      'Ctrl-G': 'jumpToLine',   // VS Code·Word 와 같게 (D91 — 다음 찾기는 F3)
-      F3: 'findNext',
-      'Shift-F3': 'findPrev',
-      // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다
-      Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
-      'Shift-Tab': (cm) => cm.indentSelection('subtract'),
-    },
+    keyMap: S.config?.vi_keys && window.CodeMirror.Vim ? 'vim' : 'default',   // vi 키 (D122)
+    extraKeys: editorKeys(pane),
   });
+  ed.cm.lecternEd = ed;
   ed.clean = ed.cm.changeGeneration(true);
   ed.cm.on('changes', () => setDirty(ed, !ed.cm.isClean(ed.clean)));
   ed.cm.on('change', (cm, change) => logChange(ed.log, change));
@@ -467,6 +510,7 @@ function onRendered(pane) {
 }
 
 export function initEditor() {
+  on('vi-keys', applyViKeys);   // 설정에서 vi 키를 켜고 끌 때 (D122)
   setLeaveGuard((pane) => closeEditor(pane));   // 다른 화면으로 가기 전에 (nav.js)
   setEditJump(jumpTo);   // 편집 중에 목차·모아 보기에서 고르면 편집기가 그곳으로 (toc.js)
   on('rendered', onRendered);

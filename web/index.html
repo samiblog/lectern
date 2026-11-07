@@ -324,6 +324,7 @@
     <button id="lec-st-structure" class="st-edit" title="칸·배치의 숨은 줄을 꼬리표로 보기 — 꼬리표에서 F2 로 고칩니다" hidden><svg aria-hidden="true"><use href="#i-slide"/></svg><span>구조 보기</span></button>
     <button id="lec-st-check" class="st-edit st-check" title="넘치거나 잘못 쓴 곳 — 눌러서 목록 보기" hidden><svg aria-hidden="true"><use href="#i-box"/></svg><span></span></button>
     <span id="lec-st-info"></span>
+    <span id="lec-st-vi" class="st-vi" hidden>vi</span>
     <span id="lec-st-here" class="st-here" hidden></span>
     <span id="lec-st-lit" class="st-lit" hidden></span>
     <button id="lec-st-changes" class="st-changes" hidden></button>
@@ -435,6 +436,7 @@
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="md_breaks"><span><b>문단 안의 줄바꿈 보이기</b><small>원문에서 Enter 로 바꾼 줄이 화면에서도 바뀝니다 (Word 의 Shift+Enter 처럼). 끄면 표준 Markdown 처럼 이어서 보입니다.</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="vi_keys"><span><b>vi 키</b><small>문서에서 글자 키로 움직이고 고칩니다 — j·k 줄 옮기기, V 고르기, dd 지우기, i 쓰기, u 되돌리기 (단축키 표의 'vi 키'). 전체 편집도 vim 처럼. 끄면 글자 키는 아무 일도 하지 않습니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>
     <div class="opt-choice" role="radiogroup" aria-labelledby="lec-termpos-title">
       <span class="opt-head"><b id="lec-termpos-title">터미널 자리</b><small>터미널 머리줄의 버튼으로도 바꿉니다 (그러면 자동이 아니게 됩니다)</small></span>

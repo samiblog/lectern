@@ -55,6 +55,10 @@ const notes = await load('web/js/notesdata.js');
   say('문서 구성 요소 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/refs_cases.js', await load('web/js/refs.js'));
+  say('참조·캡션·인용 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
 }

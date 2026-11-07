@@ -81,6 +81,7 @@ FILES: list[tuple[str, str, str]] = [
     ('codemirror', 'addon/edit/matchbrackets.js', 'codemirror/addon/matchbrackets.js'),
     ('codemirror', 'addon/selection/active-line.js', 'codemirror/addon/active-line.js'),
     ('codemirror', 'addon/mode/simple.js', 'codemirror/addon/simple.js'),   # rust 모드가 쓴다
+    ('codemirror', 'keymap/vim.js', 'codemirror/keymap/vim.js'),   # vi 키 (D122) — 설정을 켰을 때만 editor.js 가 불러온다
     *(('codemirror', f'mode/{m}/{m}.js', f'codemirror/mode/{m}.js') for m in CODEMIRROR_MODES),
     ('vega', 'build/vega.min.js', 'vega/vega.min.js'),
     ('vega-lite', 'build/vega-lite.min.js', 'vega/vega-lite.min.js'),

@@ -58,6 +58,8 @@
 | docops.js | 문서 구성 요소의 계산 (D107, DOM 없음) — 줄 종류(`setKind`), 제목 수준(`shiftHeadings`), 절 옮기기·지우기(`moveSection`·`deleteSection`) |
 | chartops.js | 차트의 계산 (D115, DOM 없음) — 값 표로 읽고 쓰기(`readValues`·`writeValues`), 종류 바꾸기(`setChartKind`), 표에서 차트(`chartFromTable`) |
 | putmenu.js | 넣기 창 (D109) — 구성 요소·파일을 고르거나 글을 묻는 작은 창 (`pick`·`askText`). 고르는 일만 하고 넣는 것은 lineedit.js |
+| refs.js | 참조와 캡션의 계산 (D121, DOM 없음) — 캡션 번호 다시 매기기(`renumberCaptions` — lineedit 의 `withNumbers` 가 저장할 때, 참조 링크도), 상호 참조(`refTargets`·`refLink`), 문서 안 목차 줄(`tocKind` — markdown.js 가 빈 `nav.lec-doctoc` 로, doc.js 가 채움), 쪽 나눔 줄(`PAGE_BREAK`), 본문 인용(`referencesIn`·`citeOf`·`citedCount`). 표 점검은 tools/edges/refs_cases.js |
+| vikeys.js | vi 키 (D122, 설정 `vi_keys` — 기본 꺼짐) — 글자 키를 같은 일의 기존 키로 바꿔 보내는 번역표(`viKey` — main.js 의 keydown, 현재 줄 = Normal·고른 줄 = Visual), 앞 글자·숫자 기다리기와 상태줄 `#lec-st-vi`, 담아 둔 줄(p·P → lineedit `putLinesHere`). 전체 편집의 vim 키맵은 editor.js |
 | lineblock.js | 블록 펼치기 (D112·D115) — 화면 옆 패널에 수식·다이어그램·차트·머리 설정의 원문을 줄마다, 값이 문서 안에 있는 차트는 값 표로 (`openBlock`·`openFront`·`closeBlock`) |
 | newdialog.js | 새 문서 만들기 창 (D105) — 제목과 스타일을 정해 선택된 폴더에. 최근 스타일이 처음 값 |
 | deletedoc.js | 문서 삭제 (D104) — 트리의 문서 하나를 휴지통으로. 늘 묻고, 그 문서를 보던 칸을 닫는다 |
