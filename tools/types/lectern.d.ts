@@ -75,6 +75,7 @@ declare global {
     missedRefresh: boolean;
     dragMissed: boolean;
     redrawing: number;
+    drawing: Promise<unknown> | null;
     stale: boolean;
     renderId: number;
     tocRoot: HTMLElement | null;

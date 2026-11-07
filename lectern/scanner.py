@@ -265,14 +265,19 @@ def iter_files(nodes: list[Node]) -> Iterator[Node]:
 
 
 def is_hidden_path(root: Path, target: Path) -> bool:
-    """root 에서 target 까지 경로 중 숨김 요소가 하나라도 있으면 True."""
+    """root 에서 target 까지 경로 중 숨김 요소가 하나라도 있으면 True. 마지막 이름이 없으면 숨김이 아니다 — 있는지는 부르는 쪽이 본다.
+    저장이 파일을 바꿔 끼우는 순간(ReplaceFileW — editing._swap)에는 원래 이름이 잠깐 비는데, 그때 숨김으로 보면 그 순간에 들어온
+    문서 읽기·위치 기억·저장이 404 를 받는다 (2026-11-08 시나리오 시험에서 찾음)"""
     cur = root
-    for part in target.relative_to(root).parts:
+    parts = target.relative_to(root).parts
+    for i, part in enumerate(parts):
         if part.startswith('.'):
             return True
         cur = cur / part
         try:
             st = os.stat(cur, follow_symlinks=False)
+        except FileNotFoundError:
+            return i < len(parts) - 1
         except OSError:
             return True
         if has_hidden_attr(st):

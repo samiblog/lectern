@@ -26,6 +26,7 @@ function makePane(el, tab) {
     pending: 0, missedRefresh: false,         // 진행 중인 이동 수, 이동 중에 들어온 새로고침 (nav.js)
     dragMissed: false,                        // 끄는 동안 미룬 자동 새로고침 (nav.js, D94)
     redrawing: 0,                             // 진행 중인 다시 그리기 수 — 끝나면 화면째 바뀐다 (nav.js, lineedit.js 가 기다린다)
+    drawing: null,                            // 가장 나중에 시작한 다시 그리기 — 앞의 것이 버려지면 이것을 기다린다 (nav.js)
     stale: false,                             // 숨은 동안 바뀌어 고를 때 다시 그릴 칸 (watch.js·nav.js → tabs.js)
     renderId: 0,                              // 늦게 끝난 렌더링이 새 화면을 덮지 않도록 하는 순번 (doc.js·htmldoc.js·overview.js)
     tocRoot: null,                            // 목차를 만들 곳 (toc.js)

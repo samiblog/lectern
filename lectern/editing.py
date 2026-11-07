@@ -64,13 +64,26 @@ def present(path: Path) -> bool:
     return False
 
 
+def present_file(path: Path) -> bool:
+    """path 가 파일인지 — present 처럼 바꿔 끼우는 순간이면 조금 기다린다. 있는지 본 뒤에 따로 is_file() 을 부르면 그 사이에
+    바꿔 끼우기가 끼어 '파일이 아니다'가 된다. 폴더면 기다리지 않고 False"""
+    for attempt in range(10):
+        if path.is_file():
+            return True
+        if path.is_dir():
+            return False
+        if attempt < 9:
+            time.sleep(0.015)
+    return False
+
+
 def _check(path: Path) -> os.stat_result:
     _protect(path)
     if not present(path):
         raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
-    if not path.is_file() or not can_edit(path.name):
+    if not present_file(path) or not can_edit(path.name):
         raise EditError(400, t('문서와 코드 파일만 편집할 수 있습니다'))
-    st = path.stat()
+    st = steady(path.stat)
     if st.st_size > MAX_EDIT_BYTES:
         raise EditError(413, t('{n}MB 가 넘는 파일은 편집할 수 없습니다', n=MAX_EDIT_BYTES // (1024 * 1024)))
     return st

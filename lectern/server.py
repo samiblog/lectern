@@ -347,14 +347,14 @@ def create_app(state: AppState) -> Flask:
         target = resolve_inside(root, rel)
         if target is None or not editing.present(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
-        if not target.is_file() or not is_number(scroll) or not 0 <= scroll < 10**8:
+        if not editing.present_file(target) or not is_number(scroll) or not 0 <= scroll < 10**8:
             abort(400)
         if state.config.get('restore_last') is not False:
             doc = target.relative_to(root).as_posix()
             kept = []
             for d in docs if docs is not None else [doc]:
                 found = resolve_inside(root, d) if isinstance(d, str) and d else None
-                if found is not None and found.is_file():
+                if found is not None and editing.present_file(found):
                     kept.append(found.relative_to(root).as_posix())
             state.config.remember_position(str(root), doc, int(scroll), list(dict.fromkeys(kept)) or [doc])
         return jsonify(ok=True)
@@ -744,7 +744,7 @@ def create_app(state: AppState) -> Flask:
         """?p=&path= — 고를 수 있는 pptx 스타일과 이 문서가 기억하는 것"""
         project = arg_project()
         target = resolve_inside(project.root, request.args.get('path', ''))
-        if target is None or not target.is_file():
+        if target is None or not editing.present_file(target):
             abort(404)
         return jsonify(styles=pptxexport.list_styles(), dir=str(pptxexport.styles_dir()), default=state.config.get('pptx_style') or '',
                        memory=pptxexport.doc_memory(target), out=pptxexport.free_path(target).name, readonly=project.readonly)
@@ -828,7 +828,7 @@ def create_app(state: AppState) -> Flask:
     def doc(pid: str, rel: str) -> Response:
         root = project_of(pid).root
         target = resolve_inside(root, rel)
-        if target is None or not editing.present(target) or not target.is_file():
+        if target is None or not editing.present_file(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
         kind = doc_kind(target.name)
         if kind == 'markdown':

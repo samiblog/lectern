@@ -319,6 +319,37 @@ def test_search_endpoint(client, pid):
     assert client.get(f'/api/search?p={pid}&q=' + 'x' * 201).status_code == 400
 
 
+def test_requests_wait_through_the_swap_moment(client, project, pid):
+    """저장이 파일을 바꿔 끼우는 순간(ReplaceFileW — 원래 이름이 잠깐 빔)에 들어온 문서 읽기·원문·위치 기억·저장이 404 를 받지 않는다.
+    경로 검사가 없는 파일을 숨김으로 보던 것 (2026-11-08 시나리오 시험에서 찾음)"""
+    import threading
+    doc = project / 'docs' / '10-a.md'
+    gone = doc.with_name('.lectern-gap.tmp')
+
+    def gap(call):
+        doc.replace(gone)
+        timer = threading.Timer(0.05, lambda: gone.replace(doc))
+        timer.start()
+        try:
+            return call()
+        finally:
+            timer.join()
+
+    r = gap(lambda: client.get(f'/doc/{pid}/docs/10-a.md'))
+    assert r.status_code == 200 and '# 열' in r.get_data(as_text=True)
+    r = gap(lambda: client.get('/api/source', query_string={'p': pid, 'path': 'docs/10-a.md'}))
+    assert r.status_code == 200
+    h = r.get_json()['hash']
+    assert gap(lambda: client.post('/api/position', json={'p': pid, 'path': 'docs/10-a.md', 'scroll': 3})).status_code == 200
+    r = gap(lambda: client.post('/api/save', json={'p': pid, 'path': 'docs/10-a.md', 'text': '# 열\n\n더\n', 'hash': h}))
+    assert r.status_code == 200 and doc.read_text(encoding='utf-8') == '# 열\n\n더\n'
+    # 정말 없는 파일은 그대로 404 — 만들지 않는다
+    assert client.get(f'/doc/{pid}/docs/없음.md').status_code == 404
+    assert client.get('/api/source', query_string={'p': pid, 'path': 'docs/없음.md'}).status_code == 404
+    assert client.post('/api/save', json={'p': pid, 'path': 'docs/없음.md', 'text': 'x', 'hash': h}).status_code == 404
+    assert not (project / 'docs' / '없음.md').exists()
+
+
 def test_position_is_remembered(client, project, pid):
     post = lambda body: client.post('/api/position', json={'p': pid} | body)   # noqa: E731
     assert post({'path': 'docs/10-a.md', 'scroll': 420}).get_json() == {'ok': True}

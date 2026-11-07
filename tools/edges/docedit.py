@@ -1470,6 +1470,30 @@ try:
         page.keyboard.press('Control+z')
         check('기록이 남아 한 번 더 되돌린다', until_src(start), src())
 
+        print('[저장 뒤 다시 그리기를 자동 새로고침이 앞질러도]')
+        start = '# 글\n\n## 가\n\n가 본문.\n\n## 나\n\n나 본문.\n\n## 다\n\n다 본문.\n'
+        put(start)
+        page.locator('#lec-view h2', has_text='다').click(modifiers=['Shift'])
+        page.wait_for_timeout(250)
+        # 문서 응답을 늦추고 저장 응답 바로 뒤에 감시처럼 자동 새로고침을 한 번 더 — 저장 쪽의 다시 그리기가 버려진다.
+        # 버려진 뒤 곧바로 돌아오면 옛 화면에 고른 줄을 놓아 새 화면에서 다른 제목을 고르거나 풀렸다 (2026-11-08)
+        page.evaluate("""async () => { const { emit, S } = await import('/static/js/store.js'); const real = window.fetch; window.__lecRealFetch = real;
+          window.fetch = async (u, o) => { const r = await real(u, o); const s = String(u);
+            if (s.includes('/doc/')) await new Promise((ok) => setTimeout(ok, 250));
+            if (s.includes('/api/save')) setTimeout(() => emit('refresh-auto', S.pane), 40);
+            return r; }; }""")
+        page.keyboard.press('Alt+ArrowUp')
+        moved = '# 글\n\n## 가\n\n가 본문.\n\n## 다\n\n다 본문.\n\n## 나\n\n나 본문.\n'
+        check('절을 옮긴다', until_src(moved), src())
+        page.wait_for_timeout(1200)
+        lit = lambda: page.inner_text('#lec-st-lit') if page.locator('#lec-st-lit').is_visible() else ''   # noqa: E731
+        check('고른 줄이 옮긴 제목에 남는다', lit().startswith('고른 줄 7행'), lit())
+        page.keyboard.press('Alt+ArrowUp')
+        again = '# 글\n\n## 다\n\n다 본문.\n\n## 가\n\n가 본문.\n\n## 나\n\n나 본문.\n'
+        check('이어서 한 번 더 옮기면 같은 절이 올라간다', until_src(again), [src(), page.text_content('#lec-toast')])
+        page.evaluate('() => { window.fetch = window.__lecRealFetch; }')
+        page.keyboard.press('Escape')
+
         for rel, want in (('code.py', 400), ('data.csv', 400), ('없는.md', 404), ('../밖.md', 400)):
             got = post('/api/delete-doc', {'p': tid, 'path': rel})
             check(f'서버가 막는다: {rel}', got == want, got)

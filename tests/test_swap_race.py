@@ -16,6 +16,24 @@ def test_present_waits_only_for_missing(tmp_path):
     assert not editing.present(tmp_path / '없음.md')
 
 
+def test_present_file_waits_only_for_missing(tmp_path):
+    there = tmp_path / '있음.md'
+    there.write_text('글\n', encoding='utf-8')
+    assert editing.present_file(there)
+    start = time.perf_counter()
+    assert not editing.present_file(tmp_path)   # 폴더는 기다리지 않는다
+    assert time.perf_counter() - start < 0.05
+    assert not editing.present_file(tmp_path / '없음.md')
+    gone = tmp_path / '.lectern-gap.tmp'
+    there.replace(gone)   # 바꿔 끼우는 순간처럼 원래 이름이 잠깐 빈다
+    timer = threading.Timer(0.04, lambda: gone.replace(there))
+    timer.start()
+    try:
+        assert editing.present_file(there)
+    finally:
+        timer.join()
+
+
 def test_swap_puts_new_text_when_original_is_gone(tmp_path):
     """바꿔 끼우다 멈춰 원래 파일이 없어진 경우 — 새 글을 바로 그 자리에 놓는다"""
     path = tmp_path / '문서.md'

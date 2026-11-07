@@ -92,6 +92,9 @@ def test_resolve_inside(project):
     assert resolve_inside(project, '.claude/notes.md') is None
     assert resolve_inside(project, str(project.parent / 'other.md')) is None
     assert resolve_inside(project, 'a\x00b') is None
+    # 없는 이름은 숨김이 아니다 — 저장이 바꿔 끼우는 순간 원래 이름이 잠깐 비어도 그 경로를 준다 (있는지는 부르는 쪽이 본다)
+    assert resolve_inside(project, 'docs/없음.md') == project / 'docs' / '없음.md'
+    assert resolve_inside(project, '.없음.md') is None and resolve_inside(project, '없는폴더/x.md') is None
     # 제외 폴더는 트리에는 안 나오지만 링크로는 열 수 있다 (숨김이 아니므로)
     assert resolve_inside(project, 'node_modules/lib/README.md') is not None
 

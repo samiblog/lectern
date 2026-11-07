@@ -234,8 +234,16 @@ export async function refreshView(pane, { auto = false } = {}) {
   pane.stale = false;
   const scrollTop = () => pane.scroller.scrollTop;
   pane.redrawing += 1;
+  let job = (async () => render(pane, view, { scrollTop }))();
+  pane.drawing = job;
   try {
-    await render(pane, view, { scrollTop });
+    await job;
+    // 그리는 사이에 다시 그리기가 또 시작되면(파일 감시의 자동 새로고침 등) 이 그리기는 버려진다 — 새 것이 끝날 때까지 기다린다.
+    // 저장한 쪽이 옛 화면에 고른 줄을 놓으면 새 화면에서 한 줄 어긋나거나 풀린다 (2026-11-08 시나리오 시험에서 찾음)
+    while (pane.drawing !== job) {
+      job = pane.drawing;
+      await job.catch(() => {});   // 그 그리기의 오류는 그쪽이 알린다
+    }
   } catch (e) {
     console.error(e);
     toast(t('다시 그리지 못했습니다: {error}', { error: e.message }), 'error');
