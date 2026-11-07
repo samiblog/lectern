@@ -248,23 +248,40 @@ def run(headed: bool) -> None:
             sec = lambda name: page.locator(f'#lec-view [id="{name}"]')
             text = lambda t: page.locator('#lec-view li, #lec-view p', has_text=t).first
             folded = lambda name: 'lec-folded' in (sec(name).get_attribute('class') or '')
+
+            def fold_click(target):
+                """제목 왼쪽 여백의 화살표를 누른다 (D120 — 제목 글자를 눌러서는 접지 않는다). target: 제목 id 나 locator"""
+                loc = sec(target) if isinstance(target, str) else target
+                box = None
+                for _ in range(10):   # 막 연 문서는 한 번 더 그려질 수 있다 — 요소가 바뀌면 다시 찾는다
+                    try:
+                        loc.scroll_into_view_if_needed(timeout=3000)
+                        box = loc.bounding_box()
+                        if box:
+                            break
+                    except Exception:
+                        pass
+                    page.wait_for_timeout(200)
+                page.mouse.click(box['x'] - 18, box['y'] + box['height'] / 2)
             check(page.locator('#lec-view h1.lec-fold').count() == 0 and page.locator('#lec-view .lec-fold').count() == 7,
                   '절 제목 7개는 접을 수 있고, 문서 제목(H1 하나)은 접지 않음')
-            sec('표').click()
+            sec('표').click(position={'x': 20, 'y': 12})
+            check(not folded('표') and page.locator('#lec-view .table-wrap').is_visible(), '제목 글자를 누르면 접지 않음 (D120)')
+            fold_click('표')
             check(not page.locator('#lec-view .table-wrap').is_visible() and sec('체크리스트와-각주').is_visible(),
-                  '제목을 누르면 다음 같은 수준 제목 전까지 접힘')
-            sec('표').click()
+                  '제목 왼쪽의 화살표를 누르면 다음 같은 수준 제목 전까지 접힘')
+            fold_click('표')
             check(page.locator('#lec-view .table-wrap').is_visible(), '다시 누르면 펼쳐짐')
-            sec('파일과-바깥-주소').click()
-            sec('링크').click()
+            fold_click('파일과-바깥-주소')
+            fold_click('링크')
             hidden = [not sec('파일과-바깥-주소').is_visible(), not text('구현 계획').is_visible(), page.locator('#lec-view .footnotes').is_visible()]
-            sec('링크').click()
+            fold_click('링크')
             hidden += [sec('파일과-바깥-주소').is_visible(), not text('CommonMark 명세').is_visible()]
             check(all(hidden), f'하위 절도 함께 접히고, 펴면 따로 접어 둔 하위 절은 접힌 채 (각주는 접히지 않음): {hidden}')
-            sec('링크').click()
+            fold_click('링크')
             page.locator('#lec-toc a[data-i]', has_text='파일과 바깥 주소').click()
             check(sec('파일과-바깥-주소').is_visible() and not folded('링크'), '목차로 접힌 절 안의 제목에 가면 펴짐')
-            sec('파일과-바깥-주소').click()
+            fold_click('파일과-바깥-주소')
             sec('코드').dblclick(position={'x': 12, 'y': 16})   # 제목 글자 위
             selected = page.evaluate('getSelection().toString().trim()')
             check(not folded('코드') and selected == '코드', f'두 번 눌러 낱말을 고를 때는 접지 않음: {selected!r}')
@@ -293,7 +310,7 @@ def run(headed: bool) -> None:
                   and toc_buttons() == ['표 1', '그림 1', '박스글 5', '코드 3'],
                   f'목차의 제목 아래에 그 절의 표·코드·박스글·그림이 문서 순서로, 머리에 종류 버튼 ({under}, {toc_buttons()})')
             shot('02-toc-parts')
-            sec('콜아웃').click()   # 접힌 절 안의 박스글로 가면 편다
+            fold_click('콜아웃')   # 접힌 절 안의 박스글로 가면 편다
             page.locator('#lec-toc li.part-box a', has_text='프로젝트 폴더 밖').click()   # [!WARNING] 박스글
             warn = page.locator('#lec-view blockquote.alert-warning')
             went = wait_until(page, '''(() => { const el = document.querySelector('#lec-view blockquote.alert-warning');
@@ -443,9 +460,11 @@ def run(headed: bool) -> None:
                 const head = kids[lit[0]];
                 if (head.classList.contains('lec-fold')) {
                   const before = new Set(idx((e) => e.classList.contains('lec-fold-hidden')));
-                  head.click();
+                  const arrow = () => { const r = head.getBoundingClientRect();   // 제목 왼쪽의 화살표 (D120)
+                    head.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true, detail: 1, clientX: r.left - 18, clientY: r.top + r.height / 2 })); };
+                  arrow();
                   const fold = [lit[0], ...idx((e) => e.classList.contains('lec-fold-hidden')).filter((i) => !before.has(i))];
-                  head.click();
+                  arrow();
                   out.push(JSON.stringify(fold) === JSON.stringify(lit) ? 'same' : `${head.id}: ${lit} / ${fold}`);
                 } else out.push('title');
                 if (document.querySelector('#lec-spot-next').disabled) break;
@@ -574,7 +593,7 @@ def run(headed: bool) -> None:
             copied = choose('고른 글 복사') if items.split('\n')[1].startswith('고른 글 복사') else ''
             check(selected and copied == selected, f'글을 고른 채 우클릭하면 맨 위에 고른 글 복사 ({items[:10]!r}, {copied[:20]!r})')
             page.evaluate('getSelection().removeAllRanges()')
-            sec('표').click()   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
+            fold_click('표')   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
             shot('02-doc-folded')
 
             print('[현재 위치와 줄 하이라이트]')   # D75 — 원문 줄 단위: 현재 위치(삼각형)·↑·↓, Shift+Enter·Shift+↑·↓·Shift+누르기·끌기, Shift+←·Ctrl+C, 상태줄
@@ -1131,9 +1150,9 @@ def run(headed: bool) -> None:
                   f"Alt+L 로 줄 번호 — 원문 줄 번호로 (빈 줄·표 구분 줄·``` 은 건너뜀), 버튼 켜짐, 설정에 저장 ({off_state}, {on_state}, {saved_on})")
             check(spots['gap'] >= 24 and spots['mid'] and spots['inside'] and spots['out'] and spots['noPointer'] == 'none' and on_state[2] != off_state[2],
                   f"번호는 본문 왼쪽 여백에 (삼각형·막대 자리를 두고), 그 줄 높이에, 칸 안에, 본문 밖이라 찾기·복사에 안 들어감 ({spots}, {off_state[2]} → {on_state[2]})")
-            page.locator('#lec-view h2').click()
+            fold_click(page.locator('#lec-view h2'))
             folded_nums = wait_until(page, "!document.querySelector('#lec-content > .lec-gutter').textContent.includes('19')", 3000)
-            page.locator('#lec-view h2').click()
+            fold_click(page.locator('#lec-view h2'))
             unfolded_nums = wait_until(page, "document.querySelector('#lec-content > .lec-gutter').textContent.includes('19')", 3000)
             num_doc.write_text('앞 문단\n\n' + num_text, encoding='utf-8')
             redrawn = wait_until(page, "[...document.querySelectorAll('#lec-content > .lec-gutter span')].map((s) => s.textContent).join(' ').startsWith('1 3 5')"
@@ -1355,7 +1374,7 @@ def run(headed: bool) -> None:
                        uiActive: ratio(active.color, active.backgroundColor), side };
             }'''
             if folded('표'):
-                sec('표').click()   # 캡처에 표가 보이도록
+                fold_click('표')   # 캡처에 표가 보이도록
             problems = []
             sides: set[str] = set()
             for theme in themes:
@@ -1412,7 +1431,7 @@ def run(headed: bool) -> None:
             use_theme('default')
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
-            sec('표').click()   # 다시 불러오면 접은 상태를 잊는다(메모리에만 둠). 아래 찾기 점검을 위해 다시 접는다
+            fold_click('표')   # 다시 불러오면 접은 상태를 잊는다(메모리에만 둠). 아래 찾기 점검을 위해 다시 접는다
 
             print('[빠른 열기와 찾기]')
             page.keyboard.press('Control+p')
@@ -1452,7 +1471,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
 
             print('[자동 새로고침]')
-            sec('코드').click()
+            fold_click('코드')
             page.locator('#lec-content').evaluate('el => el.scrollTop = 600')
             doc = work / 'docs' / '01-기능-점검.md'
             doc.write_text(doc.read_text(encoding='utf-8').replace('# 렌더링 기능 점검', '# 렌더링 기능 점검 (수정됨)'), encoding='utf-8')
@@ -2374,7 +2393,7 @@ def run(headed: bool) -> None:
             jump_fwd = scroll_top()
             check(top1 > read_top + 200 and back_ok and fwd_on and near(jump_back[0], read_top) and jump_back[1] == line0 and near(jump_fwd, top1),
                   f"목차로 뛴 뒤 Alt+← 는 앞 문서가 아니라 읽던 자리(스크롤·현재 위치)로, Alt+→ 는 뛴 곳으로 ({read_top}, {line0}, {top1}, {jump_back}, {jump_fwd})")
-            page.evaluate("[...document.querySelectorAll('#lec-view h2')].find((h) => h.textContent.includes('절 2')).click()")   # 읽던 절을 접는다
+            fold_click(page.locator('#lec-view h2', has_text='절 2'))   # 읽던 절을 접는다
             fold_n = page.locator('#lec-view .lec-folded').count()
             page.keyboard.press('Alt+ArrowLeft')
             settle()
@@ -3866,7 +3885,7 @@ def run(headed: bool) -> None:
             items = menu(page.locator('#lec-content'), position={'x': 30, 'y': 420})
             page.keyboard.press('Escape')
             if not folded('코드'):
-                sec('코드').click()   # 접어 둔 절도 인쇄되는지
+                fold_click('코드')   # 접어 둔 절도 인쇄되는지
             use_theme('dark')
             page.emulate_media(media='print')
             pr = page.evaluate('''() => ({
@@ -3877,7 +3896,7 @@ def run(headed: bool) -> None:
             pdf = b'' if headed else page.pdf()   # PDF 만들기는 headless 에서만 된다
             page.emulate_media(media='screen')
             use_theme('default')
-            sec('코드').click()
+            fold_click('코드')
             check('인쇄 / PDF로 저장' in items and pr['toolbar'] == 'none' and pr['folded'] != 'none'
                   and pr['fg'] == 'rgb(17, 17, 17)' and 'https://' in pr['url'] and (headed or pdf.startswith(b'%PDF')),
                   f'인쇄: 문서 메뉴에 인쇄, 화면 UI 빼고 접은 절 펴서, 어두운 스타일도 검은 글자, 링크 주소 표시 ({pr}, PDF {len(pdf)}바이트)')
