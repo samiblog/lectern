@@ -23,7 +23,7 @@ AREAS = [
     (r'web/js/(slide\w+|present|theme|csssafe)\.js|web/themes/.*', ['slides', 'slidecheck', 'deckguard', 'sample_decks', 'reading']),
     (r'samples/slides/.*|web/help/slides.*', ['sample_decks']),
     (r'web/js/sideorder\.js', ['sidebar']),
-    (r'web/js/(refs|vikeys|editor|settings)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'docedit']),
+    (r'web/js/(refs|vikeys|editor|settings|help)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'docedit', 'reading']),
     (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile']),
     (r'web/js/(htmldoc|nav|find|toc|fold)\.js', ['frames', 'reading', 'hostile', 'refresh']),
     (r'web/js/solo\.js|lectern/(windows|native)\.py', ['solo', 'solo_cases']),

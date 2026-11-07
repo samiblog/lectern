@@ -11,6 +11,8 @@ Lectern is a workspace for Markdown-centered research with AI. You read, review 
 
 ## Getting started
 
+If you are new, press **Shift+F1** to open the sample project and follow its usage guide in order — [the first page of the samples](../../samples/README.en.md). Chapters of this guide link to matching samples with 'Sample —'; clicking one opens that document in the samples tab. The usage guide is in Korean.
+
 ### Opening a folder
 
 - Click **+** in the tab bar (Ctrl+O) and choose a project folder; it opens in a new tab. If the folder is already open, Lectern switches to its tab.
@@ -20,6 +22,8 @@ Lectern is a workspace for Markdown-centered research with AI. You read, review 
 - When you start Lectern again, the tabs you had open come back, each at the document and position you were reading.
 
 ### The window
+
+Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md): the window, the tree and folder overview, opening documents, going back.
 
 | Area | What it does |
 |---|---|
@@ -154,11 +158,15 @@ Collect pieces of documents and send them to a document open in a document tab, 
 
 ## Reading documents
 
+Sample — [guide 02, reading](../../samples/guide/02-읽기-기능.md): folding, section focus, text size and styles, find and search, gathered view.
+
 ### Folder overview
 
 This is the first screen when a folder opens. It shows recently changed documents, subfolders, and each document's title, summary and modified time. Click a folder name in the tree to see that folder's overview.
 
 ### Document view
+
+Samples — [guide 04, writing documents](../../samples/guide/04-문서-쓰는-법.md) (source and result of tables, callouts, footnotes, links and figures), [guide 05, math](../../samples/guide/05-수식.md), [guide 06, diagrams](../../samples/guide/06-다이어그램.md), [guide 07, charts](../../samples/guide/07-차트.md).
 
 - Tables align number columns to the right, and the header row stays visible as you scroll.
 - Code blocks are colored by language; the 'Copy' button at the top right copies them.
@@ -231,7 +239,9 @@ Right-click the margin of a document and choose **Print / Save as PDF**. To save
 
 ## Writing and editing documents
 
-Write and edit an md document from start to finish without opening the full editor. Guide 08 in the sample project collects worked cases.
+Write and edit an md document from start to finish without opening the full editor.
+
+Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): picking lines and twenty cases to try.
 
 **There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z**. A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
 
@@ -394,9 +404,11 @@ Turn on **vi keys** in Settings (Ctrl+,) to move and edit documents with letter 
 - Keys with Ctrl are not changed (Ctrl+D still duplicates a slide, Ctrl+F still finds). Page with PageUp and PageDown.
 - They work whether the keyboard is in Korean or English mode.
 - The full editor is set separately — **Full editor keys** in Settings (see 'Full editor' above).
-- For practice steps and a side-by-side key table, see guide 10 in the samples' `guide` folder (in Korean).
+- Sample — [guide 10, vi keys](../../samples/guide/10-vi-키.md): practice steps, a side-by-side key table, and the vi mode of the full editor.
 
 ## Lectern slides
+
+Samples — [guide 09, Lectern slides](../../samples/guide/09-Lectern-슬라이드.md) (this chapter written out as a detailed md document) and [the slide samples](../../samples/slides/README.en.md) (basics, by situation, complex layouts).
 
 Lectern tells three things apart.
 
@@ -499,6 +511,8 @@ Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file a
 
 ### Asking Claude
 
+Sample — section 12 of [guide 09, Lectern slides](../../samples/guide/09-Lectern-슬라이드.md), 'Working with Claude Code': installing the skills, example requests, the request menus and the order of polishing together.
+
 Claude Code skills move a pptx into Lectern slides and build slides from a pptx. They come with Lectern and are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button next to it). Claude explains the skills and asks before installing.
 
 Lectern does not run Claude. You talk to Claude Code in the terminal yourself. Here is how to ask. `@document.md` is **Copy @path** from a right-click in the tree.
@@ -545,7 +559,7 @@ More examples are in `skills\README.md` in the program folder. The guide Claude 
 
 ### Samples
 
-`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read guide 09 in the `guide` folder before it (in Korean) — the content of the slide samples written out as a detailed plain md document, ending with links to the samples. Then go through them in this order.
+[slides/README.md](../../samples/slides/README.md) in the project opened by **Open samples** (Shift+F1) is the way in ([slides/README.en.md](../../samples/slides/README.en.md) in English). If you are new to slides, read [guide 09](../../samples/guide/09-Lectern-슬라이드.md) before it (in Korean) — the content of the slide samples written out as a detailed plain md document, ending with links to the samples. Then go through them in this order.
 
 | Order | Folder | What |
 |---|---|---|
@@ -680,6 +694,8 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 
 ## Working with Claude Code
 
+Sample — [guide 03, Claude Code](../../samples/guide/03-Claude-Code와-함께.md): the terminal, copying locations, change marks, reading code.
+
 1. Open the project folder you work on with Claude Code in Lectern.
 2. Run `claude` in the terminal (Ctrl+\`) to work with Claude Code right next to your documents.
 3. When Claude creates or edits a document, the change appears within a second, and changed documents you have not opened yet get an amber dot in the tree.
@@ -720,7 +736,7 @@ Write backslashes in paths twice (`\\`). If the file has a syntax error, Lectern
 
 ## Keyboard shortcuts
 
-You can bring up this table at any time with the **?** button in the toolbar or Ctrl+/.
+You can bring up this table at any time with the **?** button in the toolbar or Ctrl+/. **Shift+F1** opens the sample project.
 
 <!-- 단축키 표 -->
 

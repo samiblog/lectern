@@ -1363,5 +1363,9 @@ export default {
 "기본 방식": "Default",
 "Esc 로 닫기, Ctrl+S 로 저장": "Esc closes, Ctrl+S saves",
 "vi 방식": "vi",
-"vim 처럼 — Esc 는 Normal 모드로, :w 저장, :q 닫기": "Like vim — Esc goes to Normal mode, :w saves, :q closes"
+"vim 처럼 — Esc 는 Normal 모드로, :w 저장, :q 닫기": "Like vim — Esc goes to Normal mode, :w saves, :q closes",
+"사용법과 Lectern 슬라이드 예제가 든 예제 프로젝트를 탭으로 엽니다": "Open the sample project with the usage guide and Lectern slide samples in a tab",
+"예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제": "Open the sample project — the usage guide and Lectern slide samples",
+"예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)": "Opens in the sample project (Shift+F1 opens its first page)",
+"예제에 그 문서가 없습니다: {path}": "That document is not in the samples: {path}"
 };

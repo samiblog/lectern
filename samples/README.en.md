@@ -3,7 +3,7 @@
 An example project for looking around Lectern. Think of it as a **copper market research automation** project done together with Claude Code: code (`src/`), data (`data/`), research documents (`research/`), plans (`plans/`) and reports (`reports/`). The `guide/` folder explains how to use Lectern (in Korean).
 
 > [!TIP]
-> Click a document in the tree on the left to read it here. Click an entry in the contents on the right to jump to that section. **F1** opens the user guide (in English when the language is English) and **Ctrl+/** the keyboard shortcuts.
+> Click a document in the tree on the left to read it here. Click an entry in the contents on the right to jump to that section. **F1** opens the user guide (in English when the language is English), **Ctrl+/** the keyboard shortcuts, and **Shift+F1** brings you back to these samples from anywhere. Chapters of the user guide link to the matching sample documents.
 
 ## What to try
 

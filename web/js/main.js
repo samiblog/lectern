@@ -28,7 +28,7 @@ import { initPalette, openPalette, closePalette } from './palette.js';
 import { initPanes, paneShown } from './panes.js';
 import { initNav, back, forward, refreshView } from './nav.js';
 import {
-  initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded,
+  initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded, openSamples,
 } from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import {
@@ -326,6 +326,11 @@ function bindKeys() {
     } else if (e.key === 'F5') {
       e.preventDefault();
       manualRefresh();
+    } else if (e.key === 'F1' && e.shiftKey && !mod && !e.altKey) {   // 예제 프로젝트 (D123 — F1 은 사용설명서)
+      e.preventDefault();
+      closeManual();
+      closeShortcuts();
+      openSamples();
     } else if (e.key === 'F1') {
       e.preventDefault();
       toggleManual();

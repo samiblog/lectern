@@ -216,14 +216,20 @@ export async function openFolder(path) {
   return true;
 }
 
-/** 예제 프로젝트를 탭으로 연다 (D57 — 설치 폴더의 samples. 이미 열려 있으면 그 탭). 처음이면 폴더 개요 대신 README('여기서 시작하세요') */
-export async function openSamples() {
+/**
+ * 예제 프로젝트를 탭으로 연다 (D57 — 설치 폴더의 samples. 이미 열려 있으면 그 탭). path 를 주면 그 문서로 (설명서의 예제 링크 — D123),
+ * 아니면 처음일 때 폴더 개요 대신 README('여기서 시작하세요')
+ */
+export async function openSamples(path = null) {
   if (!S.samples) {
     toast(t('예제 폴더가 없습니다. Lectern 을 다시 설치하면 생깁니다'), 'error');
     return false;
   }
   const ok = await openFolder(S.samples);
-  if (ok && S.view?.type === 'overview' && !S.view.path && S.fileMap.has('README.md')) await navigate({ type: 'doc', path: 'README.md' });
+  if (!ok) return ok;
+  if (typeof path === 'string' && S.fileMap.has(path)) await navigate({ type: 'doc', path });
+  else if (typeof path === 'string' && path) toast(t('예제에 그 문서가 없습니다: {path}', { path }), 'error');
+  else if (S.view?.type === 'overview' && !S.view.path && S.fileMap.has('README.md')) await navigate({ type: 'doc', path: 'README.md' });
   return ok;
 }
 
@@ -370,6 +376,7 @@ function recentMenu(e) {
 }
 
 export function initTabs() {
+  on('open-sample', (path) => openSamples(path));   // Shift+F1·설명서의 예제 링크·버튼 (help.js — D123)
   const list = $('#lec-tablist');
   // 고른 탭을 또 누르면 프로젝트 개요. 사용설명서·터미널 모음이 덮고 있었으면 그것만 닫는다 — 누르는 때 보아 둔다 (click 전에 닫힌다)
   let covered = false;

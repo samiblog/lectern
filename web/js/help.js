@@ -3,7 +3,7 @@
 // 덮고, 왼쪽에 장 목록(읽는 곳 표시), Ctrl+F 는 설명서 안에서 찾는다. 다른 화면으로 가면(문서 열기·프로젝트 탭·터미널) 닫힌다.
 // 단축키 표와 설명서의 '단축키' 장은 같은 SHORTCUTS 로 만든다 — 단축키를 더하면 여기에 넣는다.
 
-import { on } from './store.js';
+import { S, on, emit } from './store.js';
 import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
 import { setFindTarget } from './find.js';
@@ -150,6 +150,7 @@ export const SHORTCUTS = [
   ]],
   [t('도움말·설정'), [
     ['F1', t('사용설명서 열기·닫기')],
+    ['Shift+F1', t('예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제')],
     ['Ctrl+/', t('단축키 표 열기·닫기')],
     ['Ctrl+,', t('설정 창')],
   ]],
@@ -170,7 +171,23 @@ function shortcutsMarkdown() {
 
 const keysBox = () => $('#lec-keys');
 
+/**
+ * 설명서 속 예제 링크의 예제 안 경로 — 저장소 기준 상대경로('../../samples/guide/08-….md', GitHub 에서도 맞다)에서 'guide/08-….md'.
+ * 예제 링크가 아니면 null
+ */
+function samplePath(href) {
+  let path;
+  try {
+    path = decodeURIComponent(href || '');
+  } catch {
+    return null;
+  }
+  path = path.replace(/^(?:\.\.?\/)+/, '');
+  return path.startsWith('samples/') && path.length > 'samples/'.length ? path.slice('samples/'.length).split('#')[0] : null;
+}
+
 export function openShortcuts() {
+  $('#lec-keys-samples').hidden = !S.samples;
   keysBox().hidden = false;
   $('#lec-keys-close').focus();
 }
@@ -204,6 +221,11 @@ async function loadManual() {
   const text = (await r.text()).replace('<!-- 단축키 표 -->', shortcutsMarkdown());   // i18n-ok (두 설명서에 같은 자리 표시)
   const { html: markup } = renderMarkdown(text, { math: false });
   setHtml(view(), raw(window.DOMPurify.sanitize(markup)));
+  for (const a of $$('a[href]', view())) {   // 예제로 가는 링크 (예제 프로젝트의 그 문서를 연다)
+    if (!samplePath(a.getAttribute('href'))) continue;
+    a.classList.add('sample-link');
+    a.title = t('예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)');
+  }
   decorateBlocks(view());
   heads = $$('h2, h3', view());
   setHtml($('#lec-help-toc'), heads.map((h, i) => [html`<li class="${h.tagName === 'H3' ? 'sub' : ''}">`, html`<a href="#" data-i="${i}">${h.textContent}</a></li>`]));
@@ -229,6 +251,7 @@ function markCurrent() {
 }
 
 export async function openManual() {
+  $('#lec-help-samples').hidden = !S.samples;
   closeShortcuts();
   helpBox().hidden = false;
   setFindTarget({ root: view(), scroller: scroller() });   // Ctrl+F 는 설명서 안에서
@@ -265,15 +288,28 @@ export function initHelp() {
     e.preventDefault();
     scrollToHead(heads[Number(a.dataset.i)]);
   });
-  // 설명서 속 링크: 설명서 안의 제목(#…)으로만 간다 — 다른 주소로 가면 앱 창이 떠난다
+  // 설명서 속 링크: 설명서 안의 제목(#…)과 예제 문서(../../samples/…)만 — 다른 주소로 가면 앱 창이 떠난다
   view().addEventListener('click', (e) => {
     const a = e.target.closest('a[href]');
     if (!a) return;
     e.preventDefault();
     const href = a.getAttribute('href');
+    const sample = samplePath(href);
+    if (sample) {
+      closeManual();
+      emit('open-sample', sample);   // tabs.js — 예제 프로젝트를 열고 그 문서로
+      return;
+    }
     const target = href.startsWith('#') && findAnchor(view(), href);
     if (target) scrollToHead(target);
   });
+  const toSamples = () => {
+    closeManual();
+    closeShortcuts();
+    emit('open-sample', null);
+  };
+  $('#lec-help-samples').addEventListener('click', toSamples);
+  $('#lec-keys-samples').addEventListener('click', toSamples);
   let ticking = false;
   scroller().addEventListener('scroll', () => {
     if (ticking) return;
