@@ -832,7 +832,7 @@ def create_app(state: AppState) -> Flask:
             abort(404)
         kind = doc_kind(target.name)
         if kind == 'markdown':
-            return Response(read_text(target), content_type='text/markdown; charset=utf-8')
+            return Response(editing.steady(read_text, target), content_type='text/markdown; charset=utf-8')   # 저장과 겹쳐도
         if kind == 'html':
             # Claude 가 만드는 문서는 UTF-8 이다 (D1). meta charset 이 없어도 한글이 깨지지 않게 헤더로 정한다
             resp = send_file(target, mimetype='text/html', conditional=True, max_age=0)

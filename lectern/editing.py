@@ -90,11 +90,22 @@ def _digest(data: bytes) -> str:
     return hashlib.sha256(data).hexdigest()
 
 
+def steady(read: Any, *args: Any) -> Any:
+    """read(*args) — 저장이 바꿔 끼우는 순간(_swap)이면 파일이 잠깐 없거나 잠겨 있어 조금 기다려 다시 읽는다"""
+    for attempt in range(10):
+        try:
+            return read(*args)
+        except (FileNotFoundError, PermissionError):
+            if attempt == 9:
+                raise
+            time.sleep(0.02)
+
+
 def _read_whole(path: Path) -> bytes:
     """다른 프로그램이 쓰는 중이면(읽은 길이가 크기와 다름) 잠깐 기다려 다시 읽는다"""
     for _ in range(5):
-        size = path.stat().st_size
-        data = path.read_bytes()
+        size = steady(lambda: path.stat().st_size)
+        data = steady(path.read_bytes)
         if len(data) == size:
             return data
         time.sleep(0.05)
