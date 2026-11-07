@@ -394,6 +394,7 @@ Turn on **vi keys** in Settings (Ctrl+,) to move and edit documents with letter 
 - Keys with Ctrl are not changed (Ctrl+D still duplicates a slide, Ctrl+F still finds). Page with PageUp and PageDown.
 - They work whether the keyboard is in Korean or English mode.
 - The full editor is set separately — **Full editor keys** in Settings (see 'Full editor' above).
+- For practice steps and a side-by-side key table, see guide 10 in the samples' `guide` folder (in Korean).
 
 ## Lectern slides
 

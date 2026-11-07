@@ -16,6 +16,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
 8. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — fix lines in place and save at once: pick lines with **Insert**, move and delete them, insert elements with **/**, keep writing past the last line
 9. Lectern slides: start with the guide [guide/09-Lectern-슬라이드.md](guide/09-Lectern-슬라이드.md), a detailed plain md document (in Korean) — skeleton, cells, layouts, text size, directives, editing, checking, presenting and converting to pptx — then the samples [slides/README.en.md](slides/README.en.md): basics, model decks by situation and complex layouts
+10. vi keys [guide/10-vi-키.md](guide/10-vi-키.md) (in Korean) — optional: vi keys for reading (j·k·V·dd·yy·p·o·i·u) and the vi mode of the full editor (:w·:q)
 
 ## For AI (Claude Code)
 
