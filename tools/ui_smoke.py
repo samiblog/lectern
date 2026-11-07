@@ -638,7 +638,7 @@ def run(headed: bool) -> None:
             drag_sel = page.evaluate('getSelection().toString()')
             page.mouse.click(one['x'] + 30, one['y'] - 120)   # 흐린 곳을 누르면 푼다
             by_grey = page.evaluate(lit_status)
-            check(by_shift_click == '하이라이트 21행 · 1줄' and extended == '하이라이트 21~26행 · 6줄' and by_drag == '하이라이트 11~13행 · 3줄'
+            check(by_shift_click == '고른 줄 21행 · 1줄' and extended == '고른 줄 21~26행 · 6줄' and by_drag == '고른 줄 11~13행 · 3줄'
                   and not drag_sel and by_grey is None,
                   f"Shift+누르기는 그 줄(있으면 거기까지 넓힘), Shift+끌기는 끈 줄들(글은 고르지 않음), 흐린 곳을 누르면 풂 ({by_shift_click}, {extended}, {by_drag})")
             # 현재 위치는 스크롤하면 화면 안으로 따라오고, ↓ 로 옮기면 화면이 따라간다
@@ -701,9 +701,10 @@ def run(headed: bool) -> None:
             shaded = f"(() => {{ const v = {shade_js}; return !!v && !v[0] && v[1] === '1' && v[2] === '1'; }})()"
 
             def start(locator, **kw):
-                """줄을 Shift+누르기로 하이라이트하고 F2 — 글 칸이 생길 때까지"""
+                """줄을 Shift+누르기로 고르고 하이라이트한 뒤 F2 — 글 칸이 생길 때까지 (D108 — 고른 줄은 흐리지 않는다)"""
                 page.keyboard.press('Escape')
                 locator.click(modifiers=['Shift'], **kw)
+                page.keyboard.press('Shift+Enter')
                 page.keyboard.press('F2')
                 wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
                 return editing()
@@ -3045,15 +3046,14 @@ def run(headed: bool) -> None:
             page.fill('#lec-insert-input', 'data/모음')
             page.keyboard.press('Enter')
             new_doc = tables / 'data' / '모음.md'
-            cm_text = lambda: page.evaluate("document.querySelector('.lec-pane.active .lec-editor .CodeMirror').CodeMirror.getValue()")
-            wait_until(page, "!!document.querySelector('.lec-pane.active .lec-editor .CodeMirror')?.CodeMirror.getValue().includes('담은 곳')", 10000)
-            made_first = new_doc.exists() and new_doc.read_text(encoding='utf-8') == '# 모음\n\n'   # 경로를 정할 때 만들고, 보낸 것은 편집기에만
-            new_text = cm_text()
+            for _ in range(100):   # 경로를 정할 때 만들고 편집 모드 없이 바로 넣는다 (D113)
+                new_text = new_doc.read_text(encoding='utf-8') if new_doc.exists() else ''
+                if '담은 곳' in new_text:
+                    break
+                page.wait_for_timeout(100)
+            made_first = page.locator('.lec-pane.active .lec-editor').count() == 0
             new_tab = page.evaluate("document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path")
             shot('24-basket-new-doc')
-            page.keyboard.press('Control+s')
-            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor.dirty')", 5000)
-            page.keyboard.press('Escape')
             drawn = wait_until(page, '''(() => { const v = document.querySelector('#lec-view'); const img = v.querySelector('img');
               return !document.querySelector('.lec-pane.active .lec-editor') && v.querySelector('h1')?.textContent === '모음' && !!v.querySelector('table')
                 && !!img && img.complete && img.naturalWidth > 0 && !v.innerHTML.includes('담은 곳'); })()''', 10000)
@@ -3091,7 +3091,7 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)
             check(not_open and readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
                   and inserted and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
-                  f'담기: 문서 탭에 없는 문서는 받는 곳에 없고(안내 줄), 탭으로 열면 맨 끝으로 보내 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({not_open}, {inserted}, {len(asked)})')
+                  f'담기: 문서 탭에 없는 문서는 받는 곳에 없고(안내 줄), 탭으로 열면 맨 끝으로 보내 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({not_open}, {inserted}, {asked})')
 
             print('[새로 만들기]')   # D65·D105 — 폴더 우클릭·Ctrl+N·문서 탭 줄의 + : 제목과 스타일을 정해 만들고 md 문서 화면에서 바로 쓴다
             page.click('.side-tabs button[data-tab="files"]')
@@ -3131,7 +3131,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             check(guess == ['새 문서', '위치: data/'] and on_memo and memo_text == '# 메모\n\n' and focused and in_tree
                   and ctrl_n == ['새 문서 만들기', '새 문서'] and dup and closed_pick and first_new and plus_pick and plain_palette,
-                  f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {cursor}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
+                  f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')
 
             print('[이름 바꾸기]')   # D66 — 파일 우클릭 '이름 바꾸기…'·F2: 같은 폴더 안에서 이름만, 보던 문서 탭·담은 조각이 새 이름으로
