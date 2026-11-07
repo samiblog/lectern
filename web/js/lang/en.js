@@ -208,8 +208,6 @@ export default {
 "다시 불러오기 (지금 탭의 트리와 화면)": "Reload (this tab's tree and view)",
 "Ctrl+휠": "Ctrl+Wheel",
 "앱 화면 전체 확대·축소 (문서 글자만은 툴바의 − +)": "Zoom the whole app (document text only: − + in the toolbar)",
-"현재 위치·하이라이트 (문서·코드 화면)": "Current line and focus (documents and code)",
-"현재 위치를 위 / 아래 줄로 — 화면이 따라감 (장 하이라이트 중에는 앞 장 / 다음 장)": "Move the current line up / down — the view follows (in section focus: previous / next section)",
 "Shift+누르기 / Shift+끌기": "Shift+click / Shift+drag",
 "문서 ↔ 터미널로 초점 옮기기 (터미널 안에서도, 닫혀 있으면 열면서)": "Move keyboard focus between the document and the terminal (also inside the terminal; opens it if closed)",
 "앞 장 / 다음 장 (장 하이라이트 중)": "Previous / next section (in section focus)",
@@ -1315,5 +1313,7 @@ export default {
 "현재 줄": "Current line",
 "줄을 먼저 고르세요 — Insert 로 현재 줄을 고릅니다": "Pick lines first — Insert picks the current line",
 "아래에 넣기…": "Insert below…",
-"고른 줄의 끝 줄 아래에": "Below the last picked line"
+"고른 줄의 끝 줄 아래에": "Below the last picked line",
+"현재 줄·고른 줄 (문서·코드 화면)": "Current line and picked lines (documents and code)",
+"현재 줄을 위 / 아래 줄로 — 화면이 따라감 (장 하이라이트 중에는 앞 장 / 다음 장)": "Move the current line up / down — the view follows (in section focus: previous / next section)"
 };

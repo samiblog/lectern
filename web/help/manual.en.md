@@ -198,89 +198,14 @@ Click a heading to fold its section, and click it again to unfold. Right-click t
 - **Open style folder** in Settings opens the folder. Deleting a file removes it from the list.
 - Anything that would load fonts or images from the internet is removed by the app; only fonts installed on the PC are used.
 
-### Current line and focus
+### Current line
 
 In Markdown documents and the code view (including csv and txt), lines are counted as lines of the source file — a paragraph, list item, heading or table row written on one line is one line, a paragraph wrapped over several lines goes line by line, and code goes line by line. So the `@path lines 12-20` sent to Claude matches what you picked on screen.
 
-- **Current line**: the small triangle to the left of the line you are reading. Click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. Each document tab keeps its own.
-- **Picked lines**: **Insert**, **Ctrl+L** and **Shift+Enter** pick the current line. Insert and Ctrl+L extend downward when pressed again. **Shift+↑ ↓**, **Shift+click** and **Shift+drag** pick lines too. The text around them stays as it is and only the picked lines get a light band. **Esc** releases them and so does moving with ↑ ↓. Clicking elsewhere releases them and the click still works.
-- **Focus**: a light you turn on over picked lines. **Shift+Enter** on picked lines keeps them sharp and dims the rest. While it is on you can only look — the keys for picked lines do nothing, copying and sending do not work, ↑ ↓ just scroll, and the right-click menu only turns it off. Turning it off with **Shift+Enter**, **Esc** or a click on a dimmed area returns to the picked lines.
-- **Which keys work where**: keys that do not change the file (copy, copy location, send to the terminal) act on the current line when no lines are picked. Keys that change the file (delete, move, line type, level) work only in a cell or on picked lines, so reading never changes the file.
-- **Grow and shrink**: **Shift+↑ ↓** move the last picked line up or down — the first line stays, so the range grows or shrinks. With picked lines, Shift+click extends them to that line. Without any, Shift+↑ ↓ start from the current line.
-- **Send to Claude**: **Shift+→** puts the location of the picked lines, `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away (the current line if nothing is picked). To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if text is selected, Ctrl+C copies that text). While lines are picked, the status bar shows the line range.
-- **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section at your current position (the small arrow) sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn the section into picked lines you can grow and shrink. With lines picked, the button turns their focus on and off. In documents without sections and in the code view, the button works like Shift+Enter.
-- **Right-click**: right-clicking inside the picked lines opens a selection box — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, Edit here (for one line), release, and Delete lines at the bottom. Hover over an item for its description.
-- Press Esc or the button to turn section focus off. You can also right-click the text and choose 'Focus this section'.
-
-### Line editing
-
-Guide 09 in the sample project collects worked cases.
-
-You can edit a line right where it is. Press **F2** on the current line, or **double-click** the body to open that line with the cursor where you clicked. With several lines picked, F2 only tells you so. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
-
-- While you edit, the grey shading outside the focus is lifted so the lines above and below read normally. The line being edited keeps its bar on the left and the box around the text; the shading returns when you finish.
-- **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
-- **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
-- **Tables**: press F2 on a row or double-click a cell to edit it cell by cell. **Tab** and Shift+Tab move between cells; ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
-- In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. F2 on a picture opens its source line. F2 on math, diagrams and charts opens the source to edit line by line. HTML and comments are edited in **Source lines** from the status bar. Data files like CSV, text and Excel are view only.
-- Links, pictures, diagrams, charts and math do not open on a double-click, and a triple-click still selects the paragraph. To copy a word, double-click it again inside the box — clicking outside without changing anything ends without saving.
-- **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
-- After saving, **Ctrl+Z** restores the line as it was and saves again. Press it again for earlier edits — but not if the file has changed elsewhere (Claude Code and so on) in the meantime.
-- **Ctrl+Y** redoes what you undid. Undo is kept per file, so you can go back to a document and undo there after editing another one. Editing again after an undo clears the redo.
-- If something else (Claude Code and so on) added lines above while you were editing, so only the line number moved, Lectern finds the same line and saves there. If that line itself changed, or the same line appears more than once, it is not saved; your edited line is copied to the clipboard instead.
-
-### Adding, moving and deleting lines
-
-While editing a line you can also change the structure around it. Any text you changed is saved first, so undoing takes two steps. If something can't be done, the box stays open and a message says why.
-
-- **New line**: **Ctrl+Enter** opens a new line below, **Ctrl+Shift+Enter** above. The same keys work on the current line without opening a cell. With lines picked, **A** opens one above the first line and **B** below the last. It takes after the line it came from: the same marker in a list (after any sub-items), the next number in a numbered list, a paragraph under a paragraph or heading. In a table it is a new row, around a chart or math a paragraph. The file does not change until you write something.
-- **Keep writing**: on the last line, **↓** moves the arrow down and opens a new line. On a new line, **Enter** saves and opens the next new line; on an empty one it stops. On an existing line, Enter saves and closes. After a table or code block at the end, a paragraph opens.
-- **Ending a list**: on an empty new item, **↓** or **Shift+Tab** moves out a level, and at the outermost level it becomes a paragraph and the list ends. **Tab** nests it under the item above.
-- **Split and join**: **Ctrl+Enter** in the middle of the text splits the line there. **Backspace** at the start of a line joins it to the end of the line above — paragraphs with paragraphs, list items with list items, code within its block. Lines of different kinds, such as a heading and a paragraph, are not joined.
-- **Level**: on a list line, **Tab** indents and **Shift+Tab** outdents, taking the sub-items along. Moving between table cells and inserting tabs in code stay as they are.
-- **Move**: **Alt+↑ ↓** move lines. List items move with their sub-items within the same list, paragraphs swap with the block next to them, one line of a paragraph written over several lines stays inside that paragraph, code stays in its block, and table rows stay below the header. This works only while editing a line or with lines highlighted; while just reading, nothing happens.
-- **Delete**: pick lines and press **Delete** (or right-click 'Delete lines'); while editing a line, **Ctrl+Shift+K**. **Ctrl+X** copies the source and deletes. You are asked first if it is more than 10 lines or includes a heading. Doubled blank lines left behind become one, and sub-items left behind move up to the deleted item's place.
-- Deleting only a table's header or divider row would break the table, so it is blocked (pick the whole table to delete it). Deleting part of a code block together with lines outside it is blocked too; highlighting every code line deletes the block.
-- **Duplicate**: **Ctrl+Shift+D** while editing a line adds the same line below and goes on editing the copy. Table rows are not duplicated.
-- Numbered lists are renumbered when you add, move or delete. A list written with `1.` throughout stays as it is. One **Ctrl+Z** brings the numbers back too.
-- All of this also works in the code view. It is not available in HTML documents, data files (CSV, text, Excel), presentation documents and view-only projects.
-- Files that are not UTF-8 are view-only. Files in the Windows encoding, such as EViews programs (`prg`), show Korean correctly in the code view and in search, but line editing and edit mode don't change them. A `prg` written only in English can be edited; adding Korean to it is not saved, because the file would turn into UTF-8 and EViews would show broken characters.
-
-### Line types and heading levels
-
-Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus.
-
-- **Ctrl+Alt+1–6** turn this line into a heading and **Ctrl+Alt+0** into a paragraph. Right-click **Change this line…** for lists, numbered lists, to-dos, quotes and callouts.
-- **Alt+Shift+← →** change the level. Headings take their subsections along and lists take their sub-items. **Tab** does not change headings.
-- With lines picked, the same keys change all of them at once — for example several paragraphs into a list.
-- **Numbered headings**: if the document numbers its headings, adding, moving or deleting a heading renumbers them. One **Ctrl+Z** brings the numbers back too, and links to sections in this document follow. The number is locked in the cell. Sections such as `References`, `Appendix`, `Attachments` and `Summary` get no number.
-- **Sections**: on a heading line, **Alt+↑ ↓** swap the section with the one before or after it, text included. Right-click a heading and choose **Delete section** to delete it with its text and subsections.
-
-### Inserting elements
-
-On an empty line, press **/** to open the insert box. Type to filter. On a line with text use **Ctrl+Shift+/**; with the mouse, right-click **Insert here…**.
-
-- **Text**: headings, paragraph, list, numbered list, to-do, quote. They reach the file when you write something. Typing `## ` or `- ` works too.
-- **Table**: give the size like `3x4` (columns x rows). A `Table 1. Title` caption comes with the next number. **Tab** moves to the next cell; Tab in the last cell and **Ctrl+Enter** add a row, **Ctrl+Shift+Enter** adds one above. Right-click a cell to add, delete, move or align columns.
-- **Callouts**: note, tip, important, warning, caution. On an empty new line, **↓** leaves the callout. Right-click to change the type, remove the callout or delete it.
-- **Notes**: **Ctrl+Alt+F** in the middle of text adds a mark there and asks for the note. The mark and the note are saved together. On a mark, the same key edits that note. Numbers follow the order of appearance and the notes gather at the end of the document. If you delete a mark, Lectern asks whether to delete the note too.
-- **Figures**: pick an image file from the project; a `Figure 1. Title` caption comes with it. Copy a picture and paste it with **Ctrl+V**, or drag it in, and it is saved as a PNG in the `name-images` folder next to the document. Nothing is overwritten.
-- **Math, diagrams, charts**: insert a sample and a panel opens beside the document. For existing ones press **F2**. Edit math and diagrams line by line; charts with their values in the document show a table. The result stays in place. Press **Esc** to fold it.
-- **Source line, table note**: opens a line starting with `Source: ` or `Note: `.
-- **Links**: **Ctrl+K** picks a project file or takes an address. If text is selected, the link goes on that text.
-- **Attachments**: pick a project file and it is added with a number and a link to the `## Attachments` section at the end, which is created if needed. The file is not copied.
-- **Appendix**: adds `## Appendix A. Title` with the next letter. It stays out of the body numbering.
-- **Document info**: right-click the info at the top and choose **Edit document info**. Keys are locked and you edit the values.
-
-### Formatting and pasting
-
-- In a cell, **Ctrl+B** is bold, **Ctrl+I** italic and **Ctrl+\`** code. They wrap the selected text in `**`, `*` or `` ` ``.
-- Pasting several lines puts them on separate lines. In a list they become items. One undo brings it back.
-- Pasting an Excel range makes a table.
-
-### Source lines
-
-**Source lines** in the status bar shows the md document as a code view with line numbers. Every line can be edited in a cell, including blank lines, comments and HTML. **View as md document** comes back.
+- **Current line**: the small triangle to the left of the line you are reading. Click or right-click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. The status bar shows it as `Current line 12`, and each document tab keeps its own.
+- **Send to Claude**: **Shift+→** puts the location of the current line (or of the picked lines), `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away. To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if you dragged to select text, Ctrl+C copies that text).
+- **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section with the current line sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn the section into picked lines. Press Esc or the button to turn it off, or right-click the text and choose 'Focus this section'. In documents without sections and in the code view, the button works like Shift+Enter.
+- Picking and editing lines are described in 'Writing and editing documents'.
 
 ### Find in document
 
@@ -303,26 +228,109 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer. Slide decks print one slide per page.
 
-## Edit mode
+## Writing and editing documents
 
-Edit the document (Markdown or HTML) or code you are reading, right where it is.
+Write and edit an md document from start to finish without opening the full editor. Guide 08 in the sample project collects worked cases.
 
-- To open it: the **Edit** button at the right end of the tab bar (left of Contents and Terminal — press it again to close; it is highlighted and underlined while on), **Edit** in the status bar, **Edit** in the code view header, **Edit this document** or **Edit here** (at that block or line) in the right-click menu, or Ctrl+E. It opens with the source of what you were reading at the same height.
-- **It stays in step with the reading position**: while you edit, the contents on the right marks the section the cursor is in (the section at the top of the screen if the cursor is off screen). Clicking a place in this file in the contents, the Elements tab or search results moves the editor to that line. When you close the editor, the document view is where you were editing (a folded section is unfolded). HTML documents follow by headings.
-- It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace, Ctrl+G to go to a line, and F3 / Shift+F3 to find next and previous. Tab indents with spaces.
-- **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
-- If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
-- With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
-- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document below), and files are renamed from the sidebar (see Files above); it does not delete files, and does not edit other files (PDF, Excel and so on).
+### Four states of a line
+
+| State | What it is | Get there | Leave |
+|---|---|---|---|
+| **Current line** | The place — where you write and insert | Click, right-click, ↑ ↓ | — |
+| **Picked lines** | The target — lines to delete, move or change. One line or many | **Insert**, **Ctrl+L**, **Shift+Enter**, Shift+↑ ↓, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, opening a cell |
+| **Focus** | A light over picked lines — dims the rest, view only | **Shift+Enter** on picked lines, the toolbar button | Shift+Enter, Esc or a click on a dimmed area — back to the picked lines |
+| **Cell** | A text box that edits the line right where it is | **F2**, double-click, Ctrl+Enter | Enter saves, Esc cancels |
+
+- **The current line says where, picked lines say what.** New lines, pictures and elements go at the current line (below the last line when lines are picked); deleting, moving, line types and levels act on the picked lines.
+- **Keys that change the file work only in a cell or on picked lines**: on the current line, Delete, Ctrl+X, Alt+↑ ↓, Ctrl+Alt+number and Alt+Shift+← → only show 'Pick lines first', so reading never changes the file. Keys that do not change the file — copy, copy location, send to the terminal — act on the current line when no lines are picked.
+- **Writing ends picking**: opening a cell releases the picked lines. F2 with several lines picked opens the current position (the last line).
+- **Grow and shrink**: **Shift+↑ ↓** move the last picked line up or down — the first line stays, so the range grows or shrinks. Without picked lines they pick two lines from the current line. Insert and Ctrl+L extend downward when pressed again, and Shift+click extends picked lines to that line. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
+- **Focus is view only**: while it is on, the keys for picked lines, copying, sending and opening a cell do nothing, ↑ ↓ just scroll, and the right-click menu only turns it off. Turn it off to edit.
+- **Right-click**: the line you right-click becomes the current line. Inside picked lines, right-clicking opens a selection box for that range — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, **Insert below…**, **Change picked lines…**, Edit here (for one line), release, and Delete lines at the bottom. Right-clicking outside them releases them and opens that line's menu. Hover over an item for its description.
+- **Picking a heading**: clicking a heading folds or unfolds its section. To pick a heading, move to it with ↑ ↓ and press Insert, or **Shift+click** it.
 
 ### New document
 
 - To start: **Create** in the **Documents** header of the sidebar, **Ctrl+N**, **+** in the document tab row, or right-click a document, folder or empty space in the tree and choose **New document…**. It starts in that folder; Ctrl+N and **Create** start in the folder of the document or overview you are viewing.
 - The **title** becomes the file name and starts as 'New document'. The most recent **style** is selected; change it with ↑ ↓. Choose **Lectern slides** to pick a template for the first slide.
 - In **Location**, choose the top of the project or another folder, including empty ones. **New folder…** creates a folder inside the chosen location and selects it. **New folder…** in the right-click menus of the tree and project tab does the same. Empty folders do not show in the tree, so the new document box opens right away.
-- It starts with one `# Title` line and you write right away in the md document view of a new tab. A numbered style adds two sample headings.
+- It starts with one `# Title` line, and a cell opens under the title in a new tab so you can write right away. A numbered style adds two sample headings with the first one selected, so typing changes the text and keeps the number.
 - It is created only if the name is free. If not, the reason is shown — change the title. Esc closes the box.
 - The file stays even if you close it before writing. If you do not need it, right-click it in the tree and choose **Delete document…**.
+
+### Line editing
+
+You can edit a line right where it is. Press **F2** on the current line, or **double-click** the body to open that line with the cursor where you clicked. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
+
+- **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
+- **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
+- **Tables**: press F2 on a row or double-click a cell to edit it cell by cell. **Tab** and Shift+Tab move between cells — Tab in the last cell of a row goes to the first cell of the next row and Shift+Tab in the first cell to the last cell of the row above, so you can fill a table row by row. ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
+- In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. F2 on a picture opens its source line. F2 on math, diagrams and charts opens the source to edit line by line. HTML and comments are edited in **Source lines** from the status bar. Data files like CSV, text and Excel are view only.
+- Links, pictures, diagrams, charts and math do not open on a double-click, and a triple-click still selects the paragraph. To copy a word, double-click it again inside the box — clicking outside without changing anything ends without saving.
+- Editing during section focus lifts the grey shading so the lines above and below read normally; it returns when you finish.
+- **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
+- After saving, **Ctrl+Z** restores the line as it was and saves again; press it again for earlier edits. **Ctrl+Y** redoes what you undid. Undo is kept per file, so you can go back to a document and undo there after editing another one. Editing again after an undo clears the redo.
+
+### Adding, moving and deleting lines
+
+Change the structure in a cell or on picked lines. Any text you changed in a cell is saved first, so undoing takes two steps. If something can't be done, nothing changes and a message says why.
+
+- **New line**: **Ctrl+Enter** opens a new line below, **Ctrl+Shift+Enter** above. The same keys work on the current line without opening a cell, and with lines picked they open below the last line or above the first. It takes after the line it came from: the same marker in a list (after any sub-items), the next number in a numbered list, a paragraph under a paragraph or heading. In a table it is a new row, around a chart or math a paragraph. The file does not change until you write something.
+- **Keep writing**: on the last line, **↓** moves the arrow down and opens a new line. On a new line, **Enter** saves and opens the next new line; on an empty one it stops. On an existing line, Enter saves and closes. After a table or code block at the end, a paragraph opens. With footnotes, ↓ on the last line of the body opens a new line instead of going into the notes, and new text goes before the notes.
+- **Ending a list**: on an empty new item, **↓** or **Shift+Tab** moves out a level, and at the outermost level it becomes a paragraph and the list ends. **Tab** nests it under the item above.
+- **Split and join**: **Ctrl+Enter** in the middle of the text splits the line there. **Backspace** at the start of a line joins it to the end of the line above — paragraphs with paragraphs, list items with list items, code within its block. Lines of different kinds, such as a heading and a paragraph, are not joined.
+- **Move**: **Alt+↑ ↓** move lines. List items move with their sub-items within the same list, paragraphs swap with the block next to them, one line of a paragraph written over several lines stays inside that paragraph, code stays in its block, and table rows stay below the header. The picked lines follow, so you can keep moving them.
+- **Delete**: pick lines and press **Delete** (or right-click 'Delete lines'); in a cell, **Ctrl+Shift+K**. **Ctrl+X** copies the source and deletes. You are asked first if it is more than 10 lines or includes a heading. Doubled blank lines left behind become one, and sub-items left behind move up to the deleted item's place.
+- Deleting only a table's header or divider row would break the table, so it is blocked (pick the whole table to delete it). Deleting part of a code block together with lines outside it is blocked too; picking every code line deletes the block.
+- **Duplicate**: **Ctrl+Shift+D** in a cell adds the same line below and goes on editing the copy. Table rows are not duplicated.
+- Numbered lists are renumbered when you add, move or delete. A list written with `1.` throughout stays as it is. One **Ctrl+Z** brings the numbers back too.
+- All of this also works in the code view and in slides. It is not available in HTML documents, data files (CSV, text, Excel) and view-only projects.
+- Files that are not UTF-8 are view-only. Files in the Windows encoding, such as EViews programs (`prg`), show Korean correctly in the code view and in search, but line editing and edit mode don't change them. A `prg` written only in English can be edited; adding Korean to it is not saved, because the file would turn into UTF-8 and EViews would show broken characters.
+
+### Line types and heading levels
+
+Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The keys work in a cell or on picked lines.
+
+- **Ctrl+Alt+1–6** turn a line into a heading and **Ctrl+Alt+0** into a paragraph. Right-click **Change this line…** for lists, numbered lists, to-dos, quotes and callouts.
+- **Alt+Shift+← →** change the level. Headings take their subsections along and lists take their sub-items. On list lines **Tab** and **Shift+Tab** do the same. **Tab** does not change headings.
+- With several lines picked, the same keys change all of them at once. To turn several paragraphs into one list or callout, right-click **Change picked lines…**.
+- **Numbered headings**: if the document numbers its headings, adding, moving or deleting a heading renumbers them. One **Ctrl+Z** brings the numbers back too, and links to sections in this document follow. The number is locked in the cell. Sections such as `References`, `Appendix`, `Attachments` and `Summary` get no number.
+- **Sections**: pick a heading line and press **Alt+↑ ↓** to swap the section with the one before or after it, text included. Right-click a heading and choose **Delete section** to delete it with its text and subsections. Moving or deleting the last section leaves the notes at the end of the document in place.
+
+### Inserting elements
+
+On an empty line, press **/** to open the insert box. Type to filter. On a line with text use **Ctrl+Shift+/**; with the mouse, right-click **Insert here…** — on a table it inserts below the table, and on picked lines **Insert below…** inserts below the last line.
+
+- **Text**: headings, paragraph, list, numbered list, to-do, quote. They reach the file when you write something. Typing `## ` or `- ` works too.
+- **Table**: give the size like `3x4` (columns x rows). A `Table 1. Title` caption comes with the next number, with 'Title' selected so you can type it. Press ↓ to go into the table and fill cells with **Tab**. Tab in the last cell and **Ctrl+Enter** add a row, **Ctrl+Shift+Enter** adds one above. Right-click a cell to add, delete, move or align columns.
+- **Callouts**: note, tip, important, warning, caution. On an empty new line, **↓** leaves the callout. Right-click to change the type, remove the callout or delete it.
+- **Notes**: **Ctrl+Alt+F** in the middle of text adds a mark there and asks for the note. The mark and the note are saved together. On a mark, the same key edits that note. Numbers follow the order of appearance and the notes gather at the end of the document. If you delete a mark, Lectern asks whether to delete the note too.
+- **Figures**: pick an image file from the project; a `Figure 1. Title` caption comes with it. Copy a picture and paste it with **Ctrl+V**, or drag it in, and it is saved as a PNG in the `name-images` folder next to the document (after the current line, or below the last picked line). Nothing is overwritten.
+- **Math, diagrams, charts**: insert a sample and a panel opens beside the document. For existing ones press **F2**. Edit math and diagrams line by line; charts with their values in the document show a table. The result stays in place. Press **Esc** to fold it.
+- **Source line, table note**: opens a line starting with `Source: ` or `Note: `. Such lines right under a table show in small type.
+- **Links**: **Ctrl+K** picks a project file or takes an address. If text is selected, the link goes on that text.
+- **Attachments**: pick a project file and it is added with a number and a link to the `## Attachments` section at the end (before the notes), which is created if needed. The file is not copied.
+- **Appendix**: adds `## Appendix A. Title` with the next letter. It stays out of the body numbering.
+- **Document info**: right-click the info at the top and choose **Edit document info**. Keys are locked and you edit the values.
+
+### Formatting and pasting
+
+- In a cell, **Ctrl+B** is bold, **Ctrl+I** italic and **Ctrl+\`** code. They wrap the selected text in `**`, `*` or `` ` ``.
+- Pasting several lines puts them on separate lines. In a list they become items. One undo brings it back.
+- Pasting an Excel range makes a table.
+
+### Editing alongside Claude
+
+While Claude Code edits the same document, your changes and Claude's do not overwrite each other.
+
+- **Text in a cell** is not lost when the file changes meanwhile. If lines were added above so only the line number moved, Lectern finds the same line and saves there. If that line itself changed, or the same line appears more than once, it is not saved; your edited line is copied to the clipboard instead.
+- **Picked lines** follow their text. If lines are added above, the same text stays picked; if that text changes or disappears, the lines are released — so another line is never deleted by mistake.
+- **Undo**: if the file has changed meanwhile, Ctrl+Z does not undo and tells you so, so it does not overwrite someone else's changes.
+- The screen is redrawn within a second and your reading position stays (see Auto refresh).
+
+### Source lines
+
+**Source lines** in the status bar shows the md document as a code view with line numbers. Every line can be edited in a cell, including blank lines, comments and HTML. **View as md document** comes back.
 
 ### md document style
 
@@ -351,6 +359,18 @@ Open it from **md document style** in the status bar or the right-click menu. Pi
 - **Make a style from this document:** In a document with numbered headings, this saves the numbering as **My styles**, under the type you are looking at (prose or outline), shared by all of Lectern. The files are in `%APPDATA%\Lectern\md-styles`; **Open styles folder** opens it so you can delete them.
 - If the numbering is too complex to pick up, use **Ask Claude for a style**. A request goes into the terminal; add a name and press Enter, and Claude makes it from the document.
 - With many styles, type a name, a use (`paper`) or a number form in the search box. Styles you used lately come first.
+
+### Full editor (edit mode)
+
+For what line editing does not cover — reworking many places at once or editing an HTML document — open the whole file in the editor. Most work is done with line editing above.
+
+- To open it: the **Edit** button at the right end of the tab bar (left of Contents and Terminal — press it again to close; it is highlighted and underlined while on), **Edit** in the status bar, **Edit** in the code view header, **Edit this document** or **Edit here** (at that block or line) in the right-click menu, or Ctrl+E. It opens with the source of what you were reading at the same height.
+- **It stays in step with the reading position**: while you edit, the contents on the right marks the section the cursor is in (the section at the top of the screen if the cursor is off screen). Clicking a place in this file in the contents, the Elements tab or search results moves the editor to that line. When you close the editor, the document view is where you were editing (a folded section is unfolded). HTML documents follow by headings.
+- It has line numbers and language colors; use Ctrl+F to find, Ctrl+H to replace, Ctrl+G to go to a line, and F3 / Shift+F3 to find next and previous. Tab indents with spaces.
+- **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
+- If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
+- With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
+- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document above), and files are renamed from the sidebar (see Files above). It does not edit other files (PDF, Excel and so on).
 
 ## Lectern slides
 
