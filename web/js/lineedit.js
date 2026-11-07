@@ -440,7 +440,7 @@ async function beginNew(base, below, { end = false, after = false, around = fals
 }
 
 /**
- * 칸 없이 새 줄을 연다 (D117): 현재 줄의 Ctrl+Enter·Ctrl+Shift+Enter, 고른 줄의 a·b. 고른 줄이면 첫 줄 위·끝 줄 아래에 열고 고르기를 푼다.
+ * 칸 없이 새 줄을 연다 (D117): Ctrl+Enter·Ctrl+Shift+Enter. 고른 줄이면 첫 줄 위·끝 줄 아래에 열고 고르기를 푼다.
  * 표의 행은 새 행을, 차트·수식은 그 블록의 앞뒤 문단을 연다
  */
 function addHere(below) {
@@ -663,7 +663,8 @@ export async function replaceLines(pane, path, start, before, after) {
 /** 제목이 바뀌면 번호를 다시 맞춘다 (D107) — 번호가 있던 md 문서만. 같은 저장에 묶여 되돌리기 한 걸음이다 */
 function withNumbers(pane, old, next) {
   const { view } = pane;
-  if (!view.dataset.docPath || view.classList.contains('lec-deck') || sameHeads(old, next)) return next;
+  const heads = (lines) => lines.filter((s) => headLevel(s)).join('\n');
+  if (!view.dataset.docPath || view.classList.contains('lec-deck') || (sameHeads(old, next) && heads(old) === heads(next))) return next;   // 번호만 떨어졌어도 다시 붙인다
   const id = numberScheme(old);
   return id ? applyScheme(next, id, slugify).lines : next;
 }
@@ -736,11 +737,19 @@ function neighbor(line, dir) {
   return i >= 0 ? order[i + dir] : dir > 0 ? order.find((n) => n > line) : order.findLast((n) => n < line);
 }
 
+/** 행의 끝 칸에서 그쪽으로 Tab 을 눌렀고 그 표에 옆 행이 있는지 */
+function rowEdge(at, back) {
+  if (at !== (back ? 0 : session.places.length - 1)) return false;
+  const src = sourceLines();
+  const next = neighbor(session.line, back ? -1 : 1);
+  return next != null && tableAt(src, next)?.last === tableAt(src, session.line)?.last;
+}
+
 /**
  * ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례). 넘어가는 사이에도 하이라이트의 회색은 걷어 둔다 (lineEditHold).
  * 마지막 줄의 ↓ 는 새 줄을 연다 (D106 — repeat: 누르고 있는 키는 마지막 줄에서 멈춘다). 빈 새 항목의 ↓ 는 한 레벨 밖으로 — 목록이 끝난다
  */
-async function step(dir, repeat = false) {
+async function step(dir, repeat = false, cell = null) {
   const s = session;
   if (dir > 0 && s.fresh && !read(s.places[0]).trim()) {
     if (repeat || shiftFresh(s, -1) || (s.line ? neighbor(s.line, 1) == null : true)) return;
@@ -761,7 +770,7 @@ async function step(dir, repeat = false) {
       return;
     }
     followLine(next);
-    await begin(next, { cell: s.kind === 'table' ? s.cell : 0 });
+    await begin(next, { cell: cell ?? (s.kind === 'table' ? s.cell : 0) });
   } finally {
     s.pane.lineEditHold = false;
     showLineEdit();
@@ -2026,7 +2035,8 @@ function onKey(e) {
     e.preventDefault();
     if (session.kind === 'table') {
       const at = Number(span.dataset.i);
-      if (!e.shiftKey && at === session.places.length - 1 && tableAt(sourceLines(), session.line)?.last === session.line) addLine(true);   // 마지막 칸의 Tab: 새 행 (기능 요청 4-7)
+      if (!e.shiftKey && at === session.places.length - 1 && tableAt(sourceLines(), session.line)?.last === session.line) addLine(true);   // 마지막 칸의 Tab: 새 행
+      else if (rowEdge(at, e.shiftKey)) step(e.shiftKey ? -1 : 1, false, e.shiftKey ? session.places.length - 1 : 0);   // 행의 끝이면 옆 행으로 — 표를 줄줄이 쓰게 (기능 요청 4-7)
       else focusPlace(Math.max(0, Math.min(session.places.length - 1, at + (e.shiftKey ? -1 : 1))), false);
     }
     else if (session.kind === 'code' && !e.shiftKey) document.execCommand('insertText', false, '\t');

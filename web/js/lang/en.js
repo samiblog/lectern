@@ -1292,7 +1292,6 @@ export default {
 "값 열이 수가 아니라 차트로 바꾸지 못했습니다 — 첫 열은 항목, 다음 열들은 수여야 합니다": "The value columns are not numbers, so no chart was made — the first column is the item and the next columns must be numbers.",
 "그림 폭 {n}px — Ctrl+Z 로 되돌립니다": "Figure width {n}px — Ctrl+Z undoes it",
 "현재 줄의 아래 / 위에 새 줄 — 줄을 골랐으면 그 앞뒤에": "New line below / above the current line — around the picked lines if any",
-"고른 줄의 위 / 아래에 새 줄": "New line above / below the picked lines",
 "팝업·메뉴·찾기·사용설명서 닫기, 그다음 하이라이트 끄기, 고른 줄 풀기": "Close popups, menus, find and the user guide, then turn off focus, then release picked lines",
 "그 줄들을 고르기 — 고른 줄이 있으면 거기까지 넓히기": "Pick those lines — with picked lines, extend to there",
 "고른 줄의 끝 줄을 위 / 아래로 — 넓히거나 줄이기": "Move the last picked line up / down — grow or shrink the range",

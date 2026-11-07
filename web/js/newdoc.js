@@ -39,8 +39,8 @@ const numbered = (scheme) => !!scheme && scheme !== 'plain';
 
 /** 새 md 문서의 글: 제목 한 줄. 번호가 있는 스타일이면 보기 머리글 두 줄 — 번호가 문서에 있어야 뒤에 더한 제목의 번호를 맞춘다 (D107) */
 function firstText(title, scheme) {
-  if (!numbered(scheme)) return `# ${title}\n\n`;
-  const lines = [`# ${title}`, '', `## ${t('첫째 절')}`, '', `### ${t('세부 절')}`, ''];
+  if (!numbered(scheme)) return `# ${title}\n`;
+  const lines = [`# ${title}`, '', `## ${t('첫째 절')}`, '', `### ${t('세부 절')}`];
   return `${applyScheme(lines, scheme, slugify).lines.join('\n')}\n`;
 }
 

@@ -53,6 +53,7 @@ let followRaf = 0;
 let revealing = 0;      // 'reveal' 뒤 현재 위치를 그곳으로 옮기기 전 — 그사이의 스크롤로 따라오지 않게
 let revealLine = null; // 다음 'reveal' 에서 현재 위치로 삼을 원문 줄 — 여러 줄 블록 안의 자리로 돌아갈 때 (뒤로·앞으로, nav.js)
 
+let pickedText = null;  // 고른 줄의 원문 {a: 첫 줄, lines} — 다시 그린 뒤 그 글을 따라간다 (followPick)
 let dimmed = false;     // 고른 줄의 라이트를 켰는지 (D108·D118) — 켜 있는 동안은 보기만 한다
 
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
@@ -559,6 +560,33 @@ function insideLit(y, target = null) {
   return !own || cell === own;
 }
 
+/** 지금 고른 줄의 원문을 적어 둔다 */
+function notePick() {
+  const r = ranged() ? litLines() : null;
+  pickedText = r ? { a: r[0], lines: srcLines().slice(r[0] - 1, r[1]) } : null;
+}
+
+/**
+ * 다시 그린 뒤: 고른 글이 다른 줄로 밀렸으면 따라간다 (D119 — 번호만 남기면 Claude 가 위에 줄을 더한 뒤 Delete 가 다른 줄을 지운다).
+ * 같은 글이 여럿이면 가장 가까운 곳. 고른 글이 없어졌으면 false — 푼다. 고른 줄을 고치는 일은 저장한 뒤 setLitSpan 으로 다시 고른다
+ */
+function followPick() {
+  const was = pickedText;
+  if (!was?.lines.length) return true;
+  const src = srcLines();
+  const same = (at) => was.lines.every((s, i) => src[at + i] === s);
+  const from = was.a - 1;
+  if (same(from)) return true;
+  let best = -1;
+  for (let at = 0; at + was.lines.length <= src.length; at++) {
+    if (same(at) && (best < 0 || Math.abs(at - from) < Math.abs(best - from))) best = at;
+  }
+  if (best < 0) return false;
+  anchor += best - from;
+  focus += best - from;
+  return true;
+}
+
 /** 칸의 스크롤 상자에 겹친 덮개 (make: 없으면 만든다) */
 function overlay(root, make) {
   const sc = root?.parentElement;
@@ -608,6 +636,7 @@ function paint() {
   if (on) overlay(root, true);
   place();
   drawHere();
+  notePick();
   resizer ||= new ResizeObserver(() => {
     gen += 1;
     requestAnimationFrame(() => {
@@ -679,7 +708,8 @@ export const sourceLines = () => srcLines();
 export const litSpan = () => (ranged() && !dimmed ? litLines() : null);
 /** 옮긴 줄들로 줄 하이라이트를 옮긴다 (lineedit.js) */
 export function setLitSpan(a, b) {
-  if (!ranged()) return;
+  active = true;   // 저장 뒤 다시 그릴 때 글이 달라 풀렸어도 그 줄을 다시 고른다
+  mode = 'range';
   anchor = a;
   focus = b;
   paint();
@@ -864,7 +894,7 @@ function lineKey(e) {
     return ['KeyL', 'KeyZ', 'KeyY', 'KeyH'].includes(e.code) || (isDeck() && (e.code === 'KeyM' || e.code === 'KeyD'));
   }
   if (e.shiftKey) return k.startsWith('Arrow');
-  return k === 'F2' || k === 'Insert' || k === 'Delete' || e.code === 'KeyA' || e.code === 'KeyB';
+  return k === 'F2' || k === 'Insert' || k === 'Delete';
 }
 
 /**
@@ -923,10 +953,6 @@ export function spotKey(e) {
   if (k === 'F2') return editHere();
   // Enter 가 아니다 — 초점이 링크나 자료 행에 남아 있으면 Enter 는 바깥 프로그램을 연다 (D118)
   if (k === 'Insert') return pickHere();
-  if (ranged() && (e.code === 'KeyA' || e.code === 'KeyB')) {   // 고른 줄의 위·아래에 새 줄 (D117 — 노트북의 a·b, 고른 줄에서만. 자리로 받아 한글 입력 상태에서도 된다)
-    emit('line-add', { below: e.code === 'KeyB' });
-    return true;
-  }
   if (k === 'Delete' && ranged()) {   // 줄 지우기 (lineedit.js, D83)
     emit('line-delete', {});
     return true;
@@ -983,6 +1009,7 @@ function endDrag() {
   window.removeEventListener('blur', endDrag);
   swallowClick = true;   // 이어 오는 click 은 링크·제목 접기로 쓰지 않는다
   setTimeout(() => { swallowClick = false; });
+  notePick();
   place();
   updateButton();
   updateStatus();
@@ -1055,7 +1082,7 @@ export function initSpotlight() {
     // 줄 하이라이트는 같은 문서일 때만 — 문서가 줄어 그 줄이 없어졌으면 푼다
     if (ranged()) {
       const us = units();
-      if (path !== shownPath || !hasLine(us, anchor) || !hasLine(us, focus)) {
+      if (path !== shownPath || !followPick() || !hasLine(us, anchor) || !hasLine(us, focus)) {
         active = false;
         mode = 'chapter';
       }
