@@ -222,4 +222,10 @@ eq(shifted('> - a\n', 1, [-1], 'x'), L('> - a\n>\n> x\n'), '인용 안 목록을
 eq(shifted('> - a\n', 1, [-1, -1], 'x'), L('> - a\n\nx\n'), '인용 밖까지');
 eq(shifted('글\n', 1, [-1], 'x'), L('글\n\nx\n'), '보통 문단은 그대로');
 
+// 문서 끝의 각주 정의와 본문은 서로 넘어가지 않는다
+const NOTED = L('# 글\n\n가[^1]\n\n| a |\n|---|\n| 1 |\n\n```\nx\n```\n\n[^1]: 주\n\n[^2]: 둘째\n');
+eq(m.moveLines(NOTED, 5, 11, 1).error, 'edge', '표와 코드를 각주 아래로 내리지 않는다');
+eq(m.moveLines(NOTED, 13, 13, -1).error, 'edge', '각주를 본문으로 올리지 않는다');
+eq(m.moveLines(NOTED, 15, 15, -1).lines.slice(12).join('\n'), '[^2]: 둘째\n\n[^1]: 주\n', '각주끼리는 바꾼다');
+
 return { n, fails };

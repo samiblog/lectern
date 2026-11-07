@@ -16,6 +16,15 @@ def test_present_waits_only_for_missing(tmp_path):
     assert not editing.present(tmp_path / '없음.md')
 
 
+def test_swap_puts_new_text_when_original_is_gone(tmp_path):
+    """바꿔 끼우다 멈춰 원래 파일이 없어진 경우 — 새 글을 바로 그 자리에 놓는다"""
+    path = tmp_path / '문서.md'
+    tmp = tmp_path / '.lectern-1.tmp'
+    tmp.write_text('새 글\n', encoding='utf-8')
+    editing._swap(tmp, path)
+    assert path.read_text(encoding='utf-8') == '새 글\n' and not tmp.exists()
+
+
 @pytest.mark.skipif(sys.platform != 'win32', reason='ReplaceFileW 는 Windows 만')
 def test_reads_never_miss_during_swaps(tmp_path):
     path = tmp_path / '문서.md'

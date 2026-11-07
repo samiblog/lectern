@@ -136,7 +136,13 @@ def _swap(tmp: Path, path: Path) -> None:
         flags = 0x2 | 0x4   # REPLACEFILE_IGNORE_MERGE_ERRORS | REPLACEFILE_IGNORE_ACL_ERRORS
         if kernel32.ReplaceFileW(str(path), str(tmp), None, flags, None, None):
             return
-        raise PermissionError(ctypes.get_last_error() or 5, 'ReplaceFileW', str(path))
+        error = ctypes.get_last_error()
+        # 바꿔 끼우다 멈추면 원래 파일은 없어지고 새 글은 임시 파일 이름으로 남는다 (ERROR_UNABLE_TO_MOVE_REPLACEMENT) —
+        # 다시 시도하며 기다리는 동안 문서가 없지 않게 새 글을 바로 그 자리에 놓는다
+        if not path.exists() and tmp.exists():
+            os.replace(tmp, path)
+            return
+        raise PermissionError(error or 5, 'ReplaceFileW', str(path))
     os.replace(tmp, path)
 
 

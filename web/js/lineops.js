@@ -620,6 +620,9 @@ export function moveLines(lines, a, b, dir, { code = false } = {}) {
   const j = blocks.indexOf(last);
   const other = dir < 0 ? blocks[i - 1] : blocks[j + 1];
   if (!other || other.kind === 'front' || other.kind === 'wall') return { error: 'edge' };
+  // 문서 끝의 각주 정의와 본문은 서로 넘어가지 않는다 — 주는 문서 맨 끝에 모인다 (D110). 각주끼리는 바꿔도 된다
+  const notes = notesStart(lines);
+  if (notes && [first.a, last.b, other.a].some((n) => n >= notes) && ![first.a, last.b, other.a].every((n) => n >= notes)) return { error: 'edge' };
   if (other.a === 1 && dir < 0 && lines[first.a - 1].trim() === '---') return { error: 'edge' };   // 맨 앞의 --- 는 머리 정보로 읽힌다
   if (dir < 0) {
     return { lines: swapped(lines, other.a, other.b, first.a, last.b), a: a - first.a + other.a, b: b - first.a + other.a };
