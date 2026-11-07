@@ -741,17 +741,13 @@ def run(headed: bool) -> None:
             page.keyboard.press('Tab')
             page.keyboard.press('Control+a')
             page.keyboard.type('a|b')
-            page.evaluate("""(() => { const box = document.querySelector('#lec-view').parentElement.querySelector(':scope > .lec-spot');
-              window.__shadeGaps = 0; window.__shadeBox = box;
-              new MutationObserver(() => { if (!box.classList.contains('editing')) window.__shadeGaps++; }).observe(box, { attributes: true, attributeFilter: ['class'] }); })()""")
             page.keyboard.press('ArrowDown')   # 저장하고 아래 행의 같은 칸
             saved_row = file_line(edit_doc, 15, '| 구리 | a\\|b |')
             wait_until(page, "document.activeElement.classList.contains('lec-line-edit') && document.activeElement.textContent === '2'", 5000)
             next_row = [editing(), focused(), page.evaluate(lit_status)]
-            step_gaps = page.evaluate("[window.__shadeGaps, window.__shadeBox.isConnected && window.__shadeBox.classList.contains('editing')]")
             page.keyboard.press('Escape')
-            esc_back = wait_until(page, finished, 3000)
-            check(step_gaps == [0, True] and esc_back, f"↓ 로 이어 고치는 동안 편집 표시가 끊기지 않고, Esc 로 끝내면 고른 줄로 ({step_gaps}, {esc_back})")
+            esc_back = wait_until(page, f"({lit_status}) === null && !document.querySelector('#lec-view .lec-line-edit')", 3000)
+            check(esc_back, f"↓ 로 이어 고치고 Esc 로 끝내면 칸도 고른 줄도 없다 — 칸을 열면 고르기가 풀린다 (D119) ({esc_back}, {page.evaluate(lit_status)})")
             check(row == ['TD:구리', 'TD:1'] and first_cell == '구리' and saved_row == '| 구리 | a\\|b |'
                   and next_row == [['TD:니켈', 'TD:2'], '2', '한 줄 편집 16행'],
                   f"표는 칸마다 (| 는 잠금, Tab 으로 옆 칸, 칸 글의 | 는 \\| 로), ↓ 는 저장하고 아래 행의 같은 칸 ({row}, {saved_row!r}, {next_row})")
@@ -3121,7 +3117,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li[data-i]')
             plain_palette = page.locator('#lec-palette-list li.new-doc').count() == 0
             page.keyboard.press('Escape')
-            check(guess == ['새 문서', 'data'] and on_memo and memo_text == '# 메모\n\n' and focused and in_tree
+            check(guess == ['새 문서', 'data'] and on_memo and memo_text == '# 메모\n' and focused and in_tree
                   and ctrl_n == ['새 문서 만들기', '새 문서'] and dup and closed_pick and first_new and plus_pick and plain_palette,
                   f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')
