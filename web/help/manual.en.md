@@ -294,9 +294,9 @@ Open it from **md document style** in the status bar or the right-click menu. Pi
 | Prose | No numbers (articles, columns) | Overview | Market | Prices |
 | Prose | Paper (humanities, social science) | Ⅰ. Overview | 1. Market | 1) Prices |
 | Prose | Numbers (science papers, technical docs) | 1. Overview | 1.1 Market | 1.1.1 Prices |
-| Prose | Chapters (theses, books) | 제1장 Overview | 제1절 Market | 1. Prices |
-| Prose | Rules (regulations, guidelines) | 제1장 Overview | 제1조 Market | ① Prices |
-| Outline | Report (reports) | Ⅰ. Overview | 1. Market | 가. Prices |
+| Prose | Chapters (theses, books) | <span translate="no">제1장</span> Overview | <span translate="no">제1절</span> Market | 1. Prices |
+| Prose | Rules (regulations, guidelines) | <span translate="no">제1장</span> Overview | <span translate="no">제1조</span> Market | ① Prices |
+| Outline | Report (reports) | Ⅰ. Overview | 1. Market | <span translate="no">가.</span> Prices |
 | Outline | Numbers (plans) | 1. Overview | 1.1 Market | 1.1.1 Prices |
 | Outline | Symbols (official notices, summaries) | □ Overview | ○ Market | - Prices |
 | Outline | No numbers (minutes, memos) | Overview | Market | Prices |
@@ -454,9 +454,9 @@ More examples are in `skills\README.md` in the program folder. The guide Claude 
 
 | Order | Folder | What |
 |---|---|---|
-| 1 | `slides/기초/` | First look, cells and layouts, making slides from templates, key practice |
-| 2 | `slides/상황별/` | Ten model decks for situations like an executive report, comparing options and market analysis. Each finished deck has a process document |
-| 3 | `slides/복잡한-배치/` | Ten layouts with many cells, like dashboards, magazine pages, process maps and Gantt charts |
+| 1 | <code translate="no">slides/기초/</code> | First look, cells and layouts, making slides from templates, key practice |
+| 2 | <code translate="no">slides/상황별/</code> | Ten model decks for situations like an executive report, comparing options and market analysis. Each finished deck has a process document |
+| 3 | <code translate="no">slides/복잡한-배치/</code> | Ten layouts with many cells, like dashboards, magazine pages, process maps and Gantt charts |
 
 The installed samples are read-only, so follow along in your own project.
 
