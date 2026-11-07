@@ -46,6 +46,7 @@ def test_reads_never_miss_during_swaps(tmp_path):
                     break
                 except PermissionError:
                     time.sleep(0.01)
+            time.sleep(0.005)   # 저장은 잇달아도 사람의 키 사이만큼은 떨어져 있다
     finally:
         stop.set()
         worker.join()

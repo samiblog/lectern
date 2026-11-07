@@ -56,10 +56,10 @@ def _protect(path: Path) -> None:
 def present(path: Path) -> bool:
     """path 가 있는지. 저장이 바꿔 끼우는 순간(ReplaceFileW — _swap)에는 원래 이름이 잠깐 없으니, 없으면 조금 기다려 본다.
     그 순간에 들어온 읽기(문서 그리기·위치 기억·다른 창의 저장)가 '파일이 없습니다'를 받지 않게. 정말 없으면 0.1초쯤 늦게 False"""
-    for attempt in range(7):
+    for attempt in range(10):
         if path.exists():
             return True
-        if attempt < 6:
+        if attempt < 9:
             time.sleep(0.015)
     return False
 
