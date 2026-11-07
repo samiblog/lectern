@@ -7,7 +7,7 @@
 // - 글자는 e.code(KeyJ…)로 읽는다 — 한/영 상태와 관계없이 듣는다. 글 칸·입력 칸·터미널·편집 상자 안은 main.js 가 거른다.
 // - 파일을 바꾸는 dd·>>·<< 는 그 줄을 고르고(Insert) 실행하는 것으로 번역한다 (D108 — 두 번 눌러야 한다).
 // - 두 글자 명령(dd·yy·gg·zz·[[·>>…)은 1초 안에 다음 글자를 기다리고, 그동안 상태줄에 'd…' 처럼 보인다. 앞의 숫자는 그 수만큼 (3j, 2dd).
-// - 칸 안의 Esc 는 저장하고 나온다 (lineedit.js — vi 의 Insert → Normal). 전체 편집은 CodeMirror 의 vim 키맵 (editor.js).
+// - 칸 안의 Esc 는 저장하고 나온다 (lineedit.js — vi 의 Insert → Normal). 전체 편집기의 vim 키맵은 따로 고른다 (설정 editor_keys — editor.js).
 
 import { S, on } from './store.js';
 import { openFind, findStep } from './find.js';

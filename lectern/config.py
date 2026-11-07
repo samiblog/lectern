@@ -64,7 +64,8 @@ DEFAULTS: dict[str, Any] = {
     'math': True,            # $...$ 수식 렌더링
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
     'md_breaks': True,       # 문단 안의 줄바꿈을 화면에서도 줄바꿈으로 (D93 — 끄면 표준 Markdown)
-    'vi_keys': False,        # vi 키: 읽는 화면의 글자 키(j·k·V·dd·i…)와 전체 편집의 vim 키맵 (D122 — 설정 창)
+    'vi_keys': False,        # vi 키: 읽는 화면의 글자 키(j·k·V·dd·i…) (D122 — 설정 창)
+    'editor_keys': 'default',  # 전체 편집 방식: default(Esc 로 닫기) | vim(CodeMirror vim 키맵 — D122, 설정 창)
     'restore_last': True,    # 폴더를 열면 마지막에 보던 문서와 위치로
     'expand_first_level': True,  # 폴더를 열면 트리의 첫 단계 폴더를 펼쳐 둠
     'window': {'width': 1280, 'height': 860},
@@ -86,7 +87,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
@@ -109,6 +110,8 @@ def value_ok(key: str, value: Any) -> bool:
         return is_number(value)
     if key == 'terminal_position':
         return value in ('auto', 'side', 'bottom')
+    if key == 'editor_keys':
+        return value in ('default', 'vim')
     if key in ('last_folder', 'editor', 'terminal_shell'):
         return isinstance(value, str)
     if isinstance(default, bool):

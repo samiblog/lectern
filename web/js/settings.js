@@ -16,6 +16,7 @@ export function openSettings() {
   for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
+  for (const radio of $$('#lec-settings input[name="editor_keys"]')) radio.checked = radio.value === (S.config.editor_keys === 'vim' ? 'vim' : 'default');
   renderMyStyles();
   $('#lec-aiguide-samples').hidden = !S.samples;
   box().hidden = false;
@@ -79,6 +80,11 @@ async function onChange(e) {
     location.reload();
     return;
   }
+  if (e.target.name === 'editor_keys') {   // 전체 편집 방식 (D122 — editor.js 의 vim 키맵, 열린 편집기에도)
+    await saveConfig({ editor_keys: e.target.value });
+    emit('editor-keys');
+    return;
+  }
   if (e.target.name === 'terminal_position') {   // 터미널 자리 (D52 — terminal.js)
     await saveConfig({ terminal_position: e.target.value });
     emit('term-place');
@@ -97,7 +103,7 @@ async function onChange(e) {
   }
   await saveConfig({ [key]: e.target.checked });
   if (key === 'md_breaks') emit('refresh-view');   // 문서를 새 규칙으로 다시 그린다 (D93)
-  if (key === 'vi_keys') emit('vi-keys');   // 상태줄의 vi 표시와 열린 편집기의 키맵 (D122)
+  if (key === 'vi_keys') emit('vi-keys');   // 상태줄의 vi 표시 (D122 — 읽는 화면만. 전체 편집기는 editor_keys)
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
   else if (key === 'terminal_follow_style') emit('term-colors');

@@ -193,6 +193,16 @@ def test_terminal_settings(tmp_path):
     assert cfg.get('terminal_shell') == r'C:\Program Files\PowerShell\7\pwsh.exe' and cfg.get('terminal_width') is None
 
 
+def test_editor_keys_setting(tmp_path):
+    """전체 편집 방식 (D122): 기본 방식이 기본, vim 만 더 받는다. 읽는 화면의 vi 키와 따로"""
+    cfg = Config(tmp_path / 'config.json')
+    assert cfg.get('editor_keys') == 'default' and cfg.get('vi_keys') is False
+    cfg.update_client({'editor_keys': 'vim'})
+    assert cfg.get('editor_keys') == 'vim' and cfg.get('vi_keys') is False
+    cfg.update_client({'editor_keys': 'emacs'})        # 모르는 값은 받지 않는다
+    assert cfg.get('editor_keys') == 'vim'
+
+
 def test_terminal_position_settings(tmp_path):
     # 터미널 자리 (D52): auto | side | bottom, 아래에 둘 때의 높이
     cfg = Config(tmp_path / 'config.json')

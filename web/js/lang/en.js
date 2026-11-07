@@ -1320,7 +1320,7 @@ export default {
 "vi 키 (설정에서 켤 때)": "vi keys (when turned on in Settings)",
 "vi 키": "vi keys",
 "vi 키가 켜져 있습니다 — 설정(Ctrl+,)에서 끕니다": "vi keys are on — turn them off in Settings (Ctrl+,)",
-"문서에서 글자 키로 움직이고 고칩니다 — j·k 줄 옮기기, V 고르기, dd 지우기, i 쓰기, u 되돌리기 (단축키 표의 'vi 키'). 전체 편집도 vim 처럼. 끄면 글자 키는 아무 일도 하지 않습니다": "Move and edit in documents with letter keys — j·k move between lines, V pick, dd delete, i write, u undo ('vi keys' in the shortcut table). The full editor works like vim too. When off, letter keys do nothing",
+"문서에서 글자 키로 움직이고 고칩니다 — j·k 줄 옮기기, V 고르기, dd 지우기, i 쓰기, u 되돌리기 (단축키 표의 'vi 키'). 끄면 글자 키는 아무 일도 하지 않습니다. 전체 편집기는 아래 '전체 편집 방식'에서 고릅니다": "Move and edit documents with letter keys — j·k move between lines, V pick, dd delete, i write, u undo ('vi keys' in the shortcut table). When off, letter keys do nothing. Choose the full editor's keys under 'Full editor keys' below",
 "{n}줄을 넣었습니다 — Ctrl+Z 로 되돌립니다": ["Put {n} line — press Ctrl+Z to undo", "Put {n} lines — press Ctrl+Z to undo"],
 "담아 둔 줄이 없습니다 — dd·yy 로 줄을 담습니다": "Nothing to put — take lines with dd or yy first",
 "한 문단 안의 이어진 줄만 합칩니다": "Only consecutive lines within one paragraph can be joined",
@@ -1357,5 +1357,11 @@ export default {
 "줄 레벨 안으로 / 밖으로": "Indent / outdent the line",
 "되돌리기 (다시 하기는 Ctrl+Y)": "Undo (redo is Ctrl+Y)",
 "칸에서: 저장하고 나오기": "In a cell: save and leave",
-"전체 편집에서: 저장 / 닫기 / 저장하고 닫기 (vim 키맵)": "In the full editor: save / close / save and close (vim keymap)"
+"vi 방식일 때: 저장 / 닫기 / 저장하고 닫기 — 설정의 전체 편집 방식, Esc 는 Normal 모드로": "With vi keys in the editor: save / close / save and close — set in Full editor keys; Esc goes to Normal mode",
+"전체 편집 방식": "Full editor keys",
+"편집 버튼(Ctrl+E)으로 여는 전체 편집기의 키": "Keys in the full editor opened with the Edit button (Ctrl+E)",
+"기본 방식": "Default",
+"Esc 로 닫기, Ctrl+S 로 저장": "Esc closes, Ctrl+S saves",
+"vi 방식": "vi",
+"vim 처럼 — Esc 는 Normal 모드로, :w 저장, :q 닫기": "Like vim — Esc goes to Normal mode, :w saves, :q closes"
 };

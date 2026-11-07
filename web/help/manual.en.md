@@ -379,7 +379,7 @@ For what line editing does not cover — reworking many places at once or editin
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
 - Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document above), and files are renamed from the sidebar (see Files above). It does not edit other files (PDF, Excel and so on).
-- With **vi keys** on in Settings, the editor works like vim too. Esc goes to Normal mode instead of closing the editor; `:w` saves, `:q` closes, `:wq` and `:x` save and close.
+- Choose **vi** under **Full editor keys** in Settings to use the editor like vim. Esc goes to Normal mode instead of closing the editor; `:w` saves, `:q` closes, `:wq` and `:x` save and close. Ctrl+E and ✕ also close it. The default is **Default**, and it is set separately from the vi keys for reading (below). Normal-mode keys may type characters while Korean input is on, so switch to English there.
 
 ### vi keys
 
@@ -392,7 +392,8 @@ Turn on **vi keys** in Settings (Ctrl+,) to move and edit documents with letter 
 - **In one go**: `dd` deletes the line, `yy` copies its source, `>>`·`<<` change its level — the same as picking it first. Lines you deleted or copied go back with `p`·`P` below / above the current line (they are kept inside the app, separate from the clipboard). `u` undoes; redo is Ctrl+Y.
 - Two-letter commands wait one second for the next letter; meanwhile the status bar shows `vi d…`.
 - Keys with Ctrl are not changed (Ctrl+D still duplicates a slide, Ctrl+F still finds). Page with PageUp and PageDown.
-- They work whether the keyboard is in Korean or English mode. In the full editor's vim, Normal-mode keys may type characters while Korean input is on, so switch to English there.
+- They work whether the keyboard is in Korean or English mode.
+- The full editor is set separately — **Full editor keys** in Settings (see 'Full editor' above).
 
 ## Lectern slides
 
@@ -696,7 +697,8 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Resume where I left off | Opening a folder returns to the last document and position |
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
-| vi keys | Move and edit documents with letter keys, and use vim in the full editor (see 'vi keys' above). Off by default |
+| vi keys | Move and edit documents with letter keys (see 'vi keys' above). Off by default |
+| Full editor keys | Default (Esc closes) or vi (like vim — `:w`, `:q`). Default by default |
 | Show web images | Load https images in documents. When off, they show as links |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
