@@ -6,7 +6,7 @@ import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
-import { initFold } from './fold.js';
+import { initFold, foldHere } from './fold.js';
 import { initSpotlight, spotKey, escSpotlight, docKeyTarget, lightBlocks, overlayOpen, spotButton, herePoint } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
@@ -336,6 +336,8 @@ function bindKeys() {
       e.preventDefault();   // 고른 줄의 종류·레벨 (lineedit.js, D107·D108)
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyL' && !typing(e) && toggleLineNumbers()) {
       e.preventDefault();   // 줄 번호 (linenums.js, D80)
+    } else if (mod && e.shiftKey && !e.altKey && (e.code === 'BracketLeft' || e.code === 'BracketRight') && !typing(e) && !overlayOpen() && foldHere(e.code === 'BracketLeft')) {
+      e.preventDefault();   // 현재 줄이 든 절 접기·펴기 (fold.js, D120)
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyH' && !typing(e) && spotButton()) {
       e.preventDefault();   // 장 하이라이트 (spotlight.js, D91)
     } else if (((e.key === 'F10' && e.shiftKey && !mod && !e.altKey) || e.key === 'ContextMenu') && !typing(e) && menuHere()) {

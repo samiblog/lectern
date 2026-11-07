@@ -28,8 +28,9 @@
 .md-body h4 { font-size: 1.02em; }
 .md-body h5, .md-body h6 { font-size: .93em; color: var(--md-muted); }
 
-/* 제목 접기 (fold.js): 누르면 다음 같은 수준 이상의 제목 전까지 접는다. 왼쪽 여백의 화살표가 상태를 보여 준다 */
-.md-body .lec-fold { position: relative; cursor: pointer; }
+/* 제목 접기 (fold.js): 왼쪽 여백의 화살표를 누르면 다음 같은 수준 이상의 제목 전까지 접는다 (D120 — 제목 글자를 눌러서는 접지 않는다) */
+.md-body .lec-fold { position: relative; }
+.md-body .lec-fold::before { cursor: pointer; }
 .md-body .lec-fold::before {
   content: ""; position: absolute; left: -20px; top: calc(.66em - 5px);
   width: 6px; height: 6px; border: solid var(--md-muted); border-width: 0 2px 2px 0;

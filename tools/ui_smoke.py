@@ -402,7 +402,7 @@ def run(headed: bool) -> None:
                   f'글자 크기 +·− (본문 {base_size}px → 두 번 + {bigger}px {size_label}, − {smaller}px), 가운데를 누르면 100%, 설정에 저장')
             lit = lambda: page.evaluate("[...document.querySelectorAll('#lec-view > .lec-lit')].filter(e => /^H[1-6]$/.test(e.tagName)).map(e => e.id)")
             # 접어 둔 절을 모두 편다 (앞 점검이 고른 글자가 남아 있으면 제목을 눌러도 접기·펴기를 하지 않으므로 선택부터 푼다)
-            page.evaluate("getSelection().removeAllRanges(); document.querySelectorAll('#lec-view > .lec-folded').forEach(h => h.click())")
+            page.evaluate("getSelection().removeAllRanges(); document.querySelectorAll('#lec-view > .lec-folded').forEach(h => h.classList.remove('lec-folded')); import('/static/js/fold.js').then((m) => m.foldAll(false))")
             page.locator('#lec-content').evaluate('el => el.scrollTop = 0')
             arrows_off = page.is_disabled('#lec-spot-prev') and page.is_disabled('#lec-spot-next')   # 하이라이트 전에는 꺼져 있다
             page.locator('#lec-view p').first.click()   # 하이라이트는 현재 위치(작은 화살표)의 장부터 — 스크롤만으로는 화면 끝에 있다

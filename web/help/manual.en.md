@@ -178,7 +178,7 @@ This is the first screen when a folder opens. It shows recently changed document
 
 ### Folding sections
 
-Click a heading to fold its section, and click it again to unfold. Right-click the text for Fold all at this level and Fold all / Unfold all. Folded sections are unfolded again when Lectern restarts.
+Click the arrow in the margin left of a heading to fold its section, and click it again to unfold (the arrow shows when the mouse is over the heading). From the keyboard, **Ctrl+Shift+[** folds the section with the current line and **Ctrl+Shift+]** unfolds it — if it is already folded, Ctrl+Shift+[ folds the outer section, and if it is open, Ctrl+Shift+] unfolds the folded sections inside. Clicking the heading text does not fold; it makes that line the current line. Right-click the text for Fold all at this level and Fold all / Unfold all. Folded sections are unfolded again when Lectern restarts.
 
 ### Text size and style
 
@@ -247,7 +247,6 @@ Write and edit an md document from start to finish without opening the full edit
 - **Grow and shrink**: **Shift+↑ ↓** move the last picked line up or down — the first line stays, so the range grows or shrinks. Without picked lines they pick two lines from the current line. Insert and Ctrl+L extend downward when pressed again, and Shift+click extends picked lines to that line. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
 - **Focus is view only**: while it is on, the keys for picked lines, copying, sending and opening a cell do nothing, ↑ ↓ just scroll, and the right-click menu only turns it off. Turn it off to edit.
 - **Right-click**: the line you right-click becomes the current line. Inside picked lines, right-clicking opens a selection box for that range — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, **Insert below…**, **Change picked lines…**, Edit here (for one line), release, and Delete lines at the bottom. Right-clicking outside them releases them and opens that line's menu. Hover over an item for its description.
-- **Picking a heading**: clicking a heading folds or unfolds its section. To pick a heading, move to it with ↑ ↓ and press Insert, or **Shift+click** it.
 
 ### New document
 

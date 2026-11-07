@@ -1,4 +1,5 @@
-// 제목 접기: 문서 속 제목을 누르면 그 절(다음 같은 수준 이상의 제목 전까지)을 접고, 다시 누르면 편다.
+// 제목 접기: 제목 왼쪽 여백의 화살표를 누르거나 Ctrl+Shift+[ · ] 로 그 절(다음 같은 수준 이상의 제목 전까지)을 접고 편다.
+// 제목 글자를 누르면 접지 않는다 — 다른 줄처럼 현재 줄이 된다 (D120 — 제목을 고르려다 절이 접혔다).
 //
 // 문서 DOM은 markdown-it 이 만든 평평한 구조 그대로 둔다 (절을 <section> 으로 감싸면 CSS·찾기·목차가 영향을 받는다).
 // 접을 수 있는 제목에 lec-fold, 접힌 제목에 lec-folded, 그 아래 숨는 최상위 블록에 lec-fold-hidden 을 준다.
@@ -7,6 +8,7 @@
 
 import { S, emit } from './store.js';
 import { $ } from './util.js';
+import { blockOfLine } from './lineunits.js';
 
 const folds = new WeakMap();   // 칸의 화면(article) → (문서 경로 → 접힌 제목 키 집합). 탭을 닫으면 함께 사라진다
 const foldsOf = (root) => {
@@ -114,14 +116,74 @@ export function unfoldTo(el) {
   apply(root);
 }
 
+/** 누른 곳의 접기 화살표 — 제목 왼쪽 여백 (제목 줄 높이, 글 앞 32px 안). 제목 글자를 누르면 null (D120) */
+function arrowAt(e) {
+  const root = e.target.closest?.('.md-body') ?? e.target.querySelector?.(':scope > .md-body');
+  if (!root) return null;
+  const own = e.target.closest?.('.lec-fold');
+  const list = own ? [own] : [...root.querySelectorAll(':scope > .lec-fold')];
+  return list.find((h) => {
+    const r = h.getBoundingClientRect();
+    return e.clientX < r.left && e.clientX >= r.left - 32 && e.clientY >= r.top && e.clientY <= r.bottom;
+  }) ?? null;
+}
+
 function onClick(e) {
   if (e.detail > 1) return;   // 두 번째 누름은 dblclick 에서 다룬다
   lastToggled = null;
-  const h = e.target.closest('.lec-fold');
-  // 제목 속 링크는 링크로, Shift+클릭 등으로 글자를 고른 것은 고르기로 둔다
-  if (!h || e.target.closest('a') || !getSelection().isCollapsed) return;
+  const h = arrowAt(e);
+  if (!h || !getSelection().isCollapsed) return;   // Shift+클릭 등으로 글자를 고른 것은 고르기로 둔다
   toggle(h);
   lastToggled = h;
+}
+
+/** 블록이 든 가장 안쪽 절의 제목부터 바깥 절의 제목까지 */
+function sectionsOf(top) {
+  const out = [];
+  let limit = levelOf(top) || 7;
+  if (levelOf(top)) out.push(top);
+  for (let prev = top.previousElementSibling; prev && limit > 1; prev = prev.previousElementSibling) {
+    if (isBreak(prev)) break;
+    const lv = levelOf(prev);
+    if (!lv || lv >= limit) continue;
+    limit = lv;
+    out.push(prev);
+  }
+  return out.filter((h) => h.classList.contains('lec-fold'));
+}
+
+/** 제목 h 의 절 안에 접힌 하위 절을 모두 편다 */
+function unfoldInside(h) {
+  const lv = levelOf(h);
+  for (let el = h.nextElementSibling; el && !isBreak(el); el = el.nextElementSibling) {
+    const x = levelOf(el);
+    if (x && x <= lv) break;
+    if (x) el.classList.remove('lec-folded');
+  }
+  remember(h.parentElement);
+  apply(h.parentElement);
+}
+
+/**
+ * Ctrl+Shift+[ · ] (D120): 현재 줄이 든 절을 접고 편다. 이미 접혔으면 [ 는 바깥 절을 접고, 펴져 있으면 ] 는 안의 하위 절을 편다.
+ * 본문 안에서 접으면 현재 줄은 그 제목으로 옮긴다 ('reveal' — spotlight.js). md 문서가 아니면 false
+ */
+export function foldHere(fold) {
+  const root = view();
+  if (!root?.classList.contains('md-body') || !root.querySelector(':scope > .lec-fold')) return false;
+  let top = blockOfLine(root, S.pane?.here?.line || 0);
+  while (top && top.parentElement !== root) top = top.parentElement;
+  if (!top) return true;
+  const heads = sectionsOf(top);
+  const h = fold ? heads.find((x) => !x.classList.contains('lec-folded')) : heads.find((x) => x.classList.contains('lec-folded'));
+  if (!h) {   // ] 인데 현재 절이 펴져 있다 — 그 안의 접힌 하위 절을 모두 편다 (두 번 누르면 끝까지)
+    if (!fold && heads[0]) unfoldInside(heads[0]);
+    return true;
+  }
+  setFolded(h, fold);
+  apply(root);
+  if (fold && h !== top) emit('reveal', h);
+  return true;
 }
 
 function onDoubleClick(e) {

@@ -1315,5 +1315,6 @@ export default {
 "아래에 넣기…": "Insert below…",
 "고른 줄의 끝 줄 아래에": "Below the last picked line",
 "현재 줄·고른 줄 (문서·코드 화면)": "Current line and picked lines (documents and code)",
-"현재 줄을 위 / 아래 줄로 — 화면이 따라감 (장 하이라이트 중에는 앞 장 / 다음 장)": "Move the current line up / down — the view follows (in section focus: previous / next section)"
+"현재 줄을 위 / 아래 줄로 — 화면이 따라감 (장 하이라이트 중에는 앞 장 / 다음 장)": "Move the current line up / down — the view follows (in section focus: previous / next section)",
+"현재 줄이 든 절 접기 / 펴기 (md 문서 — 제목 왼쪽의 화살표를 눌러도)": "Fold / unfold the section with the current line (md documents — or click the arrow left of a heading)"
 };

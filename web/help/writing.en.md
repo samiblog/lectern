@@ -34,7 +34,7 @@ status: in progress
 
 ### Headings
 
-Go `##` → `###` → `####` without skipping levels. The contents panel, section folding (click a heading to fold) and section focus (one `##` section at a time) follow them. Split long sections with `###`.
+Go `##` → `###` → `####` without skipping levels. The contents panel, section folding (the arrow left of a heading, Ctrl+Shift+[) and section focus (one `##` section at a time) follow them. Split long sections with `###`.
 
 ### Paragraphs and line breaks
 
