@@ -35,14 +35,19 @@ import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
 } from './slideops.js';
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
-import { setKind, shiftHeadings, moveSection, headLevel } from './docops.js';
+import {
+  setKind, shiftHeadings, moveSection, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
+  moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+} from './docops.js';
+import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
+import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew,
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
-import { $, toast, copyText, rangeText, blockedReadOnly } from './util.js';
+import { $, toast, copyText, rangeText, blockedReadOnly, isMd } from './util.js';
 import { t, LANG } from './i18n.js';
 
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
@@ -74,7 +79,7 @@ const pathIn = (view) => view.dataset.docPath || view.dataset.codePath;
 /** UTF-8 이 아닌 글로 읽은 코드 화면 (D85 — Windows 인코딩의 prg, CP949 의 txt 등): 보기만 */
 const notUtf8 = (view) => isCodeView(view) && !!view.dataset.encoding;
 /** 코드 화면의 자료 파일 (csv·txt·log — D60): 보기만. 코드 파일만 고친다 */
-const dataFile = (view) => isCodeView(view) && !!view.dataset.codePath && !isCode(view.dataset.codePath);
+const dataFile = (view) => isCodeView(view) && !!view.dataset.codePath && !isCode(view.dataset.codePath) && !isMd(view.dataset.codePath);
 const DATA_FILE_NOTE = () => t('자료 파일은 볼 수만 있습니다 — 고치려면 기본 앱으로 여세요');
 
 /** 칸을 다 그릴 때까지 (오래 걸리면 false) */
@@ -109,6 +114,12 @@ function splitText(line) {
     body = body.slice(0, end.index);
   }
   return { head: line.slice(0, i), body, tail };
+}
+
+/** 펼친 머리 설정의 줄: 키를 잠그고 값만 고친다 (D112) */
+function lockKey(parts, el) {
+  const m = el.closest?.('.lec-unfold-front') && /^([\w-]+:[ \t]*)(.*)$/.exec(parts.body);
+  return m ? { ...parts, head: m[1], body: m[2] } : parts;
 }
 
 /** 번호가 있는 문서의 제목 줄: 번호도 표시처럼 잠근다 — 번호는 앱이 맞춘다 (D107) */
@@ -213,7 +224,11 @@ function caretIn(ranges, bodies, at) {
   return { cell: i, offset: sourceOffset(shown.toString(), bodies[i]) };
 }
 
-/** 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳), offset: 커서를 둘 글 안의 자리 */
+/**
+ * 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳), offset: 커서를 둘 글 안의 자리,
+ * select: true 면 글 전체를, 숫자면 그 자리부터 끝까지 골라 둔다
+ * @param {number} line @param {{cell?: number, at?: any, offset?: number | null, select?: boolean | number}} [o]
+ */
 async function begin(line, { cell = 0, at = null, offset = null, select = false } = {}) {
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
@@ -268,7 +283,7 @@ async function begin(line, { cell = 0, at = null, offset = null, select = false 
     refreshView(pane);
     return;
   }
-  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? splitCode(original, slot.fence) : lockNumber(splitText(original), shown);
+  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? lockKey(splitCode(original, slot.fence), slot.el) : lockNumber(splitText(original), shown);
   const bodies = slot.kind === 'table' ? parts.cells.map((c) => c.body) : [parts.body];
   const n = Math.min(bodies.length, slot.ranges.length);
   if (!n) {
@@ -294,10 +309,12 @@ async function begin(line, { cell = 0, at = null, offset = null, select = false 
   pane.lineEdit = session;
   for (const p of places) bind(p.span);
   document.addEventListener('mousedown', onOutside, true);
-  focusPlace(session.cell, !select);
-  const spot = select ? null : caret ?? (offset != null ? { cell: session.cell, offset } : null);
+  focusPlace(session.cell, !select || typeof select === 'number');
+  const spot = select === true ? null : caret ?? (offset != null ? { cell: session.cell, offset } : null);
   const text = spot && places[spot.cell].span.firstChild;
   if (text) getSelection().collapse(text, Math.min(spot.offset, text.length));
+  const first = places[session.cell].span.firstChild;
+  if (typeof select === 'number' && first) getSelection().setBaseAndExtent(first, Math.min(select, first.length), first, first.length);   // 뒤의 글을 골라 둔다 (캡션의 '제목')
   showLineEdit();
 }
 
@@ -514,6 +531,7 @@ async function finish(save) {
     }
     s.line = r.at;   // 위쪽이 바뀌어 줄이 밀렸으면 새 자리
     toast(t('저장했습니다: {where} — Ctrl+Z 로 되돌립니다', { where: `${s.path} ${rangeText([s.line, s.line])}` }));
+    askDroppedNotes(s, next);
     return { ok: true, saved: true };
   } catch (e) {
     restore(s);
@@ -521,6 +539,15 @@ async function finish(save) {
     toast(t('저장하지 못했습니다 — 고친 줄은 클립보드에 복사했습니다: {error}', { error: e.message }), 'error');
     return { ok: false, saved: false };
   }
+}
+
+/** 본문의 주 표시를 지웠으면 내용 줄도 지울지 묻는다 (D110) */
+function askDroppedNotes(s, next) {
+  if (s.kind !== 'text' || !s.original.includes('[^')) return;
+  const lines = sourceLines();
+  const gone = droppedNotes(lines.map((x, i) => (i === s.line - 1 ? s.original : x)), lines);
+  if (!gone.length || lines[s.line - 1] !== next) return;
+  if (window.confirm(t('주 표시를 지웠습니다. 문서 끝의 주 내용 {n}개도 지울까요?', { n: gone.length }))) commit(s.pane, s.path, lines, removeNotes(lines, gone));
 }
 
 /** 새 줄을 끝낸다: 글이 있으면 파일에 넣고, 없으면 화면의 자리를 걷는다 (파일은 그대로) */
@@ -627,7 +654,7 @@ async function commit(pane, path, old, next, { numbers = true } = {}) {
 
 /** 칸 밖을 누르면: 고친 것이 있으면 저장, 없으면 그만둔다 (그 블록 — 표면 그 행 — 안은 그대로) */
 function onOutside(e) {
-  if (!session || session.el.contains(e.target)) return;
+  if (!session || session.el.contains(e.target) || e.target.closest?.('#lec-put')) return;
   finish(true);
 }
 
@@ -713,7 +740,10 @@ function whyNot(error) {
   switch (error) {
     case 'edge': return t('더 옮길 곳이 없습니다');
     case 'mixed': return t('수준이 다른 항목은 함께 옮기지 못합니다 — 한 항목씩 옮깁니다');
-    case 'table': return t('표의 행은 아직 더하지 못합니다 — 편집 모드(Ctrl+E)에서 고칩니다');
+    case 'table': return t('표의 행은 복제하지 않습니다 — Ctrl+Enter 로 새 행을 더합니다');
+    case 'not-table': return t('표 안에서 누르세요');
+    case 'last-column': return t('하나뿐인 열은 지우지 않습니다 — 표를 지우세요');
+    case 'not-box': return t('박스글 안에서 누르세요');
     case 'first-item': return t('목록의 맨 앞 항목은 더 안으로 옮기지 못합니다');
     case 'top-level': return t('맨 바깥 항목은 더 밖으로 옮기지 못합니다');
     case 'different': return t('종류가 다른 줄은 합치지 않습니다');
@@ -765,15 +795,18 @@ async function restructure(op, { quiet = false } = {}) {
     const shift = await commit(s.pane, s.path, src, r.lines);
     if (shift == null) return;
     followLine(r.line + shift);
-    await begin(r.line + shift, { cell: s.cell, offset: r.offset ?? offset });
+    await begin(r.line + shift, { cell: r.cell ?? s.cell, offset: r.offset ?? offset });
   });
 }
 
 /** Ctrl+Enter(below)·Ctrl+Shift+Enter: 새 줄. 글 가운데서 Ctrl+Enter 면 그 자리에서 두 줄로 나눈다 */
 async function addLine(below) {
   const s = session;
-  if (s.kind === 'table') {
-    toast(whyNot('table'));
+  if (s.kind === 'table') {   // 표의 새 행 (D109)
+    restructure((lines) => {
+      const r = addRow(lines, s.line, below);
+      return r.error ? r : { ...r, cell: 0, offset: 0 };
+    });
     return;
   }
   const { span } = s.places[0];
@@ -849,17 +882,30 @@ function kindHere(kind) {
   });
 }
 
-/** 빈 새 줄을 제목·문단으로 정한다 */
+/** 빈 새 줄의 종류를 정한다 — 쓰기 전에는 파일이 그대로다: 제목·문단·목록·번호·할 일·인용·박스글 (D109) */
 function freshKind(s, kind) {
   const level = /^h([1-6])$/.exec(kind)?.[1];
-  if (!level && kind !== 'para') return;
+  const box = /^box:(\w+)$/.exec(kind)?.[1];
+  const mark = { bullet: '- ', number: '1. ', task: '- [ ] ', quote: '> ' }[kind];
+  if (!level && !box && kind !== 'para' && !mark) return;
   const old = s.fresh.plan;
   const quote = quoteOf(old.head);
   const plan = old.kind === 'para' ? old : paraAt(s.fresh.lines, old.at, quote);
-  s.fresh.plan = { ...plan, head: `${quote}${level ? `${'#'.repeat(Number(level))} ` : ''}` };
-  const el = document.createElement(level ? `h${level}` : 'p');
-  el.className = 'lec-new-line';
-  el.append(s.places[0].span);
+  const pre = box ? [...plan.pre, `${quote}> [!${box}]`] : plan.pre;
+  const head = `${quote}${level ? `${'#'.repeat(Number(level))} ` : box ? '> ' : mark ?? ''}`;
+  s.fresh.plan = { ...plan, head, pre };
+  const inner = document.createElement(level ? `h${level}` : mark && kind !== 'quote' ? 'li' : 'p');
+  inner.append(s.places[0].span);
+  let el = inner;
+  if (box || kind === 'quote') {
+    el = document.createElement('blockquote');
+    if (box) el.className = `alert alert-${box.toLowerCase()}`;
+    el.append(inner);
+  } else if (mark) {
+    el = document.createElement(kind === 'number' ? 'ol' : 'ul');
+    el.append(inner);
+  }
+  el.classList.add('lec-new-line');
   s.el.replaceWith(el);
   s.el = el;
   s.fresh.remove = () => el.remove();
@@ -1125,6 +1171,491 @@ async function slideOp({ op, dir = 0, index = null, layout = '', style = '' }) {
   else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다'), layout: t('배치를 넣었습니다 — F2 로 글을 채웁니다') }[op]);
 }
 
+// ---- 넣기 (D109~D111): 구성 요소를 고르면 표시를 대신 쓴다 --------------------------------
+
+/** 칸의 글 범위를 기억한다 — 작은 창이 초점을 가져갔다 돌아올 때 */
+function keepCaret() {
+  const sel = getSelection();
+  return sel.rangeCount ? sel.getRangeAt(0).cloneRange() : null;
+}
+
+function backTo(s, range) {
+  if (session !== s) return;
+  focusPlace(s.cell);
+  if (!range) return;
+  const sel = getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+/** 칸이 있는 곳의 아래에 블록을 넣고 그 줄에서 잇는다. make(줄들, 넣을 자리) → {lines, line, select?, then?} */
+async function putBlock(s, make) {
+  await hold(s, async () => {
+    const at = s.fresh ? s.fresh.plan.at : null;
+    const res = await finish(!s.fresh);
+    if (!res.ok || S.pane !== s.pane) return;
+    const src = sourceLines();
+    const r = make(src, at ?? blockEnd(src, s.line));
+    if (r.error) {
+      toast(whyNot(r.error));
+      return;
+    }
+    const shift = await commit(s.pane, s.path, src, r.lines);
+    if (shift == null || S.pane !== s.pane) return;
+    const line = r.line + shift;
+    followLine(line);
+    if (r.then) await r.then(line);
+    else await begin(line, { select: r.select ?? false });
+  });
+}
+
+/** 지금 칸을 새 빈 줄로 만들어 then 을 한다 — 글이 있는 줄이면 먼저 저장하고 아래에 새 줄을 연다 */
+async function onEmptyLine(s, then) {
+  if (s.fresh && !read(s.places[0]).trim()) {
+    then(s);
+    return;
+  }
+  await hold(s, async () => {
+    const res = await finish(true);
+    if (!res.ok || S.pane !== s.pane) return;
+    await beginNew(s.line, true);
+    if (session) then(session);
+  });
+}
+
+const encodeRef = (path) => (/[\s()]/.test(path) ? `<${path}>` : path);
+
+/** 문서(docPath) 기준의 상대 경로 */
+function refFrom(docPath, target) {
+  const from = docPath.split('/').slice(0, -1);
+  const to = target.split('/');
+  let i = 0;
+  while (i < from.length && i < to.length - 1 && from[i] === to[i]) i += 1;
+  return encodeRef([...from.slice(i).map(() => '..'), ...to.slice(i)].join('/'));
+}
+
+const IMAGE = /\.(?:png|jpe?g|gif|svg|webp|bmp)$/i;
+const captionOf = (word, n) => `${word} ${n}. ${t('제목')}`;
+/** 캡션 줄에서 '제목' 글자를 골라 둘 자리 */
+const captionPick = (word, n) => `${word} ${n}. `.length;
+
+/** 그림 줄과 캡션 */
+const imageBlock = (src, at, ref, alt) => {
+  const n = nextCaption(src, t('그림'));
+  const r = insertBlock(src, at, [`![${alt}](${ref})`, '', captionOf(t('그림'), n)]);
+  return { lines: r.lines, line: r.line + 2, select: captionPick(t('그림'), n) };
+};
+
+async function putTable(s) {
+  const at = s.places[0].span;
+  const keep = keepCaret();
+  const size = await askText({ title: t('표 크기 — 열 x 행'), at, value: '3x3', placeholder: '3x3' });
+  if (size == null) {
+    backTo(s, keep);
+    return;
+  }
+  const m = /(\d+)\s*[x×*,]\s*(\d+)/i.exec(size);
+  if (!m || +m[1] < 1 || +m[2] < 1 || +m[1] > 30 || +m[2] > 500) {
+    toast(t('표 크기는 3x4 처럼 쓰세요 — 열은 30, 행은 500 까지입니다'));
+    backTo(s, keep);
+    return;
+  }
+  await putBlock(s, (src, line) => {
+    const n = nextCaption(src, t('표'));
+    const r = insertBlock(src, line, [captionOf(t('표'), n), '', ...makeTable(+m[1], +m[2])]);
+    return { ...r, select: captionPick(t('표'), n) };
+  });
+}
+
+async function putImage(s) {
+  const at = s.places[0].span;
+  const keep = keepCaret();
+  const files = await projectFiles((f) => IMAGE.test(f.name));
+  if (!files.length) {
+    toast(t('프로젝트에 그림 파일이 없습니다 — 그림을 복사해서 Ctrl+V 로 붙여 넣으세요'));
+    backTo(s, keep);
+    return;
+  }
+  const chosen = await pick({ items: files.map((f) => ({ id: f.path, name: f.name, sub: f.path })), title: t('넣을 그림'), at });
+  if (!chosen) {
+    backTo(s, keep);
+    return;
+  }
+  await putBlock(s, (src, line) => imageBlock(src, line, refFrom(s.path, chosen.id), chosen.name.replace(/\.\w+$/, '')));
+}
+
+async function putAttach(s) {
+  const at = s.places[0].span;
+  const keep = keepCaret();
+  const files = await projectFiles((f) => f.path !== s.path);
+  const chosen = await pick({ items: files.map((f) => ({ id: f.path, name: f.title || f.name, sub: f.path })), title: t('첨부할 파일 — 프로젝트 안에서'), at });
+  if (!chosen) {
+    backTo(s, keep);
+    return;
+  }
+  await putBlock(s, (src) => {
+    const r = addAttachment(src, `[${chosen.name}](${refFrom(s.path, chosen.id)})`, t('붙임'));
+    return { ...r, then: () => toast(t('붙임 절에 넣었습니다: {name}', { name: chosen.name })) };
+  });
+}
+
+/** 블록을 넣고 펼쳐서 고치게 한다 (수식·다이어그램·차트 — D112) */
+const fencedBlock = (body) => (src, line) => {
+  const r = insertBlock(src, line, body);
+  return { ...r, then: (at) => unfold(at) };
+};
+
+const SAMPLES = {
+  chart: () => ['```vega-lite', '{', '  "data": {"values": [{"a": "A", "b": 3}, {"a": "B", "b": 5}]},', '  "mark": "bar",', '  "encoding": {', '    "x": {"field": "a", "type": "nominal"},', '    "y": {"field": "b", "type": "quantitative"}', '  }', '}', '```'],
+  diagram: () => ['```mermaid', 'graph TD', '  A --> B', '```'],
+  math: () => ['$$', 'x^2', '$$'],
+};
+
+/** 상태줄의 '원문 줄 보기' (D112): md 문서를 코드 화면으로 — 빈 줄·주석까지 모든 줄을 칸으로 고치는 안전망 */
+function showSource() {
+  const view = S.pane?.view;
+  const path = view && pathIn(view);
+  const btn = $('#lec-st-source');
+  btn.hidden = !path || !isMd(path) || !!S.tab?.readonly;
+  btn.textContent = view && isCodeView(view) ? t('md 문서로 보기') : t('원문 줄 보기');
+}
+
+/** 줄 line 이 든 블록을 펼치고 첫 줄을 연다 (D112) */
+async function unfold(line) {
+  const pane = S.pane;
+  const first = openBlock(pane, line);
+  if (!first) return;
+  await settled(pane);
+  const again = pane.unfold?.a ?? first;
+  followLine(again);
+  await begin(again);
+}
+
+/** 찾아 바꾸기 (Ctrl+H — find.js): 원문에서 글자 그대로 찾아 바꾼다. all: 모두 (되돌리기 한 걸음), 아니면 현재 줄 뒤의 첫 곳 */
+async function replaceNow({ find, to, all }) {
+  const pane = S.pane;
+  if (!find || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const src = sourceLines();
+  const start = src[0]?.trim() === '---' ? src.findIndex((s, i) => i > 0 && s.trim() === '---') + 1 : 0;
+  const re = new RegExp(find.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  const next = src.slice();
+  let count = 0;
+  let line = 0;
+  if (all) {
+    for (let i = start; i < next.length; i++) {
+      next[i] = next[i].replace(re, () => {
+        count += 1;
+        line ||= i + 1;
+        return to;
+      });
+    }
+  } else {
+    const from = Math.max(start, (pane.here?.line ?? 1) - 1);
+    const order = [...Array(next.length - start).keys()].map((k) => start + ((k + from - start) % (next.length - start)));
+    const i = order.find((n) => next[n].search(re) >= 0);
+    if (i != null) {
+      re.lastIndex = 0;
+      next[i] = next[i].replace(new RegExp(re.source, 'i'), () => to);
+      count = 1;
+      line = i + 1;
+    }
+  }
+  if (!count) {
+    toast(t('찾은 글이 없습니다'));
+    return;
+  }
+  const shift = await commit(pane, pathIn(pane.view), src, next);
+  if (shift == null || S.pane !== pane) return;
+  followLine(line + shift);
+  toast(t('{n}곳을 바꿨습니다 — Ctrl+Z 로 되돌립니다', { n: count }));
+}
+
+/**
+ * 보내기 (D113): 문서에 글을 바로 넣는다 — 편집 모드를 열지 않는다. compute(문서 글) → {line, ch, text, offset, size}.
+ * 저장은 replaceLines 그대로라 되돌리기 한 걸음이다. 넣었으면 true
+ */
+export async function insertLines(pane, path, compute) {
+  if (session) await finish(true);
+  if (!await settled(pane) || S.pane !== pane || blockedReadOnly(pane.tab)) return false;
+  const src = sourceLines();
+  const put = compute(src.join('\n'));
+  if (!put) return false;
+  const at = src.slice(0, put.line).join('\n').length + (put.line ? 1 : 0) + put.ch;
+  const text = src.join('\n');
+  const next = `${text.slice(0, at)}${put.text}${text.slice(at)}`.split('\n');
+  const shift = await commit(pane, path, src, next);
+  if (shift == null) return false;
+  if (S.pane === pane) followLine(put.line + (put.text.slice(0, put.offset).match(/\n/g)?.length ?? 0) + 1 + shift);
+  return true;
+}
+
+/** 고른 구성 요소를 칸 s 의 자리에 넣는다 */
+async function putItem(s, id) {
+  if (id === 'table') await putTable(s);
+  else if (id === 'image') await putImage(s);
+  else if (id === 'attach') await putAttach(s);
+  else if (id === 'note') await noteHere();
+  else if (id === 'link') await linkHere();
+  else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
+  else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
+  else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
+  else if (id === 'appendix') {
+    await putBlock(s, (src, line) => {
+      const head = `${t('부록 {x}.', { x: nextAppendix(src) })} `;
+      const r = insertBlock(src, line, [`## ${head}${t('제목')}`]);
+      return { ...r, select: head.length };
+    });
+  } else if (id === 'source' || id === 'tablenote') {
+    await onEmptyLine(s, (x) => {
+      x.places[0].span.textContent = id === 'source' ? t('자료: ') : t('주: ');
+      focusPlace(0);
+    });
+  } else await onEmptyLine(s, (x) => freshKind(x, id));
+}
+
+/** `/`·Ctrl+Shift+/: 넣기 창 (D109). 고른 것을 넣고, 그만두면 칸으로 돌아온다 */
+async function openPut() {
+  const s = session;
+  const keep = keepCaret();
+  const chosen = await pick({ items: putItems(), title: t('넣기'), at: s.places[s.cell].span });
+  if (session !== s) return;
+  if (chosen) await putItem(s, chosen.id);
+  else backTo(s, keep);
+}
+
+/** Ctrl+K: 링크 — 프로젝트의 파일을 고르거나 주소를 쓴다. 고른 글이 있으면 그 글에 건다 */
+async function linkHere() {
+  const s = session;
+  if (!s || s.kind !== 'text') return;
+  const span = s.places[s.cell].span;
+  const keep = keepCaret();
+  const shown = getSelection().toString();
+  const files = await projectFiles();
+  const r = await pick({ items: files.map((f) => ({ id: f.path, name: f.title || f.name, sub: f.path })), title: t('링크'), at: span, free: true, placeholder: t('파일 이름으로 거르거나 주소를 쓰세요') });
+  backTo(s, keep);
+  if (!r || session !== s) return;
+  const target = r.id ? refFrom(s.path, r.id) : r.text;
+  document.execCommand('insertText', false, `[${shown || r.name || r.text}](${target})`);
+}
+
+/** Ctrl+Alt+F: 글자 자리에 주를 단다 (D110). 주 표시 위면 그 주를 고친다. 본문과 내용을 한 번에 저장한다 */
+async function noteHere() {
+  const s = session;
+  if (!s || s.kind !== 'text') return;
+  const { span } = s.places[0];
+  const body = read(s.places[0]);
+  if (!body.trim()) {
+    toast(t('주는 글에 답니다 — 글을 쓴 뒤 누르세요'));
+    return;
+  }
+  const offset = caretOffset(span) ?? body.length;
+  const label = noteAt(body, offset);
+  const keep = keepCaret();
+  const old = label ? noteText(sourceLines(), label)?.text ?? '' : '';
+  const text = await askText({ title: label ? t('주 고치기') : t('주 내용'), at: span, value: old, placeholder: t('주 내용을 쓰고 Enter') });
+  backTo(s, keep);
+  if (text == null || !text.trim() || session !== s) return;
+  await hold(s, async () => {
+    const res = await finish(true);
+    if (!res.ok || S.pane !== s.pane) return;
+    const src = sourceLines();
+    const col = splitText(src[s.line - 1]).head.length + offset;
+    const r = label ? { lines: setNote(src, label, text.trim()), line: s.line } : addNote(src, s.line, col, text.trim());
+    const shift = await commit(s.pane, s.path, src, r.lines);
+    if (shift == null) return;
+    followLine(r.line + shift);
+    await begin(r.line + shift, { offset: label ? offset : offset + `[^${r.label}]`.length });
+  });
+}
+
+/** 고른 글을 표시로 감싼다 (Ctrl+B·I·`). 고른 글이 없으면 표시 사이에 커서를 둔다 */
+function wrapText(mark) {
+  const sel = getSelection();
+  const text = sel.toString();
+  document.execCommand('insertText', false, `${mark}${text}${mark}`);
+  if (!text) for (let i = 0; i < mark.length; i++) sel.modify('move', 'backward', 'character');
+}
+
+/** 칸의 줄 앞의 목록 표시 — 붙여 넣은 줄도 같은 표시로 */
+const itemHead = (line) => /^[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+(?:\[[ xX]\][ \t]+)?/.exec(line)?.[0] ?? '';
+
+/** 칸에 여러 줄을 붙여 넣는다 (D109): 줄마다 나눠 넣고 되돌리기 한 걸음. 엑셀 범위는 표로 */
+async function pasteHere(text) {
+  const s = session;
+  const { span } = s.places[0];
+  if (!getSelection().isCollapsed) document.execCommand('delete');
+  const body = read(s.places[0]);
+  const offset = caretOffset(span) ?? body.length;
+  const rows = rowsFromTsv(text);
+  if (rows && s.kind === 'text') {
+    await putBlock(s, (src, line) => insertBlock(src, line, tableFromRows(rows)));
+    return;
+  }
+  const pasted = text.replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n');
+  const rest = pasted.slice(1);
+  rest[rest.length - 1] += body.slice(offset);
+  const first = `${body.slice(0, offset)}${pasted[0]}`;
+  await hold(s, async () => {
+    const src = s.fresh ? s.fresh.lines : sourceLines();
+    const made = s.fresh ? insertLine(src, s.fresh.plan, first) : null;
+    const base = made ? made.lines : src.map((x, i) => (i === s.line - 1 ? `${s.parts.head}${first}${s.parts.tail}` : x));
+    const n = made ? made.line : s.line;
+    const r = pasteAfter(base, n, rest, s.kind === 'text' ? itemHead(base[n - 1]) : '');
+    await finish(false);
+    const shift = await commit(s.pane, s.path, src, r.lines);
+    if (shift == null) return;
+    followLine(r.line + shift);
+    await begin(r.line + shift);
+  });
+}
+
+// ---- 그림 붙여 넣기 (D111) ---------------------------------------------------------------
+
+const imageIn = (data) => [...(data?.files ?? [])].find((f) => /^image\/(?:png|jpeg|gif|webp)$/.test(f.type)) ?? null;
+
+const base64Of = (file) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '');
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(file);
+});
+
+/** 그림 파일을 문서 옆 폴더에 저장하고 지금 자리에 넣는다 — 사용자가 붙여 넣거나 끌어 넣을 때만 */
+async function putImageFile(file) {
+  const pane = S.pane;
+  const s = session;
+  const path = s?.path ?? pane.view.dataset.docPath;
+  let saved;
+  try {
+    saved = await postJSON('/api/paste-image', { p: pane.tab.id, doc: path, data: await base64Of(file) });
+  } catch (e) {
+    toast(e.message, 'error');
+    return;
+  }
+  const make = (src, line) => imageBlock(src, line, refFrom(path, saved.path), t('그림'));
+  if (s && session === s) {
+    await putBlock(s, make);
+    return;
+  }
+  turn = turn.then(async () => {
+    if (!await settled(pane) || S.pane !== pane) return;
+    const src = sourceLines();
+    const here = pane.here?.line;
+    const r = make(src, here ? blockEnd(src, here) : 0);
+    const shift = await commit(pane, path, src, r.lines);
+    if (shift == null || S.pane !== pane) return;
+    followLine(r.line + shift);
+    await begin(r.line + shift, { select: r.select });
+  });
+}
+
+// ---- 메뉴 (docmenu.js) -----------------------------------------------------------------
+
+/** 칸이 없을 때 문서 줄에 계산 op 를 한다 — 되돌리기 한 걸음. after: 저장한 뒤 */
+function menuOp(op, after = null) {
+  turn = turn.then(async () => {
+    const pane = S.pane;
+    if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
+    const src = sourceLines();
+    const r = op(src);
+    if (r.error) {
+      toast(whyNot(r.error));
+      return;
+    }
+    if (r.ask && !window.confirm(r.ask)) return;
+    const shift = await commit(pane, pathIn(pane.view), src, r.lines);
+    if (shift == null || S.pane !== pane) return;
+    followLine(Math.max(1, r.line + shift));
+    after?.(r.line + shift, r);
+  });
+}
+
+/** 메뉴의 '여기에 넣기…'·'이 줄 바꾸기…' 를 칸 없이 쓸 때: 그 줄 아래에 새 줄을 열고 고른다 */
+async function putBelow(line) {
+  await beginNew(line, true);
+  if (session) await openPut();
+}
+
+async function changeLine(line, at) {
+  const chosen = await pick({ items: changeItems(), title: t('이 줄 바꾸기'), at });
+  if (!chosen) return;
+  const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
+  menuOp((src) => {
+    if (box) return boxAt(src, line) ? setBox(src, line, box) : wrapBox(src, line, line, box);
+    const r = setKind(src, line, line, chosen.id, { bare: bareOf(src) });
+    return r.error ? r : { lines: r.lines, line: r.line };
+  });
+}
+
+/** 줄 번호 — 요소가 든 가장 안쪽 블록의 첫 줄 */
+const lineOfEl = (el) => Number(/^\d+/.exec(el?.closest?.('[data-lines]')?.dataset.lines || '')?.[0]) || 0;
+
+/** 본문 우클릭의 구성 요소 항목 (docmenu.js): 넣기·바꾸기, 표의 행과 열, 박스글, 절. 고칠 수 없는 화면이면 빈 목록 */
+export function lineMenuItems(target) {
+  const pane = S.pane;
+  const view = pane?.view;
+  if (!view?.dataset.docPath || !sectionsOn(view) || !linesEditable() || session) return [];
+  /** @type {MenuItem[]} */
+  const items = [];
+  if (target.closest?.('.front-matter')) {
+    items.push({ label: t('문서 정보 고치기'), tip: t('줄마다 값을 고칩니다'), action: () => {
+      const first = openFront(pane);
+      if (first) settled(pane).then(() => begin(first));
+    } });
+    return items;
+  }
+  const line = lineOfEl(target);
+  if (!line) return items;
+  if (target.closest?.(ATOMIC)) items.push({ label: t('원문 펼치기'), hint: 'F2', tip: t('줄마다 고칩니다'), action: () => unfold(line) });
+  items.push({ label: t('여기에 넣기…'), hint: '/', tip: t('표·박스글·그림·주 같은 구성 요소를 아래에'), action: () => putBelow(line) });
+  const src = sourceLines();
+  const cell = target.closest?.('td, th');
+  if (cell) {
+    const col = cell.cellIndex;
+    const run = (op) => () => menuOp(op);
+    items.push({ label: t('아래에 행 더하기'), hint: 'Ctrl+Enter', action: run((x) => addRow(x, line, true)) },
+      { label: t('위에 행 더하기'), action: run((x) => addRow(x, line, false)) },
+      { label: t('오른쪽에 열 더하기'), action: run((x) => addColumn(x, line, col, true)) },
+      { label: t('왼쪽에 열 더하기'), action: run((x) => addColumn(x, line, col, false)) },
+      { label: t('이 열 오른쪽으로 옮기기'), action: run((x) => moveColumn(x, line, col, 1)) },
+      { label: t('이 열 왼쪽으로 옮기기'), action: run((x) => moveColumn(x, line, col, -1)) },
+      { label: t('이 열 왼쪽 맞춤'), action: run((x) => alignColumn(x, line, col, 'left')) },
+      { label: t('이 열 가운데 맞춤'), action: run((x) => alignColumn(x, line, col, 'center')) },
+      { label: t('이 열 오른쪽 맞춤'), action: run((x) => alignColumn(x, line, col, 'right')) },
+      { label: t('이 열 지우기'), action: run((x) => removeColumn(x, line, col)) },
+      { label: t('표 지우기'), action: run((x) => {
+        const span = tableSpan(x, line);
+        return span ? { ...deleteLines(x, span[0], span[1]), ask: t('표를 지울까요?') } : { error: 'not-table' };
+      }) });
+    return items;
+  }
+  if (boxAt(src, line)) {
+    const run = (op) => () => menuOp(op);
+    items.push({ label: t('박스글 종류 바꾸기…'), action: () => changeBox(line, target) },
+      { label: t('박스글 풀기'), tip: t('보통 문단으로'), action: run((x) => unwrapBox(x, line)) },
+      { label: t('박스글 지우기'), action: run((x) => {
+        const box = boxAt(x, line);
+        return box ? { ...deleteLines(x, box.a, box.b), ask: t('박스글을 지울까요?') } : { error: 'not-box' };
+      }) });
+    return items;
+  }
+  if (!target.closest?.('pre, .math-block, .front-matter, img')) {
+    items.push({ label: t('이 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: () => changeLine(line, target) });
+  }
+  if (headLevel(src[line - 1] ?? '')) {
+    items.push({ label: t('절 지우기'), tip: t('본문과 하위 절까지'), action: () => menuOp((x) => {
+      const r = deleteSection(x, line);
+      return r.error ? r : { ...r, ask: t('이 절을 지울까요? 본문과 하위 절까지 지워집니다.') };
+    }) });
+  }
+  return items;
+}
+
+async function changeBox(line, at) {
+  const chosen = await pick({ items: changeItems().filter((x) => x.id.startsWith('box:')), title: t('박스글 종류'), at });
+  if (chosen) menuOp((src) => setBox(src, line, chosen.id.slice(4)));
+}
+
 /** 고른 줄의 종류를 바꾼다 (D107) */
 async function kindLitNow(kind) {
   const pane = S.pane;
@@ -1203,7 +1734,29 @@ function onKey(e) {
     e.preventDefault();
     return;
   }
-  if (k === 'Enter' && mod && !e.altKey) {
+  const typing = sectionsOn(session.pane.view) && session.kind === 'text';
+  if (k === '/' && !mod && !e.altKey && typing && session.fresh && !span.textContent) {   // 넣기 창 (D109)
+    e.preventDefault();
+    openPut();
+  } else if (mod && e.shiftKey && !e.altKey && e.code === 'Slash' && typing) {
+    e.preventDefault();
+    openPut();
+  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyB') {
+    e.preventDefault();
+    wrapText('**');
+  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyI') {
+    e.preventDefault();
+    wrapText('*');
+  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'Backquote') {
+    e.preventDefault();
+    wrapText('`');
+  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyK') {
+    e.preventDefault();
+    linkHere();
+  } else if (mod && e.altKey && !e.shiftKey && typing && e.code === 'KeyF') {
+    e.preventDefault();
+    noteHere();
+  } else if (k === 'Enter' && mod && !e.altKey) {
     e.preventDefault();
     addLine(!e.shiftKey);
   } else if (mod && e.shiftKey && !e.altKey && (e.code === 'Period' || e.code === 'Comma') && session.pane.view.classList.contains('lec-deck')) {
@@ -1250,7 +1803,11 @@ function onKey(e) {
     step(dir, e.repeat);
   } else if (k === 'Tab' && !mod && !e.altKey) {
     e.preventDefault();
-    if (session.kind === 'table') focusPlace(Math.max(0, Math.min(session.places.length - 1, Number(span.dataset.i) + (e.shiftKey ? -1 : 1))), false);
+    if (session.kind === 'table') {
+      const at = Number(span.dataset.i);
+      if (!e.shiftKey && at === session.places.length - 1 && tableAt(sourceLines(), session.line)?.last === session.line) addLine(true);   // 마지막 칸의 Tab: 새 행 (기능 요청 4-7)
+      else focusPlace(Math.max(0, Math.min(session.places.length - 1, at + (e.shiftKey ? -1 : 1))), false);
+    }
     else if (session.kind === 'code' && !e.shiftKey) document.execCommand('insertText', false, '\t');
     else if (session.kind === 'text') levelHere(e.shiftKey ? -1 : 1);
   }
@@ -1268,6 +1825,20 @@ function bind(span) {
         document.execCommand('insertText', false, text.replace(/\r\n?|\n/g, ' '));
       }
     }
+  });
+  span.addEventListener('paste', (e) => {   // 글 칸(plaintext-only)은 beforeinput 에 붙여 넣은 글을 주지 않는다
+    if (!session) return;
+    const file = imageIn(e.clipboardData);
+    if (file && sectionsOn(session.pane.view)) {
+      e.preventDefault();
+      putImageFile(file);
+      return;
+    }
+    const text = e.clipboardData?.getData('text/plain');
+    if (!text || !/[\r\n]/.test(text)) return;
+    e.preventDefault();
+    if (!session.fence && session.kind !== 'table' && !session.pane.view.classList.contains('lec-deck')) pasteHere(text);   // 줄마다 나눠 넣는다 (D109)
+    else document.execCommand('insertText', false, text.replace(/\r\n?|\n/g, ' '));
   });
   // 칸 안을 누르는 것은 제목 접기·링크·현재 위치로 가지 않는다
   for (const type of ['mousedown', 'click', 'dblclick', 'contextmenu']) span.addEventListener(type, (e) => e.stopPropagation());
@@ -1397,7 +1968,18 @@ export const undoLineEdit = () => walk(true);
 export const redoLineEdit = () => walk(false);
 
 export function initLineEdit() {
-  on('line-edit', (unit) => begin(lineOf(unit)));
+  on('line-edit', (unit) => {
+    if (unit.el.matches?.(ATOMIC)) unfold(unit.a);   // 수식·다이어그램·차트: 원문을 펼쳐 줄마다 (D112)
+    else begin(lineOf(unit));
+  });
+  on('replace', (op) => { turn = turn.then(() => replaceNow(op)); });
+  on('rendered', showSource);
+  on('pane', showSource);
+  $('#lec-st-source').addEventListener('click', () => {
+    const { view } = S.pane;
+    emit('open', { type: isCodeView(view) ? 'doc' : 'code', path: pathIn(view) });
+  });
+  initLineBlock(refreshView);
   on('line-open', ({ line, below = false, select = false }) => {   // 새 문서를 열면 바로 쓴다 (newdoc.js, D105)
     followLine(line);
     if (below) beginNew(line, true);
@@ -1412,6 +1994,22 @@ export function initLineEdit() {
     if (session && session.pane !== S.pane) finish(true);
   });
   const panes = $('#lec-panes');
+  const canPutImage = () => canGrow(S.pane) || (session && sectionsOn(session.pane.view));
+  document.addEventListener('paste', (e) => {   // 읽는 화면에서 Ctrl+V: 현재 줄 뒤에 그림 (D111)
+    const file = imageIn(e.clipboardData);
+    if (!file || session || !docKeyTarget(e) || !canPutImage()) return;
+    e.preventDefault();
+    putImageFile(file);
+  });
+  panes.addEventListener('dragover', (e) => {
+    if ([...(e.dataTransfer?.types ?? [])].includes('Files') && canPutImage()) e.preventDefault();
+  });
+  panes.addEventListener('drop', (e) => {
+    const file = imageIn(e.dataTransfer);
+    if (!file || !canPutImage()) return;
+    e.preventDefault();
+    putImageFile(file);
+  });
   panes.addEventListener('dblclick', onDoubleClick);   // fold.js 뒤에 — 첫 누르기의 접기를 되돌린 다음
   panes.addEventListener('click', onTaskClick);
   panes.addEventListener('mousedown', (e) => {

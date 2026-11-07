@@ -780,7 +780,7 @@ export function spotlightItems(target) {
 // 하이라이트 키를 받는 곳: 문서 칸(본문·스크롤 상자)과 툴바·목차·상태줄의 버튼 (사이드바 목록·메뉴·대화상자는 자기 ↑·↓ 가 있다)
 const KEY_PLACES = '#lec-panes, #lec-toolbar, #lec-toc, #lec-status';
 const NOT_KEYS = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), #lec-doctabs, .sp-head, .lec-editor, #lec-findbar';
-const OVERLAYS = '.overlay:not([hidden]), #lec-menu:not([hidden]), #lec-help:not([hidden]), #lec-gather:not([hidden]), #lec-present:not([hidden])';
+const OVERLAYS = '.overlay:not([hidden]), #lec-put:not([hidden]), #lec-menu:not([hidden]), #lec-help:not([hidden]), #lec-gather:not([hidden]), #lec-present:not([hidden])';
 
 function keyPlace(el) {
   if (document.querySelector(OVERLAYS)) return false;

@@ -3077,17 +3077,20 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-insert-list li.ins-doc')
             page.locator('#lec-insert-list li.ins-doc').first.click()
             page.wait_for_selector('#lec-insert-list li.ins-place')
-            page.locator('#lec-insert-list li.ins-place', has_text='맨 끝').click()
-            wait_until(page, "document.querySelector('.lec-pane.active .lec-editor')?.dataset.path === 'README.md' || !!document.querySelector('.lec-pane.active .lec-editor .ed-inserted')", 10000)
             readme_before = (tables / 'README.md').read_text(encoding='utf-8')
-            readme_text = cm_text()
-            inserted = page.locator('.lec-pane.active .lec-editor .ed-inserted').count()
-            asked = []
-            page.once('dialog', lambda d: (asked.append(d.message), d.accept()))   # 저장하지 않은 것 — 버리고 닫기
-            page.keyboard.press('Escape')
-            wait_until(page, "!document.querySelector('.lec-pane.active .lec-editor')", 3000)
+            page.locator('#lec-insert-list li.ins-place', has_text='맨 끝').click()
+            for _ in range(100):   # 편집 모드를 열지 않고 바로 저장한다 (D113)
+                readme_text = (tables / 'README.md').read_text(encoding='utf-8')
+                if readme_text != readme_before:
+                    break
+                page.wait_for_timeout(100)
+            inserted = page.locator('.lec-pane.active .lec-editor').count() == 0
+            page.wait_for_timeout(500)
+            page.keyboard.press('Control+z')
+            asked = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('되돌렸습니다')", 5000)
+            page.wait_for_timeout(300)
             check(not_open and readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
-                  and inserted > 0 and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
+                  and inserted and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,
                   f'담기: 문서 탭에 없는 문서는 받는 곳에 없고(안내 줄), 탭으로 열면 맨 끝으로 보내 편집 모드로 (넣은 곳 표시), 저장하지 않고 닫으면 파일은 그대로 ({not_open}, {inserted}, {len(asked)})')
 
             print('[새로 만들기]')   # D65·D105 — 폴더 우클릭·Ctrl+N·문서 탭 줄의 + : 제목과 스타일을 정해 만들고 md 문서 화면에서 바로 쓴다

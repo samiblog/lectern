@@ -798,6 +798,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   background: var(--ui-panel); border: 1px solid var(--ui-border); border-radius: 8px;
   box-shadow: 0 6px 20px rgb(15 25 40 / .14);
 }
+#lec-findbar #lec-replace { top: 48px; }   /* 찾기 줄 아래 (Ctrl+H, D109) */
+#lec-replace button { width: auto; padding: 0 8px; font-size: 12.5px; }
 #lec-findbar input { width: 220px; height: 28px; border: 0; padding: 0 8px; background: none; outline: none; }
 @container (max-width: 520px) { #lec-findbar .fb { right: 8px; } #lec-findbar input { width: 130px; } }
 #lec-find-count { min-width: 52px; text-align: right; color: var(--ui-muted); font-size: 12px; padding-right: 4px; font-variant-numeric: tabular-nums; }
@@ -898,6 +900,24 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .insert-msg.bad { color: var(--ui-danger); font-weight: 600; }
 #lec-insert-list .ins-new .t, #lec-insert-list .ins-cursor .t, #lec-insert-list .ins-create .t { color: var(--ui-accent); }
 #lec-insert-list .ins-back .t { color: var(--ui-muted); font-weight: 500; }
+/* 블록 펼치기 (lineblock.js, D112) */
+.lec-unfold { margin: 1em 0; border: 1px solid var(--ui-border); border-radius: 6px; overflow: hidden; }
+.lec-unfold-bar { display: flex; align-items: center; justify-content: space-between; padding: 4px 10px; background: var(--ui-bg); color: var(--ui-muted); font-size: 12px; }
+.lec-unfold-bar button { height: 22px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 5px; background: none; color: inherit; font-size: 12px; cursor: pointer; }
+.lec-unfold > pre { margin: 0; border-radius: 0; }
+.lec-unfold > :not(.lec-unfold-bar):not(pre) { margin: 8px; opacity: .92; }
+/* 넣기 창 (putmenu.js, D109) */
+#lec-put { position: fixed; z-index: 120; width: 300px; margin: 0; box-shadow: 0 8px 24px rgb(0 0 0 / .18); }
+#lec-put-find { width: 100%; height: 34px; border: 0; border-bottom: 1px solid var(--ui-border); padding: 0 12px; background: none; color: inherit; font-size: 14px; outline: none; }
+#lec-put-list { list-style: none; margin: 0; padding: 4px; max-height: 300px; overflow: auto; }
+#lec-put-list:empty { display: none; }
+#lec-put-list li { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 5px; cursor: pointer; font-size: 13.5px; }
+#lec-put-list li.head { padding: 6px 8px 2px; color: var(--ui-faint); font-size: 11.5px; font-weight: 650; cursor: default; }
+#lec-put-list li.none { color: var(--ui-faint); cursor: default; }
+#lec-put-list li.sel { background: var(--ui-active-bg); }
+#lec-put-list .t { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lec-put-list .p { flex: 1; min-width: 0; color: var(--ui-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#lec-put-list kbd { margin-left: auto; color: var(--ui-faint); font: inherit; font-size: 11.5px; }
 .delete-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; }   /* 문서 삭제 (deletedoc.js, D104) */
 .delete-actions button { height: 32px; padding: 0 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-text); font: inherit; }
 .delete-actions button.danger { border-color: var(--ui-danger); color: var(--ui-danger); font-weight: 600; }

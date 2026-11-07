@@ -95,4 +95,82 @@ eq(del(DOC, 3), L('# 글\n\n## 둘째\n\n둘 내용\n\n## 셋째\n\n셋 내용\n
 eq(del(DOC, 15), L('# 글\n\n## 첫째\n\n첫 내용\n\n### 세부\n\n세부 내용\n\n## 둘째\n\n둘 내용\n'), '끝 절');
 eq(del(DOC, 5), { error: 'not-heading' }, '본문');
 
+// 넣기
+const put = (s, at, block) => m.insertBlock(L(s), at, block).lines;
+eq(put('글\n', 1, ['---']), L('글\n\n---\n'), '글 뒤에 빈 줄을 두고');
+eq(put('가\n나\n', 1, ['---']), L('가\n\n---\n\n나\n'), '글 사이에 앞뒤 빈 줄');
+eq(put('가\n\n나\n', 2, ['---']), L('가\n\n---\n\n나\n'), '빈 줄이 있으면 더하지 않는다');
+eq(m.insertBlock(L('글\n'), 1, ['---']).line, 3, '블록의 첫 줄');
+eq(m.blockEnd(L('가\n나\n\n다\n'), 1), 2, '블록의 끝');
+eq(m.nextCaption(L('표 1. a\n\n**표 3. b**\n\n〈표 2〉 c\n'), '표'), 4, '표 번호');
+eq(m.nextCaption(L('글\n'), '그림'), 1, '첫 번호');
+
+// 표
+const T = '| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |\n';
+const tb = (f, ...a) => {
+  const r = f(L(T), ...a);
+  return r.error ? r : r.lines;
+};
+eq(m.makeTable(2, 1), ['|  |  |', '| --- | --- |', '|  |  |'], '빈 표');
+eq(tb(m.addRow, 3, true), L('| a | b |\n| --- | --- |\n| 1 | 2 |\n|  |  |\n| 3 | 4 |\n'), '아래에 행');
+eq(tb(m.addRow, 3, false), L('| a | b |\n| --- | --- |\n|  |  |\n| 1 | 2 |\n| 3 | 4 |\n'), '위에 행');
+eq(tb(m.addRow, 1, true), L('| a | b |\n| --- | --- |\n|  |  |\n| 1 | 2 |\n| 3 | 4 |\n'), '머리행 아래는 첫 본문 행');
+eq(tb(m.addRow, 1, false), L('| a | b |\n| --- | --- |\n|  |  |\n| 1 | 2 |\n| 3 | 4 |\n'), '머리행 위에는 넣지 않는다');
+eq(tb(m.addRow, 4, true), L('| a | b |\n| --- | --- |\n| 1 | 2 |\n| 3 | 4 |\n|  |  |\n'), '끝 행 아래');
+eq(m.addRow(L(T), 4, true).line, 5, '새 행의 줄');
+eq(m.addRow(L('글\n'), 1, true), { error: 'not-table' }, '표가 아니다');
+eq(tb(m.addColumn, 3, 0, true), L('| a |  | b |\n| --- | --- | --- |\n| 1 |  | 2 |\n| 3 |  | 4 |\n'), '오른쪽에 열');
+eq(tb(m.addColumn, 3, 0, false), L('|  | a | b |\n| --- | --- | --- |\n|  | 1 | 2 |\n|  | 3 | 4 |\n'), '왼쪽에 열');
+eq(tb(m.removeColumn, 3, 0), L('| b |\n| --- |\n| 2 |\n| 4 |\n'), '열 지우기');
+eq(m.removeColumn(L('| a |\n| --- |\n| 1 |\n'), 3, 0), { error: 'last-column' }, '하나뿐인 열');
+eq(tb(m.moveColumn, 3, 0, 1), L('| b | a |\n| --- | --- |\n| 2 | 1 |\n| 4 | 3 |\n'), '열 옮기기');
+eq(tb(m.moveColumn, 3, 1, 1), { error: 'edge' }, '끝 열');
+eq(tb(m.alignColumn, 3, 1, 'right'), L('| a | b |\n| --- | ---: |\n| 1 | 2 |\n| 3 | 4 |\n'), '오른쪽 정렬');
+eq(m.tableSpan(L(`글\n\n${T}`), 5), [3, 6], '표의 범위');
+eq(m.addRow(L('| a \\| x | b |\n| --- | --- |\n| 1 | 2 |\n'), 3, true).lines[3], '|  |  |', '칸 글의 | 는 칸이 아니다');
+eq(m.addColumn(L('> | a |\n> | --- |\n> | 1 |\n'), 3, 0, true).lines, L('> | a |  |\n> | --- | --- |\n> | 1 |  |\n'), '박스 안의 표');
+eq(m.rowsFromTsv('a\tb\n1\t2\n'), [['a', 'b'], ['1', '2']], '엑셀 범위');
+eq(m.rowsFromTsv('a\tb\n1\n'), null, '칸 수가 다르면 표가 아니다');
+eq(m.rowsFromTsv('그냥 글\n둘째 줄\n'), null, '탭이 없으면 표가 아니다');
+eq(m.tableFromRows([['a', 'b|c'], ['1', '2']]), ['| a | b\\|c |', '| --- | --- |', '| 1 | 2 |'], '값으로 표를');
+
+// 박스글
+const B = '앞\n\n> [!NOTE]\n> 가\n>\n> 나\n\n뒤\n';
+eq(m.boxAt(L(B), 4), { a: 3, b: 6, kind: 'NOTE' }, '박스글 범위');
+eq(m.boxAt(L('> 그냥 인용\n'), 1), null, '보통 인용');
+eq(m.boxAt(L(B), 1), null, '박스 밖');
+eq(m.setBox(L(B), 4, 'WARNING').lines, L('앞\n\n> [!WARNING]\n> 가\n>\n> 나\n\n뒤\n'), '종류 바꾸기');
+eq(m.unwrapBox(L(B), 4).lines, L('앞\n\n가\n\n나\n\n뒤\n'), '풀기');
+eq(m.wrapBox(L('앞\n\n글\n\n뒤\n'), 3, 3, 'TIP').lines, L('앞\n\n> [!TIP]\n> 글\n\n뒤\n'), '문단을 박스글로');
+eq(m.wrapBox(L('가\n\n나\n'), 1, 3, 'NOTE').lines, L('> [!NOTE]\n> 가\n>\n> 나\n'), '여러 문단을 박스글로');
+eq(m.wrapBox(L('- 항목\n'), 1, 1, 'NOTE').lines, L('> [!NOTE]\n> 항목\n'), '항목의 표시를 뗀다');
+
+// 주
+eq(m.nextNote(L('글[^1]\n\n[^1]: 내용\n')), '2', '다음 주 이름');
+eq(m.nextNote(L('글\n')), '1', '첫 주');
+eq(m.nextNote(L('글[^2]\n\n[^2]: 내용\n')), '1', '빈 번호부터');
+eq(m.addNote(L('글입니다.\n'), 1, 2, '내용').lines, L('글입[^1]니다.\n\n[^1]: 내용\n'), '주를 단다');
+eq(m.addNote(L('글[^1]\n\n[^1]: 앞\n'), 1, 1, '뒤').lines, L('글[^2][^1]\n\n[^1]: 앞\n[^2]: 뒤\n'), '주 뒤에 잇는다');
+eq(m.addNote(L('글\n\n\n'), 1, 1, '내용').lines, L('글[^1]\n\n[^1]: 내용\n\n\n'), '끝의 빈 줄 앞에');
+eq(m.noteAt('글[^3]뒤', 2), '3', '주 표시 위');
+eq(m.noteAt('글[^3]뒤', 5), '3', '주 표시 끝');
+eq(m.noteAt('글[^3]뒤', 6), '', '주 밖');
+eq(m.noteText(L('[^3]: 내용\n'), '3'), { n: 1, text: '내용' }, '주 내용');
+eq(m.setNote(L('[^3]: 내용\n'), '3', '새 글'), L('[^3]: 새 글\n'), '주 고치기');
+eq(m.droppedNotes(L('글[^1]\n\n[^1]: 내용\n'), L('글\n\n[^1]: 내용\n')), ['1'], '표시를 지운 주');
+eq(m.droppedNotes(L('글[^1] 또[^1]\n\n[^1]: 내용\n'), L('글 또[^1]\n\n[^1]: 내용\n')), [], '다른 곳에 남은 주');
+eq(m.removeNotes(L('글\n\n[^1]: 내용\n'), ['1']), L('글\n'), '내용 줄을 지운다');
+
+// 첨부·부록
+eq(m.addAttachment(L('글\n'), '[a](a.xlsx)', '붙임').lines, L('글\n\n## 붙임\n\n1. [a](a.xlsx)\n'), '붙임 절을 만든다');
+eq(m.addAttachment(L('글\n\n## 붙임\n\n1. [a](a.xlsx)\n'), '[b](b.pdf)', '붙임').lines, L('글\n\n## 붙임\n\n1. [a](a.xlsx)\n2. [b](b.pdf)\n'), '번호를 잇는다');
+eq(m.addAttachment(L('## 붙임\n\n1. a\n\n## 뒤\n'), 'b', '붙임').lines, L('## 붙임\n\n1. a\n2. b\n\n## 뒤\n'), '절 끝에');
+eq(m.addAttachment(L('## 붙임\n'), 'a', '붙임').lines, L('## 붙임\n\n1. a\n'), '빈 절');
+eq(m.nextAppendix(L('글\n')), 'A', '첫 부록');
+eq(m.nextAppendix(L('## 부록 A. 자료\n\n## 부록 B. 표\n')), 'C', '다음 부록');
+
+// 붙여 넣기
+eq(m.pasteAfter(L('가\n나\n'), 1, ['x', '', 'y']).lines, L('가\nx\n\ny\n나\n'), '줄 뒤에 넣는다');
+eq(m.pasteAfter(L('- 가\n'), 1, ['x', '', '- y'], '- ').lines, L('- 가\n- x\n- y\n'), '목록은 항목으로');
+
 return { n, fails };

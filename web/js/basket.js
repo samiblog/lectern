@@ -13,9 +13,10 @@
 import { S, on, emit } from './store.js';
 import { getText } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
-import { openTarget, openDocs } from './doctabs.js';
+import { openTarget, openDocs, docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
 import { insertIntoDoc, editingDoc } from './editor.js';
+import { insertLines } from './lineedit.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
 import { newDocGuess, cleanPath, createDoc } from './newdoc.js';
 import { html, setHtml } from './html.js';
@@ -134,14 +135,27 @@ async function goToSource(sn, newTab = false) {
  * editor.js 가 편집 모드로 연 그 문서에 넣는다. 저장은 사용자가
  */
 async function perform(snips, target) {
-  const ok = await insertIntoDoc(target.path, (text) => {
+  const compute = (text) => {
     const at = placeLine(text, target.place);
     const body = buildBody(snips, target.path, { top: levelAt(text, target.place, at), taken: noteIds(text) });
     return placeText(text.split('\n'), at, body);
-  });
+  };
+  // 그 문서를 편집 모드로 고치고 있으면 편집기에 (저장은 사용자가), 아니면 바로 넣는다 — 되돌리기 한 걸음 (D113)
+  const editing = S.tab?.panes.some((p) => p.editor?.path === target.path);
+  const ok = editing ? await insertIntoDoc(target.path, compute) : await sendInto(target.path, compute);
   if (!ok) return;
   const what = snips.length === 1 ? clip(snips[0].label || snips[0].name, 30) : t('{n}개', { n: snips.length });
-  toast(t('{path} 로 {what} 을(를) 보냈습니다 — 확인하고 저장(Ctrl+S)하세요', { path: target.path, what }), '', 4000);
+  toast(editing ? t('{path} 로 {what} 을(를) 보냈습니다 — 확인하고 저장(Ctrl+S)하세요', { path: target.path, what })
+    : t('{path} 로 {what} 을(를) 보냈습니다 — Ctrl+Z 로 되돌립니다', { path: target.path, what }), '', 4000);
+}
+
+/** 받을 문서를 문서 탭에 열고 글을 넣는다 */
+async function sendInto(path, compute) {
+  const target = { type: 'doc', path };
+  const open = docPaneOf(S.tab, target);
+  if (open) await selectDocTab(open);
+  const pane = open ?? await openInNewTab(target);
+  return pane ? insertLines(pane, path, compute) : false;
 }
 
 /** 편집 중인 문서의 커서 자리로 바로 보낸다 */

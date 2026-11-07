@@ -28,6 +28,7 @@ from .i18n import t
 from .scanner import doc_kind, is_code, resolve_inside
 
 MAX_EDIT_BYTES = 2 * 1024 * 1024
+MAX_IMAGE_BYTES = 20 * 1024 * 1024
 BOM = b'\xef\xbb\xbf'
 # Windows 가 파일 이름에 받지 않는 글자와 이름 (새 문서 — D63, 이름 바꾸기 — D66)
 BAD_NAME_CHARS = frozenset('<>:"/\\|?*') | frozenset(chr(c) for c in range(32))
@@ -216,6 +217,52 @@ def create_source(path: Path, text: str) -> dict[str, Any]:
     except OSError as exc:
         raise EditError(500, t('새 문서를 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
     return {'hash': _digest(data), 'size': len(data)}
+
+
+def _image_ext(data: bytes) -> str | None:
+    """그림 파일의 첫 바이트로 본 확장자. 그림이 아니면 None"""
+    if data.startswith(b'\x89PNG\r\n\x1a\n'):
+        return '.png'
+    if data.startswith(b'\xff\xd8\xff'):
+        return '.jpg'
+    if data[:6] in (b'GIF87a', b'GIF89a'):
+        return '.gif'
+    if data[:4] == b'RIFF' and data[8:12] == b'WEBP':
+        return '.webp'
+    return None
+
+
+def save_image(root: Path, rel: str, data: bytes) -> str:
+    """붙여 넣은 그림 한 장을 문서 옆 '문서이름-그림' 폴더에 새 파일로 저장한다 (D111 — 사용자가 붙여 넣거나 끌어 넣을 때만).
+    덮어쓰지 않고, 폴더가 없으면 만든다. 문서 기준의 상대 경로. 안 되면 EditError"""
+    parts = rel.replace('\\', '/').strip('/').split('/')
+    if any(p in ('', '.', '..') for p in parts) or doc_kind(parts[-1]) != 'markdown':
+        raise EditError(400, t('파일 경로가 올바르지 않습니다'))
+    source = resolve_inside(root, '/'.join(parts))
+    if source is None or not source.is_file() or os.path.normcase(source) != os.path.normcase(os.path.join(root, *parts)):
+        raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
+    _protect(source)
+    ext = _image_ext(data)
+    if not ext:
+        raise EditError(400, t('그림 파일이 아닙니다 — PNG, JPEG, GIF, WebP 를 붙여 넣으세요'))
+    if len(data) > MAX_IMAGE_BYTES:
+        raise EditError(413, t('그림이 너무 큽니다 — 20MB 까지 넣습니다'))
+    folder = source.parent / t('{name}-그림', name=source.stem)
+    if folder.is_symlink() or (folder.exists() and not folder.is_dir()):
+        raise EditError(409, t('{name} 폴더를 쓸 수 없습니다 — 이름이 같은 파일이 있습니다', name=folder.name))
+    try:
+        folder.mkdir(exist_ok=True)
+        for n in range(1, 10000):
+            target = folder / (t('그림 {n}', n=n) + ext)
+            try:
+                with open(target, 'xb') as f:   # 있으면 실패한다 — 덮어쓰지 않는다
+                    f.write(data)
+                return f'{folder.name}/{target.name}'
+            except FileExistsError:
+                continue
+    except OSError as exc:
+        raise EditError(500, t('그림을 저장하지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
+    raise EditError(409, t('그림 폴더가 가득 찼습니다 — 다른 이름의 문서로 옮기세요'))
 
 
 def delete_doc(root: Path, rel: str, exclude: frozenset[str], html_exclude: frozenset[str]) -> None:

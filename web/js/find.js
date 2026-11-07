@@ -7,7 +7,7 @@
 
 import { S, on, emit } from './store.js';
 import { unfoldTo } from './fold.js';
-import { $, debounce, docRoot, screenRect } from './util.js';
+import { $, debounce, docRoot, screenRect, isMd } from './util.js';
 import { t } from './i18n.js';
 
 const MAX_HITS = 2000;
@@ -114,6 +114,15 @@ function go(index, scroll = true) {
   }
 }
 
+/** Ctrl+H: 찾아 바꾸기 — md 문서에서 (D109). 편집할 수 없는 화면이면 false */
+export function openReplace() {
+  const view = S.pane?.view;
+  if (!view?.dataset.docPath || !isMd(view.dataset.docPath) || view.classList.contains('lec-deck') || S.tab?.readonly) return false;
+  $('#lec-replace').hidden = false;
+  openFind();
+  return true;
+}
+
 export function openFind() {
   bar().hidden = false;
   input().focus();
@@ -143,6 +152,7 @@ export function setFindTarget(next) {
 }
 
 export function closeFind() {
+  $('#lec-replace').hidden = true;
   if (bar().hidden) return false;
   // 찾기 칸에 있던 초점은 본문으로 — 숨은 칸에 남으면 다음 Esc·화살표 키가 그 칸으로 간다
   if (bar().contains(document.activeElement)) scrollerOf()?.focus({ preventScroll: true });
@@ -168,6 +178,19 @@ export function initFind() {
   $('#lec-find-next').addEventListener('click', () => go(current + 1));
   $('#lec-find-prev').addEventListener('click', () => go(current - 1));
   $('#lec-find-close').addEventListener('click', closeFind);
+  const replace = (all) => emit('replace', { find: input().value, to: $('#lec-replace-input').value, all });
+  $('#lec-replace-one').addEventListener('click', () => replace(false));
+  $('#lec-replace-all').addEventListener('click', () => replace(true));
+  $('#lec-replace-input').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      replace(e.ctrlKey);
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      e.stopPropagation();
+      closeFind();
+    }
+  });
   // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시. 다른 탭을 고르면 그 탭의 문서에서 (찾기 막대도 그 칸으로 옮겨 간다)
   on('rendered', (pane) => { if (pane === S.pane && !bar().hidden) search(true); });
   on('pane', () => { if (!bar().hidden) search(true); });

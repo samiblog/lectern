@@ -5,7 +5,7 @@ import { getJSON, saveConfig, native } from './api.js';
 import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
-import { initFind, openFind, closeFind } from './find.js';
+import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold } from './fold.js';
 import { initSpotlight, spotKey, stopSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint } from './spotlight.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
@@ -43,6 +43,8 @@ import { initBasket, closeInsert } from './basket.js';
 import { initNewDialog, askNewDocument, closeNewDocument } from './newdialog.js';
 import { initRename, closeRename } from './rename.js';
 import { initDeleteDoc, closeDelete } from './deletedoc.js';
+import { initPut, closePut } from './putmenu.js';
+import { closeBlock } from './lineblock.js';
 import { initGallery, closeGallery } from './slidegallery.js';
 import { initPptx, closePptx } from './pptxdialog.js';
 import { initMdStyle, closeMdStyle } from './mdstyle.js';
@@ -248,7 +250,9 @@ function bindKeys() {
       toggleEditor();
       return;
     }
-    if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
+    if (mod && !e.shiftKey && !e.altKey && key === 'h' && !typing(e) && docKeyTarget(e) && openReplace()) {   // 찾아 바꾸기 (find.js, D109)
+      e.preventDefault();
+    } else if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
       e.preventDefault();
       askNewDocument();
     } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95)
@@ -339,7 +343,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -419,6 +423,7 @@ async function boot() {
   initRename();
   initDeleteDoc();
   initNewDialog();
+  initPut();
   initGallery();
   initPptx();
   initMdStyle();

@@ -167,4 +167,11 @@ EN: dict[str, str] = {
     '휴지통으로 보내지 못했습니다 — 다른 프로그램이 이 파일을 쓰고 있으면 그 프로그램에서 닫은 뒤 다시 하세요': 'Could not send it to the Recycle Bin — if another program is using this file, close it there and try again.',
     '문서만 지웁니다 — 코드와 자료는 지우지 않습니다': 'Only documents can be deleted — code and other files are not.',
     '제외 폴더 안의 문서는 지우지 않습니다': 'Documents inside an excluded folder are not deleted.',
+    '그림 파일이 아닙니다 — PNG, JPEG, GIF, WebP 를 붙여 넣으세요': 'That is not an image — paste a PNG, JPEG, GIF or WebP.',
+    '그림이 너무 큽니다 — 20MB 까지 넣습니다': 'The image is too large — the limit is 20MB.',
+    '{name}-그림': '{name}-images',
+    '{name} 폴더를 쓸 수 없습니다 — 이름이 같은 파일이 있습니다': 'Cannot use the {name} folder — a file has the same name.',
+    '그림 {n}': 'image {n}',
+    '그림을 저장하지 못했습니다: {error}': 'Could not save the image: {error}',
+    '그림 폴더가 가득 찼습니다 — 다른 이름의 문서로 옮기세요': 'The image folder is full — move this to a document with another name.',
 }

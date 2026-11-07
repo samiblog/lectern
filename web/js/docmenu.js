@@ -15,7 +15,7 @@ import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
-import { linesEditable } from './lineedit.js';
+import { linesEditable, lineMenuItems } from './lineedit.js';
 import { openExternal } from './api.js';
 import { isCode, isViewable } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
@@ -532,6 +532,8 @@ function slideItems(target, x, y) {
 function blockMenu(e, view, el, selected, x, y) {
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
   const items = el ? blockItems(el, e.target, spot) : docItems(spot);
+  const own = lineMenuItems(e.target);   // 구성 요소: 넣기·바꾸기, 표의 행과 열, 박스글, 절 (lineedit.js, D109)
+  if (own.length) items.push('-', ...own);
   const slide = slideItems(e.target, x, y);   // 슬라이드: 장 다루기 (D96)
   if (slide.length) items.push('-', ...slide);
   const sel = view.ownerDocument.getSelection();

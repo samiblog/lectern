@@ -9,6 +9,7 @@ API 명세는 docs/ARCHITECTURE.md 에 있다. 바꾸면 문서도 함께 고친
 """
 from __future__ import annotations
 
+import base64
 import json
 import mimetypes
 import posixpath
@@ -592,6 +593,25 @@ def create_app(state: AppState) -> Flask:
         path = target.relative_to(project.root).as_posix()
         state.board.renamed(data.get('p'), rel, path)
         return jsonify(path=path)
+
+    @app.post('/api/paste-image')
+    def api_paste_image() -> Any:
+        """{p, doc, data(base64)} — 붙여 넣은 그림 한 장을 문서 옆 폴더에 새 파일로 (D111). {path(프로젝트 기준)}"""
+        data = body()
+        rel, raw = data.get('doc'), data.get('data')
+        if not isinstance(rel, str) or not isinstance(raw, str):
+            abort(400)
+        try:
+            image = base64.b64decode(raw, validate=True)
+        except ValueError:
+            return jsonify(error=t('그림 파일이 아닙니다 — PNG, JPEG, GIF, WebP 를 붙여 넣으세요')), 400
+        project = project_of(data.get('p'))
+        try:
+            saved = editing.save_image(project.root, rel, image)
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        folder = rel.rsplit('/', 1)[0] + '/' if '/' in rel else ''
+        return jsonify(path=f'{folder}{saved}')
 
     @app.post('/api/delete-doc')
     def api_delete_doc() -> Any:
