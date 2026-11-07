@@ -543,7 +543,7 @@ More examples are in `skills\README.md` in the program folder. The guide Claude 
 
 ### Samples
 
-`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read the short guide `guide/09-Lectern-슬라이드.md` before it (in Korean) — how slides differ from md documents, and making, editing, presenting and converting on one page. Then go through them in this order.
+`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read the guide `guide/09-Lectern-슬라이드.md` before it (in Korean) — the content of the slide samples written out as a detailed plain md document, ending with links to the samples. Then go through them in this order.
 
 | Order | Folder | What |
 |---|---|---|
