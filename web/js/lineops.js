@@ -16,10 +16,10 @@ const FENCE = /^[ \t]*(`{3,}|~{3,})(.*)$/;
 const CELL_MARK = /^:::(?:[ \t]|$)/;
 const COMMENT_LINE = /^[ \t]*<!--.*-->[ \t]*$/;
 
-const quoteOf = (s) => QUOTE.exec(s)[0];
+export const quoteOf = (s) => QUOTE.exec(s)[0];
 const depthOf = (s) => (quoteOf(s).match(/>/g) || []).length;
 const bodyOf = (s) => s.slice(quoteOf(s).length);
-const isBlank = (s) => !bodyOf(s).trim();
+export const isBlank = (s) => !bodyOf(s).trim();
 
 /** 앞 공백의 폭 (탭은 다음 4칸으로) */
 function colsOf(lead) {
@@ -30,7 +30,7 @@ function colsOf(lead) {
 const widthOf = (body) => colsOf(/^[ \t]*/.exec(body)[0]);
 
 /** 목록 항목 줄이면 {quote, lead, width, marker, ordered, num, delim, gap, task, text, content(글이 시작하는 폭)}, 아니면 null */
-function itemOf(line) {
+export function itemOf(line) {
   const quote = quoteOf(line);
   const body = line.slice(quote.length);
   if (RULE.test(body)) return null;
@@ -46,7 +46,7 @@ function itemOf(line) {
 const sameList = (x, y) => x.ordered === y.ordered && (x.ordered ? x.delim === y.delim : x.marker === y.marker);
 
 /** 코드·수식 블록들 [{a, b, closed}] — 닫지 않은 블록은 문서 끝까지 */
-function fencesOf(lines) {
+export function fencesOf(lines) {
   const out = [];
   let open = null;
   lines.forEach((raw, i) => {
@@ -66,18 +66,18 @@ function fencesOf(lines) {
   return out;
 }
 
-const fenceAt = (fences, n) => fences.find((f) => n >= f.a && n <= f.b) || null;
+export const fenceAt = (fences, n) => fences.find((f) => n >= f.a && n <= f.b) || null;
 const innerEnd = (f) => (f.closed ? f.b - 1 : f.b);
 
 /** 머리 정보(--- … ---)의 끝 줄. 없으면 0 */
-function frontEnd(lines) {
+export function frontEnd(lines) {
   if (lines[0]?.trim() !== '---') return 0;
   for (let i = 1; i < lines.length; i++) if (/^(?:---|\.\.\.)\s*$/.test(lines[i])) return i + 1;
   return 0;
 }
 
 /** 맨 앞 설정에 marp: true 인 Lectern 슬라이드인지 — 값을 읽는 법은 slides.js 의 readYaml 과 같게 (yes·on 도, 따옴표는 글) */
-const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^[ \t]*marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.trim().startsWith('marp'));
+export const deckOf = (lines) => lines.slice(1, frontEnd(lines)).some((s) => /^[ \t]*marp[ \t]*:[ \t]+(?:true|yes|on)[ \t]*$/i.test(s) && s.trim().startsWith('marp'));
 
 /** Lectern 슬라이드에서 장을 가르는 줄인지. 바로 위가 글이면 구분 줄이 아니라 그 글의 밑줄 제목이다 (제목\n---) */
 function slideBreak(lines, n, fences) {
@@ -88,7 +88,7 @@ function slideBreak(lines, n, fences) {
 }
 
 /** 문서의 블록들 [{a, b, kind: 'front'|'fence'|'heading'|'text'|'wall'}] (빈 줄 뺌). wall: Lectern 슬라이드의 칸(:::)·장(---)·지시어 줄 — 글이 넘지 않는다 */
-function blocksOf(lines) {
+export function blocksOf(lines) {
   const fences = fencesOf(lines);
   const blocks = [];
   const front = frontEnd(lines);
@@ -120,7 +120,7 @@ function blocksOf(lines) {
 }
 
 /** 블록 안의 표 {head, sep, first, last} (첫 본문 행·끝 행 — 본문이 없으면 first > last). 표가 아니면 null */
-function tableIn(lines, blk) {
+export function tableIn(lines, blk) {
   if (blk?.kind !== 'text') return null;
   for (let i = blk.a + 1; i <= blk.b; i++) {
     if (TABLE_SEP.test(bodyOf(lines[i - 1])) && bodyOf(lines[i - 2]).includes('|')) return { head: i - 1, sep: i, first: i + 1, last: blk.b };
@@ -128,7 +128,7 @@ function tableIn(lines, blk) {
   return null;
 }
 
-const blockAt = (blocks, n) => blocks.find((x) => n >= x.a && n <= x.b) || null;
+export const blockAt = (blocks, n) => blocks.find((x) => n >= x.a && n <= x.b) || null;
 
 // ---- 목록 -------------------------------------------------------------------------
 
@@ -362,7 +362,7 @@ function itemAbove(lines, from, depth, test) {
 }
 
 /** 문단 계획 — quote 안에서, at 앞뒤로 빈 줄을 둔다 */
-function paraAt(lines, at, quote) {
+export function paraAt(lines, at, quote) {
   const sep = quote.trimEnd();
   const after = lines[at];
   return { at, pre: [sep], post: after != null && !isBlank(after) ? [sep] : [], head: quote, fill: '', kind: 'para', list: null };

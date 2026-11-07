@@ -55,6 +55,7 @@
 | basket.js | 담기·보내기 (D63·D65) — 조각 만들기(`snippetOf`), 사이드바 '담기' 탭(`tab.basket`), 보낼 곳 고르기 창(`#lec-insert` — 편집 중인 곳·새 문서·문서 탭에 열린 문서 → 자리, 새 문서 경로 — 새로 만들기 `askNewDoc` 도 이 창), `editor.js` 의 `insertIntoDoc` 으로 보내기, Claude 에 맡기기 요청 글 |
 | rename.js | 이름 바꾸기 (D66) — 사이드바 파일의 우클릭 '이름 바꾸기…'·F2 (`rename` 이벤트), 이름을 묻는 창(`#lec-rename`), `POST /api/rename`, 바뀐 뒤 보던 문서 탭·뒤로 기록(`nav.renamePath`)·담은 조각을 새 이름으로 |
 | newdoc.js | 새 문서 (D65·D105) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`과 스타일의 보기 머리글), 새 문서 탭의 md 문서 화면에서 바로 쓰기(`openCreated`) |
+| docops.js | 문서 구성 요소의 계산 (D107, DOM 없음) — 줄 종류(`setKind`), 제목 수준(`shiftHeadings`), 절 옮기기·지우기(`moveSection`·`deleteSection`) |
 | newdialog.js | 새 문서 만들기 창 (D105) — 제목과 스타일을 정해 선택된 폴더에. 최근 스타일이 처음 값 |
 | deletedoc.js | 문서 삭제 (D104) — 트리의 문서 하나를 휴지통으로. 늘 묻고, 그 문서를 보던 칸을 닫는다 |
 | snippet.js | 담은 조각 다듬기 (D63, DOM 없음) — 상대경로를 넣을 문서 기준으로(`rebase`), 각주 정의·이름(`noteDefs`), 제목 수준(`shiftHeadings`), 넣을 자리(`placeLine`·`levelAt`·`placeText`), 담은 곳 주석(`buildBody`) |

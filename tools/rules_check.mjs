@@ -47,6 +47,10 @@ const notes = await load('web/js/notesdata.js');
   say('md 문서 스타일 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/docops_cases.js', await load('web/js/docops.js'));
+  say('문서 구성 요소 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
 }

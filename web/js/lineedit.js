@@ -29,12 +29,13 @@ import { lineSlot, editableLines, blockOfLine } from './lineunits.js';
 import { locateLines } from './linefind.js';
 import { isCode } from './icons.js';
 import {
-  diffRange, planNew, planEnd, shiftPlan, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
+  diffRange, planNew, planEnd, shiftPlan, paraAt, quoteOf, insertLine, splitLine, joinLine, duplicateLine, indentItem, outdentItem, moveLines, deleteLines,
 } from './lineops.js';
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
 } from './slideops.js';
-import { applyScheme } from './headstyle.js';
+import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
+import { setKind, shiftHeadings, moveSection, headLevel } from './docops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
@@ -108,6 +109,14 @@ function splitText(line) {
     body = body.slice(0, end.index);
   }
   return { head: line.slice(0, i), body, tail };
+}
+
+/** 번호가 있는 문서의 제목 줄: 번호도 표시처럼 잠근다 — 번호는 앱이 맞춘다 (D107) */
+function lockNumber(parts, lines) {
+  if (!headLevel(parts.head + parts.body)) return parts;
+  const id = numberScheme(lines);
+  const n = id ? markLength(parts.body, id) : 0;
+  return n ? { ...parts, head: parts.head + parts.body.slice(0, n), body: parts.body.slice(n) } : parts;
 }
 
 /** 코드 블록의 한 줄: 펜스가 인용·목록 안이면 그 앞부분(인용 >·펜스만큼의 들여쓰기)은 잠금 */
@@ -259,7 +268,7 @@ async function begin(line, { cell = 0, at = null, offset = null, select = false 
     refreshView(pane);
     return;
   }
-  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? splitCode(original, slot.fence) : splitText(original);
+  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? splitCode(original, slot.fence) : lockNumber(splitText(original), shown);
   const bodies = slot.kind === 'table' ? parts.cells.map((c) => c.body) : [parts.body];
   const n = Math.min(bodies.length, slot.ranges.length);
   if (!n) {
@@ -532,7 +541,7 @@ async function finishNew(s, save) {
   span.classList.add('saving');
   showLineEdit();
   const made = insertLine(s.fresh.lines, s.fresh.plan, text);
-  const d = diffRange(s.fresh.lines, made.lines);
+  const d = diffRange(s.fresh.lines, withNumbers(s.pane, s.fresh.lines, made.lines));
   try {
     s.pane.lineEditMissed = false;
     const r = await replaceLines(s.pane, s.path, d.start, d.before, d.after);
@@ -591,9 +600,20 @@ export async function replaceLines(pane, path, start, before, after) {
   return r;
 }
 
-/** 줄 배열 old 를 next 로 저장한다 — 되돌리기 한 걸음으로. 줄이 밀린 수를 돌려준다. 저장하지 못했으면 알리고 null */
-async function commit(pane, path, old, next) {
-  const d = diffRange(old, next);
+/** 제목이 바뀌면 번호를 다시 맞춘다 (D107) — 번호가 있던 md 문서만. 같은 저장에 묶여 되돌리기 한 걸음이다 */
+function withNumbers(pane, old, next) {
+  const { view } = pane;
+  if (!view.dataset.docPath || view.classList.contains('lec-deck') || sameHeads(old, next)) return next;
+  const id = numberScheme(old);
+  return id ? applyScheme(next, id, slugify).lines : next;
+}
+
+/**
+ * 줄 배열 old 를 next 로 저장한다 — 되돌리기 한 걸음으로. 줄이 밀린 수를 돌려준다. 저장하지 못했으면 알리고 null.
+ * numbers: 제목이 바뀌면 번호도 함께 (머리글 모양을 바꾸는 restyle 만 끈다)
+ */
+async function commit(pane, path, old, next, { numbers = true } = {}) {
+  const d = diffRange(old, numbers ? withNumbers(pane, old, next) : next);
   try {
     const r = await replaceLines(pane, path, d.start, d.before, d.after);
     if (r) return r.at - d.start;
@@ -697,6 +717,9 @@ function whyNot(error) {
     case 'first-item': return t('목록의 맨 앞 항목은 더 안으로 옮기지 못합니다');
     case 'top-level': return t('맨 바깥 항목은 더 밖으로 옮기지 못합니다');
     case 'different': return t('종류가 다른 줄은 합치지 않습니다');
+    case 'kind': return t('이 줄의 종류는 바꿀 수 없습니다 — 코드 블록과 머리 설정은 그대로 둡니다');
+    case 'table-kind': return t('표의 줄은 종류를 바꿀 수 없습니다');
+    case 'not-heading': return t('제목 줄에서 누르세요');
     case 'fence': return t('코드 블록의 ``` 줄만 지우면 블록이 깨집니다 — 코드 블록 전체를 하이라이트하면 블록째 지웁니다');
     default: return t('이 줄은 그렇게 고칠 수 없습니다 — 편집 모드(Ctrl+E)에서 고칩니다');
   }
@@ -792,14 +815,64 @@ function levelHere(dir) {
   restructure(op);
 }
 
-/** Alt+↑·↓: 이 줄을 옮긴다 (lineops.moveLines) */
+/** 제목 줄을 옮길 때 절째 옮기는 화면인지 — md 문서만 (Lectern 슬라이드는 장으로 옮긴다) */
+const sectionsOn = (view) => !isCodeView(view) && !view.classList.contains('lec-deck');
+
+/** Alt+↑·↓: 이 줄을 옮긴다 (lineops.moveLines). 제목 줄이면 그 절을 본문과 함께 (D107) */
 function moveHere(dir) {
   const s = session;
   const code = isCodeView(s.pane.view);
   restructure((lines) => {
+    if (sectionsOn(s.pane.view) && s.kind === 'text' && headLevel(lines[s.line - 1])) return moveSection(lines, s.line, dir);
     const r = moveLines(lines, s.line, s.line, dir, { code });
     return r.error ? r : { lines: r.lines, line: r.a };
   });
+}
+
+/** 제목의 번호를 떼는 함수 — 번호가 있는 문서에서 제목을 다른 종류로 바꿀 때 */
+const bareOf = (lines) => {
+  const id = numberScheme(lines);
+  return id ? (text) => bareHeading(text, id) : (text) => text;
+};
+
+/** Ctrl+Alt+숫자: 이 줄의 종류를 바꾼다 (D107 — 계산은 docops.setKind). 아직 없는 빈 새 줄이면 쓰기 전에 정한다 */
+function kindHere(kind) {
+  const s = session;
+  if (s.kind !== 'text') return;
+  if (s.fresh && !read(s.places[0]).trim()) {
+    freshKind(s, kind);
+    return;
+  }
+  restructure((lines) => {
+    const r = setKind(lines, s.line, s.line, kind, { bare: bareOf(lines) });
+    return r.error ? r : { lines: r.lines, line: r.line };
+  });
+}
+
+/** 빈 새 줄을 제목·문단으로 정한다 */
+function freshKind(s, kind) {
+  const level = /^h([1-6])$/.exec(kind)?.[1];
+  if (!level && kind !== 'para') return;
+  const old = s.fresh.plan;
+  const quote = quoteOf(old.head);
+  const plan = old.kind === 'para' ? old : paraAt(s.fresh.lines, old.at, quote);
+  s.fresh.plan = { ...plan, head: `${quote}${level ? `${'#'.repeat(Number(level))} ` : ''}` };
+  const el = document.createElement(level ? `h${level}` : 'p');
+  el.className = 'lec-new-line';
+  el.append(s.places[0].span);
+  s.el.replaceWith(el);
+  s.el = el;
+  s.fresh.remove = () => el.remove();
+  focusPlace(0);
+}
+
+/** Alt+Shift+←·→: 제목은 하위 절까지 수준을 바꾸고, 목록은 레벨을 옮긴다 (D107) */
+function levelKey(dir) {
+  const s = session;
+  if (s.kind !== 'text') return;
+  const line = s.fresh ? '' : sourceLines()[s.line - 1];
+  if (line && headLevel(line)) restructure((lines) => shiftHeadings(lines, s.line, dir));
+  else levelHere(dir);
 }
 
 /** Ctrl+Shift+D: 이 줄을 복제해 복제한 줄을 이어서 고친다 */
@@ -903,6 +976,16 @@ async function moveLitNow(dir) {
   if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
   const view = pane.view;
   const src = sourceLines();
+  if (span[0] === span[1] && sectionsOn(view) && headLevel(src[span[0] - 1])) {   // 제목 한 줄을 고르면 그 절을 본문과 함께 (D107)
+    const m = moveSection(src, span[0], dir);
+    if (m.error) {
+      toast(whyNot(m.error));
+      return;
+    }
+    const moved = await commit(pane, pathIn(view), src, m.lines);
+    if (moved != null && S.pane === pane) setLitSpan(m.line + moved, m.line + moved);
+    return;
+  }
   const r = moveLines(src, span[0], span[1], dir, { code: isCodeView(view) });
   if (r.error) {
     toast(r.error === 'table-head' ? t('표의 머리행은 옮기지 않습니다') : whyNot(r.error));
@@ -962,7 +1045,7 @@ async function restyle({ scheme, then = '' }) {
   const src = sourceLines();
   const r = applyScheme(src, scheme, slugify);
   if (r.changed) {
-    const shift = await commit(pane, pathIn(pane.view), src, r.lines);
+    const shift = await commit(pane, pathIn(pane.view), src, r.lines, { numbers: false });
     if (shift == null) return;
     toast(r.links ? t('머리글 {n}개와 이 문서의 절 링크 {links}개를 바꿨습니다 — Ctrl+Z 로 되돌립니다', { n: r.changed, links: r.links })
       : t('머리글 {n}개를 바꿨습니다 — Ctrl+Z 로 되돌립니다', { n: r.changed }));
@@ -1042,6 +1125,58 @@ async function slideOp({ op, dir = 0, index = null, layout = '', style = '' }) {
   else toast({ copy: t('장을 복제했습니다 — Ctrl+Z 로 되돌립니다'), move: t('장을 옮겼습니다 — Ctrl+Z 로 되돌립니다'), delete: t('장을 지웠습니다 — Ctrl+Z 로 되돌립니다'), layout: t('배치를 넣었습니다 — F2 로 글을 채웁니다') }[op]);
 }
 
+/** 고른 줄의 종류를 바꾼다 (D107) */
+async function kindLitNow(kind) {
+  const pane = S.pane;
+  const span = litSpan();
+  if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const src = sourceLines();
+  const r = setKind(src, span[0], span[1], kind, { bare: bareOf(src) });
+  if (r.error) {
+    toast(whyNot(r.error));
+    return;
+  }
+  const shift = await commit(pane, pathIn(pane.view), src, r.lines);
+  if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
+}
+
+/** 고른 줄의 레벨을 바꾼다: 제목은 하위 절까지, 목록 항목은 위에서부터 차례로 (D107) */
+async function levelLitNow(dir) {
+  const pane = S.pane;
+  const span = litSpan();
+  if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const src = sourceLines();
+  let lines = src;
+  const op = dir > 0 ? indentItem : outdentItem;
+  for (let n = span[0]; n <= span[1]; n++) {
+    const r = headLevel(lines[n - 1]) ? shiftHeadings(lines, n, dir) : op(lines, n);
+    if (!r.error) lines = r.lines;
+    else if (r.error === 'edge' || span[0] === span[1]) {
+      toast(whyNot(r.error));
+      return;
+    }
+  }
+  if (lines === src) return;
+  const shift = await commit(pane, pathIn(pane.view), src, lines);
+  if (shift != null && S.pane === pane) setLitSpan(span[0] + shift, span[1] + shift);
+}
+
+/** 고른 줄의 키 (main.js — 파일을 바꾸는 키는 칸이나 고른 줄에서만, D108): Ctrl+Alt+숫자, Alt+Shift+←·→, Tab·Shift+Tab. 받았으면 true */
+export function litKey(e) {
+  if (!litSpan() || isCodeView(S.pane.view)) return false;
+  const mod = e.ctrlKey || e.metaKey;
+  if (mod && e.altKey && !e.shiftKey && /^Digit[0-6]$/.test(e.code)) {
+    const kind = e.code === 'Digit0' ? 'para' : `h${e.code.at(-1)}`;
+    turn = turn.then(() => kindLitNow(kind));
+    return true;
+  }
+  const dir = e.altKey && e.shiftKey && !mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') ? (e.key === 'ArrowLeft' ? -1 : 1)
+    : e.key === 'Tab' && !mod && !e.altKey ? (e.shiftKey ? -1 : 1) : 0;
+  if (!dir) return false;
+  turn = turn.then(() => levelLitNow(dir));
+  return true;
+}
+
 /** Alt+↑·↓ (main.js — 문서 칸에서, 줄 하이라이트 중일 때만): 하이라이트한 줄을 옮긴다. 받았으면 true. 차례로 — 누르고 있어도 쌓이지 않게 */
 export function moveLit(dir) {
   if (!litSpan()) return false;
@@ -1083,6 +1218,12 @@ function onKey(e) {
   } else if ((k === 'ArrowUp' || k === 'ArrowDown') && e.altKey && !mod && !e.shiftKey) {
     e.preventDefault();
     moveHere(k === 'ArrowUp' ? -1 : 1);
+  } else if (mod && e.altKey && !e.shiftKey && /^Digit[0-6]$/.test(e.code)) {
+    e.preventDefault();
+    kindHere(e.code === 'Digit0' ? 'para' : `h${e.code.at(-1)}`);
+  } else if (e.altKey && e.shiftKey && !mod && (k === 'ArrowLeft' || k === 'ArrowRight')) {
+    e.preventDefault();
+    levelKey(k === 'ArrowLeft' ? -1 : 1);
   } else if (k === 'Backspace' && !mod && !e.altKey && !e.shiftKey && session.kind !== 'table' && caretOffset(span) === 0) {
     if (session.fresh) {
       if (span.textContent) return;   // 글이 남은 새 줄의 맨 앞 — 윗줄이 아직 없다

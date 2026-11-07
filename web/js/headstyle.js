@@ -80,9 +80,13 @@ export function headings(lines) {
   return out;
 }
 
+// 번호를 달지 않는 절 (맨 바깥 수준만): 앞뒤에 붙는 것들. 논문·보고서에서 번호 없이 쓴다 (D107)
+const NO_NUMBER = /^(?:참고\s*문헌|부록|붙임|별첨|첨부|요약|초록|목차|감사의\s*글|references|bibliography|appendix|abstract|summary|acknowledge?ments)(?:\s|$)/i;   // i18n-ok (절 이름)
+const counted = (h) => !(h.depth === 1 && NO_NUMBER.test(h.text));
+
 /** 지금 문서의 머리글 모양 id. 번호가 달린 머리글이 열에 여섯이 넘으면 그 모양이다. 똑같이 맞으면 문서 방식 kind 의 모양을 먼저 본다 */
 export function detect(lines, kind = '') {
-  const body = headings(lines).filter((h) => h.depth);
+  const body = headings(lines).filter((h) => h.depth && counted(h));
   let best = 'plain';
   let most = 0;
   for (const id of [...(STYLES[kind] ?? []), ...allIds()]) {
@@ -131,13 +135,34 @@ function dressed(lines, id) {
   const marks = marksOf(id);
   const counts = [0, 0, 0, 0, 0, 0];
   return headings(lines).filter((h) => h.depth).map((h) => {
+    const text = bare(h.text, current);
+    if (!counted({ ...h, text })) return { ...h, old: h.text, text };   // 참고문헌·부록 같은 절은 번호를 달지 않고 세지도 않는다
     counts[h.depth - 1] += 1;
     counts.fill(0, h.depth);
     for (let d = 0; d < h.depth - 1; d++) counts[d] ||= 1;
-    const text = bare(h.text, current);
     const mark = makeMark(marks[h.depth - 1], counts, h.depth - 1);
     return { ...h, old: h.text, text: mark ? `${mark} ${text}` : text };
   });
+}
+
+/** 지금 문서의 번호 모양 id — 번호가 없으면 빈 글자 (D107) */
+export function numberScheme(lines) {
+  const id = detect(lines);
+  return id === 'plain' ? '' : id;
+}
+
+/** 머리글 글 text 에서 번호 부분의 길이 (뒤의 빈칸까지) — 한 줄 편집의 칸이 번호를 잠근다 (D107) */
+export function markLength(text, id) {
+  return text.length - bare(text, id).length;
+}
+
+/** 번호를 뗀 머리글 글 — 제목을 문단으로 바꿀 때 (docops.setKind) */
+export const bareHeading = (text, id) => bare(text, id);
+
+/** 제목 차례가 같은지 (수준과 번호를 뗀 글) — 다르면 번호를 다시 맞춘다 */
+export function sameHeads(a, b) {
+  const key = (lines) => { const id = detect(lines); return JSON.stringify(headings(lines).map((h) => [h.level, bare(h.text, id)])); };
+  return key(a) === key(b);
 }
 
 /** 미리보기: 머리글 앞의 몇 개 [{depth, text}] */

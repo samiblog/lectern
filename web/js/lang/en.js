@@ -1160,5 +1160,10 @@ export default {
 "만들기": "Create",
 "새 문서 만들기 (Ctrl+N)": "New document (Ctrl+N)",
 "만들기를 누르면 첫 장의 템플릿을 고릅니다.": "After Create, you pick a template for the first slide.",
-"↑·↓ 스타일 · Enter 만들기 · Esc 그만두기": "↑·↓ style · Enter create · Esc cancel"
+"↑·↓ 스타일 · Enter 만들기 · Esc 그만두기": "↑·↓ style · Enter create · Esc cancel",
+"고른 줄": "Picked lines",
+"Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기": "Delete remove · Alt+↑·↓ move · Tab level · Shift+→ send to Claude · Shift+← copy location · Ctrl+C copy source · Shift+Enter highlight · Esc release",
+"이 줄의 종류는 바꿀 수 없습니다 — 코드 블록과 머리 설정은 그대로 둡니다": "This line cannot change type — code blocks and the header stay as they are.",
+"표의 줄은 종류를 바꿀 수 없습니다": "Table rows cannot change type.",
+"제목 줄에서 누르세요": "Press this on a heading line."
 };

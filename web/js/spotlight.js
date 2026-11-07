@@ -51,6 +51,8 @@ let followRaf = 0;
 let revealing = 0;      // 'reveal' 뒤 현재 위치를 그곳으로 옮기기 전 — 그사이의 스크롤로 따라오지 않게
 let revealLine = null; // 다음 'reveal' 에서 현재 위치로 삼을 원문 줄 — 여러 줄 블록 안의 자리로 돌아갈 때 (뒤로·앞으로, nav.js)
 
+let dimmed = false;     // 고른 줄을 하이라이트했는지 (D108) — 고른 줄은 범위일 뿐이고, 하이라이트는 나머지를 흐리게 보는 것이다
+
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
 const view = () => $('#lec-view');
 /** 선택된 칸에서 한 줄 편집 중인지 — 시작해서 끝낼 때까지, ↑·↓ 로 다음 줄로 넘어가는 사이(lineEditHold)도 */
@@ -390,12 +392,28 @@ export function editHere() {
   return true;
 }
 
+/** Shift+Enter (D108): 고른 줄을, 없으면 현재 줄을 하이라이트한다 (나머지를 흐리게). 다시 누르면 끈다 */
+function dimHere() {
+  if (ranged() && !dimmed) {
+    dimmed = true;
+    paint();
+    return true;
+  }
+  if (ranged()) {
+    toggleSpotlight(false);
+    return true;
+  }
+  dimmed = true;
+  return highlightHere();
+}
+
 /** Shift+↑·↓: 끝 줄을 옮겨 넓히거나 줄인다 (처음 줄은 그대로). 하이라이트가 없으면 현재 줄부터, 장 하이라이트면 그 장의 처음~끝 줄부터 */
 function extend(step) {
   const us = units();
   if (!us.length) return false;
   if (!ranged()) {
     const ch = spotlightOn() ? chapterIndexes(us) : null;
+    dimmed = !!ch;
     if (ch) {
       active = true;
       mode = 'range';
@@ -466,16 +484,25 @@ function sendHere(stay = false) {
   return true;
 }
 
+/** 현재 줄의 정보 — 파일을 바꾸지 않는 키는 고른 줄이 없으면 현재 줄에 한다 (D108) */
+function hereInfo() {
+  const us = units();
+  const i = hereIndex(us);
+  if (i < 0) return null;
+  const range = [us[i].a, us[i].b];
+  return { path: pathOf(), range, ref: lineRef(pathOf(), range, isCodeView() ? view().dataset.sheet || '' : ''), text: srcLines().slice(range[0] - 1, range[1]).join('\n') };
+}
+
 /** Shift+← · 메뉴 'Claude용 위치 복사' */
 export async function copyLitRef() {
-  const info = litInfo();
+  const info = litInfo() ?? hereInfo();
   if (!info) noLit();
   else toast(await copyText(info.ref) ? t('복사했습니다: {what}', { what: info.ref }) : t('복사하지 못했습니다'));
 }
 
 /** Ctrl+C(고른 글이 없을 때) · 메뉴 '원문 복사' */
 export async function copyLitSource() {
-  const info = litInfo();
+  const info = litInfo() ?? hereInfo();
   if (!info) noLit();
   else toast(await copyText(info.text) ? t('복사했습니다: {what}', { what: `${info.path} ${rangeText(info.range)}` }) : t('복사하지 못했습니다'));
 }
@@ -527,7 +554,7 @@ function overlay(root, make) {
     box = document.createElement('div');
     box.className = 'lec-spot';
     box.setAttribute('aria-hidden', 'true');
-    setHtml(box, html`<div class="spot-shade spot-above"></div><div class="spot-shade spot-below"></div><div class="spot-bar"></div>`);
+    setHtml(box, html`<div class="spot-band"></div><div class="spot-shade spot-above"></div><div class="spot-shade spot-below"></div><div class="spot-bar"></div>`);
     sc.append(box);
   }
   return box;
@@ -542,6 +569,7 @@ function place() {
   box.hidden = !r;
   if (!r) return;
   box.classList.toggle('editing', lineEditing());
+  box.classList.toggle('pick', ranged() && !dimmed);   // 고른 줄: 흐리지 않고 그 줄들에만 옅은 띠 (D108)
   const top = Math.max(0, r.top - r.padTop);
   const bottom = r.bottom + r.padBottom;
   const end = Math.max(bottom, root.offsetTop + root.offsetHeight);
@@ -612,8 +640,10 @@ function updateStatus() {
   const r = lit() && painted === view() ? litLines() : null;
   el.hidden = !r;
   if (!r) return;
-  el.textContent = `${t('하이라이트')} ${rangeText(r)} · ${t('{n}줄', { n: r[1] - r[0] + 1 })}`;
-  el.title = t('Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제');
+  const pick = ranged() && !dimmed;
+  el.textContent = `${pick ? t('고른 줄') : t('하이라이트')} ${rangeText(r)} · ${t('{n}줄', { n: r[1] - r[0] + 1 })}`;
+  el.title = pick ? t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기')
+    : t('Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제');
 }
 
 // ---- 밖에서 부르는 것 ------------------------------------------------------------
@@ -703,9 +733,11 @@ export function toggleSpotlight(want = !lit()) {
   if (!want) {
     active = false;
     mode = 'chapter';
+    dimmed = false;
     paint();
     return;
   }
+  dimmed = true;
   if (isMdDoc() && chapters.length) select(chapterHere());
   else if (linesOn()) highlightHere();
 }
@@ -784,23 +816,21 @@ export function spotKey(e) {
     }
     if (!e.shiftKey && (e.code === 'KeyL' || k.toLowerCase() === 'l')) {   // 현재 줄 하이라이트, 거듭 누르면 아래로 넓힘 (D91)
       if (!linesOn()) return false;
-      return ranged() ? extend(1) : highlightHere();
+      if (ranged()) return extend(1);
+      dimmed = false;
+      return highlightHere();
     }
     if (!e.shiftKey && (e.code === 'KeyX' || k.toLowerCase() === 'x') && ranged() && !getSelection()?.toString()) {   // 잘라내기 (lineedit.js, D83)
       emit('line-delete', { cut: true });
       return true;
     }
-    if (e.shiftKey || (e.code !== 'KeyC' && k.toLowerCase() !== 'c') || !lit() || getSelection()?.toString()) return false;
+    if (e.shiftKey || (e.code !== 'KeyC' && k.toLowerCase() !== 'c') || (!lit() && !linesOn()) || getSelection()?.toString()) return false;
     copyLitSource();
     return true;
   }
   if (e.shiftKey) {
     if (!linesOn() && !lit()) return false;
-    if (k === 'Enter') {   // 현재 줄 하이라이트 켜고 끄기 (D91 — 편집은 F2)
-      if (!ranged()) return highlightHere();
-      toggleSpotlight(false);
-      return true;
-    }
+    if (k === 'Enter') return dimHere();   // 하이라이트 켜고 끄기 (D91·D108 — 편집은 F2)
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
     if (k === 'ArrowRight') return sendHere();
     if (k === 'ArrowLeft') copyLitRef();
@@ -888,7 +918,10 @@ function onMouseDown(e) {
   e.preventDefault();
   getSelection()?.removeAllRanges();
   root.parentElement.focus({ preventScroll: true });   // 기본 동작을 막아 초점이 옮지 않는다 — 이어서 치는 키(Shift+↑·↓·Enter)가 이 칸으로 오게
-  if (!ranged()) anchor = us[i].a;
+  if (!ranged()) {
+    anchor = us[i].a;
+    dimmed = false;
+  }
   active = true;
   mode = 'range';
   focus = us[i].a;
@@ -969,8 +1002,10 @@ export function initSpotlight() {
     if (!lit() || !view().contains(e.target) || e.shiftKey || noPick(e.target) || window.getSelection()?.toString()) return;
     if (mode === 'range') {
       if (insideLit(e.clientY, e.target)) return;
-      e.preventDefault();
-      e.stopPropagation();
+      if (dimmed) {   // 고른 줄은 흐린 곳이 없다 — 풀기만 하고 그 누르기는 그대로 쓴다 (D108)
+        e.preventDefault();
+        e.stopPropagation();
+      }
       toggleSpotlight(false);
       return;
     }
