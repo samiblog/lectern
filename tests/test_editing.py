@@ -1,6 +1,8 @@
 """편집 모드 (D54): 원문 주기·저장 — 줄바꿈·BOM 되살리기, 그사이 바뀐 파일, UTF-8·크기·종류."""
 from __future__ import annotations
 
+import sys
+
 import pytest
 
 from conftest import write
@@ -71,6 +73,85 @@ def test_save_refuses_when_file_changed_meanwhile_unless_forced(tmp_path):
     assert p.read_bytes() == b'mine edited\n'
 
 
+def _leftovers(folder):
+    return [x.name for x in folder.iterdir() if x.name.startswith('.lectern-')]
+
+
+def test_save_does_not_overwrite_a_write_made_while_it_was_saving(tmp_path, monkeypatch):
+    """저장이 임시 파일을 쓰는 사이(fsync)나 잠긴 파일을 기다리는 사이에 다른 곳(Claude Code 등)이 쓴 글을 덮어쓰지 않는다 —
+    처음에 한 번만 보면 그사이의 글이 바꿔 끼우기에 지워진다 (2026-11-08 동시 쓰기 시험에서 찾음)"""
+    p = tmp_path / 'a.md'
+    p.write_bytes(b'one\n')
+    src = read_source(p)
+    real_fsync = editing.os.fsync
+
+    def claude_writes(fd):   # 임시 파일을 디스크에 내리는 사이에 Claude 가 쓴다
+        p.write_bytes(b'one\nclaude\n')
+        real_fsync(fd)
+
+    monkeypatch.setattr(editing.os, 'fsync', claude_writes)
+    with pytest.raises(EditError) as err:
+        save_source(p, 'one\nmine\n', src['hash'])
+    assert err.value.status == 409 and p.read_bytes() == b'one\nclaude\n' and not _leftovers(tmp_path)
+    monkeypatch.setattr(editing.os, 'fsync', real_fsync)
+
+    src = read_source(p)
+    real_swap = editing._swap
+    calls = []
+
+    def locked_then_written(tmp, path, backup=None):   # 처음엔 잠겨 있고, 기다리는 사이에 Claude 가 쓴다
+        calls.append(1)
+        if len(calls) == 1:
+            p.write_bytes(b'one\nclaude\nclaude 2\n')
+            raise PermissionError(5, 'ReplaceFileW', str(path))
+        return real_swap(tmp, path, backup)
+
+    monkeypatch.setattr(editing, '_swap', locked_then_written)
+    monkeypatch.setattr(editing.time, 'sleep', lambda s: None)
+    with pytest.raises(EditError) as err:
+        save_source(p, 'one\nclaude\nmine\n', src['hash'])
+    assert err.value.status == 409 and p.read_bytes() == b'one\nclaude\nclaude 2\n' and not _leftovers(tmp_path)
+    assert len(calls) == 1   # 바뀐 것을 보고 다시 바꿔 끼우지 않았다
+
+
+@pytest.mark.skipif(sys.platform != 'win32', reason='바꿔 끼우기 직전의 원래 파일(backup)은 Windows 의 ReplaceFileW 만 남긴다')
+def test_save_puts_back_a_write_that_slipped_in_just_before_the_swap(tmp_path, monkeypatch):
+    """마지막으로 본 뒤 바꿔 끼우기까지의 아주 짧은 사이에 들어온 글 — 바꿔 끼우기 직전의 원래 파일로 알아채 되돌려 놓고 409"""
+    p = tmp_path / 'a.md'
+    p.write_bytes(b'one\n')
+    src = read_source(p)
+    real_changed = editing._changed
+
+    def then_claude_writes(path, expect):
+        got = real_changed(path, expect)
+        p.write_bytes(b'one\nclaude\n')
+        return got
+
+    monkeypatch.setattr(editing, '_changed', then_claude_writes)
+    with pytest.raises(EditError) as err:
+        save_source(p, 'one\nmine\n', src['hash'])
+    assert err.value.status == 409 and p.read_bytes() == b'one\nclaude\n' and not _leftovers(tmp_path)
+    monkeypatch.setattr(editing, '_changed', real_changed)
+    save_source(p, 'one\nclaude\nmine\n', read_source(p)['hash'])   # 다시 받아 저장하면 둘 다 남는다
+    assert p.read_bytes() == b'one\nclaude\nmine\n' and not _leftovers(tmp_path)
+
+
+def test_save_is_saved_even_if_another_write_follows_at_once(tmp_path, monkeypatch):
+    """바꿔 끼운 바로 뒤에 다른 곳이 또 써도 저장은 된 것이다 — '저장하지 못했습니다' 로 알리지 않는다"""
+    p = tmp_path / 'a.md'
+    p.write_bytes(b'one\n')
+    src = read_source(p)
+    real_swap = editing._swap
+
+    def swap_then_claude(tmp, path, backup=None):
+        real_swap(tmp, path, backup)
+        p.write_bytes(b'one\nmine\nclaude\n')
+
+    monkeypatch.setattr(editing, '_swap', swap_then_claude)
+    assert save_source(p, 'one\nmine\n', src['hash'])['hash'] == editing._digest(b'one\nmine\n')
+    assert p.read_bytes() == b'one\nmine\nclaude\n' and not _leftovers(tmp_path)
+
+
 def test_save_refuses_non_utf8_target_and_wrong_kind(tmp_path):
     p = tmp_path / 'a.md'
     p.write_bytes(b'\xb0\xa1')
@@ -139,7 +220,7 @@ def test_failed_save_keeps_the_edited_text_in_the_temp_file(tmp_path, monkeypatc
     p.write_bytes(b'original\n')
     src = read_source(p)
 
-    def broken_swap(tmp, path):   # ReplaceFileW 가 원래 파일을 치운 뒤 새 파일을 옮기지 못함 (ERROR_UNABLE_TO_MOVE_REPLACEMENT)
+    def broken_swap(tmp, path, backup=None):   # ReplaceFileW 가 원래 파일을 치운 뒤 새 파일을 옮기지 못함 (ERROR_UNABLE_TO_MOVE_REPLACEMENT)
         path.unlink()
         raise PermissionError(1176, 'ReplaceFileW', str(path))
 

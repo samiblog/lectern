@@ -140,14 +140,15 @@ def read_source(path: Path) -> dict[str, Any]:
             'hash': _digest(data), 'size': len(data)}
 
 
-def _swap(tmp: Path, path: Path) -> None:
-    """임시 파일(tmp)로 path 를 바꿔 끼운다. Windows 는 ReplaceFileW — 원래 파일의 속성·만든 시각·ACL 을 남긴다"""
+def _swap(tmp: Path, path: Path, backup: Path | None = None) -> None:
+    """임시 파일(tmp)로 path 를 바꿔 끼운다. Windows 는 ReplaceFileW — 원래 파일의 속성·만든 시각·ACL 을 남긴다.
+    backup 을 주면 바꿔 끼우기 직전의 원래 파일이 그 이름으로 남는다 (Windows 만 — 무엇을 덮었는지 save_source 가 본다)"""
     if sys.platform == 'win32':
         import ctypes
 
         kernel32 = ctypes.WinDLL('kernel32', use_last_error=True)
         flags = 0x2 | 0x4   # REPLACEFILE_IGNORE_MERGE_ERRORS | REPLACEFILE_IGNORE_ACL_ERRORS
-        if kernel32.ReplaceFileW(str(path), str(tmp), None, flags, None, None):
+        if kernel32.ReplaceFileW(str(path), str(tmp), str(backup) if backup else None, flags, None, None):
             return
         error = ctypes.get_last_error()
         # 바꿔 끼우다 멈추면 원래 파일은 없어지고 새 글은 임시 파일 이름으로 남는다 (ERROR_UNABLE_TO_MOVE_REPLACEMENT) —
@@ -165,6 +166,44 @@ def _holds(path: Path, data: bytes) -> bool:
         return path.read_bytes() == data
     except OSError:
         return False
+
+
+def _changed(path: Path, expect: Any) -> bool:
+    """path 의 지금 내용이 원문을 줄 때(expect — hash)와 다른지. 없거나 읽을 수 없으면 모른다(False) —
+    바꿔 끼우다 멈춰 원래 이름이 빈 것일 수 있고, 그때 새 글을 놓는 것은 _swap·save_source 가 한다"""
+    try:
+        return _digest(_read_whole(path)) != expect
+    except OSError:
+        return False
+
+
+def _drop(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass   # 지우지 못한 임시 파일 (점으로 시작해 목록에 나오지 않는다)
+
+
+def _overwrote(path: Path, data: bytes, backup: Path, expect: Any) -> bool:
+    """바꿔 끼운 뒤: 바로 앞의 원래 파일(backup)이 원문 그대로였는지 본다. 마지막으로 본 뒤 바꿔 끼우기까지의 아주 짧은 사이에
+    다른 곳이 썼으면 그 글을 제자리에 되돌려 놓고 True — 덮어쓰지 않는다. backup 이 없으면(Windows 가 아님) 볼 것이 없다"""
+    if not backup.exists():
+        return False
+    try:
+        before = steady(backup.read_bytes)
+    except OSError:
+        _drop(backup)
+        return False
+    if _digest(before) == expect:
+        _drop(backup)
+        return False
+    if _holds(path, data):   # 그 뒤에 또 다른 글이 들어오지 않았으면 덮은 글을 되돌린다
+        try:
+            steady(os.replace, backup, path)
+            return True
+        except OSError:
+            pass
+    return False   # 되돌리지 못했다 — 덮은 글은 backup(점으로 시작하는 이름)에 남는다
 
 
 def save_source(path: Path, text: str, expect: Any, force: bool = False) -> dict[str, Any]:
@@ -187,29 +226,46 @@ def save_source(path: Path, text: str, expect: Any, force: bool = False) -> dict
     data = (BOM if current.startswith(BOM) else b'') + body.encode('utf-8', errors='replace')
     if len(data) > MAX_EDIT_BYTES:
         raise EditError(413, t('{n}MB 가 넘는 파일은 편집할 수 없습니다', n=MAX_EDIT_BYTES // (1024 * 1024)))
-    tmp = path.with_name(f'.lectern-{secrets.token_hex(4)}.tmp')   # 짧게 — 긴 경로가 Windows 의 길이 한도를 넘지 않게
+    token = secrets.token_hex(4)
+    tmp = path.with_name(f'.lectern-{token}.tmp')   # 짧게 — 긴 경로가 Windows 의 길이 한도를 넘지 않게
+    backup = None if force else path.with_name(f'.lectern-{token}.bak')
+    conflict = EditError(409, t('편집하는 동안 다른 곳에서 이 파일이 바뀌었습니다'))
     error: OSError | None = None
+    swapped = False
     try:
         with open(tmp, 'xb') as fh:
             fh.write(data)
             fh.flush()
             os.fsync(fh.fileno())
+        # 임시 파일을 쓰고 잠긴 파일을 기다리는 사이에 다른 곳(Claude Code 등)이 쓴 글을 덮지 않게, 바꿔 끼우기 바로 앞에서 다시 본다.
+        # 처음에 한 번만 보면 그사이의 글이 바꿔 끼우기에 지워진다 (2026-11-08 동시 쓰기 시험에서 찾음)
         for attempt in range(5):   # Lectern 이나 다른 프로그램이 잠깐 읽는 중이면 바꿔 끼울 수 없다 — 조금 기다려 다시
+            if not force and _changed(path, expect):
+                raise conflict
             try:
-                _swap(tmp, path)
+                _swap(tmp, path, backup)
+                swapped = True
                 break
             except PermissionError:
                 time.sleep(0.05 * (attempt + 1))
         else:
+            if not force and _changed(path, expect):
+                raise conflict
             path.write_bytes(data)   # 그래도 안 되면 그 자리에 쓴다
+    except EditError:
+        _drop(tmp)
+        if backup is not None and backup.exists() and not _changed(backup, expect):
+            _drop(backup)   # 앞서 바꿔 끼우다 멈춰 남은 원래 파일 — 원문 그대로라 지켜 둘 것이 없다
+        raise
     except OSError as exc:
         error = exc
-    saved = _holds(path, data)
+    if swapped and backup is not None and _overwrote(path, data, backup, expect):
+        _drop(tmp)
+        raise conflict
+    # 바꿔 끼웠으면 저장된 것이다 — 바로 뒤에 다른 곳이 또 써서 지금 내용이 다르더라도
+    saved = swapped or _holds(path, data)
     if saved:
-        try:
-            tmp.unlink(missing_ok=True)
-        except OSError:
-            pass   # 지우지 못한 임시 파일 (점으로 시작해 목록에 나오지 않는다) — 저장은 됐다
+        _drop(tmp)   # 지우지 못해도 저장은 됐다
     elif tmp.exists():   # 저장하지 못했다 — 고친 내용은 임시 파일에 남겨 둔다
         reason = (error.strerror or str(error)) if error else '?'
         raise EditError(500, t('저장하지 못했습니다: {error}. 고친 내용은 {tmp} 에 남겨 두었습니다', error=reason, tmp=str(tmp)))

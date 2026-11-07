@@ -639,8 +639,9 @@ async function writeLines(tab, path, start, before, after) {
     try {
       return { ...await postJSON('/api/save', { p: tab.id, path, text: lines.join('\n'), hash: src.hash }), at };
     } catch (e) {
-      // 409: 받은 뒤 저장하기 전에 바뀌었다. status 없음: 연결이 잠깐 실패했다 (D81) — 둘 다 원문을 다시 받아 한 번 더
-      if ((e.status != null && e.status !== 409) || attempt) throw e;
+      // 409: 받은 뒤 저장하기 전에 바뀌었다. status 없음: 연결이 잠깐 실패했다 (D81) — 둘 다 원문을 다시 받아 두 번까지 더.
+      // Claude 가 잇달아 쓰는 동안은 409 가 거푸 올 수 있다 (서버는 바꿔 끼우기 바로 앞에서도 본다 — editing.save_source)
+      if ((e.status != null && e.status !== 409) || attempt >= 2) throw e;
     }
   }
 }
