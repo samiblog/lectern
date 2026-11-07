@@ -52,8 +52,8 @@ korean.DesktopIconTask=바탕화면에 바로가기 만들기
 english.DesktopIconTask=Create a desktop shortcut
 korean.ExtraTasks=추가 작업:
 english.ExtraTasks=Additional tasks:
-korean.AppComment=프로젝트 문서 뷰어 (Markdown·HTML)
-english.AppComment=Project document viewer (Markdown, HTML)
+korean.AppComment=Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경(Integrated Research Work Environment)
+english.AppComment=An Integrated Research Work Environment centred on Markdown, where you work together with AI
 korean.NoWebView2=이 PC에 Microsoft Edge WebView2 런타임이 없습니다. Lectern 창을 띄우려면 필요합니다.%n%n설치는 계속할 수 있습니다. 설치를 마친 뒤 Microsoft 사이트에서 "WebView2 Runtime"을 받아 설치해 주세요.
 english.NoWebView2=Microsoft Edge WebView2 Runtime is not installed on this PC. Lectern needs it to show its window.%n%nSetup can continue. After it finishes, download "WebView2 Runtime" from the Microsoft website and install it.
 
