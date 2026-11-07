@@ -175,6 +175,7 @@ This is the first screen when a folder opens. It shows recently changed document
 - The buttons at the top of the contents, such as 'Tables 2' or 'Code 5', hide that type from the contents; click again to show it.
 - The **Contents** button at the right end of the tab bar shows or hides the contents.
 - Drag the border between the document and the contents to resize the contents. Double-click it to reset.
+- **Moving sections**: in an md document you can edit, drag a heading in the contents onto another heading to move that section — with its body and subsections — in front of it. Drop on the lower half of the last heading to move it to the end. Levels stay the same; Ctrl+Z undoes it.
 
 ### Folding sections
 
@@ -226,7 +227,7 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 ### Print and PDF
 
-Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer. Slide decks print one slide per page.
+Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer. Slide decks print one slide per page. A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
 
 ## Writing and editing documents
 
@@ -312,6 +313,12 @@ On an empty line, press **/** to open the insert box. Type to filter. On a line 
 - **Links**: **Ctrl+K** picks a project file or takes an address. If text is selected, the link goes on that text.
 - **Attachments**: pick a project file and it is added with a number and a link to the `## Attachments` section at the end (before the notes), which is created if needed. The file is not copied.
 - **Appendix**: adds `## Appendix A. Title` with the next letter. It stays out of the body numbering.
+- **Cross-reference**: pick a table or figure caption, or a section, to insert a link like `[Table 3](#table-3)`. Clicking it jumps there. In the middle of a sentence, open it with **Ctrl+Shift+/**.
+- **Citation**: pick a source from the list under `## References` (or `## 참고문헌`) to insert `(Kim & Lee, 2024)`. The window shows how often each source is cited and how many are not cited yet. Ask Claude to format the list (APA and so on).
+- **Contents, list of tables, list of figures**: a `[TOC]` line draws a table of contents of the headings in its place (without the document title, three levels deep). The lists of tables and figures collect numbered captions. They are for printing and PDF; the contents on the right stays as it is.
+- **Page break**: shows as a dashed line with 'Page break' on screen and starts a new page when printed. Other viewers don't show it.
+
+**Caption numbers**: in a document whose table or figure captions are numbered 1, 2, 3… in order, adding, moving or deleting a table or figure renumbers them and fixes the cross-reference links to them. It is one save, so one Ctrl+Z undoes it. Plain text like 'Table 3' that is not a link may point to another document, so it is left as is and Lectern tells you how many there are — check them with Ctrl+F. A single caption number you changed by hand and chapter-style captions like 'Table 2-1' are left alone.
 - **Document info**: right-click the info at the top and choose **Edit document info**. Keys are locked and you edit the values.
 
 ### Formatting and pasting
@@ -372,6 +379,20 @@ For what line editing does not cover — reworking many places at once or editin
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
 - Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document above), and files are renamed from the sidebar (see Files above). It does not edit other files (PDF, Excel and so on).
+- With **vi keys** on in Settings, the editor works like vim too. Esc goes to Normal mode instead of closing the editor; `:w` saves, `:q` closes, `:wq` and `:x` save and close.
+
+### vi keys
+
+Turn on **vi keys** in Settings (Ctrl+,) to move and edit documents with letter keys. They are off by default; when on, `vi` shows in the status bar. The line states match vi's modes — the current line is Normal, picked lines are Visual (V), and a cell is Insert. The mouse and the usual keys keep working.
+
+- **Moving**: `j`·`k` line below / above, `gg`·`G` first / last line, `[[`·`]]` previous / next heading, `zz` center the current line. Type a number first to repeat (`3j`, `12G` goes to line 12).
+- **Folding and finding**: `zc`·`zo`·`za` fold / unfold / toggle the section, `zM`·`zR` fold / unfold all, `/` find, `n`·`N` next / previous, `:` go to line.
+- **Writing**: `i`·`a` open the cell (caret at the start / end of the line), `o`·`O` new line below / above. In a cell, **Esc** saves and leaves (with vi keys off, Esc cancels).
+- **Picking and changing**: `V` picks the current line and `j`·`k` extend it. On picked lines, `d` deletes, `y` copies the source, `>`·`<` change the level, `J` joins them into one line, `V` or Esc releases.
+- **In one go**: `dd` deletes the line, `yy` copies its source, `>>`·`<<` change its level — the same as picking it first. Lines you deleted or copied go back with `p`·`P` below / above the current line (they are kept inside the app, separate from the clipboard). `u` undoes; redo is Ctrl+Y.
+- Two-letter commands wait one second for the next letter; meanwhile the status bar shows `vi d…`.
+- Keys with Ctrl are not changed (Ctrl+D still duplicates a slide, Ctrl+F still finds). Page with PageUp and PageDown.
+- They work whether the keyboard is in Korean or English mode. In the full editor's vim, Normal-mode keys may type characters while Korean input is on, so switch to English there.
 
 ## Lectern slides
 
@@ -522,7 +543,7 @@ More examples are in `skills\README.md` in the program folder. The guide Claude 
 
 ### Samples
 
-`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). Go through them in this order.
+`slides/README.md` in the project opened by **Open samples** is the way in (`slides/README.en.md` in English). If you are new to slides, read the short guide `guide/09-Lectern-슬라이드.md` before it (in Korean) — how slides differ from md documents, and making, editing, presenting and converting on one page. Then go through them in this order.
 
 | Order | Folder | What |
 |---|---|---|
@@ -675,6 +696,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Resume where I left off | Opening a folder returns to the last document and position |
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
+| vi keys | Move and edit documents with letter keys, and use vim in the full editor (see 'vi keys' above). Off by default |
 | Show web images | Load https images in documents. When off, they show as links |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |

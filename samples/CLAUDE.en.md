@@ -17,6 +17,7 @@ People read this project's documents with **Lectern** (a Windows document viewer
 - Use callouts for emphasis: `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`.
 - Write code locations as `src/report.py:14` — clicking jumps to that line (not inside code blocks).
 - Link images and other documents with paths relative to the document. Section links are `doc.md#heading-text`.
+- Table captions go above the table as `Table 1. Title`, figure captions below the figure as `Figure 1. Title`. Refer to them in the text with links like `[Table 1](#table-1)` — when people add or move a table, Lectern renumbers the captions and fixes the links.
 - Diagrams are ```` ```mermaid ```` code blocks; charts are ```` ```vega-lite ````, ```` ```echarts ````, ```` ```plotly ```` or ```` ```dot ```` code blocks.
   - Settings are JSON values only — functions (`formatter: function…`) are not allowed.
   - Put data in the document, or point to a CSV/JSON file in the project with a path relative to the document (Vega-Lite `data.url`). Data and images at internet addresses are not read.

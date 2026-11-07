@@ -33,6 +33,8 @@
 - 편집 모드(D54)의 편집 상자(`.lec-editor`)는 칸 위를 덮는다 — 아래의 문서 화면은 그대로 다시 그려지므로 렌더러는 편집 중인지 몰라도 된다. 화면을 옮기는 새 길을 만들면 `navigate` 를 거쳐야 저장하지 않은 편집을 묻는다 (leave guard). 편집 상자 안의 키는 편집기 것이라, 새 앱 단축키를 편집 중에도 쓰게 하려면 `main.js` 의 `inEditor` 거르기에 넣는다. 저장은 `editing.save_source`(새 문서는 `create_source` — `/api/save` 의 `create`)만 — 다른 곳에서 파일에 쓰는 API 를 만들지 않는다.
 - 보내기(D63·D65)는 파일에 바로 쓰지 않는다 — 보내는 것은 `editor.js` 의 `insertIntoDoc` 이 그 문서를 편집 모드로 열어 편집기에 넣는 것까지, 저장은 사용자가. 받는 곳은 문서 탭에 열린 문서(`doctabs.openDocs`)와 새 문서뿐이다. 새 문서는 경로를 정할 때 `newdoc.createDoc` 이 만들고(새로 만들기도 같은 함수) 그 뒤로는 보통 문서다 — 편집 모드는 이미 있는 파일만 연다. 조각은 담는 순간의 원문(`data-lines` 범위)이라 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 담을 수 없다. 함께 갈 캡션·'자료:' 줄은 `toc.js` 의 `partExtent` 가 정한다 (구성 요소를 감싸는 상자를 새로 만들면 같이 본다). 경로·각주·제목을 다듬는 `snippet.js` 는 DOM 을 쓰지 않는다 — 새 링크 문법(차트의 데이터 키 등)을 더하면 `rebase` 에 넣을지 본다.
 - 편집하는 동안(D55) 아래의 읽는 화면은 편집기가 스크롤한다 (`editor.js` 의 `syncView` — 편집기를 움직일 때마다 다시 맞추므로, 아래 화면만 옮기는 기능은 편집 중에는 보이지 않는다). 문서 속 어느 곳으로 '가는' 새 기능(목차·모아 보기처럼)은 `toc.js` 의 `goToPart` 를 거치거나, 줄을 알면 `edit` 이벤트 {line} 를 보내야 편집 중에 편집기가 따라간다. 목차의 '지금 읽는 위치'는 편집 중이면 `pane.tocLimit` 를 쓴다. 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 위치 잇기에서 앞뒤 블록 사이로 어림잡힌다.
+- 캡션 번호와 그 참조 링크(D121)도 `commit` 의 `withNumbers` 가 맞춘다 — `replaceLines` 로 바로 저장하는 새 길은 제목 번호와 함께 캡션 번호도 어긋난다. 고치지 않은 '표 3' 글자의 알림(`noteCaptions`)은 저장이 된 뒤에만 띄운다.
+- vi 키(D122)는 글자 키를 기존 키의 `KeyboardEvent` 로 바꿔 같은 처리기에 다시 보낸다 — main.js 의 새 키 조건이 `isTrusted` 를 보면 vi 키로는 듣지 않는다. 브라우저의 기본 동작(PageDown 스크롤처럼)에 기대는 키는 다시 보내도 일어나지 않으니 번역하지 않는다. 전체 편집의 vim 키맵은 `extraKeys` 의 Esc 를 빼야 vim 이 받는다 (`editorKeys`).
 
 ## 데이터 보기·코드 화면·파일 목록
 
@@ -87,6 +89,7 @@
 - 수식의 `$` 규칙은 달러 표기(`$105/t`)를 보호하도록 pandoc 규칙을 따른다 (`markdown.js` 주석). 규칙을 넓히지 않는다.
 - html 문서는 `<iframe sandbox="allow-same-origin allow-modals">` 이다 (`allow-modals` 는 앱이 그 문서를 인쇄하려고). **`allow-scripts` 를 더하지 않는다** — 같은 출처라서 스크립트가 돌면 앱의 `/api/*`·토큰에 닿는다. 서버 CSP(`html_doc_policy`)도 함께 막는다.
 - iframe 안의 키·마우스 이벤트는 앱 문서로 올라오지 않는다. `htmldoc.js` 가 keydown·mouseup·mousedown 을 앱으로 넘기므로, 새 단축키는 `main.js` 에만 넣으면 html 문서에서도 된다. 문서 속 요소를 찾을 때는 `util.docRoot()`, 화면 좌표는 `util.screenRect()` 를 쓴다 (iframe 위치를 더함).
+- 문서 안 목차 줄(D121)은 markdown.js 의 `docMarks` 가 단락을 빈 `nav.lec-doctoc` html_block 으로 바꾸고, doc.js 의 `enhance` 맨 앞(`fillDocToc` — 링크를 잇는 `bindLink` 전)에서 채운다. `source_lines` 뒤에 돌아 줄 범위(`data-lines`)는 스스로 단다. 캡션 단락의 id(`표-3`)도 같은 자리에서 단다 — 같은 id 가 이미 있으면(같은 이름의 제목) 두지 않는다.
 
 ## 스타일·문구·예제
 

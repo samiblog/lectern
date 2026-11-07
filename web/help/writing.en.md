@@ -79,6 +79,9 @@ Lectern does not add a title line (such as 'Note' or 'Tip') to callouts — the 
 
 - Lists, numbered lists, checklists (`- [ ]`, `- [x]` — clicking a box switches the marker in the source and saves it).
 - Footnotes: `[^1]` in the text and `[^1]: note` anywhere; they gather at the end.
+- Refer to tables and figures with links: `[Table 3](#table-3)`, `[Figure 2](#figure-2)` (the caption paragraph is the target). When people add or move a table, Lectern renumbers the captions and fixes these links — plain text like 'Table 3' is not changed.
+- Put sources in a list under `## References` and cite them in the text as `(Author, year)`. People pick citations from that list.
+- A `[TOC]` line is a table of contents in the document (also `[List of Tables]`, `[List of Figures]`), and a page break is the line `<div style="page-break-after: always;"></div>` — both are for printing and PDF.
 - Code blocks: give the language (```` ```python ````) for colors and a copy button.
 - HTML fragments: `<details><summary>…</summary>…</details>` for folded content. `<script>`, `<style>`, `<form>` and event attributes (`onclick` and so on) are removed.
 
@@ -189,6 +192,7 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Don't skip heading levels (## → ###). Only numbers in table cells, units in the header.
 - Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
 - Code locations as `src/x.py:14`; links and images relative to the document.
+- Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer to them with `[Table 1](#table-1)`. A `[TOC]` line for contents; `<div style="page-break-after: always;"></div>` for a page break.
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
 - Lectern slides (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
