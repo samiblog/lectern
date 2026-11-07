@@ -1115,7 +1115,7 @@ export default {
 "이 장에 {n}건이 더 있습니다": "{n} more on this slide",
 "숨긴 장 — 발표와 PDF 에서 빠집니다": "Hidden slide — left out of the presentation and PDF",
 "PowerPoint 스킬": "PowerPoint skills",
-"pptx 와 Lectern 슬라이드를 오가는 Claude Code 스킬이 들어 있습니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서의 'PowerPoint 와 주고받기'에 있습니다": "Claude Code skills for moving between pptx and Lectern slides are included. Paste the request into Claude Code and it asks before installing. Example prompts are in 'Working with PowerPoint' in the manual",
+"pptx 와 Lectern 슬라이드를 오가는 Claude Code 스킬이 들어 있습니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'에 있습니다": "Claude Code skills for moving between pptx and Lectern slides are included. Paste the request into Claude Code and it asks before installing. Example prompts are in 'Asking Claude' in the 'Lectern slides' chapter of the manual",
 "스킬의 위치를 적은 요청 글 — Claude Code 에 붙여 넣습니다": "A request giving the location of the skills — paste it into Claude Code",
 "요청 글을 복사했습니다 — Claude Code 에 붙여 넣으세요": "Request copied — paste it into Claude Code",
 "Lectern 에 Claude Code 스킬 두 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 두 폴더를 ~/.claude/skills/ 로 복사해. 이미 있으면 바꿀지 다시 물어봐.": "Lectern includes two Claude Code skills: pptx-to-lectern and lectern-to-pptx in {dir}. First read README.md in that folder and tell me briefly what they do, then ask whether to install them as my personal skills. If I say yes, copy both folders to ~/.claude/skills/. If they already exist, ask again before replacing them.",
