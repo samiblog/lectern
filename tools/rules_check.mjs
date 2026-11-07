@@ -67,6 +67,28 @@ const notes = await load('web/js/notesdata.js');
   say('메모 글 표 점검', r.fails, r.n);
 }
 
+// 설명서·예제의 키 표기: 'Ctrl+`' 의 백틱이 코드 표시로 먹혀 'Ctrl+' 만 남지 않는지 (앱과 같은 Markdown 으로 그려 본다)
+{
+  const md = globalThis.window.markdownit({ html: true });
+  const docs = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(join(root, dir), { withFileTypes: true })) {
+      const rel = `${dir}/${entry.name}`;
+      if (entry.isDirectory()) walk(rel);
+      else if (entry.name.endsWith('.md')) docs.push(rel);
+    }
+  };
+  walk('samples');
+  walk('web/help');
+  docs.push('README.md');
+  const lost = [];
+  for (const rel of docs) {
+    const out = md.render(readFileSync(join(root, rel), 'utf-8'));
+    for (const m of out.matchAll(/(Ctrl|Shift|Alt)\+(?=<\/|<code|\)|\s|\||<br|$)/gm)) lost.push(`${rel}: …${out.slice(Math.max(0, m.index - 30), m.index + 40).replace(/\n/g, ' ')}`);
+  }
+  say('설명서·예제의 키 표기', lost, docs.length);
+}
+
 // 자료 모음: 파일마다 같은 이름의 .expect.json 에 적은 대로 읽히는지
 const corpus = join(root, 'tests/corpus');
 const files = existsSync(corpus) ? readdirSync(corpus).filter((f) => /\.(csv|tsv)$/i.test(f)) : [];

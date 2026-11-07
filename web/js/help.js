@@ -123,7 +123,7 @@ export const SHORTCUTS = [
     ['Esc', t('편집 닫기 (저장하지 않은 것이 있으면 물음)')],
   ]],
   [t('터미널'), [
-    ['Ctrl+`', t('오른쪽 터미널 열기·닫기 (닫아도 셸은 계속 돎)')],
+    ['Ctrl+`', t('오른쪽 터미널 열기·닫기 (` 는 숫자 1 왼쪽 키, 닫아도 셸은 계속 돎)')],
     ['F6 / Shift+F6', t('문서 ↔ 터미널로 초점 옮기기 (터미널 안에서도, 닫혀 있으면 열면서)')],
     ['Ctrl+Shift+`', t('터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)')],
     ['Ctrl+C', t('고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)')],
@@ -144,7 +144,7 @@ const keysHtml = (keys) => keys.split(' / ').map((combo) => `<span class="combo"
 /** 설명서의 '단축키' 장에 넣을 Markdown (묶음마다 표 하나) */
 function shortcutsMarkdown() {
   return SHORTCUTS.map(([group, rows]) => `### ${group}\n\n| ${t('키')} | ${t('하는 일')} |\n|---|---|\n`
-    + rows.map(([keys, what]) => `| ${keysHtml(keys)} | ${esc(what)} |`).join('\n')).join('\n\n');
+    + rows.map(([keys, what]) => `| ${keysHtml(keys)} | ${esc(what).replace(/`/g, '&#96;')} |`).join('\n')).join('\n\n');   // 백틱은 Markdown 이 코드로 읽지 않게
 }
 
 // ---- 단축키 표 ------------------------------------------------------------------

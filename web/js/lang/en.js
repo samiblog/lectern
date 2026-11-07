@@ -220,7 +220,7 @@ export default {
 "열기 (코드는 읽기 화면으로)": "Open (code opens in the code view)",
 "글자": "Letter",
 "그 글자로 시작하는 항목으로 (같은 글자를 거듭 치면 다음 항목)": "Jump to the item starting with that letter (repeat for the next one)",
-"오른쪽 터미널 열기·닫기 (닫아도 셸은 계속 돎)": "Open/close the right-hand terminal (the shell keeps running)",
+"오른쪽 터미널 열기·닫기 (` 는 숫자 1 왼쪽 키, 닫아도 셸은 계속 돎)": "Open/close the right-hand terminal (` is the key left of 1; the shell keeps running)",
 "터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)": "Open/close all terminals (there, Ctrl+Tab moves to the next pane)",
 "고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)": "Copy the selection (with nothing selected, stops the running command)",
 "붙여 넣기": "Paste",
