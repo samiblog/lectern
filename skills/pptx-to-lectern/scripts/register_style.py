@@ -48,7 +48,7 @@ def main(argv=None):
     if target.exists() and not args.force:
         return stop(f"'{args.name}' 스타일이 이미 있습니다. 바꿔도 되는지 사용자에게 물은 뒤 --force 를 주세요")
     forward = [*(['--active'] if args.active else []), *args.paths, '--name', args.name, *(['--pick', args.pick] if args.pick else []),
-               *(['--no-powerpoint'] if args.no_powerpoint else [])]
+               *(['--no-powerpoint'] if args.no_powerpoint else []), *(['--force'] if args.force else [])]
     code = reference.main(forward)
     if code:
         return code
