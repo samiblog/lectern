@@ -199,7 +199,7 @@ function onKey(e) {
 }
 
 /** 이름을 묻는다 (이 장을 템플릿으로 저장) */
-function askName({ resolve }) {
+function askName({ resolve, title = '' }) {
   const dialog = $('#lec-tplname');
   const input = $('#lec-tplname-input');
   const done = (name) => {
@@ -209,6 +209,7 @@ function askName({ resolve }) {
     resolve(name);
   };
   input.value = '';
+  $('#lec-tplname-title').textContent = title || t('이 장을 템플릿으로 저장');
   dialog.hidden = false;
   input.focus();
   input.onkeydown = (e) => {

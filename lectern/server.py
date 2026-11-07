@@ -18,7 +18,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal
+from . import __version__, editing, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -661,6 +661,27 @@ def create_app(state: AppState) -> Flask:
         except (OSError, NotADirectoryError, TooManyTabs) as exc:
             return jsonify(error=str(exc)), 400
         return jsonify(state.info() | {'opened': project.id})
+
+    # ---- md 문서 스타일 (D103): 설정 폴더의 md-styles ------------------------------------------
+
+    @app.get('/api/md-styles')
+    def api_md_styles() -> Any:
+        """내 스타일 목록"""
+        return jsonify(styles=mdstyles.list_styles(), dir=str(mdstyles.styles_dir()))
+
+    @app.post('/api/md-styles')
+    def api_md_style_save() -> Any:
+        """{name, kind, marks} — '이 문서를 스타일로 만들기'. 새 파일 하나만 만든다"""
+        data = body()
+        try:
+            return jsonify(style=mdstyles.save_style(data.get('name'), data.get('kind'), data.get('marks')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/md-styles/folder')
+    def api_md_styles_folder() -> Any:
+        """내 스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나)"""
+        return open_folder(mdstyles.styles_dir())
 
     # ---- pptx 전환 (D102): 설정 폴더의 pptx-styles ----------------------------------------------
 

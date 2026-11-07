@@ -407,10 +407,16 @@ function printDoc() {
   (frame ? frame.contentWindow : window).print();
 }
 
+/** md 문서 스타일을 쓸 수 있는 화면인지 (D103) — mdstyle.js 를 import 하면 순환이 생긴다 */
+function canStyle() {
+  const view = S.pane?.view;
+  return !!view?.dataset.docPath && isMd(view.dataset.docPath) && !view.classList.contains('lec-marp') && linesEditable();
+}
+
 function docItems(views = []) {
   /** @type {MenuItem[]} */
   const folds = hasFolds() ? [{ label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) }] : [];
-  return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [{ label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }], [...folds, ...views],
+  return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [...(canStyle() ? [{ label: t('md 문서 스타일…'), tip: t('문서 방식과 머리글 모양을 고릅니다'), action: () => emit('md-style') }] : []), { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }], [...folds, ...views],
     [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }]);
 }
 

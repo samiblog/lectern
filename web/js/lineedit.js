@@ -34,6 +34,8 @@ import {
 import {
   TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
 } from './slideops.js';
+import { applyScheme } from './headstyle.js';
+import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource,
@@ -862,6 +864,21 @@ async function resizeHere(dir) {
   toast(t('{kind} {n}pt — Ctrl+Z 로 되돌립니다', { kind: own ? t('이 칸') : TEXT_LABELS[kind], n: size }));
 }
 
+/** md 문서의 머리글 모양을 바꾼다 (D103 — 계산은 headstyle.js). then: 저장한 뒤 터미널에 넣을 요청 글 (Enter 없이) */
+async function restyle({ scheme, then = '' }) {
+  const pane = S.pane;
+  if (!litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const src = sourceLines();
+  const r = applyScheme(src, scheme, slugify);
+  if (r.changed) {
+    const shift = await commit(pane, pathIn(pane.view), src, r.lines);
+    if (shift == null) return;
+    toast(r.links ? t('머리글 {n}개와 이 문서의 절 링크 {links}개를 바꿨습니다 — Ctrl+Z 로 되돌립니다', { n: r.changed, links: r.links })
+      : t('머리글 {n}개를 바꿨습니다 — Ctrl+Z 로 되돌립니다', { n: r.changed }));
+  } else toast(t('바꿀 머리글이 없습니다'));
+  if (then) emit('term-paste', then);
+}
+
 /** 템플릿을 고르는 창을 띄운다 (slidegallery.js). 고른 템플릿, 아니면 null */
 const pickTemplate = (title, group) => new Promise((resolve) => { emit('pick-template', { title, resolve, group, start: 2 }); });
 
@@ -1144,6 +1161,7 @@ export function initLineEdit() {
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });
+  on('md-headings', (op) => { turn = turn.then(() => restyle(op)); });
   on('pane', () => {   // 다른 탭을 고르면 고친 것은 저장하고 끝낸다
     if (session && session.pane !== S.pane) finish(true);
   });

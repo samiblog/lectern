@@ -195,6 +195,9 @@ flowchart LR
 | `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 묶음 (D101) `{groups:[{name, own, templates:[{number, name, text}]}], dir}`. 기본 묶음 다음에 사용자의 것 |
 | `POST /api/slide-templates` | `{name, text}` | '내 템플릿' 묶음에 장 하나를 더한다. `{template:{group, number, name}}`. 같은 이름이면 409 |
 | `POST /api/slide-templates/folder` | `{}` | 템플릿 폴더를 Lectern 탭으로 연다 (없으면 만든다). `/api/state` 와 `opened` |
+| `GET /api/md-styles` | | md 문서의 내 스타일 (D103) `{styles:[{name, kind, marks}], dir}` |
+| `POST /api/md-styles` | `{name, kind, marks}` | 설정 폴더 md-styles 에 새 파일 하나. `{style}`. 같은 이름이면 409 |
+| `POST /api/md-styles/folder` | `{}` | 내 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/pptx-styles` | `?p=&path=` | pptx 스타일 (D102) `{styles:[{name, colors, previews}], dir, default, memory:{style, group, original}, out, readonly}` |
 | `GET /pptxstyle/<파일>` | | 스타일의 미리보기 그림 (`이름-1.png`, 토큰 없이 — `<img>`) |
 | `POST /api/pptx-styles/folder` | `{}` | 보관소 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |

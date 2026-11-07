@@ -133,6 +133,18 @@ Rules:
 ```
 ~~~~
 
+## md document style
+
+When asked to make an md document style, write one `name.json` file to `md-styles` in the Lectern settings folder (`%APPDATA%\\Lectern\\md-styles`). Never overwrite a file. All of Lectern shares it.
+
+```json
+{"kind": "prose", "marks": ["제{1}장", "제{1}절", "{1}.", "{가}.", "{1})", "{가})"]}
+```
+
+- `kind` is `prose` or `outline`.
+- `marks` has one form per heading level, up to six, up to 16 characters each. The first is the level below the document title. Use an empty string for a level without a number.
+- Forms: `{1}` number, `{I}` Roman, `{가}` Korean letter, `{①}` circled number, `{path}` 1.1.1. Anything else is written as it is.
+
 ## 5. Lectern slides
 
 Markdown with `marp: true` in the front matter shows as **slides** — Lectern's presentation format, which starts from Marp. Cells (`::: a card`) and layouts (`<!-- layout: quad -->`) give each slide its own arrangement. People edit the text on a slide line by line.

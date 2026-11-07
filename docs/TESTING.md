@@ -114,6 +114,12 @@ python app.py %TEMP%\lec-check
 | 27m | 창 모드에서 차트·체크리스트·frontmatter 가 있는 실제 프로젝트의 모아 보기 → 차트·할 일·링크·출처, '문서 정보' → status 등 | 차트가 작은 그림으로 그려짐(처음 몇 초), 안 한 할 일부터, 이름을 바꾼 문서를 가리키던 링크에 '깨짐', 문서 정보는 키마다 값으로 묶임 (D62) |
 | 28 | PowerShell 7 이 있으면 설정 파일에 `"terminal_shell": "C:\\Program Files\\PowerShell\\7\\pwsh.exe"` → 터미널 머리줄의 ↻ | 'PowerShell 7' 셸이 뜸. 없는 경로·이름만 적으면 기본 PowerShell |
 
+### md 문서 스타일 점검
+| # | 할 일 | 기대 결과 |
+|---|---|---|
+| M1 | 내 문서에서 상태줄의 **md 문서 스타일**로 같은 방식의 머리글 모양을 고른다 | 묻지 않고 md 파일의 제목 줄이 바뀐다. Ctrl+Z 로 돌아온다 |
+| M2 | 문서 방식을 바꾸고 **머리글을 바꾸고 본문은 Claude 에게 요청**을 고른다 | 터미널에 요청 글이 들어가고 Enter 는 눌리지 않는다 |
+
 ### PowerPoint 스킬 점검
 PowerPoint 와 Claude Code 가 있는 PC 에서. 시험용 발표를 쓴다 (받은 pptx 는 저장소에 넣지 않는다).
 

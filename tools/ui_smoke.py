@@ -2769,8 +2769,8 @@ def run(headed: bool) -> None:
             guide_prompt = page.evaluate('navigator.clipboard.readText()')
             page.click('#lec-settings-close')
 
-            print('[슬라이드]')   # D59 — marp: true 인 Lectern 슬라이드 (예제의 guide/08-발표.md)
-            page.locator('#lec-tree .row.file[data-doc="guide/08-발표.md"]').click(modifiers=['Alt'])
+            print('[슬라이드]')   # D59 — marp: true 인 Lectern 슬라이드 (예제의 slides/기초/01-처음-보기.md)
+            page.evaluate("import('/static/js/store.js').then(({ emit }) => emit('open', { type: 'doc', path: 'slides/기초/01-처음-보기.md', force: true }))")
             deck_ok = wait_until(page, '''(() => { const v = document.querySelector('#lec-view');
               return v.classList.contains('lec-deck') && v.querySelector('pre.mermaid.mermaid-ok') && v.querySelector('pre.lec-chart.chart-ok'); })()''', 30000)
             page.wait_for_timeout(500)

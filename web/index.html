@@ -312,6 +312,7 @@
     <button id="lec-st-edit" class="st-edit" title="여기서 고치기 — 편집 모드 (Ctrl+E)" hidden><svg aria-hidden="true"><use href="#i-edit"/></svg>편집</button>
     <button id="lec-st-slides" class="st-edit" hidden><svg aria-hidden="true"><use href="#i-slides"/></svg><span>문서로 보기</span></button>
     <button id="lec-st-present" class="st-edit" title="발표 — 창 전체에 한 장씩 (Shift+F5)" hidden><svg aria-hidden="true"><use href="#i-play"/></svg>발표</button>
+    <button id="lec-st-mdstyle" class="st-edit" title="문서 방식과 머리글 모양을 고릅니다" hidden><svg aria-hidden="true"><use href="#i-edit"/></svg>md 문서 스타일</button>
     <button id="lec-st-pptx" class="st-edit" title="pptx 스타일을 골라 pptx 파일을 만듭니다" hidden><svg aria-hidden="true"><use href="#i-slides"/></svg>pptx 로 전환</button>
     <button id="lec-st-structure" class="st-edit" title="칸·배치의 숨은 줄을 꼬리표로 보기 — 꼬리표에서 F2 로 고칩니다" hidden><svg aria-hidden="true"><use href="#i-slide"/></svg><span>구조 보기</span></button>
     <button id="lec-st-check" class="st-edit st-check" title="넘치거나 잘못 쓴 곳 — 눌러서 목록 보기" hidden><svg aria-hidden="true"><use href="#i-box"/></svg><span></span></button>
@@ -460,8 +461,26 @@
 <div id="lec-tplname" class="overlay" hidden>
   <div class="palette-box insert-box" role="dialog" aria-labelledby="lec-tplname-title">
     <div id="lec-tplname-title" class="insert-title">이 장을 템플릿으로 저장</div>
-    <input id="lec-tplname-input" type="text" spellcheck="false" autocomplete="off" aria-label="템플릿 이름" placeholder="템플릿 이름">
+    <input id="lec-tplname-input" type="text" spellcheck="false" autocomplete="off" aria-label="이름" placeholder="이름">
     <p class="insert-msg rename-keys">Enter 저장 · Esc 취소</p>
+  </div>
+</div>
+<!-- md 문서 스타일 (mdstyle.js, D103) -->
+<div id="lec-mdstyle" class="overlay" hidden>
+  <div class="palette-box insert-box mdstyle-box" role="dialog" aria-labelledby="lec-mdstyle-title">
+    <div class="gallery-head"><span id="lec-mdstyle-title">md 문서 스타일</span><span class="gallery-keys">md 파일의 머리글이 바뀝니다</span><span class="tb-spacer"></span><input id="lec-mdstyle-find" type="text" spellcheck="false" autocomplete="off" placeholder="스타일 찾기" aria-label="스타일 찾기"></div>
+    <div id="lec-mdstyle-form">
+      <div class="mdstyle-kinds"><span>문서 방식</span><button id="lec-mdstyle-prose" type="button">서술식</button><button id="lec-mdstyle-outline" type="button">개조식</button></div>
+      <div class="mdstyle-body">
+        <ul id="lec-mdstyle-list" role="listbox" aria-labelledby="lec-mdstyle-title"></ul>
+        <ul id="lec-mdstyle-preview" aria-label="미리보기"></ul>
+      </div>
+      <div class="gallery-foot"><button id="lec-mdstyle-save" type="button" title="이 문서의 머리글 번호 모양을 Lectern 전체에서 쓰는 스타일로 저장합니다">이 문서를 스타일로 만들기</button><button id="lec-mdstyle-request" type="button" title="번호 모양이 복잡하면 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 스타일 요청</button><button id="lec-mdstyle-folder" type="button">스타일 폴더 열기</button><span class="tb-spacer"></span><button id="lec-mdstyle-cancel" type="button">취소</button><button id="lec-mdstyle-go" type="button" class="primary">적용</button></div>
+    </div>
+    <div id="lec-mdstyle-ask" hidden>
+      <p id="lec-mdstyle-question" class="insert-msg"></p>
+      <div class="gallery-foot"><button id="lec-mdstyle-claude" type="button" class="primary" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">머리글을 바꾸고 본문은 Claude 에게 요청</button><button id="lec-mdstyle-heads" type="button">머리글만 바꾸기 (본문은 그대로)</button><span class="tb-spacer"></span><button id="lec-mdstyle-no" type="button">취소</button></div>
+    </div>
   </div>
 </div>
 <!-- pptx 로 전환 (pptxdialog.js, D102) -->

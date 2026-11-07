@@ -282,6 +282,34 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 - It is created only in a folder that already exists and only if the name is free. If it cannot be created, the reason is shown — fix the path and press Enter again. Esc closes the box.
 - The file stays even if you close it without saving (Lectern never deletes files — delete it in File Explorer if you do not need it).
 
+### md document style
+
+Open it from **md document style** in the status bar or the right-click menu. Pick a **document type** and a **heading shape**.
+
+- The **document type** is how the body is written: prose in sentences, outline in short items. The current type is read from the body.
+- The **heading shape** is the numbers and symbols. A preview appears, and applying it really changes the heading lines in the md file.
+
+| Type | Heading shape | Level 1 | Level 2 | Level 3 |
+|---|---|---|---|---|
+| Prose | No numbers (articles, columns) | Overview | Market | Prices |
+| Prose | Paper (humanities, social science) | Ⅰ. Overview | 1. Market | 1) Prices |
+| Prose | Numbers (science papers, technical docs) | 1. Overview | 1.1 Market | 1.1.1 Prices |
+| Prose | Chapters (theses, books) | 제1장 Overview | 제1절 Market | 1. Prices |
+| Prose | Rules (regulations, guidelines) | 제1장 Overview | 제1조 Market | ① Prices |
+| Outline | Report (reports) | Ⅰ. Overview | 1. Market | 가. Prices |
+| Outline | Numbers (plans) | 1. Overview | 1.1 Market | 1.1.1 Prices |
+| Outline | Symbols (official notices, summaries) | □ Overview | ○ Market | - Prices |
+| Outline | No numbers (minutes, memos) | Overview | Market | Prices |
+
+- Heading shapes within a type change straight away. Ctrl+Z undoes it.
+- **Changing the document type always asks first**, because Lectern changes the headings but the body takes judgment. **Headings, and ask Claude about the body** puts a request in the terminal and you press Enter yourself. **Headings only** leaves the body as it is, so the type does not change.
+- The document title (a single `#`) gets no number. Body text and code blocks stay as they are.
+- Existing numbers are removed and counted again. A number in a title like `2026 outlook` is not treated as numbering.
+- Section links inside this document are updated too. Links from other documents to this section stay as they are.
+- **Make a style from this document:** In a document with numbered headings, this saves the numbering as **My styles**, under the type you are looking at (prose or outline), shared by all of Lectern. The files are in `%APPDATA%\Lectern\md-styles`; **Open styles folder** opens it so you can delete them.
+- If the numbering is too complex to pick up, use **Ask Claude for a style**. A request goes into the terminal; add a name and press Enter, and Claude makes it from the document.
+- With many styles, type a name, a use (`paper`) or a number form in the search box. Styles you used lately come first.
+
 ## Lectern slides
 
 Lectern tells three things apart.

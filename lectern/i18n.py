@@ -59,6 +59,10 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    '스타일 이름이나 머리글 모양이 올바르지 않습니다': 'The style name or heading shape is not valid',
+    '스타일 이름은 {n}자까지입니다 — 점으로 시작하거나 끝나면 안 되고 : * ? " < > | / \\ 를 쓸 수 없습니다': 'A style name is at most {n} characters, cannot start or end with a dot, and cannot use : * ? " < > | / \\',
+    '같은 이름의 스타일이 있습니다 — 다른 이름으로 저장하세요': 'A style with this name exists — save under another name',
+    '스타일을 저장하지 못했습니다: {why}': 'Could not save the style: {why}',
     '{n}번 장': 'Slide {n}',
     '내 템플릿': 'My templates',
     '{name} 이 링크라서 쓰지 않습니다': '{name} is a link, so it is not written',

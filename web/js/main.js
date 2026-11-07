@@ -43,6 +43,7 @@ import { initBasket, closeInsert, askNewDoc } from './basket.js';
 import { initRename, closeRename } from './rename.js';
 import { initGallery, closeGallery } from './slidegallery.js';
 import { initPptx, closePptx } from './pptxdialog.js';
+import { initMdStyle, closeMdStyle } from './mdstyle.js';
 import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab, moveToWindow } from './doctabs.js';
 import { solo } from './solo.js';
 import { initNotes, toggleNotes, closeNotes } from './notes.js';
@@ -334,7 +335,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closeInsert() || closeRename() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || stopSpotlight()) e.preventDefault();
     }
   });
@@ -414,6 +415,7 @@ async function boot() {
   initRename();
   initGallery();
   initPptx();
+  initMdStyle();
   initSlides();
   initSlideTools();
   initPresent();

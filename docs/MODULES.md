@@ -64,6 +64,8 @@
 | slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록) |
 | slidegallery.js | 템플릿 갤러리 (D101) — 새로 만들기·새 장·템플릿 바꾸기가 쓰는 창. 템플릿을 실제 렌더러로 그려 미리 보여 주고 번호로도 고른다. 이벤트 `pick-template`·`ask-template-name` 으로 받는다 (import 순환을 피해서) |
 | pptxdialog.js | pptx 로 전환 (D102) — 상태줄 버튼, pptx 스타일 고르기, `/api/pptx-export` 로 문서 옆에 새 pptx 를 만든다 |
+| headstyle.js | md 문서 스타일의 계산 (D103) — 머리글을 읽고, 지금 모양을 알아보고, 번호를 뗐다 붙인다. 절 링크도 함께. DOM 없음 |
+| mdstyle.js | md 문서 스타일 창 (D103) — 상태줄 버튼, 미리보기, 서술식과 개조식을 오갈 때 묻기. 저장은 lineedit 의 `md-headings` |
 | slides.js | Lectern 슬라이드 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide`), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |
 | present.js | 발표 모드 (D59) — `#lec-present` 에 슬라이드를 복제해 창 전체에, 넘기기·N 노트·F 전체 화면·Esc (키는 main.js 가 맨 먼저 `presentKey` 로) |
 | tabledata.js | 표 읽기 (D86, DOM 없음) — 구분자 어림(`delimiterOf`)·RFC 4180 읽기(`parseCsv`)·숫자(`numberOf`)·값 없는 칸(`isMissing`)·시점(`parseTime`)·주기(`frequencyOf`)·시간 열(`findTimeColumn`)·단위(`unitInfo`)·표 → 계열(`readTable`)·표 영역(`findRegions`·`reshapeRegion`·`regionOfLines`)·계산 열(`calcValues`) |

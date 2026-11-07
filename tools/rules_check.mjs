@@ -43,6 +43,10 @@ const notes = await load('web/js/notesdata.js');
   say('슬라이드 줄 구조 임의의 편집', r.problems, r.runs);
 }
 {
+  const r = cases('tools/edges/headstyle_cases.js', await load('web/js/headstyle.js'));
+  say('md 문서 스타일 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
 }

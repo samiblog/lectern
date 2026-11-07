@@ -36,6 +36,7 @@ DEFAULTS: dict[str, Any] = {
     'theme': 'auto',         # auto 또는 스타일 id (web/js/theme.js 의 THEMES). 고른 스타일이 다음 실행의 기본
     'slide_theme': 'deck',   # 슬라이드 창의 스타일 (D96 — 메인 창과 따로)
     'pptx_style': '',        # 기본 pptx 스타일 (D102 — 설정 폴더 pptx-styles 의 파일 이름)
+    'recent_md_styles': [],  # 최근 쓴 md 문서 스타일 (최신순 — D103)
     'recent_templates': [],  # 갤러리의 최근 쓴 템플릿 ('묶음\t이름', 최신순 — D101)
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'doc_width': 1.0,        # md 문서 본문의 폭 배율 (툴바의 문서 폭 버튼, 0.8~2, 10 = 가득 — D68)
@@ -80,7 +81,7 @@ DEFAULTS: dict[str, Any] = {
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
-CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
