@@ -62,7 +62,7 @@ exe = EXE(
     console=False,                   # 창 앱 (콘솔 없음)
     upx=False,                       # 백신 오탐을 줄이기 위해 압축하지 않음
     icon=str(ROOT / 'assets' / 'lectern.ico'),   # 바꾸려면 assets/lectern.svg 를 고치고 tools/make_icon.py
-    version=version_of('Lectern 문서 뷰어', 'Lectern'),
+    version=version_of('Lectern 통합 리서치 작업 환경', 'Lectern'),   # 작업 관리자·'연결 프로그램' 에 보이는 이름 — 짧게
 )
 
 # 스킬 실행기 (D99). 돌리는 스크립트는 설치된 스킬 폴더의 것이니 코드는 빼고, 쓰는 모듈만 남긴다
