@@ -174,4 +174,9 @@ EN: dict[str, str] = {
     '그림 {n}': 'image {n}',
     '그림을 저장하지 못했습니다: {error}': 'Could not save the image: {error}',
     '그림 폴더가 가득 찼습니다 — 다른 이름의 문서로 옮기세요': 'The image folder is full — move this to a document with another name.',
+    '제외 폴더 안에는 폴더를 만들지 않습니다': 'Folders are not created inside an excluded folder.',
+    '폴더가 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다': 'The folder is not there — it was deleted or renamed in the meantime.',
+    '{name} 은 제외 폴더 이름이라 목록에 나오지 않습니다 — 다른 이름을 쓰세요': '{name} is an excluded folder name and would not be listed — use another name.',
+    '같은 이름이 있습니다 — 다른 이름을 쓰세요': 'That name is taken — use another one.',
+    '폴더를 만들지 못했습니다: {error}': 'Could not create the folder: {error}',
 }

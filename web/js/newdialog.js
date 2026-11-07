@@ -1,23 +1,56 @@
-// 새 문서 만들기 (D105): 제목과 스타일을 정해 선택된 폴더에 새 문서를 만들고, md 문서 화면에서 바로 쓰게 한다 (편집 모드로 가지 않는다).
+// 새 문서 만들기 (D105): 제목과 스타일을 정해 고른 폴더에 새 문서를 만들고, md 문서 화면에서 바로 쓰게 한다 (편집 모드로 가지 않는다).
+// 위치는 고를 수 있다 — 프로젝트 맨 위, 비어 있는 폴더, 새 폴더 (D114). 비어 있는 폴더는 트리에 나오지 않으므로 서버에서 받는다.
 // 여는 곳: 사이드바 '문서' 머리줄의 만들기, Ctrl+N, 문서 탭 줄의 +, 우클릭 '새 문서 만들기…'(폴더·문서·트리의 빈 곳).
 // 제목의 처음 값은 '새 문서'(있으면 번호를 붙여), 스타일의 처음 값은 가장 최근에 쓴 것이다. 제목이 파일 이름이 된다.
 // 번호가 있는 스타일은 보기 머리글 두 줄을 넣는다 — 번호가 문서에 있어야 뒤에 더한 제목의 번호를 맞출 수 있다 (D107).
 // Lectern 슬라이드를 고르면 만들기 다음에 첫 장의 템플릿 갤러리가 뜬다 (D101).
 
 import { S, on, emit } from './store.js';
-import { getJSON, saveConfig } from './api.js';
+import { getJSON, postJSON, saveConfig } from './api.js';
 import { $, toast, basename, blockedReadOnly } from './util.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
 import { preview, setOwnStyles } from './headstyle.js';
 import { styleGroups } from './mdstyle.js';
 import { newDocGuess, cleanPath, createDoc, openCreated } from './newdoc.js';
+import { askText } from './putmenu.js';
 
-let asked = null;   // {tab, dir, deck, mine, items, sel}
+let asked = null;   // {tab, deck, mine, items, sel}
 
 const box = () => $('#lec-newdoc');
 const title = () => $('#lec-newdoc-title');
 const list = () => $('#lec-newdoc-list');
+const where = () => $('#lec-newdoc-folder');
+
+/** 위치 목록을 채운다 — 맨 앞은 프로젝트 맨 위 */
+function drawFolders(folders, chosen) {
+  setHtml(where(), ['', ...folders].map((f) => html`<option value="${f}">${f ? `${f}/` : t('프로젝트 맨 위')}</option>`));
+  where().value = chosen;
+}
+
+/** 다음 '새 문서' 이름 — 고른 폴더 기준 */
+const guessTitle = (dir) => basename(newDocGuess(dir)).replace(/\.md$/, '');
+
+/** 폴더들을 받는다. 못 받으면 트리가 아는 폴더로 */
+async function foldersOf(tab) {
+  try {
+    return (await getJSON(`/api/folders?p=${encodeURIComponent(tab.id)}`)).folders;
+  } catch {
+    return [...S.dirs].filter(Boolean);
+  }
+}
+
+/** 폴더 하나를 만든다 — 이름을 묻는다. 만든 경로, 그만두면 null */
+async function makeFolder(tab, parent, at) {
+  const name = await askText({ title: t('새 폴더 — {where}', { where: parent ? `${parent}/` : t('프로젝트 맨 위') }), at, placeholder: t('폴더 이름') });
+  if (!name?.trim()) return null;
+  try {
+    return (await postJSON('/api/new-folder', { p: tab.id, parent, name })).path;
+  } catch (e) {
+    toast(e.message, 'error');
+    return null;
+  }
+}
 
 /** 제목 → 파일 이름 (확장자 없이). Windows 가 받지 않는 글자는 빈칸으로 */
 export function fileName(text) {
@@ -73,14 +106,15 @@ export async function askNewDocument(dir = null) {
   if (blockedReadOnly(tab) || asked) return;
   const guess = newDocGuess(dir);
   const folder = guess.includes('/') ? guess.slice(0, guess.lastIndexOf('/')) : '';
+  const folders = await foldersOf(tab);
   let mine = [];
   try {
     mine = (await getJSON('/api/md-styles')).styles;
     setOwnStyles(mine);
   } catch { /* 내 스타일 없이 — 기본 스타일로 만들 수 있다 */ }
   if (S.tab !== tab || asked) return;
-  asked = { tab, dir: folder, deck: false, mine, items: [], sel: 0 };
-  $('#lec-newdoc-where').textContent = t('위치: {where}', { where: folder ? `${folder}/` : t('프로젝트 맨 위') });
+  asked = { tab, deck: false, mine, items: [], sel: 0 };
+  drawFolders(folders.includes(folder) || !folder ? folders : [...folders, folder], folder);
   title().value = basename(guess).replace(/\.md$/, '');
   setMsg('');
   draw();
@@ -101,7 +135,8 @@ export function closeNewDocument() {
 
 async function submit() {
   if (!asked) return;
-  const { dir, deck } = asked;
+  const { deck } = asked;
+  const dir = where().value;
   const text = title().value.trim();
   const name = fileName(text);
   if (!name) {
@@ -132,8 +167,8 @@ async function submit() {
 }
 
 function onKey(e) {
-  if (e.isComposing || e.keyCode === 229) return;   // 한글 조합 중
-  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !asked.deck) {
+  if (e.isComposing || e.keyCode === 229 || !asked) return;   // 한글 조합 중
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && !asked.deck && e.target !== where()) {
     e.preventDefault();
     const n = asked.items.length;
     if (n) pick((asked.sel + (e.key === 'ArrowDown' ? 1 : -1) + n) % n);
@@ -154,8 +189,40 @@ function setDeck(deck) {
   title().focus();
 }
 
+/** 우클릭 '새 폴더 만들기…': 폴더를 만들고 그 폴더의 새 문서 창을 연다 — 빈 폴더는 트리에 나오지 않는다 */
+async function newFolderAt(dir) {
+  const tab = S.tab;
+  if (!tab || blockedReadOnly(tab)) return;
+  const made = await makeFolder(tab, dir, { x: Math.max(8, innerWidth / 2 - 150), y: 140 });
+  if (!made || S.tab !== tab) return;
+  toast(t('폴더를 만들었습니다: {path}', { path: made }));
+  askNewDocument(made);
+}
+
+/** 창의 새 폴더: 고른 위치 안에 만들고 그 폴더를 고른다 */
+async function folderInDialog() {
+  const { tab } = asked;
+  const parent = where().value;
+  const made = await makeFolder(tab, parent, $('#lec-newdoc-mkdir'));
+  if (!asked) return;
+  if (made) {
+    drawFolders(await foldersOf(tab), made);
+    if (where().value !== made) drawFolders([...[...where().options].map((o) => o.value).filter(Boolean), made], made);
+    title().value = guessTitle(made);
+  }
+  title().focus();
+  title().select();
+}
+
 export function initNewDialog() {
   on('new-doc', ({ dir = null }) => askNewDocument(dir));   // 우클릭·문서 탭 줄의 + (tree·others·tabs·palette)
+  on('new-folder', ({ dir = '' }) => newFolderAt(dir));   // 우클릭 '새 폴더 만들기…' (tree·others·tabs)
+  where().addEventListener('change', () => {
+    title().value = guessTitle(where().value);
+    title().focus();
+    title().select();
+  });
+  $('#lec-newdoc-mkdir').addEventListener('click', folderInDialog);
   on('tab', closeNewDocument);   // 다른 프로젝트 탭으로 — 만들 폴더는 그 탭의 것
   box().addEventListener('keydown', onKey);
   box().addEventListener('mousedown', (e) => { if (e.target === box()) closeNewDocument(); });

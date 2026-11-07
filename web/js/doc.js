@@ -7,7 +7,7 @@ import { renderMarkdown, splitFrontMatter } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { renderCharts } from './charts.js';
 import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides.js';
-import { setToc } from './toc.js';
+import { setToc, SOURCE } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { fitTables } from './tablefit.js';
 import { setDocSource, sameSource } from './docmenu.js';
@@ -319,6 +319,7 @@ export function prepareParts(root) {
   decorateAlerts(root);
   decorateTables(root);
   decorateCode(root);
+  decorateSources(root);
 }
 
 /** 그림(img, data-src 에 문서 속 주소)을 docPath 문서 기준으로 불러온다 — 프로젝트 밖은 막고, 인터넷 그림은 설정을 따른다 */
@@ -407,10 +408,22 @@ function decorateCode(root) {
 }
 
 /** 박스글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
+/** 표·그림 바로 아래의 자료·주 줄은 작게 (D109) — 본문의 글이 아니라 그 표·그림에 딸린 줄이다 */
+function decorateSources(root) {
+  if (root.classList.contains('lec-deck')) return;
+  for (const p of root.querySelectorAll(':scope > p')) {
+    const prev = p.previousElementSibling;
+    if (!prev || !SOURCE.test(p.textContent)) continue;
+    if (prev.matches('.table-wrap, table, figure, pre.lec-chart, pre.mermaid, .lec-source') || prev.querySelector?.(':scope > img')) p.classList.add('lec-source');
+    else if (prev.tagName === 'P' && prev.previousElementSibling?.querySelector?.(':scope > img')) p.classList.add('lec-source');   // 그림, 캡션, 자료 차례
+  }
+}
+
 export function decorateBlocks(root) {
   decorateAlerts(root);
   decorateTables(root);
   decorateCode(root);
+  decorateSources(root);
 }
 
 function frontMatterHtml(raw) {
@@ -440,6 +453,7 @@ function enhance(root, docPath, stamp, tab) {
   decorateAlerts(root);
   decorateTables(root);
   decorateCode(root);
+  decorateSources(root);
 }
 
 // ---------------------------------------------------------------------------

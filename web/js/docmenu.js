@@ -15,7 +15,7 @@ import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, stopSpotlight, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
-import { linesEditable, lineMenuItems } from './lineedit.js';
+import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
 import { openExternal } from './api.js';
 import { isCode, isViewable } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
@@ -267,6 +267,7 @@ function litMenu(hl, selected, blockMenu, own = []) {
   const takes = hl.code ? [noteItem(text, hl.path, range)] : takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) });
   /** @type {MenuItem[]} */
   const edits = !hl.chapter && linesEditable() && litOneLine() ? [{ label: t('여기서 편집'), hint: 'F2', action: () => editHere() }] : [];
+  if (!hl.chapter && linesEditable()) edits.push(...pickedItems());
   /** @type {MenuItem[]} */
   const views = [];
   if (blockMenu) views.push({ label: hl.code ? t('이 줄의 메뉴…') : t('이 블록의 메뉴…'), tip: t('하이라이트 밖에서 우클릭할 때의 메뉴'), action: blockMenu });   // ui.js 가 메뉴를 닫은 뒤에 연다

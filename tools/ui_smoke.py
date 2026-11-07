@@ -3100,7 +3100,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-menu:not([hidden])')
             page.locator('#lec-menu button[data-i]', has_text='새 문서 만들기').click()
             page.wait_for_selector('#lec-newdoc:not([hidden])')
-            guess = [page.input_value('#lec-newdoc-title'), page.text_content('#lec-newdoc-where')]
+            guess = [page.input_value('#lec-newdoc-title'), page.input_value('#lec-newdoc-folder')]
             page.keyboard.type('메모')   # 제목을 골라 두었다 — 바로 고쳐 쓴다
             page.keyboard.press('Enter')
             memo = tables / 'data' / '메모.md'
@@ -3129,7 +3129,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-palette:not([hidden]) #lec-palette-list li[data-i]')
             plain_palette = page.locator('#lec-palette-list li.new-doc').count() == 0
             page.keyboard.press('Escape')
-            check(guess == ['새 문서', '위치: data/'] and on_memo and memo_text == '# 메모\n\n' and focused and in_tree
+            check(guess == ['새 문서', 'data'] and on_memo and memo_text == '# 메모\n\n' and focused and in_tree
                   and ctrl_n == ['새 문서 만들기', '새 문서'] and dup and closed_pick and first_new and plus_pick and plain_palette,
                   f"새로 만들기: 폴더 우클릭 '이 폴더에 새 문서…'(이름 부분을 골라 둠) → 바로 '# 메모'로 만들어 새 문서 탭에서 편집(커서는 제목 아래), 트리에 나옴. Ctrl+N, 같은 이름은 만들지 않음, 문서 탭 줄의 + 맨 위 '새 문서 만들기…' ({guess}, {memo_text!r}, {focused}, {in_tree}, {ctrl_n}, {dup}, {first_new}, {plus_pick}, {plain_palette})")
             page.click('.side-tabs button[data-tab="files"]')

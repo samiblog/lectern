@@ -349,6 +349,7 @@ function tabMenu(tab) {
   const items = menuGroups([{ header: tab.root }],
     [{ label: t('프로젝트 개요'), action: there(openOverview) },
       { label: t('새 문서 만들기…'), action: there(() => emit('new-doc', { dir: '' })) },
+      { label: t('새 폴더 만들기…'), action: there(() => emit('new-folder', { dir: '' })) },
       { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) }],
     [{ label: t('전체 경로 복사'), action: () => copy(tab.root) }, { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) }],
     closes);

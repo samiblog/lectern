@@ -1145,7 +1145,6 @@ export default {
 "휴지통으로 보냈습니다: {name} — 휴지통에서 되살립니다": "Sent to the Recycle Bin: {name} — restore it from there",
 "휴지통으로 보냅니다. 휴지통에서 되살릴 수 있습니다. 다른 문서 속 이 문서의 링크는 끊어집니다.": "This sends it to the Recycle Bin, where you can restore it. Links to it in other documents will break.",
 "휴지통으로 보내기": "Send to Recycle Bin",
-"위치: {where}": "Location: {where}",
 "프로젝트 맨 위": "top of the project",
 "제목을 쓰세요 — 제목이 파일 이름이 됩니다": "Write a title — it becomes the file name.",
 "첫째 절": "First section",
@@ -1259,5 +1258,14 @@ export default {
 "제목·목록의 레벨 — 제목은 하위 절까지": "Level of headings and lists — headings take subsections along",
 "고른 글을 굵게 / 기울임 / 코드로": "Selected text to bold / italic / code",
 "링크 넣기 — 파일을 고르거나 주소를 쓴다": "Add a link — pick a file or type an address",
-"주 달기 — 주 표시 위면 그 주를 고친다": "Add a note — on a mark, edit that note"
+"주 달기 — 주 표시 위면 그 주를 고친다": "Add a note — on a mark, edit that note",
+"고른 줄 바꾸기…": "Change picked lines…",
+"고른 줄 바꾸기": "Change picked lines",
+"위치": "Location",
+"새 폴더…": "New folder…",
+"고른 위치 안에 폴더를 만듭니다": "Creates a folder inside the chosen location",
+"새 폴더 — {where}": "New folder — {where}",
+"폴더 이름": "Folder name",
+"폴더를 만들었습니다: {path}": "Folder created: {path}",
+"새 폴더 만들기…": "New folder…"
 };

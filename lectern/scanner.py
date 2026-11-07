@@ -129,6 +129,34 @@ def is_code(name: str) -> bool:
     return ext in CODE_EXT
 
 
+def list_folders(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, limit: int = MAX_OTHER_FILES) -> list[str]:
+    """새 문서를 만들 수 있는 폴더들 (D114) — 비어 있는 폴더도 넣는다. 숨김·링크·제외 폴더는 뺀다. 프로젝트 기준 경로"""
+    excl = frozenset(x.lower() for x in exclude)
+    found: list[str] = []
+
+    def walk(rel: str) -> None:
+        try:
+            with os.scandir(root / rel if rel else root) as it:
+                entries = sorted(it, key=lambda e: natural_key(e.name))
+        except OSError:
+            return
+        for entry in entries:
+            name = entry.name
+            if len(found) >= limit or name.startswith('.') or name.lower() in excl or _is_link(entry):
+                continue
+            try:
+                if not entry.is_dir(follow_symlinks=False) or has_hidden_attr(entry.stat(follow_symlinks=False)):
+                    continue
+            except OSError:
+                continue
+            path = f'{rel}/{name}' if rel else name
+            found.append(path)
+            walk(path)
+
+    walk('')
+    return found
+
+
 def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
                 html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, limit: int = MAX_OTHER_FILES) -> tuple[list[Node], int, bool]:
     """문서가 아닌 파일의 트리 — 사이드바 '코드'·'자료' 목록. 문서는 md 와 트리에 보이는 html 이다 (소스 폴더의 html 은 여기 나온다).

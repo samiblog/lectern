@@ -219,6 +219,33 @@ def create_source(path: Path, text: str) -> dict[str, Any]:
     return {'hash': _digest(data), 'size': len(data)}
 
 
+def make_folder(root: Path, parent: str, name: str, exclude: frozenset[str]) -> str:
+    """폴더 하나를 만든다 (D114 — 사용자가 이름을 정할 때만). parent: 이미 있는 폴더 ('' 면 프로젝트 맨 위). 같은 이름이 있으면 만들지 않는다.
+    프로젝트 기준 경로. 안 되면 EditError"""
+    parts = [p for p in parent.replace('\\', '/').strip('/').split('/') if p]
+    if any(p in ('.', '..') for p in parts):
+        raise EditError(400, t('파일 경로가 올바르지 않습니다'))
+    if any(p.lower() in exclude for p in parts):
+        raise EditError(400, t('제외 폴더 안에는 폴더를 만들지 않습니다'))
+    base = resolve_inside(root, '/'.join(parts)) if parts else root
+    if base is None or not base.is_dir() or (parts and os.path.normcase(base) != os.path.normcase(os.path.join(root, *parts))):
+        raise EditError(404, t('폴더가 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
+    _protect(base / 'x')
+    name = name.strip()
+    if (not name or name.startswith('.') or name[-1] in ' .' or any(c in BAD_NAME_CHARS for c in name) or name.lower().split('.')[0] in RESERVED_NAMES):
+        raise EditError(400, t('쓸 수 없는 이름입니다 — 점으로 시작하거나 끝나는 이름, / \\ : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다'))
+    if name.lower() in exclude:
+        raise EditError(400, t('{name} 은 제외 폴더 이름이라 목록에 나오지 않습니다 — 다른 이름을 쓰세요', name=name))
+    target = base / name
+    try:
+        target.mkdir()   # 있으면 실패한다 — 덮어쓰지 않는다
+    except FileExistsError as exc:
+        raise EditError(409, t('같은 이름이 있습니다 — 다른 이름을 쓰세요')) from exc
+    except OSError as exc:
+        raise EditError(500, t('폴더를 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
+    return '/'.join([*parts, name])
+
+
 def _image_ext(data: bytes) -> str | None:
     """그림 파일의 첫 바이트로 본 확장자. 그림이 아니면 None"""
     if data.startswith(b'\x89PNG\r\n\x1a\n'):

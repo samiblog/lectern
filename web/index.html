@@ -358,8 +358,9 @@
 <!-- 새 문서 만들기 (newdialog.js, D105): 제목과 스타일을 정해 선택된 폴더에 -->
 <div id="lec-newdoc" class="overlay" hidden>
   <div class="palette-box insert-box mdstyle-box" role="dialog" aria-labelledby="lec-newdoc-head">
-    <div class="gallery-head"><span id="lec-newdoc-head">새 문서 만들기</span><span id="lec-newdoc-where" class="gallery-keys"></span></div>
+    <div class="gallery-head"><span id="lec-newdoc-head">새 문서 만들기</span></div>
     <div class="newdoc-title"><label for="lec-newdoc-title">제목</label><input id="lec-newdoc-title" type="text" spellcheck="false" autocomplete="off"></div>
+    <div class="newdoc-title"><label for="lec-newdoc-folder">위치</label><select id="lec-newdoc-folder"></select><button id="lec-newdoc-mkdir" type="button" title="고른 위치 안에 폴더를 만듭니다">새 폴더…</button></div>
     <p id="lec-newdoc-msg" class="insert-msg bad" role="alert" hidden></p>
     <div class="mdstyle-kinds"><span>종류</span><button id="lec-newdoc-md" type="button">md 문서</button><button id="lec-newdoc-deck" type="button">Lectern 슬라이드</button></div>
     <div id="lec-newdoc-styles" class="mdstyle-body">

@@ -188,6 +188,8 @@ flowchart LR
 | `GET /api/notes?p=<id>` | | 프로젝트 메모의 글 (D92 — `.lectern/notes.md`, 없으면 빈 글): `{text, hash, exists}` |
 | `POST /api/notes` | `{p, text, hash}` | 프로젝트 메모를 쓴다. 경로는 정해져 있고 처음이면 만든다. 그사이 바뀌었으면 409. `{hash, size}` |
 | `POST /api/rename` | `{p, path, name}` | 파일 하나의 이름을 바꾼다 (D66 — `editing.rename_file`: 같은 폴더 안에서 이름만, 프로젝트 안의 보이는 파일만(숨김·제외 폴더 안·링크 아님), 새 이름은 Windows 가 받는 이름이고 점으로 시작하지 않음, 같은 이름이면 409(대소문자만 바꾸기는 됨), 다른 프로그램이 쓰고 있으면 409). `{path}`(바뀐 경로) |
+| `GET /api/folders` | `?p=` | 새 문서를 만들 수 있는 폴더들 (D114 — 비어 있는 폴더도, 숨김·링크·제외 폴더 뺌). `{folders}` |
+| `POST /api/new-folder` | `{p, parent, name}` | 폴더 하나를 만든다 (D114 — `editing.make_folder`: 같은 이름이면 409, 숨김·제외 폴더 이름은 400). `{path}` |
 | `POST /api/delete-doc` | `{p, path}` | 문서 하나를 휴지통으로 (D104 — `editing.delete_doc`, `trash.send`: 트리에 나오는 문서만, 코드와 자료는 400, 휴지통이 없는 드라이브·다른 프로그램이 쓰면 409, 프로그램 폴더 안은 403). `{ok}` |
 | `POST /api/paste-image` | `{p, doc, data(base64)}` | 붙여 넣은 그림 한 장을 문서 옆 `문서이름-그림` 폴더에 새 파일로 (D111 — `editing.save_image`: 사용자가 붙여 넣거나 끌어 넣을 때만, PNG·JPEG·GIF·WebP, 20MB 까지, 덮어쓰지 않음). `{path}` |
 | `POST /api/editing` | `{dirty: [이름…], w?}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved_by`, `app.py`). w: 독립창의 창 id (D95) |

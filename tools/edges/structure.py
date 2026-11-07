@@ -526,7 +526,7 @@ try:
         fresh('table.md', '표')
         edit('td', '구리')
         press('Control+Shift+D')
-        no_dup = toast_has('표의 행은 아직')
+        no_dup = toast_has('표의 행은 복제하지')
         check('표의 행은 복제하지 않음', no_dup and text_of('table.md') == TABLE)
         press('Control+Shift+K')
         check('표의 행은 Ctrl+Shift+K 로 지움', until('table.md', TABLE.replace('| 구리 | 1 |\n', ''), page))

@@ -218,6 +218,8 @@ const deleteItem = (path) => ({ label: t('문서 삭제…'), tip: t('휴지통�
 
 /** 우클릭의 새로 만들기 (D65·D105): 이 폴더에 새 문서 — 제목과 스타일을 묻고 만들어 바로 쓴다 */
 export const newDocItem = (dir) => ({ label: t('새 문서 만들기…'), hint: 'Ctrl+N', action: () => emit('new-doc', { dir }) });
+/** 우클릭의 새 폴더 (D114): 이 폴더 안에 — 빈 폴더는 트리에 나오지 않아 만든 뒤 그 폴더의 새 문서 창을 연다 */
+export const newFolderItem = (dir) => ({ label: t('새 폴더 만들기…'), action: () => emit('new-folder', { dir }) });
 
 /** 문서를 Lectern 슬라이드로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
 function slideRequest(path) {
@@ -245,7 +247,7 @@ function onContextMenu(e) {
   const row = e.target.closest('.row');
   e.preventDefault();
   if (!row) {   // 목록의 빈 곳
-    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem('')]);
+    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), newFolderItem('')]);
     return;
   }
   if (row.dataset.doc != null) {
@@ -253,7 +255,7 @@ function onContextMenu(e) {
     const items = docMenuItems(path);
     showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), deleteItem(path)]);
   }
-  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
+  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 
 export function focusFilter() {

@@ -300,6 +300,7 @@
 .md-body .diagram-error > p { margin: 0 0 .4em; font-size: .88em; color: var(--md-alert-warning); font-weight: 600; }
 
 /* 각주 */
+.md-body p.lec-source { margin-top: -.5em; font-size: .86em; color: var(--md-muted); }   /* 표·그림 아래의 자료·주 줄 (doc.js) */
 .md-body .footnotes-sep { margin-top: 3em; }
 .md-body .footnotes { font-size: .88em; color: var(--md-muted); }
 .md-body .footnote-ref a, .md-body .footnote-backref { text-decoration: none; }

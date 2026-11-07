@@ -109,7 +109,7 @@ const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, 
 const MORE_CANDIDATES = 'li, a[href], p';   // 할 일·링크·출처 (모아 보기)
 const HEADS = 'h1[id], h2[id], h3[id], h4[id]';
 // 출처 단락: '자료: …', '출처: …', '※ 자료: …', 'Source: …' (표·그림 아래에 흔하다)
-const SOURCE = /^[\s※*·•\-]*[(\[]?\s*(?:자료|출처|원자료|원문|source|sources|data source)\s*[)\]]?\s*[:：]/i;
+export const SOURCE = /^[\s※*·•\-]*[(\[]?\s*(?:자료|출처|원자료|원문|주|source|sources|data source|note)\s*[)\]]?\s*[:：]/i;
 const CHART_LIBS = new Set(['vega-lite', 'vega', 'echarts', 'plotly']);   // Graphviz(dot)는 다이어그램
 
 /** 모아 보기만의 종류 (할 일·링크·출처) — 아니면 null */

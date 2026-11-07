@@ -24,7 +24,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, renameItem, hasChangedInside, shellWord } from './tree.js';
+import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, renameItem, hasChangedInside, shellWord } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -456,7 +456,7 @@ function menuItems(k, n) {
   /** @type {MenuItem[]} */
   const items = [{ label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: 'Enter', action: () => toggle(k, n.path) }];
   if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
-  if (!n.excluded) items.push(newDocItem(n.path));   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
+  if (!n.excluded) items.push(newDocItem(n.path), newFolderItem(n.path));   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
   /** @type {MenuItem[]} */
   const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)

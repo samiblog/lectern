@@ -317,8 +317,9 @@ Edit the document (Markdown or HTML) or code you are reading, right where it is.
 
 ### New document
 
-- To start: **Create** in the **Documents** header of the sidebar, **Ctrl+N**, **+** in the document tab row, or right-click a document, folder or empty space in the tree and choose **New document…**. It goes in that folder; Ctrl+N and **Create** use the folder of the document or overview you are viewing.
+- To start: **Create** in the **Documents** header of the sidebar, **Ctrl+N**, **+** in the document tab row, or right-click a document, folder or empty space in the tree and choose **New document…**. It starts in that folder; Ctrl+N and **Create** start in the folder of the document or overview you are viewing.
 - The **title** becomes the file name and starts as 'New document'. The most recent **style** is selected; change it with ↑ ↓. Choose **Lectern slides** to pick a template for the first slide.
+- In **Location**, choose the top of the project or another folder, including empty ones. **New folder…** creates a folder inside the chosen location and selects it. **New folder…** in the right-click menus of the tree and project tab does the same. Empty folders do not show in the tree, so the new document box opens right away.
 - It starts with one `# Title` line and you write right away in the md document view of a new tab. A numbered style adds two sample headings.
 - It is created only if the name is free. If not, the reason is shown — change the title. Esc closes the box.
 - The file stays even if you close it before writing. If you do not need it, right-click it in the tree and choose **Delete document…**.

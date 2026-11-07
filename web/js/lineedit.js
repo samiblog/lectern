@@ -1587,6 +1587,22 @@ async function changeLine(line, at) {
   });
 }
 
+/** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·박스글로 */
+export const pickedItems = () => (litSpan() && S.pane?.view && sectionsOn(S.pane.view) ? [{ label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
+
+async function changeLit() {
+  const span = litSpan();
+  if (!span) return;
+  const chosen = await pick({ items: changeItems(), title: t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
+  if (!chosen) return;
+  const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
+  if (!box) {
+    turn = turn.then(() => kindLitNow(chosen.id));
+    return;
+  }
+  menuOp((src) => wrapBox(src, span[0], span[1], box), () => stopSpotlight());
+}
+
 /** 줄 번호 — 요소가 든 가장 안쪽 블록의 첫 줄 */
 const lineOfEl = (el) => Number(/^\d+/.exec(el?.closest?.('[data-lines]')?.dataset.lines || '')?.[0]) || 0;
 

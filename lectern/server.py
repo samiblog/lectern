@@ -24,7 +24,7 @@ from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
 from .paths import web_dir
-from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
+from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, list_folders, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
 from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
 
@@ -593,6 +593,25 @@ def create_app(state: AppState) -> Flask:
         path = target.relative_to(project.root).as_posix()
         state.board.renamed(data.get('p'), rel, path)
         return jsonify(path=path)
+
+    @app.get('/api/folders')
+    def api_folders() -> Any:
+        """새 문서를 만들 수 있는 폴더들 (D114 — 비어 있는 폴더도). {folders: [경로…]}. 프로젝트 맨 위는 화면이 더한다"""
+        project = arg_project()
+        return jsonify(folders=list_folders(project.root, project.exclude))
+
+    @app.post('/api/new-folder')
+    def api_new_folder() -> Any:
+        """{p, parent, name} — 폴더 하나를 만든다 (D114). 같은 이름이 있으면 409. {path}"""
+        data = body()
+        parent, name = data.get('parent', ''), data.get('name')
+        if not isinstance(parent, str) or not isinstance(name, str):
+            abort(400)
+        project = project_of(data.get('p'))
+        try:
+            return jsonify(path=editing.make_folder(project.root, parent, name, project.exclude))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
 
     @app.post('/api/paste-image')
     def api_paste_image() -> Any:
