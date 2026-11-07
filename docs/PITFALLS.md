@@ -108,8 +108,10 @@
 - `.bat` 파일은 CRLF여야 한다 (`.gitattributes` 에 지정됨). `run.bat`·`dev.bat` 은 스크립트 폴더로 `cd` 하지 않고 `%~dp0` 로 경로를 잡는다. 폴더 인자(`run.bat .`)는 실행한 곳 기준이어야 하기 때문이다.
 - 스킬 스크립트가 자식을 띄울 때는 `sys.executable -I 스크립트` 로만 한다. 실행기(`lectern-skill.exe`, D99)는 `-c`·`-m` 을 받지 않고, 코드 글자나 `importlib` 로 부른 모듈은 빌드가 찾지 못해 실행기에서만 빠진다 (시험이 잡는다).
 - PowerPoint 가 있는지는 `import win32com` 으로 모른다 — 실행기에는 pywin32 가 늘 있다. `convert.has_com`·`check_pptx.has_powerpoint` 처럼 등록까지 본다.
+- 갤러리의 초점은 찾기 칸에 둔다. 목록에 두고 글자 키로 옮기면 한글은 조합 중이라 잡히지 않는다. 빈 칸일 때의 숫자만 번호로 받는다.
 - `slidegallery.js` 는 `doc.js` 를 쓴다. `lineedit`·`basket` 이 직접 import 하면 순환이 생기니 `emit('pick-template', {title, resolve, start})` 로 부른다.
 - 템플릿의 안내 글을 고칠 때는 다른 템플릿의 글과 겹쳐도 된다. `applyTemplate` 은 어느 템플릿에든 있는 글을 안내 글로 보고 옮기지 않으니, 사용자가 쓸 법한 낱말 하나만 있는 줄은 넣지 않는다.
+- 양식 pptx 를 바탕으로 쓰는 코드는 `Build.clean_properties` 를 지나야 한다. 파일 속성에 양식의 장 제목과 표지 그림이 남아 다른 문서로 샌다.
 - pptx 판정은 `convert.is_pptx` 로 한다. `zipfile.is_zipfile` 은 안 된다 — PowerPoint 가 저장한 `.ppt` 도 끝에 ZIP 조각이 있어 참이 나온다.
 - `skillrun.main` 이 예외를 직접 찍는다. PyInstaller 에 맡기면 stderr 마지막 줄이 `Failed to execute script` 가 되어 `convert.py` 가 까닭을 읽지 못한다.
 - PowerPoint 에 대화상자가 떠 있으면 COM 호출이 `AttributeError` 로 돌아온다. Office 의 첫 실행 개인정보 안내도 그렇다. 동의를 묻는 창이니 시험에서 대신 누르지 않는다.

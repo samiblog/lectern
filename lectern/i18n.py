@@ -59,8 +59,11 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    '{n}번 장': 'Slide {n}',
+    '내 템플릿': 'My templates',
+    '{name} 이 링크라서 쓰지 않습니다': '{name} is a link, so it is not written',
+    '템플릿 이름은 {n}자까지입니다 — : * ? " < > | / \\ 를 쓸 수 없습니다': 'A template name is at most {n} characters and cannot use : * ? " < > | / \\',
     '템플릿 이름과 글이 올바르지 않습니다': 'The template name or text is not valid',
-    '템플릿 이름은 {n}자까지입니다 — 점으로 시작하거나 : * ? " < > | / \\ 를 쓸 수 없습니다': 'A template name is at most {n} characters and cannot start with a dot or use : * ? " < > | / \\',
     '템플릿으로 저장할 글이 없거나 너무 깁니다': 'There is nothing to save as a template, or it is too long',
     '같은 이름의 템플릿이 있습니다 — 다른 이름으로 저장하세요': 'A template with this name exists — save under another name',
     '템플릿을 저장하지 못했습니다: {why}': 'Could not save the template: {why}',

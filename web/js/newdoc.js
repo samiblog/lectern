@@ -43,7 +43,8 @@ export async function createDoc(path, { deck = false, template = null } = {}) {
   if (q.error) throw new Error(q.error);
   const title = titleFromName(q.path);
   const first = template ? templateLines(template.text, title).join('\n') : `<!-- _class: lead -->\n<!-- _paginate: false -->\n\n# ${title}`;
-  const text = deck ? `---\nmarp: true\ntitle: ${title}\npaginate: true\n---\n\n${first}\n` : `# ${title}\n\n`;
+  const group = template?.own ? `templates: ${template.group}\n` : '';   // 사용자의 묶음이면 기억한다 — 다음 장도, pptx 스타일도 그 묶음부터 (D101)
+  const text = deck ? `---\nmarp: true\ntitle: ${title}\npaginate: true\n${group}---\n\n${first}\n` : `# ${title}\n\n`;
   const r = await postJSON('/api/save', { p: S.tab.id, path: q.path, text, create: true });
   return r.path || q.path;
 }

@@ -1,4 +1,5 @@
 """Lectern 슬라이드 템플릿 (D101)·pptx 로 전환 (D102): 갤러리, 새로 만들기, 새 장, 템플릿 바꾸기, 저장, 전환"""
+import base64
 import json
 import os
 import shutil
@@ -23,6 +24,9 @@ style_md = base / 'style.md'
 style_md.write_text('---\nmarp: true\n---\n\n# 표지\n\n---\n\n## 둘째\n\n글\n', encoding='utf-8')
 subprocess.run([sys.executable, str(ROOT / 'skills' / 'lectern-to-pptx' / 'scripts' / 'build_pptx.py'), str(style_md), '--out', str(config / 'pptx-styles' / '회사양식.pptx'), '--style', 'deck'],
                check=True, capture_output=True, env=os.environ | {'LECTERN_CONFIG_DIR': str(config)})
+PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==')
+for n in (1, 2):
+    (config / 'pptx-styles' / f'회사양식-{n}.png').write_bytes(PNG)
 
 server, url, port = serve(proj, config)
 extra = []
@@ -38,6 +42,7 @@ try:
         gallery = '#lec-gallery-list .lec-tpl'
         open_text = lambda: page.evaluate("[...document.querySelectorAll('.lec-line-edit')].map((e) => e.textContent)")
         names = lambda: [x.strip() for x in page.locator('.lec-tpl-name').all_inner_texts()]
+        groups = lambda: [x.strip() for x in page.locator('#lec-gallery-groups li').all_inner_texts()]
         text = lambda: doc.read_text(encoding='utf-8')
         slide = lambda n: page.locator('#lec-view .lec-slide-wrap').nth(n - 1)
         menu = lambda n, name: (slide(n).click(button='right', position={'x': 40, 'y': 40}), page.wait_for_timeout(200), page.locator('#lec-menu button', has_text=name).first.click())
@@ -59,6 +64,7 @@ try:
         check('Lectern 슬라이드를 새로 만들면 갤러리가 뜬다', page.locator('#lec-gallery').is_visible() and '첫 장' in page.text_content('#lec-gallery-title'))
         check('기본 템플릿 12개', page.locator(gallery).count() == 12, names())
         check('번호와 이름이 나온다', names()[0].startswith('1') and '표지' in names()[0] and names()[11].startswith('12'), names())
+        check('왼쪽에 묶음 목록', groups() == ['기본'], groups())
         page.wait_for_function("document.querySelectorAll('.lec-tpl-view .lec-slide').length === 12", timeout=15000)
         check('미리보기는 실제 슬라이드다', page.locator('.lec-tpl-view .lec-slide.lec-grid').count() >= 8)
         page.wait_for_timeout(1500)
@@ -123,12 +129,27 @@ try:
         page.keyboard.type('매출 보고')
         page.keyboard.press('Enter')
         page.wait_for_timeout(600)
-        saved = config / 'templates' / '01-매출 보고.md'
-        check('Lectern 전체의 템플릿 폴더에 파일 하나를 만든다', saved.exists() and '## 매출이 늘었다' in saved.read_text(encoding='utf-8'), list((config / 'templates').glob('*')) if (config / 'templates').exists() else '')
+        saved = config / 'templates' / '내 템플릿.md'
+        check('Lectern 전체의 내 템플릿 묶음에 장을 더한다', saved.exists() and '<!-- template: 매출 보고 -->' in saved.read_text(encoding='utf-8') and '## 매출이 늘었다' in saved.read_text(encoding='utf-8'), list((config / 'templates').glob('*')) if (config / 'templates').exists() else '')
         slide(2).locator('h2').click()
         page.keyboard.press('Control+m')
         page.wait_for_selector(gallery, timeout=6000)
-        check('13번으로 나온다', page.locator(gallery).count() == 13 and '내 템플릿' in names()[12] and names()[12].startswith('13'), names()[-1])
+        check('묶음이 늘고 최근 쓴 것이 나온다', groups() == ['최근 쓴 것', '기본', '내 템플릿'], groups())
+        page.locator('#lec-gallery-groups li', has_text='내 템플릿').click()
+        page.wait_for_timeout(600)
+        check('번호는 묶음 안에서 매긴다', names() == ['1 매출 보고'], names())
+        page.locator('#lec-gallery-groups li', has_text='최근 쓴 것').click()
+        page.wait_for_timeout(500)
+        check('최근 쓴 것에 쓴 템플릿이 나온다', any('표와 설명' in x for x in names()) and any('기본' in x for x in names()), names())
+        page.keyboard.press('PageDown')
+        page.wait_for_timeout(500)
+        check('PageDown 으로 다음 묶음', page.locator('#lec-gallery-groups li.sel').inner_text().strip() == '기본')
+        page.keyboard.type('차트')
+        page.wait_for_timeout(600)
+        check('글자를 치면 묶음을 넘어 찾는다', page.input_value('#lec-gallery-find') == '차트' and 0 < page.locator(gallery).count() < 12, names())
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(300)
+        check('Esc 는 찾기를 먼저 지운다', page.locator('#lec-gallery').is_visible() and page.input_value('#lec-gallery-find') == '')
         page.keyboard.press('Escape')
         page.wait_for_timeout(300)
         menu(2, '이 장을 템플릿으로 저장')
@@ -138,6 +159,21 @@ try:
         page.wait_for_timeout(500)
         check('같은 이름은 덮어쓰지 않고 알린다', '같은 이름' in (page.text_content('#lec-toast') or '') and len(list((config / 'templates').glob('*.md'))) == 1, page.text_content('#lec-toast'))
 
+        print('[Claude 에게 요청]')
+        page.evaluate("window.__pasted = []; import('/static/js/store.js').then(({ on }) => on('term-paste', (x) => window.__pasted.push(x)))")
+        page.wait_for_timeout(200)
+        slide(2).locator('h2').click()
+        page.keyboard.press('Control+m')
+        page.wait_for_selector(gallery, timeout=6000)
+        page.click('#lec-gallery-ask')
+        page.wait_for_timeout(400)
+        pasted = page.evaluate('window.__pasted')
+        check('요청 글을 터미널에 넣고 Claude 를 실행하지 않는다', len(pasted) == 1 and '템플릿' in pasted[0] and pasted[0].endswith(': ') and page.locator('#lec-gallery').is_hidden(), pasted)
+        page.keyboard.press('Control+`')
+        page.wait_for_timeout(300)
+        page.keyboard.press('Control+`')
+        page.wait_for_timeout(300)
+
         print('[pptx 로 전환]')
         check('상태줄에 전환 버튼', page.locator('#lec-st-pptx').is_visible())
         page.click('#lec-st-pptx')
@@ -146,6 +182,8 @@ try:
         check('보관소의 스타일이 나온다', any('회사양식' in x for x in items), items)
         check('보관소의 대표색', page.locator('.lec-pptx-colors i').count() >= 3)
         check('Lectern 스타일도 고를 수 있다', any('Lectern 스타일' in x for x in items), items)
+        page.wait_for_timeout(500)
+        check('고르는 창에 미리보기', page.locator('#lec-pptx-previews img').count() == 2 and page.evaluate("[...document.querySelectorAll('#lec-pptx-previews img')].every((i) => i.complete && i.naturalWidth > 0)"), page.locator('#lec-pptx-previews').inner_html()[:200])
         if os.environ.get('LEC_SHOTS'):
             page.screenshot(path=str(Path(os.environ['LEC_SHOTS']) / 'pptx-전환.png'))
         page.keyboard.press('Enter')
@@ -175,6 +213,34 @@ try:
         page.keyboard.press('Escape')
         page.wait_for_timeout(200)
         check('Esc 로 닫는다', page.locator('#lec-pptx').is_hidden())
+
+        print('[묶음과 스타일의 짝]')
+        (config / 'templates' / '다른이름.md').write_text('---\nmarp: true\n---\n\n<!-- template: 회사 표지 -->\n\n# {{제목}}\n\n---\n\n<!-- template: 회사 본문 -->\n\n## 회사 본문 제목\n', encoding='utf-8')
+        page.keyboard.press('Control+n')
+        page.wait_for_selector('#lec-insert-list li', timeout=4000)
+        page.fill('#lec-insert-input', '회사문서.md')
+        page.wait_for_timeout(200)
+        page.locator('#lec-insert-list li').first.click()
+        page.wait_for_selector(gallery, timeout=6000)
+        page.locator('#lec-gallery-groups li', has_text='다른이름').click()
+        page.wait_for_timeout(500)
+        page.click('.lec-tpl')
+        page.wait_for_selector('#lec-view.lec-deck', timeout=8000)
+        page.wait_for_timeout(800)
+        made = (proj / '회사문서.md').read_text(encoding='utf-8')
+        check('사용자의 묶음이면 문서가 기억한다', 'templates: 다른이름\n' in made and '# 회사문서' in made, made[:120])
+        page.locator('#lec-view h1').first.click()
+        page.keyboard.press('Control+m')
+        page.wait_for_selector(gallery, timeout=6000)
+        page.wait_for_timeout(400)
+        check('다음 장은 그 묶음이 먼저 열린다', page.locator('#lec-gallery-groups li.sel').inner_text().strip() == '다른이름', groups())
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(300)
+        page.click('#lec-st-pptx')
+        page.wait_for_selector('#lec-pptx-list li', timeout=4000)
+        first = page.locator('#lec-pptx-list li').first.inner_text()
+        check('같은 이름의 pptx 스타일이 짝이다', '다른이름' in first and '짝' in first, first)
+        page.keyboard.press('Escape')
         check('화면 오류 없음', not extra, extra)
         b.close()
 except Exception:

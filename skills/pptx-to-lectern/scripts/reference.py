@@ -132,9 +132,10 @@ def main(argv=None):
     ap.add_argument('--active', action='store_true')
     ap.add_argument('--pick', default='')
     ap.add_argument('--name')
+    ap.add_argument('--no-powerpoint', action='store_true')
     args = ap.parse_args(argv)
     name = args.name
-    forward = ['--no-draft']
+    forward = ['--no-draft', *(['--no-powerpoint'] if args.no_powerpoint else [])]
     if args.active:
         out = Path(args.paths[0]).resolve()
         forward += ['--active', str(out)]

@@ -448,9 +448,12 @@
 <!-- 템플릿 갤러리 (slidegallery.js, D101): 새로 만들기·새 장·템플릿 바꾸기 -->
 <div id="lec-gallery" class="overlay" hidden>
   <div class="palette-box gallery-box" role="dialog" aria-labelledby="lec-gallery-title">
-    <div class="gallery-head"><span id="lec-gallery-title"></span><span class="gallery-keys">번호나 화살표로 고르고 Enter</span></div>
-    <ul id="lec-gallery-list" role="listbox" tabindex="0" aria-labelledby="lec-gallery-title"></ul>
-    <div class="gallery-foot"><button id="lec-gallery-folder" type="button">템플릿 폴더 열기</button><span class="tb-spacer"></span><button id="lec-gallery-cancel" type="button">취소</button></div>
+    <div class="gallery-head"><span id="lec-gallery-title"></span><span class="gallery-keys">번호나 화살표로 고르고 Enter · PageUp·PageDown 으로 묶음</span><span class="tb-spacer"></span><input id="lec-gallery-find" type="text" spellcheck="false" autocomplete="off" placeholder="템플릿 찾기" aria-label="템플릿 찾기"></div>
+    <div class="gallery-body">
+      <ul id="lec-gallery-groups" aria-label="템플릿 묶음"></ul>
+      <ul id="lec-gallery-list" role="listbox" aria-labelledby="lec-gallery-title"></ul>
+    </div>
+    <div class="gallery-foot"><button id="lec-gallery-folder" type="button" title="템플릿 묶음을 Lectern 탭으로 열어 고칩니다">템플릿 폴더 열기</button><button id="lec-gallery-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 템플릿 요청</button><span class="tb-spacer"></span><button id="lec-gallery-cancel" type="button">취소</button></div>
   </div>
 </div>
 <!-- 이 장을 템플릿으로 저장 (slidegallery.js, D101) -->
@@ -468,7 +471,8 @@
     <p id="lec-pptx-msg" class="insert-msg" role="alert" hidden></p>
     <div id="lec-pptx-form">
       <ul id="lec-pptx-list" role="listbox" tabindex="0" aria-labelledby="lec-pptx-title"></ul>
-      <div class="gallery-foot"><label><input id="lec-pptx-default" type="checkbox"> 기본 스타일로</label><button id="lec-pptx-folder" type="button">보관소 폴더 열기</button><span class="tb-spacer"></span><button id="lec-pptx-cancel" type="button">취소</button><button id="lec-pptx-go" type="button" class="primary">전환</button></div>
+      <div id="lec-pptx-previews" hidden></div>
+      <div class="gallery-foot"><label><input id="lec-pptx-default" type="checkbox"> 기본 스타일로</label><button id="lec-pptx-folder" type="button">보관소 폴더 열기</button><button id="lec-pptx-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 스타일 요청</button><span class="tb-spacer"></span><button id="lec-pptx-cancel" type="button">취소</button><button id="lec-pptx-go" type="button" class="primary">전환</button></div>
     </div>
     <div id="lec-pptx-done" hidden>
       <p id="lec-pptx-summary" class="insert-msg"></p>

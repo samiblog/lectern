@@ -639,12 +639,12 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/slide-templates')
     def api_slide_templates() -> Any:
-        """고를 수 있는 템플릿 — 기본 템플릿 다음에 사용자의 것"""
-        return jsonify(templates=slidetemplates.list_templates(), dir=str(slidetemplates.templates_dir()))
+        """고를 수 있는 템플릿 묶음 — 기본 묶음 다음에 사용자의 것"""
+        return jsonify(groups=slidetemplates.list_groups(), dir=str(slidetemplates.templates_dir()))
 
     @app.post('/api/slide-templates')
     def api_slide_template_save() -> Any:
-        """{name, text} — '이 장을 템플릿으로 저장'. 새 파일 하나만 만든다"""
+        """{name, text} — '이 장을 템플릿으로 저장'. '내 템플릿' 묶음에 장 하나를 더한다"""
         data = body()
         try:
             return jsonify(template=slidetemplates.save_template(data.get('name'), data.get('text')))
@@ -653,8 +653,14 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/slide-templates/folder')
     def api_slide_templates_folder() -> Any:
-        """템플릿 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나)"""
-        return open_folder(slidetemplates.templates_dir())
+        """템플릿 폴더를 Lectern 탭으로 연다 (없으면 만든다 — 빈 폴더 하나). 묶음을 평소처럼 고치게"""
+        folder = slidetemplates.templates_dir()
+        try:
+            folder.mkdir(parents=True, exist_ok=True)
+            project = state.open(str(folder))
+        except (OSError, NotADirectoryError, TooManyTabs) as exc:
+            return jsonify(error=str(exc)), 400
+        return jsonify(state.info() | {'opened': project.id})
 
     # ---- pptx 전환 (D102): 설정 폴더의 pptx-styles ----------------------------------------------
 
@@ -667,6 +673,14 @@ def create_app(state: AppState) -> Flask:
             abort(404)
         return jsonify(styles=pptxexport.list_styles(), dir=str(pptxexport.styles_dir()), default=state.config.get('pptx_style') or '',
                        memory=pptxexport.doc_memory(target), out=pptxexport.free_path(target).name, readonly=project.readonly)
+
+    @app.get('/pptxstyle/<file>')
+    def pptx_style_preview(file: str) -> Response:
+        """pptx 스타일의 미리보기 그림 — <img> 가 부르므로 토큰 없이"""
+        path = pptxexport.preview_path(file)
+        if path is None:
+            abort(404)
+        return send_file(path, mimetype='image/png', conditional=True, max_age=0)
 
     @app.post('/api/pptx-styles/folder')
     def api_pptx_styles_folder() -> Any:

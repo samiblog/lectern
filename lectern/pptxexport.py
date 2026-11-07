@@ -51,7 +51,15 @@ def list_styles() -> list[dict[str, Any]]:
     if not folder.is_dir():
         return []
     items = (p for p in sorted(folder.glob('*.pptx'), key=lambda p: p.name.lower()) if p.is_file() and not p.is_symlink() and not p.name.startswith('~$'))
-    return [{'name': p.stem, 'colors': _colors(p)} for p in items]
+    return [{'name': p.stem, 'colors': _colors(p), 'previews': [f'{p.stem}-{n}.png' for n in (1, 2) if (folder / f'{p.stem}-{n}.png').is_file()]} for p in items]
+
+
+def preview_path(file: str) -> Path | None:
+    """보관소의 미리보기 그림 (이름-1.png). 보관소 안의 파일만 준다."""
+    if not re.fullmatch(r'[^/\\:]+-[12]\.png', file):
+        return None
+    path = styles_dir() / file
+    return path if path.is_file() and not path.is_symlink() else None
 
 
 def style_path(name: Any) -> Path | None:
@@ -63,10 +71,13 @@ def style_path(name: Any) -> Path | None:
 
 
 def doc_memory(md: Path) -> dict[str, Any]:
-    """문서가 기억하는 스타일: {style: 맨 앞 설정의 pptxStyle, original: pptx 에서 옮겨 와 원본 사본이 있는가}"""
+    """문서가 기억하는 스타일: {style: 맨 앞 설정의 pptxStyle, group: 템플릿 묶음(같은 이름의 스타일이 짝), original: pptx 에서 옮겨 와 원본 사본이 있는가}"""
     head = md.read_text(encoding='utf-8', errors='replace')[:4000]
     front = re.match(r'﻿?---\n(.*?)\n---', head.replace('\r\n', '\n'), re.S)
-    named = re.search(r'^pptxStyle:\s*(.+?)\s*$', front[1], re.M) if front else None
+    def key(name: str) -> str:
+        m = re.search(rf'^{name}:\s*(.+?)\s*$', front[1], re.M) if front else None
+        return m[1].strip('\'"') if m else ''
+
     record = md.with_name(f'{md.stem}-변환기록.json')   # i18n-ok (스킬이 쓰는 파일 이름)
     original = False
     if record.is_file():
@@ -75,7 +86,7 @@ def doc_memory(md: Path) -> dict[str, Any]:
             original = bool(snapshot) and (md.parent / snapshot).is_file()
         except (OSError, ValueError):
             pass
-    return {'style': named[1].strip('\'"') if named else '', 'original': original}
+    return {'style': key('pptxStyle'), 'group': key('templates'), 'original': original}
 
 
 def free_path(md: Path) -> Path:

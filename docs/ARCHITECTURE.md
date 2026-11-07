@@ -192,10 +192,11 @@ flowchart LR
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
-| `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 (D101) `{templates:[{number, id, name, text, own}], dir}`. 기본 템플릿 다음에 사용자의 것 |
-| `POST /api/slide-templates` | `{name, text}` | 설정 폴더 templates 에 새 파일 하나. `{template}`. 같은 이름이면 409 |
-| `POST /api/slide-templates/folder` | `{}` | 템플릿 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
-| `GET /api/pptx-styles` | `?p=&path=` | pptx 스타일 (D102) `{styles:[{name, colors}], dir, default, memory:{style, original}, out, readonly}` |
+| `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 묶음 (D101) `{groups:[{name, own, templates:[{number, name, text}]}], dir}`. 기본 묶음 다음에 사용자의 것 |
+| `POST /api/slide-templates` | `{name, text}` | '내 템플릿' 묶음에 장 하나를 더한다. `{template:{group, number, name}}`. 같은 이름이면 409 |
+| `POST /api/slide-templates/folder` | `{}` | 템플릿 폴더를 Lectern 탭으로 연다 (없으면 만든다). `/api/state` 와 `opened` |
+| `GET /api/pptx-styles` | `?p=&path=` | pptx 스타일 (D102) `{styles:[{name, colors, previews}], dir, default, memory:{style, group, original}, out, readonly}` |
+| `GET /pptxstyle/<파일>` | | 스타일의 미리보기 그림 (`이름-1.png`, 토큰 없이 — `<img>`) |
 | `POST /api/pptx-styles/folder` | `{}` | 보관소 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `POST /api/pptx-export` | `{p, path, style}` | 문서 옆에 새 pptx. style 이 빈 글자면 문서가 기억한 것으로. `{path, slides, reused, patched, rebuilt, new, base, style, notes}`. 보기만 하는 프로젝트는 403 |
 | `GET /api/config` | | 설정 전체 |

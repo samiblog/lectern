@@ -1593,7 +1593,7 @@ class Build:
         self.base = None
         # 적용 차례 (D102): 이번에 말한 양식, 문서의 스타일, 원본 pptx, 기본 스타일, Lectern 스타일
         named = self.deck['fm'].get('pptxStyle')
-        kept = shared_style(named)
+        kept = shared_style(named) or shared_style(self.deck['fm'].get('templates'))   # 같은 이름의 템플릿 묶음과 짝이다
         if named and not kept:
             self.notes_log.append(f"문서의 pptx 스타일 '{named}' 이 보관소에 없어 다음 차례로 만듭니다")
         chosen = template or kept
@@ -1612,6 +1612,7 @@ class Build:
             self.template = True
             chosen = default
         self.reuse = bool(self.record and self.base and not chosen and not force_all)
+        self.foreign = bool(chosen)   # 다른 문서의 pptx 를 양식으로 쓴다
         self.style = Style(style or chosen_style(), self.deck['css'])
         self.svg = {}
         self.figures = {}
@@ -1839,9 +1840,20 @@ class Build:
                 self.added += 1
                 result.append({'n': i, 'how': 'new'})
         self.finish(order)
+        if self.foreign:
+            self.clean_properties()
         self.pkg.prune()
         self.pkg.save(self.out)
         return result
+
+    def clean_properties(self):
+        """양식의 내용이 파일 속성으로 새지 않게 한다: app.xml 의 장 제목, core.xml 의 제목·작성자, 표지 그림."""
+        pkg = self.pkg
+        pkg.put('docProps/app.xml', pp.app_xml())
+        pkg.put('docProps/core.xml', pp.core_xml(str(self.deck['fm'].get('title') or self.md.stem)))
+        rels = pkg.text('_rels/.rels')
+        pkg.put('_rels/.rels', re.sub(r'<Relationship\b[^>]*metadata/thumbnail[^>]*/>', '', rels))
+        pkg.files.pop('docProps/thumbnail.jpeg', None)
 
     def patch_slide(self, prior, new_part):
         """글만 바뀐 쪽이면 원본 쪽의 글을 그 자리에서 고친다. 도형·서식·애니메이션이 그대로 남는다."""

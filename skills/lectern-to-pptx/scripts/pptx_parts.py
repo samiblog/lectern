@@ -30,6 +30,15 @@ def esc(text):
     return escape(text, {'"': '&quot;'})
 
 
+def core_xml(title):
+    return (f'{HEAD}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">'
+            f'<dc:title>{esc(title)}</dc:title></cp:coreProperties>')
+
+
+def app_xml():
+    return f'{HEAD}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Lectern</Application></Properties>'
+
+
 class Package:
     """ZIP 안의 파트를 사전으로 다룬다. 관계와 내용 형식을 함께 고친다."""
 
@@ -239,10 +248,8 @@ def fresh(cx, cy, colors, name='Lectern', title='', major='Malgun Gothic', minor
         f'{HEAD}<Relationships xmlns="{PKG_REL}"><Relationship Id="rId1" Type="{REL}/officeDocument" Target="ppt/presentation.xml"/>'
         f'<Relationship Id="rId2" Type="http://schemas.openxmlformats.org/package/2006/relationships/metadata/core-properties" Target="docProps/core.xml"/>'
         f'<Relationship Id="rId3" Type="{REL}/extended-properties" Target="docProps/app.xml"/></Relationships>')
-    files['docProps/core.xml'] = (
-        f'{HEAD}<cp:coreProperties xmlns:cp="http://schemas.openxmlformats.org/package/2006/metadata/core-properties" xmlns:dc="http://purl.org/dc/elements/1.1/">'
-        f'<dc:title>{esc(title)}</dc:title></cp:coreProperties>')
-    files['docProps/app.xml'] = f'{HEAD}<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/extended-properties"><Application>Lectern</Application></Properties>'
+    files['docProps/core.xml'] = core_xml(title)
+    files['docProps/app.xml'] = app_xml()
     overrides = {
         'ppt/presentation.xml': 'application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml',
         'ppt/slideMasters/slideMaster1.xml': 'application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml',

@@ -1,6 +1,8 @@
 // pptx 로 전환 (D102): 상태줄의 'pptx 로 전환' — pptx 스타일을 고르면 앱이 문서 옆에 새 pptx 를 만든다.
 // 스타일은 Lectern 전체의 보관소(설정 폴더 pptx-styles)에 있고 문서에는 이름만 적는다 (맨 앞 설정의 pptxStyle — lineedit 의 'pptx-style').
 
+// Claude 가 할 일(pptx 로 스타일과 템플릿 만들기)은 요청 글을 터미널에 넣는 데까지다 (Enter 는 사용자가 — D51).
+
 import { S, emit } from './store.js';
 import { getJSON, postJSON, saveConfig } from './api.js';
 import { $, $$, toast, dirname, blockedReadOnly } from './util.js';
@@ -22,10 +24,12 @@ function setMsg(text, bad = false) {
 function rowsOf({ styles, default: chosen, memory }) {
   const names = new Set(styles.map((s) => s.name));
   const rows = [];
-  if (memory.style && names.has(memory.style)) rows.push({ value: '', label: memory.style, sub: t('이 문서가 기억한 스타일'), colors: styles.find((s) => s.name === memory.style).colors, keep: memory.style });
+  const kept = names.has(memory.style) ? memory.style : names.has(memory.group) ? memory.group : '';   // 같은 이름의 템플릿 묶음이 짝이다
+  const style = styles.find((s) => s.name === kept);
+  if (style) rows.push({ ...style, value: '', label: kept, sub: kept === memory.style ? t('이 문서가 기억한 스타일') : t('템플릿 묶음과 짝인 스타일') });
   else if (memory.original) rows.push({ value: '', label: t('원본 pptx'), sub: t('고치지 않은 장은 원본 그대로 씁니다') });
-  for (const s of styles) if (s.name !== memory.style) rows.push({ value: s.name, label: s.name, sub: s.name === chosen ? t('기본 스타일') : '', colors: s.colors });
-  if (!memory.original && !(memory.style && names.has(memory.style)) && !names.has(chosen)) rows.push({ value: '', label: t('Lectern 스타일'), sub: t('슬라이드 창에서 고른 스타일로 만듭니다') });
+  for (const s of styles) if (s.name !== kept) rows.push({ ...s, value: s.name, label: s.name, sub: s.name === chosen ? t('기본 스타일') : '' });
+  if (!style && !memory.original && !names.has(chosen)) rows.push({ value: '', label: t('Lectern 스타일'), sub: t('슬라이드 창에서 고른 스타일로 만듭니다') });
   return rows;
 }
 
@@ -38,12 +42,21 @@ function draw() {
   </li>`));
 }
 
+/** 고른 스타일의 미리보기 (표지·본문). 그림은 Claude 가 스타일을 등록할 때 만든다 */
+function showPreviews() {
+  const shots = asked.rows[asked.sel]?.previews || [];
+  const box2 = $('#lec-pptx-previews');
+  box2.hidden = !shots.length;
+  setHtml(box2, shots.map((f) => html`<img src="/pptxstyle/${encodeURIComponent(f)}" alt="">`));
+}
+
 function pick(i) {
   asked.sel = i;
   $$('li', list()).forEach((li, n) => {
     li.classList.toggle('sel', n === i);
     li.setAttribute('aria-selected', String(n === i));
   });
+  showPreviews();
 }
 
 export function closePptx() {
@@ -71,7 +84,8 @@ async function open() {
   }
   const rows = rowsOf(info);
   const start = Math.max(0, rows.findIndex((r) => r.sub === t('기본 스타일')));
-  asked = { tab: S.tab, pane, path, rows, sel: info.memory.style || info.memory.original ? 0 : start, busy: false };
+  const remembered = rows[0]?.value === '' && (rows[0].sub !== t('슬라이드 창에서 고른 스타일로 만듭니다'));
+  asked = { tab: S.tab, pane, path, rows, sel: remembered ? 0 : start, busy: false };
   $('#lec-pptx-title').textContent = t('pptx 로 전환 — {name}', { name: info.out });
   $('#lec-pptx-default').checked = false;
   $('#lec-pptx-done').hidden = true;
@@ -80,6 +94,7 @@ async function open() {
   setMsg(lost ? t("문서의 스타일 '{name}' 이 보관소에 없습니다 — 다른 스타일을 고르세요", { name: info.memory.style })
     : info.styles.length ? '' : t('보관소에 pptx 스타일이 없습니다 — 보관소 폴더에 pptx 파일을 넣으면 여기에 나옵니다'), !!lost);
   draw();
+  showPreviews();
   box().hidden = false;
   list().focus();
 }
@@ -125,6 +140,11 @@ export function initPptx() {
   $('#lec-pptx-close').addEventListener('click', closePptx);
   $('#lec-pptx-show').addEventListener('click', () => send('/api/reveal'));
   $('#lec-pptx-open').addEventListener('click', () => send('/api/open-external'));
+  $('#lec-pptx-ask').addEventListener('click', () => {
+    const text = t('pptx-to-lectern 스킬로 이 pptx 를 pptx 스타일과 같은 이름의 템플릿 묶음으로 등록해 줘. 스킬이 없으면 {dir} 의 README.md 를 읽고 나에게 물어봐. 스타일 이름과 pptx 경로: ', { dir: S.skillsDir });
+    closePptx();
+    emit('term-paste', text);   // 터미널에 붙여 넣기 (D51 — Enter 는 사용자가)
+  });
   $('#lec-pptx-folder').addEventListener('click', async () => {
     try {
       await postJSON('/api/pptx-styles/folder', {});

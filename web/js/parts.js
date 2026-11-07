@@ -345,7 +345,7 @@ function render() {
 // 맨 앞 설정(frontmatter)의 키마다 값으로 문서를 묶는다. 위 단추는 키(그 키가 있는 문서 수), 목록은 값마다 문서들 —
 // 그 키가 없는 문서(맨 앞 설정은 있는)는 끝에 '값 없음'. Lectern 슬라이드의 Marp 설정과 제목·요약처럼 문서마다 다른 긴 값은 키로 보이지 않는다.
 
-const META_SKIP = new Set(['marp', 'style', 'theme', 'size', 'headingDivider', 'paginate', 'header', 'footer', 'class', 'backgroundColor',
+const META_SKIP = new Set(['marp', 'pptxStyle', 'templates', 'style', 'theme', 'size', 'headingDivider', 'paginate', 'header', 'footer', 'class', 'backgroundColor',
   'backgroundImage', 'backgroundPosition', 'backgroundRepeat', 'backgroundSize', 'color', 'math', 'title', 'name', 'description', 'lang']);
 const DATE_LIKE = /^\d{4}(?:[-./]\d{1,2}){0,2}/;
 

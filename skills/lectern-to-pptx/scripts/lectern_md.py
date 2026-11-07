@@ -21,9 +21,9 @@ LAYOUTS = {
     'kpi-two': ('t t t / a b c / d d e', '1fr 1fr 1fr', 'auto auto 1fr'),
     'stack': ('t / a / b', '1fr', 'auto 1fr 1fr'),
 }
-DIRECTIVES = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'class', 'paginate', 'header', 'footer',
+DIRECTIVES = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template', 'class', 'paginate', 'header', 'footer',
               'backgroundColor', 'backgroundImage', 'color'}
-PER_SLIDE = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden'}
+PER_SLIDE = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template'}
 CHARTS = {'vega-lite', 'echarts', 'plotly'}
 DIAGRAMS = {'mermaid', 'dot'}
 TEXT_WORDS = {'제목': 'title', '소제목': 'sub', '본문': 'body', '표': 'table', '박스글': 'box', '코드': 'code',

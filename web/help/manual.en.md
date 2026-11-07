@@ -306,13 +306,15 @@ The work goes in this order.
 
 ### Templates
 
-A template is a slide skeleton with a title, text, boxes and chart spots. All of Lectern shares them, not one project.
+A template is a slide skeleton with a title, text, boxes and chart spots. All of Lectern shares them, not one project. One Lectern slides file is a **set**, and each slide in it is a template.
 
-- **Gallery:** Preview and pick a template. Click it, type its number, or move with the arrows and press Enter. Twelve templates are built in.
+- **Gallery:** Preview and pick a template. Pick a set on the left (PageUp and PageDown), then click, type a number, or move with the arrows and press Enter. Numbers follow the slide order in the set. Type letters to search all sets. Templates you used lately collect in **Recently used**. The basic set has twelve templates.
 - **New slide:** **Ctrl+M** opens the gallery and puts the template after this slide. The title opens for typing.
 - **Change template:** Right-click a slide and pick **Change template…**. Your text moves into the new cells, and text that does not fit stays in the last cell. Placeholder text you did not change does not move. Ctrl+Z undoes it.
-- **Your own templates:** Right-click a slide, pick **Save this slide as a template…** and type a name. It shows after the built-in templates. You can also ask Claude to make one.
-- **Removing your templates:** Use **Open templates folder** in the gallery (`%APPDATA%\Lectern\templates`) and delete the file. One file is one template.
+- **Your own templates:** Right-click a slide, pick **Save this slide as a template…** and type a name. It joins the **My templates** set. The slide's text is saved as it is, so you may want to turn it into placeholder text.
+- **Editing sets:** **Open templates folder** in the gallery opens the folder (`%APPDATA%\Lectern\templates`) in a Lectern tab. Edit sets as usual with line editing and Check. Slide order is the number, and the name is `<!-- template: name -->`.
+- **Asking Claude:** **Ask Claude for a template** puts a request in the terminal. Add what you want and press Enter.
+- **Remembering the set:** A document started from your own set gets `templates: Company report` in the front matter, and that set opens first for the next slide.
 
 A slide saved with a picture keeps the picture's path. A document in another folder may not find the picture.
 
@@ -362,10 +364,12 @@ When the templates are not enough, build the cells yourself.
 
 Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file appears next to the document. You do not need Claude or Python.
 
-- **pptx styles:** Shared by all of Lectern. **Open library folder** opens the folder (`%APPDATA%\Lectern\pptx-styles`); put your company's pptx there and it shows in the list.
+- **pptx styles:** Shared by all of Lectern. **Open library folder** opens the folder (`%APPDATA%\Lectern\pptx-styles`); put your company's pptx there and it shows in the list. With **Ask Claude for a style**, add the pptx path and Claude makes the style, a template set of the same name and preview pictures.
+- **Pairs:** A template set and a pptx style with the same name are a pair. A document made from the 'Company report' set picks the 'Company report' style first.
 - **Memory:** The style's name goes into the front matter as `pptxStyle: Company report`, and that style comes first next time. If you move only the document to another PC, the style may be missing; Lectern tells you and you pick again.
 - **Default style:** Turn on **Make this the default** when converting, and documents with no style use it.
-- **Order:** The style picked now, the document's style, the original pptx, the default style, then the Lectern style.
+- **Order:** The style picked now, the document's style (including its pair), the original pptx, the default style, then the Lectern style.
+- **The model's content:** Slides and pictures of the model pptx do not go into the result. Its slide titles and cover thumbnail are removed from the file properties too. A logo and footer in the layouts are part of the style, so they stay.
 - **Result:** Cell positions follow the Lectern slides; colors, fonts, logo and footer follow the pptx style. Text stays text, tables stay tables, charts stay charts you can edit, and lines become connectors. Complex charts and Mermaid become pictures.
 - **Documents moved from a pptx:** If you pick no style, slides you did not change reuse the original slide, and where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
 - A pptx of the same name is never overwritten. A new name like `Report 2.pptx` is used.
@@ -374,7 +378,7 @@ Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file a
 
 Claude Code skills move a pptx into Lectern slides and build slides from a pptx. They come with Lectern and are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button next to it). Claude explains the skills and asks before installing.
 
-Here is how to ask. `@document.md` is **Copy @path** from a right-click in the tree.
+Lectern does not run Claude. You talk to Claude Code in the terminal yourself. Here is how to ask. `@document.md` is **Copy @path** from a right-click in the tree.
 
 **pptx to Lectern slides**
 
@@ -395,8 +399,9 @@ Use only the colors and cover of D:\templates\company.pptx and make @weekly.md i
 **Making pptx styles and templates**
 
 ```text
-Add D:\templates\company.pptx as a pptx style.
-Make a template with a table and a box, like this slide.
+Make a 'Company report' pptx style and template set from D:\templates\company.pptx.
+Add the presentation open in PowerPoint as the 'Company report' pptx style.
+Add a template with a table and a box to the 'Company report' set.
 ```
 
 **Lectern slides to pptx**

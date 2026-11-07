@@ -318,9 +318,11 @@ The sample project has ten model decks and how each was built, in `slides/README
 
 ## 11. Templates
 
-The user picks templates in the gallery, slide by slide. If asked to make a template, write one slide's text to `templates` in the Lectern settings folder as `number-name.md` (`%APPDATA%\Lectern\templates`). Leave out the front matter and `---`. Use the next number, and never overwrite a file.
+The user picks templates in the gallery, slide by slide. One Lectern slides file is a set and each slide in it is a template. Sets live in `templates` in the Lectern settings folder as `set name.md` (`%APPDATA%\Lectern\templates`). All of Lectern shares them, not one project. When asked, write a set or add a slide to one. Ask before deleting or changing a slide that is there.
 
+- Use `marp: true` and `title` in the front matter. Separate slides with `---`, and start each with `<!-- template: name -->`. Slide order is the number.
 - Write cells as usual, like `::: a card`, with placeholder text that says what goes there.
+- The pptx style of the same name (`%APPDATA%\Lectern\pptx-styles\set name.pptx`) is its pair.
 - Use `{{title}}` for the document's name. It becomes the file name when the document is made.
 - For a chart spot, use a small chart with its values in the text, so it draws in any document.
 

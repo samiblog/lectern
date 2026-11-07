@@ -863,12 +863,19 @@ async function resizeHere(dir) {
 }
 
 /** 템플릿을 고르는 창을 띄운다 (slidegallery.js). 고른 템플릿, 아니면 null */
-const pickTemplate = (title, start) => new Promise((resolve) => { emit('pick-template', { title, resolve, start }); });
+const pickTemplate = (title, group) => new Promise((resolve) => { emit('pick-template', { title, resolve, group, start: 2 }); });
+
+/** 문서가 쓰는 템플릿 묶음 (맨 앞 설정의 templates) — 그 묶음을 먼저 연다 */
+function groupOf(src) {
+  const end = src[0]?.trim() === '---' ? src.findIndex((s, i) => i > 0 && s.trim() === '---') : -1;
+  const m = src.slice(1, Math.max(0, end)).map((s) => /^templates:\s*(.+?)\s*$/.exec(s)).find(Boolean);
+  return m ? m[1].replace(/^['"]|['"]$/g, '') : '';
+}
 
 /** 어느 템플릿에든 있는 안내 글 — 고치지 않은 안내 글은 다른 템플릿으로 옮기지 않는다 */
 async function placeholders() {
-  const { templates } = await getJSON('/api/slide-templates');
-  return new Set(templates.flatMap((x) => templateLines(x.text, t('제목')).map((s) => s.trim()).filter(Boolean)));
+  const { groups } = await getJSON('/api/slide-templates');
+  return new Set(groups.flatMap((g) => g.templates).flatMap((x) => templateLines(x.text, t('제목')).map((s) => s.trim()).filter(Boolean)));
 }
 
 /** 이 장을 템플릿으로 저장 (D101): 장의 글 그대로 Lectern 전체의 템플릿 폴더에 새 파일 하나를 만든다 */
@@ -877,7 +884,7 @@ async function saveTemplate(src, [a, b]) {
   if (!name) return;
   try {
     const { template } = await postJSON('/api/slide-templates', { name, text: src.slice(a - 1, b).join('\n') });
-    toast(t('템플릿 {n}번 {name} 으로 저장했습니다', { n: template.number, name: template.name }));
+    toast(t('{group} 묶음의 {n}번 {name} 으로 저장했습니다', { group: template.group, n: template.number, name: template.name }));
   } catch (e) {
     toast(e.message);
   }
@@ -902,7 +909,7 @@ async function slideOp({ op, dir = 0, index = null, layout = '', style = '' }) {
     await commit(pane, pathIn(view), src, setFrontKey(src, 'pptxStyle', style));
     return;
   }
-  const chosen = op === 'add' ? await pickTemplate(t('새 장 — 템플릿을 고르세요'), 2) : op === 'template' ? await pickTemplate(t('이 장의 템플릿을 고르세요'), 2) : null;
+  const chosen = op === 'add' ? await pickTemplate(t('새 장 — 템플릿을 고르세요'), groupOf(src)) : op === 'template' ? await pickTemplate(t('이 장의 템플릿을 고르세요'), groupOf(src)) : null;
   if ((op === 'add' || op === 'template') && !chosen) return;
   if (S.pane !== pane) return;
   const body = chosen && templateLines(chosen.text, t('제목'));

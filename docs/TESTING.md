@@ -126,6 +126,8 @@ PowerPoint 와 Claude Code 가 있는 PC 에서. 시험용 발표를 쓴다 (받
 | S5 | 옮긴 문서의 글을 고치고 pptx 로 만들어 달라고 한다 | `-수정.pptx` 가 생기고 원본은 그대로다. 고친 쪽만 글이 바뀌고 나머지 쪽은 애니메이션까지 원본과 같다 |
 | S6 | 암호가 걸린 pptx 를 옮겨 달라고 한다 | 멈추지 않고 암호를 풀어 달라고 안내한다 |
 | S9 | 새로 만들기로 Lectern 슬라이드를 만들고 Ctrl+M 으로 장을 이어 간 뒤 **pptx 로 전환** | 갤러리가 뜨고, 콘솔 창이 번쩍이지 않고, 문서 옆에 pptx 가 생겨 PowerPoint 에서 열린다 |
+| S10 | 회사 양식 pptx 로 Claude 에게 'pptx 스타일과 템플릿 묶음을 만들어 줘' 라고 한다 | 갤러리 왼쪽에 묶음이 나오고, 전환 창에 스타일과 미리보기 그림이 나온다 |
+| S11 | 그 스타일로 전환한 pptx 의 파일 속성을 본다 | 양식의 제목·작성자가 없다 |
 | S7 | 명령 창에서 `lectern-skill.exe --version` | 판, Python, Pillow, pywin32 가 나온다 |
 | S8 | Python 이 없는 PC 에서 S2·S3·S5 | 같게 동작한다. Claude 가 `lectern-skill.exe` 로 돌린다 |
 
