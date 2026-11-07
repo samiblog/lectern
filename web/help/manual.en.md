@@ -232,13 +232,15 @@ Right-click the margin of a document and choose **Print / Save as PDF**. To save
 
 Write and edit an md document from start to finish without opening the full editor. Guide 08 in the sample project collects worked cases.
 
+**There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z**. A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
+
 ### Four states of a line
 
 | State | What it is | Get there | Leave |
 |---|---|---|---|
 | **Current line** | The place — where you write and insert | Click, right-click, ↑ ↓ | — |
 | **Picked lines** | The target — lines to delete, move or change. One line or many | **Insert**, **Ctrl+L**, **Shift+Enter**, Shift+↑ ↓, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, opening a cell |
-| **Focus** | A light over picked lines — dims the rest, view only | **Shift+Enter** on picked lines, the toolbar button | Shift+Enter, Esc or a click on a dimmed area — back to the picked lines |
+| **Focus** | A light over picked lines — dims the rest, view only | **Shift+Enter** on picked lines, the toolbar button | Shift+Enter, Esc, the toolbar button or a click on a dimmed area — back to the picked lines |
 | **Cell** | A text box that edits the line right where it is | **F2**, double-click, Ctrl+Enter | Enter saves, Esc cancels |
 
 - **The current line says where, picked lines say what.** New lines, pictures and elements go at the current line (below the last line when lines are picked); deleting, moving, line types and levels act on the picked lines.
@@ -278,7 +280,7 @@ Change the structure in a cell or on picked lines. Any text you changed in a cel
 - **Keep writing**: on the last line, **↓** moves the arrow down and opens a new line. On a new line, **Enter** saves and opens the next new line; on an empty one it stops. On an existing line, Enter saves and closes. After a table or code block at the end, a paragraph opens. With footnotes, ↓ on the last line of the body opens a new line instead of going into the notes, and new text goes before the notes.
 - **Ending a list**: on an empty new item, **↓** or **Shift+Tab** moves out a level, and at the outermost level it becomes a paragraph and the list ends. **Tab** nests it under the item above.
 - **Split and join**: **Ctrl+Enter** in the middle of the text splits the line there. **Backspace** at the start of a line joins it to the end of the line above — paragraphs with paragraphs, list items with list items, code within its block. Lines of different kinds, such as a heading and a paragraph, are not joined.
-- **Move**: **Alt+↑ ↓** move lines. List items move with their sub-items within the same list, paragraphs swap with the block next to them, one line of a paragraph written over several lines stays inside that paragraph, code stays in its block, and table rows stay below the header. The picked lines follow, so you can keep moving them.
+- **Move**: **Alt+↑ ↓** move lines. List items move with their sub-items within the same list, paragraphs swap with the block next to them, one line of a paragraph written over several lines stays inside that paragraph, code stays in its block, and table rows stay below the header. The picked lines follow, so you can keep moving them. The notes at the end of the document and the body never cross each other.
 - **Delete**: pick lines and press **Delete** (or right-click 'Delete lines'); in a cell, **Ctrl+Shift+K**. **Ctrl+X** copies the source and deletes. You are asked first if it is more than 10 lines or includes a heading. Doubled blank lines left behind become one, and sub-items left behind move up to the deleted item's place.
 - Deleting only a table's header or divider row would break the table, so it is blocked (pick the whole table to delete it). Deleting part of a code block together with lines outside it is blocked too; picking every code line deletes the block.
 - **Duplicate**: **Ctrl+Shift+D** in a cell adds the same line below and goes on editing the copy. Table rows are not duplicated.
