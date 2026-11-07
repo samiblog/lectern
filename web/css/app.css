@@ -695,6 +695,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-st-path { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 /* 상태줄의 하이라이트한 줄 범위 (spotlight.js, D75) */
 .st-lit { flex: none; color: var(--ui-accent); font-weight: 600; font-variant-numeric: tabular-nums; }
+.st-here { flex: none; font-variant-numeric: tabular-nums; }
 .st-changes {
   border: 0; border-radius: 9px; padding: 0 9px; height: 18px; line-height: 18px;
   background: var(--ui-fresh); color: #1c1400; font-size: 11.5px; font-weight: 700;

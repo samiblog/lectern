@@ -46,7 +46,7 @@ import { writeValues, setChartKind, chartFromTable } from './chartops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks,
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks, releasePick,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, blockedReadOnly, isMd } from './util.js';
@@ -309,6 +309,7 @@ async function begin(line, { cell = 0, at = null, offset = null, select: pick_ =
     range.insertNode(span);
     places.push({ span, frag, nbsp: bodies[i].includes(' ') });
   }
+  releasePick();
   session = { pane, tab, path, line, kind: slot.kind, original, parts, places, el: slot.el, cell: Math.min(caret?.cell ?? cell, n - 1), fence: slot.fence || '' };
   pane.lineEdit = session;
   for (const p of places) bind(p.span);
@@ -424,6 +425,7 @@ async function beginNew(base, below, { end = false, after = false, around = fals
     return;
   }
   const made = slot ? plantLine(slot, next, below) : plantBeside(view, at ? blockOfLine(view, at) : null, below);
+  releasePick();
   session = {
     pane, tab: pane.tab, path: pathIn(view), line: base, kind: next.kind === 'code' ? 'code' : 'text', original: '', parts: { head: '', body: '', tail: '' },
     places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot?.fence || '', fresh: { plan: next, lines: src.slice(), remove: made.remove },
@@ -1404,6 +1406,7 @@ function showSource() {
 async function unfold(line) {
   const pane = S.pane;
   if (!openBlock(pane, line)) return;
+  releasePick();
   await nap();
   await settled(pane);
   const fold = pane.unfold;
@@ -1624,7 +1627,7 @@ async function putImageFile(file) {
   turn = turn.then(async () => {
     if (!await settled(pane) || S.pane !== pane) return;
     const src = sourceLines();
-    const here = pane.here?.line;
+    const here = litSpan()?.[1] ?? pane.here?.line;   // 고른 줄이면 끝 줄 아래 (D119)
     const r = make(src, here ? blockEnd(src, here) : 0);
     const shift = await commit(pane, path, src, r.lines);
     if (shift == null || S.pane !== pane) return;
@@ -1764,7 +1767,17 @@ async function changeLine(line, at) {
 }
 
 /** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·박스글로 */
-export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [{ label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
+export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [{ label: t('아래에 넣기…'), hint: '/', tip: t('고른 줄의 끝 줄 아래에'), action: putPicked },
+  { label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
+
+/** 고른 줄의 '아래에 넣기…': 끝 줄 아래에 새 줄을 열고 넣기 창을 연다 (D119) */
+async function putPicked() {
+  const span = litSpan();
+  if (!span) return;
+  const el = blockOfLine(S.pane.view, span[1]) ?? S.pane.view;
+  stopSpotlight();
+  await putBelow(span[1], el);
+}
 
 async function changeLit() {
   const span = litSpan();
@@ -1877,7 +1890,7 @@ async function kindLitNow(kind) {
 }
 
 /** 고른 줄의 레벨을 바꾼다: 제목은 하위 절까지, 목록 항목은 위에서부터 차례로 (D107) */
-async function levelLitNow(dir) {
+async function levelLitNow(dir, tab = false) {
   const pane = S.pane;
   const span = litSpan();
   if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
@@ -1885,7 +1898,9 @@ async function levelLitNow(dir) {
   let lines = src;
   const op = dir > 0 ? indentItem : outdentItem;
   for (let n = span[0]; n <= span[1]; n++) {
-    const r = headLevel(lines[n - 1]) ? shiftHeadings(lines, n, dir) : op(lines, n);
+    const head = headLevel(lines[n - 1]);
+    if (head && tab) continue;   // 제목 수준은 Tab 으로 바꾸지 않는다 (D83)
+    const r = head ? shiftHeadings(lines, n, dir) : op(lines, n);
     if (!r.error) lines = r.lines;
     else if (r.error === 'edge' || span[0] === span[1]) {
       toast(whyNot(r.error));
@@ -1906,10 +1921,11 @@ export function litKey(e) {
     turn = turn.then(() => kindLitNow(kind));
     return true;
   }
+  const tab = e.key === 'Tab' && !mod && !e.altKey;
   const dir = e.altKey && e.shiftKey && !mod && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') ? (e.key === 'ArrowLeft' ? -1 : 1)
-    : e.key === 'Tab' && !mod && !e.altKey ? (e.shiftKey ? -1 : 1) : 0;
+    : tab ? (e.shiftKey ? -1 : 1) : 0;
   if (!dir) return false;
-  turn = turn.then(() => levelLitNow(dir));
+  turn = turn.then(() => levelLitNow(dir, tab));
   return true;
 }
 

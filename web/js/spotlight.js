@@ -271,8 +271,22 @@ function showUnit(u) {
 
 let herePainted = null;
 
-/** 현재 위치 삼각형을 그 줄의 첫 화면 줄 왼쪽에 (선택된 칸에만) */
+/** 상태줄의 현재 줄 (D119) — 고른 줄·하이라이트·칸은 #lec-st-lit 이 줄을 보여 준다 */
+function showHereLine() {
+  const el = $('#lec-st-here');
+  const us = linesOn() && !lit() && !lineEditing() ? units() : [];
+  const i = us.length ? hereIndex(us) : -1;
+  el.hidden = i < 0;
+  if (i >= 0) el.textContent = `${t('현재 줄')} ${rangeText([us[i].a, us[i].b])}`;
+}
+
 function drawHere() {
+  drawMark();
+  showHereLine();
+}
+
+/** 현재 위치 삼각형을 그 줄의 첫 화면 줄 왼쪽에 (선택된 칸에만) */
+function drawMark() {
   const root = view();
   if (herePainted && herePainted !== root) herePainted.parentElement?.querySelector(':scope > .lec-here')?.remove();
   herePainted = root;
@@ -380,20 +394,15 @@ function pickHere() {
   return true;
 }
 
-/** F2: 현재 줄을 한 줄 편집 (D76) — 한 줄만 하이라이트했으면 그 줄. 여러 줄이면 어느 줄인지 몰라 알리기만 한다 */
+/** F2: 현재 줄을 한 줄 편집 (D76) — 줄을 골랐으면 현재 위치를 열고, 칸이 열리면 고르기는 풀린다 (D119) */
 export function editHere() {
   if (!linesOn()) return false;
   const us = units();
-  const ix = ranged() ? litIndexes(us) : null;
-  if (ix && ix[0] !== ix[1]) {
-    toast(t('한 줄 편집은 한 줄만 고칩니다 — 고른 줄을 풀고 F2 를 누르세요'));
-    return true;
-  }
   if (!us.length) {   // 빈 문서 — 처음 줄을 연다 (D106)
     emit('line-end');
     return true;
   }
-  const i = ix ? ix[0] : hereIndex(us);
+  const i = hereIndex(us);
   if (i < 0) return false;
   emit('line-edit', us[i]);
   return true;
@@ -635,6 +644,7 @@ function updateButton() {
 
 /** 상태줄: 하이라이트한 줄 범위 (한 줄 편집 중이면 그 줄과 키 — lineedit.js, D76) */
 function updateStatus() {
+  showHereLine();
   const el = $('#lec-st-lit');
   const edit = S.pane?.lineEdit;
   if (edit && painted === view()) {
@@ -757,6 +767,11 @@ export function stopSpotlight() {
   return true;
 }
 
+/** 칸을 열 때 (lineedit.js): 쓰기를 시작하면 고르기는 끝난다 (D119). 장 하이라이트는 그대로 */
+export function releasePick() {
+  if (ranged()) clearSpot();
+}
+
 /** Esc: 하이라이트는 끄고 고른 줄로 돌아가고, 그 밖에는 푼다 (D118). 다룬 것이 있으면 true */
 export function escSpotlight() {
   if (!ranged() || !dimmed) return stopSpotlight();
@@ -823,6 +838,18 @@ export function lightBlocks() {
   return true;
 }
 
+/** 파일을 바꾸는 키인지 — 현재 줄에서는 듣지 않고 고르는 키를 알린다 (D108·D119) */
+function changeKey(e) {
+  const k = e.key;
+  if (e.altKey) {
+    if (e.ctrlKey) return !isCodeView() && /^Digit[0-6]$/.test(e.code);
+    if (e.shiftKey) return !isCodeView() && (k === 'ArrowLeft' || k === 'ArrowRight');
+    return k === 'ArrowUp' || k === 'ArrowDown';
+  }
+  if (e.ctrlKey) return !e.shiftKey && e.code === 'KeyX' && !getSelection()?.toString();
+  return k === 'Delete' && !e.shiftKey;
+}
+
 /** 고른 줄이나 현재 줄에 하는 키인지 — 하이라이트 중에는 듣지 않고 알린다. 글을 골랐으면 Ctrl+C·X 는 브라우저의 것이다 */
 function lineKey(e) {
   const k = e.key;
@@ -851,6 +878,10 @@ export function spotKey(e) {
     if (e.key === 'Enter' && e.shiftKey && !e.ctrlKey && !e.altKey) setLight(false);
     else if (lineKey(e)) lightBlocks();
     else return false;
+    return true;
+  }
+  if (!lit() && linesOn() && changeKey(e)) {
+    toast(t('줄을 먼저 고르세요 — Insert 로 현재 줄을 고릅니다'));
     return true;
   }
   if (e.altKey) return false;
@@ -957,11 +988,25 @@ function endDrag() {
   updateStatus();
 }
 
+/** 우클릭 (D119): 그 줄이 현재 줄이 된다 — 메뉴의 '여기'가 곧 현재 줄이게. 고른 줄 안이면 그대로, 밖이면 왼쪽 누르기처럼 푼다 */
+function rightDown(e) {
+  const root = view();
+  if (e.ctrlKey || e.altKey || e.metaKey || e.shiftKey || !root?.contains(e.target) || !linesOn() || noPick(e.target) || lightOn() || lineEditing()) return;
+  if (ranged()) {
+    if (insideLit(e.clientY, e.target)) return;
+    clearSpot();
+  }
+  const us = units();
+  const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
+  if (i >= 0) setHere(us[i].a);
+}
+
 /**
  * 본문 누르기: 누른 줄이 현재 위치 (고른 줄이 있으면 끝 줄이 현재 위치이므로 그 밖 — 누르면 풀리는 곳 — 을 누를 때만).
  * Shift+누르기: 그 줄을 고르고 끌면 넓힌다 — 고른 줄이 있으면 처음 줄은 두고 거기까지 (글 고르기·끌어 놓기 대신)
  */
 function onMouseDown(e) {
+  if (e.button === 2) rightDown(e);
   if (e.button !== 0 || e.ctrlKey || e.altKey || e.metaKey) return;
   const root = view();
   if (!root?.contains(e.target) || !linesOn() || noPick(e.target)) return;

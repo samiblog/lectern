@@ -1295,7 +1295,6 @@ export default {
 "고른 줄의 위 / 아래에 새 줄": "New line above / below the picked lines",
 "팝업·메뉴·찾기·사용설명서 닫기, 그다음 하이라이트 끄기, 고른 줄 풀기": "Close popups, menus, find and the user guide, then turn off focus, then release picked lines",
 "그 줄들을 고르기 — 고른 줄이 있으면 거기까지 넓히기": "Pick those lines — with picked lines, extend to there",
-"현재 줄을 한 줄 편집 (한 줄만 골랐으면 그 줄)": "Edit the current line (or the one picked line)",
 "고른 줄의 끝 줄을 위 / 아래로 — 넓히거나 줄이기": "Move the last picked line up / down — grow or shrink the range",
 "고른 줄(없으면 현재 줄)을 맨 앞 터미널(Claude Code)에 '@경로 a~b행' 으로, 초점도 터미널로 (Enter 는 누르지 않음)": "Put the location of the picked lines (or the current line) into the first terminal (Claude Code) as '@path lines a-b', and move focus there (Enter is not pressed)",
 "고른 줄의 위치(@경로 a~b행) 복사": "Copy the location of the picked lines (@path lines a-b)",
@@ -1307,11 +1306,15 @@ export default {
 "Insert·Shift+누르기·끌기: 줄 고르기 — Shift+↑·↓ 로 넓히고 줄이기, Shift+Enter 하이라이트, Shift+→ Claude 로 보내기": "Insert, Shift+click or drag: pick lines — Shift+↑ ↓ grow and shrink, Shift+Enter focus, Shift+→ sends to Claude",
 "고른 줄 하이라이트": "Focus the picked lines",
 "고른 줄 풀기": "Release picked lines",
-"한 줄 편집은 한 줄만 고칩니다 — 고른 줄을 풀고 F2 를 누르세요": "Line edit works on one line — release the picked lines, then press F2",
 "이 범위 밖에서 우클릭할 때의 메뉴": "The menu you get when you right-click outside this range",
 "고른 행": "Picked rows",
 "현재 줄 고르기 — 고른 줄이면 하이라이트 켜기·끄기 (나머지를 흐리게, 끄면 고른 줄로)": "Pick the current line — on picked lines, turn focus on or off (dims the rest, off returns to picked lines)",
 "현재 줄 고르기": "Pick the current line",
 "하이라이트 중입니다 — Shift+Enter 로 끄면 고른 줄로 돌아갑니다": "Focus is on — press Shift+Enter to turn it off and return to the picked lines",
-"Shift+Enter·Esc 하이라이트 끄기 — 끄면 고른 줄로": "Shift+Enter or Esc turn off focus — back to the picked lines"
+"Shift+Enter·Esc 하이라이트 끄기 — 끄면 고른 줄로": "Shift+Enter or Esc turn off focus — back to the picked lines",
+"현재 줄을 한 줄 편집 — 고른 줄은 풀림": "Edit the current line — picked lines are released",
+"현재 줄": "Current line",
+"줄을 먼저 고르세요 — Insert 로 현재 줄을 고릅니다": "Pick lines first — Insert picks the current line",
+"아래에 넣기…": "Insert below…",
+"고른 줄의 끝 줄 아래에": "Below the last picked line"
 };

@@ -720,7 +720,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+z')
             undone = file_line(edit_doc, 5, '## 고칠 제목')
             check(h2 == ['H2:고칠 제목'] and sizes[0] == sizes[1] and h2_status == '한 줄 편집 5행' and saved_h2 == '## 고친 제목' and shown_h2
-                  and after_status == '고른 줄 5행 · 1줄' and undone == '## 고칠 제목',
+                  and after_status is None and undone == '## 고칠 제목',
                   f"고른 줄에서 F2: 제목 안에 글 칸(## 는 잠금, 글자 크기 그대로), Enter 로 그 줄 저장·다시 그림, Ctrl+Z 로 되돌림 ({h2}, {sizes}, {saved_h2!r}, {undone!r})")
             page.wait_for_selector('#lec-view h2:has-text("고칠 제목")')
             task = start(page.locator('#lec-view li', has_text='할 일'))
@@ -802,16 +802,13 @@ def run(headed: bool) -> None:
             f2_done = [editing(), page.evaluate(lit_status), page.evaluate(shade_js)]
             first_p.click(modifiers=['Shift'])
             page.keyboard.press('Shift+ArrowDown')
-            page.keyboard.press('F2')
-            f2_many = [toast_has('한 줄만 고칩니다'), editing()]
-            page.keyboard.press('Escape')   # 알림대로 — 하이라이트를 풀고
-            page.keyboard.press('F2')
+            page.keyboard.press('F2')   # 여러 줄을 골랐어도 현재 위치를 열고 고르기는 풀린다 (D119)
             wait_edit()
             f2_one = editing()
             page.keyboard.press('Escape')
-            page.keyboard.press('Escape')
+            f2_many = page.evaluate(lit_status)
             check(f2_here == [['P:첫 문단은 **굵게** 한 줄입니다.'], '한 줄 편집 3행', None] and f2_done == [[], None, None]
-                  and f2_many == [True, []] and f2_one == ['H2:고칠 제목'],
+                  and f2_many is None and f2_one == ['H2:고칠 제목'],
                   f"F2 는 현재 줄을 한 줄 편집 (하이라이트를 만들지 않음), 여러 줄 하이라이트면 알림만, 한 줄 하이라이트면 그 줄 ({f2_here}, {f2_done}, {f2_many}, {f2_one})")
             # 꺾인 글의 ↑·↓: 칸 안의 화면 줄 먼저, 맨 윗줄·맨 아랫줄에서 앞뒤 원문 줄로. 칸이 block(.whole)인 목록 항목도
             caret_js = """(() => { const sp = document.activeElement; const c = getSelection().getRangeAt(0).cloneRange(); c.collapse(true);
