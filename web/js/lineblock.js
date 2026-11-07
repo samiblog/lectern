@@ -135,7 +135,10 @@ function valuesPanel(pane, data, kind) {
     u.raw = true;
     apply(pane);
   });
-  wrap.append(barOf(pane, t('차트 값 — 칸마다 고칩니다'), [raw]), table, foot);
+  const scroll = document.createElement('div');
+  scroll.className = 'lec-values-box';
+  scroll.append(table);
+  wrap.append(barOf(pane, t('차트 값 — 칸마다 고칩니다'), [raw]), scroll, foot);
   wrap.dataset.key = JSON.stringify([data, kind]);
   u.refocus = () => {
     const f = u.focus ?? { r: 0, c: 0 };

@@ -27,6 +27,8 @@
 - 제목이 바뀌는 저장은 `commit` 이 번호를 다시 맞춘다 (D107 — `withNumbers`). 머리글 모양을 바꾸는 코드는 `{ numbers: false }` 를 넘긴다 — 아니면 옛 모양으로 되돌린다. 저장을 `commit` 없이 `replaceLines` 로 하면 번호가 어긋난다 (`finishNew` 는 따로 부른다).
 - 글 칸(`contenteditable="plaintext-only"`)의 붙여 넣기는 `beforeinput` 에 글이 오지 않는다 (`dataTransfer` 가 없다) — `paste` 이벤트에서 `clipboardData` 로 받는다 (D109).
 - 펼친 블록(`lineblock.js`, D112)은 그린 뒤 DOM 을 바꾸므로 `forgetUnits` 를 부른다. 그린 결과에 `data-lines` 를 남기면 `lineSlot` 이 그쪽을 잡아 칸이 열리지 않는다.
+- 패널(`.lec-unfold`)은 슬라이드의 `transform` 밖이어야 한다 — `#lec-view` 의 자식으로 둔다. 패널의 줄은 본문 자리와 겹치므로 줄 찾기를 높이로 하지 않는다 (`neighbor` 는 `pane.unfold` 안에서만, 두 번 누르기는 패널이 받는다). 슬라이드에 켜는 기능은 md 문서로만 시험하지 않는다 — 칸은 `overflow: hidden` 이고 장은 줄여 그린다.
+- 값 표의 저장은 다시 그리기를 부른다. 같은 값이면 패널을 그대로 쓰니 패널을 새로 만들 조건을 바꾸면 치던 글이 사라지지 않는지 본다.
 - 작은 창(`putmenu.js`)이 초점을 가져가도 칸은 열려 있다. `onOutside` 가 `#lec-put` 을 칸 밖으로 보면 칸이 닫히고, `spotlight` 의 `OVERLAYS` 에서 빠지면 찾기 칸의 화살표가 현재 위치를 옮긴다.
 - 편집 모드(D54)의 편집 상자(`.lec-editor`)는 칸 위를 덮는다 — 아래의 문서 화면은 그대로 다시 그려지므로 렌더러는 편집 중인지 몰라도 된다. 화면을 옮기는 새 길을 만들면 `navigate` 를 거쳐야 저장하지 않은 편집을 묻는다 (leave guard). 편집 상자 안의 키는 편집기 것이라, 새 앱 단축키를 편집 중에도 쓰게 하려면 `main.js` 의 `inEditor` 거르기에 넣는다. 저장은 `editing.save_source`(새 문서는 `create_source` — `/api/save` 의 `create`)만 — 다른 곳에서 파일에 쓰는 API 를 만들지 않는다.
 - 보내기(D63·D65)는 파일에 바로 쓰지 않는다 — 보내는 것은 `editor.js` 의 `insertIntoDoc` 이 그 문서를 편집 모드로 열어 편집기에 넣는 것까지, 저장은 사용자가. 받는 곳은 문서 탭에 열린 문서(`doctabs.openDocs`)와 새 문서뿐이다. 새 문서는 경로를 정할 때 `newdoc.createDoc` 이 만들고(새로 만들기도 같은 함수) 그 뒤로는 보통 문서다 — 편집 모드는 이미 있는 파일만 연다. 조각은 담는 순간의 원문(`data-lines` 범위)이라 블록 렌더러가 `data-lines` 를 빠뜨리면 그 블록은 담을 수 없다. 함께 갈 캡션·'자료:' 줄은 `toc.js` 의 `partExtent` 가 정한다 (구성 요소를 감싸는 상자를 새로 만들면 같이 본다). 경로·각주·제목을 다듬는 `snippet.js` 는 DOM 을 쓰지 않는다 — 새 링크 문법(차트의 데이터 키 등)을 더하면 `rebase` 에 넣을지 본다.

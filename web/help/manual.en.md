@@ -265,7 +265,7 @@ On an empty line, press **/** to open the insert box. Type to filter. On a line 
 - **Callouts**: note, tip, important, warning, caution. On an empty new line, **↓** leaves the callout. Right-click to change the type, remove the callout or delete it.
 - **Notes**: **Ctrl+Alt+F** in the middle of text adds a mark there and asks for the note. The mark and the note are saved together. On a mark, the same key edits that note. Numbers follow the order of appearance and the notes gather at the end of the document. If you delete a mark, Lectern asks whether to delete the note too.
 - **Figures**: pick an image file from the project; a `Figure 1. Title` caption comes with it. Copy a picture and paste it with **Ctrl+V**, or drag it in, and it is saved as a PNG in the `name-images` folder next to the document. Nothing is overwritten.
-- **Math, diagrams, charts**: insert a sample and its source opens. For existing ones press **F2**. Edit line by line with the result shown below, and press **Esc** to fold it.
+- **Math, diagrams, charts**: insert a sample and a panel opens beside the document. For existing ones press **F2**. Edit math and diagrams line by line; charts with their values in the document show a table. The result stays in place. Press **Esc** to fold it.
 - **Source line, table note**: opens a line starting with `Source: ` or `Note: `.
 - **Links**: **Ctrl+K** picks a project file or takes an address. If text is selected, the link goes on that text.
 - **Attachments**: pick a project file and it is added with a number and a link to the `## Attachments` section at the end, which is created if needed. The file is not copied.
@@ -370,7 +370,7 @@ The work goes in this order.
 
 ### Creating
 
-- In **New** (Ctrl+N), type a path and pick **New Lectern slides at this path**. Pick the first slide in the template gallery and the document is made.
+- In **New document** (Ctrl+N), write a title and choose **Lectern slides** as the type. Pick the first slide in the template gallery and the document is made.
 - For an existing md document, right-click it in the sidebar and pick **Ask Claude to make Lectern slides**. A request goes into the terminal; press Enter and Claude makes a new file in the same folder.
 - Moving a pptx into Lectern slides is in [Asking Claude](#asking-claude).
 
@@ -391,7 +391,16 @@ A slide saved with a picture keeps the picture's path. A document in another fol
 ### Writing and managing slides
 
 - Edit text on a slide with **line editing**. A line added with Ctrl+Enter at the end of a cell stays in the cell, and moving or deleting lines does not break cells or slides.
-- Right-click a slide to add, duplicate, move or delete it. The keys are Ctrl+M, Ctrl+D, Ctrl+Shift+PageUp and PageDown. Ctrl+Z undoes them all.
+- **Sample text**: opening a template's sample text selects all of it, so typing replaces it.
+- **Insert**: on an empty line in a cell, press **/** for headings, lists, callouts, tables, figures, charts, diagrams, math, code, a source line or a speaker note. Notes, attachments, appendices and dividers are not used on slides.
+- **Formatting and pasting**: Ctrl+B, I, K and \`, pasting lines and Excel ranges, table rows and columns, and the callout menu work as in md documents and stay in the cell. Pasted pictures go in the cell, and **Ctrl+Shift+> <** change their width.
+- **Source**: **F2** on math and diagrams opens a panel beside the slide to edit line by line. The cell keeps showing the result and it updates on each save. **Esc** folds it.
+- **Chart values**: **F2** on a chart shows its values as a table. Edit cell by cell, add a row with **Ctrl+Enter** and delete one with **Ctrl+Shift+K**. The buttons below change it to bar, line, area or pie. Charts that read a file or are complex open as source.
+- **Table to chart**: right-click a table and choose **Turn this table into a chart**. The first column is the item, the next columns are values. These charts become PowerPoint charts in pptx, where the values can be edited too.
+- **Cells**: right-click the text of a cell for **Cell look…** (box, accent, note and so on), **Move this cell back / forward** (swaps the text) and **Empty this cell**.
+- **When text overflows**: right-click the cell for **Move overflow to a new slide** (a new slide with the same layout) and **Ask to shorten this cell** (a request in the terminal). Lectern never shrinks text on its own.
+- **Speaker notes**: right-click **Write speaker note…**. It goes in as a comment line at the end of the slide and becomes the pptx notes.
+- Right-click a slide to add, duplicate, move or delete it. The keys are Ctrl+M, Ctrl+D, Ctrl+Shift+PageUp and PageDown. **Alt+↑ ↓** on the slide title also move the slide. Ctrl+Z undoes them all.
 - The right panel is a slide list. Slides to check are marked.
 - Pressing a checkbox on a slide changes `[ ]` or `[x]` in the source. It does nothing during a presentation.
 - A slide with `<!-- hidden: true -->` is hidden. It shows faded on screen and is left out of presentations and PDF.

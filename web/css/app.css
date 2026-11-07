@@ -911,7 +911,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .lec-unfold > pre { flex: 1; margin: 0; overflow: auto; border-radius: 0; font-size: 13px; }
 .lec-unfold-foot { flex: none; display: flex; gap: 6px; padding: 8px 10px; border-top: 1px solid var(--ui-border); }
 .lec-unfold-foot button:first-child { margin-right: auto; }
-.lec-values { display: block; flex: 1; overflow: auto; margin: 0; border-collapse: collapse; font-size: 13px; }
+.lec-values-box { flex: 1; min-height: 0; overflow: auto; }
+.lec-values { display: table; width: 100%; margin: 0; border-collapse: collapse; font-size: 13px; }
 .lec-values th { padding: 5px 8px; border-bottom: 1px solid var(--ui-border); color: var(--ui-muted); font-weight: 650; text-align: left; }
 .lec-values td { padding: 0; border-bottom: 1px solid var(--ui-border); }
 .lec-values input { width: 100%; min-width: 90px; height: 30px; padding: 0 8px; border: 0; background: none; color: inherit; font: inherit; outline: none; }
