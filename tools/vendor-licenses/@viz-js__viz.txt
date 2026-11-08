@@ -1,6 +1,7 @@
 Viz.js 3 (@viz-js/viz) — https://github.com/mdaines/viz-js
 npm 패키지에 라이선스 파일이 없어 tools/update_vendor.py 가 이 파일을 web/vendor/licenses 에 넣는다.
 viz-global.js 에는 Graphviz 와 Expat 이 목적 코드(WebAssembly)로 들어 있다.
+Graphviz 16.1.0 의 소스 코드(EPL-2.0): https://gitlab.com/graphviz/graphviz/-/tree/16.1.0 — WebAssembly 빌드: https://github.com/mdaines/viz-js (v3.31.0)
 
 ==============================================================================
 Viz.js

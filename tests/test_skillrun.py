@@ -94,6 +94,19 @@ def test_build_bundles_the_runner_and_stops_without_its_libraries():
     assert re.search(r'^pillow==', dev, re.M) and re.search(r'^pywin32==.*win32', dev, re.M)
 
 
+def test_build_ships_the_licenses():
+    """바이너리로 배포할 때 라이선스를 함께 준다: Lectern 의 LICENSE 와 함께 든 오픈소스의 고지 (MIT·BSD·Apache 의 조건)"""
+    spec = (ROOT / 'lectern.spec').read_text(encoding='utf-8')
+    iss = (ROOT / 'installer' / 'lectern.iss').read_text(encoding='utf-8-sig')
+    for name in ('LICENSE', 'THIRD-PARTY-NOTICES.md'):
+        assert (ROOT / name).is_file()
+        assert f"('{name}', '.')" in spec, f'{name} 이 실행 파일 폴더에 들지 않는다'
+        assert f'Source: "..\\{name}"' in iss, f'{name} 이 설치 폴더에 들지 않는다'
+    notices = (ROOT / 'THIRD-PARTY-NOTICES.md').read_text(encoding='utf-8')
+    for part in ('### Python ', '### PyInstaller ', '### pywebview ', '### Pillow ', 'Graphviz', 'gitlab.com/graphviz'):
+        assert part in notices, f'고지에 {part} 가 없다'
+
+
 def test_skill_guides_name_the_runner_first():
     for name in ('pptx-to-lectern', 'lectern-to-pptx'):
         text = (ROOT / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')

@@ -1,12 +1,15 @@
 # 포함된 오픈소스 (Third-party notices)
 
-Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라이선스입니다. 모두 재배포를 허락하는 라이선스이며, 아래에 저작권 표시와 라이선스 전문을 옮겼습니다.
+Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라이선스입니다. 모두 재배포를 허락하는 라이선스이며, 아래에 저작권 표시와 라이선스 전문을 옮겼습니다. 이 파일과 Lectern 의 `LICENSE`(MIT)는 설치한 프로그램 폴더에도 들어 있습니다.
 
 ## 실행 환경
 
 | 이름 | 판 | 라이선스 |
 |---|---|---|
-| Python | 3.12.3 | PSF License (Windows 판에 함께 든 OpenSSL·libffi 등의 표시 포함) |
+| Python | 3.15.2 | PSF License (Windows 판에 함께 든 OpenSSL·libffi·bzip2 와 Microsoft 재배포 가능 코드의 조건 포함) |
+| Microsoft Visual C++ 런타임 (VCRUNTIME140·VCRUNTIME140_1, Python 에 포함) | — | Microsoft 재배포 가능 코드 — Python 라이선스의 'Additional Conditions for this Windows binary build' |
+| PyInstaller (실행 파일 만들기) | 6.22.3 | 부트로더: GPL-2.0-or-later 와 부트로더 예외 (넣어 배포해도 제약 없음). 실행 파일에 든 런타임 훅·모듈: Apache-2.0 |
+| pyinstaller-hooks-contrib (런타임 훅) | 2026.9 | 실행 파일에 든 런타임 훅: Apache-2.0 |
 | Microsoft Edge WebView2 SDK (pywebview 에 포함) | — | Microsoft BSD 형식 라이선스 — https://www.nuget.org/packages/Microsoft.Web.WebView2 |
 
 ## Python 패키지
@@ -24,10 +27,11 @@ Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라�
 | MarkupSafe | 3.0.4 | BSD-3-Clause | https://github.com/pallets/markupsafe/ |
 | Pillow (스킬 실행기) | 13.0.0 | MIT-CMU | https://github.com/python-pillow/Pillow |
 | proxy_tools | 0.1.0 | MIT License | http://github.com/jtushman/proxy_tools |
-| pycparser | 3.11 | BSD-3-Clause | https://github.com/eliben/pycparser |
+| pycparser | 3.12 | BSD-3-Clause | https://github.com/eliben/pycparser |
 | pythonnet | 3.2.1 | MIT | https://pythonnet.github.io/ |
 | pywebview | 6.2.1 | BSD License | https://github.com/r0x0r/pywebview |
 | pywin32 (스킬 실행기) | 312 | PSF | https://github.com/mhammond/pywin32 |
+| setuptools (PyInstaller 가 넣음) | 84.2.1 | MIT — 안에 든 importlib_metadata 8.7.1 은 Apache-2.0, jaraco.text 4.0.0 은 MIT | https://github.com/pypa/setuptools |
 | typing_extensions | 4.16.0 | PSF-2.0 | https://github.com/python/typing_extensions |
 | waitress | 3.0.2 | ZPL-2.1 | https://github.com/Pylons/waitress |
 | watchdog | 6.0.0 | Apache Software License | https://github.com/gorakhargosh/watchdog |
@@ -52,7 +56,7 @@ Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라�
 | Vega 6.4.0 | BSD-3-Clause |
 | Vega-Lite 6.5.0 | BSD-3-Clause |
 | Apache ECharts 6.1.0 | Apache-2.0 (NOTICE 포함) — 안에 든 zrender 6.1.0 은 BSD-3-Clause |
-| Viz.js 3.31.0 (@viz-js/viz) | MIT — 안에 든 Graphviz 는 EPL-2.0, Expat 은 MIT |
+| Viz.js 3.31.0 (@viz-js/viz) | MIT — 안에 든 Graphviz 16.1.0 은 EPL-2.0 (소스: https://gitlab.com/graphviz/graphviz/-/tree/16.1.0), Expat 은 MIT |
 | Plotly.js 4.1.2 (plotly.js-dist-min) | MIT — 안에 든 MapLibre GL 은 BSD-3-Clause, buffer·ieee754·object-assign·polybooljs 등은 MIT (plotly.min.js 끝의 주석) |
 | d3 (Vega·Mermaid·ECharts·Plotly 안에 든 모듈·코드) | ISC |
 
@@ -60,7 +64,7 @@ Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라�
 
 ## 라이선스 전문
 
-### Python 3.12.3
+### Python 3.15.2
 
 ```
 A. HISTORY OF THE SOFTWARE
@@ -148,10 +152,8 @@ grants Licensee a nonexclusive, royalty-free, world-wide license to reproduce,
 analyze, test, perform and/or display publicly, prepare derivative works,
 distribute, and otherwise use Python alone or in any derivative version,
 provided, however, that PSF's License Agreement and PSF's notice of copyright,
-i.e., "Copyright (c) 2001, 2002, 2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010,
-2011, 2012, 2013, 2014, 2015, 2016, 2017, 2018, 2019, 2020, 2021, 2022, 2023 Python Software Foundation;
-All Rights Reserved" are retained in Python alone or in any derivative version
-prepared by Licensee.
+i.e., "Copyright (c) 2001 Python Software Foundation; All Rights Reserved"
+are retained in Python alone or in any derivative version prepared by Licensee.
 
 3. In the event Licensee prepares a derivative work that is based on
 or incorporates Python or any part thereof, and wants to make
@@ -450,6 +452,37 @@ CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
 TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
 SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
+BSD License
+
+For Zstandard software
+
+Copyright (c) Meta Platforms, Inc. and affiliates. All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+ * Redistributions of source code must retain the above copyright notice, this
+   list of conditions and the following disclaimer.
+
+ * Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+
+ * Neither the name Facebook, nor Meta, nor the names of its contributors may
+   be used to endorse or promote products derived from this software without
+   specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 
                                  Apache License
                            Version 2.0, January 2004
@@ -709,61 +742,6 @@ Government shall have only "Restricted Rights" as defined in Clause
 authors grant the U.S. Government and others acting in its behalf
 permission to use and distribute the software in accordance with the
 terms specified in this license.
-
-Copyright (c) 1993-1999 Ioi Kim Lam.
-Copyright (c) 2000-2001 Tix Project Group.
-Copyright (c) 2004 ActiveState
-
-This software is copyrighted by the above entities
-and other parties.  The following terms apply to all files associated
-with the software unless explicitly disclaimed in individual files.
-
-The authors hereby grant permission to use, copy, modify, distribute,
-and license this software and its documentation for any purpose, provided
-that existing copyright notices are retained in all copies and that this
-notice is included verbatim in any distributions. No written agreement,
-license, or royalty fee is required for any of the authorized uses.
-Modifications to this software may be copyrighted by their authors
-and need not follow the licensing terms described here, provided that
-the new terms are clearly indicated on the first page of each file where
-they apply.
-
-IN NO EVENT SHALL THE AUTHORS OR DISTRIBUTORS BE LIABLE TO ANY PARTY
-FOR DIRECT, INDIRECT, SPECIAL, INCIDENTAL, OR CONSEQUENTIAL DAMAGES
-ARISING OUT OF THE USE OF THIS SOFTWARE, ITS DOCUMENTATION, OR ANY
-DERIVATIVES THEREOF, EVEN IF THE AUTHORS HAVE BEEN ADVISED OF THE
-POSSIBILITY OF SUCH DAMAGE.
-
-THE AUTHORS AND DISTRIBUTORS SPECIFICALLY DISCLAIM ANY WARRANTIES,
-INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE, AND NON-INFRINGEMENT.  THIS SOFTWARE
-IS PROVIDED ON AN "AS IS" BASIS, AND THE AUTHORS AND DISTRIBUTORS HAVE
-NO OBLIGATION TO PROVIDE MAINTENANCE, SUPPORT, UPDATES, ENHANCEMENTS, OR
-MODIFICATIONS.
-
-GOVERNMENT USE: If you are acquiring this software on behalf of the
-U.S. government, the Government shall have only "Restricted Rights"
-in the software and related documentation as defined in the Federal 
-Acquisition Regulations (FARs) in Clause 52.227.19 (c) (2).  If you
-are acquiring the software on behalf of the Department of Defense, the
-software shall be classified as "Commercial Computer Software" and the
-Government shall have only "Restricted Rights" as defined in Clause
-252.227-7013 (c) (1) of DFARs.  Notwithstanding the foregoing, the
-authors grant the U.S. Government and others acting in its behalf
-permission to use and distribute the software in accordance with the
-terms specified in this license. 
-
-----------------------------------------------------------------------
-
-Parts of this software are based on the Tcl/Tk software copyrighted by
-the Regents of the University of California, Sun Microsystems, Inc.,
-and other parties. The original license terms of the Tcl/Tk software
-distribution is included in the file docs/license.tcltk.
-
-Parts of this software are based on the HTML Library software
-copyrighted by Sun Microsystems, Inc. The original license terms of
-the HTML Library software distribution is included in the file
-docs/license.html_lib.
 ```
 
 ### blinker 1.9.0 — LICENSE.txt
@@ -2670,7 +2648,7 @@ freely, subject to the following restrictions:
 
 MIT License — http://github.com/jtushman/proxy_tools
 
-### pycparser 3.11 — LICENSE
+### pycparser 3.12 — LICENSE
 
 ```
 pycparser -- A C parser in Python
@@ -2830,6 +2808,305 @@ PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF
 LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
 NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+```
+
+### PyInstaller 6.22.3 — COPYING.txt (라이선스와 예외)
+
+실행 파일에는 부트로더와 런타임 훅·모듈(Apache-2.0)만 들어간다. GPL 전문은 https://www.gnu.org/licenses/old-licenses/gpl-2.0.html .
+
+```
+================================
+ The PyInstaller licensing terms
+================================
+ 
+
+Copyright (c) 2010-2023, PyInstaller Development Team
+Copyright (c) 2005-2009, Giovanni Bajo
+Based on previous work under copyright (c) 2002 McMillan Enterprises, Inc.
+
+
+PyInstaller is licensed under the terms of the GNU General Public License
+as published by the Free Software Foundation; either version 2 of the License,
+or (at your option) any later version.
+
+
+Bootloader Exception
+--------------------
+
+In addition to the permissions in the GNU General Public License, the
+authors give you unlimited permission to link or embed compiled bootloader
+and related files into combinations with other programs, and to distribute
+those combinations without any restriction coming from the use of those
+files. (The General Public License restrictions do apply in other respects;
+for example, they cover modification of the files, and distribution when
+not linked into a combined executable.)
+ 
+ 
+Bootloader and Related Files
+----------------------------
+
+Bootloader and related files are files which are embedded within the
+final executable. This includes files in directories:
+
+./bootloader/
+./PyInstaller/loader
+
+
+Run-time Hooks
+----------------------------
+
+Run-time Hooks are a different kind of files embedded within the final
+executable. To ease moving them into a separate repository, or into the
+respective project, these files are now licensed under the Apache License,
+Version 2.0.
+
+Run-time Hooks are in the directory
+./PyInstaller/hooks/rthooks
+
+
+Additional Run-time Modules
+----------------------------------
+
+In addition to run-time hooks, PyInstaller may embed additional run-time
+modules in the final executable. At the time of writing, these include
+the splash-screen module (``pyi_splash``) and modules from utility package
+for run-time hooks (``_pyi_rth_utils``). All these files are licensed under
+the Apache License, Version 2.0, and are located in the following directory:
+
+./PyInstaller/fake-modules
+
+
+The PyInstaller.isolated submodule
+----------------------------------
+
+By request, the PyInstaller.isolated submodule and its corresponding tests are
+additionally licensed with the MIT license so that it may be reused outside of
+PyInstaller under GPL 2.0 or MIT terms and conditions -- whichever is the most
+suitable to the recipient downstream project. Affected files/directories are:
+
+./PyInstaller/isolated/
+./tests/unit/test_isolation.py
+```
+
+### pyinstaller-hooks-contrib 2026.9 — LICENSE
+
+(Apache-2.0 전문은 아래 watchdog 절에 있다.)
+
+```
+============================================
+PyInstaller Community Hooks: License details
+============================================
+
+This software is made available under the terms of the licenses found below.
+Contributions to the Community Hooks are made under the terms of the license
+that covers that type of hook/file. (See below)
+
+
+Standard hooks and files
+------------------------
+
+The PyInstaller Community Hooks are licensed under the terms of the GNU General
+Public License as published by the Free Software Foundation; either version 2 of
+the License, or (at your option) any later version (SPDX GPL-2.0-or-later).
+These are all hooks/files except runtime hooks (see below). The terms of GPL 2.0
+are found in the section titled *GNU General Public License* below.
+
+
+Runtime hooks
+-------------
+
+These are runtime hooks, bundled with complete pyinstaller executables. These
+files are licensed under the Apache-2.0 whose terms are found in the section
+titled *Apache License 2.0*.
+
+These reside in "_pyinstaller_hooks_contrib/rthooks".
+
+
+GNU General Public License
+--------------------------
+
+https://gnu.org/licenses/gpl-2.0.html
+
+
+		    GNU GENERAL PUBLIC LICENSE
+		       Version 2, June 1991
+
+ Copyright (C) 1989, 1991 Free Software Foundation, Inc.
+ 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+			    Preamble
+
+  The licenses for most software are designed to take away your
+freedom to share and change it.  By contrast, the GNU General Public
+License is intended to guarantee your freedom to share and change free
+software--to make sure the software is free for all its users.  This
+General Public License applies to most of the Free Software
+Foundation's software and to any other program whose authors commit to
+using it.  (Some other Free Software Foundation software is covered by
+the GNU Library General Public License instead.)  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+this service if you wish), that you receive source code or can get it
+if you want it, that you can change the software or use pieces of it
+in new free programs; and that you know you can do these things.
+
+  To protect your rights, we need to make restrictions that forbid
+anyone to deny you these rights or to ask you to surrender the rights.
+These restrictions translate to certain responsibilities for you if you
+distribute copies of the software, or if you modify it.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must give the recipients all the rights that
+you have.  You must make sure that they, too, receive or can get the
+source code.  And you must show them these terms so they know their
+rights.
+
+  We protect your rights with two steps: (1) copyright the software, and
+(2) offer you this license which gives you legal permission to copy,
+distribute and/or modify the software.
+
+  Also, for each author's protection and ours, we want to make certain
+that everyone understands that there is no warranty for this free
+software.  If the software is modified by someone else and passed on, we
+want its recipients to know that what they have is not the original, so
+that any problems introduced by others will not reflect on the original
+authors' reputations.
+
+  Finally, any free program is threatened constantly by software
+patents.  We wish to avoid the danger that redistributors of a free
+program will individually obtain patent licenses, in effect making the
+program proprietary.  To prevent this, we have made it clear that any
+patent must be licensed for everyone's free use or not licensed at all.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+
+		    GNU GENERAL PUBLIC LICENSE
+   TERMS AND CONDITIONS FOR COPYING, DISTRIBUTION AND MODIFICATION
+
+  0. This License applies to any program or other work which contains
+a notice placed by the copyright holder saying it may be distributed
+under the terms of this General Public License.  The "Program", below,
+refers to any such program or work, and a "work based on the Program"
+means either the Program or any derivative work under copyright law:
+that is to say, a work containing the Program or a portion of it,
+either verbatim or with modifications and/or translated into another
+language.  (Hereinafter, translation is included without limitation in
+the term "modification".)  Each licensee is addressed as "you".
+
+Activities other than copying, distribution and modification are not
+covered by this License; they are outside its scope.  The act of
+running the Program is not restricted, and the output from the Program
+is covered only if its contents constitute a work based on the
+Program (independent of having been made by running the Program).
+Whether that is true depends on what the Program does.
+
+  1. You may copy and distribute verbatim copies of the Program's
+source code as you receive it, in any medium, provided that you
+conspicuously and appropriately publish on each copy an appropriate
+copyright notice and disclaimer of warranty; keep intact all the
+notices that refer to this License and to the absence of any warranty;
+and give any other recipients of the Program a copy of this License
+along with the Program.
+
+You may charge a fee for the physical act of transferring a copy, and
+you may at your option offer warranty protection in exchange for a fee.
+
+  2. You may modify your copy or copies of the Program or any portion
+of it, thus forming a work based on the Program, and copy and
+distribute such modifications or work under the terms of Section 1
+above, provided that you also meet all of these conditions:
+
+    a) You must cause the modified files to carry prominent notices
+  
+…
+```
+
+### setuptools 84.2.1 — LICENSE
+
+```
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
+```
+
+### importlib_metadata 8.7.1 (setuptools 안) — LICENSE
+
+(Apache-2.0 전문은 아래 watchdog 절에 있다.)
+
+```
+Apache License
+Version 2.0, January 2004
+http://www.apache.org/licenses/
+
+TERMS AND CONDITIONS FOR USE, REPRODUCTION, AND DISTRIBUTION
+
+1. Definitions.
+
+"License" shall mean the terms and conditions for use, reproduction, and distribution as defined by Sections 1 through 9 of this document.
+
+"Licensor" shall mean the copyright owner or entity authorized by the copyright owner that is granting the License.
+
+"Legal Entity" shall mean the union of the acting entity and all other entities that control, are controlled by, or are under common control with that entity. For the purposes of this definition, "control" means (i) the power, direct or indirect, to cause the direction or management of such entity, whether by contract or otherwise, or (ii) ownership of fifty percent (50%) or more of the outstanding shares, or (iii) beneficial ownership of such entity.
+
+"You" (or "Your") shall mean an individual or Legal Entity exercising permissions granted by this License.
+
+"Source" form shall mean the preferred form for making modifications, including but not limited to software source code, documentation source, and configuration files.
+
+"Object" form shall mean any form resulting from mechanical transformation or translation of a Source form, including but not limited to compiled object code, generated documentation, and conversions to other media types.
+
+"Work" shall mean the work of authorship, whether in Source or Object form, made available under the License, as indicated by a copyright notice that is included in or attached to the work (an example is provided in the Appendix below).
+
+"Derivative Works" shall mean any work, whether in Source or Object form, that is based on (or derived from) the Work and for which the editorial revisions, annotations, elaborations, or other modifications represent, as a whole, an original work of authorship. For the purposes of this License, Derivative Works shall not include works that remain separable from, or merely link (or bind by name) to the interfaces of, the Work and Derivative Works thereof.
+
+"Contribution" shall mean any work of authorship, including the original version of the Work and any modifications or additions to that Work or Derivative Works thereof, that is intentionally submitted to Licensor for inclusion in the Work by the copyright owner or by an individual or Legal Entity authorized to submit on behalf of the copyright owner. For the purposes of this definition, "submitted" means any form of electronic, verbal, or written communication sent to the Licensor or its representatives, including but not limited to communication on electronic mailing lists, source code control systems, and issue tracking systems that are managed by, or on behalf of, the Licensor for the purpose of discussing and improving the Work, but excluding communication that is conspicuously marked or otherwise designated in writing by the copyright owner as "Not a Contribution."
+
+"Contributor" shall mean Licensor and any individual or Legal Entity on behalf of whom a Contribution has been received by Licensor and subsequently incorporated within the Work.
+
+2. Grant of Copyright License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable copyright license to reproduce, prepare Derivative Works of, publicly display, publicly perform, sublicense, and distribute the Work and such Derivative Works in Source or Object form.
+
+3. Grant of Patent License. Subject to the terms and conditions of this License, each Contributor hereby grants to You a perpetual, worldwide, non-exclusive, no-charge, royalty-free, irrevocable (except as stated in this section) patent license to make, have made, use, offer to sell, sell, import, and otherwise transfer the Work, where such license applies only to those patent claims licensable by such Contributor that are necessarily infringed by their Contribution(s) alone or by 
+```
+
+### jaraco.text 4.0.0 (setuptools 안) — LICENSE
+
+```
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to
+deal in the Software without restriction, including without limitation the
+rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+sell copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
+IN THE SOFTWARE.
 ```
 
 ### typing_extensions 4.16.0 — LICENSE
@@ -4271,6 +4548,8 @@ THIS SOFTWARE.
 ```
 
 ### Viz.js (@viz-js/viz) — Graphviz·Expat 포함
+
+Graphviz 16.1.0 은 viz-global.js 안에 목적 코드(WebAssembly)로 들어 있다. 그 소스 코드는 EPL-2.0 으로 https://gitlab.com/graphviz/graphviz/-/tree/16.1.0 에서 받을 수 있고, WebAssembly 로 만드는 빌드는 https://github.com/mdaines/viz-js (v3.31.0) 에 있다.
 
 ```
 ==============================================================================

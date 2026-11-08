@@ -746,3 +746,4 @@ You can bring up this table at any time with the **?** button in the toolbar or 
 - The terminal needs Windows 10 (1809) or later. A shell's history is gone once Lectern closes.
 - Document titles in the tree are read from the beginning of each document. If a document starts with a very long frontmatter, its file name is shown instead.
 - Web images that cannot be loaded (blocked on a company network, or taking more than 15 seconds) turn into links.
+- Lectern is MIT licensed. The copyright notices and full licenses of the open-source software it includes (Python, pywebview, the Markdown, chart and editor libraries and more) are in `THIRD-PARTY-NOTICES.md` in the installed program folder, and Lectern's own license is in `LICENSE.txt`.
