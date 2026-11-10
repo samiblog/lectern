@@ -1483,5 +1483,7 @@ export default {
 "할 일의 기한을 읽지 못했습니다 — 줄 끝에 (YYYY-MM-DD) 또는 (M/D)": "Could not read the to-do due date — (YYYY-MM-DD) or (M/D) at the end of the line",
 "확인할 줄": "Lines to check",
 "확인할 줄 {n}": ["{n} line to check", "{n} lines to check"],
-"확인할 줄 {n}개 — 업무 현황에서 고칠 곳을 봅니다": ["{n} line to check \u2014 see the work board", "{n} lines to check \u2014 see the work board"]
+"확인할 줄 {n}개 — 업무 현황에서 고칠 곳을 봅니다": ["{n} line to check \u2014 see the work board", "{n} lines to check \u2014 see the work board"],
+"WORK.md 가 2MB 를 넘어 읽지 않습니다 — 기록을 다른 문서로 옮기세요": "WORK.md is over 2MB, so it is not read — move the log to another document",
+"그 밖에 {n}개 — WORK.md 에서 봅니다": ["{n} more — see WORK.md", "{n} more — see WORK.md"]
 };

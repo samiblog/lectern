@@ -82,6 +82,8 @@ def _read_one(folder: str) -> dict[str, Any]:
         hit = _cache.get(key)
         if hit and hit[0] == sig:
             return hit[1]
+        if st.st_size > editing.MAX_EDIT_BYTES:   # 2MB 가 넘는 WORK.md — 업무 카드로는 너무 크다
+            return {'error': 'too-big'}
         source = editing.read_source(path)
         data = {'text': source['text'], 'hash': source['hash'], 'mtime': st.st_mtime}
         _cache[key] = (sig, data)

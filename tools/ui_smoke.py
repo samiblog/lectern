@@ -2493,7 +2493,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
             boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
-            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'vi_keys=false', 'external_images=false',
+            check(dialog.is_visible() and boxes == ['work_alerts=true', 'restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'vi_keys=false', 'external_images=false',
                                                    'terminal_follow_style=true'],
                   f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
             shot('07-settings')
@@ -2866,7 +2866,7 @@ def run(headed: bool) -> None:
             check(all(more_kinds.get(k, 0) > 0 for k in ('chart', 'task', 'link', 'source')) and more_kinds['diagram'] > 0 and chart_thumbs
                   and task_sub == ['open*', 'done', 'all'] and open_tasks and done_tasks and links['n'] > 10 and links['bad'] == 0 and links['code']
                   and any(n.startswith('각주') for n in notes) and 'status' in meta_keys and 'tags' in meta_keys
-                  and meta_rows[:2] == ['진행 중', '리서치 자동화 구현 계획'] and '구리 시장 2분기 리뷰' not in meta_rows,
+                  and meta_rows[:4] == ['진행', '구리 시장 리서치 자동화', '진행 중', '리서치 자동화 구현 계획'] and '구리 시장 2분기 리뷰' not in meta_rows,
                   f"모아 보기의 차트(작은 그림)·할 일(안 한 것/한 것)·링크(코드 위치·깨짐 없음)·출처(각주), 문서 정보(frontmatter 키·값) "
                   f"({more_kinds}, {chart_thumbs}, {task_sub}, {links}, {notes[:2]}, {meta_keys}, {meta_rows[:4]})")
 

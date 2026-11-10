@@ -42,6 +42,7 @@ const ERROR = {
   'missing-card': t('WORK.md 가 없습니다'),
   slow: t('응답이 없습니다 — 드라이브가 연결되어 있는지 보세요'),
   unreadable: t('읽지 못했습니다'),
+  'too-big': t('WORK.md 가 2MB 를 넘어 읽지 않습니다 — 기록을 다른 문서로 옮기세요'),
 };
 
 const norm = (p) => String(p || '').replace(/\\/g, '/').replace(/\/+$/, '').toLowerCase();
@@ -90,6 +91,9 @@ const statusHtml = (card) => {
 };
 const timeText = (ev) => (ev.allDay ? t('종일') : ev.time ? `${ev.time}${ev.end ? `–${ev.end}` : ''}` : '');
 
+const MAX_LIST = 50;   // 확인할 줄·할 일·일정 목록에 보이는 수 — 나머지는 개수로
+const more = (items) => (items.length > MAX_LIST ? html`<li class="wk-none">${t('그 밖에 {n}개 — WORK.md 에서 봅니다', { n: items.length - MAX_LIST })}</li>` : '');
+
 let shownBoard = null;   // 마지막으로 그린 업무 현황 (누른 행이 무엇인지)
 
 function rowHtml(row, i, today) {
@@ -135,20 +139,20 @@ function boardHtml(b) {
   const ref = (r) => (r.home ? 'home' : String(b.rows.indexOf(r)));
   const checks = cards.filter((r) => !CLOSED.has(r.card.status)).flatMap((r) => r.card.problems.map((p) => ({ r, p })));
   if (checks.length) {
-    parts.push(html`<h3>${t('확인할 줄')}</h3><ul class="wk-list wk-check">${checks.map(({ r, p }) => html`<li><button type="button" data-wk-go="${ref(r)}" data-line="${p.line}" title="${p.text}">
-      <span class="wk-left">${t('{n}행', { n: p.line })}</span><span class="wk-what">${PROBLEM[p.kind]}${p.hint ? ` (${p.hint})` : ''} — <code>${p.text}</code></span><span class="wk-folder">${label(r)}</span></button></li>`)}</ul>`);
+    parts.push(html`<h3>${t('확인할 줄')}</h3><ul class="wk-list wk-check">${checks.slice(0, MAX_LIST).map(({ r, p }) => html`<li><button type="button" data-wk-go="${ref(r)}" data-line="${p.line}" title="${p.text}">
+      <span class="wk-left">${t('{n}행', { n: p.line })}</span><span class="wk-what">${PROBLEM[p.kind]}${p.hint ? ` (${p.hint})` : ''} — <code>${p.text}</code></span><span class="wk-folder">${label(r)}</span></button></li>`)}${more(checks)}</ul>`);
   }
   parts.push(html`<h3>${t('기한 있는 할 일')}</h3>`);
-  parts.push(todos.length ? html`<ul class="wk-list">${todos.map(({ card, todo, left }) => {
+  parts.push(todos.length ? html`<ul class="wk-list">${todos.slice(0, MAX_LIST).map(({ card, todo, left }) => {
     const r = whose(card);
     return html`<li><button type="button" data-wk-go="${ref(r)}" data-line="${todo.line}"><span class="wk-left ${left < 0 ? 'late' : left === 0 ? 'soon' : ''}">${leftText(left)}</span><span class="wk-what">${todo.text}</span><span class="wk-folder">${label(r)}</span></button></li>`;
-  })}</ul>` : html`<p class="wk-none">${t('이번 주까지 기한이 있는 할 일이 없습니다')}</p>`);
+  })}${more(todos)}</ul>` : html`<p class="wk-none">${t('이번 주까지 기한이 있는 할 일이 없습니다')}</p>`);
   const events = dayEvents(cards.map((r) => r.card), b.today);
   parts.push(html`<h3>${t('오늘 일정')}</h3>`);
-  parts.push(events.length ? html`<ul class="wk-list">${events.map(({ card, event }) => {
+  parts.push(events.length ? html`<ul class="wk-list">${events.slice(0, MAX_LIST).map(({ card, event }) => {
     const r = whose(card);
     return html`<li><button type="button" data-wk-go="${ref(r)}" data-line="${event.line}"><span class="wk-left">${timeText(event)}</span><span class="wk-what">${event.text}</span><span class="wk-folder">${label(r)}</span></button></li>`;
-  })}</ul>` : html`<p class="wk-none">${t('오늘 일정이 없습니다')}</p>`);
+  })}${more(events)}</ul>` : html`<p class="wk-none">${t('오늘 일정이 없습니다')}</p>`);
   return parts;
 }
 

@@ -151,6 +151,9 @@ try:
         def dialog_msg():
             return page.locator('#lec-workevent-msg').inner_text() if page.locator('#lec-workevent-msg').is_visible() else ''
 
+        until(lambda: page.locator('#lec-work-notes .wk-notice', has_text='오늘의 업무').count() > 0, 9000)
+        summary = page.locator('#lec-work-notes').inner_text() if page.locator('#lec-work-notes').count() else ''
+        check('A 켤 때 요약에 확인할 줄 수', '확인할 줄' in summary, summary)
         close_notes()
         print('[A 오타 — 손으로 쓴 WORK.md]')
         text = btext()

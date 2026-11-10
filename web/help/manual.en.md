@@ -704,14 +704,20 @@ The **Work** button in the toolbar or **Alt+W**. It opens the common folder as a
 - **Task table**: one row per remembered folder — status, task (title and folder name), priority, due date (D-n), open to-dos, updated. Items needing attention come first (blocked or at risk, overdue or due within 3 days, active but WORK.md unchanged for over 14 days), then active and planned (earliest due first), on hold, and done or dropped (folded). Click a row to open that folder as a tab and open its WORK.md.
 - **To-dos with a due date** (overdue, today, this week) and **today's events**: those from the common WORK.md are marked 'Common'. Click one to go to its line.
 - **Lines to check**: lines that could not be read because of a typo or something deleted are not dropped but gathered here. Click one to go to that line of that WORK.md. This covers a status that is not a known value, a misspelled key (`stauts` — the right key is shown), a due date or to-do date that cannot be read (`(11/31)`, a missing parenthesis), a mistyped checkbox (`- []`, `-[ ]`), an event on a date that does not exist (`2026-11-31`), an unreadable time (`25:00`, `14:00-1500` — kept as an event without a time), an event without a description, and front matter whose closing `---` is missing. The task row shows 'n lines to check', and the start summary mentions them.
-- **Folders that could not be read**: listed when a folder moved, was deleted or its drive is not connected, or when WORK.md is not UTF-8 (for example ANSI from an old Notepad). **Remove from list** removes it (the files stay).
+- **Folders that could not be read**: listed when a folder moved, was deleted or its drive is not connected, or when WORK.md is not UTF-8 (for example ANSI from an old Notepad) or is over 2MB. **Remove from list** removes it (the files stay).
 - If the common folder moved or was deleted, opening the work board asks you to choose it again. The list of task folders stays as it is.
+- Lines to check, to-dos with a due date and today's events show up to 50 items; the rest is given as a count.
 - Closing a tab keeps the folder on the board. Lectern reads only the `WORK.md` of a remembered folder, not its other files.
 - Opening a folder with a WORK.md remembers it. To add one without opening it, use **Add folder** — if the chosen folder has no WORK.md, Lectern asks whether to open it and make one. Folders inside the Lectern program folder (the samples) are not remembered.
 
 ### Adding events
 
-**Add event** on the board or **Alt+S**. Set the date (today, tomorrow and weekday buttons), time (end time, all day), what, and where to add it (common or an unfinished task), then press **Insert**. One line goes at the end of the 'Schedule' section of that WORK.md (the section is created at the end if missing). The target starts as the WORK.md of the project you are looking at. **Undo** at the bottom right takes it out again. If the file changed in the meantime nothing is added and you are told.
+**Add event** on the board or **Alt+S**. Set the date (today, tomorrow and weekday buttons), time (end time, all day), what, and where to add it (common or an unfinished task), then press **Insert**. One line goes at the end of the 'Schedule' section of that WORK.md (the section is created at the end if missing). The target starts as the WORK.md of the project you are looking at. Enter adds and Esc cancels.
+
+- An empty description or an end time before the start is not added; the reason is shown. Adding the same event twice is not prevented.
+- **Undo** at the bottom right takes it out again. If the file was edited after that, it is not undone, to keep your edit, and you are told.
+- If the file changed or was deleted while the window was open, nothing is added and you are told. If you were editing the same WORK.md in edit mode, saving in the editor tells you it changed and asks.
+- The 'Schedule' section is a `## Schedule` or `### Schedule` heading (the Korean section name works too). Something after it in parentheses or after a colon is fine, as in `## Schedule (November)`; a task title such as `# Schedule cleanup` is not the section.
 
 You can also write it in WORK.md — on the last line of the 'Schedule' section press Ctrl+Enter for a new line and type `- 2026-11-14 10:00 Team meeting`. Repeating events (every Monday) are not there yet; write one line per date.
 
@@ -721,8 +727,8 @@ Shown at the bottom right of the window while Lectern is running. They stay unti
 
 | Alert | When |
 |---|---|
-| Today's work | Once at start (again when the date changes) — overdue, due today or within 3 days, to-dos overdue or due today, today's events |
-| Starting soon | 10 minutes before an event with a time — events that already started are not announced |
+| Today's work | Once at start (again when the date changes) — overdue, due today or within 3 days, to-dos overdue or due today, today's events, lines to check. Nothing is shown when there is nothing to report |
+| Starting soon | Once, 10 minutes before an event with a time — events that already started are not announced (waking from sleep does not bring a pile of old alerts) |
 | Today's record | Once after 17:30 — active tasks whose WORK.md did not change today |
 
 - Windows notifications and the notification area are not used. If the window is hidden, the alerts are waiting when you come back. With Lectern closed there are no alerts.

@@ -203,6 +203,7 @@ This task in one line.
 - Section names and order are a recommendation. Lectern reads only the front matter and the shape of to-do and event lines. Keep event lines in the 'Schedule' section (where people add events with Add event).
 - Events and to-dos outside any task (meetings, admin) go in the common folder's `WORK.md`. Facts of one task (status, due date, to-dos, events) live only in that task's WORK.md — don't repeat them in review documents.
 - The work board is a view. Don't write the board out as a file.
+- 'Lines to check' on the work board are lines outside this format (an unknown status, a misspelled key, an unreadable date or time, a checkbox like `- []`, unclosed front matter). When people hand you such a line, fix it to the format.
 
 ## 6. HTML documents
 
