@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable
 
-from . import __version__, i18n
+from . import __version__, i18n, work
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
@@ -206,6 +206,8 @@ class AppState:
         if remember:
             self.config.add_recent(str(path))
             self.remember_tabs()
+        if not project.readonly:
+            work.note_opened(self.config, path)   # WORK.md 가 있으면 업무 폴더 목록에 (D124)
         return project
 
     def restore(self, folders: list[str], active: Any = 0) -> None:

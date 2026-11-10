@@ -339,6 +339,32 @@ function forgetDir(o, path) {
   if (o.lazy.size !== before) build(o);
 }
 
+/** 폴더 모두 펼치기·접기 (D125 — 사이드바 '펼침', 문서 트리는 tree.js). 제외 폴더는 펼치지 않는다 — 펼치면 안을 읽는다 (D49).
+ * 접을 때는 읽어 둔 제외 폴더의 안도 버린다. mode: all | none | first */
+function setAllOpen(mode) {
+  const o = state();
+  if (!o) return;
+  if (folderView()) o.folderOpen ??= new Set(S.open);
+  for (const k of Object.keys(LISTS)) {
+    if (k === 'code' && folderView()) continue;
+    const v = view(o, k);
+    if (mode !== 'all') {
+      for (const p of [...v.open]) if (v.index.get(p)?.excluded) forgetDir(o, p);
+      v.open.clear();
+    }
+    if (mode === 'none') continue;
+    const walk = (nodes) => {
+      for (const n of nodes) {
+        if (n.type !== 'dir' || n.excluded) continue;
+        v.open.add(n.path);
+        if (mode === 'all' && n.children) walk(n.children);
+      }
+    };
+    walk(v.tree);
+  }
+  render();
+}
+
 /** 목록이 보이는데 아직 받지 않았거나 그 뒤로 파일이 바뀌었으면 읽는다 */
 function ensure() {
   const o = state();
@@ -686,5 +712,6 @@ export function initOthers() {
   on('changed', () => { if (folderView()) render(); });
   on('titles', () => { if (folderView()) render(); });
   on('side-sort', render);   // 목록의 차례 (D97)
+  on('side-open', setAllOpen);   // 폴더 모두 펼치기·접기 (D125 — tree.js 의 '펼침')
   on('view', revealCurrent);
 }

@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal
+from . import __version__, editing, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -534,9 +534,12 @@ def create_app(state: AppState) -> Flask:
         if data.get('create') is True:
             try:
                 target = editing.new_doc_path(project.root, rel, project.exclude)
-                return jsonify(editing.create_source(target, text) | {'path': target.relative_to(project.root).as_posix()})
+                made = editing.create_source(target, text) | {'path': target.relative_to(project.root).as_posix()}
             except editing.EditError as exc:
                 return jsonify(error=exc.message), exc.status
+            if target == work.card_path(project.root):   # 업무 카드 만들기 (D124) — 업무 폴더 목록에
+                work.note_opened(state.config, project.root)
+            return jsonify(made)
         target = resolve_inside(project.root, rel)
         if target is None:   # 없음·밖·숨김 — 새로 만들지 않는다
             return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
@@ -557,6 +560,60 @@ def create_app(state: AppState) -> Flask:
         if target.exists():
             return jsonify(error=t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요'), status=409)
         return jsonify(path=target.relative_to(project.root).as_posix())
+
+    # ---- 업무 관리 (D124): 폴더마다 맨 위의 WORK.md, 공통 폴더, 업무 폴더 목록 (lectern/work.py) ----------------
+
+    @app.get('/api/work')
+    def api_work() -> Any:
+        """업무 현황의 재료 — 공통 폴더와 기억한 폴더들의 WORK.md 글 (탭이 닫혀 있어도). 열린 탭에 그사이 생긴 WORK.md 도 더한다.
+        {home: {path, name, text, hash, mtime} | {path, name, error} | null, folders: [같은 모양…], alerts}"""
+        for project in list(state.projects.values()):
+            if not project.readonly:
+                work.note_opened(state.config, project.root)
+        return jsonify(work.board(state.config))
+
+    @app.get('/api/work/card')
+    def api_work_card() -> Any:
+        """?folder= — 목록·공통 폴더의 WORK.md 원문 (일정 더하기가 고친다). /api/source 와 같은 모양"""
+        try:
+            return jsonify(work.read_card(state.config, request.args.get('folder')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/work/card')
+    def api_work_card_save() -> Any:
+        """{folder, text, hash} — 목록·공통 폴더의 WORK.md 를 쓴다 (일정 더하기 — 사용자가 넣을 곳을 고르고 누를 때). 바뀌었으면 409"""
+        data = body()
+        text = data.get('text')
+        if not isinstance(text, str):
+            abort(400)
+        try:
+            return jsonify(work.save_card(state.config, data.get('folder'), text, data.get('hash')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/work/folders')
+    def api_work_folders() -> Any:
+        """{add: 경로} 또는 {remove: 경로} — 업무 폴더 목록에 더하거나 뺀다 (파일은 그대로). 더할 폴더에 WORK.md 가 없으면
+        404 와 code: no-card (화면이 업무 카드 만들기를 권한다). {folders, path?}"""
+        data = body()
+        try:
+            if 'remove' in data:
+                work.remove_folder(state.config, data.get('remove'))
+                return jsonify(folders=state.config.get('work_folders'))
+            path = work.add_folder(state.config, data.get('add'))
+        except editing.EditError as exc:
+            no_card = exc.status == 404 and exc.message == t('그 폴더에 WORK.md 가 없습니다')
+            return jsonify(error=exc.message, code='no-card' if no_card else None), exc.status
+        return jsonify(folders=state.config.get('work_folders'), path=path)
+
+    @app.post('/api/work/home')
+    def api_work_home() -> Any:
+        """{path} — 공통 폴더를 정한다 (null·빈 글이면 비운다). {home}"""
+        try:
+            return jsonify(home=work.set_home(state.config, body().get('path')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
 
     @app.get('/api/notes')
     def api_notes() -> Any:

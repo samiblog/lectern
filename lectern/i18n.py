@@ -179,4 +179,10 @@ EN: dict[str, str] = {
     '{name} 은 제외 폴더 이름이라 목록에 나오지 않습니다 — 다른 이름을 쓰세요': '{name} is an excluded folder name and would not be listed — use another name.',
     '같은 이름이 있습니다 — 다른 이름을 쓰세요': 'That name is taken — use another one.',
     '폴더를 만들지 못했습니다: {error}': 'Could not create the folder: {error}',
+    '업무 폴더 목록에 없는 폴더입니다 — 업무 현황을 다시 열어 고르세요': 'That folder is not in the work folder list — open the work board again and pick it there.',
+    'WORK.md 가 없습니다 — 그사이 지워졌거나 폴더가 옮겨졌습니다': 'There is no WORK.md — it was deleted or the folder moved in the meantime.',
+    '폴더를 고르세요': 'Pick a folder.',
+    '폴더의 전체 경로가 필요합니다': 'The full path of the folder is needed.',
+    'Lectern 프로그램 폴더 안은 업무 관리에 쓰지 않습니다 — 예제는 다른 곳에 복사해 쓰세요': 'Folders inside the Lectern program folder are not used for work management — copy the samples elsewhere to try them.',
+    '그 폴더에 WORK.md 가 없습니다': 'That folder has no WORK.md.',
 }

@@ -15,12 +15,15 @@ function headers(extra = {}) {
 async function check(res) {
   if (res.ok) return res;
   let message = `HTTP ${res.status}`;
+  let code = '';
   try {
     const body = await res.json();
     if (body?.error) message = body.error;
+    if (body?.code) code = body.code;
   } catch { /* 본문이 JSON이 아님 */ }
   const err = /** @type {any} */ (new Error(message));
   err.status = res.status;
+  if (code) err.code = code;   // 서버가 붙인 까닭의 이름 (예: /api/work/folders 의 no-card)
   throw err;
 }
 

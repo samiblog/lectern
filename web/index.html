@@ -40,6 +40,8 @@
     <symbol id="i-search" viewBox="0 0 20 20"><circle cx="8.8" cy="8.8" r="5.3"/><path d="m12.8 12.8 4 4"/></symbol>
     <symbol id="i-toc" viewBox="0 0 20 20"><path d="M3 5h14M6.5 10H17M6.5 15H17"/></symbol>
     <symbol id="i-note" viewBox="0 0 20 20"><path d="M4 3.5h12a1 1 0 0 1 1 1V12l-4.5 4.5H4a1 1 0 0 1-1-1v-11a1 1 0 0 1 1-1Z"/><path d="M17 12h-3.5a1 1 0 0 0-1 1v3.5M6.5 7.5h7M6.5 10.5h4"/></symbol>
+    <symbol id="i-work" viewBox="0 0 20 20"><path d="M3.5 6.5h13a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1h-13a1 1 0 0 1-1-1v-8a1 1 0 0 1 1-1ZM7.5 6.5V5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v1.5M2.5 11h15M9 11v1.5h2V11"/></symbol>
+    <symbol id="i-expand" viewBox="0 0 20 20"><path d="m6.5 7.5 3.5-3.5 3.5 3.5M6.5 12.5l3.5 3.5 3.5-3.5"/></symbol>
     <symbol id="i-up" viewBox="0 0 20 20"><path d="m5.5 12 4.5-4.5 4.5 4.5"/></symbol>
     <symbol id="i-down" viewBox="0 0 20 20"><path d="m5.5 8 4.5 4.5L14.5 8"/></symbol>
     <symbol id="i-minus" viewBox="0 0 20 20"><path d="M5 10h10"/></symbol>
@@ -121,6 +123,8 @@
     <button id="lec-btn-settings" class="icon-btn" title="설정 (Ctrl+,)"><svg><use href="#i-gear"/></svg></button>
     <!-- 단축키 표와 사용설명서 (help.js, D45) -->
     <button id="lec-btn-help" class="icon-btn" title="단축키 (Ctrl+/) — 사용설명서는 F1" aria-label="단축키와 사용설명서"><svg><use href="#i-help"/></svg></button>
+    <!-- 업무 현황 (work.js, D124): 공통 폴더의 개요 맨 위 — 기억한 폴더들의 WORK.md -->
+    <button id="lec-btn-work" class="icon-btn labeled" title="업무 현황 (Alt+W) — WORK.md 가 있는 폴더들의 상태·마감·할 일·일정"><svg><use href="#i-work"/></svg><span class="lb">업무</span></button>
     <!-- 터미널 모음 (gather.js, D40): 열린 프로젝트들의 터미널을 한 화면에 -->
     <button id="lec-btn-gather" class="icon-btn labeled" aria-pressed="false" title="터미널 모음 — 열린 프로젝트들의 터미널을 한 화면에 (Ctrl+Shift+`)"><svg><use href="#i-terms"/></svg><span class="lb">터미널 모음</span><span id="lec-gather-count" class="n" hidden></span></button>
   </header>
@@ -150,6 +154,7 @@
         <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
         <button id="lec-btn-titles" class="icon-btn small toggle" title="파일 이름 대신 문서 제목으로 보기 (끄면 파일 이름, 마우스를 올리면 제목)">제목</button>
         <button id="lec-btn-sort" class="icon-btn small toggle" title="목록의 차례 — 이름순·시간순·형식순 (폴더가 먼저)">차례</button>
+        <button id="lec-btn-expand" class="icon-btn small" title="폴더 모두 펼치기·접기 — 문서·코드·자료 목록" aria-label="폴더 모두 펼치기·접기 — 문서·코드·자료 목록"><svg><use href="#i-expand"/></svg></button>
         <button id="lec-btn-view" class="icon-btn small toggle" title="폴더 구조 그대로 보기 — 문서와 파일을 한 트리에 (끄면 종류별: 문서·코드·자료 묶음)">폴더</button>
       </div>
       <!-- 문서 트리와 '코드'·'자료' 목록 (others.js, D48): 종류별 보기에서는 묶음 사이의 분리선을 끌어 아래 묶음의 높이를 바꾸고, 머리줄을 눌러 접는다.
@@ -432,6 +437,16 @@
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
+    <div class="opt-block" aria-labelledby="lec-work-title">
+      <span class="opt-head"><b id="lec-work-title">업무 관리</b><small>폴더마다 맨 위의 WORK.md 를 모아 업무 현황(Alt+W)과 알림으로 보여 줍니다. 공통 폴더에는 과제 밖의 일정·할 일을 적는 WORK.md 와 정리 문서를 둡니다</small></span>
+      <div class="opt-btns">
+        <span id="lec-work-home" class="wk-home-path"></span>
+        <button type="button" id="lec-work-pick" class="text-btn">공통 폴더 고르기…</button>
+        <button type="button" id="lec-work-clear" class="text-btn">비우기</button>
+      </div>
+      <ul id="lec-work-folders" class="wk-set-list" aria-label="업무 폴더 목록"></ul>
+    </div>
+    <label class="opt"><input type="checkbox" data-key="work_alerts"><span><b>업무 알림</b><small>Lectern 이 켜져 있는 동안 창 오른쪽 아래에 — 켤 때 오늘의 요약, 일정 10분 전, 17:30 에 오늘 기록이 없는 진행 중 과제. 기억한 WORK.md 가 없으면 아무 일도 없습니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="restore_last"><span><b>마지막 위치에서 시작</b><small>폴더를 열면 마지막에 보던 문서와 스크롤 위치로 엽니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="expand_first_level"><span><b>첫 단계 폴더 펼치기</b><small>폴더를 열 때 트리의 첫 단계 폴더를 펼쳐 둡니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>

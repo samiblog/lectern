@@ -23,6 +23,7 @@ MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
 MAX_DOC_TABS = 20     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67 — 화면의 doctabs.js MAX_DOCS 와 같게)
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
+MAX_WORK_FOLDERS = 200   # 업무 폴더 목록에 기억하는 폴더 수 (D124 — WORK.md 가 있는 폴더)
 
 CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
 
@@ -79,6 +80,9 @@ DEFAULTS: dict[str, Any] = {
     'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
     'csv_stats': True,       # CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
+    'work_home': None,       # 업무 관리의 공통 폴더 (D124 — 공통 WORK.md 와 정리 문서. 설정 창·업무 현황에서 고른다, 서버가 기록)
+    'work_folders': [],      # WORK.md 가 있는 폴더들 (D124 — 열거나 '폴더 더하기'로 더한다. 경로만, 서버가 기록)
+    'work_alerts': True,     # Lectern 안의 업무 알림 (D124 — 시작 요약·일정 10분 전·17:30 기록. 설정 창)
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
@@ -87,11 +91,11 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
-                      'terminal_height'})
+                      'terminal_height', 'work_home'})
 _EXAMPLE = {bool: N_('true 또는 false'), int: N_('숫자'), float: N_('숫자'), str: N_('"글자"'), list: N_('["이름", ...] 목록'),
             dict: N_('{ } 객체')}
 
@@ -112,7 +116,7 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('auto', 'side', 'bottom')
     if key == 'editor_keys':
         return value in ('default', 'vim')
-    if key in ('last_folder', 'editor', 'terminal_shell'):
+    if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):
         return isinstance(value, str)
     if isinstance(default, bool):
         return isinstance(value, bool)
@@ -136,7 +140,7 @@ def _upgrade(data: dict[str, Any]) -> None:
 
 def _expected(key: str, lang: str) -> str:
     default = DEFAULTS[key]
-    kind = (str if key in ('last_folder', 'editor', 'terminal_shell')
+    kind = (str if key in ('last_folder', 'editor', 'terminal_shell', 'work_home')
             else int if key in ('sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_width') else type(default))
     return t(_EXAMPLE.get(kind, N_('맞는 형식')), lang)
 
@@ -262,6 +266,51 @@ class Config:
             data['active_tab'] = active
             return True
         self._update(change)
+
+    def set_work_home(self, folder: str | None) -> None:
+        """업무 관리의 공통 폴더 (D124). None 이면 비운다. 목록에 같은 폴더가 있으면 뺀다 — 공통 WORK.md 는 과제가 아니다"""
+        def change(data: dict[str, Any]) -> None:
+            data['work_home'] = folder
+            if folder:
+                norm = os.path.normcase(folder)
+                data['work_folders'] = [p for p in data.get('work_folders') or [] if os.path.normcase(p) != norm]
+        self._update(change)
+
+    def add_work_folder(self, folder: str) -> bool:
+        """업무 폴더 목록에 더한다 (D124). 이미 있거나 공통 폴더면 그대로. 더했으면 True"""
+        norm = os.path.normcase(folder)
+        added = False
+
+        def change(data: dict[str, Any]) -> bool:
+            nonlocal added
+            folders = [p for p in data.get('work_folders') or [] if isinstance(p, str)]
+            home = data.get('work_home')
+            if any(os.path.normcase(p) == norm for p in folders) or (isinstance(home, str) and os.path.normcase(home) == norm):
+                return False
+            if len(folders) >= MAX_WORK_FOLDERS:
+                return False
+            data['work_folders'] = folders + [folder]
+            added = True
+            return True
+        self._update(change)
+        return added
+
+    def remove_work_folder(self, folder: str) -> bool:
+        """업무 폴더 목록에서 뺀다 (D124 — 파일은 그대로). 뺐으면 True"""
+        norm = os.path.normcase(folder)
+        removed = False
+
+        def change(data: dict[str, Any]) -> bool:
+            nonlocal removed
+            folders = [p for p in data.get('work_folders') or [] if isinstance(p, str)]
+            kept = [p for p in folders if os.path.normcase(p) != norm]
+            if len(kept) == len(folders):
+                return False
+            data['work_folders'] = kept
+            removed = True
+            return True
+        self._update(change)
+        return removed
 
     def remember_position(self, root: str, doc: str, scroll: int, docs: list[str] | None = None) -> None:
         """프로젝트의 마지막 문서와 스크롤 위치. 문서별 스크롤 위치도 남긴다 (뒤로 가기·다시 열 때).

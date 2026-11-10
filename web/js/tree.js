@@ -117,6 +117,33 @@ function openSort(e) {
   showMenu(r.left, r.bottom + 2, [{ header: t('폴더 먼저, 그 안의 차례') }, item('name', t('이름순')), item('time', t('시간순')), item('type', t('형식순'))]);
 }
 
+/** 업무 카드 만들기 (D124 — work.js). 프로젝트 맨 위의 WORK.md 가 있으면 연다 */
+const workCardItem = () => ({ label: S.fileMap.has('WORK.md') ? t('업무 카드 열기') : t('업무 카드 만들기…'), action: () => emit('work-card', {}) });
+
+/** 폴더 모두 펼치기·접기 (D125) — 문서 트리는 여기서, 코드·자료 목록은 others.js 가 'side-open' 을 듣는다. mode: all | none | first */
+function setAllOpen(mode) {
+  if (!S.tab?.treeLoaded) return;
+  S.open.clear();
+  const walk = (nodes, depth) => {
+    for (const n of nodes) {
+      if (n.type !== 'dir') continue;
+      S.open.add(n.path);
+      if (mode === 'all' && n.children) walk(n.children, depth + 1);
+    }
+  };
+  if (mode !== 'none') walk(S.tree, 0);
+  render();
+  emit('side-open', mode);
+}
+
+function openExpand(e) {
+  const r = e.currentTarget.getBoundingClientRect();
+  showMenu(r.left, r.bottom + 2, [{ header: t('문서·코드·자료 목록의 폴더') },
+    { label: t('폴더 모두 펼치기'), tip: t('제외 폴더(흐린 폴더)는 펼치지 않습니다'), action: () => setAllOpen('all') },
+    { label: t('폴더 모두 접기'), action: () => setAllOpen('none') },
+    { label: t('첫 단계 폴더만 펼치기'), action: () => setAllOpen('first') }]);
+}
+
 /** 지금 보는 항목의 상위 폴더를 펼치고 트리에서 보이게 한다. */
 function revealCurrent() {
   if (!S.view) return;
@@ -247,7 +274,7 @@ function onContextMenu(e) {
   const row = e.target.closest('.row');
   e.preventDefault();
   if (!row) {   // 목록의 빈 곳
-    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), newFolderItem('')]);
+    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), newFolderItem(''), workCardItem()]);
     return;
   }
   if (row.dataset.doc != null) {
@@ -293,6 +320,7 @@ export function initTree() {
     emit('titles');   // 최근 변경·검색·폴더 보기의 문서 행도
   });
   $('#lec-btn-sort').addEventListener('click', openSort);
+  $('#lec-btn-expand').addEventListener('click', openExpand);
   for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
   on('tree', render);

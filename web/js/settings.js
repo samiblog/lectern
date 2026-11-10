@@ -18,6 +18,7 @@ export function openSettings() {
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   for (const radio of $$('#lec-settings input[name="editor_keys"]')) radio.checked = radio.value === (S.config.editor_keys === 'vim' ? 'vim' : 'default');
   renderMyStyles();
+  emit('settings-open');   // 업무 관리 칸 (work.js, D124)
   $('#lec-aiguide-samples').hidden = !S.samples;
   box().hidden = false;
   $('#lec-settings input')?.focus();

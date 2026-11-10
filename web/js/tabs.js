@@ -356,6 +356,7 @@ function tabMenu(tab) {
     [{ label: t('프로젝트 개요'), action: there(openOverview) },
       { label: t('새 문서 만들기…'), action: there(() => emit('new-doc', { dir: '' })) },
       { label: t('새 폴더 만들기…'), action: there(() => emit('new-folder', { dir: '' })) },
+      { label: tab.fileMap.has('WORK.md') ? t('업무 카드 열기') : t('업무 카드 만들기…'), tip: t('이 폴더 맨 위의 WORK.md — 업무 현황과 알림이 읽습니다'), action: there(() => emit('work-card', { tab })) },
       { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) }],
     [{ label: t('전체 경로 복사'), action: () => copy(tab.root) }, { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) }],
     closes);

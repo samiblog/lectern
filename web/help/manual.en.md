@@ -100,6 +100,7 @@ The **Files** tab is split into three groups.
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
 - **Sort** picks the list order: by name, time or type. Folders always come first, then files. By time puts the newest on top, and a folder follows its newest file. By type goes by file extension.
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
+- The **↕** button (expand or collapse all folders) does **Expand all folders**, **Collapse all folders** or **Expand first-level folders only** for the folders in the document, code and file lists at once. Excluded (dimmed) folders stay closed, because opening one reads what is inside.
 - Documents that changed since you last looked get an amber dot.
 - The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
 - **Excluded folders** such as `node_modules`, `dist`, `build`, `venv` and `__pycache__` appear dimmed and collapsed in 'Other files'. They can hold a great many files, so their contents are read when you expand them, and everything inside is listed there whatever its type (code still opens in the code view with one click). Changes inside are not followed automatically — collapse and expand the folder again, or press F5, to read it afresh. They are not counted in the group header or matched by the filter.
@@ -669,6 +670,68 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 - To keep notes out of a git repository, especially a public one, add `.lectern/` to `.gitignore`.
 - If the file changed elsewhere in the meantime, Lectern reads it again and merges. Notes are off in view-only projects such as the samples.
 
+## Work management
+
+Put one `WORK.md` at the top of a folder, and Lectern remembers that folder and gathers the status, due dates, to-dos and events of many folders in one **work board**. While Lectern is running it also shows alerts inside the window. WORK.md is plain Markdown that you can write and edit without Claude, and Claude may read and write it too.
+
+Sample — [11 Work management](../../samples/guide/11-업무-관리.md) (in Korean): the sample WORK.md at the top of the samples and a walkthrough.
+
+### WORK.md
+
+| Part | What goes there | Read by the work board |
+|---|---|---|
+| Front matter | `status` (planned, active, at-risk, blocked, on-hold, done, dropped), `priority` (high, medium, low), `due` (YYYY-MM-DD) | Yes — status, priority, due date |
+| `# Title` | The task name | Yes |
+| To-dos | `- [ ] Draft chapter 3 (11/14)` — the parentheses at the end are the due date | Yes — checkbox and due date |
+| Events | `- 2026-11-12 14:00-15:00 Report to the lead`, `- 2026-11-20 all-day Workshop` | Yes — today's events and alerts |
+| Current state, decisions, log, materials | Anything | No |
+
+- Section names and order are up to you. Lectern reads only the front matter and the shape of to-do and event lines.
+- A due date without a year, `(11/14)`, is read as the nearest such date to today. The Korean values work too.
+- Dates are normally written `2026-11-14`, but `2026.11.14`, `2026/11/14` and `2026-11-5` are read too. Upper-case keys (`Status`) and a space before the colon also work.
+- Change status and due date by right-clicking the front matter and choosing **Edit document info**, tick to-dos with their checkboxes, and add log lines with line editing.
+- Only the `WORK.md` at the top of a folder opened as a project counts. One in a subfolder becomes a card when that subfolder is opened on its own.
+
+### Making a work card
+
+Right-click a project tab or an empty spot of the document tree and choose **Make work card…**. Set the title (the folder name at first), due date and priority and press **Create**: `WORK.md` is created from the basic template and opened. If it already exists the menu says **Open work card**. The folder joins the work folder list.
+
+### Work board
+
+The **Work** button in the toolbar or **Alt+W**. It opens the common folder as a tab and shows at the top of that folder's overview.
+
+- **Common folder**: an ordinary folder for a WORK.md with events and to-dos outside any task, and for weekly and monthly reviews. Pick it the first time you open the work board (for example `Documents\Lectern work` — you can make a new folder in the picker). Make the common WORK.md with **Make the common WORK.md** on the board.
+- **Task table**: one row per remembered folder — status, task (title and folder name), priority, due date (D-n), open to-dos, updated. Items needing attention come first (blocked or at risk, overdue or due within 3 days, active but WORK.md unchanged for over 14 days), then active and planned (earliest due first), on hold, and done or dropped (folded). Click a row to open that folder as a tab and open its WORK.md.
+- **To-dos with a due date** (overdue, today, this week) and **today's events**: those from the common WORK.md are marked 'Common'. Click one to go to its line.
+- **Lines to check**: lines that could not be read because of a typo or something deleted are not dropped but gathered here. Click one to go to that line of that WORK.md. This covers a status that is not a known value, a misspelled key (`stauts` — the right key is shown), a due date or to-do date that cannot be read (`(11/31)`, a missing parenthesis), a mistyped checkbox (`- []`, `-[ ]`), an event on a date that does not exist (`2026-11-31`), an unreadable time (`25:00`, `14:00-1500` — kept as an event without a time), an event without a description, and front matter whose closing `---` is missing. The task row shows 'n lines to check', and the start summary mentions them.
+- **Folders that could not be read**: listed when a folder moved, was deleted or its drive is not connected, or when WORK.md is not UTF-8 (for example ANSI from an old Notepad). **Remove from list** removes it (the files stay).
+- If the common folder moved or was deleted, opening the work board asks you to choose it again. The list of task folders stays as it is.
+- Closing a tab keeps the folder on the board. Lectern reads only the `WORK.md` of a remembered folder, not its other files.
+- Opening a folder with a WORK.md remembers it. To add one without opening it, use **Add folder** — if the chosen folder has no WORK.md, Lectern asks whether to open it and make one. Folders inside the Lectern program folder (the samples) are not remembered.
+
+### Adding events
+
+**Add event** on the board or **Alt+S**. Set the date (today, tomorrow and weekday buttons), time (end time, all day), what, and where to add it (common or an unfinished task), then press **Insert**. One line goes at the end of the 'Schedule' section of that WORK.md (the section is created at the end if missing). The target starts as the WORK.md of the project you are looking at. **Undo** at the bottom right takes it out again. If the file changed in the meantime nothing is added and you are told.
+
+You can also write it in WORK.md — on the last line of the 'Schedule' section press Ctrl+Enter for a new line and type `- 2026-11-14 10:00 Team meeting`. Repeating events (every Monday) are not there yet; write one line per date.
+
+### Alerts
+
+Shown at the bottom right of the window while Lectern is running. They stay until you close them.
+
+| Alert | When |
+|---|---|
+| Today's work | Once at start (again when the date changes) — overdue, due today or within 3 days, to-dos overdue or due today, today's events |
+| Starting soon | 10 minutes before an event with a time — events that already started are not announced |
+| Today's record | Once after 17:30 — active tasks whose WORK.md did not change today |
+
+- Windows notifications and the notification area are not used. If the window is hidden, the alerts are waiting when you come back. With Lectern closed there are no alerts.
+- Turn them off with **Work alerts** in Settings. Shown alerts are not remembered, so Today's work appears again after a restart.
+
+### With Claude
+
+WORK.md works the same when Claude reads and writes it. Give Claude the writing guide with **Teach Claude Code about Lectern** in Settings and it writes the same format. For example: "Make a WORK.md for this folder", "Take the to-dos from the meeting notes and add them to WORK.md", "Write what I did today in the log section".
+
 ## Terminal
 
 - The **Terminal** button at the right end of the tab bar, or Ctrl+\`, opens a terminal to the right of the main area. Windows PowerShell starts in the current tab's project folder, and each tab has its own shell.
@@ -720,6 +783,8 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
+| Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
+| Work alerts | Work alerts inside the window while Lectern is running. On by default |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |
 

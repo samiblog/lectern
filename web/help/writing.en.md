@@ -159,6 +159,51 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Keep tabular data as CSV — clicked in Lectern it shows as a table (filter, sort and stats per column), and charts can read it with `data.url`. **Make the first row the header** (column names), put only values in cells and units in the header (`price (USD/t)`). Save as UTF-8 (Excel's CP949 is readable too, but only UTF-8 can be edited).
 - To point at data from a document, use a link (`[monthly prices](../data/월별-가격.csv)`) or a path such as `data/월별-가격.csv:5` — clicking goes to that row of the table.
 
+## Work card — WORK.md
+
+`WORK.md` at the top of a project folder is that folder's **work card**. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without Claude — when Claude writes it, keep the same format so people can carry on editing it.
+
+```markdown
+---
+status: active
+priority: high
+due: 2026-12-15
+---
+
+# Market analysis report
+
+This task in one line.
+
+## Current state
+
+## To do
+
+- [ ] Draft chapter 3 (2026-11-14)
+
+## Schedule
+
+- 2026-11-12 14:00-15:00 First report to the team lead
+- 2026-11-20 all-day Commodities seminar
+
+## Decisions
+
+## Log
+
+### 2026-11-10
+
+- First report to the team lead. Scope narrowed to the home market
+
+## Materials
+```
+
+- **Only three front-matter keys are read**: `status` (`planned`, `active`, `at-risk`, `blocked`, `on-hold`, `done`, `dropped` — the Korean values 예정·진행·지연위험·막힘·보류·완료·중단 work too), `priority` (high, medium, low), `due` (`YYYY-MM-DD`). Don't rename the keys or decorate the values. Adding other keys is fine (they group in Gather view's 'Document info').
+- **To-dos**: `- [ ] what (YYYY-MM-DD)` — the date in parentheses at the end is the due date (`(11/14)` works too). Mark done with `[x]`.
+- **Events**: `- YYYY-MM-DD HH:MM what`, an end time as `HH:MM-HH:MM`, a whole day as `all-day`. Always write absolute dates — not 'tomorrow' or 'Friday'. Events with a time are announced 10 minutes before.
+- **Log**: a `### YYYY-MM-DD` per day, newest first, one line each under it. Don't rewrite past entries.
+- Section names and order are a recommendation. Lectern reads only the front matter and the shape of to-do and event lines. Keep event lines in the 'Schedule' section (where people add events with Add event).
+- Events and to-dos outside any task (meetings, admin) go in the common folder's `WORK.md`. Facts of one task (status, due date, to-dos, events) live only in that task's WORK.md — don't repeat them in review documents.
+- The work board is a view. Don't write the board out as a file.
+
 ## 6. HTML documents
 
 - Their own styles (`<style>`) show as they are. Without styles, Lectern applies its document style.
@@ -197,4 +242,5 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Lectern slides (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
 - Moving between pptx and slides uses the skills `pptx-to-lectern` and `lectern-to-pptx`. If they are missing, ask before installing, as in `slides.en.md` section 11.
+- `WORK.md` at the top of a folder is the work card — front matter `status`, `priority`, `due` only; to-dos `- [ ] what (YYYY-MM-DD)`; events `- YYYY-MM-DD HH:MM what` (absolute dates); log under `### date`, newest first.
 ```

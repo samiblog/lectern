@@ -29,6 +29,9 @@
 | outline.js | 코드 화면의 목차 — 언어마다 클래스·함수·메서드·구분 주석, 설정 파일은 키·섹션 (줄 단위 규칙), 확장자 → 언어 |
 | notes.js | 프로젝트 메모 (D92) — 탭 막대 '메모'·Alt+M 의 오른쪽 패널, 카드(제목·본문·할 일·색·고정), 저장과 합치기. `tab.notes`, 'new-note' 로 더한다 |
 | notesdata.js | 메모의 글 (D92, DOM 없음) — `.lectern/notes.md` ↔ 메모 목록, 할 일 줄 다루기 (`parseNotes`·`writeNotes`·`toggleTask`) |
+| work.js | 업무 관리 (D124) — 업무 현황(공통 폴더의 폴더 개요 맨 위, 'rendered' 를 듣고 그린다), 툴바 '업무'·Alt+W, 업무 카드 만들기('work-card' — 기본 틀 `web/templates/work*.md` 로 POST /api/save 의 create), 일정 더하기 창(Alt+S — POST /api/work/card, 되돌리기), 폴더 더하기, 공통 폴더 정하기, 설정 창의 '업무 관리' 칸('settings-open'), 알림 칸(`notice` — 닫을 때까지 남는다) |
+| workalert.js | 업무 알림 (D124) — 메인 창에서 1분마다 GET /api/work 를 읽어 시작 요약(날짜마다 한 번)·일정 10분 전·17:30 기록 알림. 띄운 것은 메모리에만, 설정 `work_alerts` 로 끈다 |
+| workdata.js | 업무 관리의 글 (D124, DOM 없음) — WORK.md 읽기(`readWork` — 머리 설정 status·priority·due, 제목, 할 일과 끝의 기한, 일정 줄), 오늘 기준 계산(`attention`·`dueTodos`·`dayEvents`·`eventsToRemind`·`quietToday`), 일정 줄(`eventLine`)과 넣을 자리(`insertEvent`) |
 | html.js | 자동 이스케이프 (D89, DOM 없음) — `html` 태그의 값은 글로 들어간다. 화면에 넣는 길은 `setHtml`·`addHtml`, 이미 안전한 HTML 은 `raw`, 결과는 `Safe`. 조각은 배열로 잇는다 |
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
 | help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |

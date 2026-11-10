@@ -59,6 +59,10 @@ const notes = await load('web/js/notesdata.js');
   say('참조·캡션·인용 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/work_cases.js', await load('web/js/workdata.js'));
+  say('업무 관리 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
 }

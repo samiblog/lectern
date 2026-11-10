@@ -59,6 +59,8 @@ import { initPresent, presenting, presentKey, startPresent } from './present.js'
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveToDoc, focusNextTile } from './gather.js';
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
 import { loadTree } from './project.js';
+import { initWork, openBoard, openEventDialog } from './work.js';
+import { initWorkAlert } from './workalert.js';
 import { forgetFailedImages } from './doc.js';
 import { html, setHtml } from './html.js';
 import { $, basename, toast } from './util.js';
@@ -182,7 +184,7 @@ const typing = (e) => e.target.closest?.('input, textarea, select, [contentedita
   || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 /** 독립창(D95)에 없는 것의 키: 메모·프로젝트 탭·터미널·터미널 모음·설정·폴더 열기 */
-const mainOnlyKey = (e, mod, key) => (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyM' || e.key === 'PageDown' || e.key === 'PageUp'))
+const mainOnlyKey = (e, mod, key) => (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyM' || e.code === 'KeyW' || e.code === 'KeyS' || e.key === 'PageDown' || e.key === 'PageUp'))
   || (mod && !e.altKey && (e.code === 'Backquote' || e.key === ',' || key === 'o'));
 
 /** Shift+F10·메뉴 키: 초점이 있는 행, 없으면 현재 줄에서 우클릭한 것처럼 */
@@ -349,6 +351,12 @@ function bindKeys() {
       e.preventDefault();   // 줄 번호 (linenums.js, D80)
     } else if (mod && e.shiftKey && !e.altKey && (e.code === 'BracketLeft' || e.code === 'BracketRight') && !typing(e) && !overlayOpen() && foldHere(e.code === 'BracketLeft')) {
       e.preventDefault();   // 현재 줄이 든 절 접기·펴기 (fold.js, D120)
+    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyW' && !typing(e)) {
+      e.preventDefault();   // 업무 현황 (work.js, D124)
+      openBoard();
+    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyS' && !typing(e)) {
+      e.preventDefault();   // 일정 더하기 (work.js, D124)
+      openEventDialog();
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyH' && !typing(e) && spotButton()) {
       e.preventDefault();   // 장 하이라이트 (spotlight.js, D91)
     } else if (((e.key === 'F10' && e.shiftKey && !mod && !e.altKey) || e.key === 'ContextMenu') && !typing(e) && menuHere()) {
@@ -447,6 +455,8 @@ async function boot() {
   initGather();
   initQuickChart();
   initSpread();
+  initWork();
+  initWorkAlert();
   bindToolbar();
   bindKeys();
   applyLayout();

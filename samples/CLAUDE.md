@@ -32,3 +32,4 @@
 - `src/collect.py` 가 `data/월별-가격.csv` 에 월평균 가격을 덧붙이고, `src/report.py` 가 요약 문장을 만든다.
 - 리서치 문서는 `research/`, 계획은 `plans/`, 보고서는 `reports/` 에 둔다.
 - 숫자를 바꾸면 리서치 문서의 표와 보고서의 숫자를 함께 맞춘다.
+- 이 과제의 상태·마감·할 일·일정은 맨 위의 `WORK.md` 에 있다 (업무 카드). 머리 설정 `status`·`priority`·`due` 만, 할 일 `- [ ] 내용 (YYYY-MM-DD)`, 일정 `- YYYY-MM-DD HH:MM 내용` (날짜는 절대값). 일을 마치면 기록 절의 오늘 날짜 아래에 한 줄.
