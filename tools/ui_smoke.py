@@ -132,7 +132,7 @@ RAW_HTML = (
 def run(headed: bool) -> None:
     from playwright.sync_api import sync_playwright
 
-    tmp = Path(tempfile.mkdtemp(prefix='lectern-smoke-'))
+    tmp = Path(tempfile.mkdtemp(prefix='lectern-smoke-')).resolve()   # 러너의 임시 폴더는 짧은 이름(RUNNER~1)으로 온다 — 문서에 적는 절대경로가 서버가 아는 긴 이름과 같게
     work = tmp / 'samples'
     shutil.copytree(ROOT / 'tests' / 'fixture', work)   # 점검용 프로젝트 (사용자 예제 samples 와 따로 — D57)
     img_dir = tmp / 'remote'
