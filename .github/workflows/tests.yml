@@ -1,6 +1,7 @@
 # 올릴 때마다 시험을 돌린다 (GitHub 의 Windows 러너에서 — 앱은 여전히 스스로 외부에 요청하지 않는다, 이것은 저장소의 일이다).
-# - unit: pytest (단위·API, 규칙 시험, JS 형 점검) — 1~2분
-# - screens: 화면 점검 (tools/ui_edges.py 전체와 tools/ui_smoke.py) — 30분쯤. master 에 올릴 때와 손으로 돌릴 때만
+# - unit: pytest (단위·API, 규칙 시험, JS 형 점검) — 1~2분. master 에 올릴 때, PR, 손으로 돌릴 때
+# - screens: 화면 점검 (tools/ui_edges.py 전체와 tools/ui_smoke.py) — 40분쯤. 손으로 돌릴 때만 (Actions 탭의 Run workflow).
+#   올릴 때마다 돌리지 않는다 — 판을 내기 전에 개발 PC 에서 전체를 돌리고, 러너에서 난 실패는 환경의 차이(표시 언어·임시 폴더 이름)뿐이었다
 name: tests
 
 on:
@@ -42,7 +43,7 @@ jobs:
 
   screens:
     name: screen checks
-    if: github.event_name != 'pull_request'
+    if: github.event_name == 'workflow_dispatch'
     needs: unit
     runs-on: windows-latest
     timeout-minutes: 120

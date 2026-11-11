@@ -36,7 +36,7 @@ python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음�
 - 느린 PC·CI 러너에서는 `LECTERN_TEST_SLOW=2` 로 고정 시간 대기와 기다리는 한도를 두 배로 한다.
 - 목록에 없는 묶음: `deckguard`·`slidecheck`·`templates`·`mdstyle`·`docedit`·`slideedit`·`sample_decks`·`data`·`variety`·`slides`·`sidebar`·`refs_vi`·`work`·`work_scenarios`·`work_more` 는 각 파일 머리의 설명을 본다.
 
-GitHub Actions (`.github/workflows/tests.yml`): PR 과 master 에 올릴 때 pytest, master 에 올릴 때와 손으로 돌릴 때 화면 점검(`ui_edges` 전체·`ui_smoke`)을 Windows 러너에서 돌린다. 이 PC 에서는 권한이 없어 건너뛰는 심볼릭 링크 시험이 거기서는 돈다.
+GitHub Actions (`.github/workflows/tests.yml`): PR 과 master 에 올릴 때 pytest 를 Windows 러너에서 돌린다 (1~2분). 화면 점검(`ui_edges` 전체·`ui_smoke`)은 손으로 돌릴 때만 돈다 (Actions 탭의 Run workflow, 40분쯤) — 판을 내기 전에는 개발 PC 에서 전체를 돌린다. 점검용 앱은 표시 언어와 상관없이 한국어 화면으로 뜬다 (러너는 영어 Windows 다). 이 PC 에서는 권한이 없어 건너뛰는 심볼릭 링크 시험이 거기서는 돈다.
 
 새 기능을 넣을 때:
 - 서버·스캔 쪽은 `tests/` 에 테스트를 추가한다.
