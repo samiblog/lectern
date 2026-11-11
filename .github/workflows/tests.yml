@@ -1,0 +1,82 @@
+# 올릴 때마다 시험을 돌린다 (GitHub 의 Windows 러너에서 — 앱은 여전히 스스로 외부에 요청하지 않는다, 이것은 저장소의 일이다).
+# - unit: pytest (단위·API, 규칙 시험, JS 형 점검) — 1~2분
+# - screens: 화면 점검 (tools/ui_edges.py 전체와 tools/ui_smoke.py) — 30분쯤. master 에 올릴 때와 손으로 돌릴 때만
+name: tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONIOENCODING: utf-8
+  PYTHONUTF8: '1'
+
+jobs:
+  unit:
+    name: pytest
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'   # 개발·빌드와 같은 판 (requirements 의 고정 버전이 이 판의 wheel 이다)
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'       # 규칙 시험(rules_check.mjs)과 형 점검(npx tsc)
+      - name: Install
+        run: python -m pip install -r requirements-dev.txt
+      - name: pytest
+        run: python -m pytest -q -ra
+
+  screens:
+    name: screen checks
+    if: github.event_name != 'pull_request'
+    needs: unit
+    runs-on: windows-latest
+    timeout-minutes: 120
+    env:
+      LECTERN_TEST_SLOW: '2'   # 러너는 개발 PC 보다 느리다 — 고정 시간 대기와 기다리는 한도를 두 배로 (tools/edges/harness.py)
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.15'
+          cache: pip
+          cache-dependency-path: requirements*.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m playwright install chromium
+      - name: ui_edges
+        # 종료 코드 3 은 '흔들린 점검만 있다'(실패했다가 다시 돌리니 통과 — tools/ui_edges.py). 일을 실패로 만들지 않고 경고로 남긴다
+        shell: pwsh
+        run: |
+          python tools/ui_edges.py
+          if ($LASTEXITCODE -eq 3) { Write-Host "::warning title=screen checks::flaky suites passed on rerun - see the log"; exit 0 }
+          exit $LASTEXITCODE
+      - name: ui_smoke
+        if: ${{ !cancelled() }}    # 가장자리 점검이 실패해도 회귀 점검의 결과를 본다
+        run: python tools/ui_smoke.py
+      - name: Keep screenshots
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-shots   # 회귀 점검의 캡처와, 실패한 가장자리 점검의 그때 화면 (ui-shots/edges)
+          path: ui-shots/
+          if-no-files-found: ignore
+          retention-days: 7
