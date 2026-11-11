@@ -7,7 +7,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from harness import check, fails, report, serve, stop
+from harness import check, expect, fails, report, serve, stop
 
 base = Path(tempfile.mkdtemp(prefix='lec-mdstyle-'))
 proj = base / 'proj'
@@ -221,14 +221,11 @@ try:
         page.wait_for_timeout(200)
         open_doc('슬라이드.md')
         page.wait_for_selector('#lec-view.lec-deck', timeout=6000)
-        page.wait_for_timeout(400)
-        check('Lectern 슬라이드에는 없다', page.locator('#lec-st-mdstyle').is_hidden())
+        expect(page, 'Lectern 슬라이드에는 없다', lambda: page.locator('#lec-st-mdstyle').is_hidden())
         open_doc('보고서.md')
-        page.wait_for_timeout(400)
-        check('md 문서로 돌아오면 있다', page.locator('#lec-st-mdstyle').is_visible())
+        expect(page, 'md 문서로 돌아오면 있다', lambda: page.locator('#lec-st-mdstyle').is_visible())
         page.keyboard.press('Control+e')
-        page.wait_for_timeout(700)
-        check('편집 중에는 없다', page.locator('#lec-st-mdstyle').is_hidden())
+        expect(page, '편집 중에는 없다', lambda: page.locator('#lec-st-mdstyle').is_hidden(), ms=10000)   # 편집기를 처음 불러올 때는 오래 걸린다
         page.keyboard.press('Escape')
         check('화면 오류 없음', not extra, extra)
         b.close()

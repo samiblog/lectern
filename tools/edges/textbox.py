@@ -254,36 +254,35 @@ try:
         print('[묶기]')
         reset()
 
-        def pick_two():
-            page.locator('#lec-view > p').first.click()
-            page.wait_for_timeout(200)
-            page.keyboard.press('Shift+ArrowDown')
-            page.wait_for_timeout(300)
+        def picked_menu(keys, word='박스글로 묶기', nth=0):
+            """문단을 눌러 keys 로 줄을 고르고 우클릭해 word 를 누른다. 고른 것이 풀렸으면(다시 그리는 중이었다) 다시 고른다 — 메뉴의 항목들"""
+            target = page.locator('#lec-view > p').nth(nth)
+            labels = []
+            for _ in range(3):
+                target.click()
+                page.wait_for_timeout(200)
+                for key in keys:
+                    page.keyboard.press(key)
+                page.wait_for_timeout(250)
+                labels = menu(target, word)   # Esc 는 고른 줄을 풀므로 메뉴를 한 번만 연다
+                if any(word in x for x in labels):
+                    break
+            return labels
 
-        pick_two()
-        labels = menu(page.locator('#lec-view > p').first, '박스글로 묶기')   # Esc 는 고른 줄을 풀므로 메뉴를 한 번만 연다
+        labels = picked_menu(['Shift+ArrowDown'])
         check('고른 줄의 우클릭에 박스글로 묶기', any('박스글로 묶기' in x for x in labels), labels)
         want = f'# 편집\n\n{OPEN}\n**박스 1. 제목**\n\n가 문단\n\n나 문단\n{CLOSE}\n\n다 문단\n'
         check('고른 줄을 묶고 제목 줄을 넣는다', until(lambda: src() == want), src())
         check('묶은 것이 박스글로 보인다', until(lambda: len(boxes()) == 1 and boxes()[0]['kids'] == ['P.lec-textbox-title', 'P', 'P']), boxes())
         reset('# 편집\n\n가 문단\n\n## 절\n\n나 문단\n')
-        page.locator('#lec-view > p').first.click()
-        page.wait_for_timeout(200)
-        page.keyboard.press('Shift+ArrowDown')
-        page.keyboard.press('Shift+ArrowDown')
-        page.wait_for_timeout(200)
         before = src()
-        menu(page.locator('#lec-view > p').first, '박스글로 묶기')
+        picked_menu(['Shift+ArrowDown', 'Shift+ArrowDown'])
         check('제목 줄에 걸치면 묶지 않고 까닭을 알린다', until(lambda: '제목 줄은 박스글로 묶지 않습니다' in toast()) and src() == before, (toast(), src()))
 
         print('[번호]')
         reset(f'# 편집\n\n가 문단\n\n[박스 1](#박스-1) 을 보라.\n\n{OPEN}\n**박스 1. 먼저 있던 것**\n\n글\n{CLOSE}\n')
         until(lambda: len(boxes()) == 1)
-        page.locator('#lec-view > p').first.click()
-        page.wait_for_timeout(200)
-        page.keyboard.press('Insert')   # 현재 줄 하나를 고른다
-        page.wait_for_timeout(200)
-        labels = menu(page.locator('#lec-view > p').first, '박스글로 묶기')
+        labels = picked_menu(['Insert'])   # 현재 줄 하나를 고른다
         if any('박스글로 묶기' in x for x in labels):
             want = f'# 편집\n\n{OPEN}\n**박스 1. 제목**\n\n가 문단\n{CLOSE}\n\n[박스 2](#박스-2) 을 보라.\n\n{OPEN}\n**박스 2. 먼저 있던 것**\n\n글\n{CLOSE}\n'
             check('앞에 박스글이 생기면 번호와 참조 링크가 밀린다', until(lambda: src() == want), src())

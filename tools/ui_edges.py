@@ -5,7 +5,11 @@ tools/edges/ 의 묶음마다 임시 프로젝트·설정으로 서버를 따로
     python tools/ui_edges.py              :: 모두
     python tools/ui_edges.py structure    :: 이름이 맞는 것만
     python tools/ui_edges.py --changed    :: 고친 파일에 닿는 것만 (master 와 다른 파일, 커밋 전 것도)
+
+실패한 묶음은 한 번 다시 돌린다. 종료 코드: 0 모두 통과, 1 두 번 모두 실패한 묶음이 있음, 3 흔들린 묶음만 있음 (다시 돌리니 통과).
+실패하면 그때의 화면이 ui-shots/edges/ 에 남는다 (harness.py). 느린 PC·CI 에서는 LECTERN_TEST_SLOW=2 로 대기 시간을 늘린다.
 """
+import os
 import re
 import subprocess
 import sys
@@ -72,18 +76,32 @@ def run_suites(args: list[str]) -> int:
     want = suites_for(changed_files()) if args == ['--changed'] else args or SUITES
     if args == ['--changed']:
         print('고친 파일에 닿는 묶음:', want or '없음', flush=True)
-    failed = []
+    failed, flaky = [], []
     for name in SUITES:
         if name not in want:
             continue
-        print(f'\n=== {name} ===', flush=True)
-        started = time.time()
-        code = subprocess.run([sys.executable, str(ROOT / 'tools' / 'edges' / f'{name}.py')], cwd=ROOT).returncode
-        print(f'--- {name}: {"통과" if code == 0 else "실패"} ({time.time() - started:.0f}초)', flush=True)
-        if code:
-            failed.append(name)
-    print(f'\n실패한 점검: {failed}' if failed else '\n모두 통과')
-    return 1 if failed else 0
+        if run_suite(name):
+            continue
+        # 실패하면 한 번 다시 돌려 '가끔 실패'를 가른다 — 통과로 치지는 않고 따로 알린다 (흔들린 점검은 고칠 것이다)
+        print(f'--- {name}: 다시 돌립니다', flush=True)
+        (flaky if run_suite(name) else failed).append(name)
+    if flaky:
+        print(f'\n흔들린 점검 (실패했다가 다시 돌리니 통과): {flaky}')
+        if os.environ.get('GITHUB_ACTIONS'):
+            print(f'::warning title=흔들린 화면 점검::{", ".join(flaky)}')
+    print(f'\n실패한 점검: {failed}' if failed else '\n모두 통과' if not flaky else '\n두 번 모두 실패한 점검은 없음')
+    return 1 if failed else FLAKY if flaky else 0
+
+
+FLAKY = 3   # 종료 코드: 흔들린 점검만 있다 (실패는 1)
+
+
+def run_suite(name: str) -> bool:
+    print(f'\n=== {name} ===', flush=True)
+    started = time.time()
+    code = subprocess.run([sys.executable, str(ROOT / 'tools' / 'edges' / f'{name}.py')], cwd=ROOT).returncode
+    print(f'--- {name}: {"통과" if code == 0 else "실패"} ({time.time() - started:.0f}초)', flush=True)
+    return code == 0
 
 
 if __name__ == '__main__':

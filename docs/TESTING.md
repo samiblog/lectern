@@ -29,11 +29,20 @@ python tools/ui_edges.py     :: 가장자리 점검 — tools/edges/ 의 묶음�
 
 `ui_smoke.py` 는 점검용 프로젝트 `tests/fixture/` 를 임시 폴더에 `samples` 라는 이름으로 복사해 브라우저 모드 서버를 띄우고 headless Chromium으로 확인한다 (사용자·AI 용 예제 `samples/` 는 따로 — D57. '[예제]' 점검이 그 예제를 열어 본다). 화면 캡처는 `ui-shots/` 에 저장되니, UI를 고친 뒤 캡처를 직접 열어 보는 것도 점검의 일부다.
 
+가장자리 점검이 실패하면 (`tools/edges/harness.py`, 2026-11-11):
+- 그때의 화면이 `ui-shots/edges/묶음-번호.png` 로 남는다 (묶음마다 처음 4개 — 실패한 점검과 묶음을 멈춘 예외). 끝에는 화면의 스크립트·콘솔 오류와 점검 서버가 남긴 글(서버 쪽 예외)이 나온다.
+- `ui_edges.py` 가 그 묶음을 한 번 다시 돌린다. 다시 돌려 통과하면 '흔들린 점검'으로 따로 알린다 — 통과로 치지 않는다 (종료 코드 3. 두 번 모두 실패하면 1). 흔들린 점검은 고정 시간 대기를 조건 대기로 바꿔 고친다.
+- 점검 서버가 뜨지 않으면 그 자리에서 멈추고 서버가 남긴 글을 보인다.
+- 느린 PC·CI 러너에서는 `LECTERN_TEST_SLOW=2` 로 고정 시간 대기와 기다리는 한도를 두 배로 한다.
+- 목록에 없는 묶음: `deckguard`·`slidecheck`·`templates`·`mdstyle`·`docedit`·`slideedit`·`sample_decks`·`data`·`variety`·`slides`·`sidebar`·`refs_vi`·`work`·`work_scenarios`·`work_more` 는 각 파일 머리의 설명을 본다.
+
+GitHub Actions (`.github/workflows/tests.yml`): PR 과 master 에 올릴 때 pytest, master 에 올릴 때와 손으로 돌릴 때 화면 점검(`ui_edges` 전체·`ui_smoke`)을 Windows 러너에서 돌린다. 이 PC 에서는 권한이 없어 건너뛰는 심볼릭 링크 시험이 거기서는 돈다.
+
 새 기능을 넣을 때:
 - 서버·스캔 쪽은 `tests/` 에 테스트를 추가한다.
 - 점검 서버는 `tools/quiet_app.py` 로 띄운다. 탐색기·편집기·기본 앱을 부르지 않아 점검 중에 창이 뜨지 않는다. 그래서 '외부 편집기로 열기' 등이 실제로 뜨는지는 수동 점검이다.
 - `ui_smoke`·`ui_edges` 는 끝날 때 점검이 띄운 창을 닫는다 (`tools/close_windows.py`). 실제 앱을 띄우는 점검을 따로 돌릴 때는 앞에 `--mark`, 뒤에 인자 없이 부른다.
-- 새 화면 점검은 `tools/edges/` 의 묶음에 더한다 (`harness.py` 의 `serve`·`check`). `ui_smoke.py` 는 구획끼리 상태를 이어 받으므로 나누지 않고, 있는 점검을 고칠 때만 손댄다. 표를 잘못 읽은 자료는 `tests/corpus/` 에 먼저 넣고 규칙을 고친다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 대신 `wait_until(page, '조건')` 을 쓴다 (느린 PC에서 간헐적으로 실패하지 않게). 실패 메시지에는 실제 값을 붙인다.
+- 새 화면 점검은 `tools/edges/` 의 묶음에 더한다 (`harness.py` 의 `serve`·`check`). `ui_smoke.py` 는 구획끼리 상태를 이어 받으므로 나누지 않고, 있는 점검을 고칠 때만 손댄다. 표를 잘못 읽은 자료는 `tests/corpus/` 에 먼저 넣고 규칙을 고친다. 사용자가 볼 예(`samples/`)에는 점검용 함정을 넣지 않는다. 무언가를 기다릴 때는 `wait_for_timeout(고정 시간)` 뒤에 한 번 읽지 말고 조건을 기다린다 — `ui_smoke` 는 `wait_until(page, '조건')`, 가장자리 점검은 `harness.py` 의 `until(page, 조건)`·`expect(page, 이름, 조건)` (PC 가 바쁘면 고정 시간이 모자란다 — 2026-11-11 되풀이 시험에서 전체를 돌린 4번 중 2번, 다른 일을 함께 돌릴 때만 실패했다. 옛 묶음에는 고정 시간 대기가 800곳쯤 남아 있다 — 흔들린 곳부터 바꾼다). 실패 메시지에는 실제 값을 붙인다.
 
 ## 2. Windows 수동 점검표
 

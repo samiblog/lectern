@@ -67,7 +67,7 @@ def run():
             print(f'[{deck.stem}]')
             rel = f'slides/상황별/{deck.name}'
             page.evaluate(OPEN, rel)
-            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=10000)
+            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=20000)
             page.wait_for_timeout(1800)
             r = page.evaluate(LOOK)
             check('장 수', 6 <= r['slides'] <= 9, r['slides'])
@@ -102,7 +102,7 @@ def run():
         for deck in [*basics, *complex_decks, *tested]:
             rel = deck.relative_to(proj).as_posix()
             page.evaluate(OPEN, rel)
-            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=10000)
+            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=deck.name, timeout=20000)
             page.wait_for_timeout(1300)
             r = page.evaluate(LOOK)
             check(f'{deck.stem}: 점검 0건', not r['issues'], r['issues'][:3])

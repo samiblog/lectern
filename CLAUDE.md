@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.70.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
+현재 버전 0.71.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -31,7 +31,7 @@ node tools/rules_check.mjs         :: 규칙 시험만 (브라우저 없이 1초
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
-변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 15초)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다. 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
+변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다 (약 25분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다). master 에 올리면 GitHub Actions 가 같은 시험을 돌린다 (`.github/workflows/tests.yml`). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
 Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열기, WebView2)은 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
 
 ## 폴더 구조

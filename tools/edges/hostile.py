@@ -10,7 +10,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from harness import ROOT, check, fails, report, serve, stop
+from harness import ROOT, check, expect, fails, report, serve, stop
 
 sys.path[:0] = [str(ROOT), str(ROOT / 'tests')]
 from test_sheet import make_xlsx  # noqa: E402
@@ -138,7 +138,7 @@ try:
 
         print('[사이드바]')
         scan('트리와 프로젝트 탭', '#lec-tree', 'a&b')
-        check('프로젝트 탭의 이름', "proj & 'x'" in page.locator('#lec-tablist').inner_text(), page.locator('#lec-tablist').inner_text())
+        expect(page, '프로젝트 탭의 이름', lambda: "proj & 'x'" in page.locator('#lec-tablist').inner_text(), lambda: page.locator('#lec-tablist').inner_text())
         page.locator('#lec-btn-titles').click()
         settle()
         scan('트리의 문서 제목', '#lec-tree', 'data-xss')
@@ -152,8 +152,8 @@ try:
         page.wait_for_selector('#lec-view h1')
         settle(1200)
         scan('문서·목차·문서 탭', '#lec-view', 'data-xss')
-        check('목차의 제목', 'data-xss' in page.locator('#lec-toc').inner_text(), page.locator('#lec-toc').inner_text()[:200])
-        check('문서 탭의 이름', 'a&b' in page.locator('#lec-doctab-list').inner_text(), page.locator('#lec-doctab-list').inner_text())
+        expect(page, '목차의 제목', lambda: 'data-xss' in page.locator('#lec-toc').inner_text(), lambda: page.locator('#lec-toc').inner_text()[:200])
+        expect(page, '문서 탭의 이름', lambda: 'a&b' in page.locator('#lec-doctab-list').inner_text(), lambda: page.locator('#lec-doctab-list').inner_text())
         check('앞머리 값', 'data-xss' in page.locator('#lec-view .lec-frontmatter, #lec-view .front-matter, #lec-view dl, #lec-view table').first.inner_text(), '')
         check('틀린 다이어그램·차트의 알림', page.locator('#lec-view pre code', has_text='틀린 다이어그램').count() + page.locator('#lec-view pre', has_text='틀린 차트').count() >= 2,
               page.locator('#lec-view').inner_text()[-300:])
