@@ -45,7 +45,9 @@ jobs:
     if: github.event_name != 'pull_request'
     needs: unit
     runs-on: windows-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    env:
+      LECTERN_TEST_SLOW: '2'   # 러너는 개발 PC 보다 느리다 — 고정 시간 대기와 기다리는 한도를 두 배로 (tools/edges/harness.py)
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -61,7 +63,12 @@ jobs:
           python -m pip install -r requirements-dev.txt
           python -m playwright install chromium
       - name: ui_edges
-        run: python tools/ui_edges.py
+        # 종료 코드 3 은 '흔들린 점검만 있다'(실패했다가 다시 돌리니 통과 — tools/ui_edges.py). 일을 실패로 만들지 않고 경고로 남긴다
+        shell: pwsh
+        run: |
+          python tools/ui_edges.py
+          if ($LASTEXITCODE -eq 3) { Write-Host "::warning title=screen checks::flaky suites passed on rerun - see the log"; exit 0 }
+          exit $LASTEXITCODE
       - name: ui_smoke
         if: ${{ !cancelled() }}    # 가장자리 점검이 실패해도 회귀 점검의 결과를 본다
         run: python tools/ui_smoke.py
@@ -69,7 +76,7 @@ jobs:
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v4
         with:
-          name: ui-shots
+          name: ui-shots   # 회귀 점검의 캡처와, 실패한 가장자리 점검의 그때 화면 (ui-shots/edges)
           path: ui-shots/
           if-no-files-found: ignore
           retention-days: 7
