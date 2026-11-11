@@ -1885,7 +1885,10 @@ def run(headed: bool) -> None:
             check(page.url == url, 'SVG xlink:href 링크도 앱 안에서 문서를 엶')
 
             print('[절대경로]')
-            w = str(work)
+            # 문서에 적는 절대경로는 앱이 아는 프로젝트 경로로 — 점검이 만든 경로와 글자가 다를 수 있다 (GitHub 러너에서 다르게 나왔다)
+            w = page.evaluate("import('/static/js/store.js').then(({ S }) => S.root)") or str(work)
+            if w != str(work):
+                print(f'  (앱이 아는 프로젝트 경로 {w!r} — 점검이 만든 경로 {str(work)!r})')
             absdoc = work / 'docs' / '96-절대경로.md'
             absdoc.write_text(
                 '# 절대경로 확인\n\n'
