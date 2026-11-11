@@ -75,6 +75,32 @@ Lectern does not add a title line (such as 'Note' or 'Tip') to callouts — the 
 > Put units in the header row.
 ```
 
+### Boxes
+
+Use a box for a side topic that stands apart from the flow of the main text — the 'Box' of a report. Write ordinary Markdown between two comment lines.
+
+```markdown
+<!-- box -->
+**Box 1. Copper stocks and prices**
+
+The rule that prices rise when stocks fall has weakened since 2020.
+
+| Year | Stocks (10k t) | Price (USD/t) |
+|---|---|---|
+| 2023 | 12 | 8,500 |
+
+Source: LME
+<!-- /box -->
+```
+
+- Lectern draws a bordered box with a title band. Other viewers do not show the comments, so it reads as a bold title and ordinary text — which is why no visible marker such as `:::` is used.
+- The opening line `<!-- box -->` and the closing line `<!-- /box -->` each take a whole line (no other text on that line). Without a closing line, the box ends before the next heading.
+- The first line is the title — write it on one line. With a number, as in `**Box 1. Title**`, `[Box 1](#box-1)` refers to it, and when a person adds or moves a box Lectern renumbers the titles and the links. Number from 1 in order.
+- Inside, write paragraphs, lists, tables, figures, charts, math, callouts and footnotes. Do not put headings (`#`) or another box inside — a box is a component, not a section, and stays within one section.
+- Tables and figures inside continue the document's numbering (after Table 3, a table inside a box is Table 4).
+- A box is not a callout (`> [!NOTE]`): a callout makes a sentence or two stand out; a box holds enough to be read on its own. Lectern slides have no boxes.
+- When a person uses Lectern's 'Ask Claude for a box' — 'summarize the conversation into a box right after `@path line 12`' — insert exactly one box after that line, with a blank line before and after. Use the number given in the request and change no other line. Do not transcribe the conversation: keep only the conclusions, the reasons and the open questions worth leaving in the document.
+
 ### Other blocks
 
 - Lists, numbered lists, checklists (`- [ ]`, `- [x]` — clicking a box switches the marker in the source and saves it).
@@ -237,6 +263,8 @@ This task in one line.
 - One `# Title` first, then a one- or two-sentence summary paragraph. Number ordered documents `01-`.
 - Don't skip heading levels (## → ###). Only numbers in table cells, units in the header.
 - Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
+- Boxes (text read apart from the main text) go between a `<!-- box -->` line and a `<!-- /box -->` line, with `**Box 1. Title**` as the first line. No headings (`#`) inside.
+- When the person says 'summarize the conversation into a box right after `@path line 12`' (Lectern's 'Ask Claude for a box'): insert exactly one box after that line, with a blank line before and after. Do not transcribe the conversation — keep the conclusions, reasons and open questions; use the number in the request and change no other line.
 - Code locations as `src/x.py:14`; links and images relative to the document.
 - Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer to them with `[Table 1](#table-1)`. A `[TOC]` line for contents; `<div style="page-break-after: always;"></div>` for a page break.
 - Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.

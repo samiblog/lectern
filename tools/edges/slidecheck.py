@@ -133,7 +133,7 @@ paginate: true
 > 인용 글
 
 > [!WARNING]
-> 박스글
+> 강조글
 
 {FENCE}py
 print(1)

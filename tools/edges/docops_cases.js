@@ -149,15 +149,15 @@ eq(m.rowsFromTsv('a\tb\n1\n'), null, '칸 수가 다르면 표가 아니다');
 eq(m.rowsFromTsv('그냥 글\n둘째 줄\n'), null, '탭이 없으면 표가 아니다');
 eq(m.tableFromRows([['a', 'b|c'], ['1', '2']]), ['| a | b\\|c |', '| --- | --- |', '| 1 | 2 |'], '값으로 표를');
 
-// 박스글
+// 강조글
 const B = '앞\n\n> [!NOTE]\n> 가\n>\n> 나\n\n뒤\n';
-eq(m.boxAt(L(B), 4), { a: 3, b: 6, kind: 'NOTE' }, '박스글 범위');
+eq(m.boxAt(L(B), 4), { a: 3, b: 6, kind: 'NOTE' }, '강조글 범위');
 eq(m.boxAt(L('> 그냥 인용\n'), 1), null, '보통 인용');
 eq(m.boxAt(L(B), 1), null, '박스 밖');
 eq(m.setBox(L(B), 4, 'WARNING').lines, L('앞\n\n> [!WARNING]\n> 가\n>\n> 나\n\n뒤\n'), '종류 바꾸기');
 eq(m.unwrapBox(L(B), 4).lines, L('앞\n\n가\n\n나\n\n뒤\n'), '풀기');
-eq(m.wrapBox(L('앞\n\n글\n\n뒤\n'), 3, 3, 'TIP').lines, L('앞\n\n> [!TIP]\n> 글\n\n뒤\n'), '문단을 박스글로');
-eq(m.wrapBox(L('가\n\n나\n'), 1, 3, 'NOTE').lines, L('> [!NOTE]\n> 가\n>\n> 나\n'), '여러 문단을 박스글로');
+eq(m.wrapBox(L('앞\n\n글\n\n뒤\n'), 3, 3, 'TIP').lines, L('앞\n\n> [!TIP]\n> 글\n\n뒤\n'), '문단을 강조글로');
+eq(m.wrapBox(L('가\n\n나\n'), 1, 3, 'NOTE').lines, L('> [!NOTE]\n> 가\n>\n> 나\n'), '여러 문단을 강조글로');
 eq(m.wrapBox(L('- 항목\n'), 1, 1, 'NOTE').lines, L('> [!NOTE]\n> 항목\n'), '항목의 표시를 뗀다');
 
 // 주

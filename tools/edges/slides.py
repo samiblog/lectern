@@ -379,7 +379,7 @@ marp: true
 
 ## 둘째
 """, encoding='utf-8')
-(proj / '보통.md').write_text('# 보통\n\n첫 문단이다.\n\n::: a\n이것은 글이다.\n:::\n\n> [!NOTE]\n> 박스글이다.\n', encoding='utf-8')
+(proj / '보통.md').write_text('# 보통\n\n첫 문단이다.\n\n::: a\n이것은 글이다.\n:::\n\n> [!NOTE]\n> 강조글이다.\n', encoding='utf-8')
 config = base / 'config'
 config.mkdir()
 server, url, port = serve(proj, config)
@@ -755,7 +755,7 @@ def run():
         page.wait_for_timeout(500)
         check('보통 문서의 ::: 는 글이다', ':::' in page.locator('#lec-view').text_content())
         box = page.evaluate("document.querySelector('#lec-view blockquote.alert p').innerHTML")
-        check('박스글 맨 위에 빈 줄이 없다', box == '박스글이다.', box)
+        check('강조글 맨 위에 빈 줄이 없다', box == '강조글이다.', box)
         check('슬라이드 도구가 없다', page.locator('#lec-st-structure').is_hidden() and page.locator('#lec-st-check').is_hidden())
         page.locator('#lec-view p').first.click()
         page.keyboard.press('Control+Shift+Period')

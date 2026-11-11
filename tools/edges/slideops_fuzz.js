@@ -59,7 +59,7 @@ flowchart LR
 
 ::: b
 > [!NOTE]
-> 박스글
+> 강조글
 
 끝 글
 :::

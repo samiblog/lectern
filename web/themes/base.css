@@ -171,7 +171,7 @@
   width: 7px; height: 10px; background: var(--md-link); clip-path: polygon(0 0, 100% 50%, 0 100%); transition: top .1s;
 }
 @media (prefers-reduced-motion: reduce) { .lec-spot .spot-shade, .lec-spot .spot-bar, .lec-here { transition: none; } }
-/* 한 줄 편집 (lineedit.js, D76): 그 줄의 블록 안에 넣는 글 칸 — 글꼴·크기·색·정렬은 그 블록(제목·목록·박스글·표의 칸·코드)의 것 */
+/* 한 줄 편집 (lineedit.js, D76): 그 줄의 블록 안에 넣는 글 칸 — 글꼴·크기·색·정렬은 그 블록(제목·목록·강조글·표의 칸·코드)의 것 */
 .md-body .lec-line-edit {
   white-space: pre-wrap; caret-color: var(--md-link); border-radius: 2px; cursor: text;
   outline: 2px solid color-mix(in srgb, var(--md-link) 70%, transparent); outline-offset: 2px;
@@ -228,6 +228,34 @@
 .md-body .alert-important { --alert: var(--md-alert-important); }
 .md-body .alert-warning { --alert: var(--md-alert-warning); }
 .md-body .alert-caution { --alert: var(--md-alert-caution); }
+
+/* 박스글 (D126): 본문과 따로 읽는 글 상자 — <!-- box --> … <!-- /box -->. 강조글(왼쪽 색 막대)과 달리 테두리와 제목 띠 */
+.md-body .lec-textbox {
+  position: relative; margin: 1.5em 0 1.6em; padding: .95em 1.2em .1em; font-size: .94em;
+  border: 1px solid var(--md-border); border-top: 3px solid var(--md-heading); border-radius: 3px;
+  background: color-mix(in srgb, var(--md-fg) 3.5%, var(--md-bg));
+}
+.md-body .lec-textbox > .lec-textbox-title {
+  margin: -.95em -1.2em .9em; padding: .5em 2.8em .5em 1.2em; font-weight: 600; color: var(--md-heading);
+  background: color-mix(in srgb, var(--md-fg) 8%, var(--md-bg)); border-bottom: 1px solid var(--md-border);
+}
+.md-body .lec-textbox > .lec-textbox-title strong { color: inherit; }
+.md-body .lec-textbox > :last-child { margin-bottom: .85em; }
+.md-body .lec-textbox-fold {
+  position: absolute; top: .3em; right: .45em; width: 1.9em; height: 1.9em; padding: 0; border: 0; border-radius: 4px;
+  background: none; color: var(--md-muted); cursor: pointer; font: inherit;
+}
+.md-body .lec-textbox-fold::before {
+  content: ""; position: absolute; left: calc(50% - 4px); top: calc(50% - 6px); width: 6px; height: 6px;
+  border: solid currentColor; border-width: 0 2px 2px 0; transform: rotate(45deg); transition: transform .12s;
+}
+.md-body .lec-textbox-fold:hover { background: color-mix(in srgb, var(--md-fg) 10%, transparent); }
+.md-body .lec-textbox-folded > .lec-textbox-fold::before { transform: rotate(-45deg); top: calc(50% - 4px); }
+/* 접으면 제목(없으면 첫 블록)만 남는다 — 버튼이 첫 자식이다 */
+.md-body .lec-textbox-folded > :not(.lec-textbox-fold):not(:nth-child(2)) { display: none !important; }
+.md-body .lec-textbox-folded { padding-bottom: 0; }
+.md-body .lec-textbox-folded > .lec-textbox-title { margin-bottom: 0; border-bottom: 0; }
+.md-body .lec-textbox-folded > :nth-child(2):not(.lec-textbox-title) { margin-bottom: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-right: 1.6em; }
 
 /* 코드 */
 .md-body code, .md-body kbd, .md-body samp { font-family: var(--md-mono); }
@@ -492,7 +520,10 @@
   :root[data-ui="dark"]:not(.lec-deck-shown) .md-body pre code.hljs, :root[data-ui="dark"]:not(.lec-deck-shown) .md-body pre code.hljs * { color: #222222 !important; }
   .md-body { max-width: none; padding: 0; font-size: 11pt; }
   .md-body .lec-fold-hidden { display: revert !important; }   /* 접어 둔 절도 인쇄 */
-  .md-body .lec-fold::before, .md-body .lec-folded::after, .md-body .code-tools { display: none !important; }
+  .md-body .lec-fold::before, .md-body .lec-folded::after, .md-body .code-tools, .md-body .lec-textbox-fold { display: none !important; }
+  .md-body .lec-textbox-folded > * { display: revert !important; white-space: revert !important; }   /* 접어 둔 박스글도 인쇄 (D126) */
+  .md-body .lec-textbox { background: none; }
+  .md-body .lec-textbox > .lec-textbox-title { break-after: avoid; }
   .md-body h1, .md-body h2, .md-body h3, .md-body h4 { break-after: avoid; }
   .md-body pre, .md-body table, .md-body img, .md-body pre.mermaid, .md-body .math-block, .md-body blockquote { break-inside: avoid; }
   .md-body .table-wrap { max-height: none; overflow: visible; }

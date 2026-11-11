@@ -174,7 +174,7 @@ function kindOf(el) {
   if (el.matches('.math-block')) return t('수식');
   if (el.matches('.front-matter')) return t('메타데이터');
   if (tag === 'LI') return t('목록 항목');
-  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? t('박스글') : t('인용');
+  if (tag === 'BLOCKQUOTE') return el.classList.contains('alert') ? t('강조글') : t('인용');
   return t('단락');
 }
 
@@ -296,7 +296,7 @@ function litChart(range) {
 
 /** 블록을 담을 범위와 이름: 표·그림·차트 등은 캡션과 바로 뒤의 '자료:' 줄까지 (toc.js 의 partExtent) */
 function blockTake(picked) {
-  // 박스글·인용 안의 단락·목록이면 박스 통째로 ('> [!WARNING]' 머리줄까지 — 안의 단락만 담으면 박스의 종류를 잃는다)
+  // 강조글·인용 안의 단락·목록이면 박스 통째로 ('> [!WARNING]' 머리줄까지 — 안의 단락만 담으면 박스의 종류를 잃는다)
   let el = picked;
   for (let box = picked.closest('blockquote'); box; box = box.parentElement?.closest('blockquote')) el = box;
   const ext = partExtent(el);
@@ -538,7 +538,7 @@ function slideItems(target, x, y) {
 function blockMenu(e, view, el, selected, x, y) {
   const spot = spotlightItems(e.target);   // 장 하이라이트 / 하이라이트 해제 (md 문서)
   const items = el ? blockItems(el, e.target, spot) : docItems(spot);
-  const own = lineMenuItems(e.target);   // 구성 요소: 넣기·바꾸기, 표의 행과 열, 박스글, 절 (lineedit.js, D109)
+  const own = lineMenuItems(e.target);   // 구성 요소: 넣기·바꾸기, 표의 행과 열, 강조글, 절 (lineedit.js, D109)
   if (own.length) items.push('-', ...own);
   const slide = slideItems(e.target, x, y);   // 슬라이드: 장 다루기 (D96)
   if (slide.length) items.push('-', ...slide);

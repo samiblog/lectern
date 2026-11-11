@@ -39,15 +39,15 @@ failures: list[str] = []
 
 
 
-# 줄 단위 점검(D75)에 쓰는 문서: 짧게 나눠 쓴 문단(화면의 한 줄), 길게 나눠 쓴 문단(원문 줄마다), 목록·박스글·표·코드, 스크롤할 만큼 긴 둘째 절
-LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 쓴 문단.\n\n이 문단은 원문에서 두 줄로 나눠 썼습니다. 첫 줄은 길어서 화면에서 한 줄을 넘기고, 다음 원문 줄은 화면의 둘째 줄이나 셋째 줄에서 시작합니다. 그래도 원문 줄은 따로 셉니다.\n둘째 원문 줄은 여기서 시작해 문단 끝까지 이어집니다.\n\n- 항목 하나\n- 항목 둘\n  - 안쪽 항목\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n```python\na = 1\n\nb = 2\n```\n\n## 둘째 절\n\n단락 1.\n\n단락 2.\n\n단락 3.\n\n단락 4.\n\n단락 5.\n\n단락 6.\n\n단락 7.\n\n단락 8.\n\n단락 9.\n\n단락 10.\n\n단락 11.\n\n단락 12.\n\n단락 13.\n\n단락 14.\n\n단락 15.\n\n단락 16.\n\n단락 17.\n\n단락 18.\n\n단락 19.\n\n단락 20.\n\n단락 21.\n\n단락 22.\n\n단락 23.\n\n단락 24.\n\n단락 25.\n\n단락 26.\n\n단락 27.\n\n단락 28.\n\n단락 29.\n\n단락 30.\n\n단락 31.\n\n단락 32.\n\n단락 33.\n\n단락 34.\n\n단락 35.\n\n단락 36.\n\n단락 37.\n\n단락 38.\n\n단락 39.\n\n단락 40.\n'
+# 줄 단위 점검(D75)에 쓰는 문서: 짧게 나눠 쓴 문단(화면의 한 줄), 길게 나눠 쓴 문단(원문 줄마다), 목록·강조글·표·코드, 스크롤할 만큼 긴 둘째 절
+LINES_DOC = '# 줄 점검\n\n첫 문단은 한 줄입니다.\n\n짧게\n나눠 쓴 문단.\n\n이 문단은 원문에서 두 줄로 나눠 썼습니다. 첫 줄은 길어서 화면에서 한 줄을 넘기고, 다음 원문 줄은 화면의 둘째 줄이나 셋째 줄에서 시작합니다. 그래도 원문 줄은 따로 셉니다.\n둘째 원문 줄은 여기서 시작해 문단 끝까지 이어집니다.\n\n- 항목 하나\n- 항목 둘\n  - 안쪽 항목\n\n> [!NOTE]\n> 강조글 한 줄.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n| 3 | 4 |\n\n```python\na = 1\n\nb = 2\n```\n\n## 둘째 절\n\n단락 1.\n\n단락 2.\n\n단락 3.\n\n단락 4.\n\n단락 5.\n\n단락 6.\n\n단락 7.\n\n단락 8.\n\n단락 9.\n\n단락 10.\n\n단락 11.\n\n단락 12.\n\n단락 13.\n\n단락 14.\n\n단락 15.\n\n단락 16.\n\n단락 17.\n\n단락 18.\n\n단락 19.\n\n단락 20.\n\n단락 21.\n\n단락 22.\n\n단락 23.\n\n단락 24.\n\n단락 25.\n\n단락 26.\n\n단락 27.\n\n단락 28.\n\n단락 29.\n\n단락 30.\n\n단락 31.\n\n단락 32.\n\n단락 33.\n\n단락 34.\n\n단락 35.\n\n단락 36.\n\n단락 37.\n\n단락 38.\n\n단락 39.\n\n단락 40.\n'
 
 
 # 뒤로 기록 점검(D78)에 쓰는 문서: 길게 — 절 여섯, 맨 앞에 각주·다른 문서 링크, 맨 끝에 각주 본문
 MOVE_DOC = ('# 이동 점검\n\n본문 각주[^1] 입니다. [다른 문서](01-기능-점검.md)\n\n'
             + ''.join(f'## 절 {i}\n\n' + ('긴 문단입니다. ' * 40 + '\n\n') * 6 for i in range(1, 7)) + '[^1]: 각주 본문.\n')
-# 한 줄 편집 점검(D76)에 쓰는 문서: 제목·할 일·박스글·표·나눠 쓴 문단·코드
-EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n\n[절로 가는 링크](#고칠-제목)\n\n- 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다.\n'
+# 한 줄 편집 점검(D76)에 쓰는 문서: 제목·할 일·강조글·표·나눠 쓴 문단·코드
+EDIT_DOC = '# 한 줄 편집\n\n첫 문단은 **굵게** 한 줄입니다.\n\n## 고칠 제목\n\n- 항목 하나\n- [ ] 할 일\n\n> [!NOTE]\n> 강조글 한 줄.\n\n| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n\n원문에서 나눠 쓴 문단의 첫 줄입니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘길 만큼 길게 씁니다. 화면에서 한 줄을 넘깁니다.\n둘째 줄입니다.\n\n```python\na = 1\nb = 2\n```\n\n[절로 가는 링크](#고칠-제목)\n\n- 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다. 아주 긴 목록 항목입니다.\n'
 
 
 def check(cond: bool, message: str) -> None:
@@ -305,13 +305,13 @@ def run(headed: bool) -> None:
                     under.setdefault(head, []).append(f'{r[1]} · {r[2]}' if r[2] else r[1])
             check(under.get('표') == ['표 1 · 품목·1분기·2분기 · 6행 5열']
                   and [x.split(' · ')[1] for x in under.get('코드', [])] == ['python', 'powershell', 'json']
-                  and [x.split(' · ')[0] for x in under.get('콜아웃', [])] == ['박스글', '박스글', '박스글', '박스글', '인용']   # 박스글은 종류 이름 없이 (D72)
+                  and [x.split(' · ')[0] for x in under.get('콜아웃', [])] == ['강조글', '강조글', '강조글', '강조글', '인용']   # 강조글은 종류 이름 없이 (D72)
                   and under.get('그림') == ['그림 1 · 분기별 가격 범위']
-                  and toc_buttons() == ['표 1', '그림 1', '박스글 5', '코드 3'],
-                  f'목차의 제목 아래에 그 절의 표·코드·박스글·그림이 문서 순서로, 머리에 종류 버튼 ({under}, {toc_buttons()})')
+                  and toc_buttons() == ['표 1', '그림 1', '강조글 5', '코드 3'],
+                  f'목차의 제목 아래에 그 절의 표·코드·강조글·그림이 문서 순서로, 머리에 종류 버튼 ({under}, {toc_buttons()})')
             shot('02-toc-parts')
-            fold_click('콜아웃')   # 접힌 절 안의 박스글로 가면 편다
-            page.locator('#lec-toc li.part-box a', has_text='프로젝트 폴더 밖').click()   # [!WARNING] 박스글
+            fold_click('콜아웃')   # 접힌 절 안의 강조글로 가면 편다
+            page.locator('#lec-toc li.part-box a', has_text='프로젝트 폴더 밖').click()   # [!WARNING] 강조글
             warn = page.locator('#lec-view blockquote.alert-warning')
             went = wait_until(page, '''(() => { const el = document.querySelector('#lec-view blockquote.alert-warning');
               const r = el.getBoundingClientRect(), c = document.querySelector('#lec-content').getBoundingClientRect();
@@ -358,13 +358,13 @@ def run(headed: bool) -> None:
                   f"사이드바 '모아 보기' 탭: 프로젝트의 표를 문서별로 (이름·크기·절), 종류마다 개수 ({p1['kinds']}, {mine})")
             page.click('#lec-parts-kinds button[data-kind="box"]')
             boxes = [i[1] for i in pv()['items'] if i[0] == 'docs/01-기능-점검.md']
-            page.fill('#lec-parts-filter', '박스글 프로젝트 폴더 밖')
+            page.fill('#lec-parts-filter', '강조글 프로젝트 폴더 밖')
             wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length === 1")
             filtered = pv()['items']
             page.press('#lec-parts-filter', 'Enter')
             went = wait_until(page, "document.querySelector('#lec-view blockquote.alert-warning')?.classList.contains('lec-target')", 5000)
-            check(boxes == ['박스글', '박스글', '박스글', '박스글', '인용'] and len(filtered) == 1 and filtered[0][1] == '박스글' and went,
-                  f'박스글 모아 보기, 거르기, Enter 로 그 문서의 그 자리로 (목차와 같은 번호로 찾아감) ({boxes}, {filtered})')
+            check(boxes == ['강조글', '강조글', '강조글', '강조글', '인용'] and len(filtered) == 1 and filtered[0][1] == '강조글' and went,
+                  f'강조글 모아 보기, 거르기, Enter 로 그 문서의 그 자리로 (목차와 같은 번호로 찾아감) ({boxes}, {filtered})')
             page.fill('#lec-parts-filter', '')
             page.click('#lec-parts-kinds button[data-kind="figure"]')
             loaded = wait_until(page, "[...document.querySelectorAll('#lec-parts-list .pt-pic img')].some(i => i.complete && i.naturalWidth > 0)", 8000)
@@ -605,7 +605,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("줄 점검")')
             lit_status = "document.querySelector('#lec-st-lit').hidden ? null : document.querySelector('#lec-st-lit').textContent"
             # 줄 단위: 한 줄짜리 블록은 통째, 화면의 한 줄에 이어지는 짧은 줄들은 함께, 화면에서 따로 시작하는 원문 줄은 따로, 코드는 줄마다(``` 빼고),
-            # 표의 구분 줄은 머리행에, 박스글의 [!NOTE] 줄은 그 글에
+            # 표의 구분 줄은 머리행에, 강조글의 [!NOTE] 줄은 그 글에
             unit_list = page.evaluate("""(src) => import('/static/js/lineunits.js').then((m) => m.collectUnits(document.querySelector('#lec-view'), src)
               .filter((u) => u.a < 33).map((u) => `${u.a}-${u.b}`).join(' '))""", lines_src)
             here_on = page.locator('#lec-content > .lec-here').count() == 1
@@ -752,9 +752,9 @@ def run(headed: bool) -> None:
             page.keyboard.type('XXX')
             page.keyboard.press('Escape')
             note_back = page.evaluate("[document.querySelector('#lec-view blockquote').textContent.trim(), !!document.querySelector('#lec-view .lec-line-edit')]")
-            check(task == ['LI:할 일'] and saved_task == '- [ ] 할 일 끝' and note == ['P:박스글 한 줄.'] and file_line(edit_doc, 11) == '> 박스글 한 줄.'
-                  and note_back == ['박스글 한 줄.', False],
-                  f"목록·할 일·박스글 표시는 잠그고 글만 (- [ ]·> 그대로), Esc 는 그만두고 되돌림 ({task}, {saved_task!r}, {note}, {note_back})")
+            check(task == ['LI:할 일'] and saved_task == '- [ ] 할 일 끝' and note == ['P:강조글 한 줄.'] and file_line(edit_doc, 11) == '> 강조글 한 줄.'
+                  and note_back == ['강조글 한 줄.', False],
+                  f"목록·할 일·강조글 표시는 잠그고 글만 (- [ ]·> 그대로), Esc 는 그만두고 되돌림 ({task}, {saved_task!r}, {note}, {note_back})")
             row = start(page.locator('#lec-view tr', has_text='구리'))
             first_cell = focused()
             page.keyboard.press('Tab')
@@ -3851,7 +3851,7 @@ def run(headed: bool) -> None:
             shot('07c-manual')
             check(manual.is_visible() and not info['keys'] and len(info['toc']) >= 20 and {'단축키', '터미널', '코드 읽기'} <= set(info['toc'])
                   and info['kbd'] >= 40 and info['alert'] and info['ver'] and info['focus'] == 'lec-help-scroll' and info['covers'],
-                  f"단축키 표의 '사용설명서 열기' → 사이드바·문서 위를 덮는 설명서, 차례·박스글·단축키 장 ({len(info['toc'])}개, kbd {info['kbd']})")
+                  f"단축키 표의 '사용설명서 열기' → 사이드바·문서 위를 덮는 설명서, 차례·강조글·단축키 장 ({len(info['toc'])}개, kbd {info['kbd']})")
             page.locator('#lec-help-toc a', has_text='터미널 모음').click()
             jumped = wait_until(page, '''(() => { const h = [...document.querySelectorAll('#lec-help-view h3')].find(h => h.textContent === '터미널 모음');
               const t = h.getBoundingClientRect().top - document.querySelector('#lec-help-scroll').getBoundingClientRect().top; return t >= 0 && t < 40; })()''')
@@ -4014,7 +4014,7 @@ def run_english(headed: bool) -> None:
             page.keyboard.press('Escape')
             check(doc['alert'] is True and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
                   and doc['status'].startswith('Modified') and 'Copy location for Claude' in menu and '@README.md line ' in menu,
-                  f'문서: 박스글(제목 줄 없음 — D72)·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
+                  f'문서: 강조글(제목 줄 없음 — D72)·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
             page.click('#lec-btn-spot')
             spot = page.evaluate("document.querySelector('#lec-btn-spot').title")
             page.keyboard.press('Escape')

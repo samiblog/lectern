@@ -1,6 +1,6 @@
 // Lectern 슬라이드 (D59·D96): 맨 앞 설정에 marp: true 가 있는 md 를 16:9 슬라이드로 그린다 — Marp 에서 출발한 Lectern 의 발표 형식.
 //
-// - 그리는 것은 문서 화면과 같은 렌더러다 (markdown.js·doc.js) — Mermaid·차트·수식·코드 색·표·박스글이 그대로 된다.
+// - 그리는 것은 문서 화면과 같은 렌더러다 (markdown.js·doc.js) — Mermaid·차트·수식·코드 색·표·강조글이 그대로 된다.
 //   markdown-it 의 줄(---)마다 나눈다 (slideRule — headingDivider 면 그 수준까지의 제목 앞에서도). 슬라이드 하나 =
 //   .lec-slide-wrap[data-lines] > .lec-slide-frame(화면 폭의 16:9 틀) > section.lec-slide(1280×720 을 transform 으로 줄임).
 //   발표자 노트(지시어가 아닌 HTML 주석)는 틀 아래 .lec-slide-notes 에.

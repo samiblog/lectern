@@ -51,7 +51,7 @@
 | `--md-th-fg` | 표 머리행 글자 (머리행을 짙게 칠할 때 흰 글자로 — 없으면 제목 색) |
 | `--md-th-rule` | 표 머리행 아래 굵은 선 |
 | `--md-stripe` | 표의 짝수 행 바탕 |
-| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | 박스글(`> [!NOTE]` 등)의 막대·옅은 바탕 색 |
+| `--md-alert-note` / `-tip` / `-important` / `-warning` / `-caution` | 강조글(`> [!NOTE]` 등)의 막대·옅은 바탕 색 |
 | `--md-font` | 본문 글꼴 |
 | `--md-heading-font` | 제목 글꼴 |
 | `--md-mono` | 코드 글꼴 |
@@ -71,8 +71,8 @@
 | 체크리스트 | `.md-body .task-list-item`, `.task-list-item-checkbox` |
 | 링크 | `.md-body a` (인터넷 링크 `a.ext` — 뒤에 ↗ 표시, 프로젝트 파일 `a.file-link`, 본문 속 경로 `a.path-link`, 열 수 없는 링크 `a.link-off`) |
 | 굵게·강조·표시 | `.md-body strong`, `em`, `mark`, `kbd` |
-| 인용문 | `.md-body blockquote` (박스글은 `blockquote.alert` — 아래) |
-| 박스글 | `.md-body blockquote.alert.alert-note` (`-tip`·`-important`·`-warning`·`-caution`). 제목 줄은 없다 — 종류는 색으로만. 색은 그 박스의 `--alert` 변수 |
+| 인용문 | `.md-body blockquote` (강조글은 `blockquote.alert` — 아래) |
+| 강조글 | `.md-body blockquote.alert.alert-note` (`-tip`·`-important`·`-warning`·`-caution`). 제목 줄은 없다 — 종류는 색으로만. 색은 그 박스의 `--alert` 변수 |
 | 코드 블록 | `.md-body .code-block` > `.code-tools`(언어 이름 `.code-lang`, 복사 단추 `.code-copy`) + `pre` > `code.hljs` |
 | 인라인 코드 | `.md-body :not(pre) > code` |
 | 표 | `.md-body .table-wrap`(테두리·스크롤 상자) > `table` > `thead th`, `tbody td`. 숫자 열은 `th.num`·`td.num` (오른쪽 정렬) |
@@ -147,7 +147,7 @@
 ## 7. 만든 뒤 확인
 
 1. 툴바 스타일 목록 맨 아래 '내 스타일'에서 고릅니다.
-2. 제목·표(머리행·짝수 행·숫자 열)·코드 블록·인라인 코드·박스글 다섯 가지·인용문·체크리스트·링크·수식·다이어그램이 든 문서를 열어 봅니다. 예제(**예제 열기**)의 `guide/04-문서-쓰는-법.md` 가 좋은 예입니다.
+2. 제목·표(머리행·짝수 행·숫자 열)·코드 블록·인라인 코드·강조글 다섯 가지·인용문·체크리스트·링크·수식·다이어그램이 든 문서를 열어 봅니다. 예제(**예제 열기**)의 `guide/04-문서-쓰는-법.md` 가 좋은 예입니다.
 3. 툴바의 글자 크기 −·+ 로 크기를 바꿔 봅니다 (함께 커지고 작아져야 합니다).
 4. 어두운 스타일이면 사이드바·메뉴·코드 색이 어두운지, 터미널 글자가 읽히는지 봅니다.
 5. 고칠 것이 있으면 파일을 고쳐 저장합니다 — 바로 다시 입혀집니다.

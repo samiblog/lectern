@@ -336,14 +336,14 @@ export function tableSpan(lines, n) {
   return table ? [table.head, table.last] : null;
 }
 
-// ---- 박스글 -------------------------------------------------------------------------
+// ---- 강조글 -------------------------------------------------------------------------
 
 export const BOXES = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'];
 const BOX_HEAD = /^[ \t]*>[ \t]?\[!([A-Za-z]+)\][ \t]*$/;
 
 const depth = (s) => (quoteOf(s).match(/>/g) || []).length;
 
-/** 줄 n 이 든 박스글 {a, b, kind}. 박스글이 아니면 null */
+/** 줄 n 이 든 강조글 {a, b, kind}. 강조글이 아니면 null */
 export function boxAt(lines, n) {
   if (!depth(lines[n - 1] ?? '')) return null;
   let a = n;
@@ -354,7 +354,7 @@ export function boxAt(lines, n) {
   return m ? { a, b, kind: m[1].toUpperCase() } : null;
 }
 
-/** 박스글의 종류를 바꾼다 (표시 한 줄) */
+/** 강조글의 종류를 바꾼다 (표시 한 줄) */
 export function setBox(lines, n, kind) {
   const box = boxAt(lines, n);
   if (!box) return { error: 'not-box' };
@@ -363,7 +363,7 @@ export function setBox(lines, n, kind) {
   return { lines: next, line: n };
 }
 
-/** 박스글을 풀어 보통 문단으로 — 인용 표시와 종류 줄을 뗀다 */
+/** 강조글을 풀어 보통 문단으로 — 인용 표시와 종류 줄을 뗀다 */
 export function unwrapBox(lines, n) {
   const box = boxAt(lines, n);
   if (!box) return { error: 'not-box' };
@@ -371,7 +371,7 @@ export function unwrapBox(lines, n) {
   return { lines: [...lines.slice(0, box.a - 1), ...body, ...lines.slice(box.b)], line: Math.max(box.a, n - 1) };
 }
 
-/** 줄 a~b 를 박스글로 감싼다 */
+/** 줄 a~b 를 강조글로 감싼다 */
 export function wrapBox(lines, a, b, kind) {
   const texts = [];
   for (let n = a; n <= b; n++) {
@@ -381,6 +381,104 @@ export function wrapBox(lines, a, b, kind) {
   if (!texts.length) return { error: 'kind' };
   const body = [`> [!${kind}]`, ...texts.flatMap((s, i) => [...(i ? ['>'] : []), `> ${s}`])];
   return { lines: padded(lines.slice(0, a - 1), body, lines.slice(b)), line: a + 1 };
+}
+
+// ---- 박스글 (D126) ------------------------------------------------------------------
+// 본문과 따로 읽는 글 상자: '<!-- box -->' 줄과 '<!-- /box -->' 줄 사이. 다른 뷰어에서는 주석이 보이지 않아 보통 글이다.
+// 닫는 줄이 없으면 다음 제목 앞(없으면 문서 끝)에서 끝난다 — 줄을 버리지 않는다. 박스글 안에 박스글은 없다: 여는 줄이 또 나오면 앞의 것이 거기서 끝난다.
+
+export const TEXTBOX_OPEN = '<!-- box -->';
+export const TEXTBOX_CLOSE = '<!-- /box -->';
+const TB_OPEN = /^ {0,3}<!--[ \t]*box[ \t]*-->[ \t]*$/i;
+const TB_CLOSE = /^ {0,3}<!--[ \t]*\/box[ \t]*-->[ \t]*$/i;
+
+/** 박스글을 여는 줄·닫는 줄인지 (markdown.js 도 이것으로 본다) */
+export const isTextboxOpen = (line) => TB_OPEN.test(line);
+export const isTextboxClose = (line) => TB_CLOSE.test(line);
+
+/** 문서의 박스글 [{a(여는 줄), b(닫는 줄 — 없으면 0), end(박스글의 마지막 줄 — 닫는 줄, 없으면 안의 마지막 글 줄)}] — 머리 설정과 코드 블록 안은 뺀다 */
+export function textboxesIn(lines) {
+  const fences = fencesOf(lines);
+  const start = frontEnd(lines);
+  const out = [];
+  let open = null;
+  const lastText = (from, to) => {
+    let n = to;
+    while (n > from && isBlank(lines[n - 1])) n -= 1;
+    return n;
+  };
+  lines.forEach((s, i) => {
+    const n = i + 1;
+    if (n <= start || fenceAt(fences, n)) return;
+    if (open && (headLevel(s) || isTextboxOpen(s))) {   // 닫지 않은 박스글은 제목·다음 박스글 앞에서 끝난다
+      out.push({ a: open, b: 0, end: lastText(open, n - 1) });
+      open = null;
+    }
+    if (isTextboxOpen(s)) open = n;
+    else if (open && isTextboxClose(s)) {
+      out.push({ a: open, b: n, end: n });
+      open = null;
+    }
+  });
+  if (open) out.push({ a: open, b: 0, end: lastText(open, lines.length) });
+  return out;
+}
+
+/** 줄 n 이 든 박스글 (여는 줄·닫는 줄도 그 박스글). 없으면 null */
+export const textboxAt = (lines, n) => textboxesIn(lines).find((x) => n >= x.a && n <= x.end) || null;
+
+/** 박스글의 제목 줄 — word 는 '박스'·'Box', title 은 제목 글 */
+export const textboxTitle = (word, n, title) => `**${word} ${n}. ${title}**`;
+
+/** 새 박스글의 줄들: 여는 줄, 제목, 내용 한 줄, 닫는 줄 */
+export const makeTextbox = (word, n, title, body) => [TEXTBOX_OPEN, textboxTitle(word, n, title), '', body, TEXTBOX_CLOSE];
+
+/**
+ * 줄 a~b 를 박스글로 묶는다 — 앞뒤에 여는 줄·닫는 줄을 넣는다. 첫 줄이 '박스 1. …' 캡션이 아니면 제목 줄(titleLine)도 넣는다.
+ * 제목·다른 박스글·머리 설정에 걸치면 묶지 않는다 (박스글은 절을 넘지 않는다)
+ * @param {string[]} lines
+ * @param {number} a
+ * @param {number} b
+ * @param {string} titleLine
+ * @param {(line: string) => boolean} [isCaption] 줄이 박스 캡션인지 (refs.js 의 captionAt 으로 — 여기서 부르면 import 가 돈다)
+ */
+export function wrapTextbox(lines, a, b, titleLine, isCaption) {
+  while (a <= b && isBlank(lines[a - 1] ?? '')) a += 1;
+  while (b >= a && isBlank(lines[b - 1] ?? '')) b -= 1;
+  if (a > b) return { error: 'kind' };
+  if (a <= frontEnd(lines)) return { error: 'kind' };
+  const fences = fencesOf(lines);
+  const fa = fenceAt(fences, a);
+  const fb = fenceAt(fences, b);
+  if (fa) a = fa.a;   // 코드 블록의 가운데부터 묶지 않는다 — 블록째
+  if (fb) b = fb.b;
+  if (textboxesIn(lines).some((x) => a <= x.end && b >= x.a)) return { error: 'in-textbox' };
+  for (let n = a; n <= b; n++) if (!fenceAt(fences, n) && headLevel(lines[n - 1])) return { error: 'textbox-heading' };
+  const head = isCaption?.(lines[a - 1]) ? [] : [titleLine, ''];
+  const body = [TEXTBOX_OPEN, ...head, ...lines.slice(a - 1, b), TEXTBOX_CLOSE];
+  const before = lines.slice(0, a - 1);
+  const r = padded(before, body, lines.slice(b));
+  return { lines: r, line: a + (before.length && before.at(-1).trim() ? 1 : 0) + 1 };
+}
+
+/** 박스글을 풀어 보통 글로 — 여는 줄과 닫는 줄만 뺀다. 그 자리에 빈 줄이 겹치면 하나만 둔다 */
+export function unwrapTextbox(lines, n) {
+  const box = textboxAt(lines, n);
+  if (!box) return { error: 'not-textbox' };
+  const out = lines.slice();
+  const drop = (at) => {
+    out.splice(at - 1, 1);
+    if (at >= 2 && at - 1 < out.length && isBlank(out[at - 2]) && isBlank(out[at - 1])) out.splice(at - 1, 1);   // 위아래가 모두 빈 줄
+  };
+  if (box.b) drop(box.b);
+  drop(box.a);
+  return { lines: out, line: Math.min(Math.max(1, box.a), out.length) };
+}
+
+/** 박스글의 줄 범위 [a, b] — 지울 때 */
+export function textboxSpan(lines, n) {
+  const box = textboxAt(lines, n);
+  return box ? [box.a, box.end] : null;
 }
 
 // ---- 주 -----------------------------------------------------------------------------

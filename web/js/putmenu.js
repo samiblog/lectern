@@ -28,11 +28,11 @@ const TEXT_ITEMS = () => [
 ];
 
 const BOX_ITEMS = () => [
-  { id: 'box:NOTE', group: t('박스글'), name: t('박스글 — 참고'), words: 'note callout 상자' },   // i18n-ok (찾는 말)
-  { id: 'box:TIP', group: t('박스글'), name: t('박스글 — 팁'), words: 'tip callout 상자' },   // i18n-ok (찾는 말)
-  { id: 'box:IMPORTANT', group: t('박스글'), name: t('박스글 — 중요'), words: 'important callout 요약 핵심 상자' },   // i18n-ok (찾는 말)
-  { id: 'box:WARNING', group: t('박스글'), name: t('박스글 — 경고'), words: 'warning callout 상자' },   // i18n-ok (찾는 말)
-  { id: 'box:CAUTION', group: t('박스글'), name: t('박스글 — 주의'), words: 'caution callout 상자' },   // i18n-ok (찾는 말)
+  { id: 'box:NOTE', group: t('강조글'), name: t('강조글 — 참고'), words: 'note callout 상자' },   // i18n-ok (찾는 말)
+  { id: 'box:TIP', group: t('강조글'), name: t('강조글 — 팁'), words: 'tip callout 상자' },   // i18n-ok (찾는 말)
+  { id: 'box:IMPORTANT', group: t('강조글'), name: t('강조글 — 중요'), words: 'important callout 요약 핵심 상자' },   // i18n-ok (찾는 말)
+  { id: 'box:WARNING', group: t('강조글'), name: t('강조글 — 경고'), words: 'warning callout 상자' },   // i18n-ok (찾는 말)
+  { id: 'box:CAUTION', group: t('강조글'), name: t('강조글 — 주의'), words: 'caution callout 상자' },   // i18n-ok (찾는 말)
 ];
 
 const BLOCK_ITEMS = () => [
@@ -42,6 +42,7 @@ const BLOCK_ITEMS = () => [
   { id: 'diagram', group: t('자료'), name: t('다이어그램'), words: 'diagram mermaid 흐름도' },   // i18n-ok (찾는 말)
   { id: 'math', group: t('자료'), name: t('수식'), words: 'math equation 공식' },   // i18n-ok (찾는 말)
   { id: 'code', group: t('자료'), name: t('코드'), words: 'code' },
+  { id: 'textbox', group: t('자료'), name: t('박스글'), words: 'box 박스 상자 참고 sidebar inset' },   // i18n-ok (찾는 말)
   { id: 'note', group: t('주·참조'), name: t('주'), hint: 'Ctrl+Alt+F', words: 'footnote 각주 미주' },   // i18n-ok (찾는 말)
   { id: 'source', group: t('주·참조'), name: t('출처 줄'), words: 'source 자료 출처' },   // i18n-ok (찾는 말)
   { id: 'tablenote', group: t('주·참조'), name: t('표 주'), words: 'table note 주석' },   // i18n-ok (찾는 말)
@@ -58,7 +59,7 @@ const BLOCK_ITEMS = () => [
 ];
 
 /** 슬라이드에 넣지 않는 것: 각주를 쓰지 않고, 첨부·부록·목차·쪽 나눔·참조·인용은 문서의 것이고, --- 는 장을 가른다 */
-const NOT_IN_DECK = new Set(['note', 'tablenote', 'attach', 'appendix', 'rule', 'pagebreak', 'toc', 'tables', 'figures', 'ref', 'cite']);
+const NOT_IN_DECK = new Set(['textbox', 'note', 'tablenote', 'attach', 'appendix', 'rule', 'pagebreak', 'toc', 'tables', 'figures', 'ref', 'cite']);
 const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표자 노트'), words: 'speaker note 노트 메모' });   // i18n-ok (찾는 말)
 
 /** 넣을 수 있는 것 */

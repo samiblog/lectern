@@ -4,7 +4,7 @@
 // - 그 줄이 보이는 자리(lineunits.js 의 lineSlot — 블록의 글, 나눠 쓴 문단의 그 줄, 코드 블록·코드 화면의 그 줄, 표의 칸)의 내용을 떼어 두고
 //   글 칸(contenteditable="plaintext-only" 인 .lec-line-edit)을 넣는다. 칸은 그 블록 안이라 제목 크기·글머리표·박스 색·코드 글꼴이 그대로다.
 //   칸에는 원문의 그 줄에서 앞뒤 표시를 뗀 글이 들어간다 — 문장 속 서식은 `**굵게**`·`[링크](주소)` 처럼 글자로 (WYSIWYG 는 하지 않는다).
-//   잠그는 것: 인용 >·들여쓰기·목록 표시(- * + 1. 1))·할 일 [ ]·제목 #·박스글 [!NOTE]·각주 [^1]:, 제목 끝의 #, 줄 끝의 공백·\(줄바꿈 표시),
+//   잠그는 것: 인용 >·들여쓰기·목록 표시(- * + 1. 1))·할 일 [ ]·제목 #·강조글 [!NOTE]·각주 [^1]:, 제목 끝의 #, 줄 끝의 공백·\(줄바꿈 표시),
 //   코드 블록이 인용·목록 안이면 그 앞부분. 표의 행은 칸마다 (| 는 잠금, Tab·Shift+Tab 으로 옆 칸, 칸 글의 | 는 \| 로 저장).
 // - Enter(·Ctrl+S): 저장. 원문을 새로 받아 그 줄이 시작할 때와 같으면 그 줄만 바꿔 /api/save — 편집 모드(D54)와 같은 길이라 줄바꿈·BOM·
 //   읽기 전용·프로그램 폴더(D71)를 서버가 지킨다. 줄 번호만 밀렸으면 근처에서 같은 줄을 찾아 하나뿐일 때 그 자리에 (linefind.js).
@@ -39,10 +39,10 @@ import {
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
   setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
-  moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+  moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
-import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, PAGE_BREAK } from './refs.js';
+import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { writeValues, setChartKind, chartFromTable } from './chartops.js';
 import { slugify } from './markdown.js';
@@ -51,7 +51,7 @@ import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks, releasePick,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
-import { $, toast, copyText, rangeText, blockedReadOnly, isMd } from './util.js';
+import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
 import { t, LANG } from './i18n.js';
 
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
@@ -825,7 +825,10 @@ function whyNot(error) {
     case 'table': return t('표의 행은 복제하지 않습니다 — Ctrl+Enter 로 새 행을 더합니다');
     case 'not-table': return t('표 안에서 누르세요');
     case 'last-column': return t('하나뿐인 열은 지우지 않습니다 — 표를 지우세요');
-    case 'not-box': return t('박스글 안에서 누르세요');
+    case 'not-box': return t('강조글 안에서 누르세요');
+    case 'not-textbox': return t('박스글 안에서 누르세요');
+    case 'in-textbox': return t('박스글 안에는 박스글을 넣지 않습니다');
+    case 'textbox-heading': return t('제목 줄은 박스글로 묶지 않습니다 — 박스글은 절 안에 둡니다');
     case 'not-cell': return t('칸 안에서 누르세요');
     case 'not-numeric': return t('값 열이 수가 아니라 차트로 바꾸지 못했습니다 — 첫 열은 항목, 다음 열들은 수여야 합니다');
     case 'first-item': return t('목록의 맨 앞 항목은 더 안으로 옮기지 못합니다');
@@ -989,7 +992,7 @@ function kindHere(kind) {
   });
 }
 
-/** 빈 새 줄의 종류를 정한다 — 쓰기 전에는 파일이 그대로다: 제목·문단·목록·번호·할 일·인용·박스글 (D109) */
+/** 빈 새 줄의 종류를 정한다 — 쓰기 전에는 파일이 그대로다: 제목·문단·목록·번호·할 일·인용·강조글 (D109) */
 function freshKind(s, kind) {
   const level = /^h([1-6])$/.exec(kind)?.[1];
   const box = /^box:(\w+)$/.exec(kind)?.[1];
@@ -1219,7 +1222,7 @@ async function moveSectionNow({ from, to }) {
 
 // ---- 슬라이드 (D96) -----------------------------------------------------------------
 
-const TEXT_LABELS = { title: t('제목'), sub: t('소제목'), body: t('본문'), table: t('표'), box: t('박스글'), code: t('코드') };
+const TEXT_LABELS = { title: t('제목'), sub: t('소제목'), body: t('본문'), table: t('표'), box: t('강조글'), code: t('코드') };
 
 /** 현재 줄의 구성 요소 — slideops.TEXT_WORDS 의 안쪽 이름 */
 function textKind(el) {
@@ -1602,6 +1605,11 @@ async function putItem(s, id) {
   else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
   else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
+  else if (id === 'textbox') await putBlock(s, (src, line) => {   // 박스글 (D126) — 제목 줄에서 고치기 시작한다
+    if (textboxesAround(src, line)) return { error: 'in-textbox' };
+    const r = insertBlock(src, line, makeTextbox(t('박스'), nextCaption(src, t('박스')), t('제목'), t('여기에 내용을 씁니다.')));
+    return { ...r, line: r.line + 1 };
+  });
   else if (id === 'pagebreak') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, [PAGE_BREAK]), then: (at) => beginNew(at, true) }));
   else if (id === 'toc' || id === 'tables' || id === 'figures') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, [tocLine(id, LANG === 'en')]), then: (at) => beginNew(at, true) }));
   else if (id === 'ref') await putRef(s);
@@ -1926,9 +1934,39 @@ async function changeLine(line, at) {
   });
 }
 
-/** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·박스글로 */
+/** 줄 at 뒤에 넣으면 박스글 안인지 — 여는 줄부터 끝 줄 앞까지 */
+const textboxesAround = (src, at) => { const box = textboxAt(src, at); return !!box && at < box.end; };
+
+/** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·강조글로, 고른 줄을 박스글로 (D126 — 슬라이드에는 없다) */
 export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [{ label: t('아래에 넣기…'), hint: '/', tip: t('고른 줄의 끝 줄 아래에'), action: putPicked },
-  { label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: changeLit }] : []);
+  { label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·강조글로'), action: changeLit },
+  ...(deckOn(S.pane.view) ? [] : [{ label: t('박스글로 묶기'), tip: t('고른 줄을 본문과 따로 읽는 상자로'), action: wrapLit }, askTextboxItem(litSpan()[1])])] : []);
+
+/**
+ * 'Claude 에 박스글 요청' (D126): 지금까지의 대화를 정리해 줄 after 뒤에 박스글로 넣어 달라는 요청 글을 터미널에 넣는다 — Enter 는 사용자가 (D51).
+ * 파일을 쓰는 것은 터미널의 Claude Code 다 (원칙 1 의 터미널 예외) — Lectern 은 자리와 규칙을 적어 줄 뿐이다. 자리는 그 줄이 든 블록의 끝, 박스글 안이면 그 박스글의 끝.
+ * 요청 글은 한 줄이다 — 여러 줄이면 셸 프롬프트에서 줄마다 명령이 될 수 있다
+ */
+function askTextbox(after) {
+  const view = S.pane?.view;
+  if (!view) return;
+  const src = sourceLines();
+  let at = Math.max(1, blockEnd(src, after));
+  const box = textboxAt(src, at);
+  if (box) at = box.end;
+  emit('term-paste', t('지금까지의 대화에서 이 문서에 남길 내용을 정리해 {ref} 바로 뒤에 박스글로 넣어 줘. 박스글은 `<!-- box -->` 줄과 `<!-- /box -->` 줄 사이에 보통 Markdown 으로 쓰고, 첫 줄은 `**{word} {n}. 제목**`, 안에 제목(#)은 넣지 않아. 앞뒤에 빈 줄을 두고 그 밖의 줄은 고치지 마. ',
+    { ref: lineRef(pathIn(view), [at, at]), word: t('박스'), n: nextCaption(src, t('박스')) }));
+}
+
+const askTextboxItem = (after) => ({ label: t('Claude 에 박스글 요청'), tip: t('대화를 정리해 이 자리 뒤에 박스글로 — 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)'), action: () => askTextbox(after) });
+
+/** 고른 줄을 박스글로 묶는다 — 여는 줄·제목 줄·닫는 줄을 넣는다 */
+function wrapLit() {
+  const span = litSpan();
+  if (!span) return;
+  const isCaption = (s) => /^(?:박스|Box)$/.test(captionAt(s)?.word ?? '');   // i18n-ok (원문의 캡션 낱말)
+  menuOp((src) => wrapTextbox(src, span[0], span[1], textboxTitle(t('박스'), nextCaption(src, t('박스')), t('제목')), isCaption), () => stopSpotlight());
+}
 
 /** 고른 줄의 '아래에 넣기…': 끝 줄 아래에 새 줄을 열고 넣기 창을 연다 (D119) */
 async function putPicked() {
@@ -1955,7 +1993,7 @@ async function changeLit() {
 /** 줄 번호 — 요소가 든 가장 안쪽 블록의 첫 줄 */
 const lineOfEl = (el) => Number(/^\d+/.exec(el?.closest?.('[data-lines]')?.dataset.lines || '')?.[0]) || 0;
 
-/** 본문 우클릭의 구성 요소 항목 (docmenu.js): 넣기·바꾸기, 표의 행과 열, 박스글, 절. 고칠 수 없는 화면이면 빈 목록 */
+/** 본문 우클릭의 구성 요소 항목 (docmenu.js): 넣기·바꾸기, 표의 행과 열, 강조글, 절. 고칠 수 없는 화면이면 빈 목록 */
 export function lineMenuItems(target) {
   const pane = S.pane;
   const view = pane?.view;
@@ -1983,8 +2021,16 @@ export function lineMenuItems(target) {
       fenceOp(pane, (text) => setChartKind(text, chosen.id));
     } });
   }
-  items.push({ label: t('여기에 넣기…'), hint: '/', tip: deck ? t('표·박스글·그림·차트 같은 구성 요소를 아래에') : t('표·박스글·그림·주 같은 구성 요소를 아래에'), action: () => putBelow(line, target) });
+  items.push({ label: t('여기에 넣기…'), hint: '/', tip: deck ? t('표·강조글·그림·차트 같은 구성 요소를 아래에') : t('표·강조글·그림·주 같은 구성 요소를 아래에'), action: () => putBelow(line, target) });
+  if (!deck) items.push(askTextboxItem(line));
   const src = sourceLines();
+  if (!deck && textboxAt(src, line)) {   // 박스글 (D126) — 안의 표·강조글 항목보다 먼저
+    items.push({ label: t('박스글 풀기'), tip: t('여는 줄과 닫는 줄만 뺍니다 — 글은 그대로'), action: () => menuOp((x) => unwrapTextbox(x, line)) },
+      { label: t('박스글 지우기'), action: () => menuOp((x) => {
+        const span = textboxSpan(x, line);
+        return span ? { ...deleteLines(x, span[0], span[1]), ask: t('박스글을 지울까요? 안의 글도 지워집니다.') } : { error: 'not-textbox' };
+      }) });
+  }
   const cell = target.closest?.('td, th');
   if (cell) {
     const col = cell.cellIndex;
@@ -2008,16 +2054,16 @@ export function lineMenuItems(target) {
   }
   if (boxAt(src, line)) {
     const run = (op) => () => menuOp(op);
-    items.push({ label: t('박스글 종류 바꾸기…'), action: () => changeBox(line, target) },
-      { label: t('박스글 풀기'), tip: t('보통 문단으로'), action: run((x) => unwrapBox(x, line)) },
-      { label: t('박스글 지우기'), action: run((x) => {
+    items.push({ label: t('강조글 종류 바꾸기…'), action: () => changeBox(line, target) },
+      { label: t('강조글 풀기'), tip: t('보통 문단으로'), action: run((x) => unwrapBox(x, line)) },
+      { label: t('강조글 지우기'), action: run((x) => {
         const box = boxAt(x, line);
-        return box ? { ...deleteLines(x, box.a, box.b), ask: t('박스글을 지울까요?') } : { error: 'not-box' };
+        return box ? { ...deleteLines(x, box.a, box.b), ask: t('강조글을 지울까요?') } : { error: 'not-box' };
       }) });
     return deck ? [...items, ...cellItems(target, line)] : items;
   }
   if (!target.closest?.('pre, .math-block, .front-matter, img')) {
-    items.push({ label: t('이 줄 바꾸기…'), tip: t('제목·문단·목록·인용·박스글로'), action: () => changeLine(line, target) });
+    items.push({ label: t('이 줄 바꾸기…'), tip: t('제목·문단·목록·인용·강조글로'), action: () => changeLine(line, target) });
   }
   if (deck) return [...items, ...cellItems(target, line)];
   if (headLevel(src[line - 1] ?? '')) {
@@ -2030,7 +2076,7 @@ export function lineMenuItems(target) {
 }
 
 async function changeBox(line, at) {
-  const chosen = await pick({ items: changeItems().filter((x) => x.id.startsWith('box:')), title: t('박스글 종류'), at });
+  const chosen = await pick({ items: changeItems().filter((x) => x.id.startsWith('box:')), title: t('강조글 종류'), at });
   if (chosen) menuOp((src) => setBox(src, line, chosen.id.slice(4)));
 }
 

@@ -1,6 +1,6 @@
 // 오른쪽 목차와 '지금 읽는 위치' 표시. 선택된 탭의 문서를 따른다 (목차는 칸마다 남겨 두고 탭을 고르면 그 칸의 것을 보인다)
 //
-// 제목 아래에는 그 절의 구성 요소 — 표·그림·박스글·다이어그램·코드·수식 — 를 문서 순서대로 함께 보인다 (D39).
+// 제목 아래에는 그 절의 구성 요소 — 표·그림·강조글·다이어그램·코드·수식 — 를 문서 순서대로 함께 보인다 (D39).
 // 누르면 그 자리로 가서(접힌 절은 편다) 잠깐 테두리로 표시한다. 목차 머리의 종류 버튼으로 종류마다 보이고 감춘다
 // (설정 toc_hidden_parts — 감춘 종류를 적어 두므로 새 종류는 처음부터 보인다). 번호(표 1, 표 2 …)는 감춘 것과 상관없이 문서 순서다.
 // 편집 모드(D55)에서는 '지금 읽는 위치'가 편집기의 지금 보는 곳을 따르고, 목차를 누르면 편집기가 그 줄로 간다 (editor.js).
@@ -94,7 +94,8 @@ export const PARTS = {
   table: { name: t('표'), many: t('표', { n: 2 }), icon: 'i-table' },
   figure: { name: t('그림'), many: t('그림', { n: 2 }), icon: 'i-image' },
   chart: { name: t('차트'), many: t('차트', { n: 2 }), icon: 'i-chart' },
-  box: { name: t('박스글'), many: t('박스글', { n: 2 }), icon: 'i-box' },
+  textbox: { name: t('박스글'), many: t('박스글', { n: 2 }), icon: 'i-textbox' },
+  box: { name: t('강조글'), many: t('강조글', { n: 2 }), icon: 'i-box' },
   diagram: { name: t('다이어그램'), many: t('다이어그램', { n: 2 }), icon: 'i-diagram' },
   code: { name: t('코드'), many: t('코드', { n: 2 }), icon: 'i-code' },
   math: { name: t('수식'), many: t('수식', { n: 2 }), icon: 'i-math' },
@@ -102,7 +103,9 @@ export const PARTS = {
   link: { name: t('링크'), many: t('링크', { n: 2 }), icon: 'i-link', more: true },
   source: { name: t('출처'), many: t('출처', { n: 2 }), icon: 'i-source', more: true },
 };
-// md(doc.js 가 꾸민 것)와 html 문서의 후보. 박스글은 인용·콜아웃과 html 의 aside·callout 류
+// md(doc.js 가 꾸민 것)와 html 문서의 후보. 강조글은 인용·콜아웃과 html 의 aside·callout 류. 박스글(D126)은 md 의 aside.lec-textbox
+const TEXTBOX = 'aside.lec-textbox';
+const TEXTBOX_HEAD = /^(?:박스|box)\s*\d+\s*[.:]\s*/i;   // i18n-ok (원문의 캡션 낱말)
 const BOXES = 'blockquote, aside, [role="note"], .callout, .admonition';
 // .image-off: 불러오지 못한 그림 자리(doc.js) — 화면 밖에서 센 모아 보기와 번호가 같게 그림으로 센다
 const CANDIDATES = `table, img, .image-off, figure, ${BOXES}, .code-block, pre, .math-block, .diagram-error`;
@@ -145,7 +148,11 @@ function partKind(el) {
     if (w && h && w < 32 && h < 32) return null;
     return 'figure';
   }
-  if (el.matches(BOXES)) return el.parentElement?.closest(BOXES) ? null : 'box';   // 박스 안의 박스는 바깥 것만
+  if (el.matches(TEXTBOX)) return 'textbox';
+  if (el.matches(BOXES)) {   // 박스 안의 박스는 바깥 것만 — 박스글 안의 강조글은 센다
+    const outer = el.parentElement?.closest(BOXES);
+    return outer && !outer.matches(TEXTBOX) ? null : 'box';
+  }
   if (el.matches('pre.lec-chart, .diagram-error[data-chart]')) return CHART_LIBS.has(el.dataset.chart) ? 'chart' : 'diagram';   // 차트 (D56·D62)
   if (el.matches('pre.mermaid, .diagram-error')) return 'diagram';
   if (el.matches('.code-block')) return 'code';
@@ -186,7 +193,7 @@ function holderKind(node) {
  */
 function captionPara(el, kind, { before = null, after = null, afterFirst = false } = {}) {
   const pick = (p, mode, side) => {
-    if (!mode || !p || p.tagName !== 'P') return null;
+    if (!mode || !p || p.tagName !== 'P' || p.classList.contains('lec-textbox-title')) return null;   // 박스글의 제목은 안의 표·그림의 캡션이 아니다
     const text = squeeze(p.textContent);
     if (!text || text.length > 90) return null;
     const only = p.children.length === 1 && /^(STRONG|B|EM|I)$/.test(p.firstElementChild.tagName) && squeeze(p.firstElementChild.textContent) === text;
@@ -213,7 +220,7 @@ const captionTag = (node) => {   // <caption>·<figcaption>
 /** 혼자 든 단락 (그림의 캡션은 그 단락의 앞뒤에서 찾는다) */
 const loneHolder = (el) => (el.parentElement?.tagName === 'P' && squeeze(el.parentElement.textContent) === '' ? el.parentElement : null);
 
-/** 구성 요소의 캡션 (모아 보기는 이것을 이름으로 — D61). 표는 위, 그림은 아래가 먼저. 박스글·수식은 없다 */
+/** 구성 요소의 캡션 (모아 보기는 이것을 이름으로 — D61). 표는 위, 그림은 아래가 먼저. 강조글·수식은 없다 */
 export function captionOf(kind, el) {
   if (kind === 'table') return captionTag(el.caption) || captionPara(el.closest('.table-wrap') || el, kind, { before: 'any', after: 'numbered' });
   if (kind === 'figure') {
@@ -261,7 +268,14 @@ function figureLabel(el, cap) {
 
 function boxLabel(el) {
   const text = [...el.children].map((c) => c.textContent).join(' ') || el.textContent;
-  return { name: el.tagName === 'BLOCKQUOTE' && !el.classList.contains('alert') ? t('인용') : t('박스글'), label: clip(text, 40) };
+  return { name: el.tagName === 'BLOCKQUOTE' && !el.classList.contains('alert') ? t('인용') : t('강조글'), label: clip(text, 40) };
+}
+
+/** 박스글 (D126): 제목 띠의 글이 이름 — '박스 1.' 머리는 번호와 겹치니 뗀다. 제목이 없으면 첫 글 */
+function textboxLabel(el, name) {
+  const title = squeeze(el.querySelector(':scope > .lec-textbox-title')?.textContent);
+  const text = title || squeeze([...el.children].find((c) => squeeze(c.textContent))?.textContent);
+  return { name, label: clip(text.replace(TEXTBOX_HEAD, '') || text, 40), caption: title, capEl: null, detail: '' };
 }
 
 const DIAGRAMS = {
@@ -303,6 +317,7 @@ function codeLabel(el, cap) {
 function describe(kind, el, n) {
   if (kind === 'box') return boxLabel(el);
   const name = `${PARTS[kind].name} ${n}`;
+  if (kind === 'textbox') return textboxLabel(el, name);
   // 모아 보기만의 종류: text 가 이름, label 이 그 아래 설명 (parts.js)
   if (kind === 'task') {
     const { text, done } = taskInfo(el);

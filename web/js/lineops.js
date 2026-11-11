@@ -330,7 +330,7 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
     return { ...para, at, pre: [sep], post: !inside && !closing && after != null && !isBlank(after) ? [sep] : [] };
   }
   const a = blk?.a ?? n;
-  if (CALLOUT.test(bodyOf(lines[a - 1]).trim())) return { ...para, at: a, pre: [], post: [sep] };   // 박스글의 [!NOTE] 줄은 맨 앞에 남는다
+  if (CALLOUT.test(bodyOf(lines[a - 1]).trim())) return { ...para, at: a, pre: [], post: [sep] };   // 강조글의 [!NOTE] 줄은 맨 앞에 남는다
   const before = lines[a - 2];
   return { ...para, at: a - 1, pre: before != null && !isBlank(before) ? [sep] : [], post: [sep] };
 }

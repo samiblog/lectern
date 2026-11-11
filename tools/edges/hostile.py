@@ -45,7 +45,7 @@ tags: [{MARK}, b&c]
 - [ ] 할 일 \\<i data-xss="1"\\> &
 - [링크 \\<i data-xss="1"\\>](없는-문서&x.md)
 
-> [!NOTE] 박스글 \\<i data-xss="1"\\>
+> [!NOTE] 강조글 \\<i data-xss="1"\\>
 > 내용 &
 
 ```python

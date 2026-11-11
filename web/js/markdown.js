@@ -5,6 +5,7 @@
 import { S } from './store.js';
 import { slideRule, cellRule } from './slides.js';
 import { tocKind, isPageBreak } from './refs.js';
+import { isTextboxOpen, isTextboxClose } from './docops.js';
 import { t } from './i18n.js';
 
 const instances = new Map();
@@ -222,6 +223,57 @@ function docMarks(state) {
   }
 }
 
+/**
+ * 박스글 (D126): 맨 바깥의 '<!-- box -->' 줄부터 '<!-- /box -->' 줄까지를 <aside class="lec-textbox"> 로 감싼다 — 다른 뷰어에서는 주석이라 보통 글이다.
+ * 닫는 줄이 없으면 다음 제목·각주 앞(없으면 끝)에서 닫는다. 첫 블록이 한 줄 문단이면 제목이다. 줄 범위는 여는 줄부터 끝까지 (docops.js 의 textboxesIn 과 같게).
+ * Lectern 슬라이드에서는 하지 않는다
+ */
+function textboxMarks(state) {
+  if (state.env.deck) return;
+  const offset = state.env.lineOffset || 0;
+  const toks = state.tokens;
+  let open = null;   // 여는 토큰
+  let last = 0;      // 안의 마지막 블록이 끝나는 줄 (닫는 줄이 없을 때)
+  const block = (content, map) => {
+    const tok = new state.Token('html_block', '', 0);
+    tok.block = true;
+    tok.map = map;
+    tok.content = content;
+    return tok;
+  };
+  const start = (tok) => {
+    open = tok;
+    last = tok.map[1];
+  };
+  const finish = (end) => {
+    open.content = `<aside class="lec-textbox" data-lines="${open.map[0] + 1 + offset}-${end + offset}">\n`;
+    open = null;
+  };
+  for (let i = 0; i < toks.length; i++) {
+    const tok = toks[i];
+    if (tok.level !== 0) continue;
+    const mark = tok.type === 'html_block' && tok.map ? tok.content.trim() : '';
+    const opens = mark && isTextboxOpen(mark);
+    if (open && (opens || tok.type === 'heading_open' || tok.type === 'footnote_block_open')) {   // 닫지 않은 박스글
+      toks.splice(i, 0, block('</aside>\n', null));
+      finish(last);
+      i += 1;
+    }
+    if (opens) {
+      start(tok);
+      const next = toks[i + 1];
+      if (next?.type === 'paragraph_open' && next.map && next.map[1] - next.map[0] === 1 && !/^!\[/.test(toks[i + 2]?.content ?? '')) next.attrJoin('class', 'lec-textbox-title');
+    } else if (open && mark && isTextboxClose(mark)) {
+      tok.content = '</aside>\n';
+      finish(tok.map[1]);
+    } else if (open && tok.map) last = Math.max(last, tok.map[1]);
+  }
+  if (open) {
+    toks.push(block('</aside>\n', null));
+    finish(last);
+  }
+}
+
 // ---------------------------------------------------------------------------
 
 function create(math, breaks) {
@@ -235,6 +287,7 @@ function create(math, breaks) {
   if (math) md.use(mathPlugin);
   md.use(sourceLines);
   md.core.ruler.push('lec_doc_marks', docMarks);   // 문서 안 목차 줄 (D121) — source_lines 뒤에 (줄 범위는 스스로 단다)
+  md.core.ruler.push('lec_textbox', textboxMarks);   // 박스글 (D126)
   // 쪽 나눔 줄 (D121): 화면에는 점선과 '쪽 나눔', 인쇄에서는 쪽이 바뀐다 (base.css). 다른 뷰어에서는 빈 div 라 보이지 않는다
   const htmlBlock = md.renderer.rules.html_block;
   md.renderer.rules.html_block = (tokens, i, options, env, self) => (!env.deck && isPageBreak(tokens[i].content)

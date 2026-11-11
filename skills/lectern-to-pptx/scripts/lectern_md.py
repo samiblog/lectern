@@ -26,7 +26,7 @@ DIRECTIVES = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hid
 PER_SLIDE = {'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template'}
 CHARTS = {'vega-lite', 'echarts', 'plotly'}
 DIAGRAMS = {'mermaid', 'dot'}
-TEXT_WORDS = {'제목': 'title', '소제목': 'sub', '본문': 'body', '표': 'table', '박스글': 'box', '코드': 'code',
+TEXT_WORDS = {'제목': 'title', '소제목': 'sub', '본문': 'body', '표': 'table', '강조글': 'box', '박스글': 'box', '코드': 'code',
               'title': 'title', 'sub': 'sub', 'body': 'body', 'table': 'table', 'box': 'box', 'code': 'code'}
 SIZES = {'title': 30, 'sub': 20, 'body': 18, 'table': 14, 'box': 16, 'code': 14}
 
