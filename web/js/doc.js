@@ -334,7 +334,7 @@ export function imageKey(src, docPath, tab) {
   return r.kind === 'local' ? r.path : r.kind === 'external' ? r.url : `${docPath}#${src}`;
 }
 
-/** 박스글 `> [!NOTE]` 등: 머리줄의 표시를 떼고 종류의 색 상자로 — 제목 줄('참고'·'팁' 등)은 붙이지 않는다 (종류는 색으로만, D72) */
+/** 강조글 `> [!NOTE]` 등: 머리줄의 표시를 떼고 종류의 색 상자로 — 제목 줄('참고'·'팁' 등)은 붙이지 않는다 (종류는 색으로만, D72) */
 function decorateAlerts(root) {
   for (const bq of $$('blockquote', root)) {
     const p = bq.firstElementChild;
@@ -408,14 +408,29 @@ function decorateCode(root) {
   }
 }
 
-/** 박스글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
+/** 강조글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
 /** 표·그림 바로 아래의 자료·주 줄은 작게 (D109) — 본문의 글이 아니라 그 표·그림에 딸린 줄이다 */
 function decorateSources(root) {
-  for (const p of [...root.children].filter((el) => el.tagName === 'P')) {   // root 는 문서 조각일 수 있다 (모아 보기) — :scope 가 없다
+  const hosts = [root, ...root.querySelectorAll('aside.lec-textbox')];   // 박스글 안의 표·그림도 (D126)
+  for (const p of hosts.flatMap((host) => [...host.children]).filter((el) => el.tagName === 'P')) {   // root 는 문서 조각일 수 있다 (모아 보기) — :scope 가 없다
     const prev = p.previousElementSibling;
     if (!prev || !SOURCE.test(p.textContent)) continue;
     if (prev.matches('.table-wrap, table, figure, pre.lec-chart, pre.mermaid, .lec-source') || prev.querySelector?.(':scope > img')) p.classList.add('lec-source');
     else if (prev.tagName === 'P' && prev.previousElementSibling?.querySelector?.(':scope > img')) p.classList.add('lec-source');   // 그림, 캡션, 자료 차례
+  }
+}
+
+/** 박스글 (D126): 접고 펴는 버튼을 제목 띠의 오른쪽에 단다 — 누르는 것은 fold.js 가 받는다. 글이 없는 버튼이라 찾기·복사에 들어가지 않는다 */
+function decorateTextboxes(root) {
+  for (const box of root.querySelectorAll('aside.lec-textbox')) {
+    if (box.firstElementChild?.classList.contains('lec-textbox-fold')) continue;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'lec-textbox-fold';
+    btn.title = t('박스글 접기·펴기');
+    btn.setAttribute('aria-label', btn.title);
+    btn.setAttribute('aria-expanded', 'true');
+    box.prepend(btn);
   }
 }
 
@@ -424,6 +439,7 @@ export function decorateBlocks(root) {
   decorateTables(root);
   decorateCode(root);
   decorateSources(root);
+  decorateTextboxes(root);
 }
 
 function frontMatterHtml(raw) {
@@ -494,6 +510,7 @@ function enhance(root, docPath, stamp, tab) {
   decorateTables(root);
   decorateCode(root);
   decorateSources(root);
+  decorateTextboxes(root);
 }
 
 // ---------------------------------------------------------------------------

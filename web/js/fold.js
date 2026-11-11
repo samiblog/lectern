@@ -17,6 +17,7 @@ const foldsOf = (root) => {
 };
 let lastToggled = null;    // 두 번 눌러 낱말을 고를 때 첫 번째 누름의 접기를 되돌리기 위해
 
+const boxFolds = new WeakMap();   // 칸의 화면 → (문서 경로 → 접힌 박스글의 차례 집합) — 박스글 접기 (D126)
 const view = () => $('#lec-view');
 const levelOf = (el) => (/^H[1-6]$/.test(el.tagName) ? +el.tagName[1] : 0);
 const isBreak = (el) => el.matches('.footnotes-sep, .footnotes');   // 각주는 마지막 절에 속하지 않는다
@@ -56,6 +57,28 @@ export function setupFolds(root, path) {
     h.classList.toggle('lec-folded', !!saved?.has(keyOf(h, i)));
   });
   apply(root);
+  const boxes = boxFolds.get(root)?.get(path);
+  textboxes(root).forEach((box, i) => setBoxFolded(box, !!boxes?.has(i)));
+}
+
+// ---- 박스글 접기 (D126): 제목 띠 오른쪽의 버튼. 접으면 제목(없으면 첫 블록)만 남는다 ----
+
+const textboxes = (root) => [...root.querySelectorAll('aside.lec-textbox')];
+
+function setBoxFolded(box, folded) {
+  box.classList.toggle('lec-textbox-folded', folded);
+  box.querySelector(':scope > .lec-textbox-fold')?.setAttribute('aria-expanded', String(!folded));
+}
+
+/** 박스글을 접거나 편다. 문서 칸이면 이번 실행 동안 기억한다 (사용설명서는 기억하지 않는다) */
+function toggleTextbox(box, folded = !box.classList.contains('lec-textbox-folded')) {
+  setBoxFolded(box, folded);
+  const root = S.panes.find((p) => p.view.contains(box))?.view;
+  if (!root?.dataset.docPath) return;
+  const keys = textboxes(root).flatMap((x, i) => (x.classList.contains('lec-textbox-folded') ? [i] : []));
+  if (!boxFolds.has(root)) boxFolds.set(root, new Map());
+  if (keys.length) boxFolds.get(root).set(root.dataset.docPath, new Set(keys));
+  else boxFolds.get(root).delete(root.dataset.docPath);
 }
 
 function remember(root) {
@@ -99,6 +122,8 @@ export function foldAll(folded) {
  * (숨은 요소는 display:none 이라 위치가 0이어서 스크롤할 수 없다)
  */
 export function unfoldTo(el) {
+  const box = el.closest?.('.lec-textbox-folded');
+  if (box) toggleTextbox(box, false);   // 접힌 박스글 안으로 갈 때 (D126)
   emit('reveal', el);   // 장 하이라이트(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
   const root = S.panes.find((p) => p.view.contains(el))?.view;
   if (!root) return;   // html 문서(iframe) 안 — 접기가 없다
@@ -194,5 +219,9 @@ function onDoubleClick(e) {
 
 export function initFold() {
   $('#lec-panes').addEventListener('click', onClick);
+  document.addEventListener('click', (e) => {   // 박스글의 접기 버튼 — 사용설명서 안의 것도
+    const btn = e.target.closest?.('.lec-textbox-fold');
+    if (btn?.parentElement) toggleTextbox(btn.parentElement);
+  });
   $('#lec-panes').addEventListener('dblclick', onDoubleClick);
 }

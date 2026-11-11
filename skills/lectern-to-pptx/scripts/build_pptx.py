@@ -733,8 +733,8 @@ class Writer:
             label = {'NOTE': 'Note', 'TIP': 'Tip', 'IMPORTANT': 'Important', 'WARNING': 'Warning', 'CAUTION': 'Caution'}.get(block['alert'], block['alert'])
             paras = self.para([{'t': label}], size, bar, bold=True)
         paras += self.text_paras([b for b in block['blocks'] if b['kind'] in ('para', 'list', 'heading')], size, self.p['heading'] if not block['alert'] else self.p['fg'], 'l')
-        sid = self.add_text(x, y, w, h, paras, fill=fill, inset=(18, 8, 12, 8), name='박스글')
-        self.add_rect(x, y, 5, h, bar, name='박스글 띠')
+        sid = self.add_text(x, y, w, h, paras, fill=fill, inset=(18, 8, 12, 8), name='강조글')
+        self.add_rect(x, y, 5, h, bar, name='강조글 띠')
         return sid
 
     # 칸

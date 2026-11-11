@@ -191,6 +191,29 @@ export function closeDocTab(pane = S.pane) {
   return true;
 }
 
+/**
+ * 문서 탭 줄의 닫기 (D127): 탭이 여럿이면 그 탭을 닫고, 하나뿐이면 그 탭을 프로젝트 폴더의 개요로 바꾼다 — 프로젝트를 처음 열었을 때와 같은 화면.
+ * 칸은 늘 하나가 남는다 (칸이 없는 프로젝트 탭은 만들지 않는다 — panes.js·nav.js 가 칸 하나를 기대한다). 이미 폴더 개요면 닫을 것이 없다 (false).
+ * 독립창의 마지막 탭은 창을 닫는다
+ */
+export function closeTab(pane = S.pane) {
+  const tab = pane?.tab;
+  if (!tab || !tab.panes.includes(pane)) return false;
+  if (tab.panes.length > 1) return closeDocTab(pane);
+  if (solo) {
+    if (!pane.editor || closeEditor(pane, { sync: false })) native.closeWindow();
+    return true;
+  }
+  if (!holdsFile(pane)) return false;
+  if (pane.editor && !closeEditor(pane, { sync: false })) return false;
+  rememberClosed(pane);
+  navigate({ type: 'overview', path: '' }, { pane });
+  return true;
+}
+
+/** 칸이 문서·코드 같은 파일을 보이는지 — 폴더 개요·빈 칸이 아닌지 */
+const holdsFile = (pane) => { const v = viewOf(pane); return !!v && v.type !== 'overview'; };
+
 /** 닫은 문서 탭을 기억한다 (Ctrl+Shift+T — D91). 프로젝트 탭마다, 그 탭이 열려 있는 동안만 */
 function rememberClosed(pane) {
   const v = viewOf(pane);
@@ -313,17 +336,12 @@ export async function moveToWindow(pane = S.pane) {
   return true;
 }
 
-/** Ctrl+W: 지금 문서 탭을 닫는다. 하나뿐이면 닫지 않고 알린다 (프로젝트는 Ctrl+Shift+W). 독립창이면 창을 닫는다 */
+/** Ctrl+W: 지금 문서 탭을 닫는다. 하나뿐이면 폴더 개요로 (D127), 이미 폴더 개요면 알린다 (프로젝트는 Ctrl+Shift+W). 독립창이면 창을 닫는다 */
 export function closeDocTabKey() {
-  if (solo && S.tab?.panes.length < 2) {
-    if (!S.pane.editor || closeEditor(S.pane, { sync: false })) native.closeWindow();
-    return true;
-  }
-  if (S.tab && S.tab.panes.length < 2) {
-    toast(t('마지막 문서 탭입니다 — 프로젝트를 닫으려면 Ctrl+Shift+W 를 누르세요'));
-    return false;
-  }
-  return closeDocTab();
+  if (!S.tab) return false;
+  if (closeTab()) return true;
+  if (S.tab.panes.length < 2 && !S.pane?.editor) toast(t('열린 문서가 없습니다 — 프로젝트를 닫으려면 Ctrl+Shift+W 를 누르세요'));
+  return false;
 }
 
 /** Ctrl+Tab·Ctrl+PageDown: 다음(+1)·이전(-1) 문서 탭. 끝에서는 반대쪽 끝으로 */
@@ -399,7 +417,7 @@ function render() {
     const active = p === tab.pane;
     const { icon, name, tip } = describe(p);
     const dirty = p.editor?.dirty ? html`<span class="dirty" title="${t('저장하지 않은 편집이 있습니다')}">●</span>` : '';
-    const close = n > 1 ? html`<button type="button" class="tab-close" title="${t('문서 탭 닫기 (Ctrl+W)')}" aria-label="${t('{name} 문서 탭 닫기', { name })}"><svg><use href="#i-close"/></svg></button>` : '';
+    const close = n > 1 || (!solo && holdsFile(p)) ? html`<button type="button" class="tab-close" title="${t('문서 탭 닫기 (Ctrl+W)')}" aria-label="${t('{name} 문서 탭 닫기', { name })}"><svg><use href="#i-close"/></svg></button>` : '';
     const key = keyOf(i, n);
     return [html`<div class="doc-tab${active ? ' active' : ''}" role="tab" aria-selected="${active}" tabindex="0" data-i="${i}" data-path="${viewOf(p)?.path || ''}" title="${key ? `${tip}\n${key}` : tip}">`, html`${icon}<span class="name">${name}</span>${dirty}${close}</div>`];
   }));
@@ -454,6 +472,8 @@ export function tabMenu(pane) {
   if (pane.tab.panes.length > 1) {
     items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+W' : t('가운데 버튼'), action: () => closeDocTab(pane) },
       { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(pane) });
+  } else if (!solo && holdsFile(pane)) {
+    items.push({ label: t('문서 탭 닫기'), hint: 'Ctrl+W', tip: t('폴더 개요로 돌아갑니다'), action: () => closeTab(pane) });
   }
   if (v?.path && (v.type === 'doc' || v.type === 'code')) {
     if (solo) items.push({ label: t('메인 창으로 보내기'), action: () => sendToWindow(pane, '') });
@@ -475,13 +495,13 @@ export function initDocTabs() {
   list.addEventListener('click', (e) => {
     const pane = paneAt(e.target);
     if (!pane) return;
-    if (e.target.closest('.tab-close')) closeDocTab(pane);
+    if (e.target.closest('.tab-close')) closeTab(pane);
     else selectDocTab(pane);
   });
   list.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });   // 가운데 버튼의 자동 스크롤 대신
   list.addEventListener('auxclick', (e) => {   // 가운데 버튼으로 누르면 닫기 (프로젝트 탭처럼)
     const pane = e.button === 1 && paneAt(e.target);
-    if (pane) closeDocTab(pane);
+    if (pane) closeTab(pane);
   });
   list.addEventListener('keydown', (e) => {
     if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('.doc-tab')) {

@@ -11,7 +11,7 @@ from harness import ROOT, check, fails, report, serve, stop
 
 
 PARA = '긴 문단입니다. ' * 40
-DOC = '# 번호 문서\n\n첫 문단\n\n- [ ] 할 일\n\n> [!NOTE]\n> 박스글\n\n```mermaid\ngraph TD; A-->B\n```\n\n$$x^2$$\n\n![그림](없는그림.png)\n\n' + ''.join(f'## 절 {i}\n\n' + (PARA + '\n\n') * 5 for i in range(1, 5))
+DOC = '# 번호 문서\n\n첫 문단\n\n- [ ] 할 일\n\n> [!NOTE]\n> 강조글\n\n```mermaid\ngraph TD; A-->B\n```\n\n$$x^2$$\n\n![그림](없는그림.png)\n\n' + ''.join(f'## 절 {i}\n\n' + (PARA + '\n\n') * 5 for i in range(1, 5))
 base = Path(tempfile.mkdtemp(prefix='lec-48-'))
 proj = base / 'proj'
 (proj / 'code').mkdir(parents=True)
@@ -65,7 +65,7 @@ try:
         settle(600)
         got = nums()
         want_lines = {'1', '3', '5', '7', '10', '14', '16', '18'}
-        check('제목·문단·할 일·박스글·다이어그램·수식·그림에 번호', want_lines <= set(got), got[:12])
+        check('제목·문단·할 일·강조글·다이어그램·수식·그림에 번호', want_lines <= set(got), got[:12])
         check('번호가 늘어나는 차례', [int(x) for x in got] == sorted(int(x) for x in got), got[:12])
         ys = page.evaluate(f"[...document.querySelectorAll('{GUTTER}')].map((s) => s.getBoundingClientRect().top)")
         check('번호끼리 겹치지 않음', all(b - a >= 9 for a, b in zip(ys, ys[1:])), min((b - a for a, b in zip(ys, ys[1:])), default=None))

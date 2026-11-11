@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.70.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
+현재 버전 0.71.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -31,7 +31,7 @@ node tools/rules_check.mjs         :: 규칙 시험만 (브라우저 없이 1초
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
-변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 15초)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다. 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
+변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다 (약 25분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다). master 에 올리면 GitHub Actions 가 같은 시험을 돌린다 (`.github/workflows/tests.yml`). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
 Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열기, WebView2)은 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
 
 ## 폴더 구조
@@ -99,7 +99,7 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 - 앱의 데이터 모양은 `tools/types/lectern.d.ts` 에 적는다 (`tsc` 가 개발할 때만 읽는다). 새 import 순환을 만들지 않는다 (시험이 잡는다).
 - 앱 DOM id는 `lec-` 접두사를 붙인다. 문서 제목 앵커 id와 겹치지 않게 하기 위해서다. 문서 안 요소는 `#lec-view` 범위 안에서만 찾는다.
 - UI 문구는 한국어로 쓰고 `t()` 로 감싼다 (JS 는 `t('…')`, 템플릿 글자 안이면 `${t('…')}`, 값은 `t('문서 {n}개', { n })` — Python 은 `i18n.t`). 영어는 `web/js/lang/en.js`·`lectern/i18n.py` 의 `EN` 에 같이 넣는다 (`tests/test_i18n.py` 가 감싸지 않은 한국어와 빠진 영어를 잡는다, D46). 한국어 문구는 짧은 평서문. 오류 메시지는 무엇이 안 됐고 어떻게 하면 되는지 말한다 ('F5 를 누르면 다시 불러옵니다'처럼 — 'F5 로 다시 불러옵니다'는 저절로 되는 것처럼 읽힌다).
-- 같은 것은 같은 이름으로 (v0.13.1 점검): md 문서·Lectern 슬라이드·pptx 를 구분해 쓴다 — 'Lectern 슬라이드'가 공식 용어이고 '발표 문서'로 부르지 않는다 (영어 Lectern slides), 그림(이미지 아님 — 인터넷 그림), 박스글(콜아웃·인용 상자), 누르기(클릭 아님), 거르기, 장 하이라이트·하이라이트 해제, '자료' 목록(사이드바 '파일' 탭 안의 문서도 코드도 아닌 파일 — D48, 안쪽 이름은 others·files), 터미널 모음, 모아 보기. 툴바의 Ctrl+P 버튼은 '문서 열기'(이름·제목으로 열기)이고, '검색'은 본문 검색, '문서에서 찾기'는 Ctrl+F 다. 말줄임은 '…' 한 글자.
+- 같은 것은 같은 이름으로 (v0.13.1 점검): md 문서·Lectern 슬라이드·pptx 를 구분해 쓴다 — 'Lectern 슬라이드'가 공식 용어이고 '발표 문서'로 부르지 않는다 (영어 Lectern slides), 그림(이미지 아님 — 인터넷 그림), 강조글(콜아웃·인용 상자 — `> [!NOTE]`. 0.70 까지는 '박스글'이라 불렀다), 박스글(본문과 따로 읽는 글 상자 — `<!-- box -->`, D126. 안쪽 이름은 textbox, 강조글의 안쪽 이름은 box), 누르기(클릭 아님), 거르기, 장 하이라이트·하이라이트 해제, '자료' 목록(사이드바 '파일' 탭 안의 문서도 코드도 아닌 파일 — D48, 안쪽 이름은 others·files), 터미널 모음, 모아 보기. 툴바의 Ctrl+P 버튼은 '문서 열기'(이름·제목으로 열기)이고, '검색'은 본문 검색, '문서에서 찾기'는 Ctrl+F 다. 말줄임은 '…' 한 글자.
 - API를 추가·변경하면 `docs/ARCHITECTURE.md` 의 API 표를 같이 고친다. 설계 판단은 `docs/DECISIONS.md` 에 한 항목으로 남긴다.
 - 단축키는 `help.js` 의 `SHORTCUTS` 하나에 적는다 (단축키 표와 설명서의 '단축키' 장이 이것으로 만들어진다).
 

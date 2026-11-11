@@ -15,6 +15,8 @@ People read and edit in place this project's documents with **Lectern** (an Inte
 - Do not skip heading levels (`##` → `###`). The contents panel, section folding and section focus follow them.
 - Put only numbers in table cells and units in the header (`Price (USD/t)`). Number columns are right-aligned automatically.
 - Use callouts for emphasis: `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`.
+- Put a side topic read apart from the main text in a box: between a `<!-- box -->` line and a `<!-- /box -->` line, with `**Box 1. Title**` as the first line. No headings (`#`) inside.
+- When the person says 'summarize the conversation into a box right after `@path line 12`': insert exactly one box after that line. Do not transcribe the conversation — keep the conclusions, reasons and open questions, and change no other line.
 - Write code locations as `src/report.py:14` — clicking jumps to that line (not inside code blocks).
 - Link images and other documents with paths relative to the document. Section links are `doc.md#heading-text`.
 - Table captions go above the table as `Table 1. Title`, figure captions below the figure as `Figure 1. Title`. Refer to them in the text with links like `[Table 1](#table-1)` — when people add or move a table, Lectern renumbers the captions and fixes the links.

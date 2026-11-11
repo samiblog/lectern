@@ -3,7 +3,7 @@
 // 잘못된 요청은 {error: 까닭 이름} — 알림 문구는 부르는 쪽이 정한다.
 
 /** 글자 크기를 정하는 구성 요소: 안쪽 이름 → 문서에 쓰는 한국어 낱말 (영어 낱말은 안쪽 이름 그대로) */
-export const TEXT_WORDS = { title: '제목', sub: '소제목', body: '본문', table: '표', box: '박스글', code: '코드' };   // i18n-ok (문서의 문법)
+export const TEXT_WORDS = { title: '제목', sub: '소제목', body: '본문', table: '표', box: '강조글', code: '코드' };   // i18n-ok (문서의 문법)
 /** 칸 배치: 이름 → [칸 자리(줄은 /), 열, 행]. t 는 제목 자리 */
 export const LAYOUTS = {
   two: ['t t / a b', '1fr 1fr', 'auto 1fr'],
@@ -18,7 +18,8 @@ export const LAYOUTS = {
   stack: ['t / a / b', '1fr', 'auto 1fr 1fr'],
 };
 
-const KINDS = Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]]));
+// '박스글' 은 강조글의 옛 이름이다 (D126) — 전에 쓴 슬라이드의 크기 줄을 그대로 읽는다
+const KINDS = { ...Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]])), 박스글: 'box' };   // i18n-ok (문서의 문법)
 const SIZE = /^\d{1,3}(?:\.\d)?$/;
 // 격자·열·행 값 (style 속성에 들어간다). 13열 간트처럼 큰 격자도 쓴다 — 길이는 그것을 막지 않을 만큼만
 export const SAFE_AREA = /^[\p{L}\p{N}_\s/.-]{1,4000}$/u;

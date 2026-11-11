@@ -133,7 +133,7 @@ paginate: true
 > 인용 글
 
 > [!WARNING]
-> 박스글
+> 강조글
 
 {FENCE}py
 print(1)
@@ -225,7 +225,7 @@ def run():
 
         def show(name):
             page.evaluate(OPEN, f'{name}.md')
-            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=f'{name}.md', timeout=8000)
+            page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view .lec-slide')", arg=f'{name}.md', timeout=20000)   # 다이어그램·차트를 처음 불러오는 문서는 바쁜 PC 에서 8초를 넘겼다
             page.wait_for_timeout(350)
 
         print('[실수가 점검에 나온다]')

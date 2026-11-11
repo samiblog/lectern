@@ -5,7 +5,7 @@
 //   다이어그램·차트·수식 블록은 통째로 한 단위. 코드 화면은 .cv-line 하나가 한 단위 (csv 의 여러 줄 행은 data-end 까지).
 // - 원문 줄은 markdown.js 가 블록마다 단 data-lines 다. 줄마다 그 줄을 가진 가장 안쪽 블록이 그 줄을 보여 준다.
 //   빈 줄과 화면에 없는 블록(머리 정보, raw HTML)의 줄은 단위가 없다. 코드 블록의 ``` 줄은 뺀다.
-//   보이는 글이 없는 줄(표의 구분 줄 |---|, 박스글의 [!NOTE] 줄, setext 제목의 === 줄)은 이웃 단위에 붙인다.
+//   보이는 글이 없는 줄(표의 구분 줄 |---|, 강조글의 [!NOTE] 줄, setext 제목의 === 줄)은 이웃 단위에 붙인다.
 // - 단위는 문서 차례(화면 위에서 아래로)이고, 자리는 스크롤 상자 안 좌표 {top, bottom} 이다 (스크롤해도 그대로).
 //   단위: {a, b(원문 줄, 1부터, 끝 포함), el, top, bottom, range?(여러 줄 문단의 그 줄 — Range), row?(코드 블록의 줄 차례)}
 
@@ -70,7 +70,7 @@ export function collectUnits(view, src = []) {
     }
     const segs = segmentsOf(el);
     if (!segs.length) {
-      if (el.matches('.lec-cell, .lec-slide-wrap')) continue;   // 칸·장의 표시 줄은 어느 글의 것도 아니다
+      if (el.matches('.lec-cell, .lec-slide-wrap, .lec-textbox')) continue;   // 칸·장·박스글의 표시 줄은 어느 글의 것도 아니다
       if (inner) for (const n of lines) orphans.push([n, el]);   // 표의 구분 줄 등 — 이웃 단위에
       else whole(lines[0], lines.at(-1));   // 글 없는 블록 (hr 등)
       continue;
@@ -104,7 +104,7 @@ export function collectUnits(view, src = []) {
 
 /**
  * 여러 줄 블록의 자기 줄들(lines)을 줄바꿈 자리로 나눈 조각(segs)과 잇는다: [{lines, parts}].
- * 조각이 모자라면 남는 줄을 붙인다 — 박스글의 [!NOTE] 줄(첫 줄)은 첫 조각에, 그 밖은 마지막 조각에
+ * 조각이 모자라면 남는 줄을 붙인다 — 강조글의 [!NOTE] 줄(첫 줄)은 첫 조각에, 그 밖은 마지막 조각에
  * (setext 제목의 === 줄, 줄을 넘는 코드·수식 조각처럼 \n 이 남지 않는 것). 조각이 남으면 마지막 줄에 모두
  */
 function groupsOf(lines, segs, src) {
@@ -325,7 +325,7 @@ export function markOf(u, base) {
 
 // ---- 한 줄 편집 (lineedit.js, D76) ------------------------------------------------
 
-// 글이 보이지 않는 표시 줄: 박스글의 [!NOTE] 줄, 표의 구분 줄, setext 제목의 밑줄, 코드 펜스
+// 글이 보이지 않는 표시 줄: 강조글의 [!NOTE] 줄, 표의 구분 줄, setext 제목의 밑줄, 코드 펜스
 const MARKER_LINE = /^\s*(?:>\s*)*(?:\[!\w+\]\s*|\|?\s*:?-+:?\s*(?:\|\s*:?-+:?\s*)*\|?\s*|=+\s*|-+\s*|(?:`{3,}|~{3,}).*)$/;
 
 /** 단위에서 한 줄 편집으로 고칠 수 있는 원문 줄들 (다이어그램·수식·csv 표·표시 줄 뺌, 코드의 빈 줄은 넣음) */
@@ -403,7 +403,7 @@ export function lineSlot(view, line, src) {
     return range && { kind: 'code', el, ranges: [range], fence: a > span[0] ? String(src[span[0] - 1] ?? '') : '' };
   }
   if (el.tagName === 'TR') return { kind: 'table', el, ranges: [...el.cells].map(contentsOf), whole: true };
-  if (el.matches('.lec-cell, .lec-slide-wrap')) return null;   // 칸·장의 표시 줄
+  if (el.matches('.lec-cell, .lec-slide-wrap, .lec-textbox')) return null;   // 칸·장·박스글의 표시 줄
   const lines = ownLines(el, src);
   if (!lines.includes(line) || MARKER_LINE.test(String(src[line - 1] ?? ''))) return null;
   const segs = segmentsOf(el);

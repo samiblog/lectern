@@ -10,7 +10,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from harness import ROOT, check, fails, report, serve, stop
+from harness import ROOT, check, expect, fails, report, serve, stop
 
 sys.path[:0] = [str(ROOT), str(ROOT / 'tests')]
 from test_sheet import make_xlsx  # noqa: E402
@@ -45,7 +45,7 @@ tags: [{MARK}, b&c]
 - [ ] 할 일 \\<i data-xss="1"\\> &
 - [링크 \\<i data-xss="1"\\>](없는-문서&x.md)
 
-> [!NOTE] 박스글 \\<i data-xss="1"\\>
+> [!NOTE] 강조글 \\<i data-xss="1"\\>
 > 내용 &
 
 ```python
@@ -138,7 +138,7 @@ try:
 
         print('[사이드바]')
         scan('트리와 프로젝트 탭', '#lec-tree', 'a&b')
-        check('프로젝트 탭의 이름', "proj & 'x'" in page.locator('#lec-tablist').inner_text(), page.locator('#lec-tablist').inner_text())
+        expect(page, '프로젝트 탭의 이름', lambda: "proj & 'x'" in page.locator('#lec-tablist').inner_text(), lambda: page.locator('#lec-tablist').inner_text())
         page.locator('#lec-btn-titles').click()
         settle()
         scan('트리의 문서 제목', '#lec-tree', 'data-xss')
@@ -149,11 +149,12 @@ try:
 
         print('[문서]')
         page.locator(f'#lec-tree .row.file[data-doc="{NAME}.md"]').click()
-        page.wait_for_selector('#lec-view h1')
+        # 폴더 개요에도 h1 이 있다 — 그 문서가 그려질 때까지 기다린다. 드물게 7초를 넘겼다 (2026-11-11, 까닭은 아직 모른다 — 보통은 0.3초)
+        page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view.md-body h1')", arg=f'{NAME}.md', timeout=30000)
         settle(1200)
         scan('문서·목차·문서 탭', '#lec-view', 'data-xss')
-        check('목차의 제목', 'data-xss' in page.locator('#lec-toc').inner_text(), page.locator('#lec-toc').inner_text()[:200])
-        check('문서 탭의 이름', 'a&b' in page.locator('#lec-doctab-list').inner_text(), page.locator('#lec-doctab-list').inner_text())
+        expect(page, '목차의 제목', lambda: 'data-xss' in page.locator('#lec-toc').inner_text(), lambda: page.locator('#lec-toc').inner_text()[:200])
+        expect(page, '문서 탭의 이름', lambda: 'a&b' in page.locator('#lec-doctab-list').inner_text(), lambda: page.locator('#lec-doctab-list').inner_text())
         check('앞머리 값', 'data-xss' in page.locator('#lec-view .lec-frontmatter, #lec-view .front-matter, #lec-view dl, #lec-view table').first.inner_text(), '')
         check('틀린 다이어그램·차트의 알림', page.locator('#lec-view pre code', has_text='틀린 다이어그램').count() + page.locator('#lec-view pre', has_text='틀린 차트').count() >= 2,
               page.locator('#lec-view').inner_text()[-300:])

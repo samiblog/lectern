@@ -1,7 +1,7 @@
 // 참조와 캡션의 계산 (D121, DOM 없음): 캡션 번호 다시 매기기, 상호 참조 링크, 문서 안 목차 줄, 쪽 나눔 줄, 본문 인용.
 // 원문 줄 배열을 받아 계산만 한다 — 저장은 lineedit.js 가 commit 으로, 그리기는 doc.js 가. 표 점검은 tools/edges/refs_cases.js.
 //
-// - 캡션은 '표 1. 제목' '그림 2: 제목' '**표 3.** 제목' '<표 4> 제목' 처럼 낱말·번호·구분 글자로 시작하는 줄이다. '표 2-1'·'표 2.1' 처럼
+// - 캡션은 '표 1. 제목' '그림 2: 제목' '박스 1. 제목'(박스글의 제목 — D126) '**표 3.** 제목' '<표 4> 제목' 처럼 낱말·번호·구분 글자로 시작하는 줄이다. '표 2-1'·'표 2.1' 처럼
 //   장 번호가 든 것은 사람이 매긴 것이라 손대지 않는다.
 // - 번호는 그 낱말의 캡션이 1, 2, 3… 차례대로였던 문서에서만, 캡션이 더해지거나 빠지거나 차례가 바뀐 저장에서만 다시 맞춘다 —
 //   사람이 한 캡션의 번호만 고친 것은 그대로 둔다.
@@ -11,10 +11,10 @@ import { fencesOf, fenceAt, frontEnd, notesStart } from './lineops.js';
 import { headsOf, bareText } from './docops.js';
 
 /** 캡션의 낱말 — 한국어와 영어. 낱말마다 번호를 따로 센다 */
-export const CAPTION_WORDS = ['표', '그림', 'Table', 'Figure'];   // i18n-ok (원문의 캡션 낱말)
+export const CAPTION_WORDS = ['표', '그림', '박스', 'Table', 'Figure', 'Box'];   // i18n-ok (원문의 캡션 낱말)
 
 // 앞: 공백·굵게·꺾쇠, 낱말, 공백, 번호, 뒤: '.'(소수점이 아닌)·':'·닫는 꺾쇠·굵게
-const CAPTION = /^(\s*(?:\*\*)?[〈<]?)(표|그림|Table|Figure)([ \t]*)(\d{1,4})(?=\.(?!\d)|:|[〉>]|\*\*)/;
+const CAPTION = /^(\s*(?:\*\*)?[〈<]?)(표|그림|박스|Table|Figure|Box)([ \t]*)(\d{1,4})(?=\.(?!\d)|:|[〉>]|\*\*)/;
 
 /** 캡션 꼬리표의 id (doc.js 가 캡션 단락에 단다) — '표-3', 'table-3' */
 export const captionId = (word, n) => `${word.toLowerCase()}-${n}`;
@@ -22,13 +22,13 @@ export const captionId = (word, n) => `${word.toLowerCase()}-${n}`;
 /** 상호 참조 링크 — '[표 3](#표-3)' */
 export const refLink = (word, n) => `[${word} ${n}](#${captionId(word, n)})`;
 
-const REF = /\[(표|그림|Table|Figure) (\d{1,4})\]\(#(표|그림|table|figure)-(\d{1,4})\)/g;
+const REF = /\[(표|그림|박스|Table|Figure|Box) (\d{1,4})\]\(#(표|그림|박스|table|figure|box)-(\d{1,4})\)/g;
 
 /** 줄 하나가 캡션이면 {word, n, title}. 아니면 null */
 export function captionAt(line) {
   const m = CAPTION.exec(line);
   if (!m) return null;
-  const title = line.slice(m[0].length).replace(/^(?:\.|:|[〉>])?(?:\*\*)?[.:]?\s*/, '').trim();
+  const title = line.slice(m[0].length).replace(/^(?:\.|:|[〉>])?(?:\*\*)?[.:]?\s*/, '').replace(/\*\*\s*$/, '').trim();   // 통째로 굵게 쓴 캡션의 닫는 ** 는 제목이 아니다
   return { word: m[2], n: Number(m[4]), title };
 }
 

@@ -75,6 +75,7 @@
     <symbol id="i-table" viewBox="0 0 20 20"><rect x="2.5" y="3.5" width="15" height="13" rx="1.5"/><path d="M2.5 8h15M2.5 12.3h15M7.5 3.5v13"/></symbol>
     <symbol id="i-code" viewBox="0 0 20 20"><path d="m7 6-4 4 4 4M13 6l4 4-4 4M11.2 4.5l-2.4 11"/></symbol>
     <symbol id="i-box" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="12" rx="2"/><path d="M6 8.3h8M6 11.7h5"/></symbol>
+    <symbol id="i-textbox" viewBox="0 0 20 20"><rect x="2.5" y="3" width="15" height="14" rx="1.5"/><path d="M2.5 7.2h15M6 10.6h8M6 13.6h5"/></symbol>
     <symbol id="i-diagram" viewBox="0 0 20 20"><rect x="2.5" y="2.5" width="6.5" height="5" rx="1"/><rect x="11" y="12.5" width="6.5" height="5" rx="1"/><path d="M5.75 7.5v3.5a1.5 1.5 0 0 0 1.5 1.5H11"/></symbol>
     <symbol id="i-math" viewBox="0 0 20 20"><path d="M15 4.5H5.5l5 5.5-5 5.5H15"/></symbol>
     <symbol id="i-expand" viewBox="0 0 20 20"><path d="M3.5 8V3.5H8M12 3.5h4.5V8M16.5 12v4.5H12M8 16.5H3.5V12"/></symbol>
@@ -147,7 +148,7 @@
         <button role="tab" data-tab="files" class="active">파일</button>
         <button role="tab" data-tab="recent">최근 변경<span id="lec-changed-count" class="count" hidden></span></button>
         <button role="tab" data-tab="search" title="문서·코드의 본문과 파일 이름에서 찾기 (Ctrl+Shift+F)">검색</button>
-        <button role="tab" data-tab="parts" title="문서 속 표·그림·박스글 등이나 파일을 종류마다 모아 보기">모아 보기</button>
+        <button role="tab" data-tab="parts" title="문서 속 표·그림·강조글 등이나 파일을 종류마다 모아 보기">모아 보기</button>
         <button role="tab" data-tab="basket" title="담은 조각 — 문서의 절·표·그림 등을 우클릭해 '담기', 모아서 열린 문서나 새 문서로 보내기">담기<span id="lec-basket-count" class="count" hidden></span></button>
       </div>
       <div class="side-filter">
@@ -203,7 +204,7 @@
       <!-- 모아 보기 (parts.js, D41·D50): 문서 속 요소 / 파일 종류, 종류 버튼, 범위(폴더), 거르기, 문서별 목록 (그림은 작은 그림 격자) -->
       <div id="lec-parts" hidden>
         <div id="lec-parts-mode" class="parts-mode" role="tablist" aria-label="모아 볼 것">
-          <button type="button" role="tab" data-mode="parts" title="문서 속 표·그림·차트·박스글·다이어그램·코드·수식·할 일·링크·출처">문서 속 요소</button>
+          <button type="button" role="tab" data-mode="parts" title="문서 속 표·그림·차트·강조글·다이어그램·코드·수식·할 일·링크·출처">문서 속 요소</button>
           <button type="button" role="tab" data-mode="meta" title="맨 앞 설정(frontmatter)의 키마다 값으로 문서 묶기 — status·author·date 등">문서 정보</button>
           <button type="button" role="tab" data-mode="files" title="문서·코드·자료 파일을 형식별로 (엑셀·PDF·그림·py·ipynb 등)">파일 종류</button>
         </div>
