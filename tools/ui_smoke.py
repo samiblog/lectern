@@ -1885,10 +1885,7 @@ def run(headed: bool) -> None:
             check(page.url == url, 'SVG xlink:href 링크도 앱 안에서 문서를 엶')
 
             print('[절대경로]')
-            # 문서에 적는 절대경로는 앱이 아는 프로젝트 경로로 — 점검이 만든 경로와 글자가 다를 수 있다 (GitHub 러너에서 다르게 나왔다)
-            w = page.evaluate("import('/static/js/store.js').then(({ S }) => S.root)") or str(work)
-            if w != str(work):
-                print(f'  (앱이 아는 프로젝트 경로 {w!r} — 점검이 만든 경로 {str(work)!r})')
+            w = str(work)
             absdoc = work / 'docs' / '96-절대경로.md'
             absdoc.write_text(
                 '# 절대경로 확인\n\n'
@@ -3765,7 +3762,7 @@ def run(headed: bool) -> None:
             check(before['count'] == '1' and g1['on'] and not g1['hidden'] and g1['pressed'] == 'true' and g1['cols'] == 2
                   and g1['tiles'] == [['samples', '대기', 'xterm'], ['second', '시작 전', 'start']] and g1['focus'] == 'second',
                   f"Ctrl+Shift+` 로 터미널 모음 — 탭마다 칸, 셸이 있으면 그 터미널, 없으면 '터미널 시작' ({before['count']}, {g1})")
-            page.locator('.g-tile', has_text='second').locator('.g-start').click()
+            page.locator('.g-tile', has=page.locator('.g-name', has_text='second')).locator('.g-start').click()
             started2 = tile_has('second', f'PS {second}>')
             g2 = g_ui()
             check(started2 and g2['count'] == '2' and g2['focus'] == 'second' and g2['tiles'][1][2] == 'xterm',
@@ -3782,12 +3779,13 @@ def run(headed: bool) -> None:
             idle = wait_until(page, "[...document.querySelectorAll('.g-tile .g-state')][0].textContent === '대기'", 8000)
             check(to_first == 'samples' and no_palette and busy and idle,
                   f"칸 안에서 Ctrl+Tab 은 다음 칸, 다른 키는 셸로 (Ctrl+P 도), 프로그램이 돌면 칸 머리에 '실행 중' ({to_first}, {busy}, {idle})")
-            page.locator('.g-tile', has_text='second').locator('.g-head').dblclick(position={'x': 150, 'y': 12})
+            # 칸은 이름으로 고른다 — 칸 안의 글로 고르면 영어 Windows 의 ping 출력('milli-seconds')이 든 samples 칸도 걸린다
+            page.locator('.g-tile', has=page.locator('.g-name', has_text='second')).locator('.g-head').dblclick(position={'x': 150, 'y': 12})
             solo = page.evaluate("[...document.querySelectorAll('.g-tile')].filter(t => t.offsetWidth).map(t => t.querySelector('.g-name').textContent)")
             page.locator('.g-tile.solo .g-solo').click()
             back_grid = page.evaluate("[...document.querySelectorAll('.g-tile')].filter(t => t.offsetWidth).length")
             check(solo == ['second'] and back_grid == 2, f'칸 머리를 두 번 누르면 그 칸만 크게, 버튼으로 다시 모두 ({solo}, {back_grid})')
-            page.locator('.g-tile', has_text='second').locator('.g-go').click()
+            page.locator('.g-tile', has=page.locator('.g-name', has_text='second')).locator('.g-go').click()
             went = wait_until(page, "!document.documentElement.classList.contains('gather-on') && document.querySelector('.lec-tab.active .name').textContent === 'second'")
             g3 = page.evaluate('''() => ({ panel: !document.querySelector('#lec-term').hidden, title: (document.querySelector('#lec-term-tabs .term-tab.on')?.textContent.replace(/^\\d+/, '') || '') + ' — ' + document.querySelector('#lec-term-title').textContent,
               boxes: document.querySelectorAll('#lec-term-body .term-box').length, gather: document.querySelector('#lec-gather').hidden,
