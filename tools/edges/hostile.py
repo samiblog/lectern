@@ -149,7 +149,8 @@ try:
 
         print('[문서]')
         page.locator(f'#lec-tree .row.file[data-doc="{NAME}.md"]').click()
-        page.wait_for_selector('#lec-view h1')
+        # 폴더 개요에도 h1 이 있다 — 그 문서가 그려질 때까지 기다린다. 드물게 7초를 넘겼다 (2026-11-11, 까닭은 아직 모른다 — 보통은 0.3초)
+        page.wait_for_function("(n) => document.querySelector('#lec-st-path')?.textContent.includes(n) && document.querySelector('#lec-view.md-body h1')", arg=f'{NAME}.md', timeout=30000)
         settle(1200)
         scan('문서·목차·문서 탭', '#lec-view', 'data-xss')
         expect(page, '목차의 제목', lambda: 'data-xss' in page.locator('#lec-toc').inner_text(), lambda: page.locator('#lec-toc').inner_text()[:200])
