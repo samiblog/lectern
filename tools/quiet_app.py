@@ -2,7 +2,7 @@
 
 점검이 '외부 편집기로 열기'를 누를 때마다 창이 뜨고, VS Code 가 켜져 있으면 점검 파일이 사용자 창에
 탭으로 끼어든다. 서버의 응답은 그대로이니 점검은 같게 돈다. 실제로 뜨는지는 docs/TESTING.md 의 수동 점검이다.
-문서 삭제도 사용자의 휴지통 대신 설정 폴더의 test-trash 로 옮긴다.
+문서 삭제도 사용자의 휴지통 대신 설정 폴더의 test-trash 로 옮긴다. 화면 언어는 Windows 표시 언어와 상관없이 한국어로 둔다.
 """
 import os
 import runpy
@@ -12,7 +12,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from lectern import osutil, trash  # noqa: E402
+from lectern import i18n, osutil, trash  # noqa: E402
+
+# 점검은 한국어 화면을 본다 — Windows 표시 언어가 영어인 PC(GitHub 러너)에서도 같게 (tests/conftest.py 와 같은 방식).
+# 설정 language 를 en 으로 준 점검은 그대로 영어로 뜬다
+i18n.system_language = lambda: 'ko'
 
 osutil._launch = lambda args: None
 osutil.open_default = lambda path: None
