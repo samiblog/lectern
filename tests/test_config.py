@@ -237,6 +237,20 @@ def test_terminal_follow_style_setting(tmp_path):
     assert cfg.get('terminal_follow_style') is False
 
 
+def test_terminal_font_size_setting(tmp_path):
+    path = tmp_path / 'config.json'
+    path.write_text(json.dumps({'version': 2, 'theme': 'nord'}), encoding='utf-8')   # 0.72 까지 쓰던 파일 — 키가 없다
+    cfg = Config(path)
+    assert cfg.get('terminal_font_size') == 14                                 # 새 기본은 13 보다 조금 크게 (D130)
+    cfg.update_client({'terminal_font_size': 18})
+    assert cfg.get('terminal_font_size') == 18 and json.loads(path.read_text(encoding='utf-8'))['terminal_font_size'] == 18
+    for bad in (9, 25, 15.5, '16', True, None):                                # 범위 밖·형식이 틀리면 받지 않는다
+        cfg.update_client({'terminal_font_size': bad})
+        assert cfg.get('terminal_font_size') == 18, bad
+    path.write_text(json.dumps({'version': 2, 'terminal_font_size': 300}), encoding='utf-8')   # 손으로 잘못 고친 파일
+    assert Config(path).get('terminal_font_size') == 14
+
+
 def test_toc_hidden_parts_setting(tmp_path):
     cfg = Config(tmp_path / 'config.json')
     assert cfg.get('toc_hidden_parts') == []                                    # 목차에 구성 요소를 모두 보인다

@@ -89,7 +89,8 @@ try:
         settle(400)
         page.locator('#lec-view tr.cv-line', has_text='구리').click()
         page.keyboard.press('Shift+ArrowRight')
-        got = wait(f"{ROWS}.includes(\"@data/가격.xlsx '1분기' 시트 2행\")", 6000)
+        # 터미널이 줄을 접은 자리(두 칸 글자가 못 들어간 끝 칸)는 빈칸으로 읽히므로 빈칸을 빼고 본다 — 글자 크기·칸 폭과 상관없이
+        got = wait(f"{ROWS}.replace(/\\s+/g, '').includes(\"@data/가격.xlsx'1분기'시트2행\")", 6000)
         check("Shift+→ 는 '시트'가 든 위치를 넣고 터미널로", got and wait(IN_TERM, 3000), page.evaluate(ROWS)[-80:])
         page.keyboard.press('Escape')
         page.keyboard.press('F6')

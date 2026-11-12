@@ -26,6 +26,7 @@ MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 �
 MAX_WORK_FOLDERS = 200   # 업무 폴더 목록에 기억하는 폴더 수 (D124 — WORK.md 가 있는 폴더)
 
 CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
+TERM_FONT = (10, 24)   # 터미널 글자 크기(px)의 범위 (D130 — 화면 terminal.js 의 TERM_FONT 와 같게)
 
 DEFAULTS: dict[str, Any] = {
     'version': CONFIG_VERSION,
@@ -78,6 +79,7 @@ DEFAULTS: dict[str, Any] = {
     'terminal_height': None, # 아래 터미널 높이(px). None 이면 기본 (D52)
     'terminal_position': 'auto',  # 터미널 자리: auto(창이 세로로 길면 아래, 아니면 오른쪽) | side | bottom (설정 창·터미널 머리줄, D52)
     'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
+    'terminal_font_size': 14,  # 터미널 글자 크기(px) 10~24 (D130 — 설정 창. 0.72 까지는 13 고정)
     'csv_stats': True,       # CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
     'work_home': None,       # 업무 관리의 공통 폴더 (D124 — 공통 WORK.md 와 정리 문서. 설정 창·업무 현황에서 고른다, 서버가 기록)
@@ -90,7 +92,7 @@ DEFAULTS: dict[str, Any] = {
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
-                         'terminal_follow_style', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
+                         'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
@@ -116,6 +118,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('auto', 'side', 'bottom')
     if key == 'editor_keys':
         return value in ('default', 'vim')
+    if key == 'terminal_font_size':
+        return isinstance(value, int) and not isinstance(value, bool) and TERM_FONT[0] <= value <= TERM_FONT[1]
     if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):
         return isinstance(value, str)
     if isinstance(default, bool):

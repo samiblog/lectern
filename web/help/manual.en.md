@@ -523,7 +523,7 @@ Press **Convert to html** in the status bar. An impress.js presentation html fil
 - **Overview:** When on, a last slide shows all slides on one screen.
 - **Presenting:** → ← Space, PageDown and PageUp move; **Home** and **End** go to the first and last slide. **P** opens the presenter console (notes, next slide, clock) in a new window.
 - **One file:** Images, styles, math fonts and impress.js all go inside the file. It opens without the internet and asks nothing from anywhere, so you can mail or message it. Only internet images stay as addresses, loaded by the reader's browser.
-- **Left out:** Hidden slides, videos and sounds. Links to other documents in the project stay as text.
+- **Left out:** Hidden slides, videos and sounds. Links to other documents in the project stay as text. `class="step"`, `notes` and `substep` in HTML slides are names impress reads as slides and notes, so they are removed in the file.
 - **Safety:** Only impress.js and its start line may run in the file. Scripts in the document do not run in the reader's browser.
 - **Open in browser:** After converting, **Open in browser** opens only the file Lectern just made, in your default browser.
 - **In Lectern:** It shows in the document list as an html document. Lectern does not run a document's scripts, so the slides appear top to bottom like a document, with their notes.
@@ -770,6 +770,7 @@ WORK.md works the same when Claude reads and writes it. Give Claude the writing 
 - **Position**: in a wide window the terminal opens to the right of the document; in a tall window (a portrait monitor, a window snapped to half the screen and so on) it opens below the document. When it is below, drag the edge to change its height. The position button in the terminal header switches between right and below and keeps it there; set 'Terminal position' back to 'Auto' in Settings.
 - **Paste into the terminal**: in a right-click menu, the **▣ Terminal** button on the right of a copy item puts that text into the current tab's terminal and shows a notice such as 'Put into terminal 1' (clicking the item name only copies). The terminal opens if needed. With several terminals the text always goes to the first one (the lowest number — usually terminal 1, the one opened first), which is then shown, so run Claude Code in terminal 1. Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
 - The terminal colors follow the document style. For an always-dark terminal, turn off 'Match terminal colors to style' in Settings.
+- Change the terminal's text size under 'Terminal text size' in Settings (10–24, default 14). Open terminals and the terminal grid change right away.
 - Closing a tab ends its shell. If a program started from the shell is still running, Lectern asks first. Closing Lectern ends all shells.
 - **Stuck program warning**: if a program started from the shell gets stuck while starting (this happens when security software on a company PC, such as DRM, blocks programs from starting — Claude Code calls git and then stops responding to any input), a red strip appears under the terminal header after about 10 seconds and the ↻ button is highlighted. Ctrl+C does not end such a program, and often neither does Task Manager, so press **Restart** in the strip. It ends the shell and the stuck program and opens a new shell. In Claude Code, run `claude --continue` in the new shell to pick up the conversation. If the terminal belongs to a tab you are not looking at, a notice appears once.
 
@@ -812,6 +813,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Work alerts | Work alerts inside the window while Lectern is running. On by default |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |
+| Terminal text size | 10–24 (default 14), with the − · + · Default size buttons or a number |
 
 Settings that are not in the window are edited with **Open settings file** in your editor (`%APPDATA%\Lectern\config.json`). Changes apply when you save; settings that affect the tree take effect when you press F5.
 

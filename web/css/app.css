@@ -1010,6 +1010,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .opt-block small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
 .opt-btns { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }
 .opt-btns .icon-btn { margin-left: -8px; }
+.opt-btns:has(.opt-num) { gap: 4px 8px; }
+.opt-num { width: 56px; height: 26px; padding: 0 6px; border: 1px solid var(--ui-border); border-radius: 5px; background: var(--ui-panel); color: inherit; font: inherit; text-align: center; }
+.opt-num:focus { outline: none; border-color: var(--ui-accent); }
 .opt:hover { background: var(--ui-hover); }
 .opt input { margin: 3px 0 0; accent-color: var(--ui-accent); }
 .opt span { display: flex; flex-direction: column; gap: 1px; }

@@ -118,6 +118,21 @@ function applyColors() {
 }
 // PC 에 있는 글꼴만 (D26): 고정폭 영문 → 한글 고정폭 → 맑은 고딕
 const FONT = '"Cascadia Mono", "Cascadia Code", Consolas, D2Coding, "NanumGothicCoding", "Malgun Gothic", monospace';
+/** 글자 크기(px)의 범위와 기본 — 설정 terminal_font_size (D130, 설정 창. config.py 의 TERM_FONT 와 같게) */
+const TERM_FONT = { min: 10, max: 24, base: 14 };
+const termFontSize =(value = S.config.terminal_font_size) => (Number.isInteger(value) && value >= TERM_FONT.min && value <= TERM_FONT.max ? value : TERM_FONT.base);
+
+/** 열린 모든 터미널(패널·모음)에 지금 글자 크기를 입히고 칸에 다시 맞춘다 — 셸에는 새 줄·칸 수가 간다 (onResize) */
+function applyFont() {
+  const size = termFontSize();
+  for (const tab of S.tabs) {
+    for (const term of termsOf(tab)) {
+      if (term.xterm.options.fontSize === size) continue;
+      term.xterm.options.fontSize = size;
+      fitNow(term);
+    }
+  }
+}
 
 let open = false;
 export const terminalOpen = () => open;
@@ -168,7 +183,7 @@ function create(tab, n = 0, parent = $('#lec-term-body')) {
   box.hidden = true;
   parent.append(box);
   const xterm = new window.Terminal({
-    fontFamily: FONT, fontSize: 13, lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
+    fontFamily: FONT, fontSize: termFontSize(), lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
     allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
     theme: applyColors(), minimumContrastRatio: MIN_CONTRAST,
   });
@@ -797,6 +812,7 @@ export function initTerminal() {
   $('#lec-theme-css').addEventListener('load', applyColors);
   $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
+  on('term-font', applyFont);
   on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
   on('term-paste-stay', (text) => pasteToTerminal(text, { stay: true }));   // Ctrl+Shift+→ (spotlight.js, D79·D97)
   applyColors();

@@ -10,6 +10,18 @@ import { $, $$, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
 const box = () => $('#lec-settings');
+const TERM_FONT_BASE = 14;   // 터미널 글자 크기의 기본 (D130 — terminal.js 의 TERM_FONT.base, config.py 의 기본값과 같게. 범위는 입력 칸의 min·max)
+
+/** 터미널 글자 크기를 정해 저장하고 열린 터미널에 입힌다. 범위 밖이나 숫자가 아니면 가까운 값·지금 값으로 */
+async function setTermFont(value) {
+  const input = $('#lec-termfont');
+  const [min, max] = [Number(input.min), Number(input.max)];
+  const size = Number.isFinite(value) ? Math.min(max, Math.max(min, Math.round(value))) : (S.config.terminal_font_size || TERM_FONT_BASE);
+  input.value = String(size);
+  if (size === S.config.terminal_font_size) return;
+  await saveConfig({ terminal_font_size: size });
+  emit('term-font');
+}
 
 export function openSettings() {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
@@ -17,6 +29,7 @@ export function openSettings() {
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   for (const radio of $$('#lec-settings input[name="editor_keys"]')) radio.checked = radio.value === (S.config.editor_keys === 'vim' ? 'vim' : 'default');
+  $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
   renderMyStyles();
   emit('settings-open');   // 업무 관리 칸 (work.js, D124)
   $('#lec-aiguide-samples').hidden = !S.samples;
@@ -91,6 +104,10 @@ async function onChange(e) {
     emit('term-place');
     return;
   }
+  if (e.target.id === 'lec-termfont') {   // 터미널 글자 크기 (D130 — terminal.js, 열린 터미널에도)
+    await setTermFont(parseFloat(e.target.value));
+    return;
+  }
   if (e.target.name === 'theme_groups') {   // 스타일 목록을 묶는 방식만 바뀐다 (고른 스타일은 그대로)
     await saveConfig({ theme_groups: e.target.value });
     fillPicker();
@@ -127,6 +144,9 @@ async function openConfigFile() {
 
 export function initSettings() {
   $('#lec-mystyles-folder').addEventListener('click', openStylesFolder);
+  $('#lec-termfont-down').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) - 1));
+  $('#lec-termfont-up').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) + 1));
+  $('#lec-termfont-reset').addEventListener('click', () => setTermFont(TERM_FONT_BASE));
   $('#lec-mystyles-prompt').addEventListener('click', async () => {
     toast(await copyText(stylePrompt()) ? t('요청 글을 복사했습니다 — Claude Code 에 붙여 넣고 원하는 모양을 이어서 적으세요') : t('복사하지 못했습니다'));
   });
