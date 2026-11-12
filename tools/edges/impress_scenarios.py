@@ -509,6 +509,7 @@ try:
         check('슬라이드로 돌아오면 다시 보인다', page.locator('#lec-st-html').is_visible())
 
         print('[18. 보기만 하는 프로젝트 (예제)]')
+        shipped = sorted((ROOT / 'samples' / 'slides').rglob('*.html'))   # 예제에 든 html 발표 (기초/07)
         s2, url2, _ = serve(ROOT / 'samples', base / 'c2')
         servers.append(s2)
         ro = b.new_page(viewport={'width': 1300, 'height': 850})
@@ -521,7 +522,7 @@ try:
         rid = ro.evaluate("import('/static/js/store.js').then((m) => m.S.tab.id)")
         r = ro.evaluate("""async ([p, path]) => { const r = await fetch('/api/html-export', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ p, path, html: '<!doctype html><meta name="generator" content="Lectern">' }) }); return r.status; }""", [rid, 'slides/상황별/01-경영-요약.md'])
         check('API 도 403', r == 403, r)
-        check('예제 폴더에 html 이 생기지 않았다', not list((ROOT / 'samples' / 'slides').rglob('*.html')))
+        check('예제 폴더에 html 이 생기지 않았다', sorted((ROOT / 'samples' / 'slides').rglob('*.html')) == shipped, shipped)
         ro.close()
 
         print('[19. 영어 화면]')

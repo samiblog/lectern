@@ -82,7 +82,7 @@ skills/                 Claude Code 스킬 (D98 — pptx-to-lectern, lectern-to-
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
-tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
+tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), make_sample_html.py(예제의 html 발표를 다시 만듦 — html 로 전환을 고치면, D129), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
 docs/                   VISION(방향 — 마름모형 리서치 방법), ARCHITECTURE, MODULES, PITFALLS, DECISIONS, ROADMAP, HISTORY, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다

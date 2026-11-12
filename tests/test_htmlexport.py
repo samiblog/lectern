@@ -1,5 +1,9 @@
 """html 로 전환 (D129): 서버 쪽 — 문서 옆에 새 파일 하나, 덮어쓰지 않기, 받지 않는 글, 이번에 만든 파일만 브라우저로. 스킬이 impress 주석을 노트로 넣지 않는지"""
+import base64
+import hashlib
+import html
 import importlib
+import re
 import sys
 from pathlib import Path
 
@@ -17,6 +21,27 @@ def deck(tmp_path):
     md = tmp_path / '보고서.md'
     md.write_text(DECK, encoding='utf-8')
     return md
+
+
+def test_sample_html_matches_this_version():
+    """예제의 html 발표(samples/slides/기초)가 지금의 impress.js·CSP·발표와 맞다.
+    어긋나면 `python tools/make_sample_html.py` 로 다시 만든다 — html 로 전환이나 그 예제 발표를 고친 뒤"""
+    md = ROOT / 'samples' / 'slides' / '기초' / '07-html-발표.md'
+    text = md.with_suffix('.html').read_text(encoding='utf-8').replace('\r\n', '\n')   # git 이 CRLF 로 받아도 브라우저는 LF 로 읽는다
+    assert htmlexport.is_deck(md) and text.startswith('<!doctype html>') and htmlexport.MARK in text[:2000]
+    assert f'<meta name="lectern-source" content="{md.name}">' in text
+    impress = (ROOT / 'web' / 'vendor' / 'impress' / 'impress.js').read_text(encoding='utf-8').replace('\r\n', '\n')
+    scripts = re.findall(r'<script>(.*?)</script>', text, re.S)
+    assert len(scripts) == 2 and scripts[0] == impress, 'impress.js 가 바뀌었다'
+    csp = re.search(r'Content-Security-Policy" content="([^"]+)"', text)[1]
+    for script in scripts:
+        assert base64.b64encode(hashlib.sha256(script.encode()).digest()).decode() in csp, 'CSP 해시가 스크립트와 다르다 — 발표가 켜지지 않는다'
+    source = md.read_text(encoding='utf-8')
+    slides = source.split('\n---\n', 1)[1].count('\n---\n') + 1   # 맨 앞 설정을 닫는 줄 뒤의 장 나눔
+    steps = re.findall(r'<div id="(lec-(?:slide-\d+|overview))" class="step', text)
+    assert steps == [*(f'lec-slide-{n}' for n in range(1, slides + 1)), 'lec-overview'], '발표의 장 수가 달라졌다'
+    for heading in re.findall(r'^#{1,2} (.+)$', source, re.M):
+        assert html.escape(heading, quote=False) in text, f'발표의 제목이 달라졌다: {heading}'
 
 
 def test_writes_next_to_the_deck_and_never_overwrites(deck):

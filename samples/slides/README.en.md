@@ -21,6 +21,7 @@ Start here.
 | 4 | [Key practice](기초/04-키-연습장.md) | Lines, text size and slides by keyboard |
 | 5 | [A grid made by keyboard](기초/05-키보드로-만든-격자.md) | Building a grid without the mouse |
 | 6 | [Text size chart](기초/06-글자-크기-기준표.md) | Cell sizes and default sizes |
+| 7 | [html presentation](기초/07-html-발표.md) | Convert to html, slide positions (`impress:`) — `07-html-발표.html` next to it is the result |
 
 ## 2. Model decks by situation
 

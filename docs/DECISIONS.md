@@ -1219,7 +1219,8 @@
 - **문서의 이름과 겹치지 않게 (사용자 시나리오 점검)**: 장의 id 는 `lec-slide-N`·`lec-overview` 다 — `## Overview` 제목의 앵커가 `overview` 라 전체 보기 장과 겹쳤다. 문서의 HTML 에 `class="step"`·`notes`·`substep` 이 있으면 impress 가 장·노트로 잡으므로 복제할 때 그 이름(과 `impress-` 로 시작하는 class·id)을 뗀다 — 그 이름에 건 장별 CSS 는 듣지 않게 된다. 차트·Mermaid 의 '누르면 크게 봅니다'와 앱 안 링크의 경로 제목도 뗀다.
 - **창 (사용자 시나리오 점검)**: 창을 연 사이 문서가 다시 그려지면(Claude 가 자리를 적으면) 지도와 장 수를 새로 그린다. 창이 떠 있는 동안 초점이 창 밖으로 나가면 되돌린다 — 'Claude 에게 배치 요청' 뒤 늦게 뜬 터미널이 초점을 가져가 다시 연 창의 Enter 가 셸로 갔다.
 - **발표자 콘솔(P)**: 파일로 열어도(`file://`) 노트·지금 장·다음 장·시계가 된다. 콘솔이 미리보기 iframe 안을 꾸미려다 막혀 오류가 찍히지만 기능에는 지장이 없다 (시제품과 `tools/edges/impress.py` 에서 확인).
-- **Lectern 에서 열면**: html 문서는 스크립트 없이 본다 (D27). 그래서 `impress-not-supported` 의 CSS 로 장을 위에서 아래로 놓고 노트를 보이며, 창 폭에 맞춰 `zoom` 을 단계(5%)로 준다 — 스크립트 없이 폭을 재는 길이 없다.
+- **Lectern 에서 열면**: html 문서는 스크립트 없이 본다 (D27). 그래서 `impress-not-supported` 의 CSS 로 장을 위에서 아래로 놓고 노트를 보이며, 창 폭에 맞춰 `zoom` 을 단계(5%)로 준다 — 스크립트 없이 폭을 재는 길이 없다. 장 높이를 푸는 규칙은 `#impress .lec-step` 의 고정 높이보다 세야 한다 (0.73.0 은 약해 노트가 다음 장 뒤에 가렸다 — 예제를 만들다 찾음, `impress.py` 가 노트와 다음 장의 자리를 잰다).
+- **예제 (0.73.1)**: 예제 폴더는 보기만 해서(D71) 거기서는 만들기가 막힌다. 그래서 `samples/slides/기초/07-html-발표.md`(앞 세 장은 격자 규칙, 나머지는 `impress:` 로 줄·돌리기·`scale`)와 그 결과 html 을 함께 싣는다. 결과는 사람이 고치지 않고 `tools/make_sample_html.py` 가 임시 사본에서 슬라이드 창으로 전환해 가져온다. 브라우저로 열기는 넓히지 않았다 (원칙 5 — 이번 실행에 만든 파일만) — 예제의 html 은 사이드바 우클릭 '탐색기에서 보기'로 연다. 판이 바뀌어 impress.js·CSP·발표가 어긋나면 `test_sample_html_matches_this_version` 이 잡는다.
 - **impress.js 판**: 2.0.0 (2022-07, MIT). npm 의 최신은 1.1.0 이고 2.0.0 은 GitHub 태그에만 있어 `update_vendor.py` 가 `GIT_PACKAGES` 로 받는다 (그 태그의 package.json 도 1.1.0 이라 판은 태그로 적는다). 앱 화면은 impress.js 를 돌리지 않고 결과에 담기만 한다. 파일 안 impress.js 의 머리 주석(MIT 고지)은 그대로 간다.
 - **하지 않은 것**: 순차 등장(substep), 나선·원형 같은 3D 배치 틀, Lectern 안에서 impress 로 발표, html → md 되돌리기, 동영상·소리 담기.
 - **`docs/VISION.md`**: 수렴 구간의 끝 — 리서치 결과를 PowerPoint 없이 브라우저 하나로 전한다 (D96 과 같은 구간).

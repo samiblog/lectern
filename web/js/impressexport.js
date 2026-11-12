@@ -219,7 +219,7 @@ body { background: color-mix(in srgb, var(--md-bg, #ffffff) 70%, #000000); }
 .impress-not-supported { background: var(--md-bg, #ffffff); }
 .impress-not-supported .impress-progressbar, .impress-not-supported .lec-overview { display: none; }
 .impress-not-supported #impress { display: flex; flex-direction: column; align-items: center; gap: 28px; padding: 24px 16px 48px; }
-.impress-not-supported .lec-step { flex: none; height: auto; }
+.impress-not-supported #impress .lec-step { flex: none; height: auto; }
 .impress-not-supported #impress .lec-slide { position: relative; box-shadow: 0 1px 4px rgb(0 0 0 / .22); }
 .impress-not-supported .notes { display: block; margin-top: 10px; padding: 8px 14px; border-left: 3px solid var(--md-border, #cccccc); color: var(--md-muted, #555555); font: 18px/1.5 var(--md-font, sans-serif); }
 .impress-not-supported .notes p { margin: 0 0 .4em; }

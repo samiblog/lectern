@@ -14,6 +14,12 @@ base = Path(tempfile.mkdtemp(prefix='lec-impress-'))
 proj = base / 'proj'
 config = base / 'config'
 proj.mkdir()
+# 스크립트 없이 연 모양에서 노트가 있는 장마다: 노트의 아래 끝이 다음 장의 위 끝보다 위 (장 높이가 고정되면 노트가 다음 장 뒤로 간다)
+UNCOVERED = """() => [...document.querySelectorAll('.lec-step:not(.lec-overview)')].every((s, i, all) => {
+  const n = s.querySelector('.notes'); const next = all[i + 1];
+  return !n || !next || n.getBoundingClientRect().bottom <= next.getBoundingClientRect().top + 1; })"""
+UNCOVERED_WHY = """() => [...document.querySelectorAll('.lec-step .notes')].map((n) => [n.closest('.lec-step').id, Math.round(n.getBoundingClientRect().bottom),
+  Math.round(n.closest('.lec-step').nextElementSibling?.getBoundingClientRect().top ?? -1)])"""
 PNG = base64.b64decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==')
 (proj / '그림.png').write_bytes(PNG)
 (proj / '보통.md').write_text('# 보통\n\n글입니다.\n', encoding='utf-8')
@@ -254,6 +260,7 @@ try:
         check('장이 위에서 아래로', len(boxes) == 7 and all(boxes[i][0] < boxes[i + 1][0] for i in range(6)), boxes)
         check('창 폭에 맞춰 줄인다', all(right <= 900 for _, right in boxes), boxes)
         check('노트가 보인다', fp.locator('#lec-slide-1 .notes').is_visible())
+        check('노트가 다음 장에 가리지 않는다', fp.evaluate(UNCOVERED), fp.evaluate(UNCOVERED_WHY))
         check('전체 보기 장은 없다', not fp.locator('#lec-overview').is_visible())
         flat.close()
 
@@ -269,6 +276,7 @@ try:
         width = page.evaluate("document.querySelector('#lec-view iframe').getBoundingClientRect().width")
         right = frame.evaluate("Math.max(...[...document.querySelectorAll('.lec-step')].map((s) => s.getBoundingClientRect().right))")
         check('장이 칸 폭 안에', right <= width + 1, (right, width))
+        check('Lectern 에서도 노트가 다음 장에 가리지 않는다', frame.evaluate(UNCOVERED), frame.evaluate(UNCOVERED_WHY))
 except Exception:
     traceback.print_exc()
     fails.append('예외')

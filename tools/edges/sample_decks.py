@@ -92,7 +92,13 @@ def run():
         complex_decks = sorted((slides / '복잡한-배치').glob('[0-9][0-9]-*.md'))
         check('복잡한 배치 열 개', len(complex_decks) == 10, len(complex_decks))
         basics = sorted((slides / '기초').glob('[0-9][0-9]-*.md'))
-        check('기초 여섯 개', len(basics) == 6, len(basics))
+        check('기초 일곱 개', len(basics) == 7, len(basics))
+        sample_html = slides / '기초' / '07-html-발표.html'
+        check('html 로 전환 예제는 결과 파일과 함께', sample_html.is_file())
+        page.evaluate(OPEN, sample_html.relative_to(proj).as_posix())
+        frame = page.wait_for_selector('#lec-view iframe', timeout=20000).content_frame()
+        frame.wait_for_selector('.lec-step', timeout=10000)
+        check('Lectern 에서 연 html 발표는 장이 위에서 아래로', frame.evaluate("document.body.classList.contains('impress-not-supported') && document.querySelectorAll('.lec-step:not(.lec-overview)').length") == 10)
         tested = sorted((slides / '시험-배치').glob('[0-9][0-9]-*.md'))
         check('시험 문서 일곱 개', len(tested) == 7, len(tested))
         for doc in (slides / 'README.md', slides / 'README.en.md'):
