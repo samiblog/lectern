@@ -319,7 +319,8 @@ async function build(pane, path, { mode, overview }) {
   if (ov) steps.push(`<div id="overview" class="step lec-overview" data-x="${ov.x}" data-y="${ov.y}" data-scale="${ov.scale}"></div>`);
   const math = items.some((it) => it.section.querySelector('.katex'));
   const css = await gatherCss(pane, math, w, h);
-  const impress = await getText(IMPRESS);
+  // 브라우저는 스크립트 글의 CRLF 를 LF 로 읽는다 — git 이 받으며 CRLF 로 바꾼 사본으로 해시를 만들면 맞지 않는다
+  const impress = (await getText(IMPRESS)).replace(/\r\n?/g, '\n');
   if (/<\/script/i.test(impress)) throw new Error('impress.js');   // 틀을 닫는 글이 있으면 해시가 맞지 않는다 (판을 올릴 때 보는 것)
   const policy = [
     "default-src 'none'",
@@ -358,7 +359,7 @@ async function build(pane, path, { mode, overview }) {
     '</body>',
     '</html>',
     '',
-  ].join('\n');
+  ].join('\n').replace(/\r\n?/g, '\n');   // 줄바꿈은 LF 하나로 — 이 PC 의 CRLF 사본(스타일 css 등)이 섞이지 않게. 브라우저도 이렇게 읽는다
   const notes = [];
   if (found.external) notes.push(t('인터넷 그림 {n}개는 주소로 남았습니다 — 받은 사람의 브라우저가 불러옵니다', { n: found.external }));
   if (found.missing) notes.push(t('불러오지 못한 그림 {n}개는 빠졌습니다', { n: found.missing }));

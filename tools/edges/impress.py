@@ -221,6 +221,28 @@ try:
         expect(console, '발표자 콘솔(P)에 노트', "document.getElementById('notes')?.innerText.includes('첫 장의 노트')")
         show.keyboard.press('ArrowRight')
         expect(console, '넘기면 콘솔의 노트도', "!document.getElementById('notes')?.innerText.includes('첫 장의 노트')")
+        crlf = base / 'CRLF 로 저장.html'   # 받은 사람이 편집기에서 CRLF 로 저장해도 — 브라우저는 스크립트 글을 LF 로 읽는다
+        crlf.write_bytes(first.replace(b'\r\n', b'\n').replace(b'\n', b'\r\n'))
+        again = ctx.new_page()
+        again.goto(crlf.as_uri())
+        expect(again, 'CRLF 로 저장한 파일도 impress 가 켜진다', "document.body.classList.contains('impress-enabled')")
+        ctx.close()
+
+        print('[git 이 impress.js 를 CRLF 로 받아도 — 해시는 LF 로 맞춘 글로]')
+        page.route('**/static/vendor/impress/impress.js', lambda route: route.fulfill(
+            status=200, content_type='text/javascript', body=(Path(__file__).resolve().parents[2] / 'web/vendor/impress/impress.js').read_text(encoding='utf-8').replace('\n', '\r\n')))
+        page.click('#lec-st-html')
+        page.wait_for_selector('#lec-html:not([hidden])')
+        page.click('#lec-html-go')
+        expect(page, 'CRLF 사본으로도 만든다', "!document.querySelector('#lec-html-done').hidden", ms=20000)
+        page.click('#lec-html-close')
+        page.unroute('**/static/vendor/impress/impress.js')
+        third = proj / '전환시험 3.html'
+        check('셋째 파일에 CR 이 없다', third.is_file() and b'\r' not in third.read_bytes())
+        ctx = b.new_context(viewport={'width': 1280, 'height': 720})
+        cr = ctx.new_page()
+        cr.goto(third.as_uri())
+        expect(cr, 'CRLF 사본으로 만든 파일도 impress 가 켜진다', "document.body.classList.contains('impress-enabled')")
         ctx.close()
 
         print('[스크립트 없이 열면 — 장이 위에서 아래로]')
