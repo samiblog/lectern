@@ -13,8 +13,9 @@ TYPESCRIPT = 'typescript@7.0.2'
 # raw() 를 쓰는 곳 (D89): 이미 안전한 HTML 이라고 약속한 곳이다. DOMPurify 를 거친 것(charts·doc·help·parts),
 # highlight.js 의 결과(codeview), 앱이 만든 단축키 표시(help), 앱이 그린 SVG(parts). 더할 때는 그 값이 정말 안전한지 본다
 RAW_USES = {'slidegallery': 1, 'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 'parts': 3, 'slides': 1}
-# esc() 를 바로 쓰는 곳: 화면이 아니라 글을 만든다 — highlight.js 가 없을 때의 코드(codeview), 설명서의 Markdown(help)
-ESC_USES = {'codeview', 'help'}
+# esc() 를 바로 쓰는 곳: 화면이 아니라 글을 만든다 — highlight.js 가 없을 때의 코드(codeview), 설명서의 Markdown(help),
+# html 로 전환이 파일로 쓰는 발표 html(impressexport — D129)
+ESC_USES = {'codeview', 'help', 'impressexport'}
 # 이미 있는 import 순환. 풀면 여기서 지운다 — 새로 생기거나 커지면 test_no_new_import_cycle 이 실패한다 (D88)
 KNOWN_CYCLES = [
     {'basket', 'codeview', 'csvview', 'doc', 'docmenu', 'doctabs', 'editor', 'htmldoc', 'lineedit', 'nav', 'newdoc', },

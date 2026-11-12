@@ -258,8 +258,9 @@ Image syntax:
 | `<!-- _paginate: false -->` | No page number on this slide |
 | `<!-- eyebrow: Market summary -->` | Small label above the title |
 | `<!-- hidden: true -->` | Hidden slide: left out of the presentation and PDF, and hidden in an exported pptx |
+| `<!-- impress: x=0 y=2400 rotate=90 -->` | This slide's place when converting to html (section 13). The slide window does not change |
 
-A leading `_` means this slide only. `class` and `backgroundColor` without `_` carry over. `layout`, `grid`, `text` and `eyebrow` are always this slide only.
+A leading `_` means this slide only. `class` and `backgroundColor` without `_` carry over. `layout`, `grid`, `text`, `eyebrow`, `hidden` and `impress` are always this slide only.
 
 ## 8. HTML slides
 
@@ -331,3 +332,14 @@ The user picks templates in the gallery, slide by slide. One Lectern slides file
 When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the Claude Code skills `pptx-to-lectern` and `lectern-to-pptx`. They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
 
 If the skills are not installed yet, ask the user first. If they agree, copy both folders to `~/.claude/skills/`. If not, read `SKILL.md` in that folder and run its scripts from there.
+
+## 13. Convert to html
+
+**Convert to html** in the status bar is done by the app. It makes one impress.js presentation html file from the slides the slide window drew. impress.js places slides on one canvas and the camera moves between them. Do not write the html yourself. When the user asks you to arrange the slides, write only each slide's **place** in the md.
+
+- Slides without a place follow a rule. The grid (default) starts a new row at each `lead` slide and wraps after 4 slides. With `impress: line` in the front matter they form one row.
+- A slide's place is a comment on that slide: `<!-- impress: x=0 y=2400 rotate=90 scale=2 -->`. The words are `x` `y` `z` `rotate` `rotate-x` `rotate-y` `scale`, and the values are numbers only. Only the axes you write change; the others follow the rule.
+- The unit is slide px. A slide is 1280×720 (960×720 for 4:3), and `x`·`y` are its center. Neighbors about 1500 apart do not overlap. A slide with `scale=3` is placed three times larger, so going to it zooms out as if seen from far away.
+- Show the story with places. Keep the slides of one section in a row and start a new row for the next section. Give a summary slide a large `scale` so it covers its section. Use `rotate` once or twice, between sections. Avoid 3D turns (`rotate-x`, `rotate-y`); they are hard to read.
+- The app adds the overview at the end. Do not write it.
+- The status bar check reports places it cannot read. The slide window does not change, so when you are done tell the user to press Convert to html again.

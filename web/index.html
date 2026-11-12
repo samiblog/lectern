@@ -327,6 +327,7 @@
     <button id="lec-st-present" class="st-edit" title="발표 — 창 전체에 한 장씩 (Shift+F5)" hidden><svg aria-hidden="true"><use href="#i-play"/></svg>발표</button>
     <button id="lec-st-mdstyle" class="st-edit" title="문서 방식과 머리글 모양을 고릅니다" hidden><svg aria-hidden="true"><use href="#i-edit"/></svg>md 문서 스타일</button>
     <button id="lec-st-pptx" class="st-edit" title="pptx 스타일을 골라 pptx 파일을 만듭니다" hidden><svg aria-hidden="true"><use href="#i-slides"/></svg>pptx 로 전환</button>
+    <button id="lec-st-html" class="st-edit" title="impress.js 발표 html 파일을 만듭니다 — 브라우저로 엽니다" hidden><svg aria-hidden="true"><use href="#i-html"/></svg>html 로 전환</button>
     <button id="lec-st-structure" class="st-edit" title="칸·배치의 숨은 줄을 꼬리표로 보기 — 꼬리표에서 F2 로 고칩니다" hidden><svg aria-hidden="true"><use href="#i-slide"/></svg><span>구조 보기</span></button>
     <button id="lec-st-check" class="st-edit st-check" title="넘치거나 잘못 쓴 곳 — 눌러서 목록 보기" hidden><svg aria-hidden="true"><use href="#i-box"/></svg><span></span></button>
     <span id="lec-st-info"></span>
@@ -561,6 +562,26 @@
     <div id="lec-pptx-done" hidden>
       <p id="lec-pptx-summary" class="insert-msg"></p>
       <div class="gallery-foot"><button id="lec-pptx-open" type="button">pptx 열기</button><button id="lec-pptx-show" type="button">탐색기에서 보기</button><span class="tb-spacer"></span><button id="lec-pptx-close" type="button">닫기</button></div>
+    </div>
+  </div>
+</div>
+<!-- html 로 전환 (impressexport.js, D129) -->
+<div id="lec-html" class="overlay" hidden>
+  <div class="palette-box insert-box" role="dialog" aria-labelledby="lec-html-title">
+    <div id="lec-html-title" class="insert-title"></div>
+    <p id="lec-html-msg" class="insert-msg" role="alert" hidden></p>
+    <div id="lec-html-form">
+      <div class="lec-html-modes" role="radiogroup" aria-label="배치">
+        <label><input type="radio" name="lec-html-mode" value="grid"> 격자 <span class="p">장 구분에서, 없으면 4장마다 줄을 바꿉니다</span></label>
+        <label><input type="radio" name="lec-html-mode" value="line"> 가로 한 줄</label>
+      </div>
+      <div id="lec-html-map" aria-hidden="true"></div>
+      <p id="lec-html-info" class="insert-msg"></p>
+      <div class="gallery-foot"><label><input id="lec-html-overview" type="checkbox" checked> 맨 끝에 전체 보기</label><button id="lec-html-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 배치 요청</button><span class="tb-spacer"></span><button id="lec-html-cancel" type="button">취소</button><button id="lec-html-go" type="button" class="primary">만들기</button></div>
+    </div>
+    <div id="lec-html-done" hidden>
+      <p id="lec-html-summary" class="insert-msg"></p>
+      <div class="gallery-foot"><button id="lec-html-open" type="button">브라우저로 열기</button><button id="lec-html-show" type="button">탐색기에서 보기</button><span class="tb-spacer"></span><button id="lec-html-close" type="button">닫기</button></div>
     </div>
   </div>
 </div>

@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, editing, htmlexport, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .i18n import t
@@ -831,6 +831,46 @@ def create_app(state: AppState) -> Flask:
             return jsonify(pptxexport.export(target, data.get('style') or ''))
         except pptxexport.ExportError as exc:
             return jsonify(error=exc.message), exc.status
+
+    # ---- html 로 전환 (D129): 화면이 지은 impress.js 발표를 문서 옆에 ------------------------------------
+
+    @app.get('/api/html-export')
+    def api_html_export_name() -> Any:
+        """?p=&path= — 만들 파일 이름 (창의 제목)"""
+        project = arg_project()
+        target = resolve_inside(project.root, request.args.get('path', ''))
+        if target is None or not editing.present_file(target):
+            abort(404)
+        try:
+            return jsonify(out=htmlexport.free_path(target).name, readonly=project.readonly)
+        except htmlexport.ExportError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/html-export')
+    def api_html_export() -> Any:
+        """{p, path, html} — 문서 옆에 새 html 하나. 사용자가 'html 로 전환' 의 만들기를 누를 때만"""
+        data = body()
+        project = project_of(data.get('p'))
+        if project.readonly:   # Lectern 프로그램 폴더 안 (D71)
+            return jsonify(error=t('보기만 하는 프로젝트라 html 을 만들지 않습니다 — 폴더를 복사해서 여세요')), 403
+        target = path_from_body()
+        try:
+            out = htmlexport.write(target, data.get('html'))
+        except htmlexport.ExportError as exc:
+            return jsonify(error=exc.message), exc.status
+        return jsonify(path=out.name)
+
+    @app.post('/api/html-export/open')
+    def api_html_export_open() -> Any:
+        """{p, path} — 이번 실행에 만든 html 만 기본 브라우저로 (원칙 5)"""
+        target = path_from_body()
+        try:
+            htmlexport.open_made(target)
+        except htmlexport.ExportError as exc:
+            return jsonify(error=exc.message), exc.status
+        except OSError as exc:
+            return jsonify(error=str(exc)), 500
+        return jsonify(action='default')
 
     @app.post('/api/open-external')
     def api_open_external() -> Any:

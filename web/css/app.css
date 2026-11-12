@@ -871,6 +871,18 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-pptx-msg { white-space: pre-line; }
 #lec-pptx-previews { display: flex; gap: 8px; padding: 0 16px 10px; }
 #lec-pptx-previews img { width: calc(50% - 4px); aspect-ratio: 16 / 9; object-fit: contain; border: 1px solid var(--ui-border); border-radius: 4px; }
+/* html 로 전환 (impressexport.js, D129): 배치 고르기와 배치 지도 */
+.lec-html-modes { display: flex; flex-wrap: wrap; gap: 6px 18px; padding: 12px 16px 4px; font-size: 13px; }
+.lec-html-modes label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.lec-html-modes .p { color: var(--ui-muted); font-size: 12px; }
+#lec-html-map { height: 190px; margin: 8px 16px 0; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); }
+#lec-html-map svg { display: block; width: 100%; height: 100%; }
+#lec-html-map polyline { fill: none; stroke: var(--ui-faint); stroke-width: 1.5; vector-effect: non-scaling-stroke; stroke-dasharray: 4 3; }
+#lec-html-map rect { fill: var(--ui-panel, var(--ui-bg)); stroke: var(--ui-muted); stroke-width: 1.2; vector-effect: non-scaling-stroke; }
+#lec-html-map rect.lead { fill: color-mix(in srgb, var(--ui-accent) 22%, var(--ui-bg)); }
+#lec-html-map rect.placed { stroke: var(--ui-accent); stroke-width: 2.4; }
+#lec-html-map text { fill: var(--ui-fg, currentColor); text-anchor: middle; dominant-baseline: central; font-family: var(--ui-font, sans-serif); }
+#lec-html-msg { white-space: pre-line; }
 
 /* md 문서 스타일 (mdstyle.js, D103) */
 .mdstyle-box { width: min(780px, 92vw); }

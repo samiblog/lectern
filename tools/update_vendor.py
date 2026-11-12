@@ -46,6 +46,12 @@ PACKAGES: dict[str, str] = {
     'plotly.js-dist-min': '4.1.2',      # ```plotly — 전체판 (사용자가 고름 — 나눈 판보다 크지만 모든 종류)
 }
 
+# npm 에 없는 판 — GitHub 태그에서 받는다: {패키지: (저장소, 태그)}. --latest 여도 이 태그 그대로다.
+# impress.js 2.0.0 은 npm 에 올라오지 않았고(npm 최신은 1.1.0) 그 태그의 package.json 도 1.1.0 이라 판은 태그로 적는다.
+GIT_PACKAGES: dict[str, tuple[str, str]] = {
+    'impress.js': ('impress/impress.js', 'v2.0.0'),   # html 로 전환 (D129) — 앱은 돌리지 않고 결과 파일에 담기만 한다
+}
+
 # 편집 모드의 언어 (codemirror/mode/<이름>.js). 편집기가 확장자에 맞는 것과 그것이 쓰는 것만 불러온다 (editor.js 의 MODES)
 CODEMIRROR_MODES = ['markdown', 'xml', 'htmlmixed', 'javascript', 'css', 'python', 'yaml', 'toml', 'properties', 'shell',
                     'powershell', 'clike', 'go', 'rust', 'ruby', 'php', 'sql', 'r', 'lua', 'swift', 'perl', 'dart', 'groovy']
@@ -88,6 +94,7 @@ FILES: list[tuple[str, str, str]] = [
     ('echarts', 'dist/echarts.min.js', 'echarts/echarts.min.js'),
     ('@viz-js/viz', 'dist/viz-global.js', 'viz/viz-global.js'),
     ('plotly.js-dist-min', 'plotly.min.js', 'plotly/plotly.min.js'),
+    ('impress.js', 'js/impress.js', 'impress/impress.js'),   # 플러그인이 든 묶음 (impressConsole·navigation·progress 등)
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')
@@ -119,6 +126,7 @@ def main() -> None:
     args = parser.parse_args()
 
     specs = [name if args.latest else f'{name}@{ver}' for name, ver in PACKAGES.items()]
+    specs += [f'{name}@github:{repo}#{tag}' for name, (repo, tag) in GIT_PACKAGES.items()]
     with tempfile.TemporaryDirectory(prefix='lectern-vendor-') as tmp:
         work = Path(tmp)
         (work / 'package.json').write_text('{"name":"vendor-fetch","private":true}', encoding='utf-8')
@@ -136,9 +144,9 @@ def main() -> None:
             copy_item(src, VENDOR / dest_rel)
 
         versions = {}
-        for pkg in PACKAGES:
+        for pkg in [*PACKAGES, *GIT_PACKAGES]:
             meta = json.loads((modules / pkg / 'package.json').read_text(encoding='utf-8'))
-            versions[pkg] = meta['version']
+            versions[pkg] = GIT_PACKAGES[pkg][1].lstrip('v') if pkg in GIT_PACKAGES else meta['version']
             lic_dir = VENDOR / 'licenses'
             lic_dir.mkdir(exist_ok=True)
             for names, suffix in ((LICENSE_NAMES, ''), (NOTICE_NAMES, '.NOTICE')):

@@ -514,6 +514,21 @@ Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file a
 - **Documents moved from a pptx:** If you pick no style, slides you did not change reuse the original slide, and where you only edited text, just that text changes in the original slide. Design and animations stay. Only slides whose cells or layout changed are rebuilt. Keep the conversion record (the `.json` file next to the document) and the `.pptx-work` folder for that.
 - A pptx of the same name is never overwritten. A new name like `Report 2.pptx` is used.
 
+### Convert to html
+
+Press **Convert to html** in the status bar. An impress.js presentation html file appears next to the document. The reader opens it in a browser to present it. The slides sit on one canvas and the view moves between them.
+
+- **Arrangement:** **Grid** starts a new row at each cover or section slide (`lead` slides) and wraps after 4 slides. You can also pick **One row**. The map in the window shows each slide number in its place. `impress: line` in the front matter makes that the first choice.
+- **Placing a slide yourself:** Write `<!-- impress: x=0 y=2400 rotate=90 scale=2 -->` on a slide to place it there. Only the axes you write change. The slide window does not change. **Ask Claude to arrange** puts a request into the terminal to place the slides along the story (Enter is not pressed).
+- **Overview:** When on, a last slide shows all slides on one screen.
+- **Presenting:** → ← Space, PageDown and PageUp move; **Home** and **End** go to the first and last slide. **P** opens the presenter console (notes, next slide, clock) in a new window.
+- **One file:** Images, styles, math fonts and impress.js all go inside the file. It opens without the internet and asks nothing from anywhere, so you can mail or message it. Only internet images stay as addresses, loaded by the reader's browser.
+- **Left out:** Hidden slides, videos and sounds. Links to other documents in the project stay as text.
+- **Safety:** Only impress.js and its start line may run in the file. Scripts in the document do not run in the reader's browser.
+- **Open in browser:** After converting, **Open in browser** opens only the file Lectern just made, in your default browser.
+- **In Lectern:** It shows in the document list as an html document. Lectern does not run a document's scripts, so the slides appear top to bottom like a document, with their notes.
+- Colors and fonts follow the style you picked. An html of the same name is never overwritten; a new name like `Report 2.html` is used. The md is the source, so convert again after editing.
+
 ### Asking Claude
 
 Sample — section 12 of [guide 09, Lectern slides](../../samples/guide/09-Lectern-슬라이드.md), 'Working with Claude Code': installing the skills, example requests, the request menus and the order of polishing together.

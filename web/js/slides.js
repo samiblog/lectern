@@ -18,7 +18,7 @@ import { $, $$ } from './util.js';
 import { marksOf, lineOfY, yOfLine } from './editsync.js';
 import { t } from './i18n.js';
 import { LAYOUTS, SAFE_AREA, SAFE_TRACK, textSizes, readCellHead } from './slideops.js';
-import { cellSlips, checkClipped, checkContrast, checkDiagrams, checkImages, checkMarks, commentSlip, gridSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
+import { cellSlips, checkClipped, checkContrast, checkDiagrams, checkImages, checkMarks, commentSlip, gridSlips, impressSlips, openBlock, openFence, strayLines, textSlips } from './slidelint.js';
 import { confinedCss } from './csssafe.js';
 import { raw, setHtml } from './html.js';
 
@@ -26,9 +26,11 @@ const SIZES = { '16:9': [1280, 720], '4:3': [960, 720] };
 const GLOBAL = new Set(['theme', 'style', 'headingDivider', 'size', 'math', 'title', 'description', 'author', 'image', 'keywords', 'reading',
   'url', 'marp', 'lang', 'transition']);
 const LOCAL = ['paginate', 'header', 'footer', 'class', 'backgroundColor', 'backgroundImage', 'backgroundPosition',
-  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template'];
+  'backgroundRepeat', 'backgroundSize', 'color', 'layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template', 'impress'];
 const LOCAL_SET = new Set(LOCAL);
-const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template'];   // 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다
+// 칸 배치는 그 장에만 — 장마다 다른 것이 보통이라 Marp 처럼 뒤로 물려주지 않는다. impress 는 html 로 전환(D129)의 그 장 자리
+// (맨 앞 설정의 impress 는 배치 방식이라 장에 물려주지 않는다)
+const PER_SLIDE = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template', 'impress'];
 const SAFE_CSS = /^[#\w\s(),.%+-]{1,120}$/;   // 색·크기·그라데이션 — 따옴표·세미콜론·url() 은 받지 않는다
 const FIGS = 'pre.mermaid > svg, .lec-chart svg:not(svg svg), img';
 /** 슬라이드 안의 다이어그램·차트를 키우는 배율 — 그 글자(12~16px)가 슬라이드 글자(본문 × 1.8)와 어울리게. charts.js 도 쓴다 */
@@ -323,7 +325,7 @@ export function slideRule(state) {
     return tok;
   };
   const out = [];
-  let inherit = Object.fromEntries(LOCAL.filter((k) => k in deck.fm).map((k) => [k, deck.fm[k]]));
+  let inherit = Object.fromEntries(LOCAL.filter((k) => k in deck.fm && k !== 'impress').map((k) => [k, deck.fm[k]]));
   slides.forEach((s, i) => {
     inherit = { ...inherit, ...s.local };
     const eff = { ...inherit, ...s.spot };
@@ -335,6 +337,7 @@ export function slideRule(state) {
     const missing = eff.layout && !Object.hasOwn(LAYOUTS, String(eff.layout).trim()) && typeof eff.grid !== 'string' ? ` data-layout-miss="${attr(eff.layout)}"` : '';
     const areas = grid ? ` data-areas="${attr([...new Set(grid.areas.replace(/'/g, ' ').trim().split(/\s+/))].filter((x) => x !== 't' && x !== '.').join(' '))}"` : '';
     const links = typeof eff.links === 'string' && eff.links.trim() ? ` data-links="${attr(eff.links)}"` : '';
+    const spot = eff.impress !== undefined && eff.impress !== '' ? ` data-impress="${attr(eff.impress)}"` : '';   // html 로 전환의 그 장 자리 (impressexport.js 가 읽는다)
     const reading = deck.fm.reading === true ? ' data-reading="1"' : '';
     const css = `${deck.style}\n${Object.values(deck.slideCss).join('\n')}\n${slides.flatMap((x) => x.css).join('\n')}`;
     const whole = (text) => ({ text, line: s.start + 1 + offset });
@@ -344,6 +347,7 @@ export function slideRule(state) {
       ...s.heads.flatMap((tok) => cellSlips(tok.meta.head, css).map((text) => ({ text, line: tok.map[0] + 1 + offset }))),
       ...[s.local.text, s.spot.text, i === 0 ? deck.fm.text : ''].flatMap(textSlips).map(whole),
       ...gridSlips(eff).map(whole),
+      ...impressSlips(eff.impress, i === 0 ? deck.fm.impress : undefined).map(whole),
     ];
     // > 를 JSON 이스케이프로: 값에 --> 나 </style> 이 있으면 DOMPurify 가 속성째 지운다 (주석 안의 속성 공격을 막는 규칙)
     const warned = warn.length ? ` data-warn="${attr(JSON.stringify(warn).replace(/[<>]/g, (c) => `\\u00${c.charCodeAt(0).toString(16)}`))}"` : '';
@@ -360,7 +364,7 @@ export function slideRule(state) {
     out.push(html(`<div class="lec-slide-wrap${wide}${skip}" data-key="${deck.key}" data-deck="${deck.id}" data-slide="${i + 1}" data-lines="${a}-${b}"`
       + ` style="--slide-w:${deck.w}px;--slide-h:${deck.h}px">`
       + `<div class="lec-slide-frame" style="aspect-ratio:${deck.w} / ${deck.h}">`
-      + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${reading}${warned} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
+      + `<section class="lec-slide ${classes.join(' ')}" data-key="${deck.key}" data-page="${i + 1}"${missing}${areas}${links}${spot}${reading}${warned} style="${attr(slideStyle(eff, deck))}">${header}${eyebrow}${bgImg}\n`));
     // 문서의 HTML 은 장 안에서 닫는다: 남은 </section> 이 틀을 닫거나 닫지 않은 <div> 가 다음 장을 삼키지 않게 (Marp 의 <div> 묶음은 여러 블록에 걸쳐 있어 장째로)
     if (s.tokens.some((tok) => tok.type === 'html_block' || tok.children?.some((c) => c.type === 'html_inline'))) {
       const box = document.createElement('template');   // 그리지도 돌리지도 않는 틀 — 글은 뒤에서 문서 전체와 함께 DOMPurify 를 거친다
@@ -374,8 +378,11 @@ export function slideRule(state) {
 
 // ---- 그린 뒤 다듬기 (doc.js 가 화면 밖 무대에서 부른다) ------------------------------------------------------
 
+/** 문서의 CSS 가 듣는 곳 — 칸·발표·무대·템플릿 미리보기. html 로 전환(impressexport.js)은 이 앞을 #impress 로 바꿔 담는다 */
+export const DECK_SCOPE = ':is(#lec-panes, #lec-present, .lec-stage, .lec-tpl-view)';
+
 /** 문서의 CSS 를 이 문서의 슬라이드 안에만 (csssafe.js). page: 그 장에만 (<style scoped>) */
-const scopedCss = (css, id, page = 0) => confinedCss(css, `:is(#lec-panes, #lec-present, .lec-stage, .lec-tpl-view) [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''}`);
+const scopedCss = (css, id, page = 0) => confinedCss(css, `${DECK_SCOPE} [data-deck="${id}"]${page ? `[data-slide="${page}"]` : ''}`);
 
 /** ![bg …](…) 의 낱말 → 배경 자리 */
 function bgOptions(words) {
@@ -783,6 +790,7 @@ function updateButtons() {
   toggle.title = deck ? t('보통 문서처럼 이어서 보기') : t('슬라이드로 보기 — Lectern 슬라이드 (marp: true)');
   $('#lec-st-present').hidden = !deck;
   $('#lec-st-pptx').hidden = !deck;
+  $('#lec-st-html').hidden = !deck;
   emit('deck-shown', deck);
 }
 

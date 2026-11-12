@@ -48,6 +48,7 @@ import { initPut, closePut } from './putmenu.js';
 import { closeBlock } from './lineblock.js';
 import { initGallery, closeGallery } from './slidegallery.js';
 import { initPptx, closePptx } from './pptxdialog.js';
+import { initHtmlExport, closeHtmlExport } from './impressexport.js';
 import { initMdStyle, closeMdStyle } from './mdstyle.js';
 import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab, moveToWindow } from './doctabs.js';
 import { solo } from './solo.js';
@@ -364,7 +365,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || escSpotlight()) e.preventDefault();
     }
   });
@@ -448,6 +449,7 @@ async function boot() {
   initPut();
   initGallery();
   initPptx();
+  initHtmlExport();
   initMdStyle();
   initSlides();
   initSlideTools();

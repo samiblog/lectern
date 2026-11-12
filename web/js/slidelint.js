@@ -4,10 +4,11 @@
 
 import { $$ } from './util.js';
 import { LAYOUTS, SAFE_AREA, SAFE_TRACK, cellHeadOdds, readCellHead, textOdds, textSizes } from './slideops.js';
+import { readMode, readSpot } from './impresslayout.js';
 import { t } from './i18n.js';
 
 const WORDS = new Set(['card', 'accent', 'dark', 'note', 'kpi', 'center', 'text-center', 'text-right', 'cols-2', 'cols-3']);
-const TYPO_NAMES = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template', 'class', 'paginate', 'header', 'footer', 'color', 'backgroundColor', 'backgroundImage'];
+const TYPO_NAMES = ['layout', 'grid', 'cols', 'rows', 'text', 'eyebrow', 'links', 'hidden', 'template', 'impress', 'class', 'paginate', 'header', 'footer', 'color', 'backgroundColor', 'backgroundImage'];
 const short = (s) => {
   const x = String(s).trim();
   return x.length > 40 ? `${x.slice(0, 40)}…` : x;
@@ -110,6 +111,16 @@ export function gridSlips(eff) {
     if (!SAFE_TRACK.test(value) || !CSS.supports(css, value)) out.push(t("{key} 값 '{value}' 을(를) 읽지 못했습니다 — 1fr 2fr 처럼 씁니다", { key, value: short(value) }));
     else if (!value.includes('(') && value.trim().split(/\s+/).length !== count) out.push(t('{key} 는 격자에 맞게 {n}개를 씁니다', { key, n: count }));
   }
+  return out;
+}
+
+/** html 로 전환(D129)의 자리 지시어 — 장의 impress(자리)와 맨 앞 설정의 impress(배치 방식, 첫 장에서만 넘긴다). 잘못 쓰면 그 장이 말없이 규칙 자리에 놓인다 */
+export function impressSlips(spot, mode) {
+  const out = [];
+  const { bad } = readSpot(spot);
+  if (bad.length) out.push(t("impress 의 '{words}' 을(를) 읽지 못했습니다 — x y z rotate rotate-x rotate-y scale 에 수를 씁니다 (x=0 y=900 처럼)", { words: short(bad.join(' ')) }));
+  const read = readMode(mode);
+  if (read.bad) out.push(t("맨 앞 설정의 impress: {value} 을(를) 모릅니다 — grid(격자)나 line(가로 한 줄)을 씁니다", { value: short(read.bad) }));
   return out;
 }
 

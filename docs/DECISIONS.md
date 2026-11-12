@@ -1204,3 +1204,20 @@
 - **어떻게**: (1) 끝을 지나친 ↓ 가 연 새 줄(`fresh.peek` — `line-end` 의 `{arrow: true}`)이 비어 있는 동안의 ↑ 는 칸을 걷고 읽기로 돌아가 마지막 줄에 화살표를 둔다. Enter·Ctrl+Enter 로 연 새 줄의 ↑ 는 지금처럼 윗줄을 고친다 — 글을 쓰다가 윗줄로 가는 길이다. (2) 넘어가는 사이의 ↑·↓ 는 `line-step` 으로 모아 두었다가(30개까지) 칸이 열리면 하나씩 잇고, 편집이 끝났으면 남은 것을 현재 줄로 옮긴다 (`drainSteps`, `stepHere`).
 - **시험**: `tools/edges/pickkeys.py` (한 글자 키 모두·되돌아가기·고른 채 남음·여러 줄·한글 입력·누르고 있기·기존 키·창의 키, 끝을 지나친 ↓ 뒤 ↑ 로 맨 위까지 칸이 열리지 않음, 이어서 편집에서 쉬지 않고 ↑ 11번·↓ 5번), 계산은 `docops_cases.js`. 화살표가 빠지는지는 예제·섞인 문서·큰 실제 문서 사본, headless 와 빌드한 창의 실제 키(SendInput)로 재 보았다 — 위의 둘 말고는 빠지지 않았다.
 - **`docs/VISION.md`**: 7 종합의 구조 다듬기와 8 최종결과물 — 문서의 꼴을 손이 덜 가게 바꾼다.
+
+## D129. html 로 전환 — Lectern 슬라이드를 impress.js 발표 html 하나로
+
+- **결정 (사용자 선택, 2026-11-12)**: 'Lectern 슬라이드를 impress.js 로 html 슬라이드로 전환하는 기능'. 제안서와 Marp 비교(Marp 는 Lectern 이 더한 칸·배치·차트를 모른다 — 예제 36개 가운데 35개가 칸, 18개가 Mermaid·차트)를 본 뒤 impress.js 를 골랐고, 다섯 가지를 권고대로 정했다: 기본 배치 격자, 파일 하나, 방금 만든 파일만 브라우저로, 다시 만들면 새 이름, `impress:` 지시어는 첫 판부터.
+- **화면이 그린 것을 담는다 (`impressexport.js`)**: 슬라이드 창이 그린 장(Mermaid·차트 SVG, 수식, 칸 배치, 넘침 맞춤이 끝난 것)을 복제한다. 렌더러를 두 벌 두지 않는다 (D102 와 같은 까닭). Python 스킬로 다시 그리면 Edge 를 띄워야 하고, Claude 가 html 을 쓰면 화면을 못 보고 매번 다르다. 서버(`htmlexport.py`)는 문서 옆에 새 파일 하나를 쓰기만 한다 — `'x'` 로 열어 덮어쓰지 않고 `보고서 2.html` 처럼 다음 이름.
+- **원칙 1 에 예외 하나**: 사용자가 만들기를 누를 때 Lectern 슬라이드(맨 앞 설정 `marp: true`) 옆에 새 html 하나. 받는 글은 화면이 지은 것만(`<!doctype html>` 과 `generator` 머리) 받고, 프로그램 폴더 안(D71)·300MB 넘는 것은 받지 않는다.
+- **원칙 5 — 브라우저로 열기**: `.html` 은 기본 앱으로 여는 형식이 아니다 (문서 속 html 링크는 편집기로). 이번 실행에 `htmlexport.write` 가 만든 경로만 기억해 그 파일만 기본 브라우저로 연다 (`/api/html-export/open`). 내용은 앱이 썼고 아래 CSP 가 앱의 스크립트만 돌린다.
+- **장의 자리 (`impresslayout.js`, 규칙 시험)**: Lectern 슬라이드에는 차례만 있고 impress 는 캔버스 위 자리가 있어야 한다. 격자는 `lead` 장에서 줄을 바꾸고 4장에서 접는다 — 예제 26개 중 23개가 `lead` 가 표지 하나뿐이라 장 구분만으로는 한 줄이 된다. 가로 한 줄도 고른다. 장 주석 `<!-- impress: x=… y=… rotate=… scale=… -->` 은 적은 축만 바꾼다 (`text:` 처럼 맨 앞 설정은 방식, 장은 자리). 이야기 흐름에 맞춘 배치는 판단이라 'Claude 에게 배치 요청'으로 요청 글만 터미널에 넣는다 (D101). 맨 끝의 전체 보기 장은 모든 장을 덮는 배율로 앱이 만든다.
+- **지시어를 문법에 넣었다**: 모르는 키의 주석은 발표자 노트다 (D59 — Marp 와 같다). `impress` 를 아는 지시어에 넣지 않으면 그 줄이 노트로 새고 pptx 노트에도 들어간다. 그래서 `slides.js`(LOCAL·PER_SLIDE, 맨 앞 설정은 장에 물려주지 않음)·`slidelint.js`(오타 이름·읽지 못한 낱말·모르는 방식)·스킬의 `lectern_md.py` 가 함께 안다.
+- **파일 하나**: 문서 폴더의 그림은 data URI, 수식이 있으면 KaTeX CSS 와 woff2 글꼴(woff·ttf 대체는 지움), 스타일은 화면과 같은 차례(KaTeX·코드 색·base·스타일·내 스타일)에 문서 `style:`·장별 CSS (앞의 범위 `DECK_SCOPE` 를 `#impress` 로). 사진이 많으면 커진다 — 예제는 0.3~0.7MB.
+- **결과 파일의 안전**: 받은 사람의 보통 브라우저에서 스크립트가 도는 파일이다. CSP 를 `script-src` 해시 둘(impress.js 본문과 시작 줄)로 한다 — 문서가 원시 HTML 로 무엇을 심어도 돌지 않는다 (시제품에서 `<script>`·`onerror` 가 막힘을 확인). 연결·바깥 글꼴은 막고(`default-src 'none'`, `font-src data:`), 그림은 data: 와 인터넷 그림이 있을 때만 http(s). 그린 화면은 이미 DOMPurify 를 거쳤고 여기서 스크립트·이벤트 속성·`javascript:`·앱 표시(`data-lines`·꼬리표·▶·복사 단추)를 한 번 더 떼며, 프로젝트 안 링크는 갈 곳이 없어 글로 남긴다. `style-src` 의 `'self'` 는 Lectern 이 이 파일을 보일 때 넣는 `frame.css` 몫이다.
+- **impress 의 함정**: extras 플러그인은 `window.markdown`·`hljs`·`mermaid` 가 있으면 부른다 — `## Mermaid` 제목의 id 가 전역으로 잡혀 시작이 깨진다 (PITFALLS 문서 그리기). 시작 줄이 그 셋을 비운다. 기본 해상도가 1920×1080 이라 `data-width`·`data-height` 를 장 크기로 적는다. Home·End 는 기본 키에 없어 Lectern 발표 모드와 같게 시작 줄이 받는다.
+- **발표자 콘솔(P)**: 파일로 열어도(`file://`) 노트·지금 장·다음 장·시계가 된다. 콘솔이 미리보기 iframe 안을 꾸미려다 막혀 오류가 찍히지만 기능에는 지장이 없다 (시제품과 `tools/edges/impress.py` 에서 확인).
+- **Lectern 에서 열면**: html 문서는 스크립트 없이 본다 (D27). 그래서 `impress-not-supported` 의 CSS 로 장을 위에서 아래로 놓고 노트를 보이며, 창 폭에 맞춰 `zoom` 을 단계(5%)로 준다 — 스크립트 없이 폭을 재는 길이 없다.
+- **impress.js 판**: 2.0.0 (2022-07, MIT). npm 의 최신은 1.1.0 이고 2.0.0 은 GitHub 태그에만 있어 `update_vendor.py` 가 `GIT_PACKAGES` 로 받는다 (그 태그의 package.json 도 1.1.0 이라 판은 태그로 적는다). 앱 화면은 impress.js 를 돌리지 않고 결과에 담기만 한다. 파일 안 impress.js 의 머리 주석(MIT 고지)은 그대로 간다.
+- **하지 않은 것**: 순차 등장(substep), 나선·원형 같은 3D 배치 틀, Lectern 안에서 impress 로 발표, html → md 되돌리기, 동영상·소리 담기.
+- **`docs/VISION.md`**: 수렴 구간의 끝 — 리서치 결과를 PowerPoint 없이 브라우저 하나로 전한다 (D96 과 같은 구간).

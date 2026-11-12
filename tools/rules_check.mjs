@@ -67,6 +67,10 @@ const notes = await load('web/js/notesdata.js');
   say('업무 관리 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/impress_cases.js', await load('web/js/impresslayout.js'));
+  say('html 로 전환의 장 자리 표 점검', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/tabledata_cases.js', table);
   say('표 읽기 표 점검', r.fails, r.n);
 }

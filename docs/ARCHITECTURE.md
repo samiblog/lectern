@@ -211,6 +211,9 @@ flowchart LR
 | `GET /pptxstyle/<파일>` | | 스타일의 미리보기 그림 (`이름-1.png`, 토큰 없이 — `<img>`) |
 | `POST /api/pptx-styles/folder` | `{}` | 보관소 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `POST /api/pptx-export` | `{p, path, style}` | 문서 옆에 새 pptx. style 이 빈 글자면 문서가 기억한 것으로. `{path, slides, reused, patched, rebuilt, new, base, style, notes}`. 보기만 하는 프로젝트는 403 |
+| `GET /api/html-export` | `?p=&path=` | html 로 전환 (D129) — 만들 파일 이름 `{out, readonly}` |
+| `POST /api/html-export` | `{p, path, html}` | 화면(impressexport.js)이 지은 impress.js 발표를 Lectern 슬라이드 옆에 새 html 로 (덮어쓰지 않음 — `보고서 2.html`). `{path}`. 슬라이드가 아닌 md·화면이 지은 글이 아닌 것은 400, 보기만 하는 프로젝트·프로그램 폴더는 403, 300MB 넘으면 413 |
+| `POST /api/html-export/open` | `{p, path}` | 이번 실행에 만든 그 html 만 기본 브라우저로 (원칙 5). 다른 파일은 403. `{action}` |
 | `GET /api/config` | | 설정 전체 |
 | `POST /api/position` | `{p, path, scroll, docs?}` | 그 탭에서 보는 문서와 스크롤 위치, 열어 둔 문서 탭들의 문서(`docs` — 탭 차례, 20개까지, 없어진 것·밖·숨김은 빼고 기록, D64·D67) 기록 (`restore_last` 가 꺼져 있으면 무시). `{ok:true}`. 밖·숨김·없음 404, 폴더·잘못된 값·문서 6개 이상 400 |
 | `POST /api/open-config` | | 설정 파일을 편집기로 (없으면 탐색기에서 선택). 파일이 없으면 기본값으로 만든다. `{action, path}` |

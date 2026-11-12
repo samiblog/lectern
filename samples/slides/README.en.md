@@ -47,7 +47,7 @@ Every process document has the same seven steps.
 4. **Fill the cells.** Pick a layout that fits how much you have to say.
 5. **Fix what Check finds.** Paste the **Check** list into the terminal and Claude fixes it.
 6. **Polish by hand.** Fix things in place with F2.
-7. **Present and share.** Present with Shift+F5, then **Convert to pptx** or use **Print / Save as PDF…**.
+7. **Present and share.** Present with Shift+F5, then **Convert to pptx**, **Convert to html** (an impress.js presentation that opens in a browser) or use **Print / Save as PDF…**.
 
 ## 3. Complex layouts
 

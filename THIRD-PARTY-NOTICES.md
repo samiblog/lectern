@@ -58,6 +58,7 @@ Lectern 설치 파일에 들어 있는 오픈소스 소프트웨어와 그 라�
 | Apache ECharts 6.1.0 | Apache-2.0 (NOTICE 포함) — 안에 든 zrender 6.1.0 은 BSD-3-Clause |
 | Viz.js 3.31.0 (@viz-js/viz) | MIT — 안에 든 Graphviz 16.1.0 은 EPL-2.0 (소스: https://gitlab.com/graphviz/graphviz/-/tree/16.1.0), Expat 은 MIT |
 | Plotly.js 4.1.2 (plotly.js-dist-min) | MIT — 안에 든 MapLibre GL 은 BSD-3-Clause, buffer·ieee754·object-assign·polybooljs 등은 MIT (plotly.min.js 끝의 주석) |
+| impress.js 2.0.0 | MIT — 앱 화면은 돌리지 않고, html 로 전환(D129)이 만드는 파일 안에 머리 주석의 고지와 함께 들어간다 |
 | d3 (Vega·Mermaid·ECharts·Plotly 안에 든 모듈·코드) | ISC |
 
 ---
@@ -4907,4 +4908,30 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 THE SOFTWARE.
+```
+
+### impress.js
+
+```
+The MIT License (MIT)
+
+Copyright (c) 2011-2016 Bartek Szopka
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
 ```
