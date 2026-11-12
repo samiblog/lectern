@@ -342,4 +342,5 @@ If the skills are not installed yet, ask the user first. If they agree, copy bot
 - The unit is slide px. A slide is 1280×720 (960×720 for 4:3), and `x`·`y` are its center. Neighbors about 1500 apart do not overlap. A slide with `scale=3` is placed three times larger, so going to it zooms out as if seen from far away.
 - Show the story with places. Keep the slides of one section in a row and start a new row for the next section. Give a summary slide a large `scale` so it covers its section. Use `rotate` once or twice, between sections. Avoid 3D turns (`rotate-x`, `rotate-y`); they are hard to read.
 - The app adds the overview at the end. Do not write it.
+- Do not use `class="step"`, `notes` or `substep` in HTML slides. impress reads them as slides and notes, so they are removed in the file.
 - The status bar check reports places it cannot read. The slide window does not change, so when you are done tell the user to press Convert to html again.

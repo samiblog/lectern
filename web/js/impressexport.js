@@ -8,7 +8,7 @@
 // - Lectern 에서 열면 스크립트가 돌지 않으므로(D27) impress-not-supported 그대로 — 장이 위에서 아래로 놓인 문서로 보인다 (폭에 맞춰 zoom).
 // - 파일의 글은 esc 로 짓는다 — 화면에 넣는 것이 아니라 파일로 쓰는 글이다 (html.js).
 
-import { S, emit } from './store.js';
+import { S, emit, on } from './store.js';
 import { getJSON, getText, postJSON } from './api.js';
 import { $, $$, toast, dirname, basename, blockedReadOnly } from './util.js';
 import { esc, html, setHtml } from './html.js';
@@ -29,8 +29,9 @@ const INIT = [
   '});',
 ].join('\n');
 const DROP = 'script, iframe, object, embed, base, meta, link, form, button, video, audio, .lec-tag, .lec-slide-tags, .lec-slide-play';
-const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-src', 'data-lec-href', 'data-lec-open', 'data-impress', 'contenteditable']);
-const MARKS = ['lec-target', 'lec-changed', 'lec-picked', 'lec-cell-over', 'lec-cell-bad'];
+const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-src', 'data-source', 'data-lec-href', 'data-lec-open', 'data-impress', 'contenteditable']);
+// 앱의 표시, 그리고 impress 가 읽는 이름 — 문서의 HTML 에 class="step"·notes·substep 이 있으면 impress 가 장·노트로 잡는다
+const MARKS = ['lec-target', 'lec-changed', 'lec-picked', 'lec-cell-over', 'lec-cell-bad', 'step', 'notes', 'substep', 'active', 'past', 'present', 'future'];
 
 const box = () => $('#lec-html');
 let asked = null;   // {tab, pane, path, mode, items, hidden, w, h, busy, result}
@@ -210,8 +211,9 @@ body { background: color-mix(in srgb, var(--md-bg, #ffffff) 70%, #000000); }
 #impress .lec-step { width: ${w}px; height: ${h}px; }
 .notes { display: none; }
 .impress-enabled .lec-step { opacity: .3; transition: opacity .8s; }
-.impress-enabled .lec-step.active, .impress-on-overview .lec-step { opacity: 1; }
+.impress-enabled .lec-step.active, .impress-on-lec-overview .lec-step { opacity: 1; }
 .impress-enabled .lec-step:not(.active) { cursor: pointer; }
+#impress .chart-ok, #impress pre.mermaid, #impress img.zoomable { cursor: auto; }
 .impress-progressbar { position: fixed; left: 0; right: 0; bottom: 0; height: 3px; pointer-events: none; }
 .impress-progressbar div { width: 0; height: 100%; background: var(--md-link, #c2410c); transition: width .6s; }
 .impress-not-supported { background: var(--md-bg, #ffffff); }
@@ -258,7 +260,8 @@ async function cleanSlide(section, images, found) {
     el.remove();
   }
   for (const el of [clone, ...$$('*', clone)]) {
-    el.classList.remove(...MARKS);
+    el.classList.remove(...MARKS, ...[...el.classList].filter((c) => c.startsWith('impress-')));
+    if (/^impress/i.test(el.id)) el.removeAttribute('id');
     for (const at of [...el.attributes]) {
       const name = at.name.toLowerCase();
       const js = /^(href|xlink:href|src|action|formaction)$/.test(name) && /^\s*javascript:/i.test(at.value);
@@ -271,9 +274,13 @@ async function cleanSlide(section, images, found) {
     if (/^https?:\/\//i.test(href)) {
       a.setAttribute('target', '_blank');
       a.setAttribute('rel', 'noopener noreferrer');
-    } else if (!/^mailto:/i.test(href)) a.removeAttribute('href');   // 프로젝트 안 문서·절 링크는 이 파일에서 갈 곳이 없다
+    } else if (!/^mailto:/i.test(href)) {   // 프로젝트 안 문서·절 링크는 이 파일에서 갈 곳이 없다 — 글로 (제목의 경로도 떼고)
+      a.removeAttribute('href');
+      a.removeAttribute('title');
+    }
   }
   for (const input of $$('input', clone)) input.setAttribute('disabled', '');
+  for (const el of $$('.chart-ok, pre.mermaid, img.zoomable', clone)) el.removeAttribute('title');   // '누르면 크게 봅니다' — 이 파일에서는 커지지 않는다
   for (const img of $$('img', clone)) {
     img.removeAttribute('srcset');
     img.removeAttribute('loading');
@@ -314,9 +321,9 @@ async function build(pane, path, { mode, overview }) {
     const p = places[i];
     const notes = it.wrap.querySelector('.lec-slide-notes')?.textContent || '';
     const data = Object.entries(p).map(([axis, v]) => `data-${axis}="${v}"`).join(' ');
-    steps.push(`<div id="slide-${it.page}" class="step lec-step" data-deck="${esc(it.wrap.dataset.deck)}" data-slide="${it.page}" ${data}>${clone.outerHTML}${notes.trim() ? `<div class="notes">${notesHtml(notes)}</div>` : ''}</div>`);
+    steps.push(`<div id="lec-slide-${it.page}" class="step lec-step" data-deck="${esc(it.wrap.dataset.deck)}" data-slide="${it.page}" ${data}>${clone.outerHTML}${notes.trim() ? `<div class="notes">${notesHtml(notes)}</div>` : ''}</div>`);
   }
-  if (ov) steps.push(`<div id="overview" class="step lec-overview" data-x="${ov.x}" data-y="${ov.y}" data-scale="${ov.scale}"></div>`);
+  if (ov) steps.push(`<div id="lec-overview" class="step lec-overview" data-x="${ov.x}" data-y="${ov.y}" data-scale="${ov.scale}"></div>`);
   const math = items.some((it) => it.section.querySelector('.katex'));
   const css = await gatherCss(pane, math, w, h);
   // 브라우저는 스크립트 글의 CRLF 를 LF 로 읽는다 — git 이 받으며 CRLF 로 바꾼 사본으로 해시를 만들면 맞지 않는다
@@ -369,7 +376,29 @@ async function build(pane, path, { mode, overview }) {
 
 // ---- 시작 ----------------------------------------------------------------------------------------
 
+/** 창을 연 사이 문서가 다시 그려지면 (Claude 가 자리를 적었거나 장을 더했으면) 지도와 장 수를 새로 */
+function refresh(pane) {
+  if (!asked || box().hidden || asked.busy || pane !== asked.pane || $('#lec-html-form').hidden) return;
+  if (pane.current?.path !== asked.path || !pane.view.classList.contains('lec-deck')) {
+    setMsg(t('그사이 칸의 문서가 바뀌었습니다 — 창을 닫고 다시 여세요'), true);
+    return;
+  }
+  const { items, hidden } = slidesOf(pane);
+  if (!items.length) return;
+  Object.assign(asked, { items, hidden, ...sizeOf(items[0].section) });
+  drawMap();
+  drawInfo();
+}
+
+/** 창이 떠 있는 동안 초점은 창 안에 — 늦게 뜬 터미널(배치 요청 뒤)이 초점을 가져가면 Enter 가 셸로 간다 */
+function keepFocus(e) {
+  if (box().hidden || box().contains(/** @type {Node} */ (e.target))) return;
+  ($('#lec-html-form').hidden ? $('#lec-html-open') : $('#lec-html-go')).focus();
+}
+
 export function initHtmlExport() {
+  on('rendered', refresh);
+  document.addEventListener('focusin', keepFocus);
   $('#lec-st-html').addEventListener('click', open);
   $('#lec-html-go').addEventListener('click', run);
   $('#lec-html-cancel').addEventListener('click', closeHtmlExport);
