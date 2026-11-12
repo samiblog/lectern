@@ -85,6 +85,79 @@ export function setKind(lines, a, b, kind, { bare = (s) => s } = {}) {
   return { lines: next, line, a: line, b: line + body.length - 1 };
 }
 
+/** 줄의 종류: 'h1'~'h6' · 'task' · 'number' · 'bullet' · 'quote' · 'para'. 빈 줄은 '' */
+export function kindOfLine(line) {
+  if (isBlank(line)) return '';
+  const it = itemOf(line);
+  if (it) return it.task ? 'task' : it.ordered ? 'number' : 'bullet';
+  const quote = quoteOf(line);
+  const level = headLevel(line.slice(quote.length));
+  if (level) return `h${level}`;
+  return quote ? 'quote' : 'para';
+}
+
+/**
+ * 고른 줄의 한 글자 키(D128)로 바꿀 종류 — Lectern 모바일과 같다. 'heading'(H)은 첫 글 줄의 수준으로 제목 2 → 3 → 1 → 문단 차례,
+ * 그 밖의 키는 고른 글 줄이 모두 이미 그 종류면 문단으로 (할 일은 목록으로) — 같은 키를 다시 누르면 되돌아간다
+ */
+export function toggledKind(lines, a, b, kind) {
+  const kinds = [];
+  for (let n = a; n <= b; n++) {
+    const k = kindOfLine(lines[n - 1] ?? '');
+    if (k) kinds.push(k);
+  }
+  if (kind === 'heading') return { h2: 'h3', h3: 'h1', h1: 'para' }[kinds[0]] ?? 'h2';
+  if (kinds.length && kinds.every((k) => k === kind)) return kind === 'task' ? 'bullet' : 'para';
+  return kind;
+}
+
+/** '**글**' 한 쌍으로만 감싼 글이면 그 안의 글, 아니면 null. '**가** 나 **다**' 는 통째가 아니다 (Lectern 모바일의 wholeBold) */
+export function wholeBold(text) {
+  const m = /^\*\*([\s\S]+)\*\*$/.exec(text.trim());
+  if (!m) return null;
+  const inner = m[1];
+  return inner.includes('**') || /^\s|\s$/.test(inner) || /^\*+$/.test(inner) ? null : inner;
+}
+
+/** 줄의 표시(인용 >·목록 표시·할 일 칸·제목 #)와 글, 끝(제목의 닫는 #·끝 공백) */
+function markedParts(line) {
+  const it = itemOf(line);
+  const quote = quoteOf(line);
+  const head = it ? line.slice(0, line.length - it.text.length)
+    : quote + (/^ {0,3}#{1,6}(?:[ \t]+|$)/.exec(line.slice(quote.length))?.[0] ?? /^[ \t]*/.exec(line.slice(quote.length))[0]);
+  const rest = line.slice(head.length);
+  const end = (headLevel(line.slice(quote.length)) ? /(?:[ \t]+#+)?[ \t]*$/ : /[ \t]*$/).exec(rest)[0];
+  return { head, text: rest.slice(0, rest.length - end.length), end };
+}
+
+/**
+ * 줄 a~b 의 글을 통째로 굵게 (D128 — 모바일의 B). 글 줄이 모두 이미 통째로 굵으면 푼다. 일부만 굵던 줄은 그 표시를 걷고 통째로 ('****' 로 겹치지 않게).
+ * 표시는 그대로. 코드 블록·표·머리 설정·구분 줄은 바꾸지 않는다. {lines, line, a, b}
+ */
+export function boldLines(lines, a, b) {
+  const fences = fencesOf(lines);
+  const blocks = blocksOf(lines);
+  const parts = [];
+  for (let n = a; n <= b; n++) {
+    const s = lines[n - 1];
+    if (isBlank(s)) continue;
+    const blk = blockAt(blocks, n);
+    if (fenceAt(fences, n) || blk?.kind === 'front' || blk?.kind === 'wall') return { error: 'kind' };
+    if (tableIn(lines, blk)) return { error: 'table-kind' };
+    const p = markedParts(s);
+    if (p.text.trim()) parts.push({ n, ...p });
+  }
+  if (!parts.length) return { error: 'kind' };
+  const undo = parts.every((p) => wholeBold(p.text) != null);
+  const next = lines.slice();
+  for (const p of parts) {
+    const inner = p.text.replace(/\*\*/g, '').trim();
+    if (undo) next[p.n - 1] = `${p.head}${wholeBold(p.text)}${p.end}`;
+    else if (inner) next[p.n - 1] = `${p.head}**${inner}**${p.end}`;
+  }
+  return { lines: next, line: a, a, b };
+}
+
 /** 제목 줄 n 의 절이 끝나는 줄 — 같거나 높은 수준의 다음 제목 앞 (끝의 빈 줄은 뺀다) */
 export function sectionEnd(lines, n) {
   const level = headLevel(lines[n - 1]);
@@ -381,6 +454,18 @@ export function wrapBox(lines, a, b, kind) {
   if (!texts.length) return { error: 'kind' };
   const body = [`> [!${kind}]`, ...texts.flatMap((s, i) => [...(i ? ['>'] : []), `> ${s}`])];
   return { lines: padded(lines.slice(0, a - 1), body, lines.slice(b)), line: a + 1 };
+}
+
+/**
+ * 고른 줄의 C (D128): 강조글(참고)로 감싼다. 이미 강조글 안이면 다음 종류로 — 참고 → 팁 → 중요 → 경고 → 주의 → 참고.
+ * {lines, line, a, b} — a~b 는 그 강조글 (표시 줄부터)
+ */
+export function cycleBox(lines, a, b) {
+  const box = boxAt(lines, a);
+  const r = box ? setBox(lines, a, BOXES[(BOXES.indexOf(box.kind) + 1) % BOXES.length]) : wrapBox(lines, a, b, 'NOTE');
+  if (r.error) return r;
+  const made = boxAt(r.lines, box ? a : r.line);
+  return { ...r, a: made?.a ?? a, b: made?.b ?? b };
 }
 
 // ---- 박스글 (D126) ------------------------------------------------------------------

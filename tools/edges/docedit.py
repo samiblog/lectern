@@ -9,7 +9,7 @@ from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
-from harness import check, fails, report, serve, stop
+from harness import check, fails, report, serve, stop, until
 
 base = Path(tempfile.mkdtemp(prefix='lec-docedit-'))
 proj = base / 'proj'
@@ -224,9 +224,13 @@ try:
         page.keyboard.press('Control+l')
         page.wait_for_timeout(250)
         page.keyboard.press('a')
-        page.keyboard.press('b')
         page.wait_for_timeout(300)
-        check('고른 줄의 a·b 도 아무 일이 없다', cells0() == [] and flow_src() == NEW, cells0())
+        check('고른 줄의 a 도 아무 일이 없다 (새 줄은 Ctrl+Enter — 2026-11-07 뺀 a·b)', cells0() == [] and flow_src() == NEW, cells0())
+        page.keyboard.press('b')   # 고른 줄의 B 는 통째로 굵게 (D128) — 새 줄을 열지 않는다
+        got = until(page, lambda: flow_src() == NEW.replace('\n나\n', '\n**나**\n'))
+        page.keyboard.press('b')
+        got = got and until(page, lambda: flow_src() == NEW)
+        check('고른 줄의 b 는 굵게·다시 누르면 풂, 새 줄은 열지 않는다 (D128)', got and cells0() == [], (flow_src(), cells0()))
         page.keyboard.press('Control+Enter')
         page.wait_for_timeout(450)
         check('고른 줄의 Ctrl+Enter 는 아래에 새 줄', cells0() == [''] and page.locator('.lec-spot:not([hidden])').count() == 0, cells0())

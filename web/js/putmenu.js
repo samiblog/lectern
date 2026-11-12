@@ -65,7 +65,10 @@ const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표
 /** 넣을 수 있는 것 */
 export const putItems = (deck = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS().filter((x) => !deck || !NOT_IN_DECK.has(x.id)), ...(deck ? [SPEAKER()] : [])];
 /** 줄을 바꿀 수 있는 것 */
-export const changeItems = () => [...TEXT_ITEMS(), ...BOX_ITEMS()];
+export const changeItems = (picked = false) => [...TEXT_ITEMS(), ...BOX_ITEMS()].map((x) => (picked && PICK_KEYS[x.id] ? { ...x, hint: PICK_KEYS[x.id] } : x));
+
+/** 고른 줄의 한 글자 키 (D128 — spotlight.kindKey) — '고른 줄 바꾸기' 창에 보인다 */
+const PICK_KEYS = { h1: '1', h2: '2', h3: '3', h4: '4', para: 'P', bullet: 'L', number: 'N', task: 'T', quote: 'Q', 'box:NOTE': 'C' };
 
 function draw() {
   const q = find().value.trim().toLowerCase();

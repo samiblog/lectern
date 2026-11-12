@@ -1,5 +1,5 @@
 // docops.js 의 계산 점검 (rules_check.mjs 가 돌린다 — m: docops.js, 끝에서 {n, fails} 를 돌려준다).
-const { setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, sectionEnd, bareText, headLevel } = m;
+const { setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, sectionEnd, bareText, headLevel, kindOfLine, toggledKind, wholeBold, boldLines, cycleBox } = m;
 let n = 0;
 const fails = [];
 const L = (s) => s.split('\n');
@@ -195,5 +195,35 @@ eq(m.addAttachment(L('# 글\n\n## 붙임\n\n1. [a](a)\n\n[^1]: 주\n'), '[b](b)'
 // 붙여 넣기
 eq(m.pasteAfter(L('가\n나\n'), 1, ['x', '', 'y']).lines, L('가\nx\n\ny\n나\n'), '줄 뒤에 넣는다');
 eq(m.pasteAfter(L('- 가\n'), 1, ['x', '', '- y'], '- ').lines, L('- 가\n- x\n- y\n'), '목록은 항목으로');
+
+// 고른 줄의 한 글자 키 (D128)
+eq(['# 가', '### 가', '- 가', '* 가', '1. 가', '- [ ] 가', '- [x] 가', '> 가', '> - 가', '> ## 가', '가', '', '   '].map(kindOfLine),
+  ['h1', 'h3', 'bullet', 'bullet', 'number', 'task', 'task', 'quote', 'bullet', 'h2', 'para', '', ''], '줄의 종류');
+eq(['## 가', '### 가', '# 가', '가', '#### 가', '- 가'].map((s) => toggledKind([s], 1, 1, 'heading')), ['h3', 'h1', 'para', 'h2', 'h2', 'h2'], 'H: 제목 2 → 3 → 1 → 문단');
+eq(toggledKind(L('- 가\n- 나'), 1, 2, 'bullet'), 'para', '모두 목록이면 L 은 문단으로');
+eq(toggledKind(L('- 가\n나'), 1, 2, 'bullet'), 'bullet', '하나라도 아니면 목록으로');
+eq(toggledKind(L('- [ ] 가'), 1, 1, 'task'), 'bullet', '할 일의 T 는 목록으로');
+eq(toggledKind(L('## 가'), 1, 1, 'h2'), 'para', '같은 수준을 다시 누르면 문단');
+eq(toggledKind(L('## 가'), 1, 1, 'h3'), 'h3', '다른 수준은 그 수준');
+eq(toggledKind(L('가\n\n나'), 1, 3, 'number'), 'number', '빈 줄은 세지 않는다');
+eq(kind('- [ ] 가\n', 1, 1, toggledKind(L('- [ ] 가'), 1, 1, 'task')), L('- 가\n'), '할 일 → 목록');
+eq(wholeBold('**가 나**'), '가 나', '통째로 굵음');
+eq(['**가** 나 **다**', '** 가**', '****', '가'].map(wholeBold), [null, null, null, null], '통째가 아님');
+const bold = (s, a, b) => { const r = boldLines(L(s), a, b); return r.error ? r : r.lines; };
+eq(bold('가\n', 1, 1), L('**가**\n'), 'B: 문단');
+eq(bold('**가**\n', 1, 1), L('가\n'), 'B 다시: 풂');
+eq(bold('- [ ] 할 일  \n', 1, 1), L('- [ ] **할 일**  \n'), '표시와 끝 공백은 밖에');
+eq(bold('## 제목 ##\n', 1, 1), L('## **제목** ##\n'), '제목의 닫는 # 는 밖에');
+eq(bold('> 인용 **일부** 굵음\n', 1, 1), L('> **인용 일부 굵음**\n'), '일부만 굵던 줄은 통째로');
+eq(bold('**가**\n\n나\n', 1, 3), L('**가**\n\n**나**\n'), '하나라도 굵지 않으면 모두 굵게');
+eq(bold('**가**\n\n**나**\n', 1, 3), L('가\n\n나\n'), '모두 굵으면 모두 풂');
+eq(bold('##\n', 1, 1), { error: 'kind' }, '글이 없는 제목');
+eq(bold('```\n코드\n```\n', 2, 2), { error: 'kind' }, '코드는 그대로');
+eq(bold('| 가 | 나 |\n|---|---|\n| 1 | 2 |\n', 3, 3), { error: 'table-kind' }, '표는 그대로');
+const box = (s, a, b) => { const r = cycleBox(L(s), a, b); return r.error ? r : [r.lines, r.a, r.b]; };
+eq(box('가\n\n나\n', 1, 3), [L('> [!NOTE]\n> 가\n>\n> 나\n'), 1, 4], 'C: 강조글(참고)로 — 강조글 전체를 고른 채');
+eq(box('> [!NOTE]\n> 가\n', 1, 2), [L('> [!TIP]\n> 가\n'), 1, 2], 'C 다시: 참고 → 팁');
+eq(box('> [!CAUTION]\n> 가\n', 2, 2), [L('> [!NOTE]\n> 가\n'), 1, 2], '주의 → 참고');
+eq(box('앞\n가\n', 2, 2)[1], 3, '앞 글 뒤에 빈 줄을 두고 감싼다');
 
 return { n, fails };

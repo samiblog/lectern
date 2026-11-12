@@ -328,7 +328,7 @@ export const hereAtNew = () => drawHere();
 function moveHere(step, repeat = false) {
   const us = units();
   if (!us.length && step > 0) {   // 빈 문서
-    emit('line-end');
+    emit('line-end', { arrow: true });
     return true;
   }
   const i = hereIndex(us);
@@ -351,8 +351,24 @@ function moveHere(step, repeat = false) {
   if (step > 0 && !inNotes(i) && inNotes(j)) j = i;   // 본문 마지막 줄 — 각주로 내려가지 않고 새 줄을 연다 (D106)
   if (j === i) vp.sc.scrollTop += step * 40;   // 첫 줄·마지막 줄: 문서의 위·아래 여백까지
   setHere(us[j].a, { scroll: true });
-  if (j === i && step > 0 && !repeat) emit('line-end');
+  if (j === i && step > 0 && !repeat) emit('line-end', { arrow: true });   // 끝을 지나친 ↓ — 그 새 줄의 ↑ 는 읽기로 돌아온다 (lineedit.js, D128)
   return true;
+}
+
+/** 현재 줄을 한 줄 옮긴다 — 한 줄 편집이 끝난 뒤 넘어가는 사이에 누른 ↑·↓ 가 남았을 때 (lineedit.js, D128). 끝에서 새 줄은 열지 않는다 */
+export const stepHere = (dir) => moveHere(dir, true);
+
+/** 고른 줄의 한 글자 키 (D128 — Lectern 모바일과 같게): 자판 자리(e.code)로 읽어 한글 입력 상태에서도 듣는다. 누르고 있는 키는 듣지 않는다 */
+const KIND_CODES = {
+  Digit0: 'para', Numpad0: 'para', KeyP: 'para', KeyH: 'heading', KeyL: 'bullet', Minus: 'bullet', NumpadSubtract: 'bullet',
+  KeyN: 'number', KeyT: 'task', KeyQ: 'quote', KeyC: 'box', KeyB: 'bold',
+};
+
+/** 고른 줄을 바꾸는 한 글자 키면 그 종류 ('h1'~'h6'·'para'·'heading'·'bullet'·'number'·'task'·'quote'·'box'·'bold'), 아니면 null */
+export function kindKey(e) {
+  if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || !isMdDoc()) return null;
+  const level = /^(?:Digit|Numpad)([1-6])$/.exec(e.code)?.[1];
+  return level ? `h${level}` : KIND_CODES[e.code] ?? null;
 }
 
 /** 스크롤해서 현재 위치가 화면 밖으로 나가면 화면 안의 가장 가까운 줄로 (줄 하이라이트 중에는 끝 줄이 현재 위치라 그대로) */
@@ -873,6 +889,7 @@ export function lightBlocks() {
 /** 파일을 바꾸는 키인지 — 현재 줄에서는 듣지 않고 고르는 키를 알린다 (D108·D119) */
 function changeKey(e) {
   const k = e.key;
+  if (kindKey(e)) return S.config?.vi_keys !== true;   // vi 키를 켰으면 h·l 같은 글자는 vi 습관이다 — 알리지 않는다
   if (e.altKey) {
     if (e.ctrlKey) return !isCodeView() && /^Digit[0-6]$/.test(e.code);
     if (e.shiftKey) return !isCodeView() && (k === 'ArrowLeft' || k === 'ArrowRight');
@@ -885,6 +902,7 @@ function changeKey(e) {
 /** 고른 줄이나 현재 줄에 하는 키인지 — 하이라이트 중에는 듣지 않고 알린다. 글을 골랐으면 Ctrl+C·X 는 브라우저의 것이다 */
 function lineKey(e) {
   const k = e.key;
+  if (kindKey(e)) return true;
   if (e.altKey) {
     if (e.ctrlKey) return /^Digit[0-6]$/.test(e.code);
     return e.shiftKey ? k === 'ArrowLeft' || k === 'ArrowRight' : k === 'ArrowUp' || k === 'ArrowDown';
@@ -961,6 +979,10 @@ export function spotKey(e) {
   }
   if (k !== 'ArrowUp' && k !== 'ArrowDown' && k !== 'PageUp' && k !== 'PageDown') return false;
   const step = k === 'ArrowUp' || k === 'PageUp' ? -1 : 1;
+  if (S.pane?.lineEditHold && !k.startsWith('Page')) {   // 한 줄 편집이 다음 줄로 넘어가는 사이 — 그 편집에 잇는다 (lineedit.js, D128)
+    emit('line-step', { dir: step });
+    return true;
+  }
   if (spotlightOn()) return moveSpotlight(step);
   if (k.startsWith('Page') || !linesOn()) return false;   // PageUp·PageDown 은 보통 스크롤 (현재 위치가 따라온다)
   if (ranged()) clearSpot();   // 편집기처럼 풀고 옮긴다

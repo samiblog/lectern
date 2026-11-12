@@ -39,7 +39,7 @@ import {
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
   setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
-  moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+  toggledKind, boldLines, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
@@ -49,6 +49,7 @@ import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks, releasePick,
+  kindKey, stepHere,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
@@ -408,7 +409,7 @@ function plantLine(slot, plan, below) {
  * 줄 base 의 아래(below)·위에 새 줄을 연다 — 글을 쓰고 끝낼 때 파일에 넣는다 (finishNew).
  * end: 문서 끝에 (D106 — 마지막 줄의 ↓, 빈 문서). 구분선·그림처럼 줄의 자리가 없는 곳은 그 블록의 앞뒤에 문단을 연다
  */
-async function beginNew(base, below, { end = false, after = false, around = false } = {}) {
+async function beginNew(base, below, { end = false, after = false, around = false, peek = false } = {}) {
   const pane = S.pane;
   const ready = await settled(pane);
   if (S.pane !== pane || session || !ready) return;
@@ -431,7 +432,7 @@ async function beginNew(base, below, { end = false, after = false, around = fals
   releasePick();
   session = {
     pane, tab: pane.tab, path: pathIn(view), line: base, kind: next.kind === 'code' ? 'code' : 'text', original: '', parts: { head: '', body: '', tail: '' },
-    places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot?.fence || '', fresh: { plan: next, lines: src.slice(), remove: made.remove },
+    places: [{ span: made.span, frag: null, nbsp: false }], el: made.el, cell: 0, fence: slot?.fence || '', fresh: { plan: next, lines: src.slice(), remove: made.remove, peek },
   };
   pane.lineEdit = session;
   bind(made.span);
@@ -474,13 +475,16 @@ function canGrow(pane) {
   return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session && !lightOn();
 }
 
-/** 마지막 줄의 ↓·빈 문서의 F2: 문서 끝에 새 줄을 연다. 각주는 문서 끝에 모인 것이라 그 뒤에는 더하지 않는다 */
-function growEnd() {
+/**
+ * 마지막 줄의 ↓·빈 문서의 F2: 문서 끝에 새 줄을 연다. 각주는 문서 끝에 모인 것이라 그 뒤에는 더하지 않는다.
+ * peek: 읽는 화면에서 끝을 지나친 ↓ 가 연 줄 — 비어 있는 동안의 ↑ 는 편집을 잇지 않고 읽기로 돌아간다 (D128)
+ */
+function growEnd({ peek = false } = {}) {
   const pane = S.pane;
   if (!canGrow(pane)) return;
   const line = pane.here?.line || 0;
   if (pane.unfold || (line && blockOfLine(pane.view, line)?.closest('.footnotes'))) return;   // 주 내용 줄에서는 더하지 않는다 (D106)
-  beginNew(line, true, { end: true, after: pane.view.classList.contains('lec-deck') });   // 슬라이드는 그 칸 안에 (문서 끝은 닫는 ::: 뒤다)
+  beginNew(line, true, { end: true, after: pane.view.classList.contains('lec-deck'), peek });   // 슬라이드는 그 칸 안에 (문서 끝은 닫는 ::: 뒤다)
 }
 
 /** 빈 새 줄의 레벨을 바꾸고 화면의 자리를 맞춘다 (D106 — 계산은 lineops.shiftPlan). 바뀌었으면 true */
@@ -812,7 +816,26 @@ async function step(dir, repeat = false, cell = null) {
   } finally {
     s.pane.lineEditHold = false;
     showLineEdit();
+    drainSteps(s.pane);
   }
+}
+
+/**
+ * 넘어가는 사이(lineEditHold)에 누른 ↑·↓ (D128 — spotlight.js 가 'line-step' 으로 넘긴다). 읽는 화면의 현재 줄로 보내면
+ * 저장 뒤 다음 칸이 옛 차례의 줄에 열려 화살표가 되돌아가고 키가 빠진 것처럼 된다 — 모았다가 칸이 열리면 하나씩 잇는다
+ */
+let queued = [];
+
+/** 모아 둔 ↑·↓ 를 잇는다: 칸이 열려 있으면 그 칸의 ↑·↓ 하나 (그것이 끝나면 다음 것), 편집이 끝났으면 남은 것을 현재 줄로 */
+function drainSteps(pane) {
+  if (!queued.length) return;
+  if (session?.pane === pane && S.pane === pane) {
+    step(queued.shift());
+    return;
+  }
+  const rest = queued;
+  queued = [];
+  if (S.pane === pane && !session) for (const dir of rest) stepHere(dir);
 }
 
 // ---- 줄 구조 (D83 — 계산은 lineops.js) ---------------------------------------------
@@ -852,6 +875,7 @@ async function hold(s, work) {
   } finally {
     s.pane.lineEditHold = false;
     showLineEdit();
+    drainSteps(s.pane);
   }
 }
 
@@ -1980,7 +2004,7 @@ async function putPicked() {
 async function changeLit() {
   const span = litSpan();
   if (!span) return;
-  const chosen = await pick({ items: changeItems(), title: t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
+  const chosen = await pick({ items: changeItems(true), title: t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
   if (!chosen) return;
   const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
   if (!box) {
@@ -2080,13 +2104,13 @@ async function changeBox(line, at) {
   if (chosen) menuOp((src) => setBox(src, line, chosen.id.slice(4)));
 }
 
-/** 고른 줄의 종류를 바꾼다 (D107) */
-async function kindLitNow(kind) {
+/** 고른 줄에 op(줄 배열, a, b → {lines, a, b} | {error})를 하고, 바뀐 줄 a~b 를 고른 채 둔다 — 키를 이어 누르게 (D107·D128) */
+async function opLitNow(op) {
   const pane = S.pane;
   const span = litSpan();
   if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
   const src = sourceLines();
-  const r = setKind(src, span[0], span[1], kind, { bare: bareOf(src) });
+  const r = op(src, span[0], span[1]);
   if (r.error) {
     toast(whyNot(r.error));
     return;
@@ -2094,6 +2118,9 @@ async function kindLitNow(kind) {
   const shift = await commit(pane, pathIn(pane.view), src, r.lines);
   if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
 }
+
+/** 고른 줄의 종류를 바꾼다 (D107). toggle: 한 글자 키 — 이미 그 종류면 문단으로, H 는 제목 차례로 (D128) */
+const kindLitNow = (kind, toggle = false) => opLitNow((src, a, b) => setKind(src, a, b, toggle ? toggledKind(src, a, b, kind) : kind, { bare: bareOf(src) }));
 
 /** 고른 줄의 레벨을 바꾼다: 제목은 하위 절까지, 목록 항목은 위에서부터 차례로 (D107) */
 async function levelLitNow(dir, tab = false) {
@@ -2118,9 +2145,17 @@ async function levelLitNow(dir, tab = false) {
   if (shift != null && S.pane === pane) setLitSpan(span[0] + shift, span[1] + shift);
 }
 
-/** 고른 줄의 키 (main.js — 파일을 바꾸는 키는 칸이나 고른 줄에서만, D108): Ctrl+Alt+숫자, Alt+Shift+←·→, Tab·Shift+Tab. 받았으면 true */
+/**
+ * 고른 줄의 키 (main.js — 파일을 바꾸는 키는 칸이나 고른 줄에서만, D108): 한 글자 키(D128 — 1~6·0·P·H·L·-·N·T·Q·C·B), Ctrl+Alt+숫자,
+ * Alt+Shift+←·→, Tab·Shift+Tab. 받았으면 true
+ */
 export function litKey(e) {
   if (!litSpan() || isCodeView(S.pane.view)) return false;
+  const key = kindKey(e);
+  if (key) {
+    turn = turn.then(() => (key === 'bold' ? opLitNow(boldLines) : key === 'box' ? opLitNow(cycleBox) : kindLitNow(key, true)));
+    return true;
+  }
   const mod = e.ctrlKey || e.metaKey;
   if (mod && e.altKey && !e.shiftKey && /^Digit[0-6]$/.test(e.code)) {
     const kind = e.code === 'Digit0' ? 'para' : `h${e.code.at(-1)}`;
@@ -2227,6 +2262,10 @@ function onKey(e) {
     const dir = k === 'ArrowUp' ? -1 : 1;
     if (!caretOnEdge(span, dir)) return;   // 꺾인 글의 안쪽 줄: 칸 안에서 위·아래로 (기본 동작)
     e.preventDefault();
+    if (dir < 0 && session.fresh?.peek && !read(session.places[0]).trim()) {   // 끝을 지나친 ↓ 가 연 빈 새 줄 — ↑ 는 읽기로 돌아간다 (D128)
+      finish(false);
+      return;
+    }
     step(dir, e.repeat);
   } else if (k === 'Tab' && !mod && !e.altKey) {
     e.preventDefault();
@@ -2418,7 +2457,8 @@ export function initLineEdit() {
     if (below) beginNew(line, true);
     else begin(line, { select });
   });
-  on('line-end', growEnd);   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
+  on('line-end', (d) => growEnd({ peek: !!d?.arrow }));   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
+  on('line-step', ({ dir }) => { if (S.pane?.lineEditHold && queued.length < 30) queued.push(dir); });   // 넘어가는 사이의 ↑·↓ (spotlight.js, D128)
   on('line-add', ({ below }) => addHere(below));   // 칸 없이 새 줄 (spotlight.js, D117)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)
