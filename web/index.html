@@ -13,6 +13,7 @@
 <link id="lec-theme-css" rel="stylesheet" href="/static/themes/default.css">
 <link id="lec-user-css" rel="stylesheet"><!-- 내 스타일 (D53 — theme.js 가 바탕 스타일 위에 얹는다) -->
 <link rel="stylesheet" href="/static/css/app.css">
+<link rel="stylesheet" href="/static/themes/print.css" media="print"><!-- 보고서 인쇄 양식 (D131 — 인쇄·'PDF로 저장' 에서만, 화면 스타일보다 뒤에) -->
 <!-- 시작 스크립트를 받지 못하면 다시 불러온다 (js/bootguard.js, D81) — data-boot 를 단 것이 대상. 없어도 앱이 도는 코드 색칠 언어 묶음은 빼 둔다 -->
 <script src="/static/js/bootguard.js"></script>
 <script data-boot src="/static/vendor/markdown-it/markdown-it.min.js"></script>
@@ -430,6 +431,18 @@
         <button type="button" id="lec-skills-prompt" class="text-btn" title="스킬의 위치를 적은 요청 글 — Claude Code 에 붙여 넣습니다">Claude Code용 요청 복사</button>
         <button type="button" id="lec-skills-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
+    </div>
+    <div class="opt-block" aria-labelledby="lec-wstyle-title">
+      <span class="opt-head"><b id="lec-wstyle-title">글쓰기 스타일</b><small>Claude Code 를 개발자가 아닌 리서치 동료·편집자로 바꾸는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다</small></span>
+      <div class="opt-btns">
+        <button type="button" id="lec-wstyle-prompt" class="text-btn" title="글쓰기 스타일 파일의 위치를 적은 요청 글 — Claude Code 에 붙여 넣습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-wstyle-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
+      </div>
+    </div>
+    <div class="opt-choice" role="radiogroup" aria-labelledby="lec-printfont-title">
+      <span class="opt-head"><b id="lec-printfont-title">인쇄·PDF 글꼴</b><small>문서 우클릭의 'PDF로 저장…'·'인쇄…' 는 화면 스타일과 상관없이 보고서 양식(A4, 쪽 번호)으로 나옵니다. 그 본문 글꼴입니다</small></span>
+      <label><input type="radio" name="print_font" value="serif"><span>명조<small>본문은 함초롬바탕(없으면 바탕), 제목은 고딕 — 한글 문서 같은 보고서</small></span></label>
+      <label><input type="radio" name="print_font" value="sans"><span>고딕<small>본문과 제목 모두 맑은 고딕 — 화면에 가까운 모양</small></span></label>
     </div>
     <div class="opt-block" aria-labelledby="lec-mystyles-title">
       <span class="opt-head"><b id="lec-mystyles-title">내 스타일</b><small id="lec-mystyles-info">CSS 파일 하나가 스타일 하나입니다. 스타일 폴더에 저장하면 툴바 스타일 목록 맨 아래 '내 스타일'에 나오고, 고치면 바로 반영됩니다</small></span>

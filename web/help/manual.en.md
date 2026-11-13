@@ -238,7 +238,13 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 ### Print and PDF
 
-Right-click the margin of a document and choose **Print / Save as PDF**. To save a PDF, choose 'Microsoft Print to PDF' as the printer. Slide decks print one slide per page. A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
+Right-click the margin of a document and choose **Save as PDF…** or **Print…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
+
+- **Save as PDF…**: writes one PDF file where you choose in the save dialog (it opens next to the document, with the document's name). It does not go through the print dialog, so there is no date and address header from the browser, and headings become PDF bookmarks. If the name exists, Windows asks whether to replace it. If a PDF viewer has the file open, close it and save again.
+- **Print…**: opens the print dialog. Turn off **Headers and footers** there to leave out the date and address.
+- HTML documents keep their own style and have only the print dialog (**Print / Save as PDF…**) — choose 'Microsoft Print to PDF' as the printer for a PDF.
+
+Lectern slides print one slide per slide-sized page (see 'Lectern slides'). A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
 
 ## Writing and editing documents
 
@@ -498,7 +504,7 @@ When the templates are not enough, build the cells yourself.
 - The slide window has its own style, **Presentation** by default. This style is how the slides look on screen. It does not change the pptx style.
 - **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** shows speaker notes, **F** full screen, **Esc** ends.
 - **View as document** in the status bar opens the cells and reads on like an ordinary document.
-- Printing or saving as PDF gives one slide per page in the screen's colors. Speaker notes are left out.
+- In the slide window, right-click the margin and choose **Save as PDF…** for a PDF with one slide per slide-sized page in the screen's colors (hidden slides and speaker notes are left out). **Print…** also prints one slide per page.
 
 ### Convert to pptx
 
@@ -791,6 +797,8 @@ Sample — [guide 03, Claude Code](../../samples/guide/03-Claude-Code와-함께.
 4. To ask about a document, right-click it in the tree, choose `Copy @path` and paste it into your prompt. For example: `@docs/report.md summarize the conclusion in three lines`
 5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
+7. When writing for people — reports, review notes — paste **Writing style** → **Copy request for Claude Code** from the settings into Claude Code. Claude Code's default role is a developer, so its writing drifts into short lists. This output style turns Claude into a research partner and editor: it decides the reader and the purpose first, widens the evidence with earlier material outside the folder and the web, writes in paragraphs and rereads as the reader to revise. Claude asks before installing; after installing, restart Claude Code and choose **Research writing** with `/output-style` in a report folder — it then applies to that folder only (code folders stay as they are).
+8. Adding the reader and the purpose to a request changes the writing. For example: "The readers are the KMI researchers and they must accept the downside risk in the long-term outlook. Read this folder and the earlier opinions, look on the web for counter-evidence and footnote the sources. Show me an outline first." When it is done, asking once more "read it from the start as the reader and fix whatever reads mechanically" helps.
 
 ## Settings
 
@@ -808,6 +816,8 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Show web images | Load https images in documents. When off, they show as links |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
+| Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code') |
+| Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print and PDF') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
 | Work alerts | Work alerts inside the window while Lectern is running. On by default |

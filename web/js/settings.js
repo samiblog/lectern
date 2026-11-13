@@ -29,6 +29,7 @@ export function openSettings() {
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   for (const radio of $$('#lec-settings input[name="editor_keys"]')) radio.checked = radio.value === (S.config.editor_keys === 'vim' ? 'vim' : 'default');
+  for (const radio of $$('#lec-settings input[name="print_font"]')) radio.checked = radio.value === (S.config.print_font === 'sans' ? 'sans' : 'serif');
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
   renderMyStyles();
   emit('settings-open');   // 업무 관리 칸 (work.js, D124)
@@ -41,7 +42,7 @@ export function openSettings() {
 
 /** Claude Code 에 줄 요청 글: 작성 안내(web/help/writing.md)를 읽고 그 프로젝트의 CLAUDE.md 에 규칙을 정리하게 */
 function guidePrompt() {
-  return t("이 프로젝트의 문서는 사람이 Lectern(Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경)으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 'CLAUDE.md 에 넣을 요약'을 이 프로젝트에 맞게 다듬어 이 프로젝트의 CLAUDE.md 에 넣어 줘. 앞으로 문서는 그 규칙대로 써.",
+  return t("이 프로젝트의 문서는 사람이 Lectern(Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경)으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 'CLAUDE.md 에 넣을 요약'을 이 프로젝트에 맞게 다듬어 이 프로젝트의 CLAUDE.md 에 넣어 줘. 이 프로젝트의 글을 누가 읽고 무엇에 쓰는지 모르면 나에게 물어서 형식 규칙보다 앞에 적어 줘. 앞으로 문서는 그 규칙대로 써.",
     { guide: S.writingGuide });
 }
 
@@ -51,6 +52,15 @@ function guidePrompt() {
 function skillsPrompt() {
   return t('Lectern 에 Claude Code 스킬 두 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 두 폴더를 ~/.claude/skills/ 로 복사해. 이미 있으면 바꿀지 다시 물어봐.',
     { dir: S.skillsDir });
+}
+
+// ---- 글쓰기 스타일 (D132) -------------------------------------------------------
+
+/** Claude Code 에 줄 요청 글: 글쓰기용 출력 스타일(web/help/research-writing.md). 앱이 설치하지 않는다 — Claude 가 설명하고 물은 뒤
+    사용자가 허락하면 ~/.claude/output-styles 로 복사한다. 고르는 것은 사용자가 보고서 폴더에서 /output-style 로 */
+function writingStylePrompt() {
+  return t('Lectern 에 Claude Code 의 글쓰기용 출력 스타일이 들어 있어: {file}. 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 내 개인 출력 스타일로 설치할지 나에게 물어봐. 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사해 (폴더가 없으면 만들고, 같은 이름이 있으면 바꿀지 다시 물어봐). 설치한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것과, 보고서를 쓰는 폴더에서 /output-style 로 그 스타일을 고르면 그 폴더에서만 쓴다는 것을 알려 줘.',
+    { file: S.writingStyle });
 }
 
 // ---- 내 스타일 (D53) --------------------------------------------------------------
@@ -97,6 +107,11 @@ async function onChange(e) {
   if (e.target.name === 'editor_keys') {   // 전체 편집 방식 (D122 — editor.js 의 vim 키맵, 열린 편집기에도)
     await saveConfig({ editor_keys: e.target.value });
     emit('editor-keys');
+    return;
+  }
+  if (e.target.name === 'print_font') {   // 인쇄·PDF 글꼴 (D131 — printdoc.js, print.css)
+    await saveConfig({ print_font: e.target.value });
+    emit('print-font');
     return;
   }
   if (e.target.name === 'terminal_position') {   // 터미널 자리 (D52 — terminal.js)
@@ -167,6 +182,13 @@ export function initSettings() {
   $('#lec-skills-term').addEventListener('click', () => {
     closeSettings();
     emit('term-paste', skillsPrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-wstyle-prompt').addEventListener('click', async () => {
+    toast(await copyText(writingStylePrompt()) ? t('요청 글을 복사했습니다 — Claude Code 에 붙여 넣으세요') : t('복사하지 못했습니다'));
+  });
+  $('#lec-wstyle-term').addEventListener('click', () => {
+    closeSettings();
+    emit('term-paste', writingStylePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
   });
   $('#lec-aiguide-samples').addEventListener('click', () => {
     closeSettings();

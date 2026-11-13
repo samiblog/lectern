@@ -69,6 +69,8 @@ def test_samples_and_writing_guide():
     assert samples.is_dir() and (samples / 'README.md').is_file() and (samples / 'CLAUDE.md').is_file()
     assert guide.name in ('writing.md', 'writing.en.md') and guide.is_file()
     assert (guide.parent / 'writing.md').is_file() and (guide.parent / 'writing.en.md').is_file()
+    style = Path(info['writing_style'])   # 글쓰기 스타일 (D132 — 설정 창의 요청 글이 이 경로를 준다)
+    assert style.name in ('research-writing.md', 'research-writing.en.md') and style.is_file()
     opened = c.post('/api/open', json={'path': info['samples']}).get_json()
     tree = c.get(f"/api/tree?p={opened['opened']}").get_json()['tree']
     names = {n['name'] for n in tree}

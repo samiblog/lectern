@@ -297,4 +297,6 @@ class AppState:
             'writing_guide': str(web_dir() / 'help' / ('writing.en.md' if i18n.language() == 'en' else 'writing.md')),
             'slides_guide': str(web_dir() / 'help' / ('slides.en.md' if i18n.language() == 'en' else 'slides.md')),
             'skills_dir': str(skills_dir()),
+            # Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창의 요청 글이 이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가)
+            'writing_style': str(web_dir() / 'help' / ('research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md')),
         }

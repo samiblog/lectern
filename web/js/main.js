@@ -31,6 +31,7 @@ import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded, openSamples,
 } from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
+import { initPrint } from './printdoc.js';
 import {
   initHelp, toggleManual, closeManual, manualOpen, toggleShortcuts, closeShortcuts,
 } from './help.js';
@@ -420,6 +421,7 @@ async function boot() {
   initLineNumbers();
   initTableFit();
   initDocMenu();
+  initPrint();   // 인쇄·PDF 양식 (D131)
   initChangeMarks();
   initSearch();
   initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다

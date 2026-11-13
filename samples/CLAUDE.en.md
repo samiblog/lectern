@@ -2,6 +2,12 @@
 
 People read and edit in place this project's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules when writing or editing documents. The full rules are in Lectern's writing guide (`web/help/writing.en.md` — 'Teach Claude Code about Lectern' in Lectern's settings shows the path).
 
+## Writing first
+
+- In this sample, the research notes and the weekly report are read by a buyer at a company that purchases copper, who uses them to decide when and how much to buy next quarter (the sample's assumption). Before writing, decide what that reader must judge.
+- Write in paragraphs rather than bullet lists, conclusion first. Give every number its comparison (against what, by how much), and keep sources (document path or URL) for facts you bring in.
+- When done, reread from the start as the reader and fix paragraphs that only list and repeated sentence endings. The formatting below comes after that.
+
 ## Files
 
 - Write documents in Markdown (`.md`). HTML works when the look matters, as for reports, but **scripts do not run** — make charts with Markdown chart code blocks instead of JavaScript in HTML.

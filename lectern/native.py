@@ -1,4 +1,4 @@
-"""pywebview js_api — 창에서만 가능한 네이티브 기능만 둔다 (폴더 대화상자, 창 제목, 독립창, 발표 모드의 전체 화면).
+"""pywebview js_api — 창에서만 가능한 네이티브 기능만 둔다 (폴더 대화상자, 창 제목, 독립창, 발표 모드의 전체 화면, PDF로 저장).
 
 나머지 기능은 모두 HTTP API(server.py)에 있어서 브라우저 개발 모드에서도 동작한다.
 밑줄(_)로 시작하는 속성은 pywebview가 JS에 노출하지 않는다.
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from .i18n import t
 from .state import AppState
 
 
@@ -40,6 +41,22 @@ class NativeApi:
         if not result:
             return None
         return result[0] if isinstance(result, (list, tuple)) else str(result)
+
+    def save_pdf(self, tab: str, path: str) -> dict[str, str]:
+        """'PDF로 저장…' (D131 — pdfexport.py): 저장 대화상자에서 사용자가 고른 경로에 이 창의 지금 화면(보고서 인쇄 양식)을
+        PDF 하나로 쓴다. 대화상자는 문서 옆, '문서 이름.pdf' 로 연다. 화면에는 {'path'}·{'error'}, 취소면 {}"""
+        import webview
+
+        from . import pdfexport
+
+        if self._window is None:
+            return {}
+        project = self._state.get(tab)
+        folder, name = pdfexport.start_place(project.root if project else None, str(path or ''))
+        dialog = getattr(webview, 'FileDialog', None)
+        kind = dialog.SAVE if dialog else webview.SAVE_DIALOG
+        chosen = self._window.create_file_dialog(kind, directory=folder, save_filename=name, file_types=(t('PDF 파일 (*.pdf)'),))
+        return pdfexport.save(self._window, chosen)
 
     def set_title(self, title: str) -> None:
         if self._window is not None:

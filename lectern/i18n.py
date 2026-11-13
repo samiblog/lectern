@@ -193,4 +193,12 @@ EN: dict[str, str] = {
     '폴더의 전체 경로가 필요합니다': 'The full path of the folder is needed.',
     'Lectern 프로그램 폴더 안은 업무 관리에 쓰지 않습니다 — 예제는 다른 곳에 복사해 쓰세요': 'Folders inside the Lectern program folder are not used for work management — copy the samples elsewhere to try them.',
     '그 폴더에 WORK.md 가 없습니다': 'That folder has no WORK.md.',
+    'PDF 파일 (*.pdf)': 'PDF files (*.pdf)',
+    'Lectern 프로그램 폴더 안에는 저장하지 않습니다 — 다른 폴더를 고르세요': 'Lectern does not save inside its program folder — pick another folder.',
+    '같은 이름의 폴더가 있습니다 — 다른 이름을 고르세요': 'A folder with that name exists — pick another name.',
+    '저장할 폴더가 없습니다: {path}': 'The folder to save in does not exist: {path}',
+    '{name} 을 쓰지 못했습니다 — PDF 보기 프로그램이 그 파일을 열고 있으면 닫고 다시 저장하세요': 'Could not write {name} — if a PDF viewer has the file open, close it and save again.',
+    '{name} 을 쓰지 못했습니다: {error}': 'Could not write {name}: {error}',
+    'PDF 를 만드는 데 {n}초가 넘게 걸려 멈췄습니다': 'Stopped making the PDF after more than {n} seconds.',
+    'PDF 를 만들지 못했습니다: {error}': 'Could not make the PDF: {error}',
 }

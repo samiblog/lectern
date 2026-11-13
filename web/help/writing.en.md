@@ -2,7 +2,9 @@
 
 This guide is for AI such as Claude Code. People read and edit in place the project folder's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules and tables, contents, diagrams and charts show correctly, and the locations people pick in Lectern (`@path lines 12-20`) can be handed back to the AI.
 
-If the task is "put these rules into this project's CLAUDE.md", trim the **Summary for CLAUDE.md** at the end to fit that project. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
+**Formatting makes writing visible; the quality of the writing comes first.** The rules below only make documents show correctly in Lectern — they do not make good writing. Before writing, decide who reads it and what they must judge after reading. Do not stop at the folder: look for background and counter-evidence in earlier material and on the web, and keep the sources. Write in paragraphs rather than bullet lists, and when done, reread from the start as the reader and revise. For people who write reports often, the 'Writing style' in Lectern's settings (a Claude Code output style) keeps this on for the whole session.
+
+If the task is "put these rules into this project's CLAUDE.md", trim the **Summary for CLAUDE.md** at the end to fit that project, and write down this guide's full path with it so it is read again when writing tables, charts or slides. Keep the project's CLAUDE.md from becoming a formatting rulebook: put that project's readers, purpose and tone before the formatting rules. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
 
 ## 1. What Lectern shows
 
@@ -259,17 +261,12 @@ This task in one line.
 
 ```markdown
 ## Documents (read with Lectern)
-- Write Markdown. HTML reports run no scripts, so make charts with chart code blocks in md.
-- One `# Title` first, then a one- or two-sentence summary paragraph. Number ordered documents `01-`.
-- Don't skip heading levels (## → ###). Only numbers in table cells, units in the header.
-- Callouts: `> [!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, `[!CAUTION]`.
-- Boxes (text read apart from the main text) go between a `<!-- box -->` line and a `<!-- /box -->` line, with `**Box 1. Title**` as the first line. No headings (`#`) inside.
-- When the person says 'summarize the conversation into a box right after `@path line 12`' (Lectern's 'Ask Claude for a box'): insert exactly one box after that line, with a blank line before and after. Do not transcribe the conversation — keep the conclusions, reasons and open questions; use the number in the request and change no other line.
-- Code locations as `src/x.py:14`; links and images relative to the document.
-- Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer to them with `[Table 1](#table-1)`. A `[TOC]` line for contents; `<div style="page-break-after: always;"></div>` for a page break.
-- Diagrams in ```mermaid; charts in ```vega-lite, ```echarts, ```plotly, ```dot — JSON values only (no functions), data in the document or a project CSV by relative path, no internet addresses.
-- Lectern slides (read `slides.en.md` first) — `marp: true` in the front matter, `---` between slides, one heading and five or six short bullets per slide (longer is cut off), speaker notes in `<!-- … -->`.
-- `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file.
-- Moving between pptx and slides uses the skills `pptx-to-lectern` and `lectern-to-pptx`. If they are missing, ask before installing, as in `slides.en.md` section 11.
-- `WORK.md` at the top of a folder is the work card — front matter `status`, `priority`, `due` only; to-dos `- [ ] what (YYYY-MM-DD)`; events `- YYYY-MM-DD HH:MM what` (absolute dates); log under `### date`, newest first.
+- Writing before formatting: decide the reader and the purpose first, write in paragraphs, and reread as the reader when done. Keep sources for facts you bring in.
+- Detailed formatting is in the Lectern writing guide `<full path of this guide>` — read the section when writing tables, charts, boxes, slides or work cards.
+- Write Markdown. One `# Title` first, then a one- or two-sentence summary paragraph. Don't skip heading levels (## → ###).
+- Only numbers in table cells, units in the header. Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer with `[Table 1](#table-1)`.
+- Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
+- Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses); diagrams in ```mermaid. HTML reports run no scripts.
+- `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.
+- Slides are Lectern slides (read `slides.en.md` first); pptx goes through the skills `pptx-to-lectern` and `lectern-to-pptx`. `WORK.md` at the top of a folder is the work card.
 ```

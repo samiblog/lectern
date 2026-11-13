@@ -81,6 +81,7 @@ function syncTabs(info) {
   S.writingGuide = info.writing_guide || '';
   S.slidesGuide = info.slides_guide || '';
   S.skillsDir = info.skills_dir || '';
+  S.writingStyle = info.writing_style || '';
   if (info.sep) S.sep = info.sep;
   for (const n of solo ? [] : info.notices || []) {   // 알림은 메인 창이 보인다
     if (n.id <= noticeSeen) continue;

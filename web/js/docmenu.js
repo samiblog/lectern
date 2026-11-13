@@ -23,6 +23,7 @@ import { openChart, domTable } from './quickchart.js';
 import { html } from './html.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
+import { printDoc, savePdf, canSavePdf } from './printdoc.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
@@ -402,23 +403,29 @@ function selectionRange(sel) {
   return spans.length ? [Math.min(...spans.map((s) => s[0])), Math.max(...spans.map((s) => s[1]))] : null;
 }
 
-/** 인쇄 대화상자. html 문서는 그 문서 자체(자기 스타일)를 인쇄한다 — iframe 에 allow-modals 가 있어야 한다 */
-function printDoc() {
-  const frame = $('#lec-view > iframe.lec-html:not(.lec-loading)');
-  (frame ? frame.contentWindow : window).print();
-}
-
 /** md 문서 스타일을 쓸 수 있는 화면인지 (D103) — mdstyle.js 를 import 하면 순환이 생긴다 */
 function canStyle() {
   const view = S.pane?.view;
-  return !!view?.dataset.docPath && isMd(view.dataset.docPath) && !view.classList.contains('lec-marp') && linesEditable();
+  // html 문서를 보여도 dataset.docPath 에는 앞의 md 문서가 남아 있다 — 메뉴의 문서와 같을 때만
+  return !!view?.dataset.docPath && view.dataset.docPath === doc?.path && isMd(view.dataset.docPath) && !view.classList.contains('lec-marp') && linesEditable();
 }
 
 function docItems(views = []) {
   /** @type {MenuItem[]} */
   const folds = hasFolds() ? [{ label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) }] : [];
   return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [...(canStyle() ? [{ label: t('md 문서 스타일…'), tip: t('문서 방식과 머리글 모양을 고릅니다'), action: () => emit('md-style') }] : []), { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }], [...folds, ...views],
-    [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }]);
+    printItems());
+}
+
+/** 'PDF로 저장…'(창 모드의 md 문서 — 보고서 양식, 브라우저 머리글 없이)과 '인쇄…'. 그 밖(html 문서·브라우저 개발 모드)은 인쇄 창 하나 (D131) */
+function printItems() {
+  if (!canSavePdf(doc?.path)) return [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }];
+  if (S.pane.view.classList.contains('lec-deck')) {   // Lectern 슬라이드: 한 장이 한 쪽 (base.css 의 @page lec-slide)
+    return [{ label: t('PDF로 저장…'), tip: t('슬라이드 한 장이 한 쪽인 PDF — 브라우저가 붙이는 날짜·주소는 없습니다'), action: savePdf },
+      { label: t('인쇄…'), tip: t('슬라이드 한 장을 한 쪽으로 인쇄합니다'), action: printDoc }];
+  }
+  return [{ label: t('PDF로 저장…'), tip: t('보고서 양식의 A4 PDF — 쪽 번호와 문서 제목을 넣고, 브라우저가 붙이는 날짜·주소는 없습니다'), action: savePdf },
+    { label: t('인쇄…'), tip: t("보고서 양식으로 인쇄합니다. 인쇄 창의 '머리글 및 바닥글'을 끄면 날짜·주소가 붙지 않습니다"), action: printDoc }];
 }
 
 /** 코드 화면의 줄 번호 (요소·글 위치가 든 줄) */

@@ -148,6 +148,7 @@ declare global {
     writingGuide: string;
   slidesGuide: string;
   skillsDir: string;
+  writingStyle: string;
 
     root: string | null;
     name: string;
