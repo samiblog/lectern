@@ -60,7 +60,9 @@
 | rename.js | 이름 바꾸기 (D66) — 사이드바 파일의 우클릭 '이름 바꾸기…'·F2 (`rename` 이벤트), 이름을 묻는 창(`#lec-rename`), `POST /api/rename`, 바뀐 뒤 보던 문서 탭·뒤로 기록(`nav.renamePath`)·담은 조각을 새 이름으로 |
 | newdoc.js | 새 문서 (D65·D105) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`과 스타일의 보기 머리글), 새 문서 탭의 md 문서 화면에서 바로 쓰기(`openCreated`) |
 | docops.js | 문서 구성 요소의 계산 (D107, DOM 없음) — 줄 종류(`setKind`), 제목 수준(`shiftHeadings`), 절 옮기기·지우기(`moveSection`·`deleteSection`) |
-| chartops.js | 차트의 계산 (D115, DOM 없음) — 값 표로 읽고 쓰기(`readValues`·`writeValues`), 종류 바꾸기(`setChartKind`), 표에서 차트(`chartFromTable`) |
+| chartops.js | 차트의 계산 (D115, DOM 없음) — 값 표로 읽고 쓰기(`readValues`·`writeValues`), 종류 바꾸기(`setChartKind`), 표에서 차트(`chartFromTable`). 차트의 데이터 (D136): 설정에서 표로(`chartData` — Vega-Lite·Vega·ECharts·Plotly), 긴 표 줄이기(`thinRows`), CSV 를 문서 안의 값으로(`csvRecords`·`inlineUrlData`). 표 점검은 tools/edges/chartops_cases.js |
+| chartdata.js | 차트의 [표]·[복사] (D136) — 그린 차트에 단추(`addChartTools` — charts.js 가 그릴 때마다), 차트 아래 데이터 표(`.lec-chart-data`, 30행 넘으면 줄여서·모두 보기), 데이터 복사, CSV 차트의 '데이터를 문서 안으로 넣기'(CSV 를 읽어 `chart-inline` → lineedit.js 가 저장) |
+| tablecopy.js | 표 복사 (D136) — 표 상자의 [복사] 단추(`addTableCopy` — doc.js), 탭으로 나눈 글과 HTML 표를 함께 클립보드에(`copyParts`·`tableData`·`copyTable` — docmenu.js 의 '표 복사'도) |
 | putmenu.js | 넣기 창 (D109) — 구성 요소·파일을 고르거나 글을 묻는 작은 창 (`pick`·`askText`). 고르는 일만 하고 넣는 것은 lineedit.js |
 | refs.js | 참조와 캡션의 계산 (D121, DOM 없음) — 캡션 번호 다시 매기기(`renumberCaptions` — lineedit 의 `withNumbers` 가 저장할 때, 참조 링크도), 상호 참조(`refTargets`·`refLink`), 문서 안 목차 줄(`tocKind` — markdown.js 가 빈 `nav.lec-doctoc` 로, doc.js 가 채움), 쪽 나눔 줄(`PAGE_BREAK`), 본문 인용(`referencesIn`·`citeOf`·`citedCount`). 표 점검은 tools/edges/refs_cases.js |
 | vikeys.js | vi 키 (D122, 설정 `vi_keys` — 기본 꺼짐) — 글자 키를 같은 일의 기존 키로 바꿔 보내는 번역표(`viKey` — main.js 의 keydown, 현재 줄 = Normal·고른 줄 = Visual), 앞 글자·숫자 기다리기와 상태줄 `#lec-st-vi`, 담아 둔 줄(p·P → lineedit `putLinesHere`). 전체 편집의 vim 키맵은 editor.js |

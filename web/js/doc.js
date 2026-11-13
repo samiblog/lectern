@@ -22,6 +22,7 @@ import {
 } from './util.js';
 import { t } from './i18n.js';
 import { captionAt, captionId } from './refs.js';
+import { addTableCopy } from './tablecopy.js';
 
 const PURIFY = {
   SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
@@ -374,7 +375,9 @@ function markNumericColumns(table) {
   }
 }
 
-function decorateTables(root) {
+/** 표를 상자로 감싼다. copy: 상자 오른쪽 위에 [복사] (D136 — 보는 문서만, Lectern 슬라이드는 빼고) */
+function decorateTables(root, copy = false) {
+  const deck = root.classList?.contains('lec-deck');
   for (const table of $$('table', root)) {
     if (table.closest('.front-matter')) continue;
     const wrap = document.createElement('div');
@@ -382,6 +385,7 @@ function decorateTables(root) {
     table.replaceWith(wrap);
     wrap.append(table);
     markNumericColumns(table);
+    if (copy && !deck) addTableCopy(wrap);
   }
 }
 
@@ -507,7 +511,7 @@ function enhance(root, docPath, stamp, tab) {
   for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, stamp, tab);
   for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath, tab);   // 이미지 맵의 area 도 링크
   decorateAlerts(root);
-  decorateTables(root);
+  decorateTables(root, true);
   decorateCode(root);
   decorateSources(root);
   decorateTextboxes(root);

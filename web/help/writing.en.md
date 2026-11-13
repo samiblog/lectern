@@ -141,7 +141,8 @@ The code block language decides. All become static pictures (SVG) whose colors f
 Rules:
 
 - **Settings are JSON values only.** Functions (`formatter: function…`, `=>`) are not run, so they are errors. Use string templates such as `'{b}\n{d}%'` for ECharts `formatter`. `option = { … }`, unquoted keys, single quotes, comments and trailing commas (as in ECharts examples) are read.
-- **Nothing goes to the internet.** Put data in the document or point to a file in the project with a path relative to the document (Vega-Lite `"data": {"url": "../data/x.csv"}`). Do not use data at internet addresses, internet images inside charts, or Plotly map types (scattergeo, choropleth, mapbox). Links inside charts are removed.
+- **Data goes inside the chart.** Write the data in the chart as `"data": {"values": [...]}` by default — the document alone then draws the chart on other PCs, and people see the values as a table and copy them to Excel with the chart's [Table] button. Point to a CSV in the project (`"data": {"url": "../data/x.csv"}`, relative to the document) only for working data with hundreds of rows or more, or data another program updates — a CSV may not travel with the document.
+- **Nothing goes to the internet.** Do not use data at internet addresses, internet images inside charts, or Plotly map types (scattergeo, choropleth, mapbox). Links inside charts are removed.
 - **Size.** To fit the document width, give Vega-Lite `"width": "container"` and a `"height"`, ECharts only `"height"` (a key only Lectern reads, default 360), and Plotly only `layout.height` (default 400). A numeric width draws at that size.
 - **Colors.** Without colors, the style's colors are used (readable in light and dark styles). Colors you set are kept. Plotly follows `layout.template` when there is one.
 - **Titles.** Vega-Lite and ECharts `title`, Plotly `layout.title` and the Graphviz graph name (`digraph name {`) label the chart in the contents and Elements tab.
@@ -154,7 +155,11 @@ Rules:
   "title": "Monthly average price (USD/t)",
   "width": "container",
   "height": 220,
-  "data": { "url": "../data/월별-가격.csv" },
+  "data": { "values": [
+    { "월": "2026-01", "가격": 9120 },
+    { "월": "2026-02", "가격": 9340 },
+    { "월": "2026-03", "가격": 9285 }
+  ] },
   "mark": { "type": "line", "point": true },
   "encoding": {
     "x": { "field": "월", "type": "temporal", "title": null },
@@ -266,7 +271,7 @@ This task in one line.
 - Write Markdown. One `# Title` first, then a one- or two-sentence summary paragraph. Don't skip heading levels (## → ###).
 - Only numbers in table cells, units in the header. Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer with `[Table 1](#table-1)`.
 - Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
-- Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses); diagrams in ```mermaid. HTML reports run no scripts.
+- Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. HTML reports run no scripts.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.
 - Slides are Lectern slides (read `slides.en.md` first); pptx goes through the skills `pptx-to-lectern` and `lectern-to-pptx`. `WORK.md` at the top of a folder is the work card.
 ```

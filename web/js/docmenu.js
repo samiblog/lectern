@@ -20,10 +20,10 @@ import { openExternal } from './api.js';
 import { isCode, isViewable } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
-import { html } from './html.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
 import { printDoc, openPrint, canSavePdf } from './printdoc.js';
+import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
@@ -101,40 +101,6 @@ function describe(text) {
 
 async function copyPlain(text, what = describe(text)) {
   toast(await copyText(text) ? t('복사했습니다: {what}', { what }) : t('복사하지 못했습니다'));
-}
-
-/** 여러 형식을 함께 클립보드에 넣는다. parts: {'text/plain', 'text/html', 'image/png'} */
-async function copyParts(parts, what) {
-  let ok = false;
-  try {
-    const data = {};
-    for (const [type, value] of Object.entries(parts)) data[type] = typeof value === 'string' ? new Blob([value], { type }) : value;
-    await navigator.clipboard.write([new ClipboardItem(data)]);
-    ok = true;
-  } catch {
-    if (typeof parts['text/plain'] === 'string') ok = await copyText(parts['text/plain']);
-  }
-  toast(ok ? t('복사했습니다: {what}', { what }) : t('복사하지 못했습니다'));
-}
-
-/** 표 → 탭으로 나눈 글(엑셀이 칸으로 나눔)과 간단한 HTML 표(워드·메일이 표로 붙임) */
-function tableData(table) {
-  const rows = [...table.rows].map((r) => [...r.cells].map((c) => {
-    const align = c.ownerDocument.defaultView.getComputedStyle(c).textAlign;
-    return { text: c.innerText.replace(/\s+/g, ' ').trim(), head: c.tagName === 'TH', align: /right|center/.test(align) ? align : '' };
-  }));
-  const tsv = rows.map((r) => r.map((c) => c.text).join('\t')).join('\n');
-  const markup = html`<table border="1" cellspacing="0" cellpadding="4" style="border-collapse:collapse">${rows.map((r) => html`<tr>${r.map((c) => {
-    const style = c.align ? html` style="text-align:${c.align}"` : '';
-    return c.head ? html`<th${style}>${c.text}</th>` : html`<td${style}>${c.text}</td>`;
-  })}</tr>`)}</table>`;
-  return { tsv, html: markup.text };   // 클립보드에는 글로
-}
-
-function tableSize(table) {
-  const rows = table.tBodies[0]?.rows.length ?? table.rows.length;
-  const cols = Math.max(0, ...[...table.rows].map((r) => r.cells.length));
-  return t('{rows}행 {cols}열', { rows, cols });
 }
 
 /** 그림을 PNG로. 같은 출처(/doc/*, data:)만 된다 — 인터넷 그림은 브라우저가 픽셀을 읽지 못하게 막는다 */
@@ -341,7 +307,7 @@ function uniqueItems(el, target) {
   } else if (tag === 'TABLE') {
     items.push({
       label: t('표 복사'), tip: t('엑셀에 붙이면 칸이 나뉘고, 워드·메일에는 표로'),
-      action: () => { const data = tableData(el); copyParts({ 'text/plain': data.tsv, 'text/html': data.html }, `${t('표')} ${tableSize(el)}`); },
+      action: () => copyTable(el),
     }, { label: t('차트로 보기'), tip: t('시간·단위를 어림해 선·막대로'), action: () => chartTable(el) });
   } else if (el.matches('.code-block')) {
     const code = el.querySelector('pre').textContent.replace(/\n$/, '');

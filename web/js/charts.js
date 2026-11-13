@@ -17,6 +17,7 @@ import { mermaidTheme } from './theme.js';
 import { openLightbox } from './ui.js';
 import { SLIDE_ZOOM } from './slides.js';
 import { t } from './i18n.js';
+import { addChartTools } from './chartdata.js';
 
 const LIB = '/static/vendor';
 const FONT = '"Segoe UI", "Malgun Gothic", "Noto Sans KR", sans-serif';   // mermaid.js 와 같은 글꼴
@@ -532,11 +533,15 @@ async function draw(node, ctx) {
     el.style.height = 'auto';
   }
   node.replaceChildren(el);
+  addChartTools(node, ctx, parseSpec);   // [표]·[복사] (D136) — 칸의 안을 바꿔 끼웠으니 다시
   if (kind === 'dot') paintGraph(el, colors());   // 글자 폭을 재지 않으므로 붙인 뒤 어디서든
   if (!drawn.has(node)) {
     node.classList.add('chart-ok');
     node.title = t('누르면 크게 봅니다');
-    node.addEventListener('click', () => openLightbox(node.querySelector('svg').cloneNode(true)));
+    node.addEventListener('click', (e) => {
+      if (e.target.closest?.('.lec-chart-tools, .lec-chart-data')) return;
+      openLightbox(node.querySelector(':scope > svg').cloneNode(true));
+    });
     if (out.fluid) watchWidth(node);
   }
   info.width = width;

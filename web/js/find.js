@@ -40,7 +40,7 @@ const BLOCKS = 'p, li, td, th, dt, dd, h1, h2, h3, h4, h5, h6, pre, blockquote, 
 /** root 의 보이는 글자를 한 줄로: text 는 소문자·공백 정리(글자 수는 그대로), parts 는 [시작 위치, 텍스트 노드] */
 function flatten(root) {
   const walker = root.ownerDocument.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-    acceptNode: (n) => (n.parentElement?.closest('.code-tools, svg, .katex-mathml, script, style')
+    acceptNode: (n) => (n.parentElement?.closest('.code-tools, .table-copy, .lec-chart-tools, .lec-chart-data, svg, .katex-mathml, script, style')
       ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT),
   });
   let text = '';

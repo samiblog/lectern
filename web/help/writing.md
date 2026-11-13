@@ -141,7 +141,8 @@ Lectern 은 강조글에 제목 줄('참고'·'팁' 같은 종류 이름)을 붙
 규칙:
 
 - **설정은 JSON 값만.** 함수(`formatter: function…`, `=>`)는 돌리지 않으므로 오류가 된다. ECharts 의 `formatter` 는 `'{b}\n{d}%'` 같은 문자열 틀을 쓴다. ECharts 예제처럼 `option = { … }`, 따옴표 없는 키, 작은따옴표, 주석, 끝 쉼표는 읽는다.
-- **인터넷에 닿지 않는다.** 데이터는 문서 안에 적거나, 프로젝트 안의 파일을 문서 기준 상대경로로 가리킨다 (Vega-Lite `"data": {"url": "../data/x.csv"}`). 인터넷 주소의 데이터, 차트 속 인터넷 그림, Plotly 의 지도 종류(scattergeo·choropleth·mapbox)는 쓰지 않는다. 차트 속 링크는 풀린다.
+- **데이터는 차트 안에.** 데이터는 `"data": {"values": [...]}` 로 차트 안에 적는 것이 기본이다 — 문서만 보내도 다른 PC 에서 차트가 그려지고, 사람은 차트의 [표] 단추로 그 값을 표로 보고 엑셀로 복사한다. 프로젝트의 CSV 를 가리키는 것(`"data": {"url": "../data/x.csv"}`, 문서 기준 상대경로)은 행이 수백 개를 넘거나 다른 프로그램이 갱신하는 작업용 자료일 때만 쓴다 — CSV 는 문서와 함께 가지 않을 수 있다.
+- **인터넷에 닿지 않는다.** 인터넷 주소의 데이터, 차트 속 인터넷 그림, Plotly 의 지도 종류(scattergeo·choropleth·mapbox)는 쓰지 않는다. 차트 속 링크는 풀린다.
 - **크기.** 문서 폭에 맞추려면 Vega-Lite 는 `"width": "container"` 와 `"height"`, ECharts 는 `"height"`(Lectern 만 읽는 키, 기본 360)만, Plotly 는 `layout.height`(기본 400)만 적는다. 폭을 숫자로 적으면 그 크기로 그린다.
 - **색.** 정하지 않으면 스타일 색이 쓰인다 (밝은·어두운 스타일 모두 읽히게). 색을 정하면 그대로 쓰인다. Plotly 는 `layout.template` 이 있으면 그것을 따른다.
 - **제목.** Vega-Lite·ECharts 는 `title`, Plotly 는 `layout.title`, Graphviz 는 그래프 이름(`digraph 이름 {`)이 목차·모아 보기의 이름표가 된다.
@@ -154,7 +155,11 @@ Lectern 은 강조글에 제목 줄('참고'·'팁' 같은 종류 이름)을 붙
   "title": "월평균 가격 (USD/t)",
   "width": "container",
   "height": 220,
-  "data": { "url": "../data/월별-가격.csv" },
+  "data": { "values": [
+    { "월": "2026-01", "가격": 9120 },
+    { "월": "2026-02", "가격": 9340 },
+    { "월": "2026-03", "가격": 9285 }
+  ] },
   "mark": { "type": "line", "point": true },
   "encoding": {
     "x": { "field": "월", "type": "temporal", "title": null },
@@ -266,7 +271,7 @@ due: 2026-12-15
 - 문서는 Markdown. 첫 줄은 `# 제목` 하나, 첫 문단은 한두 문장 요약. 제목 단계(## → ###)를 건너뛰지 않는다.
 - 표의 칸에는 숫자만, 단위는 머리행에. 캡션은 `표 1. 제목`(표 위)·`그림 1. 제목`(그림 아래), 가리킬 때는 `[표 1](#표-1)`.
 - 강조글은 `> [!NOTE]` 등, 박스글은 `<!-- box -->`~`<!-- /box -->` 사이(첫 줄 `**박스 1. 제목**`).
-- 차트는 ```vega-lite·```echarts·```plotly·```dot (JSON 값만, 인터넷 주소 안 됨), 다이어그램은 ```mermaid. HTML 보고서는 스크립트가 돌지 않는다.
+- 차트는 ```vega-lite·```echarts·```plotly·```dot (JSON 값만, 인터넷 주소 안 됨, 데이터는 차트 안의 values 로 — CSV 는 큰 작업용 자료만), 다이어그램은 ```mermaid. HTML 보고서는 스크립트가 돌지 않는다.
 - 사람이 건네는 `@경로 12~17행` 은 그 파일의 그 줄들이다. 그 줄 뒤에 박스글로 정리하라고 하면 그 자리에 박스글 하나만 넣는다.
 - 발표 자료는 Lectern 슬라이드(쓰기 전에 `slides.md`), pptx 는 스킬 `pptx-to-lectern`·`lectern-to-pptx`. 폴더 맨 위의 `WORK.md` 는 업무 카드다.
 ```

@@ -44,7 +44,7 @@ import {
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
-import { writeValues, setChartKind, chartFromTable } from './chartops.js';
+import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './chartops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
@@ -2055,7 +2055,7 @@ export function lineMenuItems(target) {
         return span ? { ...deleteLines(x, span[0], span[1]), ask: t('박스글을 지울까요? 안의 글도 지워집니다.') } : { error: 'not-textbox' };
       }) });
   }
-  const cell = target.closest?.('td, th');
+  const cell = chart ? null : target.closest?.('td, th');   // 차트 아래 데이터 표(D136)의 칸은 문서의 표가 아니다
   if (cell) {
     const col = cell.cellIndex;
     const run = (op) => () => menuOp(op);
@@ -2446,6 +2446,19 @@ export function initLineEdit() {
   on('rendered', loadSamples);
   on('chart-values', ({ pane, fields, rows }) => fenceOp(pane, (text) => writeValues(text, fields, rows)));
   on('chart-kind', ({ pane, kind }) => fenceOp(pane, (text) => setChartKind(text, kind)));
+  on('chart-inline', ({ pane, a, b, data }) => {   // 차트의 CSV 를 문서 안의 값으로 (chartdata.js, D136)
+    turn = turn.then(async () => {
+      if (S.pane !== pane || !await settled(pane) || S.pane !== pane || blockedReadOnly(pane.tab) || !linesEditable()) return;
+      const src = sourceLines();
+      const next = /^\s*(`{3,}|~{3,})/.test(src[a - 1] || '') ? inlineUrlData(src.slice(a - 1, b).join('\n'), data) : null;
+      if (next == null) {
+        toast(t('이 차트의 데이터를 문서 안으로 넣지 못했습니다 — 원문에서 data 의 url 을 values 로 고치세요'));
+        return;
+      }
+      const shift = await commit(pane, pathIn(pane.view), src, [...src.slice(0, a - 1), ...next.split('\n'), ...src.slice(b)]);
+      if (shift != null) toast(t('데이터를 문서 안으로 넣었습니다 — 이제 CSV 파일 없이도 그려집니다'));
+    });
+  });
   on('pane', showSource);
   $('#lec-st-source').addEventListener('click', () => {
     const { view } = S.pane;

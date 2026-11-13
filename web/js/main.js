@@ -12,6 +12,8 @@ import { initViKeys, viKey } from './vikeys.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
 import { initQuickChart, closeChart } from './quickchart.js';
+import { initTableCopy } from './tablecopy.js';
+import { initChartData } from './chartdata.js';
 import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
@@ -458,6 +460,8 @@ async function boot() {
   initPresent();
   initGather();
   initQuickChart();
+  initTableCopy();   // 표의 [복사] (D136)
+  initChartData();   // 차트의 [표]·[복사] (D136)
   initSpread();
   initWork();
   initWorkAlert();
