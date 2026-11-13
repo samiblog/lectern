@@ -81,4 +81,12 @@ Claude Code 가 파일을 고치면 Lectern 이 1~2초 안에 다시 그린다. 
 
 Claude Code 가 Lectern 에서 잘 보이는 문서를 쓰게 하려면, 설정(Ctrl+,)의 **Claude Code 에 Lectern 알려 주기** → **Claude Code용 요청 복사**를 Claude Code 에 붙인다. Claude Code 가 Lectern 의 작성 안내를 읽고 그 프로젝트의 `CLAUDE.md` 에 규칙을 정리한다. 이 예제의 [CLAUDE.md](../CLAUDE.md) 가 그 결과의 본보기다.
 
+## Codex·Antigravity·OpenCode 를 쓸 때
+
+터미널은 어떤 프로그램이든 돌리므로 `claude` 대신 `codex`(OpenAI Codex CLI), `agy`(Google Antigravity CLI), `opencode`(OpenCode)를 띄워도 된다. 이 안내에서 'Claude Code' 라고 적은 것은 네 도구 모두에 해당한다.
+
+- 설정(Ctrl+,)의 **쓰는 AI 도구**에서 고르면 화면의 이름('Codex로 보내기')과 요청 글이 그 도구를 따른다.
+- 세 도구는 프로젝트의 규칙을 `CLAUDE.md` 가 아니라 `AGENTS.md` 에서 읽는다. 이 예제의 [AGENTS.md](../AGENTS.md) 는 CLAUDE.md 를 읽으라고 가리키기만 한다.
+- 터미널을 여럿 열어 1번은 Claude Code, 2번은 Codex 처럼 두고 **Shift+숫자**로 골라 보낼 수 있다. 여러 줄을 붙여 넣어도 네 도구 모두 보내지 않고 입력 칸에 둔다 — Enter 는 직접 누른다.
+
 다음: [문서 쓰는 법](04-문서-쓰는-법.md)

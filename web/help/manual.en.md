@@ -137,7 +137,7 @@ The **Files** tab is split into three groups.
   - To-dos, links and sources are not shown in the contents (only here).
 - When a table, figure or diagram has a **caption**, the caption is shown as its name, with the number and size below (such as 'Table 3 · 6 rows 2 columns'). A caption is a line such as 'Table 1. …', '<Table 2>' or '[Figure 1]' (or the same forms in Korean) directly above a table or below a picture, a short whole-bold line, or `<caption>`/`<figcaption>` in HTML. Without one, tables show their header row and pictures their alt text.
 - Click an item to go to that place in its document; it is outlined briefly.
-- **Right-click** an item for Show in document, **Copy location for Claude** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents), **Clip**, **Send…** and **Clip all shown** (see Clip below) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
+- **Right-click** an item for Show in document, **Copy location** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents), **Clip**, **Send…** and **Clip all shown** (see Clip below) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
 - Doc info: a button for each key in the documents' front matter (such as `status: review`, `owner: research`, `tags: [a, b]`); documents are grouped by the values of the chosen key (dates newest first). Indented sub-keys appear joined with a dot, such as `author.name`. Documents without that key are under 'No value' at the end. Click a document to open it; right-click to copy its `@path` or put it into the terminal.
@@ -618,7 +618,7 @@ The installed samples are read-only, so follow along in your own project.
 
 - Click a file once in the 'Code' list (or press Enter) to show it in the main area with line numbers and language colors. It is never edited or run.
 - The contents on the right list classes, functions, methods and divider comments such as `# ---- drawing ----`; click one to jump to that line. Config files list their keys and sections.
-- The **Open in external editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location for Claude and Open this line in the editor.
+- The **Open in external editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location and Open this line in the editor.
 - When the code you are viewing changes, it is redrawn within two seconds and the changed lines are highlighted briefly.
 - Clicking a path such as `src/app.py:42` or a link to a code file in a document jumps to that line. Go back (Alt+←) to return to the document.
 - Files over 4 MB, or files that are not text, show a note to open them in an editor instead.
@@ -632,7 +632,7 @@ Click a `csv`, `tsv`, `txt` or `log` file once in the 'Other files' list (also i
 - **Filter**: type in the box under a column header to keep only rows containing that text. `!text` excludes, `=text` matches exactly, and numbers take `>100`, `<=5` or `10..20`. Filters on several columns combine; **Clear filters** resets them.
 - **Sort**: click a column header for ascending → descending → original order.
 - **Stats**: a row above the table shows, per column — count, sum, mean, min, max and median for numbers; count, distinct values and the most common value for text. Filtering recounts them. The **Stats** button in the bar hides the row.
-- Row numbers are the source line numbers. Right-click a row for Copy line (the source line) and Copy location for Claude.
+- Row numbers are the source line numbers. Right-click a row for Copy line (the source line) and Copy location.
 - CSV files saved by Excel (CP949) and 'Unicode text' (UTF-16) are read too (the encoding shows in the status bar). Edit mode works only on UTF-8 files.
 - Up to 2,000 rows are shown; filter to narrow down larger files (counts and stats use all rows).
 
@@ -643,7 +643,7 @@ Click an Excel file (`xlsx`, `xlsm`) once in the 'Other files' list, or right-cl
 - It shows as a table like CSV — filter, sort, stats and the header option all work, and the **sheet tabs** under the header switch sheets (hidden sheets in italics).
 - Column names start with Excel's column letters (A, B, C…) and row numbers are Excel's row numbers. Rows without values are left out.
 - Cells show what Excel shows — number formats such as thousands separators, percentages, dates and decimals are followed, and formula cells show the calculated value (hover to see the formula). Colors, fonts and merged cells are not shown.
-- Right-click a cell for **Copy this cell** (with its name, such as B3), **Copy this row** and **Copy location for Claude** (`@data/prices.xlsx sheet 'Q1' line 3`). **Copy all** copies the current sheet as tab-separated text that fills the cells when pasted into Excel. You can also focus rows and send them to Claude with Shift+→.
+- Right-click a cell for **Copy this cell** (with its name, such as B3), **Copy this row** and **Copy location** (`@data/prices.xlsx sheet 'Q1' line 3`). **Copy all** copies the current sheet as tab-separated text that fills the cells when pasted into Excel. You can also focus rows and send them to Claude with Shift+→.
 - It is read-only — open the file in Excel to change it. The old `xls` and `xlsb` formats open in Excel. Up to 50,000 rows and 1,000,000 cells per sheet are shown; the bar says so when a sheet is longer.
 
 ### Viewing a table as a chart
@@ -694,7 +694,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 
 - Right-clicking a heading, paragraph, table or image outlines it and opens a copy menu.
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
-- **Copy location for Claude** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
+- **Copy location** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
 - If you right-click with text selected, 'Copy selected text' and 'Clip selected text' appear at the top.
 - Menus keep the same order everywhere: what only that item can do → Claude → copying → Clip and Send → edit and open → view → delete. Only shortcuts appear on the right; hover over an item for its description.
 - From the keyboard, **Shift+F10** opens the menu for the focused item or the current line.
@@ -794,12 +794,12 @@ WORK.md works the same when Claude reads and writes it. Give Claude the writing 
 - Select text with the mouse, then press Ctrl+C or right-click to copy; press Ctrl+V or right-click to paste. With nothing selected, Ctrl+C stops the running command.
 - Drag the edge to resize the terminal (double-click to reset).
 - **Position**: in a wide window the terminal opens to the right of the document; in a tall window (a portrait monitor, a window snapped to half the screen and so on) it opens below the document. When it is below, drag the edge to change its height. The position button in the terminal header switches between right and below and keeps it there; set 'Terminal position' back to 'Auto' in Settings.
-- **Paste into the terminal**: in a right-click menu, the **▣ Terminal** button on the right of a copy item puts that text into the current tab's terminal and shows a notice such as 'Put into terminal 1' (clicking the item name only copies). The terminal opens if needed. With several terminals the default is the first one (the lowest number — usually terminal 1, the one opened first), which is then shown, so run Claude Code in terminal 1 (to send to another number, see 'Send by number' below). Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, are not asked about).
+- **Paste into the terminal**: in a right-click menu, the **▣ Terminal** button on the right of a copy item puts that text into the current tab's terminal and shows a notice such as 'Put into terminal 1' (clicking the item name only copies). The terminal opens if needed. With several terminals the default is the first one (the lowest number — usually terminal 1, the one opened first), which is then shown, so run Claude Code in terminal 1 (to send to another number, see 'Send by number' below). Enter is not pressed — check the text and press Enter yourself. For several lines Lectern asks first, because at a PowerShell prompt each line may run as a command (programs that turn on paste mode, such as Claude Code, Codex, Antigravity and OpenCode, are not asked about — the lines go into the input box without being sent).
 - **Send by number**: to send to another terminal, open the menu and **hold a number key (1-5)** while clicking ▣ Terminal or 'Send to Claude' — '→ terminal 3' shows above the menu. On the keyboard, **Shift+number** (focus goes to the terminal) and **Ctrl+Shift+number** (focus stays in the document) put the location of the current line into that terminal. With stacked terminals the header of the one that got it lights up briefly. If there is no terminal with that number, nothing is sent and you are told (none is created). Inside a line-edit box or a terminal, Shift+number just types the character (! @ # …).
 - The terminal colors follow the document style. For an always-dark terminal, turn off 'Match terminal colors to style' in Settings.
 - Change the terminal's text size under 'Terminal text size' in Settings (10–24, default 14). Open terminals and the terminal grid change right away.
 - Closing a tab ends its shell. If a program started from the shell is still running, Lectern asks first. Closing Lectern ends all shells.
-- **Stuck program warning**: if a program started from the shell gets stuck while starting (this happens when security software on a company PC, such as DRM, blocks programs from starting — Claude Code calls git and then stops responding to any input), a red strip appears under the terminal header after about 10 seconds and the ↻ button is highlighted. Ctrl+C does not end such a program, and often neither does Task Manager, so press **Restart** in the strip. It ends the shell and the stuck program and opens a new shell. In Claude Code, run `claude --continue` in the new shell to pick up the conversation. If the terminal belongs to a tab you are not looking at, a notice appears once.
+- **Stuck program warning**: if a program started from the shell gets stuck while starting (this happens when security software on a company PC, such as DRM, blocks programs from starting — Claude Code calls git and then stops responding to any input), a red strip appears under the terminal header after about 10 seconds and the ↻ button is highlighted. Ctrl+C does not end such a program, and often neither does Task Manager, so press **Restart** in the strip. It ends the shell and the stuck program and opens a new shell. In Claude Code, run `claude --continue` in the new shell to pick up the conversation (`codex resume --last` in Codex, `agy --continue` in Antigravity, `opencode --continue` in OpenCode). If the terminal belongs to a tab you are not looking at, a notice appears once.
 
 ### All terminals
 
@@ -816,10 +816,30 @@ Sample — [guide 03, Claude Code](../../samples/guide/03-Claude-Code와-함께.
 2. Run `claude` in the terminal (Ctrl+\`) to work with Claude Code right next to your documents.
 3. When Claude creates or edits a document, the change appears within a second, and changed documents you have not opened yet get an amber dot in the tree.
 4. To ask about a document, right-click it in the tree, choose `Copy @path` and paste it into your prompt. For example: `@docs/report.md summarize the conclusion in three lines`
-5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
+5. To point at one part of a document, right-click the text and choose **Copy location**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
 7. When writing for people — reports, review notes — paste **Writing style** → **Copy request for Claude Code** from the settings into Claude Code. Claude Code's default role is a developer, so its writing drifts into short lists. This output style turns Claude into a research partner and editor: it decides the reader and the purpose first, widens the evidence with earlier material outside the folder and the web, writes in paragraphs and rereads as the reader to revise. Claude asks before installing; after installing, restart Claude Code and choose **Research writing** with `/output-style` in a report folder — it then applies to that folder only (code folders stay as they are). Requests that were actually tried, with their results, are in the sample [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean).
 8. Adding the reader and the purpose to a request changes the writing. For example: "The reader is the executive in charge of purchasing and must accept the downside risk to second-half prices. Read this folder and the earlier reports, look on the web for counter-evidence and footnote the sources. Show me an outline first." When it is done, asking once more "read it from the start as the reader and fix whatever reads mechanically" helps.
+
+### Using Codex, Antigravity or OpenCode
+
+The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy` (Google Antigravity CLI) or `opencode` (OpenCode) instead of `claude`. Sending locations while you read (Shift+→, Shift+number) and seeing edits at once work the same. This manual says 'Claude' for short, but it applies to all four tools.
+
+- Choose Claude Code, Codex, Antigravity, OpenCode or Several under **AI tool** in the settings. Names on screen follow it ('Send to Codex', 'Copy request for Codex'), and requests name that tool's file and folder. Lectern does not run the tool — you start it in the terminal yourself.
+- What differs by tool:
+
+| | Claude Code | Codex | Antigravity | OpenCode |
+|---|---|---|---|---|
+| In the terminal | `claude` | `codex` | `agy` | `opencode` |
+| Project instruction file | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` |
+| Personal skills folder | `~/.claude/skills` | `~/.codex/skills` | `~/.gemini/config/skills` | `~/.config/opencode/skills` |
+| Writing style | Output style (`/output-style`) | A 'Writing' section in `AGENTS.md` | A 'Writing' section in `AGENTS.md` | A 'Writing' section in `AGENTS.md` |
+| Continue a conversation | `claude --continue` | `codex resume --last` | `agy --continue` | `opencode --continue` |
+
+- With **Several**, the name becomes 'AI' and requests list each tool's file and folder. If one project uses several tools, keep the rules in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`, so there is one place to edit.
+- The two PowerPoint skills use the format the four tools share (SKILL.md), so they install as they are. OpenCode also reads `~/.claude/skills`, so skills installed for Claude Code show up without installing again.
+- Pasting several lines into the terminal (▣ Terminal in a menu, Ctrl+V) leaves them in the input box of all four tools without sending. You press Enter yourself.
+- With stacked terminals you can keep Claude Code in terminal 1 and Codex in terminal 2 side by side, and choose with Shift+number.
 
 ## Settings
 
@@ -835,9 +855,10 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | vi keys | Move and edit documents with letter keys (see 'vi keys' above). Off by default |
 | Full editor keys | Default (Esc closes) or vi (like vim — `:w`, `:q`). Default by default |
 | Show web images | Load https images in documents. When off, they show as links |
-| Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to CLAUDE.md; open the samples |
+| AI tool | Claude Code (default), Codex, Antigravity, OpenCode or Several — names on screen and requests follow it (see 'Using Codex, Antigravity or OpenCode') |
+| Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to the instruction file (CLAUDE.md or AGENTS.md); open the samples. The name follows the AI tool |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
-| Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code') |
+| Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code'). For Codex, Antigravity and OpenCode the request adds it to that project's AGENTS.md |
 | Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print and PDF') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |

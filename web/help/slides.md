@@ -236,7 +236,7 @@ LME 가격 ($/t)
 - 칸의 `center` 는 차트·다이어그램에도 듣는다.
 - 체크 칸은 사람이 눌러 바꾼다. 원문의 `[ ]`·`[x]` 를 고쳐도 된다.
 - `vega-lite` 의 `layer` 는 축의 `scale`·`sort` 를 모든 층에 같게 쓴다. 한 층에만 쓰면 듣지 않는다. 정렬은 값의 배열로 준다 (`"sort": ["1월", "2월"]`).
-- 차트의 값은 한 줄 편집으로 고치지 못한다. 사람은 Ctrl+E 로 고친다. 자주 바뀌는 값은 CSV 로 뺀다. Lectern 의 CSV 화면은 보기만 하니 표 프로그램이나 Claude 가 고친다. 고친 뒤 F5 를 누르면 차트가 새 값으로 그려진다.
+- 차트의 값은 한 줄 편집으로 고치지 못한다. 사람은 Ctrl+E 로 고친다. 자주 바뀌는 값은 CSV 로 뺀다. Lectern 의 CSV 화면은 보기만 하니 표 프로그램이나 AI 도구가 고친다. 고친 뒤 F5 를 누르면 차트가 새 값으로 그려진다.
 
 ```vega-lite
 {
@@ -379,9 +379,9 @@ Lectern 의 예제 프로젝트 `slides/README.md` 가 입구다. 설치 폴더�
 
 ## 14. PowerPoint 와 주고받기
 
-사용자가 pptx 를 Lectern 슬라이드로 옮기거나, pptx 를 참고해 md 를 슬라이드로 만들거나, 슬라이드를 pptx 로 내보내라고 하면 Claude Code 스킬 `pptx-to-lectern`·`lectern-to-pptx` 를 쓴다. 이 스킬들은 Lectern 프로그램 폴더의 `skills/` 에 들어 있다 (설치본은 `_internal\skills`).
+사용자가 pptx 를 Lectern 슬라이드로 옮기거나, pptx 를 참고해 md 를 슬라이드로 만들거나, 슬라이드를 pptx 로 내보내라고 하면 스킬 `pptx-to-lectern`·`lectern-to-pptx` 를 쓴다 (SKILL.md 형식 — Claude Code·Codex·Antigravity·OpenCode 가 함께 쓴다). 이 스킬들은 Lectern 프로그램 폴더의 `skills/` 에 들어 있다 (설치본은 `_internal\skills`).
 
-스킬이 아직 설치되어 있지 않으면 먼저 사용자에게 설치할지 묻는다. 그렇다고 하면 두 폴더를 `~/.claude/skills/` 로 복사한다. 아니라고 하면 그 폴더의 `SKILL.md` 를 읽고 그 자리의 스크립트로 한다.
+스킬이 아직 설치되어 있지 않으면 먼저 사용자에게 설치할지 묻는다. 그렇다고 하면 두 폴더를 네 개인 스킬 폴더로 복사한다 (Claude Code 는 `~/.claude/skills/`, Codex 는 `~/.codex/skills/`, Antigravity 는 `~/.gemini/config/skills/`, OpenCode 는 `~/.config/opencode/skills/`). 아니라고 하면 그 폴더의 `SKILL.md` 를 읽고 그 자리의 스크립트로 한다.
 
 ## 15. html 로 전환
 

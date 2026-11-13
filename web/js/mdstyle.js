@@ -8,6 +8,7 @@ import { getJSON, postJSON, saveConfig } from './api.js';
 import { $, toast, isMd } from './util.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
+import { aiName } from './aitool.js';
 import { STYLES, detect, kindOf, marksFrom, preview, sample, setOwnStyles } from './headstyle.js';
 import { sourceLines } from './spotlight.js';
 import { linesEditable } from './lineedit.js';
@@ -167,7 +168,7 @@ function choose() {
     return;
   }
   const names = KINDS();
-  $('#lec-mdstyle-question').textContent = t('{from} 문서를 {to} 으로 바꿀까요? 머리글은 바로 바뀌지만 본문은 Claude 가 고쳐야 합니다.', { from: names[asked.kind], to: names[item.kind] });
+  $('#lec-mdstyle-question').textContent = t('{from} 문서를 {to} 으로 바꿀까요? 머리글은 바로 바뀌지만 본문은 {ai} 가 고쳐야 합니다.', { ai: aiName(), from: names[asked.kind], to: names[item.kind] });
   $('#lec-mdstyle-form').hidden = true;
   $('#lec-mdstyle-ask').hidden = false;
   $('#lec-mdstyle-claude').focus();

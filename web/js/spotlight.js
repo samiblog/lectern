@@ -32,6 +32,7 @@ import { S, on, emit } from './store.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
+import { aiName } from './aitool.js';
 import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf, blockOfLine } from './lineunits.js';
 
 let active = false;
@@ -681,7 +682,7 @@ function updateButton() {
   const usable = hasChapters || linesOn();
   btn.classList.toggle('on', lit() && (mode === 'chapter' || dimmed));
   btn.disabled = !usable && !lit();
-  const keys = t('Insert·Shift+누르기·끌기: 줄 고르기 — Shift+↑·↓ 로 넓히고 줄이기, Shift+Enter 하이라이트, Shift+→ Claude 로 보내기');
+  const keys = t('Insert·Shift+누르기·끌기: 줄 고르기 — Shift+↑·↓ 로 넓히고 줄이기, Shift+Enter 하이라이트, Shift+→ {ai} 로 보내기', { ai: aiName() });
   if (ranged()) btn.title = `${dimmed ? t('하이라이트 끄기') : t('고른 줄 하이라이트')} (Shift+Enter)\n${keys}`;
   else if (lit()) btn.title = `${t('하이라이트 끄기')} (Esc)\n${keys}`;
   else if (hasChapters) btn.title = `${t('장 하이라이트 켜기')} — ${t('켜면 ↑·↓·PageUp·PageDown 으로 앞뒤 장 (Esc 로 끄기)')}\n${keys}`;
@@ -701,7 +702,7 @@ function updateStatus() {
   if (edit && painted === view()) {
     el.hidden = false;
     el.textContent = `${t('한 줄 편집')} ${rangeText([edit.line, edit.line])}`;
-    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄 · Shift+→(글 끝) 저장하고 Claude 로 보내기');
+    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄 · Shift+→(글 끝) 저장하고 {ai} 로 보내기', { ai: aiName() });
     return;
   }
   const r = lit() && painted === view() ? litLines() : null;
@@ -709,9 +710,9 @@ function updateStatus() {
   if (!r) return;
   const pick = ranged() && !dimmed;
   el.textContent = `${pick ? t('고른 줄') : t('하이라이트')} ${rangeText(r)} · ${t('{n}줄', { n: r[1] - r[0] + 1 })}`;
-  if (pick) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기');
+  if (pick) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ {ai} 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기', { ai: aiName() });
   else if (ranged()) el.title = t('Shift+Enter·Esc 하이라이트 끄기 — 끄면 고른 줄로');
-  else el.title = t('Shift+→ Claude 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제');
+  else el.title = t('Shift+→ {ai} 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제', { ai: aiName() });
 }
 
 // ---- 밖에서 부르는 것 ------------------------------------------------------------

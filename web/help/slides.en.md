@@ -216,7 +216,7 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - Inside a cell, `vega-lite` draws axes and legends to fit the cell. Lots of text in the same cell makes the chart shorter.
 - In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
 - `center` on a cell also works for charts and diagrams.
-- Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV. The CSV view in Lectern is read-only, so edit it in a spreadsheet or ask Claude. Press F5 afterwards to redraw the chart.
+- Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV. The CSV view in Lectern is read-only, so edit it in a spreadsheet or ask your AI tool. Press F5 afterwards to redraw the chart.
 
 ```vega-lite
 {
@@ -329,9 +329,9 @@ The user picks templates in the gallery, slide by slide. One Lectern slides file
 
 ## 12. Working with PowerPoint
 
-When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the Claude Code skills `pptx-to-lectern` and `lectern-to-pptx`. They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
+When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the skills `pptx-to-lectern` and `lectern-to-pptx` (the SKILL.md format that Claude Code, Codex, Antigravity and OpenCode share). They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
 
-If the skills are not installed yet, ask the user first. If they agree, copy both folders to `~/.claude/skills/`. If not, read `SKILL.md` in that folder and run its scripts from there.
+If the skills are not installed yet, ask the user first. If they agree, copy both folders to your personal skills folder (`~/.claude/skills/` for Claude Code, `~/.codex/skills/` for Codex, `~/.gemini/config/skills/` for Antigravity, `~/.config/opencode/skills/` for OpenCode). If not, read `SKILL.md` in that folder and run its scripts from there.
 
 ## 13. Convert to html
 

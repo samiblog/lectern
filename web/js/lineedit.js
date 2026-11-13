@@ -54,6 +54,7 @@ import {
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
 import { t, LANG } from './i18n.js';
+import { aiName } from './aitool.js';
 
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
 // 되돌리기 기록 — 파일마다 ('탭 id|경로' → {done, undone}). done 은 저장한 변경(마지막 것이 끝), undone 은 되돌린 변경.
@@ -1982,7 +1983,7 @@ function askTextbox(after) {
     { ref: lineRef(pathIn(view), [at, at]), word: t('박스'), n: nextCaption(src, t('박스')) }));
 }
 
-const askTextboxItem = (after) => ({ label: t('Claude 에 박스글 요청'), tip: t('대화를 정리해 이 자리 뒤에 박스글로 — 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)'), action: () => askTextbox(after) });
+const askTextboxItem = (after) => ({ label: t('{ai} 에 박스글 요청', { ai: aiName() }), tip: t('대화를 정리해 이 자리 뒤에 박스글로 — 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)'), action: () => askTextbox(after) });
 
 /** 고른 줄을 박스글로 묶는다 — 여는 줄·제목 줄·닫는 줄을 넣는다 */
 function wrapLit() {

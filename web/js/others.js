@@ -30,6 +30,7 @@ import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
+import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -448,7 +449,7 @@ async function copy(text) {
 /** 경로 복사 항목 */
 function copyItems(n) {
   /** @type {MenuItem[]} */
-  const items = [{ label: t('@{path} 복사', { path: n.path }), tip: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
+  const items = [{ label: t('@{path} 복사', { path: n.path }), tip: t('{cli} 프롬프트에 붙여 넣기', { cli: aiCli() }), action: () => copy(`@${n.path}`), term: `@${n.path} ` },
     { label: t('전체 경로 복사'), action: () => copy(fullPath(n.path)), term: shellWord(fullPath(n.path)) }];
   if (n.type === 'file') items.push({ label: t('파일 이름 복사'), action: () => copy(n.name), term: shellWord(n.name) });
   return items;

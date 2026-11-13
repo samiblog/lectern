@@ -22,6 +22,7 @@ import { newDocGuess, cleanPath, createDoc } from './newdoc.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, docUrl, isMd, basename, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
 import { t } from './i18n.js';
+import { aiCli } from './aitool.js';
 
 let seq = 0;
 
@@ -331,8 +332,8 @@ function claudeMenu(btn) {
   if (!snips.length) return;
   const text = claudeRequest(snips);
   const r = btn.getBoundingClientRect();
-  showMenu(r.left, r.bottom + 4, [{ header: t('Claude Code 에 맡기기 — 담은 것 {n}개로 새 문서', { n: snips.length }) },
-    { label: t('요청 글 복사'), hint: t('Claude Code 에 붙여 넣습니다'), action: async () => toast(await copyText(text) ? t('복사했습니다: {what}', { what: t('요청 글') }) : t('복사하지 못했습니다')), term: text }]);
+  showMenu(r.left, r.bottom + 4, [{ header: t('{cli} 에 맡기기 — 담은 것 {n}개로 새 문서', { cli: aiCli(), n: snips.length }) },
+    { label: t('요청 글 복사'), hint: t('{cli} 에 붙여 넣습니다', { cli: aiCli() }), action: async () => toast(await copyText(text) ? t('복사했습니다: {what}', { what: t('요청 글') }) : t('복사하지 못했습니다')), term: text }]);
 }
 
 // ---- 시작 -----------------------------------------------------------------------

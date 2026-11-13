@@ -225,11 +225,11 @@
         <p id="lec-parts-info" class="side-info"></p>
         <nav id="lec-parts-list" class="side-list" aria-label="모아 본 구성 요소"></nav>
       </div>
-      <!-- 담기 (basket.js, D63·D65): 담은 조각을 차례대로 — 문서로 보내기(보낼 곳 고르기 창), Claude 에 맡기기, 편집 중이면 항목의 '보내기'가 커서 자리로 -->
+      <!-- 담기 (basket.js, D63·D65): 담은 조각을 차례대로 — 문서로 보내기(보낼 곳 고르기 창), AI 도구에 맡기기(이름은 설정 ai_tool — D138), 편집 중이면 항목의 '보내기'가 커서 자리로 -->
       <div id="lec-basket" hidden>
         <div class="basket-bar">
           <button type="button" id="lec-basket-insert" class="primary small" title="담은 것을 차례대로 열린 문서 탭이나 새 문서로 보내기 — 편집 모드로 열고, 저장은 직접">문서로 보내기…</button>
-          <button type="button" id="lec-basket-claude" class="text-btn" title="담은 것의 위치로 새 문서를 만들어 달라는 Claude Code 요청 글 — 복사·터미널">Claude 에 맡기기</button>
+          <button type="button" id="lec-basket-claude" class="text-btn"></button>
           <span class="tb-spacer"></span>
           <button type="button" id="lec-basket-clear" class="text-btn" title="담은 것을 모두 빼기 (문서는 그대로)">비우기</button>
         </div>
@@ -457,25 +457,34 @@
       <label><input type="radio" name="theme_groups" value="mood"><span>분위기별<small>깔끔한 / 따뜻한·종이 / 색이 있는 / 어두운</small></span></label>
       <label><input type="radio" name="theme_groups" value="tone"><span>밝기별<small>밝은 / 종이·책 / 어두운</small></span></label>
     </div>
+    <!-- 쓰는 AI 도구 (D138 — aitool.js): 아래 세 칸과 화면 곳곳의 이름·요청 글이 이것을 따른다. 그 글자들은 settings.js 의 applyAiNames 가 채운다 -->
+    <div class="opt-choice" role="radiogroup" aria-labelledby="lec-aitool-title">
+      <span class="opt-head"><b id="lec-aitool-title">쓰는 AI 도구</b><small>터미널에서 쓰는 도구입니다. 화면의 이름('Codex로 보내기'처럼)과 요청 글이 말하는 지시 파일·스킬 폴더가 이것을 따릅니다. Lectern 이 도구를 실행하지는 않습니다 — 터미널에서 직접 띄웁니다</small></span>
+      <label><input type="radio" name="ai_tool" value="claude"><span><span translate="no">Claude Code</span><small>지시 파일 CLAUDE.md — 터미널에서 claude</small></span></label>
+      <label><input type="radio" name="ai_tool" value="codex"><span><span translate="no">Codex</span><small>지시 파일 AGENTS.md — 터미널에서 codex</small></span></label>
+      <label><input type="radio" name="ai_tool" value="antigravity"><span><span translate="no">Antigravity</span><small>지시 파일 AGENTS.md — 터미널에서 agy</small></span></label>
+      <label><input type="radio" name="ai_tool" value="opencode"><span><span translate="no">OpenCode</span><small>지시 파일 AGENTS.md — 터미널에서 opencode</small></span></label>
+      <label><input type="radio" name="ai_tool" value="any"><span>여럿<small>이름을 'AI'로 — 요청 글이 도구마다의 파일과 폴더를 함께 적습니다</small></span></label>
+    </div>
     <div class="opt-block" aria-labelledby="lec-aiguide-title">
-      <span class="opt-head"><b id="lec-aiguide-title">Claude Code 에 Lectern 알려 주기</b><small>Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 Claude Code 에 붙이면 안내를 읽고 그 프로젝트의 CLAUDE.md 에 규칙을 정리합니다</small></span>
+      <span class="opt-head"><b id="lec-aiguide-title"></b><small id="lec-aiguide-desc"></small></span>
       <div class="opt-btns">
-        <button type="button" id="lec-aiguide-prompt" class="text-btn" title="작성 안내의 위치를 적은 요청 글 — 작업할 프로젝트의 Claude Code 에 붙여 넣습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-aiguide-prompt" class="text-btn"></button>
         <button type="button" id="lec-aiguide-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
         <button type="button" id="lec-aiguide-samples" class="text-btn" title="Lectern 둘러보기와 문서 쓰는 법이 든 예제 프로젝트를 탭으로 엽니다">예제 열기</button>
       </div>
     </div>
     <div class="opt-block" aria-labelledby="lec-skills-title">
-      <span class="opt-head"><b id="lec-skills-title">PowerPoint 스킬</b><small>pptx 와 Lectern 슬라이드를 오가는 Claude Code 스킬이 들어 있습니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'에 있습니다</small></span>
+      <span class="opt-head"><b id="lec-skills-title">PowerPoint 스킬</b><small id="lec-skills-desc"></small></span>
       <div class="opt-btns">
-        <button type="button" id="lec-skills-prompt" class="text-btn" title="스킬의 위치를 적은 요청 글 — Claude Code 에 붙여 넣습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-skills-prompt" class="text-btn"></button>
         <button type="button" id="lec-skills-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
     <div class="opt-block" aria-labelledby="lec-wstyle-title">
-      <span class="opt-head"><b id="lec-wstyle-title">글쓰기 스타일</b><small>Claude Code 를 개발자가 아닌 리서치 동료·편집자로 바꾸는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다</small></span>
+      <span class="opt-head"><b id="lec-wstyle-title">글쓰기 스타일</b><small id="lec-wstyle-desc"></small></span>
       <div class="opt-btns">
-        <button type="button" id="lec-wstyle-prompt" class="text-btn" title="글쓰기 스타일 파일의 위치를 적은 요청 글 — Claude Code 에 붙여 넣습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-wstyle-prompt" class="text-btn"></button>
         <button type="button" id="lec-wstyle-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
@@ -488,7 +497,7 @@
       <span class="opt-head"><b id="lec-mystyles-title">내 스타일</b><small id="lec-mystyles-info">CSS 파일 하나가 스타일 하나입니다. 스타일 폴더에 저장하면 툴바 스타일 목록 맨 아래 '내 스타일'에 나오고, 고치면 바로 반영됩니다</small></span>
       <div class="opt-btns">
         <button type="button" id="lec-mystyles-folder" class="text-btn">스타일 폴더 열기</button>
-        <button type="button" id="lec-mystyles-prompt" class="text-btn" title="스타일 설명서의 위치와 저장할 폴더를 적은 요청 글 — Claude Code 에 붙여 넣고 원하는 모양을 이어서 적습니다">Claude Code용 요청 복사</button>
+        <button type="button" id="lec-mystyles-prompt" class="text-btn"></button>
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
@@ -582,7 +591,7 @@
       <ul id="lec-gallery-groups" aria-label="템플릿 묶음"></ul>
       <ul id="lec-gallery-list" role="listbox" aria-labelledby="lec-gallery-title"></ul>
     </div>
-    <div class="gallery-foot"><button id="lec-gallery-folder" type="button" title="템플릿 묶음을 Lectern 탭으로 열어 고칩니다">템플릿 폴더 열기</button><button id="lec-gallery-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 템플릿 요청</button><span class="tb-spacer"></span><button id="lec-gallery-cancel" type="button">취소</button></div>
+    <div class="gallery-foot"><button id="lec-gallery-folder" type="button" title="템플릿 묶음을 Lectern 탭으로 열어 고칩니다">템플릿 폴더 열기</button><button id="lec-gallery-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><span class="tb-spacer"></span><button id="lec-gallery-cancel" type="button">취소</button></div>
   </div>
 </div>
 <!-- 이 장을 템플릿으로 저장 (slidegallery.js, D101) -->
@@ -603,11 +612,11 @@
         <ul id="lec-mdstyle-list" role="listbox" aria-labelledby="lec-mdstyle-title"></ul>
         <ul id="lec-mdstyle-preview" aria-label="미리보기"></ul>
       </div>
-      <div class="gallery-foot"><button id="lec-mdstyle-save" type="button" title="이 문서의 머리글 번호 모양을 Lectern 전체에서 쓰는 스타일로 저장합니다">이 문서를 스타일로 만들기</button><button id="lec-mdstyle-request" type="button" title="번호 모양이 복잡하면 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 스타일 요청</button><button id="lec-mdstyle-folder" type="button">스타일 폴더 열기</button><span class="tb-spacer"></span><button id="lec-mdstyle-cancel" type="button">취소</button><button id="lec-mdstyle-go" type="button" class="primary">적용</button></div>
+      <div class="gallery-foot"><button id="lec-mdstyle-save" type="button" title="이 문서의 머리글 번호 모양을 Lectern 전체에서 쓰는 스타일로 저장합니다">이 문서를 스타일로 만들기</button><button id="lec-mdstyle-request" type="button" title="번호 모양이 복잡하면 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><button id="lec-mdstyle-folder" type="button">스타일 폴더 열기</button><span class="tb-spacer"></span><button id="lec-mdstyle-cancel" type="button">취소</button><button id="lec-mdstyle-go" type="button" class="primary">적용</button></div>
     </div>
     <div id="lec-mdstyle-ask" hidden>
       <p id="lec-mdstyle-question" class="insert-msg"></p>
-      <div class="gallery-foot"><button id="lec-mdstyle-claude" type="button" class="primary" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">머리글을 바꾸고 본문은 Claude 에게 요청</button><button id="lec-mdstyle-heads" type="button">머리글만 바꾸기 (본문은 그대로)</button><span class="tb-spacer"></span><button id="lec-mdstyle-no" type="button">취소</button></div>
+      <div class="gallery-foot"><button id="lec-mdstyle-claude" type="button" class="primary" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><button id="lec-mdstyle-heads" type="button">머리글만 바꾸기 (본문은 그대로)</button><span class="tb-spacer"></span><button id="lec-mdstyle-no" type="button">취소</button></div>
     </div>
   </div>
 </div>
@@ -619,7 +628,7 @@
     <div id="lec-pptx-form">
       <ul id="lec-pptx-list" role="listbox" tabindex="0" aria-labelledby="lec-pptx-title"></ul>
       <div id="lec-pptx-previews" hidden></div>
-      <div class="gallery-foot"><label><input id="lec-pptx-default" type="checkbox"> 기본 스타일로</label><button id="lec-pptx-folder" type="button">보관소 폴더 열기</button><button id="lec-pptx-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 스타일 요청</button><span class="tb-spacer"></span><button id="lec-pptx-cancel" type="button">취소</button><button id="lec-pptx-go" type="button" class="primary">전환</button></div>
+      <div class="gallery-foot"><label><input id="lec-pptx-default" type="checkbox"> 기본 스타일로</label><button id="lec-pptx-folder" type="button">보관소 폴더 열기</button><button id="lec-pptx-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><span class="tb-spacer"></span><button id="lec-pptx-cancel" type="button">취소</button><button id="lec-pptx-go" type="button" class="primary">전환</button></div>
     </div>
     <div id="lec-pptx-done" hidden>
       <p id="lec-pptx-summary" class="insert-msg"></p>
@@ -639,7 +648,7 @@
       </div>
       <div id="lec-html-map" aria-hidden="true"></div>
       <p id="lec-html-info" class="insert-msg"></p>
-      <div class="gallery-foot"><label><input id="lec-html-overview" type="checkbox" checked> 맨 끝에 전체 보기</label><button id="lec-html-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)">Claude 에게 배치 요청</button><span class="tb-spacer"></span><button id="lec-html-cancel" type="button">취소</button><button id="lec-html-go" type="button" class="primary">만들기</button></div>
+      <div class="gallery-foot"><label><input id="lec-html-overview" type="checkbox" checked> 맨 끝에 전체 보기</label><button id="lec-html-ask" type="button" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><span class="tb-spacer"></span><button id="lec-html-cancel" type="button">취소</button><button id="lec-html-go" type="button" class="primary">만들기</button></div>
     </div>
     <div id="lec-html-done" hidden>
       <p id="lec-html-summary" class="insert-msg"></p>

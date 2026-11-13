@@ -28,6 +28,7 @@
 //   term-colors      설정 '터미널 색을 스타일에 맞춤'이 바뀜              (settings → terminal)
 //   term-place       설정 '터미널 자리'가 바뀜                            (settings → terminal, D52)
 //   term-font        설정 '터미널 글자 크기'가 바뀜                       (settings → terminal, D130)
+//   ai-tool          설정 '쓰는 AI 도구'가 바뀜 — 이름이 든 글자를 다시            (settings → terminal, D138)
 //   user-styles      내 스타일 목록이 바뀜 (파일이 생기거나 고쳐짐)        (theme → settings, D53)
 //   edit             편집 모드를 엶 {line?} — 우클릭 메뉴. 편집 중이면 그 줄로 (docmenu·search → editor, D54·D55)
 //   editor           칸(pane)의 편집 상자가 열리거나 닫힘                 (editor → basket — 커서 자리로 보내기, D63)

@@ -22,6 +22,7 @@ import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
+import { aiName } from './aitool.js';
 import { printDoc, openPrint, canSavePdf } from './printdoc.js';
 import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
@@ -242,7 +243,7 @@ function litMenu(hl, selected, blockMenu, own = []) {
   /** @type {MenuItem[]} */
   const danger = !hl.chapter && linesEditable() ? [{ label: t('줄 지우기'), hint: 'Delete', tip: rangeText(range), action: () => emit('line-delete', {}) }] : [];
   return menuGroups([{ header: `${name} · ${rangeText(range)}` }], uniques,
-    [{ label: t('Claude로 보내기'), hint: 'Shift+→', tip: t('맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit }], copies, takes, edits, views, danger);
+    [{ label: t('{ai}로 보내기', { ai: aiName() }), hint: 'Shift+→', tip: t('맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit }], copies, takes, edits, views, danger);
 }
 
 /** 표를 차트로 — 캡션은 제목과 단위를 어림하는 데 쓴다 (D86). range: 이 원문 줄의 행만 */

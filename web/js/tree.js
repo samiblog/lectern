@@ -9,6 +9,7 @@ import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd } from './util.js';
 import { t } from './i18n.js';
+import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
@@ -222,7 +223,7 @@ export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? t
 export function pathMenuItems(path, isDoc) {
   /** @type {MenuItem[]} */
   const copies = [];
-  if (path) copies.push({ label: t('@{path} 복사', { path }), tip: t('Claude Code 프롬프트에 붙여 넣기'), action: () => copy(`@${path}`), term: `@${path} ` });
+  if (path) copies.push({ label: t('@{path} 복사', { path }), tip: t('{cli} 프롬프트에 붙여 넣기', { cli: aiCli() }), action: () => copy(`@${path}`), term: `@${path} ` });
   copies.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)), term: shellWord(fullPath(path)) });
   /** @type {MenuItem[]} */
   const opens = [];

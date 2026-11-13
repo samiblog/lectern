@@ -33,6 +33,7 @@ import { updateTocVisibility } from './toc.js';
 import { html, setHtml } from './html.js';
 import { $, toast, copyText, blockedReadOnly } from './util.js';
 import { t } from './i18n.js';
+import { aiResume } from './aitool.js';
 
 const TERM_HEADER = { 'X-Term': document.querySelector('meta[name="lec-term"]')?.content || '' };
 export const MAX_TERMS = 5;   // 프로젝트마다 터미널 수 (서버 terminal.MAX_SLOTS — D69)
@@ -230,6 +231,14 @@ function create(tab, n = 0, parent = null) {
     if (term.alive) postJSON('/api/term/resize', { t: term.id, cols, rows }, TERM_HEADER).catch(() => {});
   });
   xterm.attachCustomKeyEventHandler((e) => keyFor(term, e));
+  // Ctrl+V (브라우저의 붙여 넣기): xterm 보다 먼저 받아 같은 길로 (pasteText — 여러 줄이 Codex 에서 보내지지 않게)
+  box.addEventListener('paste', (e) => {
+    const text = e.clipboardData?.getData('text/plain');
+    if (text == null) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (text) pasteText(term, plainText(text));
+  }, true);
   box.addEventListener('contextmenu', (e) => {
     e.preventDefault();
     if (xterm.hasSelection()) copySelection(term);
@@ -248,9 +257,20 @@ async function copySelection(term) {
   term.xterm.focus();   // copyText 가 잠시 다른 칸을 쓸 수 있다
 }
 
+/**
+ * 글을 셸에 붙여 넣는다 — Ctrl+V·우클릭·'터미널에 붙여 넣기' 모두 이 길 (D138).
+ * 받는 프로그램이 붙여넣기 모드(bracketed paste)를 켰으면 표시 사이에 넣되 줄바꿈은 LF 로 보낸다. xterm 의 paste 는 CR 로 바꾸는데,
+ * Windows 의 Codex 는 표시 안의 CR 을 Enter 로 받아 첫 줄에서 보내 버린다 (2026-11-14 실제 시험 — LF 면 Claude Code·Codex·Antigravity
+ * 모두 여러 줄을 입력 칸에 그대로 둔다). 모드를 켜지 않은 셸 프롬프트는 xterm 의 길 그대로다 (CR — 줄마다 Enter)
+ */
+function pasteText(term, text) {
+  if (term.alive && term.xterm.modes.bracketedPasteMode) send(term, `\x1b[200~${text.replace(/\r\n?/g, '\n')}\x1b[201~`);
+  else term.xterm.paste(text);
+}
+
 async function pasteFromClipboard(term) {
   try {
-    term.xterm.paste(plainText(await navigator.clipboard.readText()));
+    pasteText(term, plainText(await navigator.clipboard.readText()));
   } catch {
     toast(t('붙여 넣지 못했습니다. Ctrl+V 로 붙여 넣으세요'));
   }
@@ -268,7 +288,7 @@ function keyFor(term, e) {
     copySelection(term);
     return false;
   }
-  if (ctrl && e.code === 'KeyV') return false;   // 브라우저의 붙여 넣기 → xterm 이 받아 셸로 보낸다
+  if (ctrl && e.code === 'KeyV') return false;   // 브라우저의 붙여 넣기 → 상자의 paste 가 받아 셸로 보낸다 (pasteText)
   return true;
 }
 
@@ -407,8 +427,8 @@ export async function restartTerminal(tab = S.tab) {
 // (Claude Code 등)도 함께 멈춘다. 서버가 몇 초 안에 알아채 read 의 stuck 으로 알린다. 멈춘 프로그램은 종료 권한이 깎여 있어
 // 작업 개체째 끝내는 '다시 시작'만 듣는다.
 
-export const stuckMessage = (stuck) => t('셸에서 띄운 프로그램({name})이 시작하다 멈췄습니다. 보안 프로그램(DRM 등)이 프로그램 실행을 막을 때 생깁니다. 다시 시작을 누르면 셸과 멈춘 프로그램을 끝내고 새 셸을 엽니다 — Claude Code 는 claude --continue 로 이어 갑니다.',
-  { name: [...new Set(stuck.map((p) => p.name))].join(', ') });
+export const stuckMessage = (stuck) => t('셸에서 띄운 프로그램({name})이 시작하다 멈췄습니다. 보안 프로그램(DRM 등)이 프로그램 실행을 막을 때 생깁니다. 다시 시작을 누르면 셸과 멈춘 프로그램을 끝내고 새 셸을 엽니다 — {resume}.',
+  { name: [...new Set(stuck.map((p) => p.name))].join(', '), resume: aiResume() });
 
 function setStuck(term, stuck) {
   const key = (list) => (list || []).map((p) => p.pid).join();
@@ -825,7 +845,7 @@ async function pasteInto(term, raw) {
     && !window.confirm(t('{n}줄을 터미널에 붙여 넣습니다. 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있습니다. 붙여 넣을까요?', { n: lines }))) {
     return false;
   }
-  term.xterm.paste(text);
+  pasteText(term, text);
   term.xterm.focus();
   return true;
 }
@@ -1014,7 +1034,7 @@ export function initTerminal() {
   locked.id = 'lec-term-locked';
   locked.className = 'term-locked';
   locked.hidden = true;
-  setHtml(locked, [html`<p><strong>${t('이 프로젝트에서는 터미널을 열지 않습니다')}</strong></p>`, html`<p>${t('Lectern 프로그램 폴더 안에 있는 프로젝트(설치된 예제 등)는 보기만 합니다 — 터미널·편집·새 문서·이름 바꾸기가 없습니다. 예제로 Claude Code 를 써 보려면 이 폴더를 다른 곳(문서 폴더 등)에 복사해 그 복사본을 여세요.')}</p>`, html`<button type="button" class="text-btn">${t('탐색기에서 이 폴더 보기')}</button>`]);
+  setHtml(locked, [html`<p><strong>${t('이 프로젝트에서는 터미널을 열지 않습니다')}</strong></p>`, html`<p>${t('Lectern 프로그램 폴더 안에 있는 프로젝트(설치된 예제 등)는 보기만 합니다 — 터미널·편집·새 문서·이름 바꾸기가 없습니다. 예제로 Claude Code 같은 AI 도구를 써 보려면 이 폴더를 다른 곳(문서 폴더 등)에 복사해 그 복사본을 여세요.')}</p>`, html`<button type="button" class="text-btn">${t('탐색기에서 이 폴더 보기')}</button>`]);
   locked.querySelector('button').addEventListener('click', () => revealInExplorer('', S.tab));
   $('#lec-term-body').append(locked);
   const title = $('#lec-term-title');
@@ -1029,6 +1049,7 @@ export function initTerminal() {
   $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
   on('term-font', applyFont);
+  on('ai-tool', showStuck);   // 멈춘 프로그램 띠의 이어 가기 명령 (D138)
   on('term-paste', (d) => pasteToTerminal(...pasteArgs(d, false)));   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js), Shift+→·Shift+숫자
   on('term-paste-stay', (d) => pasteToTerminal(...pasteArgs(d, true)));   // Ctrl+Shift+→·Ctrl+Shift+숫자 (spotlight.js, D79·D97·D137)
   on('term-target', (n) => { target = Number.isInteger(n) ? n : null; });   // 메뉴의 숫자+누르기 (ui.js, D137)

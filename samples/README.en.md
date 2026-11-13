@@ -11,7 +11,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 2. Press **Ctrl+P**, type `동향` and press Enter — quick open by name, title or path.
 3. Open [the research document](research/구리-시장-동향.md): tables with right-aligned numbers, a figure, callouts, a footnote and a chart that reads `data/월별-가격.csv`.
 4. In the sidebar's **Code** group, click `src/report.py` — line numbers, language colors, and functions in the contents.
-5. Right-click a table and choose **Copy location for Claude** — in your own project, paste it into Claude Code in the terminal (**Ctrl+\`** — the key left of 1).
+5. Right-click a table and choose **Copy location** — in your own project, paste it into Claude Code in the terminal (**Ctrl+\`** — the key left of 1).
 6. Edit mode (**Ctrl+E**, then **Ctrl+S** to save and **Esc** to close) works in your own projects and in a copy of this folder — the samples themselves are view-only (see the note below).
 7. Look at the chart guide [guide/07-차트.md](guide/07-차트.md) — Vega-Lite, ECharts, Plotly and Graphviz code blocks.
 8. Line editing [guide/08-한-줄-편집.md](guide/08-한-줄-편집.md) — fix lines in place and save at once: pick lines with **Insert**, move and delete them, insert elements with **/**, keep writing past the last line

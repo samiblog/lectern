@@ -1,6 +1,6 @@
 # Lectern 의 PowerPoint 스킬
 
-Claude Code 가 쓰는 스킬 두 개가 들어 있습니다. 설치하면 Claude Code 에게 말로 시킬 수 있습니다.
+AI 도구가 쓰는 스킬 두 개가 들어 있습니다 (SKILL.md 형식 — Claude Code·Codex·Antigravity·OpenCode 가 함께 씁니다). 설치하면 그 도구에게 말로 시킬 수 있습니다.
 
 | 스킬 | 하는 일 |
 |---|---|
@@ -9,7 +9,16 @@ Claude Code 가 쓰는 스킬 두 개가 들어 있습니다. 설치하면 Claud
 
 ## 설치
 
-Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 Claude Code 가 먼저 묻고, 허락하면 두 폴더를 `~/.claude/skills/` 로 복사합니다.
+Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 AI 도구가 먼저 묻고, 허락하면 두 폴더를 제 개인 스킬 폴더로 복사합니다.
+
+| 도구 | 개인 스킬 폴더 |
+|---|---|
+| Claude Code | `~/.claude/skills/` |
+| Codex | `~/.codex/skills/` |
+| Antigravity | `~/.gemini/config/skills/` |
+| OpenCode | `~/.config/opencode/skills/` (`~/.claude/skills/` 도 읽습니다 — Claude Code 용으로 설치했으면 그대로 보입니다) |
+
+Lectern 설정 창의 'PowerPoint 스킬'에서 요청 글을 복사하면 '쓰는 AI 도구'에 맞는 폴더가 적혀 나옵니다.
 
 Python 을 따로 설치하지 않아도 됩니다. Lectern 설치 폴더의 `lectern-skill.exe` 에 Python, pywin32, Pillow 가 들어 있고 스킬은 이것으로 실행됩니다. PowerPoint 가 있으면 `.ppt`, 띄워 둔 발표, 쪽 그림도 씁니다.
 

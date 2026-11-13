@@ -89,7 +89,11 @@ DEFAULTS: dict[str, Any] = {
     'print_margin': 'normal',  # 인쇄·PDF 의 여백: normal(위 25·아래 22·좌우 22mm) | narrow(사방 15mm) | wide(위 30·아래 25·좌우 30mm) (D134 — PDF·인쇄 창)
     'print_header': True,    # 인쇄·PDF 의 쪽 머리 — 2쪽부터 문서 제목과 날짜 (D134)
     'print_page_numbers': True,  # 인쇄·PDF 의 바닥 쪽 번호 (D134)
+    'ai_tool': 'claude',     # 터미널에서 쓰는 AI 도구: claude(Claude Code) | codex(Codex CLI) | antigravity(Antigravity CLI) | opencode(OpenCode) | any(여럿 — 이름을 정하지 않음)
+                             # (D138 — 설정 창. 화면의 이름과 요청 글의 지시 파일·스킬 폴더가 이것을 따른다. 앱이 그 도구를 실행하지는 않는다)
 }
+
+AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
@@ -97,7 +101,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
@@ -126,6 +130,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('serif', 'sans')
     if key == 'print_margin':
         return value in ('normal', 'narrow', 'wide')
+    if key == 'ai_tool':
+        return value in AI_TOOLS
     if key == 'terminal_font_size':
         return isinstance(value, int) and not isinstance(value, bool) and TERM_FONT[0] <= value <= TERM_FONT[1]
     if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):

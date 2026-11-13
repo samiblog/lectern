@@ -1,10 +1,10 @@
 # Writing documents that read well in Lectern — guide for AI
 
-This guide is for AI such as Claude Code. People read and edit in place the project folder's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules and tables, contents, diagrams and charts show correctly, and the locations people pick in Lectern (`@path lines 12-20`) can be handed back to the AI.
+This guide is for AI tools such as Claude Code, Codex, Antigravity and OpenCode. People read and edit in place the project folder's documents with **Lectern** (an Integrated Research Work Environment for Windows, centred on Markdown, where people work together with AI). Follow these rules and tables, contents, diagrams and charts show correctly, and the locations people pick in Lectern (`@path lines 12-20`) can be handed back to the AI.
 
 **Formatting makes writing visible; the quality of the writing comes first.** The rules below only make documents show correctly in Lectern — they do not make good writing. Before writing, decide who reads it and what they must judge after reading. Do not stop at the folder: look for background and counter-evidence in earlier material and on the web, and keep the sources. Write in paragraphs rather than bullet lists, and when done, reread from the start as the reader and revise. For people who write reports often, the 'Writing style' in Lectern's settings (a Claude Code output style) keeps this on for the whole session.
 
-If the task is "put these rules into this project's CLAUDE.md", trim the **Summary for CLAUDE.md** at the end to fit that project, and write down this guide's full path with it so it is read again when writing tables, charts or slides. Keep the project's CLAUDE.md from becoming a formatting rulebook: put that project's readers, purpose and tone before the formatting rules. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
+If the task is "put these rules into this project's instruction file" (the instruction file is `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex, Antigravity and OpenCode — if the project uses both, put them in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`), trim the **Summary for the instruction file** at the end to fit that project, and write down this guide's full path with it so it is read again when writing tables, charts or slides. Keep the project's instruction file from becoming a formatting rulebook: put that project's readers, purpose and tone before the formatting rules. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
 
 ## 1. What Lectern shows
 
@@ -101,7 +101,7 @@ Source: LME
 - Inside, write paragraphs, lists, tables, figures, charts, math, callouts and footnotes. Do not put headings (`#`) or another box inside — a box is a component, not a section, and stays within one section.
 - Tables and figures inside continue the document's numbering (after Table 3, a table inside a box is Table 4).
 - A box is not a callout (`> [!NOTE]`): a callout makes a sentence or two stand out; a box holds enough to be read on its own. Lectern slides have no boxes.
-- When a person uses Lectern's 'Ask Claude for a box' — 'summarize the conversation into a box right after `@path line 12`' — insert exactly one box after that line, with a blank line before and after. Use the number given in the request and change no other line. Do not transcribe the conversation: keep only the conclusions, the reasons and the open questions worth leaving in the document.
+- When a person uses Lectern's box request ('Ask Claude for a box' — the name follows the tool the person uses) — 'summarize the conversation into a box right after `@path line 12`' — insert exactly one box after that line, with a blank line before and after. Use the number given in the request and change no other line. Do not transcribe the conversation: keep only the conclusions, the reasons and the open questions worth leaving in the document.
 
 ### Other blocks
 
@@ -194,7 +194,7 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 
 ## Work card — WORK.md
 
-`WORK.md` at the top of a project folder is that folder's **work card**. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without Claude — when Claude writes it, keep the same format so people can carry on editing it.
+`WORK.md` at the top of a project folder is that folder's **work card**. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without AI — when an AI tool writes it, keep the same format so people can carry on editing it.
 
 ```markdown
 ---
@@ -248,7 +248,7 @@ This task in one line.
 
 ## 7. What people hand to the AI
 
-- **Location for Claude**: people right-click a block and paste `@research/report.md lines 12-17` into the terminal (in the Korean UI: `@research/report.md 12~17행`). The first part is the file, the rest is the source line range. Read those lines and work on them.
+- **Location (@path lines)**: people right-click a block and paste `@research/report.md lines 12-17` into the terminal (in the Korean UI: `@research/report.md 12~17행`). The first part is the file, the rest is the source line range. Read those lines and work on them.
 - From a heading it carries the section name, such as `@research/report.md lines 10-19 (section 'Summary')` — the whole section.
 - From the code view it looks like `@src/report.py lines 14-19`.
 
@@ -262,7 +262,7 @@ This task in one line.
 - Don't mix units or notes into table cells (it breaks number alignment).
 - Don't put long text on one slide (the bottom is cut off).
 
-## Summary for CLAUDE.md
+## Summary for the instruction file (CLAUDE.md or AGENTS.md)
 
 ```markdown
 ## Documents (read with Lectern)

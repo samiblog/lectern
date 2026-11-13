@@ -78,6 +78,14 @@ def test_save_without_a_choice_does_nothing():
     assert pdfexport.save(None, [str(samples_dir().resolve() / 'x.pdf')])['error']   # 만들기 전에 거절 — 창을 부르지 않는다
 
 
+def test_ai_tool_setting():
+    """쓰는 AI 도구 (D138): 네 값만, 기본은 Claude Code, 화면에서 바꾼다"""
+    from lectern.config import CLIENT_KEYS, DEFAULTS
+    assert DEFAULTS['ai_tool'] == 'claude' and 'ai_tool' in CLIENT_KEYS
+    assert all(value_ok('ai_tool', v) for v in ('claude', 'codex', 'antigravity', 'opencode', 'any'))
+    assert not value_ok('ai_tool', 'gemini') and not value_ok('ai_tool', None) and not value_ok('ai_tool', 1)
+
+
 def test_print_font_setting():
     assert value_ok('print_font', 'serif') and value_ok('print_font', 'sans')
     assert not value_ok('print_font', 'mono') and not value_ok('print_font', None)
@@ -106,8 +114,8 @@ def test_writing_style_files():
 
 
 def test_writing_guide_summary_is_short_and_quality_first():
-    """작성 안내의 'CLAUDE.md 에 넣을 요약' (D132): 첫 줄이 글의 질, 열 줄을 넘지 않는다"""
-    for name, head in (('writing.md', '## CLAUDE.md 에 넣을 요약'), ('writing.en.md', '## Summary for CLAUDE.md')):
+    """작성 안내의 '지시 파일에 넣을 요약' (D132 — 이름은 D138: CLAUDE.md·AGENTS.md): 첫 줄이 글의 질, 열 줄을 넘지 않는다"""
+    for name, head in (('writing.md', '## 지시 파일에 넣을 요약'), ('writing.en.md', '## Summary for the instruction file')):
         text = (web_dir() / 'help' / name).read_text(encoding='utf-8')
         block = text.split(head, 1)[1].split('```markdown', 1)[1].split('```', 1)[0]
         bullets = [s for s in block.splitlines() if s.startswith('- ')]

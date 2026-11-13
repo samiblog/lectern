@@ -1316,3 +1316,16 @@
 - **보인 표시**: 쌓아 둔 칸이면 넣은 터미널의 머리줄이 잠깐 빛난다 (알림 '3번 터미널에 넣었습니다' 와 함께).
 - **구조**: 터미널마다 칸(`term.pane` > `.term-pane-body` > `term.box`). 터미널 모음(D40)은 지금처럼 상자를 빌려 갔다가 그 칸으로 돌려준다. 크기 맞추기는 칸마다 (경계를 끌면 패널 크기는 그대로다).
 - **`docs/VISION.md`**: 바탕 작업 — Claude Code 와 다른 셸(서버·빌드·두 번째 Claude)을 함께 보며 문서의 위치를 골라 보낸다.
+
+## D138. Codex·Antigravity·OpenCode 도 쓴다 — '쓰는 AI 도구' 설정과 붙여 넣기
+
+- **결정 (사용자 요청, 2026-11-14)**: '현재 클로드 코드만 지원하는데 코덱스 안티그래비티 cli 지원' — 검토 뒤 시작, 구현 중에 'opencode도 적용해주세요'. Lectern 은 도구를 실행하지 않고 터미널은 어떤 프로그램이든 돌리므로(D51 — 앱은 요청 글까지) 이미 대부분 됐다. Claude 에 묶인 것은 이름·지시 파일·스킬 폴더·글쓰기 스타일·이어 가기 명령과, 실제로 띄워 보고 찾은 붙여 넣기 하나였다.
+- **설정 `ai_tool`** (설정 창 '쓰는 AI 도구'): `claude`(기본)·`codex`·`antigravity`·`opencode`·`any`(여럿). 표는 `web/js/aitool.js` — 이름, 프로젝트의 지시 파일(CLAUDE.md / AGENTS.md), 개인 스킬 폴더(`~/.claude/skills`·`~/.codex/skills`·`~/.gemini/config/skills`·`~/.config/opencode/skills`), 이어 가기 명령(`claude --continue`·`codex resume --last`·`agy --continue`·`opencode --continue`). 이 PC 에 깔린 codex-cli 0.169·agy 1.5.8·opencode 1.19.5 의 자체 문서(스킬 설치기·customizations 안내·`opencode debug skill`)로 확인했다. OpenCode 는 `~/.claude/skills` 도 읽어 Claude Code 용으로 설치한 스킬이 그대로 보인다.
+- **OpenCode** 도 같은 표에 (사용자 요청으로 더함): 지시 파일 AGENTS.md, `opencode --continue`, 붙여 넣기도 같은 길로 된다 ('[Pasted ~3 lines]' 로 받는다).
+- **이름**: 'Claude로 보내기'·'Claude Code용 요청 복사'·'Claude 에 맡기기' 같은 화면 글자 30여 곳이 고른 도구의 이름을 따른다 (`aiName`·`aiCli` — 여럿이면 'AI'·'AI 도구'). index.html 의 그 글자는 비워 두고 `settings.applyAiNames` 가 채운다 (고르는 순간에도). 단축키 표·보기만 하는 프로젝트 안내처럼 처음 한 번 만드는 글은 'Claude Code 같은 AI 도구'로 적었다. 설명서는 줄여서 'Claude' 라 적고 'Codex·Antigravity 를 쓸 때' 절에서 차이를 표로 보인다.
+- **요청 글**: '알려 주기'는 그 도구의 지시 파일에 (여럿이면 둘을 함께 적고, 둘 다 쓰는 프로젝트는 AGENTS.md 에 두고 CLAUDE.md 에는 `@AGENTS.md` 한 줄). 작성 안내의 절 이름을 '지시 파일에 넣을 요약'으로 바꿨다 (요청 글이 그 이름을 말한다 — 점검이 절이 있는지 본다). 스킬은 세 도구가 같은 SKILL.md 형식이라 폴더만 다르다 (스킬과 실행기 `lectern-skill.exe` 는 경로를 가리지 않는다). 글쓰기 스타일(D132)은 Claude Code 만의 출력 스타일이라, 다른 도구는 그 프로젝트의 AGENTS.md 에 '글쓰기' 절로 넣게 한다 — 보고서 폴더에서만 고르는 것과 같은 범위. 지시 파일의 규칙은 출력 스타일보다 약할 수 있다 (비교 시험은 하지 않았다 — 두 도구의 사용량이 적다).
+- **터미널에 무엇이 도는지는 여전히 찾지 않는다** (D69). 1번에 Claude Code, 2번에 Codex 를 두면 Shift+숫자(D137)로 고른다. 설정은 이름과 요청 글만 정한다.
+- **붙여 넣기 — 실제로 찾은 문제**: Codex 는 여러 줄을 붙여 넣으면 첫 줄바꿈에서 **보내 버렸다** (2026-11-14, Lectern 터미널에서 실제로 한 번 나감). xterm 의 `paste` 는 붙여넣기 표시(bracketed paste) 안의 줄바꿈을 CR 로 보내는데, Windows 의 Codex 는 그 CR 을 Enter 로 받는다 — 'Enter 는 누르지 않는다'(D51)가 깨진다. 표시 사이의 줄바꿈을 **LF** 로 보내면 Claude Code·Codex·Antigravity·OpenCode 모두 여러 줄을 입력 칸에 그대로 둔다 (표시 없이 LF 만 보내면 Codex 가 첫 줄바꿈을 잃는다). 그래서 Ctrl+V·우클릭·'터미널에 붙여 넣기' 를 한 길(`terminal.pasteText`)로 모아, 받는 프로그램이 붙여넣기 모드를 켰으면 표시 + LF 로, 아니면(셸 프롬프트) 지금처럼 xterm 의 길(CR, 여러 줄이면 묻기)로 보낸다. `@경로 12~20행` 은 세 도구 모두 글자 그대로 받는다 (Codex 의 `@` 파일 찾기 창은 붙여 넣은 글에는 뜨지 않았다).
+- **시험**: 실제 네 도구를 쌓은 터미널 넷에 띄워 (보내는 Enter 없이 — 사용량 없음) Shift+숫자의 위치, 여러 줄 요청 글, Ctrl+V 가 모두 보내지지 않고 온전히 들어가는지 25가지. 화면 점검 `aitool` 은 도구 대신 붙여넣기 모드를 켜고 받은 바이트를 찍는 작은 프로그램으로 표시·LF 를 보고, 도구마다 이름·요청 글·이어 가기 명령·영어 화면을 본다 (56가지).
+- **하지 않은 것**: 도는 프로그램을 알아보고 이름을 바꾸기 (D69), 도구를 Lectern 이 실행하기, 글쓰기 규칙의 도구별 비교 시험, 칸 머리줄에 도구 이름 (셸 이름 그대로).
+- **`docs/VISION.md`**: 바탕 작업 — AI 도구를 고르는 것은 사용자의 일이고, Lectern 은 사람이 읽고 고치는 자리로서 어느 도구와도 같은 방식으로 주고받는다.

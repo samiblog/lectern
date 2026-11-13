@@ -28,6 +28,7 @@ import { html, setHtml } from './html.js';
 import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
 import { isCode } from './icons.js';
 import { t } from './i18n.js';
+import { aiCli } from './aitool.js';
 
 const LIB = '/static/vendor/codemirror';
 const ADDONS = ['dialog', 'searchcursor', 'search', 'jump-to-line', 'matchbrackets', 'active-line', 'simple'];   // simple: rust 모드가 쓴다
@@ -478,7 +479,7 @@ async function save(ed, force = false) {
   }
   if (!conflict) return;
   setState(ed, t('저장하지 않음'));
-  if (window.confirm(t('편집하는 동안 다른 곳(Claude Code 등)에서 {path} 이(가) 바뀌었습니다.\n내 편집으로 덮어쓸까요? 취소하면 저장하지 않고 편집을 이어 갑니다.', { path: ed.path }))) {
+  if (window.confirm(t('편집하는 동안 다른 곳({cli} 등)에서 {path} 이(가) 바뀌었습니다.\n내 편집으로 덮어쓸까요? 취소하면 저장하지 않고 편집을 이어 갑니다.', { cli: aiCli(), path: ed.path }))) {
     await save(ed, true);
   }
   ed.cm.focus();
