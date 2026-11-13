@@ -201,4 +201,5 @@ EN: dict[str, str] = {
     '{name} 을 쓰지 못했습니다: {error}': 'Could not write {name}: {error}',
     'PDF 를 만드는 데 {n}초가 넘게 걸려 멈췄습니다': 'Stopped making the PDF after more than {n} seconds.',
     'PDF 를 만들지 못했습니다: {error}': 'Could not make the PDF: {error}',
+    '창이 없습니다': 'There is no window.',
 }

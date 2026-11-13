@@ -33,7 +33,7 @@ flowchart LR
 - 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38). 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 — 자식에게 물려지기 때문이다.
 - 프로젝트를 여는 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34). 그 밖에 프로젝트에 속한 독립창을 띄울 수 있다 (`windows.py`, D95 — 같은 서버·같은 화면, 주소의 `?solo=<프로젝트 id>&w=<창 id>` 만 다르다).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
-- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59, 저장 대화상자와 WebView2 의 인쇄 창 없는 PDF `save_pdf` — D131)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
+- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59, 저장 대화상자와 WebView2 의 인쇄 창 없는 PDF `save_pdf`·미리보기 `pdf_preview` — D131·D134)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
 
 ### 실행 모드
 
@@ -140,6 +140,10 @@ flowchart LR
 | `terminal_position` | `"auto"` | 가능 | 터미널 자리: `auto`(창이 세로로 길면 아래)·`side`(오른쪽)·`bottom`(문서 아래) — 설정 창·터미널 머리줄 버튼 (D52) |
 | `terminal_height` | `null` | 가능 | 아래에 둔 터미널 높이(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(40%) |
 | `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
+| `print_font` | `"serif"` | 가능 | 인쇄·PDF 본문 글꼴 `serif`(명조)·`sans`(고딕) (D131 — 설정 창, 'PDF·인쇄' 창) |
+| `print_margin` | `"normal"` | 가능 | 인쇄·PDF 여백 `normal`(위 25·아래 22·좌우 22mm)·`narrow`(사방 15mm)·`wide`(위 30·아래 25·좌우 30mm) (D134) |
+| `print_header` | `true` | 가능 | 인쇄·PDF 의 쪽 머리 — 2쪽부터 문서 제목과 날짜 (D134) |
+| `print_page_numbers` | `true` | 가능 | 인쇄·PDF 의 바닥 쪽 번호 (D134) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
 | `external_images` | `true` | 가능 | 문서 속 `http(s)` 이미지 표시. 끄면 링크로만 (설정 창. 바꾸면 페이지를 다시 불러옴 — CSP) |
 | `restore_last` | `true` | 가능 | 폴더(탭)를 처음 열면 마지막에 보던 문서와 스크롤 위치로 (설정 창). 끄면 위치를 기록하지도 않는다. 탭 목록은 이 설정과 상관없이 되살린다 |
@@ -199,6 +203,7 @@ flowchart LR
 | `POST /api/paste-image` | `{p, doc, data(base64)}` | 붙여 넣은 그림 한 장을 문서 옆 `문서이름-그림` 폴더에 새 파일로 (D111 — `editing.save_image`: 사용자가 붙여 넣거나 끌어 넣을 때만, PNG·JPEG·GIF·WebP, 20MB 까지, 덮어쓰지 않음). `{path}` |
 | `POST /api/editing` | `{dirty: [이름…], w?}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved_by`, `app.py`). w: 독립창의 창 id (D95) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
+| `GET /pdf-preview/<토큰>.pdf` | | 'PDF·인쇄' 창의 미리보기 PDF (D134 — 창의 js_api `pdf_preview` 가 메모리에 둔 최근 4개, 디스크에 쓰지 않음). 토큰이 비밀이다 — iframe 은 `X-Token` 을 보낼 수 없어 `/api` 밖. `Cache-Control: no-store`, 모르는 토큰은 404 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 묶음 (D101) `{groups:[{name, own, templates:[{number, name, text}]}], dir}`. 기본 묶음 다음에 사용자의 것 |

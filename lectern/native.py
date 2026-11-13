@@ -42,9 +42,39 @@ class NativeApi:
             return None
         return result[0] if isinstance(result, (list, tuple)) else str(result)
 
-    def save_pdf(self, tab: str, path: str) -> dict[str, str]:
+    def pdf_preview(self) -> dict[str, Any]:
+        """'PDF·인쇄' 창의 미리보기 (D134): 이 창의 지금 화면을 PDF 로 만들어 메모리에 둔다 — {'token', 'pages', 'size'} 또는 {'error'}.
+        화면은 /pdf-preview/<token>.pdf 를 iframe 으로 띄운다. PDF 보기의 저장 단추는 감춘다 — 파일은 'PDF로 저장…' 길로만 쓴다"""
+        from . import pdfexport
+
+        if self._window is None:
+            return {'error': t('창이 없습니다')}
+        try:
+            self._hide_pdf_save()
+            data = pdfexport.print_to_pdf(self._window)
+        except Exception as e:   # noqa: BLE001 — WebView2 가 없는 PC, 시간 초과 등
+            return {'error': t('PDF 를 만들지 못했습니다: {error}', error=str(e)[:300])}
+        return {'token': pdfexport.keep_preview(data), 'pages': pdfexport.page_count(data), 'size': len(data)}
+
+    def _hide_pdf_save(self) -> None:
+        """WebView2 PDF 보기의 저장·다른 이름으로 저장 단추를 감춘다 (원칙 1 — 파일은 저장 대화상자 길로만). 못 하면 그대로"""
+        if getattr(self, '_pdf_toolbar_done', False):
+            return
+        self._pdf_toolbar_done = True
+        try:
+            from Microsoft.Web.WebView2.Core import CoreWebView2PdfToolbarItems  # type: ignore[import-not-found]
+            from System import Action  # type: ignore[import-not-found]
+
+            wv = self._window.native.browser.webview
+            hide = CoreWebView2PdfToolbarItems.Save | CoreWebView2PdfToolbarItems.SaveAs
+            wv.Invoke(Action(lambda: setattr(wv.CoreWebView2.Settings, 'HiddenPdfToolbarItems', hide)))
+        except Exception:   # noqa: BLE001 — 옛 WebView2 SDK 면 이 설정이 없다
+            pass
+
+    def save_pdf(self, tab: str, path: str, token: str = '') -> dict[str, str]:
         """'PDF로 저장…' (D131 — pdfexport.py): 저장 대화상자에서 사용자가 고른 경로에 이 창의 지금 화면(보고서 인쇄 양식)을
-        PDF 하나로 쓴다. 대화상자는 문서 옆, '문서 이름.pdf' 로 연다. 화면에는 {'path'}·{'error'}, 취소면 {}"""
+        PDF 하나로 쓴다. token 이 있으면 미리 본 PDF 를 그대로 (D134). 대화상자는 문서 옆, '문서 이름.pdf' 로 연다.
+        화면에는 {'path'}·{'error'}, 취소면 {}"""
         import webview
 
         from . import pdfexport
@@ -56,7 +86,7 @@ class NativeApi:
         dialog = getattr(webview, 'FileDialog', None)
         kind = dialog.SAVE if dialog else webview.SAVE_DIALOG
         chosen = self._window.create_file_dialog(kind, directory=folder, save_filename=name, file_types=(t('PDF 파일 (*.pdf)'),))
-        return pdfexport.save(self._window, chosen)
+        return pdfexport.save(self._window, chosen, token)
 
     def set_title(self, title: str) -> None:
         if self._window is not None:

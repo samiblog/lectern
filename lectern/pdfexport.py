@@ -7,15 +7,20 @@
   Lectern 프로그램 폴더 안(설치된 예제)에는 쓰지 않는다 (D71). 같은 폴더의 임시 파일에 쓴 뒤 바꿔 끼운다 —
   쓰다 멈추면 반쪽 PDF 가 남지 않게.
 - 개발자 도구를 꺼 둔 보통 실행에서도 CDP 를 부를 수 있다 (AreDevToolsEnabled 와 상관없다).
+- 미리보기 (D134): 'PDF·인쇄' 창이 옵션을 바꿀 때마다 같은 길로 PDF 를 만들어 메모리에 두고(디스크에 쓰지 않는다), 서버가
+  /pdf-preview/<토큰>.pdf 로 내준다 — 창의 iframe 이 WebView2 의 PDF 보기로 띄운다. 저장은 미리 본 그 바이트를 그대로 쓴다.
+  토큰은 추측할 수 없는 값이고 최근 몇 개만 둔다 (/api 가 아니라 토큰 헤더가 없다 — iframe 은 헤더를 보낼 수 없다).
 """
 from __future__ import annotations
 
 import base64
 import json
 import os
+import re
+import secrets
 import tempfile
 from pathlib import Path
-from threading import Semaphore
+from threading import Lock, Semaphore
 from typing import Any
 
 from .i18n import t
@@ -26,6 +31,32 @@ from .scanner import resolve_inside
 PDF_PARAMS = {'preferCSSPageSize': True, 'printBackground': True, 'displayHeaderFooter': False,
               'generateTaggedPDF': True, 'generateDocumentOutline': True}
 TIMEOUT = 180   # 초 — 그림이 많은 긴 문서도 보통 몇 초
+MAX_PREVIEWS = 4   # 메모리에 두는 미리보기 PDF 수 (창 여럿이 함께 미리 볼 때도 모자라지 않게)
+_previews: dict[str, bytes] = {}
+_previews_lock = Lock()
+
+
+def keep_preview(data: bytes) -> str:
+    """미리보기 PDF 를 메모리에 두고 토큰을 준다. 오래된 것부터 버린다"""
+    token = secrets.token_urlsafe(24)
+    with _previews_lock:
+        _previews[token] = data
+        while len(_previews) > MAX_PREVIEWS:
+            _previews.pop(next(iter(_previews)))
+    return token
+
+
+def preview_bytes(token: Any) -> bytes | None:
+    """토큰의 미리보기 PDF (없거나 버렸으면 None)"""
+    if not isinstance(token, str) or not token:
+        return None
+    with _previews_lock:
+        return _previews.get(token)
+
+
+def page_count(data: bytes) -> int:
+    """PDF 의 쪽 수 (쪽 객체를 센다 — Chromium 이 만든 PDF 는 객체 흐름에 쪽을 넣지 않는다)"""
+    return len(re.findall(rb'/Type\s*/Page[^s]', data))
 
 
 def documents_dir() -> str:
@@ -117,8 +148,9 @@ def print_to_pdf(window: Any) -> bytes:
     return base64.b64decode(json.loads(str(box['json']))['data'])
 
 
-def save(window: Any, chosen: Any) -> dict[str, str]:
-    """대화상자에서 고른 값으로 PDF 를 만들어 쓴다. 화면에는 {'path'}·{'error'}, 고르지 않았으면 {}"""
+def save(window: Any, chosen: Any, token: Any = None) -> dict[str, str]:
+    """대화상자에서 고른 값으로 PDF 를 쓴다 — 미리 본 것(token)이 있으면 그 바이트 그대로, 없으면 지금 만든다.
+    화면에는 {'path'}·{'error'}, 고르지 않았으면 {}"""
     path = target_of(chosen)
     if path is None:
         return {}
@@ -126,7 +158,7 @@ def save(window: Any, chosen: Any) -> dict[str, str]:
     if why:
         return {'error': why}
     try:
-        data = print_to_pdf(window)
+        data = preview_bytes(token) or print_to_pdf(window)
     except Exception as e:   # noqa: BLE001 — WebView2 가 없는 PC, 시간 초과 등
         return {'error': t('PDF 를 만들지 못했습니다: {error}', error=str(e)[:300])}
     why = write_pdf(path, data)

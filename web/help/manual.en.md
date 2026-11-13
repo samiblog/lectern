@@ -241,8 +241,20 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 Right-click the margin of a document and choose **Save as PDF…** or **Print…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
 
-- **Save as PDF…**: writes one PDF file where you choose in the save dialog (it opens next to the document, with the document's name). It does not go through the print dialog, so there is no date and address header from the browser, and headings become PDF bookmarks. If the name exists, Windows asks whether to replace it. If a PDF viewer has the file open, close it and save again.
-- **Print…**: opens the print dialog. Turn off **Headers and footers** there to leave out the date and address.
+Both open the **PDF and print** window. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
+
+| Option | Choices |
+|---|---|
+| Font | Serif (HCR Batang, else Batang — sans-serif headings) or sans-serif (Malgun Gothic) |
+| Margins | Normal (top 25, bottom 22, sides 22 mm), narrow (15 mm all round), wide (top 30, bottom 25, sides 30 mm) |
+| Page header | Document title and date in the header from page 2 |
+| Page numbers | '- 1 -' centred at the foot |
+
+The options are kept for next time.
+
+- **Save as PDF…**: writes the previewed PDF where you choose in the save dialog (it opens next to the document, with the document's name). There is no date and address header from the browser, and headings become PDF bookmarks. If the name exists, Windows asks whether to replace it. If a PDF viewer has the file open, close it and save again.
+- **Print…**: sends the previewed PDF to the print dialog. Choose the printer, copies, pages and colour there. It prints the PDF, so no date and address header is added.
+- Close the window with Esc or **Close** (after clicking inside the preview, move the mouse out of it first).
 - HTML documents keep their own style and have only the print dialog (**Print / Save as PDF…**) — choose 'Microsoft Print to PDF' as the printer for a PDF.
 
 Lectern slides print one slide per slide-sized page (see 'Lectern slides'). A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').

@@ -120,3 +120,36 @@ def test_build_ships_the_writing_style():
     spec = (ROOT / 'lectern.spec').read_text(encoding='utf-8')
     assert re.search(r"\('web',\s*'web'\)", spec), 'web 폴더가 설치 파일에 들어가야 한다'
     assert os.path.isfile(web_dir() / 'help' / 'research-writing.md')
+
+
+def test_preview_store_keeps_the_last_few():
+    """미리보기 PDF (D134): 메모리에만, 추측할 수 없는 토큰으로, 최근 몇 개만"""
+    first = pdfexport.keep_preview(b'%PDF-1.7 1 0 obj << /Type /Page >> 2 0 obj << /Type /Pages >>')
+    assert pdfexport.preview_bytes(first).startswith(b'%PDF') and len(first) >= 30
+    assert pdfexport.page_count(pdfexport.preview_bytes(first)) == 1
+    others = [pdfexport.keep_preview(b'%PDF-x') for _ in range(pdfexport.MAX_PREVIEWS)]
+    assert pdfexport.preview_bytes(first) is None and pdfexport.preview_bytes(others[-1]) == b'%PDF-x'
+    assert pdfexport.preview_bytes('') is None and pdfexport.preview_bytes(None) is None
+
+
+def test_preview_route_needs_only_the_token():
+    """/pdf-preview/<토큰>.pdf — iframe 은 X-Token 머리를 보낼 수 없어 /api 밖이다. 토큰이 비밀, 모르는 토큰은 404"""
+    from lectern.config import Config
+    from lectern.server import create_app
+    from lectern.state import AppState
+    st = AppState(Config(), mode='window')
+    st.token = 'secret'   # 창 모드 — /api 는 X-Token 이 있어야 한다
+    c = create_app(st).test_client()
+    token = pdfexport.keep_preview(b'%PDF-1.7 preview')
+    r = c.get(f'/pdf-preview/{token}.pdf')
+    assert r.status_code == 200 and r.data == b'%PDF-1.7 preview' and r.content_type == 'application/pdf'
+    assert r.headers['Cache-Control'] == 'no-store' and r.headers['X-Content-Type-Options'] == 'nosniff'
+    assert c.get('/pdf-preview/nope.pdf').status_code == 404
+    assert c.get('/api/state').status_code == 403   # /api 는 여전히 토큰을
+    st.close()
+
+
+def test_print_options_settings():
+    assert value_ok('print_margin', 'narrow') and not value_ok('print_margin', '10mm')
+    assert value_ok('print_header', False) and not value_ok('print_header', 'no')
+    assert value_ok('print_page_numbers', True)

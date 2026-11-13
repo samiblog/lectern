@@ -399,6 +399,44 @@
     </div>
   </div>
 </div>
+<div id="lec-print" class="overlay" hidden><!-- PDF·인쇄 창 (D134 — printdoc.js): 옵션과 실제 PDF 의 미리보기 -->
+  <div class="dialog-box print-box" role="dialog" aria-labelledby="lec-print-title" tabindex="-1">
+    <h2 id="lec-print-title">PDF·인쇄</h2>
+    <div class="print-main">
+      <div class="print-opts">
+        <fieldset id="lec-print-layout">
+          <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-font-title">
+            <span class="opt-head"><b id="lec-pp-font-title">글꼴</b></span>
+            <label><input type="radio" name="pp_font" value="serif"><span>명조<small>함초롬바탕(없으면 바탕), 제목은 고딕</small></span></label>
+            <label><input type="radio" name="pp_font" value="sans"><span>고딕<small>맑은 고딕</small></span></label>
+          </div>
+          <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-margin-title">
+            <span class="opt-head"><b id="lec-pp-margin-title">여백</b></span>
+            <label><input type="radio" name="pp_margin" value="normal"><span>보통<small>위 25 · 아래 22 · 좌우 22mm</small></span></label>
+            <label><input type="radio" name="pp_margin" value="narrow"><span>좁게<small>사방 15mm</small></span></label>
+            <label><input type="radio" name="pp_margin" value="wide"><span>넓게<small>위 30 · 아래 25 · 좌우 30mm</small></span></label>
+          </div>
+          <label class="opt"><input type="checkbox" id="lec-pp-header"><span><b>쪽 머리</b><small>2쪽부터 문서 제목과 날짜</small></span></label>
+          <label class="opt"><input type="checkbox" id="lec-pp-pages"><span><b>쪽 번호</b><small>바닥 가운데 '- 1 -'</small></span></label>
+        </fieldset>
+        <p id="lec-print-note" class="print-note"></p>
+        <p class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다.</p>
+      </div>
+      <div class="print-preview">
+        <iframe id="lec-print-frame" title="미리보기"></iframe>
+        <p id="lec-print-wait" class="print-wait" role="status"></p>
+      </div>
+    </div>
+    <div class="dialog-foot">
+      <span id="lec-print-info"></span>
+      <span class="print-btns">
+        <button type="button" id="lec-print-close" class="text-btn">닫기</button>
+        <button type="button" id="lec-print-paper" title="미리 본 그대로 인쇄합니다 — 프린터·매수·쪽은 인쇄 창에서 고릅니다">인쇄…</button>
+        <button type="button" id="lec-print-save" title="미리 본 그대로 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">PDF로 저장…</button>
+      </span>
+    </div>
+  </div>
+</div>
 <div id="lec-settings" class="overlay" hidden>
   <div class="dialog-box" role="dialog" aria-labelledby="lec-settings-title">
     <h2 id="lec-settings-title">설정</h2>

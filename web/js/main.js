@@ -31,7 +31,7 @@ import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded, openSamples,
 } from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
-import { initPrint } from './printdoc.js';
+import { initPrint, closePrint } from './printdoc.js';
 import {
   initHelp, toggleManual, closeManual, manualOpen, toggleShortcuts, closeShortcuts,
 } from './help.js';
@@ -366,7 +366,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || escSpotlight()) e.preventDefault();
     }
   });

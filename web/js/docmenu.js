@@ -23,7 +23,7 @@ import { openChart, domTable } from './quickchart.js';
 import { html } from './html.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
-import { printDoc, savePdf, canSavePdf } from './printdoc.js';
+import { printDoc, openPrint, canSavePdf } from './printdoc.js';
 
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
@@ -420,12 +420,13 @@ function docItems(views = []) {
 /** 'PDF로 저장…'(창 모드의 md 문서 — 보고서 양식, 브라우저 머리글 없이)과 '인쇄…'. 그 밖(html 문서·브라우저 개발 모드)은 인쇄 창 하나 (D131) */
 function printItems() {
   if (!canSavePdf(doc?.path)) return [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }];
+  // 둘 다 'PDF·인쇄' 창을 연다 (D134 — 옵션과 미리보기). 처음 누를 단추만 다르다
   if (S.pane.view.classList.contains('lec-deck')) {   // Lectern 슬라이드: 한 장이 한 쪽 (base.css 의 @page lec-slide)
-    return [{ label: t('PDF로 저장…'), tip: t('슬라이드 한 장이 한 쪽인 PDF — 브라우저가 붙이는 날짜·주소는 없습니다'), action: savePdf },
-      { label: t('인쇄…'), tip: t('슬라이드 한 장을 한 쪽으로 인쇄합니다'), action: printDoc }];
+    return [{ label: t('PDF로 저장…'), tip: t('미리 보고 저장합니다 — 슬라이드 한 장이 한 쪽, 브라우저가 붙이는 날짜·주소는 없습니다'), action: () => openPrint('pdf') },
+      { label: t('인쇄…'), tip: t('미리 보고 인쇄합니다 — 슬라이드 한 장이 한 쪽'), action: () => openPrint('print') }];
   }
-  return [{ label: t('PDF로 저장…'), tip: t('보고서 양식의 A4 PDF — 쪽 번호와 문서 제목을 넣고, 브라우저가 붙이는 날짜·주소는 없습니다'), action: savePdf },
-    { label: t('인쇄…'), tip: t("보고서 양식으로 인쇄합니다. 인쇄 창의 '머리글 및 바닥글'을 끄면 날짜·주소가 붙지 않습니다"), action: printDoc }];
+  return [{ label: t('PDF로 저장…'), tip: t('글꼴·여백·쪽 머리를 고르고 미리 본 뒤 A4 PDF 로 저장합니다 — 브라우저가 붙이는 날짜·주소는 없습니다'), action: () => openPrint('pdf') },
+    { label: t('인쇄…'), tip: t('글꼴·여백·쪽 머리를 고르고 미리 본 그대로 인쇄합니다 — 프린터·매수는 인쇄 창에서'), action: () => openPrint('print') }];
 }
 
 /** 코드 화면의 줄 번호 (요소·글 위치가 든 줄) */

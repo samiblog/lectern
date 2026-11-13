@@ -55,7 +55,7 @@
 | resize.js | 사이드바·목차 폭 조절 (경계 끌기, 두 번 누르면 기본 — 설정 sidebar_width·toc_width) |
 | htmldoc.js | html 문서 보기 — 스크립트 없는 같은 출처 iframe (css/frame.css 를 넣는다) |
 | docmenu.js | 본문 우클릭 메뉴 (텍스트·원문·표·그림 복사, Claude용 위치, 담기·보내기 — D63·D65) |
-| printdoc.js | 인쇄와 PDF로 저장 (D131) — 인쇄 직전에 `#lec-print-page` 에 쪽 머리(문서 제목·날짜, CSS 글자로 막아서)와 여백 상자 글꼴, 슬라이드면 기본 쪽 크기를 슬라이드 크기로 적고, 늦게 불러오는 그림을 불러 둔다. 'PDF로 저장…' 은 창의 `save_pdf`(저장 대화상자 → WebView2 Page.printToPDF), '인쇄…' 는 인쇄 창. 설정 `print_font` 를 루트의 `data-print-font` 로 (양식은 `web/themes/print.css`) |
+| printdoc.js | 인쇄와 PDF로 저장 (D131), 'PDF·인쇄' 창 (D134 — 옵션: 글꼴·여백·쪽 머리·쪽 번호, 설정에 남김. 미리보기: 창의 `pdf_preview` 가 만든 PDF 를 `/pdf-preview/<토큰>.pdf` 로 iframe 의 PDF 보기에, 옵션을 바꾸면 다시 — 늦게 온 것은 버림. 저장은 그 토큰으로 미리 본 그대로, 인쇄는 미리 본 PDF 를). 인쇄 직전에 `#lec-print-page` 에 쪽 머리(문서 제목·날짜, CSS 글자로 막아서)와 여백 상자 글꼴, 슬라이드면 기본 쪽 크기를 슬라이드 크기로 적고, 늦게 불러오는 그림을 불러 둔다. 'PDF로 저장…' 은 창의 `save_pdf`(저장 대화상자 → WebView2 Page.printToPDF), '인쇄…' 는 인쇄 창. 설정 `print_font` 를 루트의 `data-print-font` 로 (양식은 `web/themes/print.css`) |
 | basket.js | 담기·보내기 (D63·D65) — 조각 만들기(`snippetOf`), 사이드바 '담기' 탭(`tab.basket`), 보낼 곳 고르기 창(`#lec-insert` — 편집 중인 곳·새 문서·문서 탭에 열린 문서 → 자리, 새 문서 경로 — 새로 만들기 `askNewDoc` 도 이 창), `editor.js` 의 `insertIntoDoc` 으로 보내기, Claude 에 맡기기 요청 글 |
 | rename.js | 이름 바꾸기 (D66) — 사이드바 파일의 우클릭 '이름 바꾸기…'·F2 (`rename` 이벤트), 이름을 묻는 창(`#lec-rename`), `POST /api/rename`, 바뀐 뒤 보던 문서 탭·뒤로 기록(`nav.renamePath`)·담은 조각을 새 이름으로 |
 | newdoc.js | 새 문서 (D65·D105) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`과 스타일의 보기 머리글), 새 문서 탭의 md 문서 화면에서 바로 쓰기(`openCreated`) |

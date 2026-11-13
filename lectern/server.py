@@ -146,6 +146,22 @@ def create_app(state: AppState) -> Flask:
             resp.headers['Referrer-Policy'] = 'no-referrer'
         return resp
 
+    @app.get('/pdf-preview/<token>.pdf')
+    def pdf_preview(token: str) -> Response:
+        """'PDF·인쇄' 창의 미리보기 PDF (D134 — 창의 js_api pdf_preview 가 메모리에 둔 것). 토큰이 비밀이다 — iframe 은
+        X-Token 머리를 보낼 수 없어 /api 밖에 둔다. 디스크의 파일은 내주지 않는다"""
+        from . import pdfexport
+
+        data = pdfexport.preview_bytes(token)
+        if data is None:
+            abort(404)
+        resp = Response(data, content_type='application/pdf')
+        resp.headers['Cache-Control'] = 'no-store'
+        resp.headers['Content-Disposition'] = 'inline; filename="preview.pdf"'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Referrer-Policy'] = 'no-referrer'
+        return resp
+
     @app.get('/')
     def index() -> Response:
         html = (web / 'index.html').read_text(encoding='utf-8')

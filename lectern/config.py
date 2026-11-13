@@ -86,6 +86,9 @@ DEFAULTS: dict[str, Any] = {
     'work_folders': [],      # WORK.md 가 있는 폴더들 (D124 — 열거나 '폴더 더하기'로 더한다. 경로만, 서버가 기록)
     'work_alerts': True,     # Lectern 안의 업무 알림 (D124 — 시작 요약·일정 10분 전·17:30 기록. 설정 창)
     'print_font': 'serif',   # 인쇄·PDF 의 본문 글꼴: serif(명조) | sans(고딕) (D131 — 설정 창, 보고서 인쇄 양식 web/themes/print.css)
+    'print_margin': 'normal',  # 인쇄·PDF 의 여백: normal(위 25·아래 22·좌우 22mm) | narrow(사방 15mm) | wide(위 30·아래 25·좌우 30mm) (D134 — PDF·인쇄 창)
+    'print_header': True,    # 인쇄·PDF 의 쪽 머리 — 2쪽부터 문서 제목과 날짜 (D134)
+    'print_page_numbers': True,  # 인쇄·PDF 의 바닥 쪽 번호 (D134)
 }
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
@@ -94,7 +97,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
@@ -121,6 +124,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('default', 'vim')
     if key == 'print_font':
         return value in ('serif', 'sans')
+    if key == 'print_margin':
+        return value in ('normal', 'narrow', 'wide')
     if key == 'terminal_font_size':
         return isinstance(value, int) and not isinstance(value, bool) and TERM_FONT[0] <= value <= TERM_FONT[1]
     if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):
