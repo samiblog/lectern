@@ -244,4 +244,6 @@ export function initPrint() {
     if (dlg && document.activeElement === $('#lec-print-frame')) $('#lec-print .print-box').focus();
   });
   on('tab', () => closePrint());
+  // 창을 연 사이 문서가 다시 그려지면(Claude 가 고침) 미리보기도 다시 — 옛 미리보기를 저장하지 않게
+  on('rendered', (pane) => { if (dlg && pane === dlg.pane) refreshSoon(); });
 }
