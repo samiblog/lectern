@@ -2037,8 +2037,8 @@ def run(headed: bool) -> None:
             no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
             page.locator('#lec-tree .row.file', has_text='후속 과제').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
-            check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-notes', 'lec-btn-toc', 'lec-btn-term'],
-                  f"탭 막대의 [편집] [메모] [목차] [터미널] — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
+            check(pressed_on and off and no_edit and order == ['lec-btn-edit', 'lec-btn-toc', 'lec-btn-print', 'lec-btn-notes', 'lec-btn-term'],
+                  f"탭 막대의 [편집] [목차] [인쇄] [메모] [터미널] (D135) — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
             page.click('#lec-st-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
             in_editor = page.evaluate("!!document.activeElement?.closest('.lec-editor') && document.querySelector('#lec-st-edit').hidden")

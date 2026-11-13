@@ -113,7 +113,9 @@ export async function printDoc() {
 /** 'PDF·인쇄' 창을 쓸 수 있는 화면 — 창 모드의 md 문서(Lectern 슬라이드 포함). html 문서·코드·자료·폴더 개요는 아니다 */
 export function canSavePdf(path = S.pane?.view?.dataset.docPath) {
   // 칸이 html 문서를 보여도 dataset.docPath 에는 앞의 md 문서가 남아 있다 (doc.js 만 적는다) — 메뉴의 문서와 같을 때만
-  return native.has('pdf_preview') && !!path && isMd(path) && S.pane?.view?.dataset.docPath === path && !S.pane.view.querySelector(':scope > iframe.lec-html');
+  // 폴더 개요·코드 화면에서도 남아 있다 — 칸이 지금 보이는 것(pane.current)이 그 md 문서일 때만
+  return native.has('pdf_preview') && !!path && isMd(path) && S.pane?.view?.dataset.docPath === path && !S.pane.view.querySelector(':scope > iframe.lec-html')
+    && S.pane.current?.type === 'doc' && S.pane.current.path === path;
 }
 
 // ---- 'PDF·인쇄' 창 (D134) ------------------------------------------------------------
@@ -225,6 +227,23 @@ function paper() {
   }
 }
 
+/**
+ * 탭 막대의 [인쇄] (D135): 창 모드의 md 문서(Lectern 슬라이드 포함)면 'PDF·인쇄' 창을 인쇄가 기본 단추로 연다.
+ * html 문서·브라우저 개발 모드는 인쇄 창, 문서가 아니면(폴더 개요·코드·자료) 까닭을 알린다
+ */
+export function printButton() {
+  if (canSavePdf()) {
+    openPrint('print');
+    return;
+  }
+  const cur = S.pane?.current;
+  if (cur?.type === 'doc') {   // html 문서·브라우저 개발 모드의 md 문서 — 인쇄 창
+    printDoc();
+    return;
+  }
+  toast(t('문서를 볼 때 인쇄할 수 있습니다 — 왼쪽에서 문서를 여세요'));
+}
+
 /** 인쇄·PDF 글꼴을 문서 루트에 (print.css 가 :root[data-print-font] 로 고른다) */
 export function applyPrintFont() {
   document.documentElement.dataset.printFont = printFont();
@@ -239,6 +258,7 @@ export function initPrint() {
   $('#lec-print-close').addEventListener('click', closePrint);
   $('#lec-print-save').addEventListener('click', save);
   $('#lec-print-paper').addEventListener('click', paper);
+  $('#lec-btn-print').addEventListener('click', printButton);   // 탭 막대의 [인쇄] (D135)
   // 미리보기(PDF 보기)를 누르면 초점이 그 안으로 들어가 Esc 가 오지 않는다 — 마우스가 나가면 창으로 되돌린다
   $('#lec-print .print-preview').addEventListener('mouseleave', () => {
     if (dlg && document.activeElement === $('#lec-print-frame')) $('#lec-print .print-box').focus();

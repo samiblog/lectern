@@ -1576,5 +1576,8 @@ export default {
 "미리 보고 저장합니다 — 슬라이드 한 장이 한 쪽, 브라우저가 붙이는 날짜·주소는 없습니다": "Preview, then save — one slide per page, without the date and address the browser adds",
 "미리 보고 인쇄합니다 — 슬라이드 한 장이 한 쪽": "Preview, then print — one slide per page",
 "글꼴·여백·쪽 머리를 고르고 미리 본 뒤 A4 PDF 로 저장합니다 — 브라우저가 붙이는 날짜·주소는 없습니다": "Choose font, margins and header, preview, then save an A4 PDF — without the date and address the browser adds",
-"글꼴·여백·쪽 머리를 고르고 미리 본 그대로 인쇄합니다 — 프린터·매수는 인쇄 창에서": "Choose font, margins and header and print exactly the preview — printer and copies in the print dialog"
+"글꼴·여백·쪽 머리를 고르고 미리 본 그대로 인쇄합니다 — 프린터·매수는 인쇄 창에서": "Choose font, margins and header and print exactly the preview — printer and copies in the print dialog",
+"인쇄": "Print",
+"인쇄·PDF — 보고 있는 문서의 글꼴·여백을 고르고 미리 본 뒤 인쇄하거나 PDF 로 저장합니다": "Print and PDF — choose the font and margins for the open document, preview it, then print or save a PDF",
+"문서를 볼 때 인쇄할 수 있습니다 — 왼쪽에서 문서를 여세요": "You can print while viewing a document — open one on the left"
 };

@@ -239,7 +239,7 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 
 ### Print and PDF
 
-Right-click the margin of a document and choose **Save as PDF…** or **Print…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
+Click **Print** at the right end of the tab bar (between Contents and Notes), or right-click the margin of a document and choose **Save as PDF…** or **Print…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
 
 Both open the **PDF and print** window. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
 
