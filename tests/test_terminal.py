@@ -118,6 +118,39 @@ def test_session_runs_in_project_folder_with_korean(tmp_path, monkeypatch):
     assert wait_for(lambda: not s.alive)
 
 
+def test_console_keys():
+    """콘솔에 쓸 글 (D138): 부호와 줄바꿈은 win32-input-mode 의 키로, 한글·영문·ESC 순서는 그대로"""
+    from lectern.terminal import console_keys
+    assert console_keys('abc 가나다 é 漢') == 'abc 가나다 é 漢'
+    assert console_keys('\x1b[A\x1b[200~x\x1b[201~\r\t') == '\x1b[A\x1b[200~x\x1b[201~\r\t'   # 화살표·붙여넣기 표시·Enter·Tab
+    dot = '\x1b[0;0;183;1;0;1_\x1b[0;0;183;0;0;1_'
+    assert console_keys('가·나') == f'가{dot}나'
+    for ch in '—…→’“”℃①「」':
+        assert console_keys(ch) == f'\x1b[0;0;{ord(ch)};1;0;1_\x1b[0;0;{ord(ch)};0;0;1_'
+    assert console_keys('a\nb') == 'a\x1b[74;36;10;1;8;1_\x1b[74;36;10;0;8;1_b'   # 줄바꿈은 Ctrl+J 키
+    assert console_keys('😀') == '😀'   # BMP 밖은 그대로
+
+
+@windows
+def test_symbols_reach_a_key_reading_program(tmp_path):
+    """부호가 키 입력으로 읽는 프로그램에 닿는다 (D138 — Codex 가 잃던 가운뎃점·줄표): 콘솔이 win32-input-mode 를 청하면
+    그 표기로 보내고, 프로그램은 키를 하나씩 읽어(ReadConsoleInput — msvcrt.getwch) 받은 글자의 코드를 찍는다"""
+    s = Session('p1', str(tmp_path), None, 100, 30)
+    try:
+        assert read_until(s, '>')
+        if not s.win32_input:
+            pytest.skip('이 Windows 의 콘솔은 win32-input-mode 를 청하지 않는다 (옛 conhost)')
+        code = "import msvcrt; print('RE'+'ADY', flush=True); print('GOT', [ord(msvcrt.getwch()) for _ in range(5)], 'FIN'+'ISH', flush=True)"
+        s.write(f'& \'{sys.executable}\' -c "{code}"\r')
+        assert read_until(s, 'READY')
+        time.sleep(0.5)
+        s.write('가·나—다')
+        out = read_until(s, 'FINISH')
+        assert f"GOT [{ord('가')}, 183, {ord('나')}, 8212, {ord('다')}]" in out, out[-300:]
+    finally:
+        s.close()
+
+
 @windows
 def test_busy_and_close_ends_child_programs(tmp_path):
     s = Session('p1', str(tmp_path), None, 80, 24)

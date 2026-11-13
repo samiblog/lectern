@@ -838,7 +838,9 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 
 - With **Several**, the name becomes 'AI' and requests list each tool's file and folder. If one project uses several tools, keep the rules in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`, so there is one place to edit.
 - The two PowerPoint skills use the format the four tools share (SKILL.md), so they install as they are. OpenCode also reads `~/.claude/skills`, so skills installed for Claude Code show up without installing again.
-- Pasting several lines into the terminal (▣ Terminal in a menu, Ctrl+V) leaves them in the input box of all four tools without sending. You press Enter yourself.
+- Pasting several lines into the terminal (▣ Terminal in a menu, Ctrl+V) leaves them in the input box of all four tools without sending. You press Enter yourself. Punctuation such as the middle dot (·), em dash (—) and ellipsis (…) goes in as it is.
+- Antigravity and Codex may ask before reading files outside the working folder (Lectern's writing guide and skills folder). Allow it and they carry on.
+- A tool that uses the whole screen, such as OpenCode, shows only its lower part when a stacked terminal is short. Drag the border to make it taller, or put the terminal below the document (tabs).
 - With stacked terminals you can keep Claude Code in terminal 1 and Codex in terminal 2 side by side, and choose with Shift+number.
 
 ## Settings

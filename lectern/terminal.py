@@ -77,8 +77,40 @@ def shell_label(exe: str) -> str:
     return t(_LABELS.get(stem.lower(), stem))
 
 
+# ---- 콘솔에 글자를 '키 하나'로 (D138) ----------------------------------------------------
+# 의사 콘솔(conhost)은 받은 글자를 프로그램에 키 입력으로 바꿔 준다. 자판으로 칠 수 없고 글자(Letter)도 전각도 아닌 것
+# (가운뎃점 · 줄표 — 말줄임 … 화살표 → 굽은 따옴표 ’ “ ” 단위 ℃ 동그라미 숫자 ① …)은 한국어 Windows 에서 Alt+숫자판
+# 입력을 흉내 낸 키로 바뀌는데, Codex CLI 는 그 키를 버린다 — 붙여 넣은 요청 글에서 그 부호들이 사라졌다 (2026-11-14 실제 시험.
+# VT 입력을 켜는 Claude Code·Antigravity·OpenCode 는 글자 그대로 받는다). 콘솔이 알아듣는 win32-input-mode 표기
+# (ESC [ Vk ; Sc ; Uc ; Kd ; Cs ; Rc _)로 보내면 어느 프로그램에나 그 글자의 키 하나로 간다.
+# 줄바꿈(LF — 붙여넣기 표시 사이의 줄바꿈, terminal.js 의 pasteText)도 Ctrl+J 키로 보낸다: 위의 표기와 섞인 날 LF 는 Codex 가 잃었다.
+# 이 표기는 콘솔이 먼저 청할 때(출력 맨 앞의 ESC [ ? 9001 h — Windows 11 과 새 conhost)만 쓴다. 청하지 않는 옛 콘솔에는
+# 그대로 보낸다 (표기를 모르면 글자로 찍힌다).
+WIN32_INPUT_ASK = '\x1b[?9001h'
+_CTRL_J = '\x1b[74;36;10;1;8;1_\x1b[74;36;10;0;8;1_'   # J 키(가상 키 74·스캔 36) + 왼쪽 Ctrl(8), 글자 LF(10) — 누름과 뗌
+
+
+def console_keys(text: str) -> str:
+    """콘솔에 쓸 글: 줄바꿈(LF)과, ASCII 가 아니면서 글자(Letter)가 아닌 것을 win32-input-mode 의 키로. 나머지는 그대로
+    (ASCII 의 ESC 순서 — 화살표·붙여넣기 표시 — 와 한글·한자·영문은 건드리지 않는다. BMP 밖은 그대로)"""
+    if text.isascii() and '\n' not in text:
+        return text
+    out = []
+    for ch in text:
+        cp = ord(ch)
+        if ch == '\n':
+            out.append(_CTRL_J)
+        elif 0x7f < cp <= 0xffff and not ch.isalpha() and not 0xd800 <= cp <= 0xdfff:
+            out.append(f'\x1b[0;0;{cp};1;0;1_\x1b[0;0;{cp};0;0;1_')
+        else:
+            out.append(ch)
+    return ''.join(out)
+
+
 class Session:
     """셸 하나. 읽는 스레드가 출력을 모으고, 지켜보는 스레드가 셸이 끝나면 정리한다."""
+
+    win32_input = False   # 콘솔이 win32-input-mode 를 청했는지 (출력 맨 앞 — console_keys, D138)
 
     def __init__(self, project_id: str, cwd: str, shell: str | None, cols: int, rows: int, slot: int = 0):
         self.id = secrets.token_hex(6)
@@ -106,6 +138,8 @@ class Session:
         if not text:
             return
         with self._cond:
+            if not self.win32_input and self.end < 4096 and WIN32_INPUT_ASK in self._buf[-16:] + text:
+                self.win32_input = True
             self._buf += text
             if len(self._buf) > MAX_KEEP:
                 cut = len(self._buf) - MAX_KEEP
@@ -187,6 +221,8 @@ class Session:
 
     def write(self, text: str) -> None:
         if self.alive:
+            if self.win32_input:
+                text = console_keys(text)   # 부호와 줄바꿈을 키 하나로 (D138)
             self._pc.write(text.encode('utf-8', 'replace'))   # 짝이 맞지 않는 대리 문자는 '?' 로
 
     def resize(self, cols: int, rows: int) -> None:
