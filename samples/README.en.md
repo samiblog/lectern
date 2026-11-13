@@ -18,6 +18,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 9. Lectern slides: start with the guide [guide/09-Lectern-슬라이드.md](guide/09-Lectern-슬라이드.md), a detailed plain md document (in Korean) — skeleton, cells, layouts, text size, directives, editing, checking, presenting and converting to pptx — then the samples [slides/README.en.md](slides/README.en.md): basics, model decks by situation and complex layouts
 10. vi keys [guide/10-vi-키.md](guide/10-vi-키.md) (in Korean) — optional: vi keys for reading (j·k·V·dd·yy·p·o·i·u) and the vi mode of the full editor (:w·:q)
 11. Work management [guide/11-업무-관리.md](guide/11-업무-관리.md) (in Korean) — the sample [WORK.md](WORK.md) at the top: work cards, the work board (Alt+W), adding events (Alt+S) and alerts
+12. Reports and PDF [guide/12-보고서와-PDF.md](guide/12-보고서와-PDF.md) (in Korean) — example requests for the writing style, and a [sample report](reports/3분기-구리-구매-전략.md) written by Claude to save as PDF
 
 ## For AI (Claude Code)
 

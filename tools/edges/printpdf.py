@@ -1,4 +1,5 @@
-"""보고서 인쇄 양식과 PDF (D131) — 브라우저 개발 모드에서: 메뉴, 인쇄 화면의 모양, 쪽 머리, 글꼴 설정, 어두운 스타일, 슬라이드 쪽 크기.
+"""보고서 인쇄 양식과 PDF (D131) — 브라우저 개발 모드에서: 메뉴, 인쇄 화면의 모양, 쪽 머리, 글꼴 설정, 어두운 스타일, 슬라이드 쪽 크기,
+화면 설정(글자 크기·문서 폭·줄 번호)이 종이에 새지 않음, 쪽 나누기(긴 표·긴 코드·큰 그림·캡션 — 0.74.1 실제 시나리오에서 찾은 것).
 
 창 모드의 'PDF로 저장…'(WebView2 + 저장 대화상자)은 여기서 돌지 않는다 — docs/TESTING.md 의 수동 점검. 대신 같은 Chromium 의
 printToPDF(page.pdf, preferCSSPageSize)로 쪽 크기·쪽 수를 본다.
@@ -26,12 +27,30 @@ author: 시험
 
 > 작성: 시험
 
-첫 문단. [본문 링크](https://example.com/body)
+첫 문단의 `인라인 코드`. [본문 링크](https://example.com/body)
 
 | 항목 | 값 (t) |
 |---|---|
 | 가 | 10 |
 | 나 | 20 |
+
+표 1. 긴 표
+
+| 번호 | 항목 | 값 (t) |
+|---|---|---:|
+{''.join(f'| {i} | 항목 {i} | {i * 3} |' + chr(10) for i in range(1, 21))}
+| 구분 | 1월 | 2월 | 3월 | 4월 | 5월 | 6월 | 7월 | 8월 | 9월 | 10월 | 11월 | 12월 | 합계 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| 품목 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 | 78 |
+
+```python
+{chr(10).join(f'v{i} = {i}' for i in range(1, 41))}
+long_line = "{'x' * 300}"
+```
+
+![큰 그림](tall.svg)
+
+그림 1. 아주 긴 그림
 
 {LONG}
 
@@ -57,6 +76,7 @@ marp: true
 
 ## 숨긴 장
 """, encoding='utf-8')
+(proj / 'docs' / 'tall.svg').write_text('<svg xmlns="http://www.w3.org/2000/svg" width="400" height="2400"><rect width="400" height="2400" fill="#ccd"/></svg>', encoding='utf-8')
 (proj / 'docs' / '쪽.html').write_text('<!doctype html><title>쪽</title><h1>html 문서</h1><p>본문</p>', encoding='utf-8')
 
 OPEN = "(p) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: p }))"
@@ -119,6 +139,47 @@ try:
         check('A4 쪽 (595 x 842)', boxes and all(bx == (595, 842) for bx in boxes), boxes[:3])
         check('여러 쪽', len(boxes) >= 3, len(boxes))
         page.emulate_media(media='screen')
+
+        print('[쪽 나누기 — 긴 표·긴 코드·큰 그림·캡션·넓은 표]')
+        page.emulate_media(media='print')
+        brk = page.evaluate("""() => { const v = document.querySelector('#lec-view'); const cs = (el) => getComputedStyle(el);
+          const tables = [...v.querySelectorAll('table')]; const long = tables.find((t) => t.rows.length > 13); const wide = tables.find((t) => t.rows[0].cells.length > 12);
+          const pres = [...v.querySelectorAll('pre:not(.mermaid):not(.lec-chart)')]; const cap = long.closest('.table-wrap').previousElementSibling;
+          const img = v.querySelector('img[alt="큰 그림"]');
+          return { longTable: cs(long).breakInside, shortTable: cs(tables[0] === long ? tables[tables.length - 1] : tables[0]).breakInside, thead: cs(long.tHead).display,
+            caption: cap.textContent.trim().slice(0, 6) + ' ' + cs(cap).breakAfter, wideSize: cs(wide).fontSize, cell: cs(wide.rows[0].cells[10]).wordBreak,
+            preLong: pres[0].classList.contains('lec-print-long') + ' ' + cs(pres[0]).breakInside + ' ' + cs(pres[0]).whiteSpace,
+            imgMax: cs(img).maxHeight }; }""")
+        check('12행이 넘는 표는 쪽을 나눠 싣고 머리행을 되풀이', brk['longTable'] == 'auto' and brk['thead'] == 'table-header-group', brk)
+        check('짧은 표는 한 덩어리', brk['shortTable'] == 'avoid', brk['shortTable'])
+        check("캡션 '표 1.' 은 표와 붙는다", brk['caption'] == '표 1. 긴 avoid', brk['caption'])
+        check('열이 13개 넘는 표는 7pt, 칸 안에서 낱말을 쪼개지 않음', brk['wideSize'] == '9.33333px' and brk['cell'] == 'keep-all', brk)
+        check('40줄 코드는 쪽을 나눠 싣고 긴 줄은 접는다', brk['preLong'] == 'true auto pre-wrap', brk['preLong'])
+        check('그림은 한 쪽 높이(225mm) 안으로', brk['imgMax'].startswith('850'), brk['imgMax'])
+        page.emulate_media(media='screen')
+
+        print('[화면 설정이 종이에 새지 않는다 — 글자 크기·문서 폭·줄 번호]')
+        page.emulate_media(media='print')
+        plain = page.evaluate("() => { const c = document.querySelector('#lec-view p code, #lec-view code'); return [getComputedStyle(document.querySelector('#lec-view')).paddingLeft, c ? getComputedStyle(c).fontSize : '']; }")
+        page.emulate_media(media='screen')
+        for _ in range(4):
+            page.click('#lec-text-bigger')
+        while page.is_enabled('#lec-width-wider'):
+            page.click('#lec-width-wider')
+        page.click('#lec-view h1')
+        page.keyboard.press('Alt+l')
+        until(page, "() => document.documentElement.classList.contains('line-numbers')")
+        page.emulate_media(media='print')
+        leaked = page.evaluate("() => { const c = document.querySelector('#lec-view p code, #lec-view code'); return [getComputedStyle(document.querySelector('#lec-view')).paddingLeft, c ? getComputedStyle(c).fontSize : '']; }")
+        page.emulate_media(media='screen')
+        check('줄 번호를 켜도 본문 왼쪽 여백 0, 글자를 키워도 같은 크기', plain == leaked and leaked[0] == '0px', (plain, leaked))
+        page.keyboard.press('Alt+l')
+        page.click('#lec-text-reset')
+        page.click('#lec-width-reset')
+        page.emulate_media(media='print')   # 'screen' 을 흉내 낸 채면 page.pdf 도 화면 모양으로 만든다
+        pdf = page.pdf(prefer_css_page_size=True, print_background=True)
+        page.emulate_media(media='screen')
+        check('PDF 도 A4', media_boxes(pdf)[:1] == [(595, 842)], media_boxes(pdf)[:1])
 
         print('[설정 창 — 인쇄·PDF 글꼴]')
         page.keyboard.press('Control+,')

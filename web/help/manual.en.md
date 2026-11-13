@@ -247,6 +247,11 @@ Right-click the margin of a document and choose **Save as PDF…** or **Print…
 
 Lectern slides print one slide per slide-sized page (see 'Lectern slides'). A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
 
+- Text size, document width, line numbers, find marks, highlights and the screen style do not reach the paper. Tables longer than 12 rows break across pages with the header row repeated, captions stay on the same page as their table or figure, and figures taller than a page are scaled to fit one page.
+- If you are editing, save and close the editor first (the PDF uses the saved text). In Spread all, the PDF is of the pane you right-clicked.
+
+Sample — [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean): example requests for the writing style, writing for the report layout, and a sample report written by Claude to try.
+
 ## Writing and editing documents
 
 Write and edit an md document from start to finish without opening the full editor.
@@ -798,8 +803,8 @@ Sample — [guide 03, Claude Code](../../samples/guide/03-Claude-Code와-함께.
 4. To ask about a document, right-click it in the tree, choose `Copy @path` and paste it into your prompt. For example: `@docs/report.md summarize the conclusion in three lines`
 5. To point at one part of a document, right-click the text and choose **Copy location for Claude**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
-7. When writing for people — reports, review notes — paste **Writing style** → **Copy request for Claude Code** from the settings into Claude Code. Claude Code's default role is a developer, so its writing drifts into short lists. This output style turns Claude into a research partner and editor: it decides the reader and the purpose first, widens the evidence with earlier material outside the folder and the web, writes in paragraphs and rereads as the reader to revise. Claude asks before installing; after installing, restart Claude Code and choose **Research writing** with `/output-style` in a report folder — it then applies to that folder only (code folders stay as they are).
-8. Adding the reader and the purpose to a request changes the writing. For example: "The readers are the KMI researchers and they must accept the downside risk in the long-term outlook. Read this folder and the earlier opinions, look on the web for counter-evidence and footnote the sources. Show me an outline first." When it is done, asking once more "read it from the start as the reader and fix whatever reads mechanically" helps.
+7. When writing for people — reports, review notes — paste **Writing style** → **Copy request for Claude Code** from the settings into Claude Code. Claude Code's default role is a developer, so its writing drifts into short lists. This output style turns Claude into a research partner and editor: it decides the reader and the purpose first, widens the evidence with earlier material outside the folder and the web, writes in paragraphs and rereads as the reader to revise. Claude asks before installing; after installing, restart Claude Code and choose **Research writing** with `/output-style` in a report folder — it then applies to that folder only (code folders stay as they are). Requests that were actually tried, with their results, are in the sample [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean).
+8. Adding the reader and the purpose to a request changes the writing. For example: "The reader is the executive in charge of purchasing and must accept the downside risk to second-half prices. Read this folder and the earlier reports, look on the web for counter-evidence and footnote the sources. Show me an outline first." When it is done, asking once more "read it from the start as the reader and fix whatever reads mechanically" helps.
 
 ## Settings
 

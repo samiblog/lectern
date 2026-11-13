@@ -59,6 +59,10 @@ function preparePage() {
     style.textContent = `@page { size: ${size}; margin: 0; @top-left { content: none; } @top-right { content: none; } @bottom-center { content: none; } }`;
     return;
   }
+  // 30줄이 넘는 코드는 쪽을 나눠 싣는다 (print.css — 짧은 것은 한 덩어리로). CSS 로는 줄 수를 셀 수 없다
+  for (const pre of view?.querySelectorAll('pre:not(.mermaid):not(.lec-chart)') || []) {
+    pre.classList.toggle('lec-print-long', (pre.textContent.match(/\n/g) || []).length > 30);
+  }
   const { title, date } = pageHead(view, view?.dataset.docPath);
   const font = PAGE_FONT[LANG === 'en' ? 'en' : 'ko'][printFont()];
   // 첫 쪽과 슬라이드 쪽의 '머리 없음'을 뒤에 다시 적는다 — Chrome 은 여백 상자 규칙을 :first·쪽 이름의 무게가 아니라 나중 것으로 고른다

@@ -25,6 +25,10 @@
 html, body, #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content, .lec-scroll { background: #fff !important; }
 :root { color-scheme: light !important; }   /* 어두운 스타일의 color-scheme: dark 면 Chrome 이 쪽 여백(캔버스)을 #121212 로 칠한다 */
 
+/* 화면의 글자 크기·문서 폭(툴바)은 종이에 쓰지 않는다 — 인라인 코드·표 글자가 커져 줄바꿈과 양쪽 정렬이 흐트러졌다.
+   html 의 style 속성으로 오는 값이라 !important (슬라이드는 자기 --md-scale 을 따로 둔다) */
+:root { --md-scale: 1 !important; --md-wide: 1 !important; }
+
 :root {
   --print-body: "HCR Batang", "함초롬바탕", "KoPubWorldBatang", "KoPubBatang", "Noto Serif KR", "NanumMyeongjo", "Batang", "바탕", serif;
   --print-head: "HCR Dotum", "함초롬돋움", "Malgun Gothic", "맑은 고딕", "Noto Sans KR", sans-serif;
@@ -39,7 +43,9 @@ html, body, #lec-app, #lec-main, #lec-panes, .lec-pane, #lec-content, .lec-scrol
 
 html body .md-body:not(.lec-deck) {
   font-family: var(--print-body) !important; font-size: 10.5pt; line-height: 1.75; color: #111;
-  text-align: justify; max-width: none; padding: 0; margin: 0;
+  text-align: justify; max-width: none;
+  /* 줄 번호(Alt+L)의 넓힌 왼쪽 여백은 id 선택자이고, 좁은 칸용 규칙(@container max-width 640px)은 종이 폭(약 627px)에서도 걸린다 — 본문 폭이 줄었다 */
+  padding: 0 !important; margin: 0 !important;
 }
 html body .md-body:not(.lec-deck) p { margin: 0 0 .7em; orphans: 3; widows: 3; }
 html body .md-body:not(.lec-deck) :is(h1, h2, h3, h4, h5, h6) {
@@ -75,8 +81,24 @@ html body .md-body:not(.lec-deck) thead th {
   text-align: center; border: 0; border-bottom: .7pt solid #000; padding: 4pt 7pt; font-family: var(--print-head);
 }
 html body .md-body:not(.lec-deck) td { padding: 3.5pt 7pt; border: 0; border-bottom: .4pt solid #b5b5b5; background: none; }
+/* 칸 안에서 낱말·숫자를 쪼개지 않는다 ('10월'이 '10/월', '9,876'이 '9,87/6' 으로 갈렸다 — 좁은 칸용 규칙 @container 가 종이에서도 걸림).
+   열이 많은 표는 글자와 칸 여백을 줄여 쪽 폭에 넣는다 */
+html body .md-body:not(.lec-deck) :is(th, td) { overflow-wrap: normal; word-break: keep-all; }
+html body .md-body:not(.lec-deck) table:has(tr > :nth-child(9)) { font-size: 8pt; }
+html body .md-body:not(.lec-deck) table:has(tr > :nth-child(9)) :is(th, td) { padding: 3pt 3.5pt; }
+html body .md-body:not(.lec-deck) table:has(tr > :nth-child(13)) { font-size: 7pt; }
+html body .md-body:not(.lec-deck) table:has(tr > :nth-child(13)) :is(th, td) { padding: 2.5pt 2.5pt; }
 html body .md-body:not(.lec-deck) tbody tr { background: none !important; }
 html body .md-body:not(.lec-deck) tbody tr:last-child td { border-bottom: 0; }
+/* 쪽 나누기 — 짧은 표는 한 덩어리로, 12행이 넘는 표는 쪽을 나눠 싣고 머리행을 쪽마다 되풀이한다 (통째로 다음 쪽으로 밀면
+   캡션만 남고 빈 공간이 생긴다). 행은 쪼개지 않는다 */
+html body .md-body:not(.lec-deck) table { break-inside: auto; }
+html body .md-body:not(.lec-deck) table:not(:has(tbody tr:nth-child(13))) { break-inside: avoid; }
+html body .md-body:not(.lec-deck) tr { break-inside: avoid; }
+html body .md-body:not(.lec-deck) thead { display: table-header-group; }
+/* 캡션은 표·그림과 같은 쪽에: '표 1.' 은 표 위(다음과 붙임), '그림 1.' 은 그림·차트·다이어그램 아래(앞과 붙임) */
+html body .md-body:not(.lec-deck) p:has(+ .table-wrap), html body .md-body:not(.lec-deck) p:has(+ table) { break-after: avoid; }
+html body .md-body:not(.lec-deck) :is(p:has(> img), pre.mermaid, pre.lec-chart) + p { break-before: avoid; }
 html body .md-body:not(.lec-deck) p.lec-source { font-size: 8.5pt; color: #444; margin-top: -2mm; }
 /* 강조글·인용 — 색 없이 */
 html body .md-body:not(.lec-deck) blockquote.alert {
@@ -90,10 +112,17 @@ html body .md-body:not(.lec-deck) .lec-textbox > .lec-textbox-title { background
 /* 코드 */
 html body .md-body:not(.lec-deck) :not(pre) > code { background: none; padding: 0; font-size: .9em; color: inherit; }
 html body .md-body:not(.lec-deck) pre { background: none; border: .5pt solid #aaa; border-radius: 0; font-size: 8.5pt; text-align: left; }
+/* 코드는 긴 줄을 접어 쪽 밖으로 나가지 않게, 30줄이 넘으면 쪽을 나눠 싣는다 (printdoc.js 가 lec-print-long 을 단다) */
+html body .md-body:not(.lec-deck) pre:not(.mermaid):not(.lec-chart), html body .md-body:not(.lec-deck) pre:not(.mermaid):not(.lec-chart) code {
+  white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; max-height: none;
+}
+html body .md-body:not(.lec-deck) pre.lec-print-long { break-inside: auto; }
 html body .md-body:not(.lec-deck) pre code.hljs { background: none; }
 /* 그림·차트 가운데 */
 html body .md-body:not(.lec-deck) p:has(> img:only-child), html body .md-body:not(.lec-deck) pre.lec-chart, html body .md-body:not(.lec-deck) pre.mermaid { text-align: center; border: 0; }
-html body .md-body:not(.lec-deck) img { max-width: 100%; }
+/* 그림·다이어그램·차트는 한 쪽 높이 안으로 줄인다 (쪽보다 크면 여러 쪽에 잘려 찍히고 앞의 제목만 빈 쪽에 남았다) — 본문 높이 250mm 에서 캡션 자리를 뺀 값 */
+html body .md-body:not(.lec-deck) img { max-width: 100%; max-height: 225mm; width: auto; height: auto; object-fit: contain; }
+html body .md-body:not(.lec-deck) :is(pre.mermaid, pre.lec-chart) svg { max-height: 225mm; }
 html body .md-body:not(.lec-deck) :is(ul, ol) { padding-left: 1.4em; text-align: left; }
 html body .md-body:not(.lec-deck) li + li { margin-top: .15em; }
 html body .md-body:not(.lec-deck) hr { border: 0; border-top: .5pt solid #999; }
