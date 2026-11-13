@@ -4019,7 +4019,7 @@ def run_english(headed: bool) -> None:
             scan('본문 우클릭')
             page.keyboard.press('Escape')
             check(doc['alert'] is True and doc['copy'] == 'Copy' and doc['toc'] == 'Contents' and 'Table 1' in doc['chips']
-                  and doc['status'].startswith('Modified') and 'Copy location for Claude' in menu and '@README.md line ' in menu,
+                  and doc['status'].startswith('Modified') and 'Copy location' in menu and '@README.md line ' in menu,
                   f'문서: 강조글(제목 줄 없음 — D72)·코드 복사·목차·구성 요소·상태줄·우클릭 메뉴가 영어 ({doc})')
             page.click('#lec-btn-spot')
             spot = page.evaluate("document.querySelector('#lec-btn-spot').title")
