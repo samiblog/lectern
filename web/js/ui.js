@@ -17,6 +17,7 @@ export const menuGroups = (...groups) => groups.filter((g) => g?.length).flatMap
 
 let menuItems = [];
 let onMenuClose = null;
+let heldTerm = null;   // 메뉴가 열린 동안 누르고 있는 숫자 1~5 → 터미널 번호(0 부터) — 숫자+누르기로 그 터미널에 보낸다 (D137)
 
 function menuItemHtml(it, i) {
   if (it === '-') return html`<div class="menu-sep" role="separator"></div>`;
@@ -25,7 +26,7 @@ function menuItemHtml(it, i) {
   const main = html`<button role="menuitem" data-i="${i}"${attrs}${it.tip ? html` title="${it.tip}"` : ''}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
   if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
-  const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음)');
+  const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르면 그 번호의 터미널에');
   return [html`<div class="menu-row">${main}<button role="menuitem" class="menu-term" data-term="${i}" title="${tip}" aria-label="${tip}">`, html`<svg aria-hidden="true"><use href="#i-term"/></svg>${t('터미널')}</button></div>`];
 }
 
@@ -56,6 +57,7 @@ export function hideMenu() {
   if (menu.hidden) return false;
   menu.hidden = true;
   menuItems = [];
+  setHeld(null);
   const done = onMenuClose;
   onMenuClose = null;
   done?.();
@@ -86,22 +88,47 @@ export function closeLightbox() {
   return true;
 }
 
+/** 누르고 있는 숫자를 메뉴 위에 보인다 ('→ 3번 터미널') */
+function setHeld(n) {
+  heldTerm = n;
+  const menu = $('#lec-menu');
+  menu.classList.toggle('term-held', n != null);
+  if (n != null) menu.dataset.termHeld = t('→ {n}번 터미널', { n: n + 1 });
+  else delete menu.dataset.termHeld;
+}
+
+const digitOf = (e) => (/^(?:Digit|Numpad)[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 1 : null);
+
 export function initUi() {
   const menu = $('#lec-menu');
   menu.addEventListener('click', (e) => {
+    const n = heldTerm;
     const term = e.target.closest('button[data-term]');
     if (term) {
       const item = menuItems[+term.dataset.term];
       hideMenu();
-      if (item?.term) emit('term-paste', item.term);
+      if (item?.term) emit('term-paste', n == null ? item.term : { text: item.term, n });
       return;
     }
     const btn = e.target.closest('button[data-i]');
     if (!btn) return;
     const item = menuItems[+btn.dataset.i];
     hideMenu();
-    item?.action?.();
+    // 숫자+누르기: 이 항목이 곧바로 터미널에 보내는 글은 그 번호로 (D137 — 'Claude로 보내기'·요청 글 등)
+    if (n != null) emit('term-target', n);
+    try {
+      item?.action?.();
+    } finally {
+      if (n != null) emit('term-target', null);
+    }
   });
+  // 메뉴가 열린 동안의 숫자 키 (메뉴가 초점을 가진다 — 문서의 숫자 키(D128)로 가지 않는다)
+  document.addEventListener('keydown', (e) => {
+    if (menu.hidden || e.ctrlKey || e.altKey || e.metaKey || digitOf(e) == null) return;
+    e.preventDefault();
+    if (!e.repeat) setHeld(digitOf(e));
+  }, true);
+  document.addEventListener('keyup', (e) => { if (digitOf(e) === heldTerm) setHeld(null); }, true);
   menu.addEventListener('keydown', (e) => {
     if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
     e.preventDefault();
@@ -112,7 +139,10 @@ export function initUi() {
   document.addEventListener('mousedown', (e) => {
     if (!menu.hidden && !menu.contains(e.target)) hideMenu();
   });
-  window.addEventListener('blur', hideMenu);
+  window.addEventListener('blur', () => {
+    setHeld(null);
+    hideMenu();
+  });
   window.addEventListener('resize', hideMenu);
   $('#lec-lightbox').addEventListener('click', closeLightbox);
 }

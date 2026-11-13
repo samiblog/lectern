@@ -3613,6 +3613,10 @@ def run(headed: bool) -> None:
             term_tabs = lambda: page.evaluate("[...document.querySelectorAll('#lec-term-tabs .term-tab')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent.trim())")
             page.keyboard.press('Control+Backquote')
             term_has('PS ', 20000)
+            # 여럿을 탭으로 보는 것은 문서 아래에 둘 때다 (오른쪽이면 위아래로 쌓는다 — D137, tools/edges/termstack.py)
+            below_now = lambda: page.evaluate("document.documentElement.classList.contains('term-bottom')")
+            if not below_now():
+                page.click('#lec-term-place')
             page.click('#lec-term-new')
             page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 2")
             two = term_tabs()
@@ -3657,6 +3661,7 @@ def run(headed: bool) -> None:
                 if tab_btn.count():
                     tab_btn.click()
             one = wait_until(page, "document.querySelectorAll('#lec-term-tabs .term-tab').length === 1", 8000)
+            page.click('#lec-term-place')   # 오른쪽으로 되돌린다
             page.click('#lec-term-close')
             check(two == ['1PowerShell', '*2PowerShell'] and in_second and first_clean and full and reused == '2' and pasted and told2
                   and served == [0, 1, 2, 3, 4] and one and quoted == ['docs/a.md ', "'it''s ‘‘q’’ ‚‚r‛‛ $x.md' "],

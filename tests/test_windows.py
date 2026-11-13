@@ -321,6 +321,10 @@ def test_terminal_relay_is_guarded_like_the_terminal(tmp_path):
         c.get('/api/changes')
         assert c.post('/api/term/relay', json={**body, 'text': 'x' * 65537}, headers=secret).status_code == 413
         assert c.post('/api/term/relay', json={**body, 'text': 1}, headers=secret).status_code == 400
+        c.post('/api/term/relay', json={**body, 'stay': True, 'n': 2}, headers=secret)   # 받을 터미널의 번호 (D137)
+        assert c.get('/api/changes').get_json()['inbox'] == [{'term': '@a.md 1행 ', 'p': 'p1', 'stay': True, 'n': 2}]
+        for bad in (5, -1, '2', True, 1.0):
+            assert c.post('/api/term/relay', json={**body, 'n': bad}, headers=secret).status_code == 400
     finally:
         state.close()
 

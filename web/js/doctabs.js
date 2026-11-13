@@ -295,7 +295,7 @@ export async function sendToWindow(pane, to) {
 }
 
 /** 다른 창이 보낸 것을 받는다: 문서는 새 문서 탭에서, 터미널로 보낼 글·메모는 고른 프로젝트의 것일 때만 */
-async function receive({ type, path, top, term, note, p, stay, hash, line, to }) {
+async function receive({ type, path, top, term, n, note, p, stay, hash, line, to }) {
   if (type === 'renamed') {
     const tab = S.tabs.find((x) => x.id === p);
     if (tab) emit('file-renamed', { tab, path, to });
@@ -309,7 +309,7 @@ async function receive({ type, path, top, term, note, p, stay, hash, line, to })
   if (term != null || note) {
     if (p !== S.tab?.id) toast(t('메인 창이 다른 프로젝트를 보고 있어 받지 않았습니다'), 'error');
     else if (note) emit('new-note', note);
-    else emit(stay ? 'term-paste-stay' : 'term-paste', term);
+    else emit(stay ? 'term-paste-stay' : 'term-paste', Number.isInteger(n) ? { text: term, n } : term);   // n: 받을 터미널 (D137)
     return;
   }
   const open = docPaneOf(S.tab, { type, path });   // 슬라이드 창이 이미 연 발표 (D96)

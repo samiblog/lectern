@@ -132,6 +132,8 @@ declare global {
     restoring?: any;
     term?: any;
     terms?: any[];
+    /** 쌓은 터미널 칸의 무게 (번호 → 높이 비율 — D137, 메모리에만. null 이면 균등) */
+    termWeights?: Map<number, number> | null;
   }
 
   /** 앱 상태 (store.js). root 부터는 선택된 탭의 값을 그대로 읽고 쓴다 */

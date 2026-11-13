@@ -505,17 +505,21 @@ export function sendLit() {
 
 /**
  * Shift+→: 하이라이트한 곳(없으면 현재 줄)의 위치를 맨 앞 터미널에 넣고 초점도 그 터미널로 (D97).
- * stay (Ctrl+Shift+→): 초점은 문서에 둔다 — 여러 곳을 이어서 넣게 (D79)
+ * stay (Ctrl+Shift+→): 초점은 문서에 둔다 — 여러 곳을 이어서 넣게 (D79).
+ * n: 받을 터미널의 번호 (0 부터 — Shift+숫자·Ctrl+Shift+숫자, D137)
  */
-function sendHere(stay = false) {
+function sendHere(stay = false, n = null) {
   const info = litInfo();
   const us = info ? [] : units();
   const i = info ? -1 : hereIndex(us);
   if (!info && i < 0) return false;
   const ref = info ? info.ref : lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '');
-  emit(stay ? 'term-paste-stay' : 'term-paste', `${ref} `);
+  emit(stay ? 'term-paste-stay' : 'term-paste', n == null ? `${ref} ` : { text: `${ref} `, n });
   return true;
 }
+
+/** Shift+1~5 의 터미널 번호 (0 부터) — 자판 위쪽 숫자 줄의 자리로 읽는다 (한글 입력 상태에서도. 숫자 패드는 Shift 를 누르면 다른 키가 된다) */
+const termDigit = (e) => (/^Digit[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 1 : null);
 
 /** 현재 줄의 정보 — 파일을 바꾸지 않는 키는 고른 줄이 없으면 현재 줄에 한다 (D108) */
 function hereInfo() {
@@ -908,7 +912,7 @@ function lineKey(e) {
     return e.shiftKey ? k === 'ArrowLeft' || k === 'ArrowRight' : k === 'ArrowUp' || k === 'ArrowDown';
   }
   if (e.ctrlKey) {
-    if (k === 'Enter' || (e.shiftKey && k === 'ArrowRight')) return true;
+    if (k === 'Enter' || (e.shiftKey && (k === 'ArrowRight' || termDigit(e) != null))) return true;
     if (e.shiftKey) return isDeck() && (e.code === 'Period' || e.code === 'Comma');
     if (e.code === 'KeyC' || e.code === 'KeyX') return !getSelection()?.toString();
     return ['KeyL', 'KeyZ', 'KeyY', 'KeyH'].includes(e.code) || (isDeck() && (e.code === 'KeyM' || e.code === 'KeyD'));
@@ -942,6 +946,7 @@ export function spotKey(e) {
       return true;
     }
     if (e.shiftKey && k === 'ArrowRight') return sendHere(true);
+    if (e.shiftKey && termDigit(e) != null) return e.repeat || sendHere(true, termDigit(e));   // Ctrl+Shift+숫자 (D137)
     if (view().classList.contains('lec-deck')) {   // 슬라이드 (D96): 구성 요소의 글자 크기, 장 더하기·복제
       if (e.shiftKey && (e.code === 'Period' || e.code === 'Comma')) {
         emit('text-size', { dir: e.code === 'Period' ? 1 : -1 });
@@ -966,6 +971,7 @@ export function spotKey(e) {
     if (k === 'Enter') return dimHere();   // 현재 줄 고르기, 고른 줄이면 하이라이트 켜고 끄기 (D118 — 편집은 F2)
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
     if (k === 'ArrowRight') return sendHere();
+    if (termDigit(e) != null) return e.repeat || sendHere(false, termDigit(e));   // Shift+숫자: 그 번호의 터미널로 (D137)
     if (k === 'ArrowLeft') copyLitRef();
     else return false;
     return true;

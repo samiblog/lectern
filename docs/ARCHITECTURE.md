@@ -173,7 +173,7 @@ flowchart LR
 | `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}], samples, writing_guide, slides_guide, skills_dir}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개). `samples` 는 예제 프로젝트 폴더(`paths.samples_dir()` — 없으면 `null`), `writing_guide` 는 화면 언어에 맞는 AI 용 작성 안내 파일 (D57) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
 | `POST /api/window-send` | `{to, type, path, top}` | 문서를 다른 창으로 보낸다 (D95 — to 는 창 id, 메인 창은 빈 값). 그 창이 없으면 `ok: false` |
-| `POST /api/term/relay` | `{p, text, stay}` | 독립창의 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95 — 터미널 API 와 같은 비밀값 검사, 셸로 바로 보내지 않음) |
+| `POST /api/term/relay` | `{p, text, stay, n?}` | 독립창의 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95 — 터미널 API 와 같은 비밀값 검사, 셸로 바로 보내지 않음). `n` 은 받을 터미널 번호(0 부터, D137 — 없으면 맨 앞 터미널) |
 | `POST /api/window-note` | `{p, note}` | 독립창의 '새 메모로 보내기'를 메인 창에 맡긴다 (D95) |
 | `POST /api/window-gone` | `{w}` | 독립창이 닫힌다 — 다른 창의 보낼 곳에서 뺀다 (D95) |
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤, 그 프로젝트의 독립창도 닫음). 이미 닫혔으면 그대로. 독립창의 저장하지 않은 편집을 두기로 하면 409. `/api/state` 와 같은 형식 |

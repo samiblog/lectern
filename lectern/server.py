@@ -459,16 +459,19 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/term/relay')
     def api_term_relay() -> Any:
-        """{p, text, stay} — 독립창에서 고른 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95). 셸로 바로 보내지 않는다:
-        메인 창이 사용자가 고른 것과 같은 길(/api/term/input, Enter 없이)로 넣는다. stay 면 창을 앞으로 가져오지 않는다"""
+        """{p, text, stay, n?} — 독립창에서 고른 '터미널에 붙여 넣기'를 메인 창에 맡긴다 (D95). 셸로 바로 보내지 않는다:
+        메인 창이 사용자가 고른 것과 같은 길(/api/term/input, Enter 없이)로 넣는다. stay 면 창을 앞으로 가져오지 않는다.
+        n: 받을 터미널의 번호 (0 부터 — Shift+숫자·숫자+누르기, D137). 없으면 맨 앞 터미널"""
         term_guard()
         data = body()
-        text, pid, stay = data.get('text'), data.get('p'), data.get('stay', False)
+        text, pid, stay, n = data.get('text'), data.get('p'), data.get('stay', False), data.get('n')
         if not isinstance(text, str) or not isinstance(pid, str) or not isinstance(stay, bool):
+            abort(400)
+        if n is not None and (type(n) is not int or not 0 <= n < terminal.MAX_SLOTS):
             abort(400)
         if len(text) > 65536:
             abort(413, description=t('한 번에 보낼 수 있는 글은 65536자까지입니다'))
-        state.board.send('', {'term': text, 'p': pid, 'stay': stay})
+        state.board.send('', {'term': text, 'p': pid, 'stay': stay, **({'n': n} if n is not None else {})})
         if not stay and state.on_send:
             state.on_send('')
         return jsonify(ok=True)

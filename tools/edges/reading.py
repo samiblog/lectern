@@ -427,7 +427,8 @@ try:
         wait(IN_TERM, 3000)
         two = page.evaluate("import('/static/js/store.js').then((m) => m.S.tab.term.n)")
         check('터미널이 여럿이면 고른(마지막에 쓰던) 터미널로', two == 1, two)
-        page.locator('#lec-term-tabs .term-tab[data-n="1"] [data-close]').click()
+        page.locator('#lec-term-body .term-pane[data-n="1"] .term-pane-head').hover()   # 오른쪽이면 위아래로 쌓인다 (D137) — 칸 머리줄의 ×
+        page.locator('#lec-term-body .term-pane[data-n="1"] .term-pane-head [data-close]').click()
         wait("document.querySelectorAll('#lec-term-tabs .term-tab').length === 1", 8000)
         settle(500)
         page.locator('#lec-content').focus()

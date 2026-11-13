@@ -10,6 +10,10 @@
 //   예외는 사용자가 우클릭 메뉴에서 고른 '터미널에 붙여 넣기'(D51)이고, 이것도 Ctrl+V 와 같은 길로 Enter 없이 넣는다 (pasteToTerminal).
 // - 패널을 감춰도(머리줄 오른쪽 ×·Ctrl+`) 셸은 그대로 돈다. 탭을 닫으면 끝난다 — 셸에서 띄운 프로그램이 돌고 있으면 먼저 묻는다 (tabs.js).
 //   다른 탭을 고르면 그 탭의 셸로 바뀐다 (패널이 열려 있으면 그 탭의 셸을 띄운다).
+// - 오른쪽에 두고 터미널이 둘 이상이면 위아래로 쌓는다 (D137 — 1번이 맨 아래, 번호가 클수록 위). 칸마다 머리줄(번호·이름·×),
+//   칸 사이 경계를 끌어 높이를 바꾸고(tab.termWeights — 메모리에만, 더하거나 닫으면 균등), 두 번 누르면 균등. 문서 아래에 두면 탭.
+//   화면은 터미널마다 칸(term.pane > .term-pane-body > term.box)이고, 터미널 모음이 빌려 간 상자는 돌려줄 때 그 칸으로 간다.
+// - 보내기: 맨 앞 터미널(가장 작은 번호)이 기본이고, Shift+숫자·메뉴의 숫자+누르기는 그 번호의 터미널로 (D137 — pasteToTerminal 의 n).
 // - 자리는 오른쪽 또는 문서 아래 (D52 — 설정 terminal_position: auto 면 창이 세로로 길 때 아래). 오른쪽이면 목차 자리를 쓰므로
 //   목차를 감춘다 (목차 버튼으로 함께 볼 수 있다 — toc.js). 아래면 #lec-main 이 격자가 되어 문서·목차 아래에 전체 폭으로 놓인다.
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
@@ -35,6 +39,7 @@ export const MAX_TERMS = 5;   // 프로젝트마다 터미널 수 (서버 termin
 const MIN_WIDTH = 280;
 const DOC_MIN = 360;   // 본문에 남길 폭
 const MIN_HEIGHT = 120;      // 아래 터미널의 높이 (D52)
+const MIN_PANE = 72;         // 쌓은 터미널 칸 하나의 높이 (D137 — 머리줄과 서너 줄)
 const DOC_MIN_HEIGHT = 160;  // 아래 터미널 위에 문서를 남길 높이
 const SEND_CHUNK = 16384;
 const root = document.documentElement;
@@ -176,12 +181,23 @@ function loadLib() {
 
 const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
-/** 탭의 n 번 터미널 화면(xterm)을 만들어 tab.terms 에 넣는다 (parent: 오른쪽 패널 또는 모음 칸). 셸은 start() 가 띄운다 */
-function create(tab, n = 0, parent = $('#lec-term-body')) {
+/**
+ * 탭의 n 번 터미널 화면(xterm)을 만들어 tab.terms 에 넣는다. 칸(term.pane)은 늘 오른쪽 패널에 만들고, 화면 상자는 그 칸에 —
+ * parent(터미널 모음 칸)를 주면 상자만 거기에 (숨긴 채 — 모음이 고른 것을 보인다). 셸은 start() 가 띄운다
+ */
+function create(tab, n = 0, parent = null) {
+  const pane = document.createElement('div');
+  pane.className = 'term-pane';
+  pane.hidden = true;
+  pane.dataset.n = String(n);
+  setHtml(pane, [html`<div class="term-pane-head"><span class="n">${n + 1}</span><span class="name"></span><span class="state"></span>`,
+    html`<span class="term-tab-close" role="button" data-close="${n}" title="${t('이 터미널 끝내기 — 셸과 거기서 띄운 프로그램을 끝냄')}"><svg aria-hidden="true"><use href="#i-close"/></svg></span></div>`,
+    html`<div class="term-pane-body"></div>`]);
+  $('#lec-term-body').append(pane);
   const box = document.createElement('div');
   box.className = 'term-box';
-  box.hidden = true;
-  parent.append(box);
+  box.hidden = !!parent;
+  (parent || pane.lastElementChild).append(box);
   const xterm = new window.Terminal({
     fontFamily: FONT, fontSize: termFontSize(), lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
     allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
@@ -193,9 +209,19 @@ function create(tab, n = 0, parent = $('#lec-term-body')) {
   xterm.unicode.activeVersion = '11';
   xterm.open(box);
   const term = {
-    tab, n, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '',
+    tab, n, pane, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '',
     stuck: [],
   };
+  paneTerms.set(pane.lastElementChild, term);
+  paneSizes.observe(pane.lastElementChild);
+  // 쌓은 칸을 누르거나 그 셸에 초점이 가면 그 터미널이 '고른 터미널' (다시 시작·F6·모음이 쓴다)
+  box.addEventListener('focusin', () => {
+    if (tab.term === term || !termsOf(tab).includes(term)) return;
+    tab.term = term;
+    renderHead();
+    markPanes(tab);
+    emit('terms');
+  });
   xterm.onData((data) => {
     if (term.alive) send(term, data);
     else if (!term.starting && data === '\r') start(term);   // 끝난 셸: Enter 로 다시 시작
@@ -211,6 +237,7 @@ function create(tab, n = 0, parent = $('#lec-term-body')) {
   });
   tab.terms = [...termsOf(tab), term].sort((a, b) => a.n - b.n);
   tab.term ||= term;
+  tab.termWeights = null;   // 더하면 균등 (D137)
   return term;
 }
 
@@ -429,6 +456,7 @@ function renderHead() {
   const title = $('#lec-term-title');
   title.textContent = tab ? tab.name : t('터미널 — 열린 프로젝트가 없습니다');
   title.title = tab ? tab.root : '';
+  if (tab) markPanes(tab);
   showStuck();
 }
 
@@ -460,11 +488,165 @@ function restoreTerms(tab, parent) {
   return tab.restoring;
 }
 
-/** 선택된 탭의 고른 셸을 보인다 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 머리줄만 */
+// ---- 쌓기 (D137): 오른쪽 패널에 터미널이 둘 이상이면 위아래로 — 1번이 맨 아래 -----------------------------
+
+const paneTerms = new WeakMap();   // 칸의 몸통(.term-pane-body) → term
+let fitRaf = 0;
+const fitLater = new Set();
+// 칸 크기가 바뀌면(패널·창 크기, 경계 끌기, 쌓기 ↔ 탭) 그 터미널의 글자 칸 수를 다시 맞춘다 (셸에도 알린다 — onResize)
+const paneSizes = new ResizeObserver((entries) => {
+  for (const e of entries) {
+    const term = paneTerms.get(e.target);
+    if (term) fitLater.add(term);
+  }
+  cancelAnimationFrame(fitRaf);
+  fitRaf = requestAnimationFrame(() => {
+    if (!gathered()) for (const term of fitLater) fitNow(term);
+    fitLater.clear();
+  });
+});
+
+/** 지금 탭의 터미널을 쌓아 보이는지: 오른쪽에 두고 둘 이상 */
+const stacked = (tab = S.tab) => !!tab && !terminalBelow() && termsOf(tab).length > 1;
+
+/** 위에서 아래로 놓을 차례 — 번호가 큰 것이 위 */
+const topDown = (tab) => [...termsOf(tab)].sort((a, b) => b.n - a.n);
+
+/** 칸 머리줄의 이름·상태와 고른 칸 표시 */
+function markPanes(tab) {
+  for (const term of termsOf(tab)) {
+    const head = term.pane.firstElementChild;
+    head.querySelector('.name').textContent = termLabel(term);
+    head.title = `${term.n + 1} · ${termLabel(term)} — ${t('Shift+{n} 으로 이 터미널에 보냅니다', { n: term.n + 1 })}`;
+    const state = !term.alive && term.id ? t('끝남') : term.stuck?.length ? t('멈춤') : '';
+    head.querySelector('.state').textContent = state;
+    term.pane.classList.toggle('on', term === tab.term);
+    term.pane.classList.toggle('ended', !term.alive && !!term.id);
+    term.pane.classList.toggle('stuck', !!term.stuck?.length);
+  }
+}
+
+/** 칸들을 놓는다: 지금 탭의 고른 터미널만(탭) 또는 모두를 위아래로(쌓기). 다른 탭의 칸은 감춘다. 모음이 화면을 가져가 있으면 그대로 */
+function layout() {
+  if (gathered()) return;
+  const tab = S.tab;
+  const stack = open && stacked(tab);
+  $('#lec-term').classList.toggle('stacked', stack);
+  for (const other of S.tabs) {
+    for (const term of termsOf(other)) {
+      term.pane.hidden = !(other === tab && (stack || term === other.term));
+      const body = term.pane.lastElementChild;
+      if (term.box.parentElement !== body) body.append(term.box);   // 모음에서 돌아옴
+      term.box.hidden = term.pane.hidden;   // 상자도 함께 (보이는 화면을 상자로 찾는 곳이 있다 — 모음·점검)
+    }
+  }
+  const body = $('#lec-term-body');
+  if (stack) {
+    // 차례가 다를 때만 다시 놓는다 (상자를 옮기면 셸에 있던 초점이 빠진다)
+    const want = topDown(tab);
+    const key = want.map((x) => x.n).join();
+    if (body.dataset.stack !== `${tab.id}|${key}`) {
+      body.dataset.stack = `${tab.id}|${key}`;
+      const had = document.activeElement?.closest?.('.term-pane');
+      for (const el of body.querySelectorAll(':scope > .term-split')) el.remove();
+      want.forEach((term, i) => {
+        if (i) {
+          const split = document.createElement('div');
+          split.className = 'term-split';
+          split.setAttribute('role', 'separator');
+          split.setAttribute('aria-orientation', 'horizontal');
+          split.title = t('끌어서 위아래 터미널의 높이 조절 (두 번 누르면 똑같이)');
+          split.dataset.above = String(want[i - 1].n);
+          split.dataset.below = String(term.n);
+          body.append(split);
+        }
+        body.append(term.pane);
+      });
+      had?.querySelector('.xterm-helper-textarea')?.focus({ preventScroll: true });
+    }
+    const weights = tab.termWeights;
+    for (const term of want) term.pane.style.flexGrow = String(weights?.get(term.n) || 1);
+  } else {
+    delete body.dataset.stack;
+    for (const el of body.querySelectorAll(':scope > .term-split')) el.remove();
+  }
+  if (tab) markPanes(tab);
+}
+
+/** 보이는 터미널들 (쌓았으면 모두, 아니면 고른 것) */
+const shownTerms = (tab = S.tab) => (open && tab && !tab.readonly ? (stacked(tab) ? termsOf(tab) : tab.term ? [tab.term] : []) : []);
+
+/** 쌓은 칸 사이 경계를 끌어 위아래 칸의 높이를 나눈다. 두 번 누르면 모두 똑같이 */
+function bindSplits() {
+  const body = $('#lec-term-body');
+  body.addEventListener('pointerdown', (e) => {
+    const split = e.target.closest?.('.term-split');
+    if (!split || e.button !== 0) return;
+    e.preventDefault();
+    const tab = S.tab;
+    const above = termsOf(tab).find((x) => String(x.n) === split.dataset.above);
+    const below = termsOf(tab).find((x) => String(x.n) === split.dataset.below);
+    if (!above || !below) return;
+    split.setPointerCapture(e.pointerId);
+    // 지금 높이를 무게로 — 끄는 두 칸만 바뀌고 나머지는 그대로
+    const weights = new Map(termsOf(tab).map((x) => [x.n, x.pane.getBoundingClientRect().height]));
+    const a0 = weights.get(above.n);
+    const sum = a0 + weights.get(below.n);
+    const apply = () => { for (const x of termsOf(tab)) x.pane.style.flexGrow = String(weights.get(x.n)); };
+    apply();
+    const move = (ev) => {
+      const a = Math.max(MIN_PANE, Math.min(sum - MIN_PANE, a0 + ev.clientY - e.clientY));
+      weights.set(above.n, a);
+      weights.set(below.n, sum - a);
+      apply();
+    };
+    const up = () => {
+      split.removeEventListener('pointermove', move);
+      split.removeEventListener('pointerup', up);
+      root.classList.remove('resizing-rows', 'resizing-term');
+      tab.termWeights = weights;
+    };
+    root.classList.add('resizing-rows', 'resizing-term');
+    split.addEventListener('pointermove', move);
+    split.addEventListener('pointerup', up);
+  });
+  body.addEventListener('dblclick', (e) => {
+    if (!e.target.closest?.('.term-split')) return;
+    S.tab.termWeights = null;
+    layout();
+  });
+  // 칸 머리줄: 누르면 그 터미널을 고르고, × 는 그 터미널을 끝낸다 (가운데 버튼도)
+  const termOfHead = (el) => {
+    const pane = el?.closest?.('.term-pane-head')?.parentElement;
+    return pane ? termsOf(S.tab).find((x) => x.pane === pane) || null : null;
+  };
+  body.addEventListener('click', (e) => {
+    const term = termOfHead(e.target);
+    if (!term) return;
+    if (e.target.closest('[data-close]')) closeTerminal(term);
+    else selectTerminal(S.tab, term);
+  });
+  body.addEventListener('mousedown', (e) => { if (e.button === 1 && termOfHead(e.target)) e.preventDefault(); });
+  body.addEventListener('auxclick', (e) => {
+    const term = e.button === 1 && termOfHead(e.target);
+    if (term) closeTerminal(term);
+  });
+}
+
+/** 보낸 칸을 잠깐 표시한다 (쌓았을 때 — 어느 터미널에 들어갔는지) */
+function flash(term) {
+  if (!stacked(term.tab)) return;
+  term.pane.classList.remove('flash');
+  void term.pane.offsetWidth;
+  term.pane.classList.add('flash');
+  setTimeout(() => term.pane.classList.remove('flash'), 1000);
+}
+
+/** 선택된 탭의 셸을 보인다 — 쌓았으면 모두, 아니면 고른 것 (없으면 만든다 — 패널이 열려 있을 때만). 터미널 모음이 화면을 가져가 있으면 머리줄만 */
 async function showCurrent({ focus = false } = {}) {
   renderHead();
   if (gathered()) return;
-  for (const tab of S.tabs) for (const term of termsOf(tab)) term.box.hidden = !(tab === S.tab && term === tab.term);
+  layout();
   $('#lec-term-locked').hidden = !S.tab?.readonly;
   if (!open || !S.tab || S.tab.readonly) return;   // 보기만 하는 프로젝트 (D71) — 셸 대신 안내
   try {
@@ -477,21 +659,24 @@ async function showCurrent({ focus = false } = {}) {
   if (!termsOf(tab).length) await restoreTerms(tab);
   if (tab !== S.tab || !tab.term) return;
   renderHead();
+  layout();
+  for (const term of shownTerms(tab)) {
+    fitNow(term);
+    if (!term.alive && !term.id) start(term);
+  }
   const term = tab.term;
-  for (const other of termsOf(tab)) other.box.hidden = other !== term;
-  fitNow(term);
-  if (!term.alive && !term.id) await start(term);
+  if (term.starting) await term.starting;
   if (focus && tab === S.tab) term.xterm.focus();
 }
 
-/** 탭의 터미널 하나를 고른다 (머리줄의 터미널 탭, 터미널 모음 칸의 번호) */
+/** 탭의 터미널 하나를 고른다 (머리줄의 터미널 탭·쌓은 칸의 머리줄, 터미널 모음 칸의 번호) */
 export function selectTerminal(tab, term) {
   if (!termsOf(tab).includes(term)) return;
   tab.term = term;
   if (tab === S.tab) renderHead();
   emit('terms');
   if (gathered()) return;   // 모음이 화면을 옮긴다 ('terms')
-  for (const other of termsOf(tab)) other.box.hidden = !(tab === S.tab && other === term);
+  if (tab === S.tab) layout();
   if (tab === S.tab && open) {
     fitNow(term);
     if (!term.alive && !term.id) start(term);
@@ -546,13 +731,16 @@ export async function closeTerminal(term) {
   term.id = null;
   term.xterm.dispose();
   term.box.remove();
+  term.pane.remove();
   tab.terms = termsOf(tab).filter((x) => x !== term);
+  tab.termWeights = null;   // 닫으면 균등 (D137)
   if (tab.term === term) tab.term = tab.terms[Math.min(i, tab.terms.length - 1)] || null;
   if (tab.term) selectTerminal(tab, tab.term);
   else {
     // 마지막 터미널 — 패널을 감춘다. 머리줄 오른쪽 ×(감추기)와 같아 보이니 셸이 끝났다고 알린다. 다음에 열면 1번을 새로
     if (tab === S.tab && open) toggleTerminal(false);
     renderHead();
+    layout();
     emit('terms');
     toast(t('{n}번 터미널을 끝냈습니다 — 다시 열면 새 셸로 시작합니다', { n: term.n + 1 }));
   }
@@ -599,6 +787,7 @@ export function disposeTerminal(tab) {
     term.id = null;
     term.xterm.dispose();
     term.box.remove();
+    term.pane.remove();
   }
   tab.terms = [];
   tab.term = null;
@@ -610,6 +799,18 @@ export function disposeTerminal(tab) {
  * 붙여넣기의 끝 표시를 흉내 낸다 — 문서의 글이 사용자가 고른 '붙여 넣기'를 타고 올 수 있다 (D96). 탭과 줄바꿈만 남긴다
  */
 export const plainText = (text) => String(text).replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/g, '');
+
+// 메뉴의 숫자+누르기 (D137 — ui.js 가 항목을 부르기 직전에 'term-target' 으로 번호를 주고, 부른 뒤 지운다).
+// 그 항목이 곧바로(같은 차례에) 보내는 글만 그 번호로 간다 — 창을 거쳐 나중에 보내는 것은 기본 터미널로
+let target = null;
+function takeTarget() {
+  const n = target;
+  target = null;
+  return n;
+}
+
+/** 'term-paste' 의 값: 글, 또는 {text, n} (번호를 정한 보내기 — D137) */
+const pasteArgs = (d, stay) => (d && typeof d === 'object' ? [d.text, { stay, n: Number.isInteger(d.n) ? d.n : null }] : [d, { stay }]);
 
 /** 고른 터미널에 글을 넣는다 — 사용자의 Ctrl+V 와 같은 길 (xterm 의 paste → onData → POST /api/term/input). Enter 는 누르지 않는다 */
 async function pasteInto(term, raw) {
@@ -635,29 +836,42 @@ async function pasteInto(term, raw) {
  * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
- * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로
+ * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로.
+ * n: 받을 터미널의 번호 (0 부터 — Shift+숫자, 메뉴의 숫자+누르기 — D137). 없는 번호면 넣지 않고 알린다 (새로 만들지 않는다 —
+ * 셸이 막 뜨는 사이에 글이 들어가면 받을 프로그램이 없다). 1번은 터미널이 하나도 없으면 지금처럼 열어서 넣는다
  */
-export async function pasteToTerminal(text, { stay = false } = {}) {
+export async function pasteToTerminal(text, { stay = false, n = null } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
+  if (n == null) n = takeTarget();
   if (!tab || !text || blockedReadOnly(tab)) return;
   if (solo) {   // 터미널은 메인 창에 있다 — 메인 창이 같은 길로 넣는다 (D95)
     try {
-      await postJSON('/api/term/relay', { p: tab.id, text, stay }, TERM_HEADER);
-      toast(t('메인 창의 터미널로 보냈습니다 — Enter 는 누르지 않습니다'));
+      await postJSON('/api/term/relay', { p: tab.id, text, stay, ...(n != null ? { n } : {}) }, TERM_HEADER);
+      toast(n != null ? t('메인 창에 맡겼습니다 — {n}번 터미널로, Enter 는 누르지 않습니다 (없는 번호면 메인 창이 알립니다)', { n: n + 1 }) : t('메인 창의 터미널로 보냈습니다 — Enter 는 누르지 않습니다'));
     } catch (e) {
       toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
     }
+    return;
+  }
+  const missing = () => toast(t('{n}번 터미널이 없습니다 — 터미널 머리줄의 + 로 엽니다', { n: n + 1 }), 'error');
+  if (n != null && n > 0 && termsOf(tab).length && !termsOf(tab).some((x) => x.n === n)) {
+    missing();   // 패널을 열기 전에 — 없는 번호로 패널만 열리지 않게
     return;
   }
   if (!gathered()) {
     if (!open) toggleTerminal(true, { focus: !stay });
     await showCurrent();
   }
-  const term = termsOf(tab)[0];
-  if (!term || tab !== S.tab) return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다), 또는 그사이 다른 탭
+  if (tab !== S.tab) return;   // 그사이 다른 탭
+  const term = n == null ? termsOf(tab)[0] : termsOf(tab).find((x) => x.n === n);
+  if (!term) {
+    if (n != null && termsOf(tab).length) missing();
+    return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다)
+  }
   if (term !== tab.term) selectTerminal(tab, term);   // 넣는 터미널을 보인다 (셸이 없으면 띄운다)
   if (!(await pasteInto(term, text))) return;
+  flash(term);
   if (stay) S.pane?.scroller.focus({ preventScroll: true });
   // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 몇 번 터미널인지도
   toast(t("'{name}' 탭의 {n}번 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name, n: term.n + 1 }));
@@ -693,10 +907,15 @@ export async function terminalBusy(term) {
   }
 }
 
-/** 모음 칸에 옮겨 둔 화면들을 오른쪽 패널로 되돌린다 (터미널 모음을 닫을 때) */
+/** 모음 칸에 옮겨 둔 화면들을 오른쪽 패널의 제 칸으로 되돌린다 (터미널 모음을 닫을 때) */
 export function returnTerminals() {
-  const body = $('#lec-term-body');
-  for (const tab of S.tabs) for (const term of termsOf(tab)) if (term.box.parentElement !== body) body.append(term.box);
+  for (const tab of S.tabs) {
+    for (const term of termsOf(tab)) {
+      const body = term.pane.lastElementChild;
+      if (term.box.parentElement !== body) body.append(term.box);
+      term.box.hidden = false;
+    }
+  }
   showCurrent();
 }
 
@@ -719,6 +938,8 @@ function applyPlace() {
   btn.title = below ? t('터미널을 오른쪽으로') : t('터미널을 아래로');
   btn.querySelector('use').setAttribute('href', below ? '#i-term-side' : '#i-term-bottom');
   updateTocVisibility();
+  layout();   // 오른쪽이면 쌓기, 아래면 탭 (D137)
+  for (const term of shownTerms()) if (!term.alive && !term.id) start(term);
 }
 
 function applyWidth() {
@@ -800,12 +1021,7 @@ export function initTerminal() {
   new ResizeObserver(() => { title.style.visibility = title.clientWidth < 40 ? 'hidden' : ''; }).observe(title);
   applyWidth();
   applyPlace();
-  // 패널 크기가 바뀌면 글자 칸 수를 다시 맞춘다 (셸에도 알린다 — onResize)
-  let raf = 0;
-  new ResizeObserver(() => {
-    cancelAnimationFrame(raf);
-    raf = requestAnimationFrame(() => { if (!gathered()) fitNow(S.tab?.term); });
-  }).observe($('#lec-term-body'));
+  // 패널 크기가 바뀌면 글자 칸 수를 다시 맞추는 것은 칸마다 (paneSizes — 쌓은 칸 하나만 바뀌기도 한다)
   // 다른 탭을 고르면 그 탭의 셸로. 터미널에서 Ctrl+Tab 으로 왔으면 새 셸에 입력이 가게
   on('tab', () => showCurrent({ focus: !!document.activeElement?.closest?.('#lec-term') }));
   // 색: 스타일 파일을 바꿔 끼우면(theme.js) 다 불러온 뒤에 CSS 변수를 읽는다. 설정 창에서 '스타일에 맞춤'을 바꿔도
@@ -813,8 +1029,11 @@ export function initTerminal() {
   $('#lec-user-css').addEventListener('load', applyColors);   // 내 스타일 (D53)
   on('term-colors', applyColors);
   on('term-font', applyFont);
-  on('term-paste', pasteToTerminal);   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js)
-  on('term-paste-stay', (text) => pasteToTerminal(text, { stay: true }));   // Ctrl+Shift+→ (spotlight.js, D79·D97)
+  on('term-paste', (d) => pasteToTerminal(...pasteArgs(d, false)));   // 우클릭 메뉴의 '터미널에 붙여 넣기' (ui.js), Shift+→·Shift+숫자
+  on('term-paste-stay', (d) => pasteToTerminal(...pasteArgs(d, true)));   // Ctrl+Shift+→·Ctrl+Shift+숫자 (spotlight.js, D79·D97·D137)
+  on('term-target', (n) => { target = Number.isInteger(n) ? n : null; });   // 메뉴의 숫자+누르기 (ui.js, D137)
+  on('terms', () => { if (S.tab && !gathered()) markPanes(S.tab); });   // 셸이 끝나거나 멈춤 — 칸 머리줄
+  bindSplits();
   applyColors();
   renderHead();
 }

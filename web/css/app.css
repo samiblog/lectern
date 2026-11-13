@@ -346,6 +346,38 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .term-stuck .text-btn { flex: none; height: 26px; padding: 0 10px; border-color: var(--ui-danger); color: var(--ui-danger); font-weight: 600; }
 .icon-btn.attention, .icon-btn.attention:hover:not(:disabled) { color: var(--ui-danger); background: color-mix(in srgb, var(--ui-danger) 16%, transparent); }
 #lec-term-body { flex: 1; min-height: 0; position: relative; color-scheme: dark; }   /* 스크롤바도 바탕에 맞게 */
+/* 터미널마다 칸 (terminal.js, D137): 탭이면 고른 칸 하나가 몸통 전체, 쌓으면(.stacked — 오른쪽에 둘 이상) 위아래로 */
+.term-pane { position: absolute; inset: 0; }
+.term-pane-head { display: none; }
+.term-pane-body { position: absolute; inset: 0; }
+#lec-term.stacked #lec-term-tabs { display: none; }
+#lec-term.stacked #lec-term-body { display: flex; flex-direction: column; }
+#lec-term.stacked .term-pane { position: relative; inset: auto; flex: 1 1 0; min-height: 72px; display: flex; flex-direction: column; }
+#lec-term.stacked .term-pane[hidden] { display: none; }
+#lec-term.stacked .term-pane-body { position: relative; inset: auto; flex: 1; min-height: 0; }
+#lec-term.stacked .term-pane-head {
+  display: flex; align-items: center; gap: 6px; flex: none; height: 24px; padding: 0 4px 0 8px; user-select: none; cursor: default;
+  border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-muted); font-size: 12px; font-weight: 500;
+}
+.term-pane-head .n {
+  flex: none; min-width: 17px; height: 17px; padding: 0 4px; border-radius: 4px; background: var(--ui-border); color: var(--ui-fg);
+  font-size: 11.5px; font-weight: 700; line-height: 17px; text-align: center; font-variant-numeric: tabular-nums;
+}
+.term-pane-head .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.term-pane-head .state { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; color: var(--ui-faint); font-size: 11px; }
+#lec-term.stacked .term-pane.on > .term-pane-head { background: var(--ui-active-bg); color: var(--ui-fg); font-weight: 650; box-shadow: inset 3px 0 0 var(--ui-accent); }
+.term-pane.on .term-pane-head .n { background: var(--ui-accent); color: #fff; }
+:root[data-ui="dark"] .term-pane.on .term-pane-head .n { color: #0f1a26; }
+.term-pane.stuck .term-pane-head .n { background: var(--ui-danger); color: #fff; }
+.term-pane.stuck .term-pane-head .state { color: var(--ui-danger); font-weight: 650; }
+.term-pane.ended > .term-pane-body { opacity: .6; }
+.term-pane:not(.on):not(:hover) .term-pane-head .term-tab-close { visibility: hidden; }
+/* 보낸 칸을 잠깐 표시 (Shift+숫자·메뉴의 숫자+누르기 — 어느 터미널에 들어갔는지) */
+.term-pane.flash > .term-pane-head { animation: term-flash 1s ease-out; }
+@keyframes term-flash { 0%, 40% { background: color-mix(in srgb, var(--ui-accent) 45%, var(--ui-bg)); } 100% { background: var(--ui-active-bg); } }
+/* 쌓은 칸 사이 경계: 끌어서 위아래 칸의 높이, 두 번 누르면 똑같이 */
+.term-split { flex: none; height: 5px; margin: -2px 0; position: relative; z-index: 2; cursor: row-resize; background: var(--ui-border); background-clip: content-box; padding: 2px 0; }
+.term-split:hover, .resizing-term .term-split:active { background-color: color-mix(in srgb, var(--ui-accent) 55%, transparent); padding: 0; }
 .term-light #lec-term-body, .term-light .g-body { color-scheme: light; }
 /* 아래에 둔 터미널 (D52): #lec-main 을 격자로 — 위에 문서·목차, 그 아래 경계와 터미널이 사이드바를 뺀 전체 폭 */
 .term-on.term-bottom #lec-main {
@@ -433,6 +465,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .g-empty small { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
 .g-none { grid-column: 1 / -1; align-self: center; justify-self: center; color: var(--ui-muted); }
 .term-box { position: absolute; inset: 6px 2px 4px 8px; }
+#lec-term.stacked .term-box { inset: 3px 2px 2px 8px; }
 /* 보기만 하는 프로젝트(D71 — Lectern 프로그램 폴더 안)의 터미널 자리: 셸 대신 안내 */
 .term-locked {
   position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 20px;
@@ -979,6 +1012,13 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 .menu .menu-term:hover, .menu .menu-term:focus { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); color: var(--ui-accent); }
 .menu-term svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+/* 메뉴가 열린 동안 숫자 키를 누르고 있으면 (D137): 터미널로 보내는 항목은 그 번호의 터미널로 — 메뉴 위에 표시 */
+#lec-menu.term-held::before {
+  content: attr(data-term-held); display: block; position: sticky; top: 0; z-index: 1; margin: 0 0 4px; padding: 3px 10px; border-radius: 5px;
+  background: var(--ui-accent); color: #fff; font-size: 12px; font-weight: 650; white-space: nowrap; pointer-events: none;
+}
+:root[data-ui="dark"] #lec-menu.term-held::before { color: #0f1a26; }
+#lec-menu.term-held .menu-term { color: var(--ui-accent); }
 /* 아이콘이 있는 항목 (열린 문서 탭 목록 — doctabs.js, D67): 한 줄에 아이콘·이름·흐린 경로, 고른 탭은 강조색 */
 .menu button.with-icon { flex-direction: row; align-items: center; gap: 7px; }
 .menu button.with-icon > span { flex: 0 1 auto; min-width: 0; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

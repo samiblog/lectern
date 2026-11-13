@@ -1599,5 +1599,14 @@ export default {
 "차트를 그린 데이터를 표로 보기": "Show the chart's data as a table",
 "차트 데이터 복사 — 엑셀에 붙이면 칸이 나뉩니다": "Copy chart data — splits into cells in Excel",
 "이 차트의 데이터를 문서 안으로 넣지 못했습니다 — 원문에서 data 의 url 을 values 로 고치세요": "Couldn't put this chart's data into the document — change data's url to values in the source",
-"데이터를 문서 안으로 넣었습니다 — 이제 CSV 파일 없이도 그려집니다": "Put the data into the document — the chart now draws without the CSV file"
+"데이터를 문서 안으로 넣었습니다 — 이제 CSV 파일 없이도 그려집니다": "Put the data into the document — the chart now draws without the CSV file",
+"Shift+{n} 으로 이 터미널에 보냅니다": "Shift+{n} sends to this terminal",
+"{n}번 터미널이 없습니다 — 터미널 머리줄의 + 로 엽니다": "There is no terminal {n} — open one with + in the terminal header",
+"→ {n}번 터미널": "→ terminal {n}",
+"그 번호의 터미널에 넣기 — 초점은 터미널로 / 문서에 (터미널이 여럿일 때)": "Put it into the terminal with that number — focus goes to the terminal / stays in the document (with several terminals)",
+"끌어서 위아래 터미널의 높이 조절 (두 번 누르면 똑같이)": "Drag to resize the terminals above and below (double-click to even them out)",
+"맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에": "To the first terminal (Enter is not pressed) — hold a number key while clicking, or press Shift+number, for that terminal",
+"멈춤": "Stuck",
+"메인 창에 맡겼습니다 — {n}번 터미널로, Enter 는 누르지 않습니다 (없는 번호면 메인 창이 알립니다)": "Handed to the main window — for terminal {n}, Enter is not pressed (the main window tells you if there is no such terminal)",
+"터미널에 붙여 넣기 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르면 그 번호의 터미널에": "Paste into the terminal (Enter is not pressed) — hold a number key while clicking for that terminal"
 };
