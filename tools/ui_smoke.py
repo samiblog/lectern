@@ -3315,8 +3315,8 @@ def run(headed: bool) -> None:
             wait_until(page, "document.querySelectorAll('#lec-doctab-list .doc-tab').length === 1", 5000)
             on_tab(base)
             check(twice == [base, '*docs/02-수식과-달러.md'] and twice_panes[0][0] == base and twice_panes[1][1:] == [1, True] and again == twice
-                  and badge == '2' and len(listed) == 3 and listed[0].startswith(base) and listed[1].startswith('*docs/02-수식과-달러.md')
-                  and listed[2] == '다른 문서 탭 모두 닫기' and picked and alt9,
+                  and badge == '2' and len(listed) == 4 and listed[0].startswith(base) and listed[1].startswith('*docs/02-수식과-달러.md')
+                  and listed[2:] == ['다른 문서 탭 모두 닫기', '열린 문서 모두 닫기'] and picked and alt9,
                   f"문서 탭: 트리에서 두 번 누르면 새 탭(지금 탭은 보던 문서로, 새 탭은 뒤로 기록 없음 — 열린 문서는 그 탭 그대로), 오른쪽 끝 [2 ∨] 의 열린 문서 탭 목록에서 고르기, Alt+9 마지막 탭 ({twice}, {twice_panes}, {again}, {badge}, {listed})")
 
             print('[터미널]')
@@ -3899,8 +3899,8 @@ def run(headed: bool) -> None:
             use_theme('default')
             fold_click('코드')
             check('인쇄 / PDF로 저장' in items and pr['toolbar'] == 'none' and pr['folded'] != 'none'
-                  and pr['fg'] == 'rgb(17, 17, 17)' and 'https://' in pr['url'] and (headed or pdf.startswith(b'%PDF')),
-                  f'인쇄: 문서 메뉴에 인쇄, 화면 UI 빼고 접은 절 펴서, 어두운 스타일도 검은 글자, 링크 주소 표시 ({pr}, PDF {len(pdf)}바이트)')
+                  and pr['fg'] == 'rgb(17, 17, 17)' and pr['url'] in ('none', 'normal') and (headed or pdf.startswith(b'%PDF')),
+                  f'인쇄: 문서 메뉴에 인쇄, 화면 UI 빼고 접은 절 펴서, 어두운 스타일도 검은 글자, 본문 링크에는 주소를 붙이지 않음 (D131 — 출처 목록에만) ({pr}, PDF {len(pdf)}바이트)')
 
             print('[보안]')
             pid = page.evaluate("fetch('/api/state').then(r => r.json()).then(s => s.active)")
