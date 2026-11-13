@@ -41,7 +41,7 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 - Clicking the tab that is already selected shows that project's overview. Right-clicking a tab also offers the project overview, a new document in the top folder and the project's Elements.
 - When a document in a background tab changes, a dot appears next to the tab name.
 - Folders with the same name also show their parent folder's name.
-- To close a tab, click its ×, middle-click it, or press Ctrl+Shift+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer.
+- To close a tab, click its ×, middle-click it, or press Ctrl+Shift+W. Right-click a tab for Close other tabs, Copy full path and Show in Explorer. To keep the project but clear the documents open in it, right-click its tab and choose **Close all open documents** (see 'Document tabs' below).
 - To move between tabs: Ctrl+1~8 (tab by position), Ctrl+9 (last tab), Alt+PageDown / Alt+PageUp (next / previous tab).
 
 ## Document tabs
@@ -56,8 +56,9 @@ Keep up to 20 documents of a project open as tabs and switch between them. They 
 - **Back and forward** (Alt+← →, the mouse back and forward buttons) also undo jumps within a document — after going somewhere from the contents, a section link, a footnote, find, Elements or search results, they return you to where you were reading (scroll and current line), unfolding the section if needed. However many find results you step through, one press returns to where you started. Moves by scrolling or ↑ ↓ are not recorded.
 - Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Send from the Clip tab opens the receiving document in its own tab.
 - To switch, click a tab or press **Alt+1~8** (by position) or **Alt+9** (last tab). When there are more tabs than fit, scroll the row with the mouse wheel or click **∨** at its right end (the number beside it is how many are open) and pick from the list of open document tabs. **Ctrl+Tab** and **Ctrl+Shift+Tab** (or Ctrl+PageDown, PageUp) go to the next and previous document tab. To close, click its ×, middle-click it or press **Ctrl+W** (or Ctrl+F4 — the last tab is not closed); **Ctrl+Shift+T** reopens a closed document tab. **Ctrl+T** opens a document in a new document tab. Right-click a tab for Close other document tabs and copying its path.
+- **Close all open documents**: choose it by right-clicking a document tab or the project tab (or from **∨** at the end of the document tab row) and every document tab of that project closes, leaving the folder overview. If there are unsaved edits you are asked once, and cancelling closes nothing. **Ctrl+Shift+T** reopens the closed documents one at a time. Documents in separate windows stay (close those windows instead).
 - When you close every document tab, the folder overview appears — the screen you see when a project is first opened. The last remaining document tab closes too, with **×**, **Ctrl+W** or the middle button. With only the folder overview left, press **Ctrl+Shift+W** to close the project.
-- The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them).
+- The next time Lectern opens, your document tabs come back (when Settings → Start where I left off is on — only the selected tab is drawn at once, the others when you click them). If you closed every document tab and left only the folder overview, it opens with the folder overview next time too.
 
 ### Spread all
 

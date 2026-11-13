@@ -15,7 +15,7 @@ import { S, on, emit } from './store.js';
 import { createPane, removePane, selectPane } from './panes.js';
 import { navigate, refreshView, seedScroll } from './nav.js';
 import { goToPart } from './toc.js';
-import { closeEditor } from './editor.js';
+import { closeEditor, confirmCloseEditor } from './editor.js';
 import { native, postJSON } from './api.js';
 import { solo, soloQuery } from './solo.js';
 import { labelOf, tipOf, pathMenuItems } from './tree.js';
@@ -208,8 +208,28 @@ export function closeTab(pane = S.pane) {
   if (pane.editor && !closeEditor(pane, { sync: false })) return false;
   rememberClosed(pane);
   navigate({ type: 'overview', path: '' }, { pane });
+  emit('docs-closed', tab);   // 다음에 열 때 닫은 문서가 돌아오지 않게 (position.js — D133)
   return true;
 }
+
+/**
+ * 열린 문서 모두 닫기 (D133): 이 프로젝트의 문서 탭을 모두 닫고 폴더 개요 하나만 남긴다 — 프로젝트를 처음 열었을 때와 같은 화면.
+ * 저장하지 않은 편집이 있으면 한 번만 묻고(그만두면 아무것도 닫지 않는다), 닫은 탭은 Ctrl+Shift+T 로 하나씩 되살린다.
+ * 메인 창만 — 독립창은 창을 닫으면 된다. 고른 탭의 칸을 남겨 폴더 개요로 바꾸므로 다른 칸은 고른 탭을 바꾸지 않고 닫힌다.
+ * 뒤에 있는 프로젝트 탭이면 그 탭을 먼저 고른 뒤 부른다 (tabs.js 의 메뉴)
+ */
+export function closeAllDocs(tab = S.tab) {
+  if (!canCloseAll(tab) || !confirmCloseEditor(tab)) return false;
+  for (const p of tab.panes) if (p.editor) closeEditor(p, { ask: false, sync: false });
+  const keep = tab.pane;
+  for (const p of tab.panes.filter((x) => x !== keep)) closeDocTab(p);
+  if (holdsFile(keep)) closeTab(keep);   // 폴더 개요로 — 'docs-closed' 도 거기서
+  else emit('docs-closed', tab);
+  return true;
+}
+
+/** 열린 문서 모두 닫기를 보일지 — 메인 창이고, 닫을 문서 탭이 있다 (탭이 여럿이거나 하나뿐인 탭이 파일을 보인다) */
+export const canCloseAll = (tab) => !solo && !!tab?.pane && (tab.panes.length > 1 || holdsFile(tab.pane));
 
 /** 칸이 문서·코드 같은 파일을 보이는지 — 폴더 개요·빈 칸이 아닌지 */
 const holdsFile = (pane) => { const v = viewOf(pane); return !!v && v.type !== 'overview'; };
@@ -229,7 +249,10 @@ export async function reopenDocTab() {
   const list = tab?.closedDocs || [];
   while (list.length) {
     const target = list.pop();
-    if (target.type === 'code' || tab.fileMap.has(target.path)) return !!(await openInNewTab(target));
+    if (target.type !== 'code' && !tab.fileMap.has(target.path)) continue;
+    // 폴더 개요만 남았으면(마지막 탭을 닫았거나 열린 문서 모두 닫기 — D127·D133) 그 자리에 연다 — 폴더 개요 탭을 남기지 않는다
+    if (tab.panes.length === 1 && !holdsFile(tab.pane)) return !!(await navigate(target, { pane: tab.pane }));
+    return !!(await openInNewTab(target));
   }
   toast(t('다시 열 문서 탭이 없습니다'));
   return false;
@@ -454,6 +477,7 @@ function listMenu(btn) {
     });
   });
   if (n > 1) items.push('-', { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(tab.pane) });
+  if (n > 1 && canCloseAll(tab)) items.push(closeAllItem(tab));
   const r = btn.getBoundingClientRect();
   showMenu(r.right, r.bottom + 2, items);
   // 단추의 오른쪽 끝에 맞춘다 — 목차·터미널이 열려 있으면 단추가 창 오른쪽 끝이 아니다
@@ -461,6 +485,15 @@ function listMenu(btn) {
   menu.style.left = `${Math.max(8, r.right - menu.offsetWidth)}px`;
   menu.querySelector('button[aria-current="true"]')?.focus();
 }
+
+/**
+ * 메뉴의 '열린 문서 모두 닫기' (D133 — 문서 탭·∨ 목록·프로젝트 탭의 우클릭이 같은 이름으로)
+ * @param {Tab} tab
+ * @param {() => unknown} [action] 뒤에 있는 프로젝트 탭이면 그 탭을 먼저 고르는 것 (tabs.js)
+ * @returns {MenuItem}
+ */
+export const closeAllItem = (tab, action = () => closeAllDocs(tab)) => (
+  { label: t('열린 문서 모두 닫기'), tip: t('이 프로젝트의 문서 탭을 모두 닫고 폴더 개요로 돌아갑니다 (Ctrl+Shift+T 로 하나씩 다시 엽니다)'), action });
 
 const paneAt = (el) => S.tab?.panes[Number(el?.closest('.doc-tab')?.dataset.i)] || null;
 
@@ -472,6 +505,7 @@ export function tabMenu(pane) {
   if (pane.tab.panes.length > 1) {
     items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+W' : t('가운데 버튼'), action: () => closeDocTab(pane) },
       { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(pane) });
+    if (canCloseAll(pane.tab)) items.push(closeAllItem(pane.tab));
   } else if (!solo && holdsFile(pane)) {
     items.push({ label: t('문서 탭 닫기'), hint: 'Ctrl+W', tip: t('폴더 개요로 돌아갑니다'), action: () => closeTab(pane) });
   }

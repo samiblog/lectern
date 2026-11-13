@@ -26,7 +26,19 @@ export function rememberPosition(tab) {
   return postJSON('/api/position', body).catch(() => { sent.delete(tab); });
 }
 
+/**
+ * 사용자가 문서 탭을 모두 닫아 폴더 개요만 남았다 (doctabs.js 의 'docs-closed' — 마지막 문서 탭 닫기 D127, 열린 문서 모두 닫기 D133):
+ * 서버가 기억한 마지막 문서와 문서 탭 목록을 비운다 — 다음에 열 때 닫은 문서들이 돌아오지 않게. 위의 기록은 폴더 개요면 아무것도
+ * 보내지 않으므로(처음 열 때·아직 그리지 않은 탭) 따로 둔다 — 폴더 개요를 그냥 보는 것으로는 비우지 않는다
+ */
+function forgetDocs(tab) {
+  if (solo || S.config.restore_last === false || !tab) return;
+  sent.delete(tab);
+  postJSON('/api/position', { p: tab.id, path: '', docs: [] }).catch(() => {});
+}
+
 export function initPosition() {
+  on('docs-closed', forgetDocs);
   // 모든 탭을 본다 — 스크롤하고 1.5초 안에 다른 탭을 골라도 앞 탭의 위치가 남게 (숨은 탭의 위치는 바뀌지 않으니 보내지 않는다)
   const later = debounce(() => S.tabs.forEach(rememberPosition), 1500);
   on('view', later);

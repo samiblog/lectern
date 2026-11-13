@@ -338,12 +338,19 @@ def create_app(state: AppState) -> Flask:
     @app.post('/api/position')
     def api_position() -> Any:
         """탭(p)에서 보는 문서와 스크롤 위치 {p, path, scroll, docs?} (다음에 열 때 되살림). docs: 열어 둔 문서 탭들의 문서 (탭 차례,
-        20개까지 — D64·D67. 없어진 문서는 뺀다). 설정 restore_last 가 꺼져 있으면 기록하지 않는다."""
+        20개까지 — D64·D67. 없어진 문서는 뺀다). 설정 restore_last 가 꺼져 있으면 기록하지 않는다.
+        path 가 '' 이고 docs 가 [] 면 사용자가 문서 탭을 모두 닫아 폴더 개요만 남은 것이다 (D133) — 마지막 문서와 문서 탭 목록을 비운다."""
         data = body()
         root = project_of(data.get('p')).root
         rel, scroll, docs = data.get('path'), data.get('scroll', 0), data.get('docs')
         if not isinstance(rel, str) or (docs is not None and (not isinstance(docs, list) or len(docs) > MAX_DOC_TABS)):
             abort(400)
+        if rel == '':
+            if docs != []:
+                abort(400)
+            if state.config.get('restore_last') is not False:
+                state.config.forget_docs(str(root))
+            return jsonify(ok=True)
         target = resolve_inside(root, rel)
         if target is None or not editing.present(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)

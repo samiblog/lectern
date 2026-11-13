@@ -19,7 +19,7 @@ import { showMenu, menuGroups } from './ui.js';
 import { folderIcon } from './icons.js';
 import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { confirmCloseEditor, disposeEditor } from './editor.js';
-import { restoreDocTabs, selectDocTab } from './doctabs.js';
+import { restoreDocTabs, selectDocTab, closeAllDocs, closeAllItem, canCloseAll } from './doctabs.js';
 import { gatherOn } from './gather.js';
 import { manualOpen } from './help.js';
 import { solo } from './solo.js';
@@ -351,7 +351,8 @@ function tabMenu(tab) {
     act();
   };
   /** @type {MenuItem[]} */
-  const closes = [{ label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+Shift+W' : '', action: () => closeTab(tab) }];
+  const closes = canCloseAll(tab) ? [closeAllItem(tab, there(() => closeAllDocs(tab)))] : [];   // 이 프로젝트의 문서 탭만 (D133)
+  closes.push({ label: t('탭 닫기'), hint: tab === S.tab ? 'Ctrl+Shift+W' : '', action: () => closeTab(tab) });
   if (S.tabs.length > 1) closes.push({ label: t('다른 탭 모두 닫기'), action: () => closeOthers(tab) });
   const items = menuGroups([{ header: tab.root }],
     [{ label: t('프로젝트 개요'), action: there(openOverview) },

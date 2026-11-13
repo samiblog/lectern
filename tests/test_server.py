@@ -371,6 +371,13 @@ def test_position_is_remembered(client, project, pid):
     assert post({'path': 'README.md', 'scroll': 7, 'docs': 'README.md'}).status_code == 400
     post({'path': 'docs/10-a.md', 'scroll': 1})   # docs 없이 — 그 문서 하나
     assert client.get('/api/state').get_json()['projects'][0]['position']['docs'] == ['docs/10-a.md']
+    # 문서 탭을 모두 닫아 폴더 개요만 남음 (D133): 마지막 문서와 문서 탭 목록을 비우고, 문서별 스크롤 위치는 둔다
+    post({'path': 'README.md', 'scroll': 9, 'docs': ['docs/10-a.md', 'README.md']})
+    assert post({'path': '', 'docs': ['README.md']}).status_code == 400
+    assert post({'path': '', 'docs': []}).get_json() == {'ok': True}
+    pos = client.get('/api/state').get_json()['projects'][0]['position']
+    assert pos['doc'] is None and pos['docs'] == [] and pos['scroll']['README.md'] == 9
+    post({'path': 'docs/10-a.md', 'scroll': 1})
     client.post('/api/config', json={'restore_last': False})
     post({'path': 'README.md', 'scroll': 5})
     assert client.get('/api/state').get_json()['projects'][0]['position']['doc'] == 'docs/10-a.md'   # 꺼 두면 기록하지 않음

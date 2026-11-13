@@ -333,6 +333,17 @@ class Config:
             data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
         self._update(change)
 
+    def forget_docs(self, root: str) -> None:
+        """프로젝트의 마지막 문서와 열어 둔 문서 탭 목록을 비운다 — 사용자가 문서 탭을 모두 닫아 폴더 개요만 남았다 (D133).
+        다음에 열면 폴더 개요부터. 문서별 스크롤 위치는 둔다 (다시 열 때 읽던 자리)"""
+        def change(data: dict[str, Any]) -> None:
+            projects = data.get('projects')
+            entry = projects.get(os.path.normcase(root)) if isinstance(projects, dict) else None
+            if isinstance(entry, dict):
+                entry['doc'] = None
+                entry['docs'] = []
+        self._update(change)
+
     def position(self, root: str) -> dict[str, Any]:
         """{doc, scroll:{문서: 위치}, docs:[열어 둔 문서 탭들의 문서]}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.
         창을 나누던 때(v0.6)의 기록에 남은 panes·active 는 읽지 않는다 — doc 이 그때 선택된 창의 문서다.
