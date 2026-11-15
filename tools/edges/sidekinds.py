@@ -173,6 +173,52 @@ try:
         check('Shift+F8: 앞의 것', sel() == '초록 말', sel())
         page.keyboard.press('m')
         check('고른 채라 M 으로 색을 바꾼다', until(page, lambda: '<mark class="pink">초록 말</mark>' in read()), read())
+
+        print('[문서 안의 칠한 글을 우클릭]')
+        page.keyboard.press('Control+z')
+        until(page, lambda: read() == MARKED)
+        until(page, lambda: page.evaluate("import('/static/js/store.js').then(({ S }) => S.pane?.source?.lines?.join('\\n'))") == MARKED, 10000)
+        page.wait_for_timeout(400)
+        labels = lambda: page.evaluate("[...document.querySelectorAll('#lec-menu button[data-i] > span')].map((e) => e.textContent)")
+
+        def menu_at(text):
+            page.locator('#lec-view mark', has_text=text).click(button='right')
+            page.wait_for_selector('#lec-menu:not([hidden])')
+            return labels()
+
+        page.locator('#lec-view h1').click()
+        page.keyboard.press('F8')
+        got = menu_at('크게 올랐다')
+        check('F8 로 고른 칠한 글: 서식 뒤에 담기·보내기·메모 달기, 이 형광펜 지우기, 블록의 메뉴',
+              got[0] == '고른 글 복사' and got.index('서식 풀기') < got.index('고른 글 담기') < got.index('메모 달기') < got.index('이 형광펜 지우기') < got.index('이 블록의 메뉴…')
+              and '새 메모로 보내기' not in got, got)
+        check('고른 글 복사 옆에 터미널 버튼', page.locator('#lec-menu .menu-row', has=page.locator('button[data-i]', has_text='고른 글 복사')).locator('.menu-term').count() == 1)
+        page.locator('#lec-menu button', has_text='이 형광펜 지우기').click()
+        check('문서에서 이 형광펜 지우기: 그것만, 글은 그대로', until(page, lambda: '구리 가격은 크게 올랐다 그리고' in read() and read().count('<mark') == 2), read())
+        page.locator('#lec-view h1').click()
+        page.keyboard.press('Control+z')
+        check('되돌린다', until(page, lambda: read() == MARKED), read())
+        until(page, lambda: page.evaluate("import('/static/js/store.js').then(({ S }) => S.pane?.source?.lines?.join('\\n'))") == MARKED, 10000)
+        page.wait_for_timeout(400)
+        word = page.locator('#lec-view mark', has_text='노랑 말')
+        word.dblclick()   # 칠한 글 안의 낱말을 두 번 눌러 고른다
+        page.wait_for_timeout(200)
+        menu_at('노랑 말')
+        page.locator('#lec-menu button', has_text='메모 달기').click()
+        page.wait_for_selector('.note-card')
+        check('칠한 글 안의 낱말에서도 메모 달기 — 칠한 글 통째가 제목', until(page, lambda: '## 노랑 말' in notes.read_text(encoding='utf-8'), 8000), notes.read_text(encoding='utf-8')[-200:])
+        page.keyboard.press('Alt+m')
+        end_p = page.locator('#lec-view p', has_text='끝 문단')
+        end_p.dblclick(position={'x': 8, 'y': 8})   # 글 위를 — 문단 가운데는 빈 곳이라 아무것도 고르지 않는다
+        page.wait_for_timeout(200)
+        end_p.click(button='right', position={'x': 8, 'y': 8})
+        page.wait_for_selector('#lec-menu:not([hidden])')
+        got = labels()
+        check('칠하지 않은 글: 담기·문서로 보내기·새 메모로 보내기, 형광펜 항목은 없음',
+              '고른 글 담기' in got and '고른 글을 문서로 보내기…' in got and '새 메모로 보내기' in got and '메모 달기' not in got and '이 형광펜 지우기' not in got, got)
+        page.locator('#lec-menu button', has_text='새 메모로 보내기').click()
+        check('고른 글의 새 메모는 그 글로 다시 찾는다 (find)', until(page, lambda: 'find=' in notes.read_text(encoding='utf-8').split('lectern-note')[-1], 8000), notes.read_text(encoding='utf-8')[-200:])
+        page.keyboard.press('Alt+m')
         check('페이지 오류 없음', not errors, errors[:3])
         b.close()
 except Exception:

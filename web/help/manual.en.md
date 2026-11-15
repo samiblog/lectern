@@ -28,7 +28,7 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 | Area | What it does |
 |---|---|
 | Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, document width, **line numbers**, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
-| Tab bar | One tab per open project, open folder (+), and the **Contents** and **Terminal** buttons at the right end |
+| Tab bar | One tab per open project, open folder (+), and the **Edit**, **Contents**, **Print**, **Notes** and **Terminal** buttons at the right end |
 | Document tab row | Just above the document — the documents open in this project (up to 40), open a document in a new tab (+), the list of open document tabs (∨) and Spread all (▦) at the right end |
 | Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
 | Main area (center) | Documents, folder overviews and the code view |
@@ -99,7 +99,7 @@ The **Files** tab is split into three groups.
 | Other files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
 
 - **Only one group is open at a time.** Click a group header ('Documents 10', 'Code 3', 'Other files 4') to open it; the others shrink to their headers and the open group takes all the remaining height. Closed headers still show counts, and while you type in the filter box they show how many match. Each project tab remembers which group was open.
-- **Sub-groups inside Documents**: when Documents is open, its sub-groups are stacked under it, indented. Only one opens at a time, and the tree appears right below the open one. Kinds with no documents, or the same as All, are hidden.
+- **Sub-groups inside Documents**: when Documents is open, its sub-groups are stacked under it, indented. Only one opens at a time, and the tree appears right below the open one. Kinds with no documents, or the same as All, are hidden (Highlights and To-dos show whenever there are md documents, even at 0).
 
   | Sub-group | Shows |
   |---|---|
@@ -111,7 +111,7 @@ The **Files** tab is split into three groups.
   | Highlights | Documents with highlighted text — the highlighted text listed under each document, with its color |
   | To-dos | Documents with open to-dos — the to-dos listed under each document |
 
-  Highlights and To-dos read the documents' text, so they take a moment the first time you open them (afterwards only changed documents are read again). Their counts appear then. Code blocks are skipped.
+  Highlights and To-dos read the documents' text, so they take a moment the first time you open them (afterwards only changed documents are read again). Their counts appear then. Code blocks are skipped. Click a line to go to that place in the document; right-click it to add a note or remove it (see 'Highlighting to come back later' below).
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
 - **Sort** picks the list order: by name, time or type. Folders always come first, then files. By time puts the newest on top, and a folder follows its newest file. By type goes by file extension.
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
@@ -230,7 +230,7 @@ Click the arrow in the margin left of a heading to fold its section, and click i
 In Markdown documents and the code view (including csv and txt), lines are counted as lines of the source file — a paragraph, list item, heading or table row written on one line is one line, a paragraph wrapped over several lines goes line by line, and code goes line by line. So the `@path lines 12-20` sent to Claude matches what you picked on screen.
 
 - **Current line**: the small triangle to the left of the line you are reading. Click or right-click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. The status bar shows it as `Current line 12`, and each document tab keeps its own.
-- **Send to Claude**: **Shift+→** puts the location of the current line (or of the picked lines), `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away. To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. With several terminals, **Shift+number** (Ctrl+Shift+number) puts it into the terminal with that number. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if you dragged to select text, Ctrl+C copies that text).
+- **Send to Claude**: **Shift+→** puts the location of the current line (or of the picked lines — while words are selected it widens the selection instead), `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away. To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. With several terminals, **Shift+number** (Ctrl+Shift+number) puts it into the terminal with that number. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if you dragged to select text, Ctrl+C copies that text).
 - **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section with the current line sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn the section into picked lines. Press Esc or the button to turn it off, or right-click the text and choose 'Focus this section'. In documents without sections and in the code view, the button works like Shift+Enter.
 - Picking and editing lines are described in 'Writing and editing documents'.
 
@@ -282,7 +282,7 @@ Sample — [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in 
 
 Write and edit an md document from start to finish without opening the full editor.
 
-Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): picking lines and twenty cases to try.
+Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): picking lines and twenty-two cases to try.
 
 **There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z** (picked lines and focus stay on the lines you undid). A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
 
@@ -292,7 +292,7 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 |---|---|---|---|
 | **Current line** | One line — where you read, write and insert | Click, right-click, ↑ ↓ | — |
 | **Picked lines** | Several lines — to delete, move or change together | **Shift+↑ ↓** from the current line, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, shrinking to one line |
-| **Focus** | A light over the current line or the picked lines — dims the rest | **Shift+Enter**, the toolbar button | Shift+Enter, Esc, the toolbar button or a click on a dimmed area |
+| **Focus** | A light over the current line or the picked lines — dims the rest | **Shift+Enter** | Shift+Enter, Esc or a click on a dimmed area |
 | **Cell** | A text box that edits the line right where it is | **F2**, right-click 'Edit here', Ctrl+Enter | Enter saves, Esc cancels |
 
 - **There is one selection**: one line is the current line; extend it with Shift+↑ ↓ or Shift+click and several lines are picked lines. The first line stays and the last one moves, so the range grows or shrinks, and back at one line it is the current line again. Shift+click picks from the current line (the line you last clicked or moved to — scrolling afterwards does not change it) to the line you click; Shift+drag picks from the line you press to the line you drag to. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
@@ -306,6 +306,8 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 
 You can also select words in the reading view and format them straight away, without opening a cell.
 
+Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md) (in Korean), cases 21 and 22: bold and highlight on key words, and formatting a whole line. The source of inline formats is in [guide 04, writing documents](../../samples/guide/04-문서-쓰는-법.md), 'Inline formatting'.
+
 | Key | What it does |
 |---|---|
 | **Double-click** the body | Selects that word (the line-edit cell does not open) |
@@ -318,19 +320,22 @@ You can also select words in the reading view and format them straight away, wit
 | **Esc**, **↑ ↓** | Clear the selection (↑ ↓ also move the current line) |
 
 - Words are split at spaces. Moving stays within the line (one source line); → on the last word does not go on to the next line. A selection made by dragging extends with the same keys.
-- Formatting is saved as you press and shows right away. The selection stays, so highlight and text color step to the next color each press. Pressing again removes it, and **Ctrl+Z** undoes it.
-- **B, I, S, M and F work only while text or lines are selected.** On the current line with nothing selected they do nothing, so a stray key while reading never changes the file. With lines picked (Shift+↑ ↓) they act on the whole text of those lines.
-- Right-click selected text for a formatting box — formats and colors, Clear formatting, Edit here, Copy selected text and This block's menu.
+- Formatting is saved as you press and shows right away. The selection stays. Pressing bold, italic or strikethrough again removes it. Highlight and text color step to the next color each press and come off after the last one (highlight: yellow → green → pink → blue → off). To take a color off at once, right-click and choose the same color again, or **Clear formatting**. **Ctrl+Z** undoes it.
+- **B, I, S, M and F work only while text or lines are selected.** On the current line with nothing selected they do nothing, even pressed twice, so a stray key while reading never changes the file. Don't hold Shift. **Ctrl+B** with nothing selected still hides and shows the sidebar as usual.
+- **A whole line**: **triple-click** a line to select all its text, then press B, M or another key to format the whole line (list and heading markers stay). For several lines, pick them with Shift+↑ ↓ first.
+- Right-click selected text for its box — Copy selected text (the terminal button beside it puts it in the terminal), formats and colors, Clear formatting, Edit here, Clip selected text, Send selected text… and Send to new note. If the selection is inside a highlight, **Add a note** and **Remove this highlight** appear too (below). The block's usual menu (copy table and so on) is **Menu for this block…** at the bottom.
 - While text is selected, Shift+→ extends it instead of sending to the terminal. Press Esc first to send.
 - A note explains what cannot be done: a selection over several lines (pick the lines and format whole lines), across table cells, from the middle of a bold or colored part to outside it, or on a line with math or footnotes (press F2 and format inside the cell).
 
 ### Highlighting to come back later
 
-A highlight is not only a look; it also marks places to come back to.
+A highlight is not only a look; it also marks places to come back to. To highlight, see 'Selecting text and formatting' above — double-click a word and press **M**.
 
-- **Going back**: the **Highlights** sub-group under Documents in the sidebar lists highlighted text by document. Click one to go to that line. Typing in the filter box also matches the highlighted text. Inside a document, **F8** goes to the next highlight and **Shift+F8** to the previous one and selects it — press M to change its color or right-click to format it.
-- **Adding a note**: right-click a highlight and choose **Add a note** to create a note in the notes panel titled with the highlighted text. Its 'Go to source' brings you back, and finds the text even if lines have moved.
-- **Removing**: right-click a highlight for **Remove this highlight**, or a document row for **Remove all highlights in this document…** (and per color when there are several). Removing all asks first with the count. Only the highlighting goes; the text stays, and one **Ctrl+Z** undoes it. The document is opened first so you see the change. There is no way to remove highlights from many documents at once.
+Sample — [guide 02, reading](../../samples/guide/02-읽기-기능.md) (in Korean), 'Marking as you read': go back to highlighted places with the sidebar and F8.
+
+- **Going back**: the **Highlights** sub-group under Documents in the sidebar lists highlighted text by document. Click one to go to that line. Typing in the filter box also matches the highlighted text. Inside a document, **F8** goes to the next highlight and **Shift+F8** to the previous one and selects it — press M to change its color, or right-click to add a note or remove it.
+- **Adding a note**: right-click a highlight line in the sidebar, or the highlighted text in the document (selected with F8 or by double-clicking a word in it), and choose **Add a note**. A note titled with the highlighted text appears in the notes panel, ready for you to type. Its 'Go to source' brings you back, and finds the text even if lines have moved.
+- **Removing**: right-click a highlight line in the sidebar, or the highlighted text in the document, for **Remove this highlight**, or a document row in the sidebar for **Remove all highlights in this document…** (and per color when there are several). Removing all asks first with the count. Only the highlighting goes; the text stays, and one **Ctrl+Z** undoes it. If the highlight is in another document, that document is opened first so you see the change. There is no way to remove highlights from many documents at once.
 
 ### New document
 
@@ -349,7 +354,7 @@ You can edit a line right where it is. Press **F2** on the current line or right
 - **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
 - **Tables**: F2 on a row opens its first cell; double-click a word in a cell and press F2 to open that cell. You edit cell by cell. **Tab** and Shift+Tab move between cells — Tab in the last cell of a row goes to the first cell of the next row and Shift+Tab in the first cell to the last cell of the row above, so you can fill a table row by row. ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
 - In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. F2 on a picture opens its source line. F2 on math, diagrams and charts opens the source to edit line by line. HTML and comments are edited in **Source lines** from the status bar. Data files like CSV, text and Excel are view only.
-- A triple-click still selects the paragraph. Clicking outside a cell without changing anything ends without saving.
+- Clicking outside a cell without changing anything ends without saving.
 - Editing during section focus lifts the grey shading so the lines above and below read normally; it returns when you finish.
 - **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
 - After saving, **Ctrl+Z** restores the line as it was and saves again; press it again for earlier edits. **Ctrl+Y** redoes what you undid. Undo is kept per file, so you can go back to a document and undo there after editing another one. Editing again after an undo clears the redo.
@@ -372,9 +377,10 @@ Change the structure in a cell or on picked lines (on the current line alone, pr
 
 ### Line types and heading levels
 
-Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The keys work in a cell or on picked lines; on the current line alone, press them twice.
+Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The keys work in a cell or on picked lines; on the current line alone, press them twice (the format keys B, I, S, M and F differ — see below).
 
-- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution), **B** the whole text in bold, **I** italic, **S** strikethrough, **M** highlight, **F** text color (highlight and color step to the next color each press — B, I, S, M and F work only with something selected; see 'Selecting text and formatting'). Pressing the same key again goes back to a paragraph (a to-do goes back to a list item, and B removes the bold). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
+- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution). Pressing the same key again goes back to a paragraph (a to-do goes back to a list item). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
+- **Format keys**: **B** the whole text in bold, **I** italic, **S** strikethrough, **M** highlight, **F** text color (highlight and color step to the next color each press; B again removes the bold). These five work only on picked lines (for one line, Shift+Enter or a triple-click) and on selected text — on the current line they do nothing, even pressed twice. See 'Selecting text and formatting' above.
 - In a cell the letters are typed, so use **Ctrl+Alt+1–6** (heading) and **Ctrl+Alt+0** (paragraph) there; they work on picked lines too. Right-click **Change this line…** for lists, numbered lists, to-dos, quotes and callouts.
 - **Alt+Shift+← →** change the level. Headings take their subsections along and lists take their sub-items. On list lines **Tab** and **Shift+Tab** do the same. **Tab** does not change headings.
 - With several lines picked, a key changes all of them at once. Pick several paragraphs and press **L** for one list or **C** for one callout. With the mouse it is right-click **Change picked lines…** — each item shows its key.
@@ -421,7 +427,7 @@ On the current line, press **/** to open a new line below it with the insert box
 - **Formatting shows inside the cell.** The characters stay as the source and only their look changes — bold text looks bold, colored text takes its color, highlight gets a background, strikethrough gets a line, and markers such as `**` or `<mark>` are dimmed. Italic alone cannot be slanted there and shows as a wavy underline (it is slanted once saved).
 - **With nothing selected**: the key puts the cursor between empty markers so you keep typing. If the cursor is already inside that format, the key removes it.
 - **Right-click**: right-clicking in a cell opens a formatting box — formats and colors, link and footnote, **Clear formatting**, each with its key. It acts on the selected text, or on the whole text of the line when nothing is selected. The box closes and your selection stays, so you keep writing.
-- **A whole line at once**: without opening a cell, pick lines (Shift+↑ ↓, or Shift+Enter for one line) and press **B**, **I**, **S**, **M** or **F**. On the current line with nothing selected they do nothing. List and heading markers stay and only the text is wrapped. You can also choose them under 'Whole-line formatting' in right-click **Change this line…** / **Change picked lines…**.
+- **A whole line at once**: without opening a cell, pick lines (Shift+↑ ↓; for one line Shift+Enter or a triple-click) and press **B**, **I**, **S**, **M** or **F**. On the current line with nothing selected they do nothing. List and heading markers stay and only the text is wrapped. You can also choose them under 'Whole-line formatting' in right-click **Change this line…** / **Change picked lines…**.
 - Highlight and text color carry over to PDF, print and pptx export.
 - Pasting several lines puts them on separate lines. In a list they become items. One undo brings it back.
 - Pasting an Excel range makes a table.
@@ -754,7 +760,7 @@ Programs and scripts are never run. Absolute paths in documents (`C:\...\chart.p
 - Right-clicking a heading, paragraph, table or image outlines it and opens a copy menu.
 - You can copy the text or the Markdown source. For a heading, copy the whole section or a link to it. Tables copy in a form that pastes into Excel and Word, and images copy as PNG.
 - **Copy location** copies something like `@docs/report.md lines 40-52`. Pasted into a Claude Code prompt, it points Claude at that exact part.
-- If you right-click with text selected, 'Copy selected text' and 'Clip selected text' appear at the top.
+- If you right-click with text selected, 'Copy selected text' appears at the top. When the selection is within one line, the formats and the clip and send items come with it (see 'Selecting text and formatting'), and the block's usual menu is **Menu for this block…** at the bottom.
 - Menus keep the same order everywhere: what only that item can do → Claude → copying → Clip and Send → edit and open → view → delete. Only shortcuts appear on the right; hover over an item for its description.
 - From the keyboard, **Shift+F10** opens the menu for the focused item or the current line.
 - **Clip** and **Send to a document…** in block and heading menus send that piece to a document open in a document tab, or to a new one (see Clip above).
@@ -768,7 +774,7 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 - **To to-do** adds a checkbox to each line. Finished items move down, and you add items in the box at the bottom. Writing `- [ ] item` in the text works too.
 - **Copy** copies Markdown text, **Terminal** pastes into the terminal (Enter is not pressed), and **To document** sends to a document in a document tab or a new one.
 - After **Delete**, **Undo** appears at the top for a moment.
-- Right-click a document and choose **Send to new note** to turn that text into a note, with where it came from (`@path lines 12-20`) below it. Click that to go back there.
+- Right-click a document and choose **Send to new note** to turn that text into a note, with where it came from (`@path lines 12-20`) below it. Click that to go back there. A note sent from selected text, and **Add a note** on a highlight (see 'Highlighting to come back later' above), find their text again even if lines have moved; a note sent from a block goes to its line number.
 - Notes are stored as Markdown in one file in the project folder, `.lectern/notes.md`. It is created when you first write a note and does not appear in the tree or search. It moves with the folder, and Claude Code can read it as `@.lectern/notes.md`.
 - To keep notes out of a git repository, especially a public one, add `.lectern/` to `.gitignore`.
 - If the file changed elsewhere in the meantime, Lectern reads it again and merges. Notes are off in view-only projects such as the samples.

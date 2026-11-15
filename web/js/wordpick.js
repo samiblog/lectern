@@ -9,7 +9,7 @@
 // - F2: 그 줄의 칸을 열고 같은 글을 골라 둔다 (lineedit.editShown). 우클릭: 서식의 선택 상자 (docmenu.js 가 wordMenu 를 부른다).
 // 낱말은 띄어쓰기로 나눈다. 표의 행은 칸마다 따로 — 칸을 넘어 고르면 서식은 하지 않는다. md 문서에서만 (코드 화면은 글을 고치는 화면이 아니다).
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { lineSlot, blockOfLine } from './lineunits.js';
 import { sourceLines, pickedMany, followLine } from './spotlight.js';
 import { formatShown, formatPicked, editShown, linesEditable } from './lineedit.js';
@@ -305,19 +305,46 @@ export function clearPick() {
   return true;
 }
 
+/** 사이드바의 형광펜 줄과 같은 글 (lectern/marks.py 의 TEXT_LEN — 길면 줄여 끝에 '…') */
+const MARK_TEXT = 80;
+
 /**
- * 우클릭 (docmenu.js): 읽는 화면에서 한 줄 안의 글을 골랐으면 서식의 선택 상자 항목들, 아니면 null.
+ * 고른 글이 든 형광펜 (D143): 고른 곳이 한 <mark> 안이면 {text, color} — F8 로 고른 것, 칠한 글 안의 낱말을 두 번 누른 것.
+ * 두 번 누르기가 칠한 글 끝을 넘어 뒤 빈칸까지 골랐어도 고른 글이 그 안에 들면 같은 형광펜이다
+ * @param {HTMLElement} v
+ */
+function markOf(v) {
+  const sel = getSelection();
+  if (!sel.rangeCount) return null;
+  const r = sel.getRangeAt(0);
+  const at = (n) => (n?.nodeType === 1 ? /** @type {Element} */ (n) : n?.parentElement)?.closest('mark') ?? null;
+  const m = at(r.startContainer);
+  if (!m || !v.contains(m) || (at(r.endContainer) !== m && !m.textContent.includes(sel.toString().trim()))) return null;
+  const text = m.textContent.replace(/\s+/g, ' ').trim();
+  return { text: text.length <= MARK_TEXT ? text : `${text.slice(0, MARK_TEXT - 1)}…`, color: ['green', 'pink', 'blue'].find((c) => m.classList.contains(c)) ?? '' };
+}
+
+/**
+ * 우클릭 (docmenu.js): 읽는 화면에서 한 줄 안의 글을 골랐으면 서식의 선택 상자, 아니면 null.
+ * items 는 서식 항목들, mark 는 고른 글이 형광펜 안일 때의 [메모 달기, 이 형광펜 지우기] (사이드바의 형광펜 줄과 같은 일 — D143).
  * 우클릭한 때의 고른 글을 기억해 둔다 — 항목을 누를 때는 고르기가 바뀌었을 수 있다
- * @returns {MenuItem[] | null}
+ * @returns {{ items: MenuItem[], mark: MenuItem[] | null } | null}
  */
 export function wordMenu() {
   const p = shownPick();
   if (!p || p.cross || !linesEditable()) return null;
+  const root = view();
+  const path = root.dataset.docPath;
+  const mk = markOf(root);
+  const mark = mk ? [
+    { label: t('메모 달기'), tip: t('메모 패널에 — 이 글이 제목이고, 메모에서 이 자리로 돌아옵니다 (줄이 밀려도 이 글로 찾습니다)'), action: () => emit('new-note', { title: mk.text, path, line: p.line, end: p.line, find: mk.text }) },
+    { label: t('이 형광펜 지우기'), tip: t('글은 그대로 두고 칠한 것만'), action: () => emit('clear-marks', { path, line: p.line, text: mk.text, color: mk.color }) },
+  ] : null;
   const run = (kind, value) => () => applyTo(p, kind, value);
   const marks = [['', t('노랑')], ['green', t('초록')], ['pink', t('분홍')], ['blue', t('하늘')]];
   const colors = [['red', t('빨강')], ['blue', t('파랑')], ['green', t('초록')], ['goldenrod', t('노랑')]];
   const again = t('같은 색을 다시 고르면 풉니다. 키는 거듭 누르면 다음 색');
-  return [
+  return { mark, items: [
     { label: t('굵게'), hint: 'B', action: run('bold') },
     { label: t('기울임'), hint: 'I', action: run('italic') },
     { label: t('취소선'), hint: 'S', action: run('strike') },
@@ -328,5 +355,5 @@ export function wordMenu() {
     '-',
     { label: t('서식 풀기'), tip: t('고른 곳의 굵게·색·형광펜 같은 서식을 모두'), action: run('clear') },
     ...(p.seg === p.endSeg ? [{ label: t('여기서 편집'), hint: 'F2', tip: t('그 줄을 열고 고른 글을 골라 둡니다'), action: () => editShown({ line: p.line, seg: p.seg, shown: p.ranges[p.seg].toString(), va: p.va, vb: p.vb }) }] : []),
-  ];
+  ] };
 }

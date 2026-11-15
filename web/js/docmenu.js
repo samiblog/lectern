@@ -17,9 +17,12 @@ import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
 
-/** @type {() => (MenuItem[] | null)} 읽는 화면에서 고른 글의 서식 항목 (D142 — wordpick.js. main.js 가 잇는다: 여기서 부르면 import 순환이 생긴다) */
+/**
+ * 읽는 화면에서 고른 글의 서식 항목과, 형광펜이면 [메모 달기, 이 형광펜 지우기] (D142·D143 — wordpick.js. main.js 가 잇는다: 여기서 부르면 import 순환이 생긴다)
+ * @type {() => ({ items: MenuItem[], mark: MenuItem[] | null } | null)}
+ */
 let wordMenu = () => null;
-/** @param {() => (MenuItem[] | null)} fn */
+/** @param {() => ({ items: MenuItem[], mark: MenuItem[] | null } | null)} fn */
 export function useWordMenu(fn) {
   wordMenu = fn;
 }
@@ -485,10 +488,17 @@ function openMenu(e, view, x, y) {
   const el = pickBlock(e.target, view);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
-  // 한 줄 안의 글을 골랐으면 그 글의 서식 (D142 — wordpick.js). '이 블록의 메뉴…' 로 보통 메뉴
+  // 한 줄 안의 글을 골랐으면 그 글의 서식 (D142 — wordpick.js) 과 고른 글의 담기·보내기, 형광펜이면 메모 달기·지우기 (D143).
+  // '이 블록의 메뉴…' 로 보통 메뉴
   const words = view === $('#lec-view') ? wordMenu() : null;
   if (words) {
-    showMenu(x, y, menuGroups([{ header: `${t('고른 글')} · ${describe(selected)}` }], [{ label: t('고른 글 복사'), hint: 'Ctrl+C', action: () => copyPlain(selected) }], words,
+    const range = selectionRange(sel);
+    const one = selected.replace(/\s+/g, ' ');
+    // 고른 글의 메모는 그 글로 다시 찾는다 — 줄이 밀려도 (notes.js 의 relocate)
+    const memo = range ? { ...noteItem(selected, doc.path, range), action: () => emit('new-note', { body: selected, path: doc.path, line: range[0], end: range[1], find: one }) } : null;
+    const takes = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(one), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서로 보내기…')]).slice(0, 2) : [];
+    showMenu(x, y, menuGroups([{ header: `${t('고른 글')} · ${describe(selected)}` }], [{ label: t('고른 글 복사'), hint: 'Ctrl+C', action: () => copyPlain(selected), term: selected }], words.items,
+      [...takes, ...(words.mark ? [words.mark[0]] : memo ? [memo] : [])], words.mark ? [words.mark[1]] : [],
       [{ label: t('이 블록의 메뉴…'), action: () => blockMenu(e, view, el, selected, x, y) }]));
     return;
   }
