@@ -243,6 +243,8 @@ export async function buildLayoutHtml(pane, path, info) {
     const first = body.firstElementChild;
     if (first?.tagName === 'H1') first.remove();
   }
+  // 틀이 차례를 따로 쓰면({{toc}}) 문서의 [목차] 줄은 뺀다 — 둘 다 두면 차례가 두 번 나온다. 표 목차·그림 목차는 둔다
+  if (/\{\{\s*toc\s*\}\}/.test(layout.markup)) for (const nav of body.querySelectorAll('nav.lec-doctoc[data-toc="toc"]')) nav.remove();
   for (const p of body.querySelectorAll('p[id]')) if (CAPTION.test(p.id)) p.classList.add('caption');
   const wanted = new Set([...layout.markup.matchAll(/(?:\{\{\s*|data-if="!?)slot:([^}|"]+)/g)].map((m) => m[1].trim()));
   const slots = new Map();
@@ -289,7 +291,9 @@ export async function buildLayoutHtml(pane, path, info) {
     '<meta name="generator" content="Lectern">',
     `<meta http-equiv="Content-Security-Policy" content="${esc(policy)}">`,
     '<meta name="referrer" content="no-referrer">',
-    '<meta name="viewport" content="width=device-width, initial-scale=1">',
+    // 쪽 틀은 종이 한 장의 폭으로 — 휴대폰이 화면에 맞춰 줄여 PDF 처럼 보인다 (기기 폭으로 그리면 mm 로 짠 표지·여백에 글이 한 글자씩 쪼개진다).
+    // 쪽 없는 틀(웹 장문)은 기기 폭 그대로
+    `<meta name="viewport" content="${info.flow ? 'width=device-width, initial-scale=1' : 'width=860'}">`,
     `<meta name="lectern-source" content="${esc(basename(path))}">`,
     `<meta name="lectern-layout" content="${esc(info.id)}">`,
     `<title>${esc(title)}</title>`,

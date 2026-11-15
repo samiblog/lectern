@@ -262,6 +262,8 @@ try:
         check('CSV 를 가리키는 차트도 그림으로 담긴다', h.count('<svg') >= 1 and '../data/가격.csv' not in h)
         check('html 에 스크립트가 없다', '<script' not in h.lower())
         check('본문은 .md-body 한 겹 (두 겹이면 2단 틀이 종이에서 4단)', h.count('class="md-body"') == 1, h.count('class="md-body"'))
+        check('틀이 차례를 쓰면 문서의 [목차] 줄은 빠진다 (차례가 두 번 나오지 않게)', 'data-toc="toc"' not in h)
+        check('쪽 틀은 종이 폭의 viewport — 휴대폰이 PDF 처럼 줄여 보인다', 'name="viewport" content="width=860"' in h)
         page.click('#lec-print input[name="pp_format"][value="docx"]')
         check('Word 로 바꾸면 만든다', docx_ready(page))
         info = page.inner_text('#lec-print-docx-info')
