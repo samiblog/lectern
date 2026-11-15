@@ -873,13 +873,17 @@ def run(headed: bool) -> None:
             page.locator('#lec-view h1').click()
             page.keyboard.press('Control+z')
             check(emptied == '- ' and empty_next == '할 일 끝' and file_line(edit_doc, 7, '- 항목 하나') == '- 항목 하나', f"빈 칸의 ↓ 도 다음 줄로 ({emptied!r}, {empty_next!r})")
-            # 두 번 누르기: 그 줄을 누른 자리 커서로 (서식 표시를 건너뛰어), 제목의 접기는 되돌리고, 링크·세 번 누르기는 그대로
+            # 두 번 누르기 (D142): 낱말만 고르고 칸은 열지 않는다. F2 가 그 낱말을 고른 채 칸을 연다 (서식 표시를 건너뛰어). 제목은 접지 않고, 링크·세 번 누르기는 그대로
             page.wait_for_selector('#lec-view li:has-text("항목 하나")')
             dbl_at = page.evaluate("""(needle) => { const w = document.createTreeWalker(document.querySelector('#lec-view'), NodeFilter.SHOW_TEXT);
               for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.nodeValue.indexOf(needle); if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 1);
                 const b = r.getBoundingClientRect(); return [b.left + 1, b.top + b.height / 2]; } } }""", '줄입니다')
             page.mouse.dblclick(*dbl_at)
+            page.wait_for_timeout(450)
+            dbl_word = [editing(), page.evaluate('getSelection().toString().trim()')]
+            page.keyboard.press('F2')
             wait_edit()
+            page.keyboard.press('ArrowLeft')   # 고른 낱말의 앞으로
             page.keyboard.type('X')
             page.keyboard.press('Enter')
             dbl_saved = file_line(edit_doc, 3, '첫 문단은 **굵게** 한 X줄입니다.')
@@ -889,6 +893,7 @@ def run(headed: bool) -> None:
             file_line(edit_doc, 3, '첫 문단은 **굵게** 한 줄입니다.')
             page.wait_for_selector('#lec-view p:has-text("한 줄입니다")')
             page.locator('#lec-view h2', has_text='고칠 제목').dblclick()
+            page.keyboard.press('F2')
             wait_edit()
             dbl_head = [editing(), page.locator('#lec-view .lec-folded').count()]
             page.keyboard.press('Escape')
@@ -899,9 +904,9 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(450)
             dbl_triple = [editing(), page.evaluate('getSelection().toString().trim()')]
             page.evaluate('getSelection().removeAllRanges()')
-            check(dbl_saved == '첫 문단은 **굵게** 한 X줄입니다.' and dbl_head == [['H2:고칠 제목'], 0] and dbl_link == []
+            check(dbl_word[0] == [] and dbl_word[1].startswith('줄입니다') and dbl_saved == '첫 문단은 **굵게** 한 X줄입니다.' and dbl_head == [['H2:고칠 제목'], 0] and dbl_link == []
                   and dbl_triple[0] == [] and dbl_triple[1].startswith('첫 문단은'),
-                  f"두 번 누르기: 그 줄을 누른 자리 커서로 (서식 표시 건너뜀), 제목은 접지 않음, 링크·세 번 누르기(문단 고르기)는 그대로 ({dbl_saved!r}, {dbl_head}, {dbl_link}, {dbl_triple})")
+                  f"두 번 누르기는 낱말만 고르고 칸을 열지 않음, F2 가 그 낱말을 고른 채 엶 (서식 표시 건너뜀), 제목은 접지 않음, 링크·세 번 누르기(문단 고르기)는 그대로 ({dbl_word}, {dbl_saved!r}, {dbl_head}, {dbl_link}, {dbl_triple})")
             # 다시 그리는 중에 시작해도 칸이 사라지지 않는다 — 문서 받기를 늦춰 늘 그 사이에 시작한다 (자동 새로고침과의 경합)
             page.evaluate("""() => { const real = window.fetch; window.__realFetch = real;
               window.fetch = (u, o) => (String(u).includes('/doc/') && o?.method !== 'HEAD' ? new Promise((r) => setTimeout(r, 900)).then(() => real(u, o)) : real(u, o)); }""")
@@ -1108,10 +1113,10 @@ def run(headed: bool) -> None:
             page.keyboard.press('Escape')
             page.wait_for_selector('#lec-view .cv-line[data-line="9"]:has-text("고친 설명")')
             page.locator('#lec-view .cv-line[data-line="9"] .cv-text').dblclick()
-            wait_edit()
+            page.wait_for_timeout(450)
             cv_dbl = editing()
             page.keyboard.press('Escape')
-            check(cv_dbl == ['SPAN:    """고친 설명."""'], f"코드 화면도 두 번 누르면 그 줄을 한 줄 편집 ({cv_dbl})")
+            check(cv_dbl == [], f"코드 화면도 두 번 누르면 낱말만 고르고 칸은 열지 않음 — 편집은 F2 (D142) ({cv_dbl})")
             example.write_bytes(example_text)
             edit_doc.unlink()
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])

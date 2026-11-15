@@ -73,18 +73,19 @@ try:
           for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.nodeValue.indexOf('1분기에 상승햇다'); if (i >= 0 && n.parentElement.tagName === 'P') {
             n.parentElement.scrollIntoView({ block: 'center' }); const r = document.createRange(); r.setStart(n, i + 7); r.setEnd(n, i + 8);
             const b = r.getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; } } }""")
-        page.mouse.dblclick(*at)
+        page.mouse.dblclick(*at)   # 오타가 든 낱말을 고르고 (D142)
+        page.keyboard.press('F2')   # 고른 채 칸을 연다
         page.wait_for_selector(cell, timeout=3000)
-        page.keyboard.press('Delete')
-        page.keyboard.type('했')
+        page.keyboard.type(page.evaluate('getSelection().toString()').replace('햇', '했'))
         page.keyboard.press('Enter')
-        check('사례 1: 두 번 누른 자리에서 오타를 고친다', until(lambda: '구리 가격은 1분기에 상승했다.' in read()), [x for x in read().split('\n') if '1분기에' in x][:1])
+        check('사례 1: 오타가 든 낱말을 두 번 눌러 고르고 F2 로 고친다', until(lambda: '구리 가격은 1분기에 상승했다.' in read()), [x for x in read().split('\n') if '1분기에' in x][:1])
 
         # 2. 제목
         settle(600)   # 저장이 화면을 다시 그린 뒤에
         head = page.locator('#lec-view h3', has_text='임시 제목')
         head.scroll_into_view_if_needed()
-        head.dblclick()
+        head.click()
+        page.keyboard.press('F2')
         page.wait_for_selector(cell, timeout=3000)
         page.keyboard.press('Control+a')
         page.keyboard.type('수요 전망')

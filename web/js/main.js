@@ -7,6 +7,7 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold, foldHere } from './fold.js';
+import { wordKey, clearPick, wordMenu } from './wordpick.js';
 import { initSpotlight, spotKey, escSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint, armHeld, putKey } from './spotlight.js';
 import { initViKeys, viKey } from './vikeys.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
@@ -17,7 +18,7 @@ import { initChartData } from './chartdata.js';
 import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
-import { initDocMenu } from './docmenu.js';
+import { initDocMenu, useWordMenu } from './docmenu.js';
 import { initChangeMarks } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
 import { initParts } from './parts.js';
@@ -252,6 +253,11 @@ function bindKeys() {
     // 문서 탭(Alt+1~9·Ctrl+W·Ctrl+F4·Ctrl+T — D64·D67·D91)만 앱이
     const docTabKey = (e.altKey && !mod && !e.shiftKey && /^[1-9]$/.test(e.key)) || (mod && !e.altKey && (key === 'w' || key === 't' || (!e.shiftKey && e.key === 'F4')));
     if (inEditor(e.target) && !(mod && (e.key === 'Tab' || key === 'e' || key === 'p' || key === 'n' || e.key === ',' || /^[1-9]$/.test(e.key))) && !helpKey && !docTabKey) return;
+    // 읽는 화면에서 고른 글 (D142 — wordpick.js): 낱말 옮기기·넓히기, 고른 글의 서식 키, F2. vi 키보다 먼저 — 글을 고른 동안은 B·I·S·M·F 가 서식이다
+    if (!typing(e) && docKeyTarget(e) && !overlayOpen() && !manualOpen() && wordKey(e)) {
+      e.preventDefault();
+      return;
+    }
     // vi 키 (D122 — 설정에서 켤 때만): Ctrl·Alt 없는 글자 키를 문서에서. 같은 일을 하는 기존 키로 바꿔 이 처리기를 다시 거친다
     if (!mod && !e.altKey && !typing(e) && docKeyTarget(e) && !overlayOpen() && !manualOpen() && viKey(e)) {
       e.preventDefault();
@@ -373,7 +379,7 @@ function bindKeys() {
       e.preventDefault();
     } else if (e.key === 'Escape') {
       if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
-        || escSpotlight()) e.preventDefault();
+        || clearPick() || escSpotlight()) e.preventDefault();
     }
   });
   // 마우스 뒤로/앞으로 버튼
@@ -427,6 +433,7 @@ async function boot() {
   initLineNumbers();
   initTableFit();
   initDocMenu();
+  useWordMenu(wordMenu);   // 고른 글의 서식 상자 (D142)
   initPrint();   // 인쇄·PDF 양식 (D131)
   initChangeMarks();
   initSearch();

@@ -310,10 +310,11 @@ def run():
         page.wait_for_timeout(400)
         tags = page.locator('#lec-view .lec-slide-tags .lec-tag')
         for i, want in enumerate(('grid', 'cols', 'rows', '노트')):
-            tags.nth(i).dblclick()
+            tags.nth(i).click()
+            page.keyboard.press('F2')   # 칸은 F2 로 (D142)
             page.wait_for_selector('#lec-view .lec-line-edit', timeout=3000)
             got = page.locator('#lec-view .lec-line-edit').first.text_content()
-            check(f'{want} 꼬리표를 누르면 그 줄이 열린다', want in got, got)
+            check(f'{want} 꼬리표를 누르고 F2 — 그 줄이 열린다', want in got, got)
             page.keyboard.press('Escape')
             page.wait_for_timeout(200)
         page.locator('#lec-st-structure').click()

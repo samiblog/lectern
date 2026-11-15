@@ -280,7 +280,7 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 | **Current line** | One line — where you read, write and insert | Click, right-click, ↑ ↓ | — |
 | **Picked lines** | Several lines — to delete, move or change together | **Shift+↑ ↓** from the current line, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, shrinking to one line |
 | **Focus** | A light over the current line or the picked lines — dims the rest | **Shift+Enter**, the toolbar button | Shift+Enter, Esc, the toolbar button or a click on a dimmed area |
-| **Cell** | A text box that edits the line right where it is | **F2**, double-click, Ctrl+Enter | Enter saves, Esc cancels |
+| **Cell** | A text box that edits the line right where it is | **F2**, right-click 'Edit here', Ctrl+Enter | Enter saves, Esc cancels |
 
 - **There is one selection**: one line is the current line; extend it with Shift+↑ ↓ or Shift+click and several lines are picked lines. The first line stays and the last one moves, so the range grows or shrinks, and back at one line it is the current line again. Shift+click picks from the current line (the line you last clicked or moved to — scrolling afterwards does not change it) to the line you click; Shift+drag picks from the line you press to the line you drag to. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
 - **Writing and inserting happen at the current line**: editing the line (F2), a new line below or above (Ctrl+Enter, Ctrl+Shift+Enter), the insert box below (`/`), pasting a picture. They are off while several lines are picked — a note says to release them with Esc first.
@@ -288,6 +288,28 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 - **Writing ends picking**: opening a cell releases the band and a one-line focus.
 - **Focus goes on and off at any time**: **Shift+Enter** keeps the current line, or the picked lines, sharp and dims the rest. Focused lines are picked lines — delete, move, line types, copy and send work as usual (at once even on one line), and Shift+↑ ↓ grow and shrink them. Only ↑ ↓ differ: they scroll without releasing. Turning it off returns to the picked lines (or to the current line when it was one line). Clicking a dimmed area turns it off, and right-clicking there only offers to turn it off.
 - **Right-click**: the line you right-click becomes the current line. Inside picked lines, right-clicking opens a selection box for that range — what only that block can do (such as Copy table), **Send to Claude**, copying, Clip and Send, **Change picked lines…**, release, and Delete lines at the bottom. Right-clicking outside them releases them and opens that line's menu. Hover over an item for its description.
+
+### Selecting text and formatting
+
+You can also select words in the reading view and format them straight away, without opening a cell.
+
+| Key | What it does |
+|---|---|
+| **Double-click** the body | Selects that word (the line-edit cell does not open) |
+| **→** / **←** on the current line | Selects the first / last word of the line |
+| **→** / **←** with a selection | Moves to the next / previous word |
+| **Shift+→** / **Shift+←** with a selection | Extends or shrinks it word by word |
+| **Home** / **End** with a selection | First / last word (with Shift, extends to it) |
+| **B** · **I** · **S** · **M** · **F** | Bold · italic · strikethrough · highlight · text color on the selection (also Ctrl+B, Ctrl+I, Ctrl+Shift+X, H, C) |
+| **F2** | Opens the line's cell with the same text selected |
+| **Esc**, **↑ ↓** | Clear the selection (↑ ↓ also move the current line) |
+
+- Words are split at spaces. Moving stays within the line (one source line); → on the last word does not go on to the next line. A selection made by dragging extends with the same keys.
+- Formatting is saved as you press and shows right away. The selection stays, so highlight and text color step to the next color each press. Pressing again removes it, and **Ctrl+Z** undoes it.
+- **B, I, S, M and F work only while text or lines are selected.** On the current line with nothing selected they do nothing, so a stray key while reading never changes the file. With lines picked (Shift+↑ ↓) they act on the whole text of those lines.
+- Right-click selected text for a formatting box — formats and colors, Clear formatting, Edit here, Copy selected text and This block's menu.
+- While text is selected, Shift+→ extends it instead of sending to the terminal. Press Esc first to send.
+- A note explains what cannot be done: a selection over several lines (pick the lines and format whole lines), across table cells, from the middle of a bold or colored part to outside it, or on a line with math or footnotes (press F2 and format inside the cell).
 
 ### New document
 
@@ -300,13 +322,13 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 
 ### Line editing
 
-You can edit a line right where it is. Press **F2** on the current line, or **double-click** the body to open that line with the cursor where you clicked. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
+You can edit a line right where it is. Press **F2** on the current line or right-click **Edit here** to open it. A double-click only selects a word and does not open the cell — press F2 with a word selected and the cell opens with that word selected. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
 
 - **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
 - **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
-- **Tables**: press F2 on a row or double-click a cell to edit it cell by cell. **Tab** and Shift+Tab move between cells — Tab in the last cell of a row goes to the first cell of the next row and Shift+Tab in the first cell to the last cell of the row above, so you can fill a table row by row. ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
+- **Tables**: F2 on a row opens its first cell; double-click a word in a cell and press F2 to open that cell. You edit cell by cell. **Tab** and Shift+Tab move between cells — Tab in the last cell of a row goes to the first cell of the next row and Shift+Tab in the first cell to the last cell of the row above, so you can fill a table row by row. ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
 - In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. F2 on a picture opens its source line. F2 on math, diagrams and charts opens the source to edit line by line. HTML and comments are edited in **Source lines** from the status bar. Data files like CSV, text and Excel are view only.
-- Links, pictures, diagrams, charts and math do not open on a double-click, and a triple-click still selects the paragraph. To copy a word, double-click it again inside the box — clicking outside without changing anything ends without saving.
+- A triple-click still selects the paragraph. Clicking outside a cell without changing anything ends without saving.
 - Editing during section focus lifts the grey shading so the lines above and below read normally; it returns when you finish.
 - **To-dos**: click a checkbox in the body to switch `[ ]` and `[x]` in the source and save it straight away. Nothing changes in view-only projects such as the samples.
 - After saving, **Ctrl+Z** restores the line as it was and saves again; press it again for earlier edits. **Ctrl+Y** redoes what you undid. Undo is kept per file, so you can go back to a document and undo there after editing another one. Editing again after an undo clears the redo.
@@ -331,7 +353,7 @@ Change the structure in a cell or on picked lines (on the current line alone, pr
 
 Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The keys work in a cell or on picked lines; on the current line alone, press them twice.
 
-- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution), **B** the whole text in bold, **I** italic, **S** strikethrough, **M** highlight, **F** text color (highlight and color step to the next color each press). Pressing the same key again goes back to a paragraph (a to-do goes back to a list item, and B removes the bold). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
+- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution), **B** the whole text in bold, **I** italic, **S** strikethrough, **M** highlight, **F** text color (highlight and color step to the next color each press — B, I, S, M and F work only with something selected; see 'Selecting text and formatting'). Pressing the same key again goes back to a paragraph (a to-do goes back to a list item, and B removes the bold). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
 - In a cell the letters are typed, so use **Ctrl+Alt+1–6** (heading) and **Ctrl+Alt+0** (paragraph) there; they work on picked lines too. Right-click **Change this line…** for lists, numbered lists, to-dos, quotes and callouts.
 - **Alt+Shift+← →** change the level. Headings take their subsections along and lists take their sub-items. On list lines **Tab** and **Shift+Tab** do the same. **Tab** does not change headings.
 - With several lines picked, a key changes all of them at once. Pick several paragraphs and press **L** for one list or **C** for one callout. With the mouse it is right-click **Change picked lines…** — each item shows its key.
@@ -378,7 +400,7 @@ On the current line, press **/** to open a new line below it with the insert box
 - **Formatting shows inside the cell.** The characters stay as the source and only their look changes — bold text looks bold, colored text takes its color, highlight gets a background, strikethrough gets a line, and markers such as `**` or `<mark>` are dimmed. Italic alone cannot be slanted there and shows as a wavy underline (it is slanted once saved).
 - **With nothing selected**: the key puts the cursor between empty markers so you keep typing. If the cursor is already inside that format, the key removes it.
 - **Right-click**: right-clicking in a cell opens a formatting box — formats and colors, link and footnote, **Clear formatting**, each with its key. It acts on the selected text, or on the whole text of the line when nothing is selected. The box closes and your selection stays, so you keep writing.
-- **A whole line at once**: without opening a cell, press **B**, **I**, **S**, **M** or **F** on the current line or on picked lines (twice on the current line alone). List and heading markers stay and only the text is wrapped. You can also choose them under 'Whole-line formatting' in right-click **Change this line…** / **Change picked lines…**.
+- **A whole line at once**: without opening a cell, pick lines (Shift+↑ ↓, or Shift+Enter for one line) and press **B**, **I**, **S**, **M** or **F**. On the current line with nothing selected they do nothing. List and heading markers stay and only the text is wrapped. You can also choose them under 'Whole-line formatting' in right-click **Change this line…** / **Change picked lines…**.
 - Highlight and text color carry over to PDF, print and pptx export.
 - Pasting several lines puts them on separate lines. In a list they become items. One undo brings it back.
 - Pasting an Excel range makes a table.
@@ -527,7 +549,7 @@ When the templates are not enough, build the cells yourself.
 
 ### Structure and Check
 
-- **Structure** in the status bar shows cell head lines and directive and note lines as tags. Press F2 on a tag or double-click it to edit that line. This is how to change a cell's look or the layout.
+- **Structure** in the status bar shows cell head lines and directive and note lines as tags. Click a tag and press F2 to edit that line. This is how to change a cell's look or the layout.
 - When content overflows, pictures and charts shrink to fit the cell. Text does not shrink; it is cut off and gets a red dotted line.
 - Grammar slips are marked too: cell names, a missing `:::`, typos in directives and words, bad grids, unclosed comments and code blocks, text right above `---`, and unresolved `**`.
 - Some things are measured on screen: text close to its background, code and tables cut off at the side, missing pictures, charts that could not be drawn. Text over a photo cannot be measured, so look at it yourself.

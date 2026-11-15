@@ -24,11 +24,15 @@ const blank = (s, a, b) => s.slice(0, a) + '\u0001'.repeat(b - a) + s.slice(b);
 
 /**
  * 글 속의 서식 범위들 [{kind, value, oa, a, b, cb}] — oa~a 가 여는 표시, a~b 가 안의 글, b~cb 가 닫는 표시.
- * 코드 안은 다른 서식으로 읽지 않는다. 여닫는 짝이 맞는 것만 (Markdown 의 모든 경우를 따지지는 않는다 — 한 줄의 흔한 꼴)
+ * 코드 안은 다른 서식으로 읽지 않는다. 역슬래시로 막은 표시(\*)는 표시가 아니다. 여닫는 짝이 맞는 것만 (Markdown 의 모든 경우를
+ * 따지지는 않는다 — 한 줄의 흔한 꼴)
  */
 export function spansOf(text) {
   const out = [];
-  let masked = text;
+  // 막은 표시는 다른 글자로 가린다 — 글자 수는 같게, 글로는 남게 (\u0001 은 '표시를 가린 곳'이라 서식의 안쪽 글이 되지 못한다)
+  let masked = text.replace(/\\[\\`*_{}[\]()#+\-.!|>~$<]/g, '\u0002\u0002');
+  // 앞서 읽은 서식과 엇갈리면(한쪽 끝만 안에 있으면) 서식이 아니다 — '*가 **나* 다**' 의 '*가 **나*'
+  const crosses = (oa, cb) => out.some((s) => (oa < s.oa && s.oa < cb && cb < s.cb) || (s.oa < oa && oa < s.cb && s.cb < cb));
   const take = (kind, re, src, hide) => {
     for (const m of src.matchAll(re)) {
       const value = m.length > 2 ? m[1] ?? '' : '';
@@ -37,14 +41,15 @@ export function spansOf(text) {
       const cb = oa + m[0].length;
       const b = cb - closeOf(kind).length;
       const a = b - inner.length;
+      if (crosses(oa, cb)) continue;
       out.push({ kind, value, oa, a, b, cb });
       if (hide === 'all') masked = blank(masked, oa, cb);
       else if (hide === 'marks') masked = blank(blank(masked, oa, a), b, cb);
     }
   };
-  take('code', /`([^`]+)`/g, text, 'all');
+  take('code', /`([^`]+)`/g, masked, 'all');
   take('bold', /\*\*(?=[^\s*\u0001]|\*[^\s*])(.+?)(?<=[^\s\u0001])\*\*(?!\*)/g, masked, 'marks');
-  take('italic', /(?<!\*)\*(?=[^\s*\u0001])([^*\u0001]*?[^\s*\u0001]|[^\s*\u0001])\*(?!\*)/g, masked, null);
+  take('italic', /(?<!\*)\*(?=[^\s*\u0001])([^*]*?[^\s*\u0001]|[^\s*\u0001])\*(?!\*)/g, masked, null);   // 안에 굵게가 들 수 있다 ('*가 **나** 다*')
   take('strike', /~~(?=[^\s\u0001])(.+?)(?<=[^\s\u0001])~~/g, masked, null);
   take('mark', /<mark(?: class="(green|pink|blue)")?>(.*?)<\/mark>/g, masked, null);
   take('color', /<span style="color:(red|blue|green|goldenrod)">(.*?)<\/span>/g, masked, null);
@@ -150,4 +155,88 @@ export function paintOf(text) {
     (out[key] ||= []).push([s.a, s.b]);
   }
   return out;
+}
+
+// ---- 읽는 화면에서 고른 글 (D142): 화면에 보이는 글의 자리 ↔ 원문 글의 자리 ----------------------------------
+
+const LINK = /!?\[((?:[^\]\\]|\\.)*)\]\((?:<[^>]*>|[^)\s]*)(?:\s+"[^"]*")?\)/g;
+
+/**
+ * 원문 글 body 가 화면에 보일 때의 글과 자리 맞춤 — {text, map(보이는 글자의 차례 → 원문 자리), atoms(통째로 다룰 것 — 링크)}.
+ * 아는 것만 걷는다: 서식의 표시(** · <mark> …), 링크의 [ ]( ), 글자 앞의 역슬래시. 모르는 것(수식·각주·그 밖의 HTML)은 그대로 두므로
+ * 화면의 글과 달라진다 — 부르는 쪽(sourceRange)이 견주어 다르면 하지 않는다
+ */
+export function visibleOf(body) {
+  const skip = new Uint8Array(body.length);
+  const spans = spansOf(body);
+  const codes = spans.filter((s) => s.kind === 'code');
+  const inCode = (i) => codes.some((s) => i >= s.a && i < s.b);
+  for (const s of spans) skip.fill(1, s.oa, s.a).fill(1, s.b, s.cb);
+  const atoms = [];
+  for (const m of body.matchAll(LINK)) {
+    if (m[0][0] === '!' || inCode(m.index)) continue;   // 그림은 글이 아니다 — 화면과 달라져 걸러진다
+    const oa = m.index;
+    const a = oa + 1;
+    const b = a + m[1].length;
+    const cb = oa + m[0].length;
+    skip.fill(1, oa, a).fill(1, b, cb);
+    atoms.push({ oa, a, b, cb });
+  }
+  for (let i = 0; i < body.length - 1; i += 1) {
+    if (body[i] === '\\' && !skip[i] && !inCode(i) && /[\\`*_{}[\]()#+\-.!|>~$<]/.test(body[i + 1])) {
+      skip[i] = 1;
+      i += 1;
+    }
+  }
+  let text = '';
+  const map = [];
+  for (let i = 0; i < body.length; i += 1) {
+    if (skip[i]) continue;
+    text += body[i];
+    map.push(i);
+  }
+  return { text, map, atoms };
+}
+
+const flat = (s) => s.replace(/\u00a0/g, ' ');
+
+/**
+ * 화면의 글 shown 에서 고른 자리 va~vb 가 원문 글 body 의 어디인지 → {a, b} | {error}.
+ * 'map': 화면의 글과 원문을 맞추지 못한다 (수식·각주 등), 'empty': 고른 글이 없다, 'cross': 서식이나 링크의 경계를 걸쳐 골랐다.
+ * 서식의 안쪽 글 처음부터(끝까지) 골라 그 밖으로 넘어갔으면 표시까지 넣어 통째로 다룬다 — 표시가 엇갈리지 않게
+ */
+export function sourceRange(body, shown, va, vb) {
+  const v = visibleOf(body);
+  const vt = flat(v.text);
+  const st = flat(shown);
+  if (vt.trim() !== st.trim()) return { error: 'map' };
+  const d = (vt.length - vt.trimStart().length) - (st.length - st.trimStart().length);
+  const ia = Math.max(0, va + d);
+  const ib = Math.min(v.map.length, vb + d);
+  if (ib <= ia) return { error: 'empty' };
+  let a = v.map[ia];
+  let b = v.map[ib - 1] + 1;
+  const all = [...spansOf(body), ...v.atoms];
+  for (let turn = 0; turn < 8; turn += 1) {
+    let moved = false;
+    for (const s of all) {
+      if (a === s.a && b > s.b) { a = s.oa; moved = true; }
+      if (b === s.b && a < s.a) { b = s.cb; moved = true; }
+    }
+    if (!moved) break;
+  }
+  for (const s of all) {
+    const inside = a >= s.a && b <= s.b;
+    const outside = a <= s.oa && b >= s.cb;
+    const apart = b <= s.oa || a >= s.cb;
+    if (!inside && !outside && !apart) return { error: 'cross' };
+  }
+  return { a, b };
+}
+
+/** 원문 글 text 의 자리 a~b 가 화면의 글에서는 몇 번째 글자부터 몇 번째까지인지 [va, vb] — 서식을 준 뒤 그 글을 다시 고른다 */
+export function visibleOffsets(text, a, b) {
+  const { map } = visibleOf(text);
+  const count = (n) => { let i = 0; while (i < map.length && map[i] < n) i += 1; return i; };
+  return [count(a), count(b)];
 }

@@ -48,14 +48,14 @@ import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './char
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
+  currentUnits, sourceLines, followLine, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
   kindKey, stepHere, litOneLine, manyBlocks,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
 import { t, LANG } from './i18n.js';
 import { aiName } from './aitool.js';
-import { applyFormat, clearFormats, paintOf } from './inlinefmt.js';
+import { applyFormat, clearFormats, paintOf, sourceRange } from './inlinefmt.js';
 import { showMenu } from './ui.js';
 
 const FMT_PAINT = ['marks', 'bold', 'italic', 'strike', 'code', 'mark', 'mark-green', 'mark-pink', 'mark-blue', 'color-red', 'color-blue', 'color-green', 'color-goldenrod'];
@@ -67,14 +67,9 @@ const records = new Map();
 const MAX_UNDO = 50;
 let turn = Promise.resolve();   // 되돌리기·다시 하기는 차례로 — 앞의 것이 저장을 마치기 전에 다음 것이 파일을 보면 '바뀌었다'고 잘못 안다
 const saving = new Set();   // 기록에 쌓이기 전인 저장 — 되돌리기는 이것들을 기다린다 (칸의 Enter 바로 뒤 Ctrl+Z 가 기록을 버리지 않게)
-let opening = 0;     // 두 번 누른 뒤 칸을 열 때까지의 타이머 — 세 번째 누르기(문단 고르기)면 열지 않는다
 let taskSaving = false;
 let moves = 0;       // 차례를 기다리는 줄 옮기기 — 키를 누르고 있으면 쌓이지 않게
 
-const OPEN_WAIT = 250;
-let firstOnLink = false;   // 두 번 누르기의 첫 누름이 링크 등에 떨어졌는지 — 첫 누르기가 화면을 옮기면 둘째가 다른 곳에 떨어진다
-// 두 번 눌러도 열지 않는 곳: 링크·그림·다이어그램·차트·수식, 머리 정보, 코드 블록의 도구
-const NO_OPEN = 'a, img, svg, input, button, select, textarea, summary, video, .math-block, .katex, pre.mermaid, pre.lec-chart, .diagram-error, .image-off, .front-matter, .code-tools, .lec-line-edit, .lec-unfold';
 const TASK_BOX = '.task-list-item-checkbox';
 // 할 일 줄의 [ ] — 앞의 인용 >·목록 표시(겹친 것도) 뒤
 const TASK_LINE = /^((?:[ \t]*>[ \t]?|[ \t]*(?:[-*+]|\d{1,9}[.)])[ \t]+)*\[)([ xX])\]/;
@@ -237,10 +232,10 @@ function caretIn(ranges, bodies, at) {
 
 /**
  * 원문 줄 line 을 편집한다. cell: 표면 처음 고를 칸 차례, at: 커서를 둘 화면 좌표 {x, y} (두 번 누른 곳), offset: 커서를 둘 글 안의 자리,
- * select: true 면 글 전체를, 숫자면 그 자리부터 끝까지 골라 둔다
- * @param {number} line @param {{cell?: number, at?: any, offset?: number | null, select?: boolean | number}} [o]
+ * select: true 면 글 전체를, 숫자면 그 자리부터 끝까지 골라 둔다. range: 칸 cell 의 글에서 고를 자리 [a, b] — 번호를 잠그기 전의 글 기준 (읽는 화면에서 고른 글, D142)
+ * @param {number} line @param {{cell?: number, at?: any, offset?: number | null, select?: boolean | number, range?: number[] | null}} [o]
  */
-async function begin(line, { cell = 0, at = null, offset = null, select: pick_ = false } = {}) {
+async function begin(line, { cell = 0, at = null, offset = null, select: pick_ = false, range = null } = {}) {
   let select = pick_;
   const pane = S.pane;
   if (!pane?.tab || session || pane.editor) return;
@@ -329,6 +324,11 @@ async function begin(line, { cell = 0, at = null, offset = null, select: pick_ =
   if (text) getSelection().collapse(text, Math.min(spot.offset, text.length));
   const first = places[session.cell].span.firstChild;
   if (typeof select === 'number' && first) getSelection().setBaseAndExtent(first, Math.min(select, first.length), first, first.length);   // 뒤의 글을 골라 둔다 (캡션의 '제목')
+  if (range && first) {   // 읽는 화면에서 고른 글 그대로 (D142) — 제목의 번호를 잠갔으면 그만큼 앞으로
+    const cut = slot.kind === 'text' ? parts.head.length - splitText(original).head.length : 0;
+    const at = (n) => Math.max(0, Math.min(n - cut, first.length));
+    getSelection().setBaseAndExtent(first, at(range[0]), first, at(range[1]));
+  }
   showLineEdit();
 }
 
@@ -2287,6 +2287,82 @@ async function opLitNow(op) {
   if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
 }
 
+// ---- 읽는 화면에서 고른 글 (D142 — wordpick.js 가 부른다) -------------------------------------------------
+
+/** 원문 줄의 머리·글·끝 — 표의 행은 칸마다. {table, parts, bodies} | null (서식을 줄 수 없는 줄 — 코드·그림·다이어그램 등) */
+function shownParts(view, line, src) {
+  const original = src[line - 1];
+  const slot = original == null || isCodeView(view) ? null : lineSlot(view, line, src);
+  if (!slot || slot.kind === 'code') return null;
+  if (slot.kind === 'table') {
+    const parts = splitRow(original);
+    return { table: true, parts, bodies: parts.cells.map((c) => c.body) };
+  }
+  const parts = splitText(original);
+  return { table: false, parts, bodies: [parts.body] };
+}
+
+const SHOWN_NOTE = () => t('이 줄에는 바로 서식을 줄 수 없습니다 — F2 로 열어 칸 안에서 하세요');
+
+/**
+ * 읽는 화면에서 고른 글에 서식을 하고 저장한다 (D142). req: {line, seg(표의 칸 차례), shown(그 칸의 화면 글), va·vb(화면 글에서 고른 자리), kind, value}.
+ * 계산은 inlinefmt.js — 화면의 글과 원문을 맞추지 못하거나(수식·각주 등) 서식의 경계를 걸쳐 골랐으면 하지 않고 알린다.
+ * 저장하면 {line, seg, body(새 글), a, b(안의 글 자리)} — 부른 쪽이 같은 글을 다시 고른다. 되돌리기 한 걸음
+ */
+export function formatShown(req) {
+  const job = turn.then(() => formatShownNow(req));
+  turn = job.catch(() => null);
+  return job;
+}
+
+async function formatShownNow({ line, seg = 0, shown, va, vb, kind, value }) {
+  const pane = S.pane;
+  if (!pane?.tab || !linesEditable() || !litOpen() || !await settled(pane) || S.pane !== pane) return null;
+  const view = pane.view;
+  const src = sourceLines();
+  const got = shownParts(view, line, src);
+  const body = got?.bodies[seg];
+  if (body == null) {
+    toast(SHOWN_NOTE());
+    return null;
+  }
+  const m = sourceRange(body, shown, va, vb);
+  if (m.error) {
+    if (m.error === 'cross') toast(t('서식의 경계에 걸쳐 골랐습니다 — 굵게·색 같은 서식의 안에서만, 또는 밖에서만 고르세요'));
+    else if (m.error === 'map') toast(SHOWN_NOTE());
+    return null;
+  }
+  const out = kind === 'clear' ? clearFormats(body, m.a, m.b) : applyFormat(body, m.a, m.b, kind, value);
+  if (out.text === body) return null;
+  const { parts } = got;
+  let next;
+  if (got.table) {
+    const cells = parts.cells.map((c, i) => (i === seg ? { ...c, body: escapePipes(out.text) } : c));
+    next = parts.head + (parts.open ? '|' : '') + cells.map((c) => c.lead + c.body + c.trail).join('|') + (parts.close ? `|${parts.after}` : '');
+  } else next = parts.head + out.text + parts.tail;
+  const lines = src.slice();
+  lines[line - 1] = next;
+  const shift = await commit(pane, pathIn(view), src, lines);
+  if (shift == null || S.pane !== pane) return null;
+  return { line: line + shift, seg, body: out.text, a: out.a, b: out.b };
+}
+
+/** 읽는 화면에서 고른 글에서 F2 (D142): 그 줄의 칸을 열고 같은 글을 골라 둔다. 맞추지 못하면 그냥 연다 */
+export function editShown({ line, seg = 0, shown, va, vb }) {
+  const view = S.pane?.view;
+  const got = view ? shownParts(view, line, sourceLines()) : null;
+  const body = got?.bodies[seg];
+  const m = body == null ? null : sourceRange(body, shown, va, vb);
+  begin(line, { cell: seg, range: m && !m.error ? [m.a, m.b] : null });
+}
+
+/** 고른 줄(줄 전체)의 Ctrl 서식 키 — Ctrl+B·Ctrl+I·Ctrl+Shift+X·H·C (D142 — 한 글자 키는 litKey). 받았으면 true */
+export function formatPicked(kind) {
+  if (!litSpan() || isCodeView(S.pane.view)) return false;
+  turn = turn.then(() => opLitNow(formatOp(kind)));
+  return true;
+}
+
 /** 줄 전체에 하는 서식 (D141 — 굵게는 boldLines) */
 const LINE_FORMATS = new Set(['italic', 'strike', 'mark', 'color']);
 /** 줄 a~b 를 통째로 서식 fmt 로 */
@@ -2512,30 +2588,6 @@ export function focusLineEdit() {
   return true;
 }
 
-// ---- 두 번 누르기 -------------------------------------------------------------------
-
-/** 두 번 누른 곳의 줄을 그 자리 커서로 연다. 고칠 수 없는 곳이면 낱말 고르기 그대로 (알리지 않는다 — 읽다가 누른 것이다) */
-function onDoubleClick(e) {
-  const pane = S.pane;
-  if (e.button !== 0 || e.ctrlKey || e.shiftKey || e.altKey || e.metaKey || session || !pane?.tab || pane.tab.readonly || pane.editor) return;
-  if (firstOnLink || e.target.closest(NO_OPEN)) return;
-  if (!currentUnits().length) {   // 빈 문서 — 처음 줄을 연다 (D106)
-    growEnd();
-    return;
-  }
-  const unit = unitAtPoint(e);
-  if (!unit) return;
-  const view = $('#lec-view');
-  if (notUtf8(view) || dataFile(view)) return;   // 고칠 수 없는 곳 — 낱말 고르기 그대로
-  const src = sourceLines();
-  const at = document.caretRangeFromPoint?.(e.clientX, e.clientY);
-  // 한 화면 줄에 이어진 짧은 줄들은 한 단위다 — 누른 글자가 든 원문 줄로
-  const hit = at && editableLines(unit, src).find((n) => lineSlot(view, n, src)?.ranges.some((r) => r.isPointInRange(at.startContainer, at.startOffset)));
-  const line = hit ?? lineOf(unit);
-  if (!line || !lineSlot(view, line, src)) return;
-  opening = setTimeout(() => begin(line, { at: { x: e.clientX, y: e.clientY } }), OPEN_WAIT);
-}
-
 // ---- 할 일 체크박스 ----------------------------------------------------------------
 
 /** 본문의 체크박스를 누르면: 원문의 [ ] ↔ [x] 를 바꿔 저장하고 다시 그린다 (화면은 그때 바뀐다) */
@@ -2689,11 +2741,8 @@ export function initLineEdit() {
     e.preventDefault();
     if (session || !manyBlocks()) putImageFile(file);
   });
-  panes.addEventListener('dblclick', onDoubleClick);   // fold.js 뒤에 — 첫 누르기의 접기를 되돌린 다음
   panes.addEventListener('click', onTaskClick);
   panes.addEventListener('mousedown', (e) => {
-    clearTimeout(opening);   // 세 번째 누르기 — 문단 고르기 그대로
-    if (e.detail === 1) firstOnLink = !!e.target.closest?.(NO_OPEN);
     if (e.target.matches?.(TASK_BOX)) e.preventDefault();   // 초점은 문서 칸에 — 이어서 치는 ↑·↓·F2 가 그대로 되게
   }, true);
 }

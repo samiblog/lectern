@@ -16,6 +16,13 @@ import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyL
 import { partExtent, captionOf } from './toc.js';
 import { snippetOf, addSnippets, sendSnippets } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
+
+/** @type {() => (MenuItem[] | null)} 읽는 화면에서 고른 글의 서식 항목 (D142 — wordpick.js. main.js 가 잇는다: 여기서 부르면 import 순환이 생긴다) */
+let wordMenu = () => null;
+/** @param {() => (MenuItem[] | null)} fn */
+export function useWordMenu(fn) {
+  wordMenu = fn;
+}
 import { openExternal } from './api.js';
 import { isCode, isViewable } from './icons.js';
 import { colName, columnMenu, chartRange, markRange } from './csvview.js';
@@ -478,6 +485,13 @@ function openMenu(e, view, x, y) {
   const el = pickBlock(e.target, view);
   const sel = view.ownerDocument.getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
+  // 한 줄 안의 글을 골랐으면 그 글의 서식 (D142 — wordpick.js). '이 블록의 메뉴…' 로 보통 메뉴
+  const words = view === $('#lec-view') ? wordMenu() : null;
+  if (words) {
+    showMenu(x, y, menuGroups([{ header: `${t('고른 글')} · ${describe(selected)}` }], [{ label: t('고른 글 복사'), hint: 'Ctrl+C', action: () => copyPlain(selected) }], words,
+      [{ label: t('이 블록의 메뉴…'), action: () => blockMenu(e, view, el, selected, x, y) }]));
+    return;
+  }
   // 하이라이트한 곳 안이면 그 범위의 선택 상자 (D74). '이 블록의 메뉴…' 로 아래의 보통 메뉴
   const hl = view === $('#lec-view') ? litAt(e.clientY, e.target) : null;
   const lit = hl && litMenu(hl, selected, () => blockMenu(e, view, el, selected, x, y), el ? uniqueItems(el, e.target) : []);

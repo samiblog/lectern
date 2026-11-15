@@ -1,5 +1,5 @@
 // inlinefmt.js 의 계산 점검 (rules_check.mjs 가 돌린다 — m: inlinefmt.js, d: docops.js. 끝에서 {n, fails} 를 돌려준다).
-const { spansOf, applyFormat, clearFormats, wholeOf, stripFormat, wrapWhole, nextValue, paintOf, MARK_COLORS, TEXT_COLORS } = m;
+const { spansOf, applyFormat, clearFormats, wholeOf, stripFormat, wrapWhole, nextValue, paintOf, MARK_COLORS, TEXT_COLORS, visibleOf, sourceRange, visibleOffsets } = m;
 const { formatLines } = d;
 let n = 0;
 const fails = [];
@@ -27,6 +27,9 @@ eq(kinds('2 * 3 * 4 와 a ** b'), [], '띄어 쓴 별표는 서식이 아니다'
 eq(kinds('<mark>가</mark> <mark class="green">나</mark> <span style="color:red">다</span>'), ['mark=가', 'mark:green=나', 'color:red=다'], '형광펜과 글자색');
 eq(kinds('<span style="color:#abc">가</span> <mark class="x">나</mark>'), [], '정한 색이 아니면 읽지 않는다');
 eq(kinds('**가** 나 **다**'), ['bold=가', 'bold=다'], '두 군데');
+eq(kinds('*가 **나** 다*'), ['italic=가 **나** 다', 'bold=나'], '기울임 안의 굵게');
+eq(kinds('*가 **나* 다**'), ['bold=나* 다'], '엇갈린 표시는 기울임이 아니다');
+eq(wholeOf('*항목 **굵은 말** 과 끝*', 'italic') != null, true, '굵게가 든 글 통째의 기울임');
 eq(spansOf('가 **나** 다')[0], { kind: 'bold', value: '', oa: 2, a: 4, b: 5, cb: 7 }, '범위');
 
 // 감싸고 풀기
@@ -117,5 +120,33 @@ eq(lines('\n\n', 1, 2, 'italic'), { error: 'kind' }, '글이 없으면 그대로
 // 칠할 범위
 eq(paintOf('가 **나** <mark class="green">다</mark> <span style="color:red">라</span>'),
   { marks: [[2, 4], [5, 7], [8, 28], [29, 36], [37, 61], [62, 69]], bold: [[4, 5]], 'mark-green': [[28, 29]], 'color-red': [[61, 62]] }, '칠할 범위');
+
+// 읽는 화면에서 고른 글 (D142) — 화면의 글과 원문의 자리
+eq(visibleOf('가 **나** [다](a.md) \\*라\\* `**마**`').text, '가 나 다 *라* **마**', '보이는 글');
+eq(visibleOf('가 <mark class="green">나</mark> <span style="color:red">다</span>').text, '가 나 다', '형광펜과 글자색의 표시는 보이지 않는다');
+/** 화면의 글 shown 에서 word 를 고른 것으로 원문의 자리를 얻어 서식을 한다 */
+const onShown = (body, shown, word, kind, value) => {
+  const va = shown.indexOf(word);
+  const r = sourceRange(body, shown, va, va + word.length);
+  if (r.error) return r;
+  const out = applyFormat(body, r.a, r.b, kind, value);
+  const [x, y] = visibleOffsets(out.text, out.a, out.b);
+  return [out.text, visibleOf(out.text).text.slice(x, y)];
+};
+eq(onShown('구리 가격은 크게 올랐다.', '구리 가격은 크게 올랐다.', '크게', 'bold'), ['구리 가격은 **크게** 올랐다.', '크게'], '낱말을 굵게 — 고른 글은 그대로');
+eq(onShown('구리 **가격은** 크게', '구리 가격은 크게', '가격은', 'bold'), ['구리 가격은 크게', '가격은'], '굵은 낱말을 다시 — 푼다');
+eq(onShown('구리 **가격은** 크게', '구리 가격은 크게', '가격은', 'mark'), ['구리 **<mark>가격은</mark>** 크게', '가격은'], '굵은 낱말에 형광펜 — 안쪽에');
+eq(onShown('구리 **가격은** 크게', '구리 가격은 크게', '가격은 크게', 'mark'), ['구리 <mark>**가격은** 크게</mark>', '가격은 크게'], '굵은 글 처음부터 밖까지 — 표시째 감싼다');
+eq(onShown('구리 **가격은** 크게', '구리 가격은 크게', '구리 가격은', 'mark'), ['<mark>구리 **가격은**</mark> 크게', '구리 가격은'], '밖에서 굵은 글 끝까지');
+eq(onShown('구리 **가격은 크게** 올랐다', '구리 가격은 크게 올랐다', '크게 올랐다', 'mark'), { error: 'cross' }, '굵은 글 가운데서 밖으로 — 경계를 걸친다');
+eq(onShown('구리 [가격은 크게](a.md) 올랐다', '구리 가격은 크게 올랐다', '크게', 'bold'), ['구리 [가격은 **크게**](a.md) 올랐다', '크게'], '링크 글의 일부');
+eq(onShown('구리 [가격은](a.md) 올랐다', '구리 가격은 올랐다', '가격은 올랐다', 'bold'), ['구리 **[가격은](a.md) 올랐다**', '가격은 올랐다'], '링크 처음부터 밖까지 — 링크째');
+eq(onShown('구리 [가격은 크게](a.md) 올랐다', '구리 가격은 크게 올랐다', '크게 올랐다', 'bold'), { error: 'cross' }, '링크 가운데서 밖으로');
+eq(onShown('값은 $x^2$ 이다', '값은 x2 이다', '이다', 'bold'), { error: 'map' }, '수식이 있어 맞추지 못하면 하지 않는다');
+eq(onShown('주가 있다[^1] 끝', '주가 있다1 끝', '끝', 'bold'), { error: 'map' }, '각주가 있어도');
+eq(onShown('  앞 공백이 있는 글', '앞 공백이 있는 글', '공백이', 'italic'), ['  앞 *공백이* 있는 글', '공백이'], '원문의 앞 공백');
+eq(onShown('\\*별표\\* 와 글', '*별표* 와 글', '글', 'bold'), ['\\*별표\\* 와 **글**', '글'], '이스케이프한 별표');
+eq(onShown('<mark>가격은</mark> 크게', '가격은 크게', '가격은', 'mark'), ['<mark class="green">가격은</mark> 크게', '가격은'], '형광펜을 거듭 — 다음 색');
+eq(sourceRange('가 나', '가 나', 1, 1), { error: 'empty' }, '고른 글이 없다');
 
 return { n, fails };

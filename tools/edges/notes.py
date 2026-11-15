@@ -78,6 +78,8 @@ try:
         page.keyboard.type('첫 메모의 본문')
         check('쓰면 조금 뒤에 파일이 생김', until(lambda: '첫 메모의 본문' in saved()), saved()[:200])
         card().locator('.note-title').fill('구리 가격 메모')
+        weights = page.evaluate("(() => { const c = document.querySelector('.note-card'); return [getComputedStyle(c.querySelector('.note-title')).fontWeight, getComputedStyle(c.querySelector('.note-body, .note-task, .note-add')).fontWeight]; })()")
+        check('메모의 제목은 진하게, 내용은 보통', int(weights[0]) >= 600 and int(weights[1]) < 600, weights)
         check('제목도 저장', until(lambda: '## 구리 가격 메모' in saved()), saved()[:200])
         check('사람이 읽는 Markdown', saved().count('<!-- lectern-note ') == 1 and '첫 메모의 본문' in saved())
         check('트리에는 나오지 않음', page.locator('#lec-tree').inner_text().find('notes') < 0)

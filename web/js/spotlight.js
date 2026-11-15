@@ -936,10 +936,14 @@ export const overlayOpen = () => !!document.querySelector(OVERLAYS);
 /** 하이라이트 키를 받을 곳인지 — 문서 칸·툴바·목차·상태줄 (main.js 의 Ctrl+Z 되돌리기도 — lineedit.js) */
 export const docKeyTarget = (e) => !e.defaultPrevented && keyPlace(e.target);
 
+/** 서식의 한 글자 키 — 고른 상태(낱말·줄)에서만 듣는다. 현재 줄에서는 잡지도 않는다 (D142 — 사용자 결정) */
+const FORMAT_KINDS = new Set(['bold', 'italic', 'strike', 'mark', 'color']);
+
 /** 파일을 바꾸는 키인지 — 현재 줄에서는 처음 누르면 그 줄을 잡기만 하고, 한 번 더 눌러야 바꾼다 (D108·D119·D139) */
 function changeKey(e) {
   const k = e.key;
-  if (kindKey(e)) return S.config?.vi_keys !== true;   // vi 키를 켰으면 h·l 같은 글자는 vi 습관이다 — 알리지 않는다
+  const kind = kindKey(e);
+  if (kind) return !FORMAT_KINDS.has(kind) && S.config?.vi_keys !== true;   // vi 키를 켰으면 h·l 같은 글자는 vi 습관이다 — 알리지 않는다
   if (e.altKey) {
     if (e.ctrlKey) return !isCodeView() && /^Digit[0-6]$/.test(e.code);
     if (e.shiftKey) return !isCodeView() && (k === 'ArrowLeft' || k === 'ArrowRight');

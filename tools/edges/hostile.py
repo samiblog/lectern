@@ -348,7 +348,8 @@ try:
         show('doc', DOC)
         page.wait_for_selector('#lec-view h1')
         settle(900)
-        page.locator('#lec-view p', has_text='첫 문단').dblclick(position={'x': 30, 'y': 8})
+        page.locator('#lec-view p', has_text='첫 문단').click(position={'x': 30, 'y': 8})
+        page.keyboard.press('F2')   # 칸은 F2 로 (D142)
         wait("!!document.querySelector('#lec-view [contenteditable]')", 3000)
         settle(300)
         editing = page.locator('#lec-view [contenteditable]').first.inner_text() if page.locator('#lec-view [contenteditable]').count() else ''

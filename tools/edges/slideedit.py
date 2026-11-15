@@ -105,7 +105,8 @@ try:
         def open_cell(sel, text=None):
             el = page.locator(sel, has_text=text).first if text else page.locator(sel).first
             el.scroll_into_view_if_needed()
-            el.dblclick()
+            el.click()
+            page.keyboard.press('F2')   # 칸은 F2 로 (D142)
             page.wait_for_timeout(450)
 
         def fresh_after(sel, text=None):

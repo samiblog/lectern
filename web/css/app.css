@@ -1368,7 +1368,8 @@ iframe.lec-html.lec-loading { position: absolute; top: 0; left: 0; visibility: h
   display: block; box-sizing: border-box; width: 100%; padding: 2px 0; border: 0; outline: none; resize: none; background: transparent; color: inherit; font: inherit;
 }
 .note-card input[type="text"]::placeholder, .note-card textarea::placeholder { color: var(--ui-faint); }
-.note-card .note-title { font-weight: 600; }
+/* 제목은 진하게 — 위의 input 규칙(font: inherit)보다 강해야 한다 (2026-11-15 — 제목과 내용이 같아 보였다) */
+.note-card input[type="text"].note-title { font-weight: 700; }
 .note-card textarea { min-height: 2.6em; overflow: hidden; line-height: 1.5; }
 .note-tasks { margin: 2px 0; padding: 0; list-style: none; }
 .note-tasks li { display: flex; align-items: center; gap: 6px; }
