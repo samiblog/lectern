@@ -1,8 +1,7 @@
 // 사이드바 '파일' 탭 (D36, D37, D42, D48). 보는 방법 두 가지 (거르기 칸 옆 '폴더' 버튼, 설정 files_view):
 // - 종류별(kind, 기본): 위에서부터 세 묶음 — '문서'(문서 트리, tree.js), '코드'(소스·스크립트·웹·설정 — icons.js 의 코드 종류),
-//   '자료'(문서도 코드도 아닌 파일 — 목록 이름은 files, 설정은 others_*). 코드와 자료는 같은 모양의 탐색기 같은 목록이다. 묶음마다 머리줄을 눌러 접고
-//   (docs_visible·others_visible·code_visible), 펼친 첫 묶음이 남은 높이를 갖고 나머지는 위 분리선을 끌어 높이를 정한다
-//   (others_height·code_height, 두 번 누르면 기본).
+//   '자료'(문서도 코드도 아닌 파일 — 목록 이름은 files). 코드와 자료는 같은 모양의 탐색기 같은 목록이다. 한 번에 한 묶음만 펼치고(D143 — 설정 files_open,
+//   프로젝트 탭마다 tab.side.filesOpen) 그것이 남은 높이를 모두 갖는다. 접힌 머리줄에도 개수(거르는 중이면 맞는 수)가 보인다.
 // - 폴더(folder): 묶음 머리줄·문서 트리·코드 목록·분리선을 감추고 '자료' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 함께 보인다.
 //   문서 행은 문서 트리처럼 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조 — 두 번 누르면 새 문서 탭, D67), 파일 행은 탐색기처럼.
 //
@@ -34,34 +33,27 @@ import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
-const MIN_HEIGHT = 64;   // 분리선을 끌어 줄일 수 있는 높이 (머리줄 + 두 줄쯤)
 const OPEN_HINT = { default: t('기본 앱으로'), editor: t('편집기로'), reveal: t('탐색기에서 선택만 (실행하지 않음)') };
 
 // 목록 둘: 자료(files — 폴더 보기에서는 문서·파일·코드를 합친 트리)와 코드
 const LISTS = {
-  files: { el: '#lec-others-list', none: t('문서나 코드가 아닌 파일이 없습니다'), noHit: t('일치하는 자료가 없습니다'), visible: 'others_visible' },
-  code: { el: '#lec-code-list', none: t('코드 파일이 없습니다'), noHit: t('일치하는 코드가 없습니다'), visible: 'code_visible' },
+  files: { el: '#lec-others-list', none: t('문서나 코드가 아닌 파일이 없습니다'), noHit: t('일치하는 자료가 없습니다'), section: 'others' },
+  code: { el: '#lec-code-list', none: t('코드 파일이 없습니다'), noHit: t('일치하는 코드가 없습니다'), section: 'code' },
 };
-// 묶음 셋 (위에서부터 — index.html 의 순서와 같게). 펼친 첫 묶음이 남은 높이를 갖는다
-const SECTIONS = [
-  { el: '#lec-docs', visible: 'docs_visible' },
-  { el: '#lec-code', visible: 'code_visible', height: 'code_height', css: '--code-h', split: '#lec-code-split' },
-  { el: '#lec-others', visible: 'others_visible', height: 'others_height', css: '--others-h', split: '#lec-others-split' },
-];
+// 묶음 셋 (위에서부터 — index.html 의 순서와 같게). 한 번에 하나만 펼친다 (D143)
+const SECTIONS = [{ name: 'docs', el: '#lec-docs' }, { name: 'code', el: '#lec-code' }, { name: 'others', el: '#lec-others' }];
 
 const listEl = (k) => $(LISTS[k].el);
 const keyOf = (el) => el?.closest?.('[data-list]')?.dataset.list || 'files';
 const state = () => S.tab?.others || null;
 const folderView = () => S.config.files_view === 'folder';
-const isOpen = (key) => S.config[key] !== false;
-export const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
-
-/** 목록 k 가 보이는지: 탭이 있고, 사이드바 '파일' 탭이고, (폴더 보기의 파일 목록이거나) 그 묶음이 펼쳐 있음 */
-function shown(k) {
-  if (!S.tab || $('#lec-files').hidden) return false;
-  if (folderView()) return k === 'files';
-  return isOpen(LISTS[k].visible);
+/** 펼친 묶음 — docs·code·others (프로젝트 탭마다, 처음은 마지막에 고른 것) */
+export function openSection() {
+  const v = S.tab?.side?.filesOpen ?? S.config.files_open;
+  return SECTIONS.some((s) => s.name === v) ? v : 'docs';
 }
+const filesShown = () => !!S.tab && !$('#lec-files').hidden;
+export const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
 
 /** 경로 → 노드 (부모 경로를 parent 로 단다 — ← 로 부모에 갈 때). 아직 읽지 않은 제외 폴더는 children 이 null */
 function indexOf(nodes, parent = null, map = new Map()) {
@@ -220,13 +212,18 @@ function folderHtml(o, v, terms) {
   return o.all.length ? nodesHtml(o, v, o.all, 0) : html`<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`;
 }
 
-/** 묶음 머리줄의 개수 */
+/** 묶음 머리줄의 개수 — 거르는 중이면 맞는 수 (접힌 묶음에서도 어디에 있는지 보이게, D143) */
 function renderHead() {
   const o = state();
   const more = o?.data?.truncated ? '+' : '';
-  $('#lec-docs-count').textContent = S.tab?.treeLoaded ? String(S.files.length) : '';
-  $('#lec-others-count').textContent = o?.trees ? `${o.counts.files}${more}` : '';
-  $('#lec-code-count').textContent = o?.trees ? `${o.counts.code}${more}` : '';
+  const query = $('#lec-filter').value.trim().toLowerCase();
+  const terms = query ? query.split(/\s+/) : null;
+  const hit = (hay) => !terms || terms.every((w) => hay.includes(w));
+  $('#lec-docs-count').textContent = S.tab?.treeLoaded ? String(terms ? S.files.filter((f) => hit(`${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`)).length : S.files.length) : '';
+  for (const [k, id] of [['files', '#lec-others-count'], ['code', '#lec-code-count']]) {
+    if (!o?.trees) $(id).textContent = '';
+    else $(id).textContent = terms ? String([...filesIn(o.trees[k])].filter((f) => hit(f.path.toLowerCase())).length) : `${o.counts[k]}${more}`;
+  }
 }
 
 function renderList(k) {
@@ -367,9 +364,10 @@ function setAllOpen(mode) {
 }
 
 /** 목록이 보이는데 아직 받지 않았거나 그 뒤로 파일이 바뀌었으면 읽는다 */
+/** '파일' 탭이 보이면 코드·자료 목록을 받아 둔다 — 접힌 묶음의 머리줄에도 개수가 보이게 */
 function ensure() {
   const o = state();
-  if (o && (shown('files') || shown('code')) && (o.stale || !o.data) && !o.loading) load(S.tab);
+  if (o && filesShown() && (o.stale || !o.data) && !o.loading) load(S.tab);
 }
 
 /** 받아 둔 문서 외 파일 노드 (제외 폴더 안은 빼고) — 검색의 이름·모아 보기의 파일 종류 (loadOthers 뒤에) */
@@ -388,7 +386,7 @@ export function refreshOthers() {
   const o = state();
   if (!o) return;
   o.stale = true;
-  if ((shown('files') || shown('code')) && !o.loading) load(S.tab, { fresh: true });
+  if (filesShown() && !o.loading) load(S.tab, { fresh: true });
 }
 
 // ---- 고르기·열기 ----------------------------------------------------------------
@@ -594,62 +592,29 @@ function applyLayout() {
   $('#lec-files').classList.toggle('folder-view', folder);
   $('#lec-btn-view').classList.toggle('on', folder);
   listEl('files').setAttribute('aria-label', folder ? t('문서와 파일 (폴더 구조)') : t('자료'));
-  const grow = SECTIONS.find((s) => isOpen(s.visible));   // 펼친 첫 묶음이 남은 높이를 갖는다
+  const cur = openSection();   // 한 번에 하나 — 그것이 남은 높이를 모두 갖는다 (D143)
   for (const s of SECTIONS) {
     const sec = $(s.el);
-    const open = isOpen(s.visible);
+    const open = s.name === cur;
     sec.classList.toggle('closed', !open);
-    sec.classList.toggle('grow', s === grow);
+    sec.classList.toggle('grow', open);
     const head = sec.querySelector('.side-head');
     head.setAttribute('aria-expanded', String(open));
     head.querySelector('.caret').classList.toggle('open', open);
-    if (!s.split) continue;
-    $(s.split).hidden = !open || s === grow;   // 분리선은 높이를 정하는 묶음 위에만
-    const h = Number(S.config[s.height]);
-    if (h) sec.style.setProperty(s.css, `${Math.round(h)}px`);
-    else sec.style.removeProperty(s.css);   // app.css 의 기본 높이
   }
 }
 
-/** 분리선을 끌어 그 아래 묶음의 높이를 바꾼다. 키운 만큼 남은 높이를 갖는 묶음이 줄어든다 */
-function bindSplit(s) {
-  const split = $(s.split);
-  const root = document.documentElement;
-  split.addEventListener('pointerdown', (e) => {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    split.setPointerCapture(e.pointerId);
-    const sec = $(s.el);
-    const start = sec.getBoundingClientRect().height;
-    const room = ($('#lec-files .side-sec.grow')?.getBoundingClientRect().height || MIN_HEIGHT) - MIN_HEIGHT;
-    // 잡은 곳에서 움직인 만큼 (분리선을 잡는 순간 높이가 튀지 않게)
-    const heightAt = (ev) => Math.round(Math.min(start + room, Math.max(MIN_HEIGHT, start + e.clientY - ev.clientY)));
-    const move = (ev) => sec.style.setProperty(s.css, `${heightAt(ev)}px`);
-    const up = (ev) => {
-      split.removeEventListener('pointermove', move);
-      split.removeEventListener('pointerup', up);
-      root.classList.remove('resizing-rows');
-      if (ev.clientY !== e.clientY) saveConfig({ [s.height]: heightAt(ev) });   // 누르기만 했으면(두 번 누르기 등) 저장하지 않는다
-    };
-    root.classList.add('resizing-rows');
-    split.addEventListener('pointermove', move);
-    split.addEventListener('pointerup', up);
-  });
-  split.addEventListener('dblclick', () => {
-    saveConfig({ [s.height]: null });
-    applyLayout();
-  });
-}
-
 function bindLayout() {
-  for (const s of SECTIONS) {
-    $(s.el).querySelector('.side-head').addEventListener('click', async () => {
-      await saveConfig({ [s.visible]: !isOpen(s.visible) });
+  for (const s of SECTIONS) {   // 머리줄을 누르면 그 묶음을 펼치고 나머지는 접는다 — 펼친 것을 누르면 그대로 (D143)
+    $(s.el).querySelector('.side-head').addEventListener('click', () => {
+      if (openSection() === s.name) return;
+      if (S.tab) S.tab.side.filesOpen = s.name;
+      saveConfig({ files_open: s.name });
       applyLayout();
       render();
       ensure();
+      emit('files-open', s.name);
     });
-    if (s.split) bindSplit(s);
   }
   // 종류별 ↔ 폴더 구조
   $('#lec-btn-view').addEventListener('click', async () => {
@@ -702,6 +667,7 @@ export function initOthers() {
   applyLayout();
   $('#lec-filter').addEventListener('input', render);
   on('tab', () => {
+    applyLayout();   // 펼친 묶음은 프로젝트 탭마다 (D143)
     render();
     for (const k of Object.keys(LISTS)) listEl(k).scrollTop = state()?.scroll[k] || 0;
     ensure();

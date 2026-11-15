@@ -50,7 +50,7 @@ def run():
         page.on('pageerror', lambda e: extra.append(str(e)[:200]))
         page.goto(url)
         page.wait_for_selector('#lec-tree .row.file')
-        page.wait_for_selector('#lec-code-list .row, #lec-others-list .row', timeout=8000)
+        page.wait_for_selector('#lec-code-list .row, #lec-others-list .row', state='attached', timeout=8000)   # 접힌 묶음 (D143)
         code = '#lec-code-list' if page.locator('#lec-code-list').count() else '#lec-others-code'
         docs = lambda: page.evaluate(DOCS)
         lst = lambda sel: page.evaluate(LIST, sel)

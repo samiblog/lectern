@@ -47,6 +47,7 @@ try:
             page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
               for (const p of [...S.tab.panes]) if (p !== S.tab.panes[0]) d.closeDocTab(p); }""")
             settle(200)
+            page.click('#lec-docs-head')   # 사이드바는 한 묶음씩 (D143) — 앞에서 코드 목록을 펼쳤을 수 있다
             row('a.md').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("문서 가")')
             settle(300)
@@ -150,6 +151,7 @@ try:
         check('모아 보기: 새 문서 탭', tabs() == ['a.md', '*b.md'], tabs())
         reset_panel()
         reset()
+        page.click('#lec-code-head')   # 한 묶음만 펼친다 (D143)
         page.locator('#lec-code-list .row.dir [data-toggle]').first.click()
         settle(300)
         page.locator('#lec-code-list .row.file').first.click()

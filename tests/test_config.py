@@ -165,12 +165,13 @@ def test_tree_shows_file_names_from_version_2(tmp_path):
 def test_others_layout_settings(tmp_path):
     path = tmp_path / 'config.json'
     cfg = Config(path)
-    assert cfg.get('others_visible') is True and cfg.get('others_height') is None
-    cfg.update_client({'others_visible': False, 'others_height': 240})
-    cfg.update_client({'others_height': 'tall'})                                # 형식이 틀리면 버린다
-    assert cfg.get('others_visible') is False and cfg.get('others_height') == 240
-    cfg.update_client({'others_height': None})                                  # 두 번 누르면 기본 높이
-    assert cfg.get('others_height') is None
+    # 사이드바 '파일' 탭은 한 번에 한 묶음만 펼친다 (D143) — 묶음마다 접고 높이를 정하던 키는 없어졌다
+    assert cfg.get('files_open') == 'docs' and cfg.get('docs_kind') == 'all'
+    cfg.update_client({'files_open': 'code', 'docs_kind': 'marks'})
+    cfg.update_client({'files_open': 'tree', 'docs_kind': 'pdf'})               # 모르는 값은 버린다
+    assert cfg.get('files_open') == 'code' and cfg.get('docs_kind') == 'marks'
+    cfg.update_client({'others_height': 240})                                    # 없어진 키는 받지 않는다
+    assert 'others_height' not in cfg.data
 
 
 def test_files_view_setting(tmp_path):
@@ -257,11 +258,3 @@ def test_toc_hidden_parts_setting(tmp_path):
     cfg.update_client({'toc_hidden_parts': ['code', 'math']})                  # 목차 머리의 종류 버튼
     cfg.update_client({'toc_hidden_parts': 'code'})                            # 형식이 틀리면 버린다
     assert cfg.get('toc_hidden_parts') == ['code', 'math']
-
-
-def test_side_sections_settings(tmp_path):
-    cfg = Config(tmp_path / 'config.json')
-    assert cfg.get('docs_visible') is True and cfg.get('code_visible') is True and cfg.get('code_height') is None
-    cfg.update_client({'docs_visible': False, 'code_visible': False, 'code_height': 180})   # 사이드바 '문서'·'코드' 묶음
-    cfg.update_client({'code_height': 'big'})                                              # 형식이 틀리면 버린다
-    assert cfg.get('docs_visible') is False and cfg.get('code_visible') is False and cfg.get('code_height') == 180

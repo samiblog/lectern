@@ -22,6 +22,7 @@ from flask import Flask, Response, abort, jsonify, request, send_file
 from . import __version__, editing, htmlexport, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
+from .marks import MARKS_READ, marks_of
 from .i18n import t
 from .paths import web_dir
 from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, list_folders, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
@@ -245,6 +246,23 @@ def create_app(state: AppState) -> Flask:
         nodes, truncated = list_dir(project.root, rel)
         return jsonify(path=rel, nodes=nodes, truncated=truncated, limit=MAX_DIR_ENTRIES)
 
+    @app.get('/api/marks')
+    def api_marks() -> Any:
+        """문서 속 형광펜과 할 일 (D143 — 사이드바 '문서'의 하위 묶음 '형광펜'·'할 일'). 읽은 글은 검색과 같은 기억을 쓴다 (바뀐 문서만 다시 읽는다)"""
+        project = arg_project()
+        docs = []
+        for f in iter_files(project.scan()):
+            if f.get('kind') != 'markdown':
+                continue
+            try:
+                text = project.texts.read(project.root / f['path'], MARKS_READ)
+            except OSError:
+                continue
+            got = marks_of(text)
+            if got['marks'] or got['tasks']:
+                docs.append({'path': f['path'], **got})
+        return jsonify(docs=docs)
+
     @app.get('/api/overview')
     def api_overview() -> Any:
         project = arg_project()
@@ -326,7 +344,7 @@ def create_app(state: AppState) -> Flask:
         pid, note = data.get('p'), data.get('note')
         if not isinstance(pid, str) or not isinstance(note, dict):
             abort(400)
-        kept = {k: note[k] for k in ('title', 'body', 'path') if isinstance(note.get(k), str)}
+        kept = {k: note[k] for k in ('title', 'body', 'path', 'find') if isinstance(note.get(k), str)}   # find: 형광펜에 단 메모가 찾아갈 글 (D143)
         kept |= {k: note[k] for k in ('line', 'end') if isinstance(note.get(k), int) and not isinstance(note.get(k), bool)}
         state.board.send('', {'note': kept, 'p': pid})
         if state.on_send:

@@ -1,6 +1,6 @@
 // inlinefmt.js 의 계산 점검 (rules_check.mjs 가 돌린다 — m: inlinefmt.js, d: docops.js. 끝에서 {n, fails} 를 돌려준다).
 const { spansOf, applyFormat, clearFormats, wholeOf, stripFormat, wrapWhole, nextValue, paintOf, MARK_COLORS, TEXT_COLORS, visibleOf, sourceRange, visibleOffsets } = m;
-const { formatLines } = d;
+const { formatLines, clearMarksIn } = d;
 let n = 0;
 const fails = [];
 const eq = (got, want, name) => {
@@ -148,5 +148,18 @@ eq(onShown('  앞 공백이 있는 글', '앞 공백이 있는 글', '공백이'
 eq(onShown('\\*별표\\* 와 글', '*별표* 와 글', '글', 'bold'), ['\\*별표\\* 와 **글**', '글'], '이스케이프한 별표');
 eq(onShown('<mark>가격은</mark> 크게', '가격은 크게', '가격은', 'mark'), ['<mark class="green">가격은</mark> 크게', '가격은'], '형광펜을 거듭 — 다음 색');
 eq(sourceRange('가 나', '가 나', 1, 1), { error: 'empty' }, '고른 글이 없다');
+
+// 형광펜 걷기 (D143 — docops.clearMarksIn)
+const doc = ['# 글', '', '가 <mark>노랑</mark> 와 <mark class="green">**초록** 말</mark>', '', '```', '<mark>코드 안</mark>', '```', '', '<mark class="green">둘째 초록</mark>'];
+const all = clearMarksIn(doc);
+eq([all.count, all.lines[2], all.lines[5], all.lines[8]], [3, '가 노랑 와 **초록** 말', '<mark>코드 안</mark>', '둘째 초록'], '모두 — 코드 블록은 그대로');
+const green = clearMarksIn(doc, { color: 'green' });
+eq([green.count, green.lines[2]], [2, '가 <mark>노랑</mark> 와 **초록** 말'], '한 색만');
+const one = clearMarksIn(doc, { line: 3, text: '초록 말' });
+eq([one.count, one.line, one.lines[2]], [1, 3, '가 <mark>노랑</mark> 와 **초록** 말'], '그 줄의 그 글 하나 (서식 표시를 걷은 글로 맞춘다)');
+const moved = clearMarksIn(['새 줄', '', ...doc], { line: 3, text: '둘째 초록' });
+eq([moved.count, moved.line], [1, 11], '줄이 밀렸으면 그 글이 든 가장 가까운 줄');
+eq(clearMarksIn(doc, { line: 3, text: '없는 글' }).count, 0, '없으면 지우지 않는다');
+eq(clearMarksIn(['<mark>' + '가'.repeat(100) + '</mark>'], { line: 1, text: `${'가'.repeat(79)}…` }).count, 1, '사이드바가 줄인 글로도');
 
 return { n, fails };

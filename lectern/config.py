@@ -50,11 +50,8 @@ DEFAULTS: dict[str, Any] = {
     'toc_width': None,       # 목차 폭(px, 160~560). None 이면 기본 폭 — 경계를 끌어 바꾸고 두 번 누르면 기본 (D47)
     'side_sort': 'name',     # 사이드바 목록의 차례: name | time | type (D97 — 폴더가 먼저)
     'files_view': 'kind',    # 사이드바 파일 탭을 보는 방법: kind(종류별 — 문서 트리 위, 파일 목록 아래) | folder(폴더 구조 그대로 한 트리)
-    'docs_visible': True,    # 종류별 보기의 '문서' 묶음을 펼쳐 둠 (머리줄을 눌러 접기)
-    'others_visible': True,  # 종류별 보기의 '자료' 묶음을 펼쳐 둠 (D48 — 안쪽 이름은 others)
-    'others_height': None,   # 종류별 보기의 '자료' 묶음 높이(px). None 이면 기본 (분리선을 끌어 바꾸고 두 번 누르면 기본)
-    'code_visible': True,    # 종류별 보기의 '코드' 묶음을 펼쳐 둠
-    'code_height': None,     # 종류별 보기의 '코드' 묶음 높이(px). None 이면 기본
+    'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others (D143 — 한 번에 하나만 펼친다)
+    'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·work·marks·tasks (D143)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
     'search_code': True,     # 전체 검색에서 코드를 찾음 ('코드' 버튼, D44)
@@ -93,18 +90,20 @@ DEFAULTS: dict[str, Any] = {
                              # (D138 — 설정 창. 화면의 이름과 요청 글의 지시 파일·스킬 폴더가 이것을 따른다. 앱이 그 도구를 실행하지는 않는다)
 }
 
-AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
+AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
+FILES_OPEN = ('docs', 'code', 'others')   # 설정 files_open (D143 — 화면은 others.js)
+DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'docs_visible', 'others_visible', 'others_height', 'code_visible', 'code_height',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
-NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_shell', 'terminal_width',
+NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'terminal_shell', 'terminal_width',
                       'terminal_height', 'work_home'})
 _EXAMPLE = {bool: N_('true 또는 false'), int: N_('숫자'), float: N_('숫자'), str: N_('"글자"'), list: N_('["이름", ...] 목록'),
             dict: N_('{ } 객체')}
@@ -120,8 +119,12 @@ def value_ok(key: str, value: Any) -> bool:
     if value is None:
         return key in NULLABLE
     default = DEFAULTS[key]
-    if key in ('sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_width', 'terminal_height'):
+    if key in ('sidebar_width', 'toc_width', 'terminal_width', 'terminal_height'):
         return is_number(value)
+    if key == 'files_open':
+        return value in FILES_OPEN
+    if key == 'docs_kind':
+        return value in DOCS_KINDS
     if key == 'terminal_position':
         return value in ('auto', 'side', 'bottom')
     if key == 'editor_keys':
@@ -159,7 +162,7 @@ def _upgrade(data: dict[str, Any]) -> None:
 def _expected(key: str, lang: str) -> str:
     default = DEFAULTS[key]
     kind = (str if key in ('last_folder', 'editor', 'terminal_shell', 'work_home')
-            else int if key in ('sidebar_width', 'toc_width', 'others_height', 'code_height', 'terminal_width') else type(default))
+            else int if key in ('sidebar_width', 'toc_width', 'terminal_width') else type(default))
     return t(_EXAMPLE.get(kind, N_('맞는 형식')), lang)
 
 

@@ -89,6 +89,7 @@ try:
 
         def opened(path, title):
             page.click('.side-tabs button[data-tab="files"]')
+            page.click('#lec-docs-head')   # 사이드바는 한 묶음씩 (D143) — 앞에서 코드 목록을 펼쳤을 수 있다
             row = page.locator(f'#lec-tree .row.file[data-doc="{path}"]')
             row.click()
             page.wait_for_selector(f'#lec-view h1:has-text("{title}")')
@@ -617,6 +618,7 @@ try:
         press('F5')
         page.wait_for_function("[...document.querySelectorAll('#lec-code-list .row .label')].some((e) => e.textContent === 'model.prg')", timeout=8000)
         check("'코드' 목록에 prg", True)
+        page.click('#lec-code-head')   # 한 묶음만 펼친다 (D143)
         page.locator('#lec-code-list .row[data-path="model.prg"]').click(modifiers=['Alt'])
         page.wait_for_selector('.code-view .cv-line[data-line="1"]')
         settle(300)

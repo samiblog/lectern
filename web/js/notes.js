@@ -229,7 +229,21 @@ function restoreNote() {
 async function goToSource(note) {
   const type = isMd(note.path) || isHtml(note.path) ? 'doc' : 'code';
   if (!(await openTarget({ type, path: note.path, newTab: true, deckLine: note.line }))) return;
-  if (note.line) emit('go-line', { line: note.line });
+  const line = relocate(note);
+  if (line) emit('go-line', { line });
+}
+
+/** 메모가 가리키는 줄 — 형광펜에 단 메모(D143)는 그 글(extra.find)이 든 줄로: 문서가 바뀌어 줄이 밀렸으면 가장 가까운 그 글의 줄 */
+function relocate(note) {
+  const find = note.extra?.find;
+  const lines = S.pane?.source?.path === note.path ? S.pane.source.lines : null;
+  if (!find || !lines) return note.line;
+  const want = find.endsWith('…') ? find.slice(0, -1) : find;
+  const has = (n) => (lines[n - 1] ?? '').replace(/<[^>]+>/g, '').replace(/\*\*|__|~~|\*|`/g, '').includes(want);
+  if (note.line && has(note.line)) return note.line;
+  let best = 0;
+  for (let n = 1; n <= lines.length; n++) if (has(n) && (!best || Math.abs(n - note.line) < Math.abs(best - note.line))) best = n;
+  return best || note.line;
 }
 
 async function act(name, note, button) {
@@ -337,7 +351,7 @@ export function initNotes() {
     hideUndo();
     if (notesOpen()) openNotes();
   });
-  on('new-note', async ({ title = '', body = '', path = '', line = 0, end = 0 }) => {
+  on('new-note', async ({ title = '', body = '', path = '', line = 0, end = 0, find = '' }) => {
     const tab = S.tab;
     if (!tab) return;
     if (tab.readonly) {
@@ -346,7 +360,7 @@ export function initNotes() {
     }
     if (solo) {   // 메모는 메인 창에 있다 — 메인 창이 쓴다 (D95)
       try {
-        await postJSON('/api/window-note', { p: tab.id, note: { title, body, path, line, end } });
+        await postJSON('/api/window-note', { p: tab.id, note: { title, body, path, line, end, find } });
         toast(t('메인 창의 메모로 보냈습니다'));
       } catch (e) {
         toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
@@ -356,8 +370,8 @@ export function initNotes() {
     const st = stateOf(tab);
     if (!st.loaded) await load(tab);
     if (!notesOpen()) await openNotes();
-    const note = newNote({ title, body, path, line, end });
-    if (note) focusCard(note.id, '.note-title');
+    const note = newNote({ title, body, path, line, end, extra: find ? { find } : {} });
+    if (note) focusCard(note.id, title ? '.note-body' : '.note-title');   // 제목이 있으면(형광펜에 단 메모 등) 바로 내용을 쓰게
     toast(t('새 메모로 보냈습니다'));
   });
 }

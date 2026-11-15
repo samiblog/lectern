@@ -161,24 +161,25 @@
         <button id="lec-btn-expand" class="icon-btn small" title="폴더 모두 펼치기·접기 — 문서·코드·자료 목록" aria-label="폴더 모두 펼치기·접기 — 문서·코드·자료 목록"><svg><use href="#i-expand"/></svg></button>
         <button id="lec-btn-view" class="icon-btn small toggle" title="폴더 구조 그대로 보기 — 문서와 파일을 한 트리에 (끄면 종류별: 문서·코드·자료 묶음)">폴더</button>
       </div>
-      <!-- 문서 트리와 '코드'·'자료' 목록 (others.js, D48): 종류별 보기에서는 묶음 사이의 분리선을 끌어 아래 묶음의 높이를 바꾸고, 머리줄을 눌러 접는다.
+      <!-- 문서 트리와 '코드'·'자료' 목록 (others.js, D48·D143): 종류별 보기에서는 한 번에 한 묶음만 펼치고 그것이 남은 높이를 모두 갖는다 (머리줄을 누르면 그 묶음으로).
+           '문서' 안의 하위 묶음(전체·문서·슬라이드·HTML·업무·형광펜·할 일 — tree.js)도 한 번에 하나만, 펼친 것 아래에 트리가 온다.
            폴더 보기에서는 문서 트리·코드 목록·분리선·머리줄을 감추고 '자료' 목록(#lec-others-list)에 문서와 파일을 폴더 구조 그대로 함께 보인다 -->
       <div id="lec-files">
         <section id="lec-docs" class="side-sec" aria-label="문서">
-          <button type="button" id="lec-docs-head" class="side-head" aria-expanded="true" title="문서 목록 펼치기/접기 (Markdown·HTML 문서)">
+          <button type="button" id="lec-docs-head" class="side-head" aria-expanded="true" title="문서 목록 펼치기 (Markdown·HTML 문서)">
             <span class="caret open" aria-hidden="true"></span><span>문서</span><span id="lec-docs-count" class="n"></span></button>
           <button type="button" id="lec-docs-new" class="side-new" title="새 문서 만들기 (Ctrl+N)">만들기</button>
+          <div id="lec-doc-kinds-top" class="doc-kinds"></div>
           <nav id="lec-tree" class="side-list" aria-label="문서"></nav>
+          <div id="lec-doc-kinds-bottom" class="doc-kinds"></div>
         </section>
-        <div id="lec-code-split" class="side-split" role="separator" aria-orientation="horizontal" title="끌어서 높이 조절 (두 번 누르면 기본 높이)"></div>
         <section id="lec-code" class="side-sec" aria-label="코드">
-          <button type="button" id="lec-code-head" class="side-head" aria-expanded="true" title="코드 목록 펼치기/접기 (소스·스크립트·웹·설정 파일)">
+          <button type="button" id="lec-code-head" class="side-head" aria-expanded="true" title="코드 목록 펼치기 (소스·스크립트·웹·설정 파일)">
             <span class="caret open" aria-hidden="true"></span><span>코드</span><span id="lec-code-count" class="n"></span></button>
           <div id="lec-code-list" class="side-list explorer" role="tree" aria-label="코드" data-list="code"></div>
         </section>
-        <div id="lec-others-split" class="side-split" role="separator" aria-orientation="horizontal" title="끌어서 높이 조절 (두 번 누르면 기본 높이)"></div>
         <section id="lec-others" class="side-sec" aria-label="자료">
-          <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="자료 목록 펼치기/접기 (문서도 코드도 아닌 파일 — PDF·오피스·그림·데이터 등)">
+          <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="자료 목록 펼치기 (문서도 코드도 아닌 파일 — PDF·오피스·그림·데이터 등)">
             <span class="caret open" aria-hidden="true"></span><span>자료</span><span id="lec-others-count" class="n"></span></button>
           <div id="lec-others-list" class="side-list explorer" role="tree" aria-label="자료" data-list="files"></div>
         </section>

@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.80.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
+현재 버전 0.81.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -49,6 +49,7 @@ lectern/
   changes.py            ChangeLog(변경 순번 기록) + Watcher(watchdog / 폴링 대체)
   config.py             config.json 읽기·쓰기, 프런트에서 바꿀 수 있는 키 제한
   search.py             전체 본문 검색 — 문서·코드 (/api/search)
+  marks.py              문서 속 형광펜과 열린 할 일 (/api/marks, D143 — 사이드바 '문서'의 하위 묶음. 읽기만)
   trash.py              문서 삭제 — 파일 하나를 휴지통으로 (D104, 되살릴 수 없게 지우는 길은 없다)
   sheet.py              엑셀 보기 — xlsx·xlsm 의 시트 목록과 값을 zipfile·ElementTree 로 (/api/sheet, D77 — 보기만)
   editing.py            편집 모드 — 원문 주기·저장 (/api/source, /api/save, D54), 새 문서 만들기 (create, /api/new-doc, D63·D65)

@@ -39,7 +39,7 @@ import {
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
   setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
-  toggledKind, boldLines, formatLines, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+  toggledKind, boldLines, formatLines, clearMarksIn, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
@@ -49,7 +49,7 @@ import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
-  kindKey, stepHere, litOneLine, manyBlocks,
+  kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
@@ -674,10 +674,11 @@ export function replaceLines(pane, path, start, before, after) {
 
 async function saveRecorded(pane, path, start, before, after) {
   const { tab } = pane;
+  const lit = S.pane === pane && (lightOn() || pickedMany()) ? litSpan() : null;   // 바꾸기 전에 고른 줄 — 되돌리면 그 줄들을 다시 고른다
   const r = await writeLines(tab, path, start, before, after);
   if (!r) return null;
   const rec = recordOf(tab.id, path);
-  rec.done.push({ line: r.at, before, after, hash: r.hash });
+  rec.done.push({ line: r.at, before, after, hash: r.hash, lit: lit && lit.map((n) => n + r.at - start) });
   if (rec.done.length > MAX_UNDO) rec.done.shift();
   rec.undone.length = 0;   // 새로 고치면 되돌린 것을 다시 할 수 없다
   await refreshView(pane);
@@ -2356,6 +2357,31 @@ export function editShown({ line, seg = 0, shown, va, vb }) {
   begin(line, { cell: seg, range: m && !m.error ? [m.a, m.b] : null });
 }
 
+/**
+ * 형광펜을 걷는다 (D143 — 사이드바 '형광펜' 하위 묶음의 우클릭). 그 문서가 지금 보는 것이 아니면 먼저 연다 — 바뀐 것을 보고 Ctrl+Z 로 되돌리게.
+ * 문서 전체를 걷을 때는 몇 곳인지 묻는다. 글은 그대로 두고 칠한 것만. 되돌리기 한 걸음
+ */
+async function clearMarksNow({ path, line = 0, text = '', color = null }) {
+  if (!path || !S.pane?.tab || blockedReadOnly(S.pane.tab)) return;
+  if (pathIn(S.pane.view) !== path) {
+    emit('open', { type: 'doc', path });
+    for (let i = 0; i < 80 && !(S.pane?.view && pathIn(S.pane.view) === path && S.pane.source?.path === path); i++) await new Promise((ok) => setTimeout(ok, 100));
+  }
+  const pane = S.pane;
+  if (!pane?.view || pathIn(pane.view) !== path || !linesEditable() || !litOpen() || !await settled(pane) || S.pane !== pane) return;
+  const src = sourceLines();
+  const r = clearMarksIn(src, { line, text, color });
+  if (!r.count) {
+    toast(t('지울 형광펜이 없습니다 — 그사이 바뀌었으면 사이드바를 다시 보세요'));
+    return;
+  }
+  if (!line && !window.confirm(t('이 문서의 형광펜 {n}곳을 지울까요? 글은 그대로 둡니다.', { n: r.count }))) return;
+  const shift = await commit(pane, path, src, r.lines);
+  if (shift == null) return;
+  if (line) followLine(r.line + shift);
+  toast(t('형광펜 {n}곳을 지웠습니다 — Ctrl+Z 로 되돌립니다', { n: r.count }));
+}
+
 /** 고른 줄(줄 전체)의 Ctrl 서식 키 — Ctrl+B·Ctrl+I·Ctrl+Shift+X·H·C (D142 — 한 글자 키는 litKey). 받았으면 true */
 export function formatPicked(kind) {
   if (!litSpan() || isCodeView(S.pane.view)) return false;
@@ -2636,6 +2662,7 @@ async function replay(pane, path, rec, undoing) {
   const [from, to] = undoing ? [rec.done, rec.undone] : [rec.undone, rec.done];
   const change = from.at(-1);
   if (!change) return;
+  const keep = S.pane === pane && (lightOn() || pickedMany());   // 하이라이트·여러 줄 고르기는 되돌린 줄들로 옮겨 남긴다 — 끄는 것은 Shift+Enter·Esc (D139)
   try {
     const src = await getJSON(`/api/source?p=${encodeURIComponent(pane.tab.id)}&path=${encodeURIComponent(path)}`);
     if (src.hash !== (undoing ? change.hash : change.prior)) {   // 그 뒤에 파일이 또 바뀌었다 (Claude Code·편집 모드 등) — 이 파일의 기록은 버린다
@@ -2652,8 +2679,10 @@ async function replay(pane, path, rec, undoing) {
     else change.hash = saved.hash;
     to.push(from.pop());
     await refreshView(pane);
-    if (S.pane === pane) followLine(change.line);
-    const where = `${path} ${rangeText([change.line, change.line + Math.max(back.length, 1) - 1])}`;
+    const last = change.line + Math.max(back.length, 1) - 1;
+    if (S.pane === pane && keep) setLitSpan(...(undoing && change.lit ? change.lit : [change.line, last]));
+    else if (S.pane === pane) followLine(change.line);
+    const where = `${path} ${rangeText([change.line, last])}`;
     toast(undoing ? t('되돌렸습니다: {where}', { where }) : t('다시 했습니다: {where}', { where }));
   } catch (e) {
     toast(undoing ? t('되돌리지 못했습니다: {error}', { error: e.message }) : t('다시 하지 못했습니다: {error}', { error: e.message }), 'error');
@@ -2715,7 +2744,8 @@ export function initLineEdit() {
   on('line-end', (d) => growEnd({ peek: !!d?.arrow }));   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
   on('line-step', ({ dir }) => { if (S.pane?.lineEditHold && queued.length < 30) queued.push(dir); });   // 넘어가는 사이의 ↑·↓ (spotlight.js, D128)
   on('line-add', ({ below }) => addHere(below));   // 칸 없이 새 줄 (spotlight.js, D117)
-  on('line-put', () => { turn = turn.then(putHere); });   // 현재 줄의 / — 아래에 넣기 창 (spotlight.js, D139)
+  on('line-put', () => { turn = turn.then(putHere); });
+  on('clear-marks', (op) => { turn = turn.then(() => clearMarksNow(op)); });   // 형광펜 지우기 (tree.js — D143)   // 현재 줄의 / — 아래에 넣기 창 (spotlight.js, D139)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });

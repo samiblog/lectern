@@ -502,26 +502,39 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* 목록 안의 안내 줄 (제외 폴더를 읽는 중 등, others.js) — 그 깊이 행의 아이콘 자리에 맞춘다 */
 .side-note { color: var(--ui-faint); font-size: 12px; margin: 0; padding: 3px 8px 3px calc(26px + var(--d, 0) * 14px); }
 
-/* 종류별 보기: '문서'·'파일'·'코드' 세 묶음 (others.js). 묶음마다 머리줄을 눌러 접고(.closed — 머리줄만), 펼친 첫 묶음(.grow)이
-   남은 높이를 갖는다. 나머지 펼친 묶음은 위 분리선을 끌어 높이(--others-h·--code-h)를 정한다.
-   폴더 보기(.folder-view): 묶음 머리줄·문서 트리·코드 목록·분리선을 감추고 '파일' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 */
+/* 종류별 보기: '문서'·'코드'·'자료' 세 묶음 (others.js, D143). 한 번에 하나만 펼치고(.grow) 그것이 남은 높이를 모두 갖는다 — 나머지는 머리줄만(.closed).
+   폴더 보기(.folder-view): 묶음 머리줄·문서 트리·코드 목록을 감추고 '자료' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 */
 #lec-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .side-sec { min-height: 0; display: flex; flex-direction: column; }
+.side-sec + .side-sec { border-top: 1px solid var(--ui-border); }
 .side-sec.grow { flex: 1 1 0; min-height: 64px; }
-#lec-others:not(.grow):not(.closed) { flex: 0 0 var(--others-h, 30%); }
-#lec-code:not(.grow):not(.closed) { flex: 0 0 var(--code-h, 26%); }
-.side-sec:not(.grow):not(.closed) { max-height: calc(100% - 96px); }
 .side-sec.closed { flex: none; }
-.side-sec.closed > .side-list { display: none; }
-.side-split[hidden] + .side-sec { border-top: 1px solid var(--ui-border); }   /* 분리선이 없는 묶음 사이에는 선 */
-.side-split { flex: none; position: relative; height: 9px; cursor: row-resize; }
-.side-split::before { content: ""; position: absolute; left: 8px; right: 8px; top: 4px; border-top: 1px solid var(--ui-border); }
-.side-split:hover, .resizing-rows .side-split:hover { background: color-mix(in srgb, var(--ui-accent) 30%, transparent); }
+.side-sec.closed > .side-list, .side-sec.closed > .doc-kinds { display: none; }
 .explorer { padding-bottom: 12px; }
-#lec-files.folder-view > #lec-docs, #lec-files.folder-view > #lec-code, #lec-files.folder-view > .side-split,
+#lec-files.folder-view > #lec-docs, #lec-files.folder-view > #lec-code,
 #lec-files.folder-view #lec-others-head { display: none; }
 #lec-files.folder-view #lec-others { flex: 1 1 auto; max-height: none; border-top: 0; }
 #lec-files.folder-view #lec-others-list { display: block; }
+/* '문서' 묶음의 하위 묶음 (D143 — tree.js): 한 단 들여 쌓고 한 번에 하나만 — 펼친 것 바로 아래에 트리(#lec-tree 는 위아래 칸 사이) */
+.doc-kinds { flex: none; display: flex; flex-direction: column; }
+.doc-kinds:empty { display: none; }
+.kind-head {
+  display: flex; align-items: center; gap: 2px; flex: none; width: 100%; height: 24px; padding: 0 12px 0 18px;
+  border: 0; background: none; color: var(--ui-muted); font-size: 12px; text-align: left;
+}
+.kind-head:hover { color: var(--ui-fg); }
+.kind-head.open { color: var(--ui-fg); font-weight: 600; }
+.kind-head .n { margin-left: auto; color: var(--ui-faint); font-weight: 400; font-variant-numeric: tabular-nums; }
+#lec-docs.kinds > #lec-tree { border-left: 1px solid var(--ui-border); margin-left: 14px; }
+/* 형광펜·할 일 하위 묶음의 줄 — 문서 행 아래에 칠한 글·할 일 */
+.row.item .label { color: var(--ui-muted); }
+.row.item:hover .label { color: var(--ui-fg); }
+.row .swatch { flex: none; width: 10px; height: 10px; margin: 0 6px 0 1px; border-radius: 2px; }
+.swatch.mark-yellow { background: #f2d36b; }
+.swatch.mark-green { background: #92d39a; }
+.swatch.mark-pink { background: #f0a3b8; }
+.swatch.mark-blue { background: #95c3ee; }
+.swatch.task { border: 1.5px solid var(--ui-muted); border-radius: 3px; }
 .resizing-rows, .resizing-rows * { cursor: row-resize !important; user-select: none; }
 .resizing-rows iframe { pointer-events: none; }
 .side-head {

@@ -10,8 +10,8 @@
 // 낱말은 띄어쓰기로 나눈다. 표의 행은 칸마다 따로 — 칸을 넘어 고르면 서식은 하지 않는다. md 문서에서만 (코드 화면은 글을 고치는 화면이 아니다).
 
 import { S } from './store.js';
-import { lineSlot } from './lineunits.js';
-import { sourceLines, pickedMany } from './spotlight.js';
+import { lineSlot, blockOfLine } from './lineunits.js';
+import { sourceLines, pickedMany, followLine } from './spotlight.js';
 import { formatShown, formatPicked, editShown, linesEditable } from './lineedit.js';
 import { visibleOf, visibleOffsets } from './inlinefmt.js';
 import { toast } from './util.js';
@@ -216,6 +216,7 @@ export function wordKey(e) {
   const k = e.key;
   const v = view();
   if (!isDoc(v)) return false;
+  if (k === 'F8') return stepMark(e.shiftKey ? -1 : 1);   // 다음·이전 형광펜 (D143)
   if (k === 'F2') {
     const p = shownPick();
     if (!p || p.cross || p.seg !== p.endSeg) return false;
@@ -256,6 +257,43 @@ export function wordKey(e) {
     }
   }
   selectWords(p.line, p.ranges, words, anchor, focus);
+  return true;
+}
+
+/**
+ * F8·Shift+F8 (D143): 다음·이전 형광펜으로 가서 그 칠한 글을 고른다 — 이어서 M 으로 색을 바꾸거나 우클릭으로 메모를 단다.
+ * 기준은 고른 글(없으면 현재 줄의 처음). 끝에서는 돌지 않고 알린다
+ */
+function stepMark(dir) {
+  const v = view();
+  const marks = [...v.querySelectorAll('mark')].filter((m) => m.getClientRects().length && !m.closest('.lec-line-edit, .lec-unfold'));
+  if (!marks.length) {
+    toast(t('이 문서에는 형광펜이 없습니다'));
+    return true;
+  }
+  const sel = getSelection();
+  const at = document.createRange();
+  if (sel.rangeCount && !sel.isCollapsed && v.contains(sel.anchorNode)) {
+    const r = sel.getRangeAt(0);
+    if (dir > 0) at.setStart(r.endContainer, r.endOffset);
+    else at.setStart(r.startContainer, r.startOffset);
+  } else {
+    const here = S.pane?.here;
+    const el = here?.path === v.dataset.docPath ? blockOfLine(v, here.line) : null;
+    if (el) at.setStartBefore(el);
+    else at.setStart(v, 0);
+  }
+  at.collapse(true);
+  const next = dir > 0 ? marks.find((m) => at.comparePoint(m, 0) >= 0) : marks.findLast((m) => at.comparePoint(m, m.childNodes.length) <= 0);
+  if (!next) {
+    toast(dir > 0 ? t('마지막 형광펜입니다 — Shift+F8 은 앞의 것') : t('첫 형광펜입니다 — F8 은 다음 것'));
+    return true;
+  }
+  next.scrollIntoView({ block: 'center' });
+  const line = Number(/^\d+/.exec(next.closest('[data-lines]')?.dataset.lines || '')?.[0]);
+  if (line) followLine(line);
+  sel.selectAllChildren(next);
+  last = null;
   return true;
 }
 

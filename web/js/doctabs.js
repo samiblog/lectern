@@ -558,7 +558,9 @@ export function initDocTabs() {
   $('#lec-doctab-all').addEventListener('click', (e) => listMenu(e.currentTarget));
   // 본문의 링크·경로 표기·폴더 개요의 문서를 가운데 버튼으로 누르면 새 문서 탭에서 (Ctrl+누르기처럼 — doc.js·pathlink.js·overview.js)
   middleClickOpens($('#lec-panes'), 'a[href], area[href], a.path-link, .overview button[data-doc]');
-  on('open', (target) => { openTarget(target); });
+  on('open', async (target) => {   // 문서 화면은 navigate 의 line 을 듣지 않는다 — 열고 나서 그 줄로 (사이드바의 형광펜·할 일 줄, D143)
+    if (await openTarget(target) && target.line && target.type === 'doc') emit('go-line', { line: target.line });
+  });
   for (const ev of ['tab', 'pane', 'view', 'titles', 'tree', 'editor']) on(ev, render);
   render();
 }

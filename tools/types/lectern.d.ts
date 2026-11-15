@@ -116,6 +116,8 @@ declare global {
     treeLoaded: boolean;
     /** 트리를 받은 횟수 — 뒤에서 받는 제목 있는 트리가 그사이의 새 트리를 덮지 않게 (project.js, D140) */
     treeGen?: number;
+    /** 문서 속 형광펜·할 일 (GET /api/marks — tree.js, D143) */
+    marks?: { data: Map<string, any> | null; loading: Promise<any> | null; stale: boolean; error?: string | null };
     loaded: boolean;
     loading: Promise<any> | null;
     side: any;

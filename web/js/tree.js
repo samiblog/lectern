@@ -3,7 +3,7 @@
 // 최근 변경 목록은 recent.js (D50).
 
 import { S, emit, on } from './store.js';
-import { saveConfig, openExternal, revealInExplorer } from './api.js';
+import { saveConfig, openExternal, revealInExplorer, getJSON } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
@@ -13,6 +13,19 @@ import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
+
+// '문서' 묶음의 하위 묶음 (D143): 한 번에 하나만 펼치고 펼친 것 아래에 트리. 종류로 거르는 것(keep)과 문서 속을 읽어 거르는 것(content —
+// 형광펜·할 일, GET /api/marks)이 있다. 문서가 없는 종류와 '전체'와 같은 종류는 머리줄을 감춘다. 설정 docs_kind, 프로젝트 탭마다 tab.side.docKind
+const KINDS = () => [
+  { id: 'all', name: t('전체') },
+  { id: 'md', name: t('문서'), keep: (f) => f.kind === 'markdown' && !f.deck },
+  { id: 'deck', name: t('슬라이드'), keep: (f) => !!f.deck },
+  { id: 'html', name: 'HTML', keep: (f) => f.kind === 'html' },
+  { id: 'work', name: t('업무'), keep: (f) => f.name.toLowerCase() === 'work.md' },
+  { id: 'marks', name: t('형광펜'), content: true },
+  { id: 'tasks', name: t('할 일'), content: true },
+];
+export const MARK_NAMES = () => ({ '': t('노랑'), green: t('초록'), pink: t('분홍'), blue: t('하늘') });
 let panel = 'files';   // 사이드바 탭: files | recent | search | parts
 
 // 목록에는 파일 이름을 보이고 마우스를 올리면 문서 제목 (사용자 요청, v0.7.1). '제목' 버튼(설정 show_titles)을 켜면 반대로
@@ -48,33 +61,142 @@ function fileRow(f, depth, extra = null) {
   return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="0">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
 }
 
-function nodesHtml(nodes, depth) {
+/** opts: {allOpen — 폴더를 모두 펼쳐 보임(S.open 은 그대로), after(f, depth) — 문서 행 아래에 붙일 줄} */
+function nodesHtml(nodes, depth, opts = null) {
   const markup = [];
   for (const n of sideOrder(nodes)) {
     if (n.type === 'file') {
       markup.push(fileRow(n, depth));
+      if (opts?.after) markup.push(opts.after(n, depth + 1));
       continue;
     }
-    const open = S.open.has(n.path);
+    const open = !!opts?.allOpen || S.open.has(n.path);
     const cls = ['row', 'dir'];
     if (n.path === activeDir()) cls.push('active');
     markup.push([html`<div class="${cls.join(' ')}" data-dir="${n.path}" style="--d:${depth}" title="${n.path}" tabindex="0">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>`, html`${!open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`]);
-    if (open) markup.push(nodesHtml(n.children, depth + 1));
+    if (open) markup.push(nodesHtml(n.children, depth + 1, opts));
   }
   return markup;
+}
+
+/** keep 에 맞는 문서만 남긴 트리 (빈 폴더는 뺀다) */
+function pickDocs(nodes, keep) {
+  const out = [];
+  for (const n of nodes) {
+    if (n.type === 'file') {
+      if (keep(n)) out.push(n);
+    } else {
+      const children = pickDocs(n.children, keep);
+      if (children.length) out.push({ ...n, children });
+    }
+  }
+  return out;
+}
+
+/** 탭의 형광펜·할 일 (GET /api/marks) — Map(경로 → {marks, tasks}). 아직 받지 않았으면 null */
+const marksOf = (tab) => tab?.marks?.data ?? null;
+
+/** 형광펜·할 일을 받는다 — 받은 것이 그대로면(stale 이 아니면) 다시 받지 않는다. 서버는 바뀐 문서만 다시 읽는다 */
+export function loadMarks(tab = S.tab) {
+  if (!tab) return;
+  const m = (tab.marks ||= { data: null, loading: null, stale: true });
+  if (m.loading || (m.data && !m.stale)) return;
+  m.stale = false;
+  m.loading = getJSON(`/api/marks?p=${encodeURIComponent(tab.id)}`)
+    .then((r) => { m.data = new Map(r.docs.map((d) => [d.path, d])); m.error = null; })
+    .catch((e) => { m.error = e.message; m.data ||= new Map(); })
+    .finally(() => {
+      m.loading = null;
+      if (tab === S.tab) render();
+    });
+}
+
+/** 하위 묶음마다의 개수 — 형광펜·할 일은 받은 뒤에만 (칠한 곳·열린 할 일의 수) */
+function kindCounts(tab) {
+  const got = marksOf(tab);
+  const n = {};
+  for (const k of KINDS()) {
+    if (k.content) n[k.id] = got ? [...got.values()].reduce((sum, d) => sum + d[k.id].length, 0) : null;
+    else n[k.id] = k.keep ? tab.files.filter(k.keep).length : tab.files.length;
+  }
+  return n;
+}
+
+/** 보일 하위 묶음 — 문서가 없거나 '전체'와 같은 종류는 뺀다. 형광펜·할 일은 Markdown 문서가 있으면 늘 */
+function shownKinds(tab) {
+  if (!tab?.treeLoaded) return [];
+  const n = kindCounts(tab);
+  const md = tab.files.some((f) => f.kind === 'markdown');
+  const out = KINDS().filter((k) => k.id === 'all' || (k.content ? md : n[k.id] > 0 && n[k.id] < n.all)).map((k) => ({ ...k, n: n[k.id] }));
+  return out.length > 1 ? out : [];
+}
+
+/** 펼친 하위 묶음 — 보이지 않는 것을 골라 두었으면 '전체' */
+function currentKind(kinds = shownKinds(S.tab)) {
+  const id = S.tab?.side?.docKind ?? S.config.docs_kind;
+  return kinds.find((k) => k.id === id) ?? kinds[0] ?? KINDS()[0];
+}
+
+/** 하위 묶음의 머리줄 — 펼친 것까지는 트리 위에, 나머지는 트리 아래에 */
+function renderKinds(kinds) {
+  const cur = currentKind(kinds);
+  const i = kinds.findIndex((k) => k.id === cur.id);
+  const head = (k) => {
+    const open = k.id === cur.id;
+    const n = k.content && k.n == null ? '' : String(k.n);
+    return html`<button type="button" class="kind-head${open ? ' open' : ''}" data-kind="${k.id}" aria-expanded="${open}"><span class="caret${open ? ' open' : ''}" aria-hidden="true"></span><span>${k.name}</span><span class="n">${n}</span></button>`;
+  };
+  setHtml($('#lec-doc-kinds-top'), kinds.slice(0, i + 1).map(head));
+  setHtml($('#lec-doc-kinds-bottom'), kinds.slice(i + 1).map(head));
+  $('#lec-docs').classList.toggle('kinds', kinds.length > 0);
+}
+
+/** 형광펜·할 일 줄 — 문서 행 아래 한 단 들여 */
+function itemRows(kind, f, items, depth) {
+  return items.map((it) => {
+    const swatch = kind === 'marks' ? ` mark-${it.color || 'yellow'}` : ' task';
+    return html`<div class="row item ${kind}" data-item-doc="${f.path}" data-line="${it.line}" data-color="${it.color ?? ''}" data-text="${it.text}" style="--d:${depth}" title="${t('{a}행', { a: it.line })} · ${it.text}" tabindex="-1"><span class="caret-space"></span><span class="swatch${swatch}" aria-hidden="true"></span><span class="label">${it.text || '…'}</span></div>`;
+  });
+}
+
+/** 형광펜·할 일 하위 묶음의 목록: 그것이 있는 문서와 그 아래 줄들 (폴더는 모두 펼친다). 거르는 중이면 이름·제목·줄의 글로 */
+function contentHtml(kind, got, terms) {
+  const itemsOf = (f) => got.get(f.path)?.[kind] ?? [];
+  const empty = kind === 'marks' ? t('칠한 곳이 없습니다 — 글을 고르고 M 을 누르면 형광펜') : t('열린 할 일이 없습니다');
+  if (terms) {
+    const rows = [];
+    for (const f of S.files) {
+      const items = itemsOf(f);
+      if (!items.length) continue;
+      const named = terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w));
+      const hits = named ? items : items.filter((it) => terms.every((w) => it.text.toLowerCase().includes(w)));
+      if (hits.length) rows.push(fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''), itemRows(kind, f, hits, 1));
+    }
+    return rows.length ? rows : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`;
+  }
+  const nodes = pickDocs(S.tree, (f) => itemsOf(f).length > 0);
+  return nodes.length ? nodesHtml(nodes, 0, { allOpen: true, after: (f, depth) => itemRows(kind, f, itemsOf(f), depth) }) : html`<p class="side-empty">${empty}</p>`;
 }
 
 function renderTree() {
   const box = $('#lec-tree');
   const scroll = box.scrollTop;
+  const kinds = shownKinds(S.tab);
+  renderKinds(kinds);
   if (!S.tab?.treeLoaded) {   // 탭이 없거나 아직 트리를 읽는 중
     box.innerHTML = '';
     return;
   }
+  const kind = currentKind(kinds);
   const query = $('#lec-filter').value.trim().toLowerCase();
-  if (query) {
+  if (kind.content) {   // 형광펜·할 일 (D143)
+    const got = marksOf(S.tab);
+    if (!got || S.tab.marks?.stale) loadMarks(S.tab);
+    setHtml(box, got ? contentHtml(kind.id, got, query ? query.split(/\s+/) : null) : html`<p class="side-empty">${t('문서를 읽는 중…')}</p>`);
+  } else if (query) {
     const terms = query.split(/\s+/);
     const hits = S.files.filter((f) => {
+      if (kind.keep && !kind.keep(f)) return false;
       const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
       return terms.every((w) => hay.includes(w));
     });
@@ -83,7 +205,8 @@ function renderTree() {
       : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`);
   } else {
     // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)
-    setHtml(box, S.tree.length ? nodesHtml(S.tree, 0) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
+    const nodes = kind.keep ? pickDocs(S.tree, kind.keep) : S.tree;
+    setHtml(box, nodes.length ? nodesHtml(nodes, 0) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
 }
@@ -189,6 +312,10 @@ function onTab({ tab, prev }) {
 function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row) return;
+  if (row.dataset.itemDoc != null) {   // 형광펜·할 일 줄: 그 문서의 그 줄로 (D143)
+    if (!repeatClick(e)) emit('open', { type: 'doc', path: row.dataset.itemDoc, line: Number(row.dataset.line), ...openHow(e) });
+    return;
+  }
   if (row.dataset.doc != null) {
     if (!repeatClick(e)) emit('open', { type: 'doc', path: row.dataset.doc, ...openHow(e) });   // D91
     return;
@@ -271,16 +398,50 @@ export function docMenuItems(path, type = 'doc') {
   return menuGroups([{ header: path }], opens, asks, pathMenuItems(path, true), [renameItem(path)]);
 }
 
+/** 형광펜·할 일 줄의 우클릭 (D143): 그 자리로, 메모 달기, 형광펜이면 이것만·이 문서의 것 모두 지우기 */
+function itemMenu(row) {
+  const path = row.dataset.itemDoc;
+  const line = Number(row.dataset.line);
+  const text = row.dataset.text;
+  const mark = row.classList.contains('marks');
+  const ro = !!S.tab?.readonly;
+  /** @type {MenuItem[]} */
+  const items = [{ header: `${path} · ${t('{a}행', { a: line })}` }, { label: t('그 자리로 가기'), action: () => emit('open', { type: 'doc', path, line }) }];
+  if (!ro) items.push({ label: t('메모 달기'), tip: t('메모 패널에 — 이 글이 제목이고, 메모에서 이 자리로 돌아옵니다 (줄이 밀려도 이 글로 찾습니다)'), action: () => emit('new-note', { title: text, path, line, end: line, find: text }) });
+  if (mark && !ro) {
+    items.push('-', { label: t('이 형광펜 지우기'), tip: t('글은 그대로 두고 칠한 것만'), action: () => emit('clear-marks', { path, line, text, color: row.dataset.color }) },
+      { label: t('이 문서의 형광펜 모두 지우기…'), action: () => emit('clear-marks', { path }) });
+  }
+  return items;
+}
+
+/**
+ * 형광펜 하위 묶음의 문서 행: 이 문서의 형광펜 모두·색마다 지우기
+ * @returns {MenuItem[]}
+ */
+function clearItems(path) {
+  const marks = marksOf(S.tab)?.get(path)?.marks ?? [];
+  if (!marks.length || S.tab?.readonly) return [];
+  const colors = [...new Set(marks.map((m) => m.color || ''))];
+  const names = MARK_NAMES();
+  return ['-', { label: t('이 문서의 형광펜 모두 지우기…'), tip: t('{n}곳 — 글은 그대로', { n: marks.length }), action: () => emit('clear-marks', { path }) },
+    ...(colors.length > 1 ? colors.map((c) => ({ label: t('이 문서의 {color} 형광펜만 지우기…', { color: names[c] }), action: () => emit('clear-marks', { path, color: c }) })) : [])];
+}
+
 function onContextMenu(e) {
   const row = e.target.closest('.row');
   e.preventDefault();
+  if (row?.dataset.itemDoc != null) {
+    showMenu(e.clientX, e.clientY, itemMenu(row));
+    return;
+  }
   if (!row) {   // 목록의 빈 곳
     if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), newFolderItem(''), workCardItem()]);
     return;
   }
   if (row.dataset.doc != null) {
     const path = row.dataset.doc;
-    const items = docMenuItems(path);
+    const items = [...docMenuItems(path), ...(currentKind().id === 'marks' ? clearItems(path) : [])];
     showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), deleteItem(path)]);
   }
   else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
@@ -322,9 +483,22 @@ export function initTree() {
   });
   $('#lec-btn-sort').addEventListener('click', openSort);
   $('#lec-btn-expand').addEventListener('click', openExpand);
+  for (const box of $$('#lec-docs .doc-kinds')) {   // 하위 묶음의 머리줄 (D143)
+    box.addEventListener('click', (e) => {
+      const id = e.target.closest('.kind-head')?.dataset.kind;
+      if (!id || !S.tab || currentKind().id === id) return;
+      S.tab.side.docKind = id;
+      saveConfig({ docs_kind: id });
+      $('#lec-tree').scrollTop = 0;
+      render();
+    });
+  }
   for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
-  on('tree', render);
+  on('tree', () => {   // 문서가 바뀌었으면 형광펜·할 일도 다시 (보고 있을 때만 받는다)
+    if (S.tab?.marks) S.tab.marks.stale = true;
+    render();
+  });
   on('changed', render);
   on('tab', onTab);
   on('view', revealCurrent);

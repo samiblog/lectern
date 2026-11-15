@@ -1,6 +1,7 @@
 """문장 속 서식 (D141): 칸 안에서 고른 글에 굵게·기울임·취소선·코드·형광펜·글자색 — 키와 우클릭 선택 상자, 다시 하면 풀기,
 색은 차례로, 칸 안에서도 모양이 보인다(글자는 원문 그대로), 줄 전체의 한 글자 키(I·S·M·F), 저장한 화면의 색."""
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -28,6 +29,11 @@ PAINT = """() => Object.fromEntries([...CSS.highlights.entries()].filter(([k]) =
 
 
 def read():
+    for _ in range(40):   # 서버가 임시 파일로 바꿔 끼우는 순간에는 Windows 가 열기를 막는다 (PermissionError) — 잠깐 뒤에 다시
+        try:
+            return doc.read_text(encoding='utf-8').replace('\r\n', '\n')
+        except PermissionError:
+            time.sleep(0.05)
     return doc.read_text(encoding='utf-8').replace('\r\n', '\n')
 
 

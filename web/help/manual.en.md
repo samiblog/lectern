@@ -98,7 +98,20 @@ The **Files** tab is split into three groups.
 | Code | Source (py, js, ts…), scripts (ps1, bat, EViews prg), web (css) and config (json, yaml, toml) | Click once for the code view, double-click for the editor |
 | Other files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
 
-- Click a group header ('Documents 10', 'Code 3', 'Other files 4') to collapse that group. Drag the divider between groups to resize them, and double-click it to reset.
+- **Only one group is open at a time.** Click a group header ('Documents 10', 'Code 3', 'Other files 4') to open it; the others shrink to their headers and the open group takes all the remaining height. Closed headers still show counts, and while you type in the filter box they show how many match. Each project tab remembers which group was open.
+- **Sub-groups inside Documents**: when Documents is open, its sub-groups are stacked under it, indented. Only one opens at a time, and the tree appears right below the open one. Kinds with no documents, or the same as All, are hidden.
+
+  | Sub-group | Shows |
+  |---|---|
+  | All | Every document |
+  | Documents | Markdown documents (without slides) |
+  | Slides | Lectern slides |
+  | HTML | HTML documents |
+  | Work | The `WORK.md` of each folder |
+  | Highlights | Documents with highlighted text — the highlighted text listed under each document, with its color |
+  | To-dos | Documents with open to-dos — the to-dos listed under each document |
+
+  Highlights and To-dos read the documents' text, so they take a moment the first time you open them (afterwards only changed documents are read again). Their counts appear then. Code blocks are skipped.
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
 - **Sort** picks the list order: by name, time or type. Folders always come first, then files. By time puts the newest on top, and a folder follows its newest file. By type goes by file extension.
 - Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
@@ -271,7 +284,7 @@ Write and edit an md document from start to finish without opening the full edit
 
 Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): picking lines and twenty cases to try.
 
-**There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z**. A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
+**There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z** (picked lines and focus stay on the lines you undid). A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
 
 ### Four states of a line
 
@@ -310,6 +323,14 @@ You can also select words in the reading view and format them straight away, wit
 - Right-click selected text for a formatting box — formats and colors, Clear formatting, Edit here, Copy selected text and This block's menu.
 - While text is selected, Shift+→ extends it instead of sending to the terminal. Press Esc first to send.
 - A note explains what cannot be done: a selection over several lines (pick the lines and format whole lines), across table cells, from the middle of a bold or colored part to outside it, or on a line with math or footnotes (press F2 and format inside the cell).
+
+### Highlighting to come back later
+
+A highlight is not only a look; it also marks places to come back to.
+
+- **Going back**: the **Highlights** sub-group under Documents in the sidebar lists highlighted text by document. Click one to go to that line. Typing in the filter box also matches the highlighted text. Inside a document, **F8** goes to the next highlight and **Shift+F8** to the previous one and selects it — press M to change its color or right-click to format it.
+- **Adding a note**: right-click a highlight and choose **Add a note** to create a note in the notes panel titled with the highlighted text. Its 'Go to source' brings you back, and finds the text even if lines have moved.
+- **Removing**: right-click a highlight for **Remove this highlight**, or a document row for **Remove all highlights in this document…** (and per color when there are several). Removing all asks first with the count. Only the highlighting goes; the text stays, and one **Ctrl+Z** undoes it. The document is opened first so you see the change. There is no way to remove highlights from many documents at once.
 
 ### New document
 
