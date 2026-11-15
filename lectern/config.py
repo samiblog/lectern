@@ -21,7 +21,7 @@ from .paths import config_dir
 MAX_RECENT = 10
 MAX_PROJECTS = 20     # 마지막 위치를 기억하는 프로젝트 수
 MAX_POSITIONS = 100   # 프로젝트마다 스크롤 위치를 기억하는 문서 수
-MAX_DOC_TABS = 20     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67 — 화면의 doctabs.js MAX_DOCS 와 같게)
+MAX_DOC_TABS = 40     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67·D140 — 화면의 doctabs.js MAX_DOCS 와 같게)
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 MAX_WORK_FOLDERS = 200   # 업무 폴더 목록에 기억하는 폴더 수 (D124 — WORK.md 가 있는 폴더)
 

@@ -110,6 +110,8 @@
 
 ## 서버·설정·설치
 
+- 트리의 제목은 설정 폴더의 제목 기억(`titlecache.py`, D140)에서 온다 — 수정 시각(ns)과 크기가 같으면 파일을 열지 않는다. 제목을 뽑는 규칙(`docinfo.extract_info`)을 바꾸면 `titlecache.VERSION` 을 올려야 옛 기억이 버려진다. 트리 노드에 문서 내용에서 뽑은 값을 더하려면 기억에도 넣는다 (`scanner.Titles.of` — 아니면 두 번째 실행부터 그 값이 없다). 요약처럼 본문 글은 기억에 적지 않는다. 화면의 첫 트리는 `quick=1` 이라 제목이 비어 올 수 있다 (`pending`) — 트리를 받자마자 제목에 기대는 코드는 뒤에 오는 'tree' 이벤트에서 다시 맞춘다.
+
 - `/` 의 CSP 는 `script-src 'self' 'unsafe-eval'` 이다 (D38 — 문서에 끼어든 스크립트가 터미널 비밀값을 읽지 못하게). `index.html` 에 인라인 `<script>`·`onclick=` 을 넣으면 돌지 않는다. vendor 를 더할 때 인라인 스크립트를 끼워 넣는 라이브러리인지 본다.
 - 보기만 하는 프로젝트(D71 — `tab.readonly`, 서버 `Project.readonly`·`paths.is_protected`)에서는 파일을 고치거나 셸을 띄우는 새 길을 만들면 `util.blockedReadOnly(tab)` 를 앞에 두고, 서버의 쓰기는 `editing` 의 `_protect` 를 거친다 (대상 파일 기준 — 위 폴더를 프로젝트로 열어도 막히게).
 - 트리 스캔은 `Project.scan()` 을 거친다 (탭마다) — 변경 기록(touch 가 아닌 마지막 순번 `tree_seq`, D50)이 그대로면 마지막 결과를 다시 쓰므로 돌려받은 노드 목록을 고치지 않는다 (복사해서 쓴다). 감시가 놓치는 변경은 F5(`fresh`)로 새로 훑는다.

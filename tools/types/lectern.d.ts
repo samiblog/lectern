@@ -114,6 +114,8 @@ declare global {
     open: Set<string>;
     lastSync: any;
     treeLoaded: boolean;
+    /** 트리를 받은 횟수 — 뒤에서 받는 제목 있는 트리가 그사이의 새 트리를 덮지 않게 (project.js, D140) */
+    treeGen?: number;
     loaded: boolean;
     loading: Promise<any> | null;
     side: any;

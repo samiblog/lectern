@@ -1,11 +1,11 @@
-// 문서 탭 (D64·D67): 한 프로젝트 탭에서 문서를 20개까지 열어 두고 오간다. 문서 탭마다 칸(panes.js) 하나 — 화면·뒤로/앞으로 기록·스크롤·
+// 문서 탭 (D64·D67·D140): 한 프로젝트 탭에서 문서를 40개까지 열어 두고 오간다. 문서 탭마다 칸(panes.js) 하나 — 화면·뒤로/앞으로 기록·스크롤·
 // 편집 상자·목차·상태줄이 따로다. tab.panes 는 탭 차례, tab.pane 은 고른 문서 탭의 칸.
 //
 // - 문서 위의 문서 탭 줄(#lec-doctabs): 이름(트리와 같게 — 파일 이름이나 '제목' 버튼이면 제목), 저장하지 않은 편집 ●, ×(하나뿐이면 없음),
 //   + (새 탭에 문서 열기 — 빠른 열기), 오른쪽 끝 ∨ (열린 문서 탭 목록 — 넘쳐 가려진 탭도 골라 간다, D67).
 //   가운데 버튼으로 누르면 닫고, 우클릭은 닫기·다른 탭 닫기와 경로 메뉴.
 // - 여는 곳은 모두 'open' 이벤트 (트리·목록·링크·검색·빠른 열기…): 그 문서가 다른 문서 탭에 열려 있으면 그 탭으로, newTab(Ctrl+누르기·가운데 버튼·
-//   우클릭 '새 탭에서 열기'·+)이면 새 문서 탭에서, 아니면 지금 탭에서. 20개가 차 있으면 가장 오래 안 본 탭(저장하지 않은 편집이 없는 것)에서 연다.
+//   우클릭 '새 탭에서 열기'·+)이면 새 문서 탭에서, 아니면 지금 탭에서. 40개가 차 있으면 가장 오래 안 본 탭(저장하지 않은 편집이 없는 것)에서 연다.
 //   사이드바 목록에서 두 번 누르면(twice) 첫 누르기가 지금 탭에서 연 것을 새 문서 탭으로 옮긴다 (openTwice, D67).
 // - 키 (main.js): Alt+1~8 그 순번의 문서 탭·Alt+9 마지막 문서 탭, Ctrl+F4 문서 탭 닫기 — 프로젝트 탭의 Ctrl+1~9·Ctrl+Tab·Ctrl+W 는 그대로.
 // - 다음 실행: position.js 가 열어 둔 문서 탭(md·html 문서)을 서버에 알리고(docs), 탭을 처음 열 때 되살린다 (restoreDocTabs) —
@@ -26,7 +26,7 @@ import { html, setHtml } from './html.js';
 import { $, basename, toast, middleClickOpens, findAnchor } from './util.js';
 import { t } from './i18n.js';
 
-export const MAX_DOCS = 20;   // 서버 config.MAX_DOC_TABS 와 같게 (D67 — v0.35.0 은 5개)
+export const MAX_DOCS = 40;   // 서버 config.MAX_DOC_TABS 와 같게 (D140 — v0.35.0 은 5개, v0.38.0 은 20개. 탭이 많아도 문서 여는 속도는 같다고 쟀다)
 
 // 문서 탭이 보이는 것: 그린 화면, 아직 그리지 않은 것(되살린 탭 — deferred), 여는 중인 것(coming)
 const viewOf = (pane) => pane.current || pane.deferred || pane.coming;
@@ -85,7 +85,7 @@ const oldestSpare = (tab, keep) => tab.panes.filter((p) => p !== keep && !p.edit
 const fullMessage = () => t('문서 탭은 {n}개까지입니다 — 모두 저장하지 않은 편집이 있어 바꿀 탭이 없습니다. 탭 하나를 닫으세요 (Ctrl+W)', { n: MAX_DOCS });
 
 /**
- * 새 문서 탭에서 연다 — 그 문서가 이미 다른 탭에 열려 있으면 그 탭으로. 20개가 차 있으면 가장 오래 안 본 탭(저장하지 않은 편집이 없는 것)에서.
+ * 새 문서 탭에서 연다 — 그 문서가 이미 다른 탭에 열려 있으면 그 탭으로. 40개가 차 있으면 가장 오래 안 본 탭(저장하지 않은 편집이 없는 것)에서.
  * 그린 뒤에 고른다 (빈 칸이 잠깐 보이지 않게). 연 칸, 열지 못했으면 null
  */
 export async function openInNewTab(target) {

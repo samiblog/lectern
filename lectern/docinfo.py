@@ -211,6 +211,12 @@ def extract_html_info(text: str) -> dict[str, Any]:
     }
 
 
+def cached_info(path: Path, st: Any) -> dict[str, Any] | None:
+    """이번 실행에 이미 읽어 둔 제목·요약 — 파일을 열지 않는다. 없으면 None (scanner 의 제목 기억, D140)"""
+    hit = _CACHE.get(str(path))
+    return hit[1] if hit and hit[0] == (st.st_mtime_ns, st.st_size) else None
+
+
 def doc_info(path: Path, st: Any = None) -> dict[str, Any]:
     """파일의 제목·요약. 읽을 수 없으면 빈 값."""
     empty = {'title': None, 'summary': ''}

@@ -78,8 +78,8 @@ def test_positions_are_bounded(tmp_path):
     assert pos['doc'] == f'd{MAX_POSITIONS + 4}.md' and len(pos['scroll']) == MAX_POSITIONS
     assert cfg.position(r'C:\nowhere') == {'doc': None, 'scroll': {}, 'docs': []}
     docs = [f'd{i}.md' for i in range(MAX_DOC_TABS + 1)]
-    cfg.remember_position(r'C:\p0', 'd1.md', 3, docs)   # 문서 탭은 20개까지 (D64·D67)
-    assert MAX_DOC_TABS == 20 and cfg.position(r'C:\p0')['docs'] == docs[:MAX_DOC_TABS]
+    cfg.remember_position(r'C:\p0', 'd1.md', 3, docs)   # 문서 탭은 40개까지 (D64·D67·D140)
+    assert MAX_DOC_TABS == 40 and cfg.position(r'C:\p0')['docs'] == docs[:MAX_DOC_TABS]
 
 
 def test_old_and_broken_positions(tmp_path):

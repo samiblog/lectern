@@ -18,7 +18,7 @@ from collections.abc import Iterable, Iterator
 from pathlib import Path
 from typing import Any
 
-from .docinfo import doc_info
+from .docinfo import cached_info, doc_info
 from .osutil import how_to_open
 
 DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html'}
@@ -59,17 +59,48 @@ def _is_link(entry: os.DirEntry) -> bool:
         return True
 
 
+class Titles:
+    """트리의 제목을 어디서 얻을지 (D140). cache: 프로젝트의 제목 기억(titlecache.TitleCache — get·put), quick: 기억한 제목만 쓰고
+    파일은 열지 않는다. 훑은 뒤 missing 은 quick 이라 제목을 모르는 채 둔 문서 수, seen 은 본 문서의 경로"""
+
+    def __init__(self, cache: Any = None, quick: bool = False):
+        self.cache = cache
+        self.quick = quick
+        self.missing = 0
+        self.seen: set[str] = set()
+
+    def of(self, full: Path, rel: str, st: os.stat_result) -> tuple[str | None, bool]:
+        """(제목, Lectern 슬라이드인지). 수정 시각과 크기가 기억과 같으면 파일을 열지 않는다"""
+        self.seen.add(rel)
+        known = self.cache.get(rel, st) if self.cache else None
+        if known is not None:
+            return known
+        info = cached_info(full, st)
+        if info is None:
+            if self.quick:
+                self.missing += 1
+                return None, False
+            info = doc_info(full, st)
+            if cached_info(full, st) is None:   # 읽지 못했다 (잠긴 파일 등) — 기억하지 않는다
+                return info['title'], bool(info.get('deck'))
+        got = (info['title'], bool(info.get('deck')))
+        if self.cache:
+            self.cache.put(rel, st, got)
+        return got
+
+
 def scan(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, rel: str = '',
-         with_info: bool = True, html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS) -> list[Node]:
-    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로. 파일 노드의 kind 는 markdown | html."""
+         with_info: bool = True, html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, titles: Titles | None = None) -> list[Node]:
+    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로. 파일 노드의 kind 는 markdown | html.
+    titles: 제목을 기억에서 얻는다 (D140 — 없으면 문서마다 앞부분을 읽는다)"""
     excl = frozenset(x.lower() for x in exclude)
     html_excl = frozenset(x.lower() for x in html_exclude)
     html_ok = not any(part.lower() in html_excl for part in rel.split('/') if part)
-    return _scan_dir(root, rel, excl, with_info, html_excl, html_ok)
+    return _scan_dir(root, rel, excl, with_info, html_excl, html_ok, titles or Titles())
 
 
 def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
-              html_excl: frozenset[str], html_ok: bool) -> list[Node]:
+              html_excl: frozenset[str], html_ok: bool, titles: Titles) -> list[Node]:
     base = root / rel if rel else root
     try:
         with os.scandir(base) as it:
@@ -93,7 +124,7 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
         if is_dir:
             if name.lower() in exclude:
                 continue
-            children = _scan_dir(root, path, exclude, with_info, html_excl, html_ok and name.lower() not in html_excl)
+            children = _scan_dir(root, path, exclude, with_info, html_excl, html_ok and name.lower() not in html_excl, titles)
             if children:
                 dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
         else:
@@ -103,9 +134,8 @@ def _scan_dir(root: Path, rel: str, exclude: frozenset[str], with_info: bool,
             node: Node = {'type': 'file', 'name': name, 'path': path, 'kind': kind,
                           'mtime': st.st_mtime, 'size': st.st_size}
             if with_info:
-                info = doc_info(Path(entry.path), st)
-                node['title'] = info['title']
-                if info.get('deck'):
+                node['title'], deck = titles.of(Path(entry.path), path, st)
+                if deck:
                     node['deck'] = True
             files.append(node)
     dirs.sort(key=lambda n: natural_key(n['name']))

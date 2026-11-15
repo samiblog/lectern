@@ -16,7 +16,7 @@ proj = base / 'proj'
 (proj / 'b.md').write_text('# 문서 나\n\n찾을말 needle 이 있습니다.\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n', encoding='utf-8')
 (proj / 'c.md').write_text('# 문서 다\n\n글\n', encoding='utf-8')
 (proj / 'lines.md').write_text('# 개조식\n\n첫째 줄\n둘째 줄\n셋째 줄\n\n공백 둘 끝  \n다음 줄\n\n꺾쇠 줄<br>이어지는 글\n\n- 항목 첫 줄\n  항목 둘째 줄\n', encoding='utf-8')
-for i in range(22):
+for i in range(42):
     (proj / 'docs' / f'n{i:02d}.md').write_text(f'# 번호 {i}\n\n글\n', encoding='utf-8')
 (proj / 'code' / 'x.py').write_text(''.join(f'value{i} = {i}\n' for i in range(40)), encoding='utf-8')
 
@@ -158,12 +158,12 @@ try:
         check('코드 목록: 새 문서 탭', tabs() == ['a.md', '*code/x.py'], tabs())
         reset()
 
-        print('[문서 탭 20개]')
+        print('[문서 탭 40개]')
         page.evaluate("""async () => { const { emit } = await import('/static/js/store.js');
-          for (let i = 0; i < 21; i += 1) emit('open', { type: 'doc', path: `docs/n${String(i).padStart(2, '0')}.md`, newTab: true, behind: true }); }""")
-        settle(1500)
+          for (let i = 0; i < 41; i += 1) emit('open', { type: 'doc', path: `docs/n${String(i).padStart(2, '0')}.md`, newTab: true, behind: true }); }""")
+        settle(2500)
         n = len(tabs())
-        check('뒤에서 여는 탭도 20개까지', n == 20, n)
+        check('뒤에서 여는 탭도 40개까지 (D140)', n == 40, n)
         reset()
 
         print('[문서 탭 단축키]')

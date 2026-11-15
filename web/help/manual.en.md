@@ -29,7 +29,7 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 |---|---|
 | Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, document width, **line numbers**, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
 | Tab bar | One tab per open project, open folder (+), and the **Contents** and **Terminal** buttons at the right end |
-| Document tab row | Just above the document — the documents open in this project (up to 20), open a document in a new tab (+), the list of open document tabs (∨) and Spread all (▦) at the right end |
+| Document tab row | Just above the document — the documents open in this project (up to 40), open a document in a new tab (+), the list of open document tabs (∨) and Spread all (▦) at the right end |
 | Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
 | Main area (center) | Documents, folder overviews and the code view |
 | Contents (right) | The current document's headings and elements such as tables and figures. When the terminal is open, it takes this place |
@@ -46,13 +46,13 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 
 ## Document tabs
 
-Keep up to 20 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
+Keep up to 40 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
 
 - **Clicking a document in the sidebar opens it in a new document tab**, and the document you were reading stays open — the tree, the Code and Other files lists, folder view, Recent, search results, Elements and Open document (Ctrl+P) all work this way. If the current tab shows a folder overview, it opens there.
 - **Ctrl+click** or **middle-click** opens a new document tab behind the current one (as in a browser — the tab is drawn when you click it). **Alt+click** opens in the current tab. In quick open, Enter, Ctrl+Enter and Alt+Enter do the same.
 - Links and paths in a document open in the current tab (Alt+← comes back). Use Ctrl+click, the middle button or **Open in new tab** in the right-click menu for a new document tab.
 - Clicking a document that is already open in another tab goes to that tab (a document is not opened twice).
-- When all 20 are in use, the tab you looked at least recently is reused (tabs with unsaved edits are left alone).
+- When all 40 are in use, the tab you looked at least recently is reused (tabs with unsaved edits are left alone).
 - **Back and forward** (Alt+← →, the mouse back and forward buttons) also undo jumps within a document — after going somewhere from the contents, a section link, a footnote, find, Elements or search results, they return you to where you were reading (scroll and current line), unfolding the section if needed. However many find results you step through, one press returns to where you started. Moves by scrolling or ↑ ↓ are not recorded.
 - Each tab keeps its own reading position, back/forward history and edit-mode changes. A tab with unsaved edits shows **●**. So you can edit a document in one tab while reading material in another, and Send from the Clip tab opens the receiving document in its own tab.
 - To switch, click a tab or press **Alt+1~8** (by position) or **Alt+9** (last tab). When there are more tabs than fit, scroll the row with the mouse wheel or click **∨** at its right end (the number beside it is how many are open) and pick from the list of open document tabs. **Ctrl+Tab** and **Ctrl+Shift+Tab** (or Ctrl+PageDown, PageUp) go to the next and previous document tab. To close, click its ×, middle-click it or press **Ctrl+W** (or Ctrl+F4 — the last tab is not closed); **Ctrl+Shift+T** reopens a closed document tab. **Ctrl+T** opens a document in a new document tab. Right-click a tab for Close other document tabs and copying its path.

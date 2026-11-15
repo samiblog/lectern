@@ -17,7 +17,8 @@ from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
 from .paths import is_protected, samples_dir, skills_dir, web_dir
-from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, is_code, iter_files, scan, scan_others
+from .scanner import DEFAULT_EXCLUDE_DIRS, DEFAULT_HTML_EXCLUDE_DIRS, Node, Titles, is_code, iter_files, scan, scan_others
+from .titlecache import TitleCache
 from .search import TextCache
 from .terminal import Terminals
 from .windows import WindowBoard
@@ -40,6 +41,8 @@ class Project:
         self._scans: dict[tuple, tuple[int, list]] = {}
         self._others_at = 0        # 마지막 문서 외 파일 스캔을 시작할 때의 변경 순번 (그 뒤로 내용이 바뀐 파일은 recent_others 가 다시 본다)
         self.texts = TextCache()   # 전체 검색이 읽은 글 (수정 시각·크기가 그대로면 다시 쓴다)
+        # 제목 기억 (D140): 설정 폴더의 cache\titles-….json — 다음 실행에 문서마다 파일을 열지 않고 트리를 그린다
+        self.titles = TitleCache(root, config.path.parent)
         # 보기만 하는 프로젝트 (D71 — Lectern 프로그램 폴더 안: 예제 등). 터미널을 열지 않고 파일을 고치지 않는다
         self.readonly = is_protected(root)
 
@@ -67,11 +70,35 @@ class Project:
         hit = self._scans.get(key)
         if hit and hit[0] == seq and not fresh:
             return hit[1]
-        nodes = scan(self.root, self.exclude, rel=rel, with_info=with_info, html_exclude=self.html_exclude)
+        titles = Titles(self.titles)
+        nodes = scan(self.root, self.exclude, rel=rel, with_info=with_info, html_exclude=self.html_exclude, titles=titles)
+        self._keep(key, seq, nodes, titles if with_info and not rel else None)
+        return nodes
+
+    def _keep(self, key: tuple, seq: int, nodes: list, titles: Titles | None) -> None:
+        """스캔 결과를 적어 둔다. titles: 프로젝트 전체를 제목과 함께 훑었다 — 없어진 문서의 기억을 버리고 제목 기억을 파일에 적는다"""
         if len(self._scans) > 64:
             self._scans.clear()
         self._scans[key] = (seq, nodes)
-        return nodes
+        if titles is not None and titles.seen:   # 하나도 못 봤으면 폴더를 읽지 못한 것일 수 있다 (뽑힌 드라이브) — 기억을 버리지 않는다
+            self.titles.keep(titles.seen)
+        self.titles.save()
+
+    def scan_quick(self) -> tuple[list, int]:
+        """프로젝트의 트리를 파일을 열지 않고 — 기억한 제목만으로 (D140). (트리, 제목을 아직 모르는 문서 수).
+
+        모르는 문서가 없으면 보통 스캔과 같은 결과라 그대로 적어 둔다. 있으면 화면이 이름으로 먼저 그리고 보통 스캔(scan)을 뒤에서 청한다.
+        """
+        key = ('', True, self.exclude, self.html_exclude)
+        seq = self.log.tree_seq
+        hit = self._scans.get(key)
+        if hit and hit[0] == seq:
+            return hit[1], 0
+        titles = Titles(self.titles, quick=True)
+        nodes = scan(self.root, self.exclude, html_exclude=self.html_exclude, titles=titles)
+        if not titles.missing:
+            self._keep(key, seq, nodes, titles)
+        return nodes, titles.missing
 
     def scan_others(self, fresh: bool = False) -> tuple[list, int, bool]:
         """문서 외 파일의 트리 (scanner.scan_others). 그 뒤로 파일이 생기거나 지워지지 않았으면(others_seq) 마지막 결과를 쓴다 —

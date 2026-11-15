@@ -15,7 +15,7 @@ base = Path(tempfile.mkdtemp(prefix='lec-variety-'))
 proj = base / 'proj'
 (proj / '.lectern').mkdir(parents=True)
 (proj / 'docs').mkdir()
-for i in range(30):
+for i in range(50):
     (proj / 'docs' / f'd{i:02d}.md').write_text(f'# 문서 {i}\n\n글 {i}\n', encoding='utf-8')
 (proj / 'a.md').write_text('# 문서 가\n\n첫 줄\n둘째 줄\n\n## 절\n\n글\n', encoding='utf-8')
 many = ''.join(f'<!-- lectern-note id=m{i} {"pinned=1" if i % 50 == 0 else ""} -->\n## 메모 {i}\n\n본문 {i}\n- [ ] 할 일 {i}\n\n' for i in range(300))
@@ -114,12 +114,12 @@ try:
             settle(150)
         settle(900)
         check('닫은 탭을 차례로 다시 염', sorted(tabs()) == sorted(n), [len(tabs()), len(n)])
-        for i in range(12, 30):
+        for i in range(12, 50):
             page.evaluate("(p) => import('/static/js/store.js').then(({ emit }) => emit('open', { type: 'doc', path: p, newTab: true }))", f'docs/d{i:02d}.md')
             settle(60)
         settle(1500)
-        check('20개를 넘겨 눌러도 20개까지', len(tabs()) == 20, len(tabs()))
-        check('마지막 문서가 보임', page.evaluate("document.querySelector('#lec-view h1')?.textContent") == '문서 29', page.evaluate("document.querySelector('#lec-view h1')?.textContent"))
+        check('40개를 넘겨 눌러도 40개까지 (D140)', len(tabs()) == 40, len(tabs()))
+        check('마지막 문서가 보임', page.evaluate("document.querySelector('#lec-view h1')?.textContent") == '문서 49', page.evaluate("document.querySelector('#lec-view h1')?.textContent"))
         page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
           for (const q of [...S.tab.panes]) if (q !== S.tab.pane) d.closeDocTab(q); }""")
         settle(400)

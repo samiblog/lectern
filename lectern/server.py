@@ -210,7 +210,10 @@ def create_app(state: AppState) -> Flask:
     @app.get('/api/tree')
     def api_tree() -> Any:
         project = arg_project()
-        return jsonify(root=str(project.root), tree=project.scan(fresh=request.args.get('fresh') == '1'))
+        if request.args.get('quick') == '1':   # 처음 그릴 때 (D140): 기억한 제목만으로 바로 — pending 은 제목을 아직 모르는 문서 수
+            tree, pending = project.scan_quick()
+            return jsonify(root=str(project.root), tree=tree, pending=pending)
+        return jsonify(root=str(project.root), tree=project.scan(fresh=request.args.get('fresh') == '1'), pending=0)
 
     @app.get('/api/others')
     def api_others() -> Any:
