@@ -1,0 +1,67 @@
+<!--lectern-layout
+name: 증권사 리포트
+name_en: Equity research
+group: 금융·컨설팅
+group_en: Finance and consulting
+pages: A4
+fields: org, company, ticker, sector, title, author, date, 투자의견, 목표가, 현재가, 상승여력
+slots: 핵심 수치, 면책
+description: 기업·산업 분석 리포트 — 첫 쪽 위에 회사·종목·업종 띠, 왼쪽 단에 투자의견·목표가·현재가와 '핵심 수치' 박스글, 오른쪽에 본문. 끝에 면책 문구(이름이 '면책'인 박스글, 없으면 기본 문구)
+description_en: A company or sector note — a company band, a left rail with rating, target price, price and a key data box, the body on the right, and a disclaimer at the end
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 12.5px; --md-line: 1.6;
+  --md-fg: #1b1f24; --md-heading: #9a0d1c; --md-muted: #5b6168; --md-border: #d5d8dc; --md-link: #9a0d1c;
+  --md-th-bg: #2b2f36; --md-th-fg: #ffffff; --md-th-rule: #2b2f36; --md-stripe: #f5f6f7;
+  --lay-pad: 14mm 14mm 16mm;
+}
+@page { size: A4; margin: 16mm 14mm 16mm; @top-left { content: {{css:company|org}}; font: 8pt "Malgun Gothic", sans-serif; color: #9a0d1c; } @top-right { content: {{css:date:dot}}; font: 8pt "Malgun Gothic", sans-serif; color: #777; } @bottom-right { content: counter(page); font: 8pt "Malgun Gothic", sans-serif; color: #777; } }
+@page :first { margin-top: 12mm; @top-left { content: none; } @top-right { content: none; } }
+.lay-equity-research .lay-band { display: flex; align-items: baseline; gap: 4mm; padding: 0 0 2.5mm; border-bottom: 3px solid #9a0d1c; }
+.lay-equity-research .lay-band .org { margin-left: auto; font: 700 9.5pt var(--md-font); color: #9a0d1c; }
+.lay-equity-research .lay-band .co { font: 800 15pt var(--md-font); color: #1b1f24; }
+.lay-equity-research .lay-band .tk { font: 10pt var(--md-font); color: #5b6168; }
+.lay-equity-research .lay-band .dt { font: 9pt var(--md-font); color: #5b6168; }
+.lay-equity-research .lay-grid { display: grid; grid-template-columns: 52mm 1fr; gap: 7mm; margin-top: 5mm; }
+.lay-equity-research .lay-rail { font-size: 9pt; }
+.lay-equity-research .lay-rail .rating { padding: 3mm; background: #9a0d1c; color: #fff; }
+.lay-equity-research .lay-rail .rating .k { margin: 0; font-size: 8pt; opacity: .85; }
+.lay-equity-research .lay-rail .rating .v { margin: 0 0 1.5mm; font: 800 15pt var(--md-font); }
+.lay-equity-research .lay-rail table.px { width: 100%; margin: 0; border-collapse: collapse; font-size: 9pt; }
+.lay-equity-research .lay-rail table.px th { width: 50%; padding: 1.4mm 0; text-align: left; font-weight: 400; color: #5b6168; background: none; border: 0; border-bottom: 1px solid #e3e5e8; }
+.lay-equity-research .lay-rail table.px td { padding: 1.4mm 0; text-align: right; font-weight: 700; border: 0; border-bottom: 1px solid #e3e5e8; }
+.lay-equity-research .lay-rail .lay-label { margin: 5mm 0 1.5mm; padding-bottom: 1mm; border-bottom: 1.5px solid #1b1f24; font: 800 9pt var(--md-font); }
+.lay-equity-research .lay-rail .lay-slot table { font-size: 8.5pt; margin: 0; }
+.lay-equity-research .lay-rail .lay-slot table th { background: none; color: #5b6168; font-weight: 400; border: 0; }
+.lay-equity-research .lay-rail .analyst { margin-top: 5mm; font-size: 8.5pt; color: #333; }
+.lay-equity-research h1.lay-h { margin: 0 0 3mm; padding: 0; border: 0; font: 800 17pt/1.3 var(--md-font); color: #1b1f24; letter-spacing: -.02em; }
+.lay-equity-research .md-body h2 { margin: 1.1em 0 .35em; padding: 0; border: 0; font: 800 11.5pt/1.4 var(--md-font); color: #9a0d1c; }
+.lay-equity-research .md-body h3 { margin: .9em 0 .3em; font: 700 10.5pt var(--md-font); }
+.lay-equity-research .md-body p { margin: .35em 0; text-align: justify; }
+.lay-equity-research .md-body table { font-size: 8.8pt; }
+.lay-equity-research .md-body .caption { margin-bottom: .2em; font: 700 9pt var(--md-font); color: #1b1f24; }
+.lay-equity-research .md-body p.lec-source { font-size: 8pt; }
+.lay-equity-research .lay-disc { break-before: page; font-size: 7.8pt; line-height: 1.5; color: #444; }
+.lay-equity-research .lay-disc .lay-label { margin: 0 0 2mm; font: 800 9pt var(--md-font); color: #1b1f24; }
+</style>
+<header class="lay-band"><span class="co">{{company|title}}</span><span class="tk" data-if="ticker">{{ticker}}</span><span class="tk" data-if="sector">{{sector}}</span><span class="dt">{{date:dot}}</span><span class="org" data-if="org">{{org}}</span></header>
+<div class="lay-grid">
+  <aside class="lay-rail">
+    <div class="rating" data-if="투자의견"><p class="k">{{t:투자의견|Rating}}</p><p class="v">{{투자의견}}</p></div>
+    <table class="px">
+      <tr data-if="목표가"><th>{{t:목표주가|Target price}}</th><td>{{목표가}}</td></tr>
+      <tr data-if="현재가"><th>{{t:현재주가|Price}}</th><td>{{현재가}}</td></tr>
+      <tr data-if="상승여력"><th>{{t:상승여력|Upside}}</th><td>{{상승여력}}</td></tr>
+    </table>
+    <div data-if="slot:핵심 수치"><p class="lay-label">{{t:핵심 수치|Key data}}</p><div class="lay-slot">{{slot:핵심 수치}}</div></div>
+    <p class="analyst" data-if="author">{{t:애널리스트|Analyst}}<br>{{author}}</p>
+  </aside>
+  <div>
+    <h1 class="lay-h">{{title}}</h1>
+    <main class="md-body">{{body}}</main>
+  </div>
+</div>
+<section class="lay-disc"><p class="lay-label">{{t:Compliance Notice|Disclosures}}</p><div class="lay-slot">{{slot:면책|'이 자료는 투자 판단의 참고 자료이며, 투자 결과에 대한 법적 책임의 증빙으로 쓸 수 없습니다. 자료에 담긴 의견과 추정은 작성 시점의 판단이며 예고 없이 바뀔 수 있습니다.'}}</div></section>

@@ -1,0 +1,46 @@
+<!--lectern-layout
+name: 뉴스레터
+name_en: Newsletter
+group: 매체·출판
+group_en: Media and publishing
+pages: A4
+fields: series, number, title, date, org
+description: 사내·연구 소식지 — 맨 위 이름판(시리즈 이름·호수·날짜), 첫 쪽 오른쪽에 '이번 호' 차례, 큰 절(##)은 기사 제목으로 줄을 그어 나눔, 두 단
+description_en: A newsletter — a masthead (series name, issue, date), an 'in this issue' list beside the lead, articles (##) separated by rules, two columns
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 12.5px; --md-line: 1.62;
+  --md-fg: #1e2226; --md-heading: #1e2226; --md-muted: #5d6670; --md-border: #d8dde2; --md-link: #d35400;
+  --md-th-bg: #fbeee6; --md-th-fg: #7a2f00; --md-th-rule: #d35400; --md-stripe: #fff9f5;
+  --lay-pad: 14mm 15mm 16mm;
+}
+@page { size: A4; margin: 14mm 15mm 16mm; @bottom-center { content: {{css:series|title}} "  ·  " counter(page); font: 7.5pt "Malgun Gothic", sans-serif; color: #888; } }
+.lay-newsletter .lay-mast { display: grid; grid-template-columns: 1fr auto; align-items: end; padding: 0 0 2mm; border-bottom: 5px solid #d35400; }
+.lay-newsletter .lay-mast .name { margin: 0; font: 900 30pt/1 var(--md-font); letter-spacing: -.03em; color: #1e2226; }
+.lay-newsletter .lay-mast .issue { margin: 0; text-align: right; font: 700 9pt/1.5 var(--md-font); color: #d35400; }
+.lay-newsletter .lay-mast .issue small { display: block; font-weight: 400; color: #5d6670; }
+.lay-newsletter .lay-lead { display: grid; grid-template-columns: 1fr 50mm; gap: 7mm; margin: 6mm 0 6mm; }
+.lay-newsletter .lay-lead h1 { margin: 0; padding: 0; border: 0; font: 800 21pt/1.25 var(--md-font); letter-spacing: -.02em; }
+.lay-newsletter .lay-in { padding: 3mm 4mm; background: #fbeee6; font-size: 9pt; }
+.lay-newsletter .lay-in .lay-label { margin: 0 0 1.5mm; font: 800 9pt var(--md-font); color: #d35400; letter-spacing: .08em; }
+.lay-newsletter .lay-in .lay-toc li.lv3 { display: none; }
+.lay-newsletter .md-body { columns: 2; column-gap: 7mm; text-align: justify;
+  word-break: normal; line-break: strict; overflow-wrap: anywhere; }
+.lay-newsletter .md-body .table-wrap, .lay-newsletter .md-body .lec-chart, .lay-newsletter .md-body pre.mermaid, .lay-newsletter .md-body .caption, .lay-newsletter .md-body p.lec-source { column-span: all; }
+.lay-newsletter .md-body h2 { column-span: all; margin: 6mm 0 3mm; padding: 2mm 0 0; border: 0; border-top: 2px solid #1e2226; font: 800 15pt/1.3 var(--md-font); }
+.lay-newsletter .md-body h2:first-child { margin-top: 0; }
+.lay-newsletter .md-body h3 { margin: .9em 0 .3em; font: 700 11pt var(--md-font); color: #d35400; }
+.lay-newsletter .md-body p { margin: 0 0 .55em; }
+.lay-newsletter .md-body img, .lay-newsletter .md-body .table-wrap, .lay-newsletter .md-body pre.mermaid, .lay-newsletter .md-body .lec-chart { break-inside: avoid; }
+.lay-newsletter .md-body .caption { font-weight: 700; font-size: .9em; }
+.lay-newsletter .md-body .lec-textbox { break-inside: avoid; border-top-color: #d35400; }
+</style>
+<header class="lay-mast"><p class="name">{{series|org|title}}</p><p class="issue"><span data-if="number">{{number}}</span><small>{{date:long}}</small></p></header>
+<section class="lay-lead">
+  <h1>{{title}}</h1>
+  <nav class="lay-in"><p class="lay-label">{{t:이번 호|In this issue}}</p>{{toc}}</nav>
+</section>
+<main class="md-body">{{body}}</main>

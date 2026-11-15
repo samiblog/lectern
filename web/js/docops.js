@@ -503,11 +503,14 @@ export function cycleBox(lines, a, b) {
 
 export const TEXTBOX_OPEN = '<!-- box -->';
 export const TEXTBOX_CLOSE = '<!-- /box -->';
-const TB_OPEN = /^ {0,3}<!--[ \t]*box[ \t]*-->[ \t]*$/i;
+// 이름이 있는 박스글 '<!-- box: 핵심 -->' (D145): 지면 틀이 그 이름의 자리(요약·핵심 수치 등)로 옮긴다. 틀이 모르면 보통 박스글
+const TB_OPEN = /^ {0,3}<!--[ \t]*box(?:[ \t]*:[ \t]*([^\n]*?))?[ \t]*-->[ \t]*$/i;
 const TB_CLOSE = /^ {0,3}<!--[ \t]*\/box[ \t]*-->[ \t]*$/i;
 
 /** 박스글을 여는 줄·닫는 줄인지 (markdown.js 도 이것으로 본다) */
-export const isTextboxOpen = (line) => TB_OPEN.test(line);
+export const isTextboxOpen = (line) => TB_OPEN.test(line);
+/** 박스글을 여는 줄의 이름 ('<!-- box: 핵심 -->' 이면 '핵심', 이름이 없으면 '') */
+export const textboxName = (line) => (TB_OPEN.exec(line)?.[1] || '').trim();
 export const isTextboxClose = (line) => TB_CLOSE.test(line);
 
 /** 문서의 박스글 [{a(여는 줄), b(닫는 줄 — 없으면 0), end(박스글의 마지막 줄 — 닫는 줄, 없으면 안의 마지막 글 줄)}] — 머리 설정과 코드 블록 안은 뺀다 */

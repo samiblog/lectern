@@ -1094,6 +1094,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-print fieldset:disabled { opacity: .45; }
 #lec-print .print-note { margin: 8px 4px; color: var(--ui-muted); font-size: 12px; line-height: 1.5; }
 #lec-print .print-note:empty { display: none; }
+#lec-print .print-layouts select { width: 100%; margin: 2px 0 0; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--ui-fg); background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px; }
+#lec-print .print-layouts .print-note { white-space: pre-line; margin: 6px 2px; }
+#lec-print .print-layouts .text-btn { margin: 0 0 6px; padding: 2px 4px; font-size: 12px; }
 #lec-print .print-preview { position: relative; min-height: 0; border: 1px solid var(--ui-border); border-radius: 6px; background: #525659; overflow: hidden; }
 #lec-print iframe { display: block; width: 100%; height: 100%; border: 0; background: #525659; }
 #lec-print .print-wait { position: absolute; inset: auto 0 0 0; margin: 0; padding: 10px 14px; background: rgb(20 24 30 / .82); color: #fff; font-size: 13px; }

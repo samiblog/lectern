@@ -1,0 +1,49 @@
+<!--lectern-layout
+name: 제안서
+name_en: Proposal
+group: 금융·컨설팅
+group_en: Finance and consulting
+pages: A4
+fields: org, client, title, subtitle, author, date
+slots: 요약
+description: 사업·연구 제안서 — 표지(제안 대상·제목·제안 기관·날짜), 차례 쪽, '제안 요약' 상자, 번호 붙은 절, 일정·예산 표를 또렷하게
+description_en: A business or research proposal — cover (client, title, proposer, date), contents page, a proposal summary box, numbered sections, schedule and budget tables made clear
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 13.5px; --md-line: 1.7;
+  --md-fg: #1f2329; --md-heading: #0a5c36; --md-muted: #5a6470; --md-border: #d2d9d5; --md-link: #0a5c36;
+  --md-th-bg: #0a5c36; --md-th-fg: #ffffff; --md-th-rule: #0a5c36; --md-stripe: #f2f8f4;
+  --lay-pad: 22mm 22mm;
+}
+@page { size: A4; margin: 22mm; @top-right { content: {{css:title}}; font: 8pt "Malgun Gothic", sans-serif; color: #888; } @bottom-center { content: counter(page); font: 8.5pt "Malgun Gothic", sans-serif; color: #0a5c36; } }
+@page cover { margin: 0; @top-right { content: none; } @bottom-center { content: none; } }
+@page front { @top-right { content: none; } }
+.lay-proposal .lay-cover { page: cover; position: relative; height: 296mm; padding: 60mm 26mm 0; break-after: page; }
+.lay-proposal .lay-cover::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 18mm; background: #0a5c36; }
+.lay-proposal .lay-cover .to { margin: 0 0 6mm; font: 700 12pt var(--md-font); color: #0a5c36; }
+.lay-proposal .lay-cover h1 { margin: 0; padding: 0 0 8mm; border: 0; border-bottom: 3px solid #0a5c36; font: 800 28pt/1.3 var(--md-font); color: #10231a; letter-spacing: -.02em; }
+.lay-proposal .lay-cover .sub { margin: 7mm 0 0; font: 400 14pt/1.5 var(--md-font); color: #333; }
+.lay-proposal .lay-cover .by { position: absolute; left: 26mm; right: 26mm; bottom: 34mm; margin: 0; text-align: right; font: 700 14pt/1.6 var(--md-font); color: #10231a; }
+.lay-proposal .lay-cover .by small { display: block; font: 400 11pt var(--md-font); color: #555; }
+.lay-proposal .lay-front { page: front; break-after: page; }
+.lay-proposal .lay-front > h2 { margin: 0 0 6mm; padding: 0 0 3mm; border-bottom: 2px solid #0a5c36; font: 800 17pt var(--md-font); color: #0a5c36; }
+.lay-proposal .lay-toc li { font: 11.5pt/2 var(--md-font); }
+.lay-proposal .lay-summary { margin: 0 0 8mm; padding: 5mm 6mm; border: 1.5px solid #0a5c36; border-radius: 4px; }
+.lay-proposal .lay-summary .lay-label { margin: 0 0 2mm; font: 800 11pt var(--md-font); color: #0a5c36; }
+.lay-proposal .md-body h2 { margin: 1.5em 0 .55em; padding: 2mm 0 2mm 4mm; border: 0; border-left: 5px solid #0a5c36; background: #f2f8f4; font: 800 14pt/1.35 var(--md-font); color: #10231a; }
+.lay-proposal .md-body h3 { margin: 1.1em 0 .4em; font: 700 12pt var(--md-font); color: #0a5c36; }
+.lay-proposal .md-body table { font-size: 10pt; }
+.lay-proposal .md-body .caption { font-weight: 700; font-size: .92em; color: #0a5c36; }
+</style>
+<section class="lay-cover">
+  <p class="to" data-if="client">{{client}} {{t:귀중|— prepared for}}</p>
+  <h1>{{title}}</h1>
+  <p class="sub" data-if="subtitle">{{subtitle}}</p>
+  <p class="by">{{org|author|' '}}<small>{{date:long}}</small></p>
+</section>
+<section class="lay-front"><h2>{{t:차 례|Contents}}</h2>{{toc}}</section>
+<section class="lay-summary" data-if="slot:요약"><p class="lay-label">{{t:제안 요약|Proposal summary}}</p><div class="lay-slot">{{slot:요약}}</div></section>
+<main class="md-body">{{body}}</main>

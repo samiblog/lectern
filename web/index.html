@@ -412,6 +412,12 @@
           <label><input type="radio" name="pp_format" value="pdf"><span>PDF·인쇄<small>A4 보고서 양식</small></span></label>
           <label><input type="radio" name="pp_format" value="html"><span>html 한 파일<small>지금 화면 스타일, 그림·차트가 파일 안에</small></span></label>
         </div>
+        <div class="opt-choice print-layouts"><!-- 지면 틀 (D145 — layout.js) -->
+          <span class="opt-head"><b id="lec-pp-layout-title">틀</b></span>
+          <select id="lec-pp-layout" aria-labelledby="lec-pp-layout-title"></select>
+          <p id="lec-pp-layout-info" class="print-note"></p>
+          <button type="button" id="lec-pp-layout-sample" class="text-btn" hidden title="이 틀이 쓰는데 문서에 비어 있는 맨 앞 설정을 견본으로 복사합니다 — 문서 맨 앞에 붙여 값을 채웁니다">맨 앞 설정 견본 복사</button>
+        </div>
         <fieldset id="lec-print-layout">
           <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-font-title">
             <span class="opt-head"><b id="lec-pp-font-title">글꼴</b></span>
@@ -507,6 +513,14 @@
         <button type="button" id="lec-mystyles-folder" class="text-btn">스타일 폴더 열기</button>
         <button type="button" id="lec-mystyles-prompt" class="text-btn"></button>
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
+      </div>
+    </div>
+    <div class="opt-block" aria-labelledby="lec-layouts-title"><!-- 지면 틀 (D145 — settings.js) -->
+      <span class="opt-head"><b id="lec-layouts-title">지면 틀</b><small>내보내기 창(PDF·html)의 '틀'에서 고르는 출력 양식입니다. html 파일 하나가 틀 하나이고, 틀 폴더에 두면 '내 틀'에 나옵니다</small></span>
+      <div class="opt-btns">
+        <button type="button" id="lec-layouts-folder" class="text-btn">틀 폴더 열기</button>
+        <button type="button" id="lec-layouts-prompt" class="text-btn"></button>
+        <button type="button" id="lec-layouts-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
     <div class="opt-block" aria-labelledby="lec-work-title">

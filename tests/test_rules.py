@@ -15,7 +15,7 @@ TYPESCRIPT = 'typescript@7.0.2'
 RAW_USES = {'slidegallery': 1, 'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 'parts': 3, 'slides': 1}
 # esc() 를 바로 쓰는 곳: 화면이 아니라 글을 만든다 — highlight.js 가 없을 때의 코드(codeview), 설명서의 Markdown(help),
 # html 로 전환이 파일로 쓰는 발표 html(impressexport — D129)
-ESC_USES = {'codeview', 'help', 'impressexport', 'mdhtml'}
+ESC_USES = {'codeview', 'help', 'impressexport', 'mdhtml', 'layout'}
 # 이미 있는 import 순환. 풀면 여기서 지운다 — 새로 생기거나 커지면 test_no_new_import_cycle 이 실패한다 (D88)
 KNOWN_CYCLES = [
     {'basket', 'codeview', 'csvview', 'doc', 'docmenu', 'doctabs', 'editor', 'htmldoc', 'lineedit', 'nav', 'newdoc', },

@@ -5,7 +5,7 @@
 import { S } from './store.js';
 import { slideRule, cellRule } from './slides.js';
 import { tocKind, isPageBreak } from './refs.js';
-import { isTextboxOpen, isTextboxClose } from './docops.js';
+import { isTextboxOpen, isTextboxClose, textboxName } from './docops.js';
 import { t } from './i18n.js';
 
 const instances = new Map();
@@ -246,7 +246,9 @@ function textboxMarks(state) {
     last = tok.map[1];
   };
   const finish = (end) => {
-    open.content = `<aside class="lec-textbox" data-lines="${open.map[0] + 1 + offset}-${end + offset}">\n`;
+    const name = textboxName(open.content.trim());   // 이름이 있는 박스글 (D145) — 지면 틀의 자리
+    const slot = name ? ` data-slot="${name.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)}"` : '';
+    open.content = `<aside class="lec-textbox"${slot} data-lines="${open.map[0] + 1 + offset}-${end + offset}">\n`;
     open = null;
   };
   for (let i = 0; i < toks.length; i++) {

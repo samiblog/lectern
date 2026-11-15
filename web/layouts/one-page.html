@@ -1,0 +1,52 @@
+<!--lectern-layout
+name: 한 장 보고서
+name_en: One-page brief
+group: 업무·공공
+group_en: Office and public sector
+pages: A4
+fields: title, date, dept, author, 결재
+slots: 결론
+description: 경영진 보고용 한 장 — 위에 결재란과 결론 상자, 촘촘한 고딕 본문. 결재란은 맨 앞 설정 결재: [담당, 팀장, 본부장]
+description_en: A one-page brief for executives — sign-off boxes and a conclusion box on top, a compact sans body. Sign-off boxes come from the front matter 결재: [담당, 팀장, 본부장]
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 12.5px; --md-line: 1.55;
+  --md-fg: #1a1a1a; --md-heading: #0b2e59; --md-muted: #555; --md-border: #c8ccd2;
+  --md-th-bg: #0b2e59; --md-th-fg: #ffffff; --md-th-rule: #0b2e59; --md-stripe: #f4f6f9;
+  --lay-pad: 15mm 16mm;
+}
+@page { size: A4; margin: 15mm 16mm; @bottom-right { content: counter(page); font: 8pt "Malgun Gothic", sans-serif; color: #777; } }
+.lay-one-page .lay-top { display: grid; grid-template-columns: 1fr auto; gap: 6mm; align-items: start; margin-bottom: 4mm; padding-bottom: 3mm; border-bottom: 2.5px solid #0b2e59; }
+.lay-one-page .lay-top h1 { margin: 0; padding: 0; border: 0; font: 800 19pt/1.3 var(--md-font); color: #0b2e59; letter-spacing: -.02em; }
+.lay-one-page .lay-top .meta { margin: 1.5mm 0 0; font-size: 9.5pt; color: #555; }
+.lay-one-page .lay-top .meta span + span::before { content: " | "; color: #aaa; }
+.lay-one-page .lay-sign { border-collapse: collapse; font-size: 8.5pt; text-align: center; }
+.lay-one-page .lay-sign td { width: 17mm; border: 1px solid #555; padding: 1mm; }
+.lay-one-page .lay-sign tr:first-child td { background: #eef1f5; font-weight: 700; }
+.lay-one-page .lay-sign tr + tr td { height: 13mm; }
+.lay-one-page .lay-conclusion { margin: 0 0 4mm; padding: 3mm 4mm; background: #eaf0f8; border-left: 4px solid #0b2e59; font-size: 1.04em; }
+.lay-one-page .lay-conclusion .lay-label { margin: 0 0 1mm; font-weight: 800; color: #0b2e59; }
+.lay-one-page .md-body h2 { margin: 1em 0 .4em; padding: 0 0 .15em; font-size: 12.5pt; color: #0b2e59; border-bottom: 1px solid #c8ccd2; }
+.lay-one-page .md-body h3 { margin: .8em 0 .3em; font-size: 11pt; color: #1a1a1a; }
+.lay-one-page .md-body p { margin: .35em 0; }
+.lay-one-page .md-body ul, .lay-one-page .md-body ol { margin: .3em 0; padding-left: 1.3em; }
+.lay-one-page .md-body li { margin: .12em 0; }
+.lay-one-page .md-body table { font-size: .92em; margin: .6em 0; }
+.lay-one-page .md-body .caption { font-weight: 700; font-size: .92em; color: #0b2e59; margin-bottom: .2em; }
+.lay-one-page .md-body blockquote.alert { padding: .35em .8em; margin: .6em 0; }
+</style>
+<header class="lay-top">
+  <div>
+    <h1 data-if="title">{{title}}</h1>
+    <p class="meta"><span>{{date:dot}}</span><span data-if="dept">{{dept}}</span><span data-if="author">{{author}}</span></p>
+  </div>
+  <table class="lay-sign" data-if="결재">
+    <tr><td data-each="결재">{{.}}</td></tr>
+    <tr><td data-each="결재"></td></tr>
+  </table>
+</header>
+<section class="lay-conclusion" data-if="slot:결론"><p class="lay-label">{{t:결론|Bottom line}}</p><div class="lay-slot">{{slot:결론}}</div></section>
+<main class="md-body">{{body}}</main>

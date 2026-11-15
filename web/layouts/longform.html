@@ -1,0 +1,46 @@
+<!--lectern-layout
+name: 웹 장문
+name_en: Long-form web article
+group: 매체·출판
+group_en: Media and publishing
+pages: continuous
+fields: kicker, title, subtitle, author, date
+description: 쪽 없이 길게 읽는 글 — html 로 보내 메일·게시판에서 읽힐 때. 큰 제목과 부제, 좁은 단의 큰 명조, 그림은 단보다 넓게, 인용은 크게
+description_en: A long continuous read for sending as html — large headline and deck, a narrow column of large serif text, figures wider than the column, big quotes
+-->
+<style>
+:root {
+  --md-font: "Georgia", "함초롬바탕", "HCR Batang", "바탕", "Batang", serif;
+  --md-heading-font: "Pretendard", "맑은 고딕", "Malgun Gothic", "Helvetica Neue", sans-serif;
+  --md-size: 19px; --md-line: 1.78;
+  --md-fg: #1f1f1f; --md-heading: #111; --md-muted: #6b6b6b; --md-border: #e3e3e3; --md-link: #0f5fd7;
+  --md-th-bg: #f2f2f2; --md-th-fg: #111; --md-th-rule: #999; --md-stripe: #fafafa;
+}
+html { background: #ffffff; }
+@page { size: A4; margin: 18mm 20mm; @bottom-center { content: counter(page); font: 8pt "Malgun Gothic", sans-serif; color: #999; } }
+.lay-longform { max-width: 720px; margin: 0 auto; padding: 64px 24px 96px; }
+.lay-longform .lay-hero { margin: 0 0 48px; }
+.lay-longform .lay-hero .kicker { margin: 0 0 18px; font: 700 13px var(--md-heading-font); letter-spacing: .14em; text-transform: uppercase; color: #0f5fd7; }
+.lay-longform .lay-hero h1 { margin: 0; padding: 0; border: 0; font: 800 46px/1.12 var(--md-heading-font); letter-spacing: -.03em; color: #111; }
+.lay-longform .lay-hero .deck { margin: 20px 0 0; font: 400 22px/1.5 var(--md-font); color: #444; }
+.lay-longform .lay-hero .by { margin: 24px 0 0; padding-top: 16px; border-top: 1px solid #e3e3e3; font: 14px var(--md-heading-font); color: #6b6b6b; }
+.lay-longform .lay-hero .by span + span::before { content: " · "; }
+.lay-longform .md-body h2 { margin: 2.2em 0 .6em; padding: 0; border: 0; font: 800 28px/1.25 var(--md-heading-font); letter-spacing: -.02em; }
+.lay-longform .md-body h3 { margin: 1.8em 0 .5em; font: 700 21px/1.3 var(--md-heading-font); }
+.lay-longform .md-body p { margin: 0 0 1.1em; }
+.lay-longform .md-body blockquote:not(.alert) { margin: 1.6em 0; padding: 0 0 0 24px; border-left: 4px solid #111; font: italic 24px/1.5 var(--md-font); color: #111; }
+@media (min-width: 900px) {
+  .lay-longform .md-body img, .lay-longform .md-body pre.mermaid, .lay-longform .md-body .lec-chart, .lay-longform .md-body .table-wrap { width: calc(100% + 160px); max-width: none; margin-left: -80px; }
+}
+.lay-longform .md-body .caption { font: 600 14px var(--md-heading-font); color: #6b6b6b; }
+.lay-longform .md-body table { font: 15px/1.5 var(--md-heading-font); }
+.lay-longform .md-body pre { font-size: 14px; }
+@media print { .lay-longform { max-width: none; padding: 0; } .lay-longform .md-body { font-size: 11pt; } }
+</style>
+<header class="lay-hero">
+  <p class="kicker" data-if="kicker">{{kicker}}</p>
+  <h1>{{title}}</h1>
+  <p class="deck" data-if="subtitle">{{subtitle}}</p>
+  <p class="by"><span data-if="author">{{author}}</span><span>{{date:long}}</span></p>
+</header>
+<main class="md-body">{{body}}</main>

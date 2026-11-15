@@ -1,0 +1,56 @@
+<!--lectern-layout
+name: 학술 논문 (2단)
+name_en: Journal paper (two columns)
+group: 연구
+group_en: Research
+pages: A4
+fields: title, author, affiliation, keywords, date
+slots: 초록
+description: 학회지 논문의 꼴 — 가운데 제목·저자·소속, 한 단의 초록과 주제어, 본문은 두 단 10pt 명조, 캡션·참고문헌은 작은 글자
+description_en: A journal paper — centred title, authors and affiliation, a full-width abstract and keywords, then a two-column 10 pt serif body with small captions and references
+-->
+<style>
+:root {
+  --md-font: "Times New Roman", "함초롬바탕", "HCR Batang", "바탕", "Batang", serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 13.3px; --md-line: 1.5;
+  --md-fg: #000; --md-heading: #000; --md-muted: #333; --md-border: #999; --md-link: #000;
+  --md-th-bg: #ffffff; --md-th-fg: #000; --md-th-rule: #000; --md-stripe: #ffffff; --md-code-bg: #f4f4f4;
+  --lay-pad: 19mm 17mm 25mm;
+}
+@page { size: A4; margin: 19mm 17mm 25mm; @bottom-center { content: counter(page); font: 9pt "Times New Roman", serif; } }
+.lay-paper-2col .lay-head { text-align: center; margin-bottom: 6mm; }
+.lay-paper-2col .lay-head h1 { margin: 0 0 4mm; padding: 0; border: 0; font: 700 18pt/1.25 var(--md-font); }
+.lay-paper-2col .lay-head .au { margin: 0; font: 11pt/1.4 var(--md-font); }
+.lay-paper-2col .lay-head .af { margin: 1mm 0 0; font: italic 9.5pt/1.4 var(--md-font); color: #333; }
+.lay-paper-2col .lay-abstract { margin: 0 6mm 6mm; font-size: 9.5pt; line-height: 1.45; text-align: justify; }
+.lay-paper-2col .lay-abstract .lay-label { display: inline; font-weight: 700; font-style: italic; }
+.lay-paper-2col .lay-abstract .lay-slot, .lay-paper-2col .lay-abstract .lay-slot > p:first-child { display: inline; }
+.lay-paper-2col .lay-kw { margin: 2mm 6mm 6mm; font-size: 9.5pt; }
+.lay-paper-2col .lay-kw b { font-style: italic; }
+.lay-paper-2col .md-body { columns: 2; column-gap: 7mm; text-align: justify; hyphens: auto;
+  word-break: normal; line-break: strict; overflow-wrap: anywhere; }
+/* 넓은 표와 그 캡션·출처는 두 단에 걸쳐 (학회지처럼) — 그림·차트는 한 단에 */
+.lay-paper-2col .md-body .table-wrap, .lay-paper-2col .md-body .caption:has(+ .table-wrap), .lay-paper-2col .md-body .table-wrap + p.lec-source { column-span: all; }
+.lay-paper-2col .md-body h2 { margin: 1em 0 .4em; padding: 0; border: 0; font: 700 10.5pt var(--md-font); text-transform: uppercase; letter-spacing: .04em; text-align: center; }
+.lay-paper-2col .md-body h3 { margin: .8em 0 .3em; font: italic 700 10pt var(--md-font); }
+.lay-paper-2col .md-body h4 { margin: .6em 0 .2em; font: italic 10pt var(--md-font); }
+.lay-paper-2col .md-body p { margin: 0 0 .35em; text-indent: 1em; }
+.lay-paper-2col .md-body p.caption, .lay-paper-2col .md-body p.lec-source { text-indent: 0; }
+.lay-paper-2col .md-body h2 + p, .lay-paper-2col .md-body h3 + p { text-indent: 0; }
+.lay-paper-2col .md-body table { font-size: 8.5pt; border-top: 1.5px solid #000; border-bottom: 1.5px solid #000; width: 100%; }
+.lay-paper-2col .md-body th { border-bottom: 1px solid #000; }
+.lay-paper-2col .md-body .caption { margin: .6em 0 .25em; font-size: 8.5pt; text-align: center; font-variant: small-caps; }
+.lay-paper-2col .md-body img, .lay-paper-2col .md-body pre.mermaid svg, .lay-paper-2col .md-body .lec-chart svg { max-width: 100%; height: auto; }
+.lay-paper-2col .md-body pre { font-size: 8pt; white-space: pre-wrap; }
+.lay-paper-2col .md-body .footnotes, .lay-paper-2col .md-body h2 ~ ol:last-child { font-size: 8.5pt; }
+.lay-paper-2col .md-body .lec-textbox, .lay-paper-2col .md-body blockquote.alert { break-inside: avoid; font-size: 9pt; }
+</style>
+<header class="lay-head">
+  <h1>{{title}}</h1>
+  <p class="au" data-if="author">{{author}}</p>
+  <p class="af" data-if="affiliation">{{affiliation}}</p>
+</header>
+<section class="lay-abstract" data-if="slot:초록"><span class="lay-label">{{t:초록|Abstract}}—</span><div class="lay-slot">{{slot:초록}}</div></section>
+<p class="lay-kw" data-if="keywords"><b>{{t:주제어|Keywords}}—</b>{{keywords}}</p>
+<main class="md-body">{{body}}</main>

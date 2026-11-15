@@ -1,0 +1,44 @@
+<!--lectern-layout
+name: 매뉴얼·가이드
+name_en: Manual or guide
+group: 안내
+group_en: Guides
+pages: A4
+fields: title, subtitle, version, org, date
+description: 사용 설명서·업무 가이드 — 판(version) 표시가 있는 머리, 차례, 번호 목록은 동그라미 숫자의 단계로, 강조글(주의·경고)을 또렷하게, 코드·키를 읽기 좋게
+description_en: A user manual or work guide — a header with version, contents, numbered lists as circled steps, strong callouts for cautions and warnings, readable code and keys
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 13.5px; --md-line: 1.7;
+  --md-fg: #1f2328; --md-heading: #1f2328; --md-muted: #59636e; --md-border: #d1d9e0; --md-link: #0969da;
+  --md-th-bg: #f6f8fa; --md-th-fg: #1f2328; --md-th-rule: #d1d9e0; --md-stripe: #fbfcfd;
+  --lay-pad: 18mm 20mm;
+}
+@page { size: A4; margin: 18mm 20mm; @top-right { content: {{css:title}}; font: 8pt "Malgun Gothic", sans-serif; color: #888; } @bottom-right { content: counter(page); font: 8.5pt "Malgun Gothic", sans-serif; color: #0969da; } }
+@page :first { @top-right { content: none; } }
+.lay-manual .lay-head { margin: 0 0 6mm; padding: 6mm 7mm; background: #f6f8fa; border: 1px solid #d1d9e0; border-radius: 6px; }
+.lay-manual .lay-head h1 { margin: 0; padding: 0; border: 0; font: 800 22pt/1.25 var(--md-font); }
+.lay-manual .lay-head .sub { margin: 2mm 0 0; font-size: 11.5pt; color: #59636e; }
+.lay-manual .lay-head .meta { margin: 3mm 0 0; font-size: 9pt; color: #59636e; }
+.lay-manual .lay-head .ver { display: inline-block; margin-right: 2mm; padding: .2mm 2mm; border-radius: 10px; background: #0969da; color: #fff; font-weight: 700; }
+.lay-manual .lay-contents { margin: 0 0 7mm; padding: 0 0 5mm; border-bottom: 1px solid #d1d9e0; columns: 2; column-gap: 8mm; font-size: 10pt; }
+.lay-manual .lay-contents .lay-label { column-span: all; margin: 0 0 2mm; font: 800 10pt var(--md-font); color: #59636e; letter-spacing: .1em; }
+.lay-manual .md-body h2 { margin: 1.5em 0 .5em; padding: 0 0 1.5mm; border: 0; border-bottom: 2px solid #0969da; font: 800 15pt var(--md-font); }
+.lay-manual .md-body h3 { margin: 1.2em 0 .4em; font: 700 12pt var(--md-font); }
+.lay-manual .md-body > ol, .lay-manual .md-body li > ol { list-style: none; counter-reset: step; padding-left: 0; }
+.lay-manual .md-body > ol > li, .lay-manual .md-body li > ol > li { counter-increment: step; position: relative; margin: .5em 0; padding-left: 9mm; }
+.lay-manual .md-body > ol > li::before, .lay-manual .md-body li > ol > li::before { content: counter(step); position: absolute; left: 0; top: .1em; width: 6mm; height: 6mm; border-radius: 50%; background: #0969da; color: #fff; font: 700 9pt/6mm var(--md-font); text-align: center; }
+.lay-manual .md-body blockquote.alert { border-left-width: 5px; border-radius: 4px; background: color-mix(in srgb, var(--alert) 8%, #fff); }
+.lay-manual .md-body kbd { border: 1px solid #c6ccd2; border-bottom-width: 2px; border-radius: 4px; padding: 0 .35em; font-size: .88em; background: #f6f8fa; }
+.lay-manual .md-body pre { border: 1px solid #d1d9e0; border-radius: 6px; }
+</style>
+<header class="lay-head">
+  <h1>{{title}}</h1>
+  <p class="sub" data-if="subtitle">{{subtitle}}</p>
+  <p class="meta"><span class="ver" data-if="version">{{version}}</span><span data-if="org">{{org}} · </span>{{date:long}}</p>
+</header>
+<nav class="lay-contents"><p class="lay-label">{{t:차례|Contents}}</p>{{toc}}</nav>
+<main class="md-body">{{body}}</main>

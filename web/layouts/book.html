@@ -1,0 +1,47 @@
+<!--lectern-layout
+name: 책
+name_en: Book chapter
+group: 매체·출판
+group_en: Media and publishing
+pages: 152×225mm
+fields: book, chapter, title, subtitle, author
+description: 단행본 본문 — 신국판(152×225mm), 장 시작 쪽, 문단 첫 줄 들여쓰기에 문단 사이 없음, 왼쪽·오른쪽 쪽의 바깥 여백에 쪽 번호와 책·장 제목
+description_en: A book chapter — 152×225 mm pages, a chapter opening page, indented paragraphs without gaps, page numbers and running heads on the outer side of left and right pages
+-->
+<style>
+:root {
+  --md-font: "함초롬바탕", "HCR Batang", "바탕", "Batang", "Georgia", serif;
+  --md-heading-font: "함초롬돋움", "HCR Dotum", "맑은 고딕", "Malgun Gothic", sans-serif;
+  --md-size: 13.3px; --md-line: 1.75;
+  --md-fg: #1a1a1a; --md-heading: #1a1a1a; --md-muted: #555; --md-border: #bbb; --md-link: #1a1a1a;
+  --md-th-bg: #ffffff; --md-th-fg: #1a1a1a; --md-th-rule: #1a1a1a; --md-stripe: #ffffff;
+  --lay-page-w: 152mm; --lay-pad: 20mm 18mm 22mm 20mm;
+}
+@page { size: 152mm 225mm; margin: 20mm 18mm 22mm 20mm; }
+@page :left { margin-left: 18mm; margin-right: 20mm; @top-left { content: counter(page) "   " {{css:book|title}}; font: 7.5pt "HCR Dotum", "Malgun Gothic", sans-serif; color: #666; } }
+@page :right { margin-left: 20mm; margin-right: 18mm; @top-right { content: {{css:title}} "   " counter(page); font: 7.5pt "HCR Dotum", "Malgun Gothic", sans-serif; color: #666; } }
+@page :first { @top-left { content: none; } @top-right { content: none; } @bottom-center { content: counter(page); font: 7.5pt "HCR Dotum", "Malgun Gothic", sans-serif; color: #666; } }
+.lay-book .lay-opener { padding-top: 36mm; margin-bottom: 14mm; }
+.lay-book .lay-opener .no { margin: 0 0 4mm; font: 300 11pt var(--md-heading-font); letter-spacing: .3em; color: #888; }
+.lay-book .lay-opener h1 { margin: 0; padding: 0 0 5mm; border: 0; border-bottom: 1px solid #1a1a1a; font: 700 22pt/1.3 var(--md-heading-font); letter-spacing: -.01em; }
+.lay-book .lay-opener .sub { margin: 4mm 0 0; font: 400 11pt/1.5 var(--md-font); color: #444; }
+.lay-book .md-body { text-align: justify; hyphens: auto; }
+.lay-book .md-body p { margin: 0; text-indent: 1em; }
+.lay-book .md-body h2 + p, .lay-book .md-body h3 + p, .lay-book .md-body .lay-first { text-indent: 0; }
+.lay-book .md-body > p:first-of-type { text-indent: 0; }
+.lay-book .md-body h2 { margin: 2em 0 .9em; padding: 0; border: 0; font: 700 12.5pt var(--md-heading-font); text-align: left; }
+.lay-book .md-body h3 { margin: 1.5em 0 .6em; font: 700 11pt var(--md-heading-font); }
+.lay-book .md-body blockquote { margin: .9em 1.5em; padding: 0; border: 0; font-size: .95em; color: #333; }
+.lay-book .md-body ul, .lay-book .md-body ol { margin: .6em 0; }
+.lay-book .md-body table { font: 8.5pt var(--md-heading-font); border-top: 1px solid #1a1a1a; border-bottom: 1px solid #1a1a1a; }
+.lay-book .md-body .caption { text-indent: 0; margin: .9em 0 .3em; font: 700 8.5pt var(--md-heading-font); text-align: center; }
+.lay-book .md-body .footnotes { font-size: 8.5pt; }
+.lay-book .md-body hr:not(.footnotes-sep) { border: 0; text-align: center; margin: 1.2em 0; }
+.lay-book .md-body hr:not(.footnotes-sep)::after { content: "* * *"; letter-spacing: .5em; color: #666; }
+</style>
+<section class="lay-opener">
+  <p class="no" data-if="chapter">{{chapter}}</p>
+  <h1>{{title}}</h1>
+  <p class="sub" data-if="subtitle">{{subtitle}}</p>
+</section>
+<main class="md-body">{{body}}</main>

@@ -56,6 +56,21 @@ class NativeApi:
             return {'error': t('PDF 를 만들지 못했습니다: {error}', error=str(e)[:300])}
         return {'token': pdfexport.keep_preview(data), 'pages': pdfexport.page_count(data), 'size': len(data)}
 
+    def layout_pdf(self, token: str) -> dict[str, Any]:
+        """지면 틀의 PDF (D145): 화면이 틀에 담아 지은 html(메모리 — /api/export/keep)을 숨은 창에 열어 WebView2 로 PDF 를 만든다.
+        html 로 저장할 파일과 같은 글이라 html 과 PDF 가 같은 꼴이다. {'token', 'pages', 'size'}(미리보기 PDF) 또는 {'error'}"""
+        from . import pdfexport
+
+        base = getattr(self._state, 'base_url', '')
+        if pdfexport.preview_bytes(token, 'html') is None or not base:
+            return {'error': t('미리 본 html 이 없습니다 — 창을 닫고 다시 여세요')}
+        try:
+            self._hide_pdf_save()
+            data = pdfexport.print_hidden(f'{base}export-preview/{token}.html')
+        except Exception as e:   # noqa: BLE001 — WebView2 가 없는 PC, 시간 초과 등
+            return {'error': t('PDF 를 만들지 못했습니다: {error}', error=str(e)[:300])}
+        return {'token': pdfexport.keep_preview(data), 'pages': pdfexport.page_count(data), 'size': len(data)}
+
     def _hide_pdf_save(self) -> None:
         """WebView2 PDF 보기의 저장·다른 이름으로 저장 단추를 감춘다 (원칙 1 — 파일은 저장 대화상자 길로만). 못 하면 그대로"""
         if getattr(self, '_pdf_toolbar_done', False):

@@ -84,6 +84,7 @@
 | impressexport.js | html 로 전환 (D129) — 상태줄 버튼과 창(배치 고르기·배치 지도), 칸이 그린 장을 모아(그림·KaTeX 글꼴은 파일 안에, 앱 표시·스크립트·앱 안 링크는 떼고) impress.js 발표 html 을 짓는다. 파일의 CSP 는 impress.js 와 시작 줄의 해시만. `/api/html-export` 가 문서 옆에 쓴다 |
 | htmlpack.js | html 한 파일로 담기 — impressexport 와 mdhtml 이 함께 쓴다: 같은 출처 그림은 data URI, 복제한 canvas 는 PNG, 스크립트·이벤트 속성·앱 표시를 떼고, 인터넷 링크는 새 창·프로젝트 안 링크는 글로(같은 파일의 #절 링크는 고를 때만 남김), 앱 화면과 같은 차례의 스타일 글(KaTeX 글꼴은 파일 안에) |
 | mdhtml.js | md 문서를 html 한 파일로 (D144) — 내보내기 창의 'html 로 저장'. 칸이 그린 문서를 복제해 지금 화면 스타일 그대로, 종이에 나가지 않는 앱 표시(복사·차트 단추, 접기, 줄 번호, 맨 앞 설정 표)를 떼고 접은 절·박스글은 펴서. 스크립트 없는 CSP, 인쇄하면 보고서 양식(print.css 와 printdoc.pageCss 를 media=print 로) |
+| layout.js | 지면 틀 (D145) — 틀 목록(`/api/layouts`), 문서의 맨 앞 설정(한국어 키 별칭), 틀의 뼈대를 DOMParser 로 채우기({{키}}·{{date:dot}}·{{a\|b}}·{{t:한\|영}}·{{body}}·{{toc}}·{{slot:이름}}, data-if·data-each, CSS 안의 {{css:식}}), 이름 있는 박스글을 자리로 옮기기, 캡션에 class caption. 늘 같은 바탕(base.css 의 종이 규칙을 뺀 것·기본 스타일·밝은 코드 색) 위에 _base.css 와 틀의 CSS 로 html 한 파일을 짓는다 — 내보내기 창이 html 로 저장하고, PDF 는 이 html 을 숨은 창이 찍는다 |
 | impresslayout.js | html 로 전환의 장 자리 (D129, DOM 없음 — 규칙 시험) — 맨 앞 설정의 배치 방식(`readMode`), 장 주석의 `impress: x=… y=…`(`readSpot`), 격자·가로 한 줄(`layoutSteps`), 전체 보기(`overviewOf`) |
 | headstyle.js | md 문서 스타일의 계산 (D103) — 머리글을 읽고, 지금 모양을 알아보고, 번호를 뗐다 붙인다. 절 링크도 함께. DOM 없음 |
 | mdstyle.js | md 문서 스타일 창 (D103) — 상태줄 버튼, 미리보기, 서술식과 개조식을 오갈 때 묻기. 저장은 lineedit 의 `md-headings` |

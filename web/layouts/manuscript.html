@@ -1,0 +1,47 @@
+<!--lectern-layout
+name: 투고 원고
+name_en: Manuscript (double-spaced)
+group: 연구
+group_en: Research
+pages: Letter
+fields: title, author, affiliation, short_title, date
+slots: 초록
+description: 학술지 투고용 원고 — 표지 쪽(제목·저자·소속), 초록 쪽, 본문 1단 12pt 두 줄 간격, 여백 1인치, 오른쪽 위 쪽 번호와 짧은 제목
+description_en: A submission manuscript — title page, abstract page, single-column 12 pt double-spaced body, 1-inch margins, short title and page number top right
+-->
+<style>
+:root {
+  --md-font: "Times New Roman", "함초롬바탕", "HCR Batang", "바탕", "Batang", serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 16px; --md-line: 2;
+  --md-fg: #000; --md-heading: #000; --md-muted: #000; --md-border: #000; --md-link: #000;
+  --md-th-bg: #fff; --md-th-fg: #000; --md-th-rule: #000; --md-stripe: #fff; --md-code-bg: #fff;
+  --lay-page-w: 8.5in; --lay-pad: 1in;
+}
+@page { size: Letter; margin: 1in; @top-left { content: {{css:short_title|title}}; font: 11pt "Times New Roman", serif; text-transform: uppercase; } @top-right { content: counter(page); font: 12pt "Times New Roman", serif; } }
+.lay-manuscript .lay-titlepage { min-height: 8.5in; padding-top: 2.2in; text-align: center; break-after: page; line-height: 2; }
+.lay-manuscript .lay-titlepage h1 { margin: 0; padding: 0; border: 0; font: 700 12pt/2 var(--md-font); }
+.lay-manuscript .lay-titlepage p { margin: 0; font-size: 12pt; }
+.lay-manuscript .lay-abs { break-after: page; font-size: 12pt; }
+.lay-manuscript .lay-abs .lay-label { margin: 0; text-align: center; font-weight: 700; }
+.lay-manuscript .lay-abs .lay-slot p { text-indent: 0; }
+.lay-manuscript .md-body { font-size: 12pt; }
+.lay-manuscript .md-body h2 { margin: 0; padding: 0; border: 0; font: 700 12pt/2 var(--md-font); text-align: center; }
+.lay-manuscript .md-body h3 { margin: 0; font: 700 12pt/2 var(--md-font); }
+.lay-manuscript .md-body h4 { margin: 0; font: italic 700 12pt/2 var(--md-font); }
+.lay-manuscript .md-body p { margin: 0; text-indent: .5in; }
+.lay-manuscript .md-body p.caption { text-indent: 0; font-weight: 700; margin-top: 1em; }
+.lay-manuscript .md-body table { font-size: 11pt; line-height: 1.4; border-top: 1px solid #000; border-bottom: 1px solid #000; }
+.lay-manuscript .md-body table th { border-bottom: 1px solid #000; }
+.lay-manuscript .md-body blockquote { margin: 0 0 0 .5in; padding: 0; border: 0; color: #000; }
+.lay-manuscript .md-body pre, .lay-manuscript .md-body code { font-size: 10pt; line-height: 1.4; }
+.lay-manuscript .md-body .footnotes { font-size: 11pt; }
+</style>
+<section class="lay-titlepage">
+  <h1>{{title}}</h1>
+  <p data-if="author">{{author}}</p>
+  <p data-if="affiliation">{{affiliation}}</p>
+  <p>{{date:long}}</p>
+</section>
+<section class="lay-abs" data-if="slot:초록"><p class="lay-label">{{t:초록|Abstract}}</p><div class="lay-slot">{{slot:초록}}</div></section>
+<main class="md-body">{{body}}</main>

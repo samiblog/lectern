@@ -140,3 +140,11 @@
 - pptx 판정은 `convert.is_pptx` 로 한다. `zipfile.is_zipfile` 은 안 된다 — PowerPoint 가 저장한 `.ppt` 도 끝에 ZIP 조각이 있어 참이 나온다.
 - `skillrun.main` 이 예외를 직접 찍는다. PyInstaller 에 맡기면 stderr 마지막 줄이 `Failed to execute script` 가 되어 `convert.py` 가 까닭을 읽지 못한다.
 - PowerPoint 에 대화상자가 떠 있으면 COM 호출이 `AttributeError` 로 돌아온다. Office 의 첫 실행 개인정보 안내도 그렇다. 동의를 묻는 창이니 시험에서 대신 누르지 않는다.
+
+### 지면 틀 (D145)
+
+- **머리 주석 안에 `-->` 를 쓰지 않는다**: html 주석은 처음 나오는 `-->` 에서 끝난다. 설명에 `<!-- box: 면책 -->` 을 적었더니 주석이 거기서 끝나 나머지 머리가 표지 위에 글로 찍혔다. 박스글은 "이름이 '면책'인 박스글" 로 쓴다 (`tests/test_layouts.py` 가 본다).
+- **이름 붙은 쪽은 쪽을 새로 시작한다**: `page: opener` 를 단 요소 뒤의 글은 다음 쪽으로 간다 — 책의 장 시작을 이름 붙은 쪽으로 했더니 제목만 한 쪽에 남았다. 첫 쪽만 다르게는 `@page :first`.
+- **base.css 의 `@media print` 는 뗀다**: 그 안의 `:root:not(.lec-deck-shown) { --md-heading: #000 !important … }` 가 틀의 색을 종이에서 검게 덮는다 (`layout.js` 의 dropPrintBlocks).
+- **두 단의 한글**: base.css 의 `word-break: keep-all` 로 좁은 단을 양쪽 맞춤하면 낱말 사이가 크게 벌어지고, 넓은 표는 단을 넘어 옆 단 글을 덮는다. 두 단 틀은 `word-break: normal; line-break: strict;`, 넓은 표·차트·캡션은 `column-span: all`.
+- **자리의 박스글 제목**: 한 줄짜리 문단으로 시작하는 박스글은 그 문단이 제목(`.lec-textbox-title`)이 된다 — 자리에서 제목을 감췄더니 초록이 통째로 사라졌다. 굵은 글뿐이거나 '박스 1.' 인 제목만 빼고 나머지는 글로 둔다.

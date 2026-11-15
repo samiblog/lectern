@@ -26,6 +26,9 @@ const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues'
 const MARKS = ['lec-fold', 'lec-folded', 'lec-fold-hidden', 'lec-textbox-folded', 'lec-changed', 'lec-picked', 'lec-target',
   'lec-cell-over', 'lec-cell-bad', 'lec-lit', 'lec-armed'];
 
+/** 화면이 그린 문서를 담을 때 걸러 낼 것 — 지면 틀(layout.js)도 같은 것으로 */
+export const MD_PACK = { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS };
+
 /** 이 파일만의 CSS: 바탕과 가운데 단 — 화면에서는 앱의 문서 칸이 하던 일 */
 const FRAME_CSS = `
 html, body { margin: 0; padding: 0; }
@@ -89,9 +92,14 @@ export async function buildMdHtml(pane, path, { printCss }) {
     '</html>',
     '',
   ].join('\n').replace(/\r\n?/g, '\n');   // 줄바꿈은 LF 하나로 — 이 PC 의 CRLF 사본(스타일 css 등)이 섞이지 않게
+  return { text, title, notes: foundNotes(found) };
+}
+
+/** 담으며 센 것을 알릴 글로 */
+export function foundNotes(found) {
   const notes = [];
   if (found.external) notes.push(t('인터넷 그림 {n}개는 주소로 남았습니다 — 받은 사람의 브라우저가 불러옵니다', { n: found.external }));
   if (found.missing) notes.push(t('불러오지 못한 그림 {n}개는 빠졌습니다', { n: found.missing }));
   if (found.media) notes.push(t('동영상·소리 {n}개는 넣지 않았습니다', { n: found.media }));
-  return { text, title, notes };
+  return notes;
 }

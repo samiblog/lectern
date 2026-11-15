@@ -2,7 +2,7 @@
 // 편집기 경로·제외 폴더처럼 API로 못 바꾸는 값은 설정 파일을 편집기로 열어 고친다 (서버가 저장된 파일을 다시 읽는다).
 
 import { S, emit, on } from './store.js';
-import { saveConfig, postJSON } from './api.js';
+import { saveConfig, postJSON, getJSON } from './api.js';
 import { fillPicker, grouping, userStyleInfo } from './theme.js';
 import { confirmReload } from './editor.js';
 import { openSamples } from './tabs.js';
@@ -58,7 +58,8 @@ export function applyAiNames() {
   text('#lec-wstyle-desc', claude
     ? t('Claude Code 를 개발자가 아닌 리서치 동료·편집자로 바꾸는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다')
     : t('개발자가 아닌 리서치 동료·편집자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 그 프로젝트의 AGENTS.md 에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
-  for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-mystyles-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
+  for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-mystyles-prompt', '#lec-layouts-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
+  tip('#lec-layouts-prompt', t('틀 작성 안내의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적습니다', { cli }));
   tip('#lec-aiguide-prompt', t('작성 안내의 위치를 적은 요청 글 — 작업할 프로젝트의 {cli} 에 붙여 넣습니다', { cli }));
   tip('#lec-skills-prompt', t('스킬의 위치를 적은 요청 글 — {cli} 에 붙여 넣습니다', { cli }));
   tip('#lec-wstyle-prompt', t('글쓰기 스타일 파일의 위치를 적은 요청 글 — {cli} 에 붙여 넣습니다', { cli }));
@@ -127,6 +128,24 @@ function stylePrompt() {
   const { dir, guide } = userStyleInfo();
   return t('Lectern 의 내 스타일(CSS)을 만들어 줘. 먼저 설명서 {guide} 를 읽고, 그 규칙대로 {dir} 폴더에 CSS 파일 하나로 저장해. 원하는 모양: ',
     { guide, dir });
+}
+
+// ---- 지면 틀 (D145) --------------------------------------------------------------
+
+/** AI 도구에 줄 요청 글: 틀 작성 안내·앱의 틀·저장할 폴더 (원하는 양식은 사용자가 이어서 적는다) */
+async function layoutPrompt() {
+  const r = await getJSON('/api/layouts');
+  return t('Lectern 의 지면 틀(PDF·html 내보내기 양식)을 만들어 줘. 먼저 작성 안내 {guide} 를 읽고, 그 규칙대로 {dir} 폴더에 html 파일 하나로 저장해. 앱에 든 틀은 {builtin} 에 있으니 비슷한 것을 참고해. 원하는 양식: ',
+    { guide: r.guide, dir: r.dir, builtin: r.builtin });
+}
+
+async function openLayoutsFolder() {
+  try {
+    const r = await postJSON('/api/layouts/folder', {});
+    toast(t('틀 폴더를 열었습니다: {path}', { path: r.path }));
+  } catch (e) {
+    toast(t('틀 폴더를 열지 못했습니다: {error}', { error: e.message }), 'error');
+  }
 }
 
 async function openStylesFolder() {
@@ -217,6 +236,15 @@ async function openConfigFile() {
 export function initSettings() {
   applyAiNames();   // 고른 AI 도구의 이름으로 (D138)
   $('#lec-mystyles-folder').addEventListener('click', openStylesFolder);
+  $('#lec-layouts-folder').addEventListener('click', openLayoutsFolder);
+  $('#lec-layouts-prompt').addEventListener('click', async () => {
+    toast(await copyText(await layoutPrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
+  });
+  $('#lec-layouts-term').addEventListener('click', async () => {
+    const text = await layoutPrompt();
+    closeSettings();
+    emit('term-paste', text);   // 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
   $('#lec-termfont-down').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) - 1));
   $('#lec-termfont-up').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) + 1));
   $('#lec-termfont-reset').addEventListener('click', () => setTermFont(TERM_FONT_BASE));

@@ -164,6 +164,7 @@ class AppState:
         i18n.use_setting(lambda: self.config.get('language'))   # 서버 문구의 언어 (D46)
         self.mode = mode                 # 'app' (pywebview 창) | 'browser' (개발용)
         self.token: str | None = None    # pywebview 세션 토큰. None 이면 검사 안 함
+        self.base_url = ''               # 창 모드의 서버 주소 'http://127.0.0.1:포트/' — 지면 틀의 PDF 를 찍는 숨은 창이 쓴다 (D145)
         self.projects: dict[str, Project] = {}   # 열린 순서 = 탭 순서
         self.active: str | None = None           # 선택된 탭 (다음 실행에 되살리고, 폴더 대화상자가 여기서 시작)
         # 탭 목록이 바뀔 때마다 늘어난다. 다른 실행이 넘긴 폴더로 탭이 생기면 화면이 /api/changes 로 알아챈다

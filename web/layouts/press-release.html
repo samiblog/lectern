@@ -1,0 +1,46 @@
+<!--lectern-layout
+name: 보도자료
+name_en: Press release
+group: 업무·공공
+group_en: Office and public sector
+pages: A4
+fields: org, title, subtitle, 보도일시, 배포일시, dept, 담당자, 연락처
+slots: 부제
+description: 맨 위 '보도자료' 띠와 보도·배포 일시, 담당 부서·담당자·연락처 표, 큰 제목과 부제(맨 앞 설정 subtitle, 여러 줄이면 이름이 '부제'인 박스글), 역삼각형 본문
+description_en: A 'press release' band with release and distribution times, a contact table, a large headline with sub-points, and the body
+-->
+<style>
+:root {
+  --md-font: "맑은 고딕", "Malgun Gothic", "Pretendard", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 14px; --md-line: 1.75;
+  --md-fg: #1b1b1b; --md-heading: #12305e; --md-border: #c9ced6;
+  --md-th-bg: #eef2f7; --md-th-fg: #12305e; --md-th-rule: #12305e;
+  --lay-pad: 18mm 20mm;
+}
+@page { size: A4; margin: 18mm 20mm; @bottom-center { content: "- " counter(page) " -"; font: 9pt "Malgun Gothic", sans-serif; color: #666; } }
+.lay-press-release .lay-band { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 2mm; border-bottom: 4px solid #12305e; }
+.lay-press-release .lay-band .kind { font: 800 24pt/1 var(--md-font); color: #12305e; letter-spacing: .05em; }
+.lay-press-release .lay-band .org { font: 700 12pt var(--md-font); color: #333; }
+.lay-press-release .lay-times { width: 100%; margin: 3mm 0 0; border-collapse: collapse; font-size: 10pt; }
+.lay-press-release .lay-times th { width: 22mm; padding: 1.2mm 2mm; background: #eef2f7; color: #12305e; text-align: center; border: 1px solid #c9ced6; }
+.lay-press-release .lay-times td { padding: 1.2mm 2mm; border: 1px solid #c9ced6; }
+.lay-press-release .lay-head { margin: 8mm 0 6mm; text-align: center; }
+.lay-press-release .lay-head h1 { margin: 0; padding: 0; border: 0; font: 800 20pt/1.35 var(--md-font); color: #111; letter-spacing: -.02em; }
+.lay-press-release .lay-sub { margin: 4mm auto 0; padding: 3mm 6mm; max-width: 150mm; text-align: left; background: #f4f6f9; border-left: 3px solid #12305e; font-size: 11.5pt; }
+.lay-press-release .lay-sub p.sub { margin: 0; }
+.lay-press-release .lay-sub ul { margin: 0; padding-left: 1.2em; }
+.lay-press-release .md-body h2 { font-size: 13pt; color: #12305e; border-bottom: 0; margin: 1.2em 0 .4em; }
+.lay-press-release .md-body p { text-indent: 0; }
+</style>
+<header class="lay-band"><span class="kind">{{t:보도자료|PRESS RELEASE}}</span><span class="org" data-if="org">{{org}}</span></header>
+<table class="lay-times">
+  <tr data-if="보도일시"><th>{{t:보도 일시|For release}}</th><td colspan="3">{{보도일시}}</td></tr>
+  <tr><th>{{t:배포 일시|Issued}}</th><td>{{배포일시|date:dot}}</td><th data-if="dept">{{t:담당 부서|Department}}</th><td data-if="dept">{{dept}}</td></tr>
+  <tr data-if="담당자"><th>{{t:담당자|Contact}}</th><td>{{담당자}}</td><th>{{t:연락처|Phone}}</th><td>{{연락처}}</td></tr>
+</table>
+<section class="lay-head" data-if="title">
+  <h1>{{title}}</h1>
+  <div class="lay-sub lay-slot" data-if="slot:부제">{{slot:부제}}</div>
+</section>
+<main class="md-body">{{body}}</main>

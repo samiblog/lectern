@@ -1,5 +1,5 @@
 // 인쇄와 'PDF로 저장' (D131·D134): 종이에는 화면 스타일과 상관없이 보고서 양식(web/themes/print.css)으로 나간다.
-// - 'PDF로 저장…'·'인쇄…' 는 'PDF·인쇄' 창을 연다 (D134): 왼쪽은 옵션(글꼴·여백·쪽 머리·쪽 번호 — 설정에 남는다), 오른쪽은 실제로
+// - 'PDF로 저장…'·'인쇄…' 는 내보내기 창을 연다 (D134): 왼쪽은 옵션(글꼴·여백·쪽 머리·쪽 번호 — 설정에 남는다), 오른쪽은 실제로
 //   만들어질 PDF 의 미리보기. 미리보기는 창의 WebView2 가 인쇄 창 없이 만든 PDF(native.pdf_preview — 메모리에만)를 서버가
 //   /pdf-preview/<토큰>.pdf 로 내주고 iframe 의 PDF 보기로 띄운다. 저장은 미리 본 그 바이트를 그대로 (native.save_pdf — 저장
 //   대화상자에서 고른 경로 하나에만), 인쇄는 미리 본 PDF 를 인쇄한다 — 브라우저 인쇄 창이 붙이는 날짜·주소 머리글이 없다.
@@ -14,8 +14,10 @@
 
 import { S, on, emit } from './store.js';
 import { native, saveConfig, postJSON } from './api.js';
-import { $, $$, toast, isMd, basename, debounce } from './util.js';
+import { $, $$, toast, isMd, basename, debounce, copyText } from './util.js';
+import { html, setHtml } from './html.js';
 import { buildMdHtml } from './mdhtml.js';
+import { listLayouts, buildLayoutHtml, fieldsOf, fieldSample, ALIAS } from './layout.js';
 import { t, LANG } from './i18n.js';
 
 const PAGE_FONT = {
@@ -26,13 +28,13 @@ const PAGE_FONT = {
 export const MARGINS = { normal: '25mm 22mm 22mm 22mm', narrow: '15mm 15mm 15mm 15mm', wide: '30mm 30mm 25mm 30mm' };
 const TITLE_MAX = 60;
 const box = () => $('#lec-print');
-/** @type {{ tab: Tab, pane: Pane, path: string, deck: boolean, format: 'pdf' | 'html', token: string, seq: number, busy: boolean } | null} */
+/** @type {{ tab: Tab, pane: Pane, path: string, deck: boolean, format: 'pdf' | 'html', layout: string, layouts: any[], token: string, seq: number, busy: boolean } | null} */
 let dlg = null;
 
 /** CSS content 의 글자 하나로: 따옴표·역슬래시를 막고 줄바꿈·제어 문자는 빈칸으로 */
 export const cssString = (s) => `"${String(s).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/[\\"]/g, '\\$&')}"`;
 
-/** 인쇄·PDF 글꼴 (설정 print_font — 설정 창과 'PDF·인쇄' 창) */
+/** 인쇄·PDF 글꼴 (설정 print_font — 설정 창과 내보내기 창) */
 export const printFont = () => (S.config?.print_font === 'sans' ? 'sans' : 'serif');
 /** 여백 (설정 print_margin) */
 export const printMargin = () => (Object.hasOwn(MARGINS, S.config?.print_margin || '') ? S.config.print_margin : 'normal');
@@ -121,7 +123,7 @@ export async function printDoc() {
   window.print();
 }
 
-/** 'PDF·인쇄' 창을 쓸 수 있는 화면 — 창 모드의 md 문서(Lectern 슬라이드 포함). html 문서·코드·자료·폴더 개요는 아니다 */
+/** 내보내기 창을 쓸 수 있는 화면 — 창 모드의 md 문서(Lectern 슬라이드 포함). html 문서·코드·자료·폴더 개요는 아니다 */
 export function canSavePdf(path = S.pane?.view?.dataset.docPath) {
   // 칸이 html 문서를 보여도 dataset.docPath 에는 앞의 md 문서가 남아 있다 (doc.js 만 적는다) — 메뉴의 문서와 같을 때만
   // 폴더 개요·코드 화면에서도 남아 있다 — 칸이 지금 보이는 것(pane.current)이 그 md 문서일 때만
@@ -142,7 +144,7 @@ export function openPrint(kind = 'pdf') {
   const format = kind === 'html' ? 'html' : 'pdf';
   if (format === 'pdf' ? !canSavePdf() : !canExportHtml()) return;
   const view = S.pane.view;
-  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, token: '', seq: 0, busy: false };
+  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], token: '', seq: 0, busy: false };
   for (const r of $$('#lec-print input[name="pp_font"]')) r.checked = r.value === printFont();
   for (const r of $$('#lec-print input[name="pp_margin"]')) r.checked = r.value === printMargin();
   $('#lec-pp-header').checked = S.config?.print_header !== false;
@@ -158,7 +160,49 @@ export function openPrint(kind = 'pdf') {
   box().hidden = false;
   showFormat();
   (format === 'html' ? $('#lec-print-html') : kind === 'print' ? $('#lec-print-paper') : $('#lec-print-save')).focus();
-  refresh();
+  fillLayouts().then(refresh);
+}
+
+/** 틀 목록을 채운다 — 맨 앞 설정의 layout(틀 id·이름)이 있으면 그것을 고른다. 슬라이드는 틀이 없다 */
+async function fillLayouts() {
+  const d = dlg;
+  const sel = $('#lec-pp-layout');
+  let list = [];
+  try {
+    list = d.deck ? [] : await listLayouts(true);
+  } catch { /* 목록을 못 읽으면 기본 양식만 */ }
+  if (dlg !== d) return;
+  d.layouts = list;
+  const en = LANG === 'en';
+  const groups = new Map();
+  for (const l of list) {
+    const g = l.user ? t('내 틀') : (en ? l.group_en : l.group) || t('그 밖');
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(l);
+  }
+  setHtml(sel, [html`<option value="">${t('보고서 (기본 양식)')}</option>`,
+    ...[...groups].map(([g, ls]) => html`<optgroup label="${g}">${ls.map((l) => html`<option value="${l.id}">${en ? l.name_en : l.name}</option>`)}</optgroup>`)]);
+  const want = String(fieldsOf(d.pane).layout ?? fieldsOf(d.pane)['틀'] ?? '').trim();   // i18n-ok (맨 앞 설정의 한국어 키)
+  const hit = want && list.find((l) => l.id === want || l.name === want || l.name_en === want || l.id === `user/${want}`);
+  d.layout = hit ? hit.id : '';
+  sel.value = d.layout;
+  sel.disabled = d.deck;
+  showLayout();
+}
+
+/** 고른 틀의 설명과 비어 있는 맨 앞 설정 — 기본 양식이면 PDF 옵션(글꼴·여백·쪽 머리·쪽 번호)을 보인다 */
+function showLayout() {
+  const info = dlg.layouts.find((l) => l.id === dlg.layout);
+  const en = LANG === 'en';
+  $('#lec-print-layout').hidden = dlg.format === 'html' || !!info;
+  const fields = fieldsOf(dlg.pane);
+  const empty = (info?.fields || []).filter((k) => !['title', 'date'].includes(k) && fields[k] == null && fields[ALIAS[k]] == null);
+  const slots = (info?.slots || []).map((n) => `<!-- box: ${n} -->`).join(' ');
+  const lines = info ? [en ? info.description_en : info.description, info.flow ? t('쪽 없이 길게') : t('쪽: {size}', { size: info.pages })] : [];
+  if (empty.length) lines.push(t('이 틀이 쓰는 맨 앞 설정 중 비어 있는 것: {keys}', { keys: empty.join(', ') }));
+  if (slots) lines.push(t('박스글 자리: {slots}', { slots }));
+  $('#lec-pp-layout-info').textContent = lines.join('\n');
+  $('#lec-pp-layout-sample').hidden = !empty.length;
 }
 
 /** 고른 형식에 맞춰 옵션·단추·알림을 보인다 */
@@ -199,7 +243,7 @@ async function refresh() {
   const seq = ++dlg.seq;
   dlg.token = '';
   setBusy(t('미리보기를 만드는 중입니다…'));
-  if (dlg.format === 'html') {
+  if (dlg.format === 'html' || dlg.layout) {
     await refreshHtml(seq);
     return;
   }
@@ -222,19 +266,36 @@ async function refresh() {
 }
 const refreshSoon = debounce(refresh, 250);
 
-/** html 한 파일을 지어 서버 메모리에 두고 미리 보인다 (D144) */
+/**
+ * html 한 파일을 지어 서버 메모리에 두고 미리 보인다 (D144). 틀을 골랐으면 틀로 짓고 (D145), PDF 형식이면 그 html 을
+ * 숨은 창이 PDF 로 찍어(native.layout_pdf) PDF 를 미리 보인다 — 저장·인쇄는 그 PDF
+ */
 async function refreshHtml(seq) {
   try {
     const printCss = pageCss(dlg.pane.view);
     await loadImages();
-    const built = await buildMdHtml(dlg.pane, dlg.path, { printCss });
+    const info = dlg.layouts.find((l) => l.id === dlg.layout);
+    const built = info ? await buildLayoutHtml(dlg.pane, dlg.path, info) : await buildMdHtml(dlg.pane, dlg.path, { printCss });
     if (!dlg || seq !== dlg.seq) return;
     const r = await postJSON('/api/export/keep', { text: built.text });
     if (!dlg || seq !== dlg.seq) return;
+    $('#lec-print-html-note').textContent = built.notes.join('\n');
+    if (dlg.format === 'pdf') {
+      const pdf = await window.pywebview.api.layout_pdf(r.token);
+      if (!dlg || seq !== dlg.seq) return;
+      if (pdf?.error) {
+        setBusy(pdf.error, true);
+        return;
+      }
+      dlg.token = pdf.token;
+      $('#lec-print-frame').src = `/pdf-preview/${pdf.token}.pdf#view=Fit`;
+      $('#lec-print-info').textContent = t('{n}쪽 · {kb}KB', { n: pdf.pages, kb: Math.max(1, Math.round(pdf.size / 1024)) });
+      setBusy('');
+      return;
+    }
     dlg.token = r.token;
     $('#lec-print-frame').src = `/export-preview/${r.token}.html`;
     $('#lec-print-info').textContent = t('html 한 파일 · {kb}KB', { kb: Math.max(1, Math.round(r.size / 1024)) });
-    $('#lec-print-html-note').textContent = built.notes.join('\n');
     setBusy('');
   } catch (e) {
     if (dlg && seq === dlg.seq) setBusy(t('html 을 만들지 못했습니다: {error}', { error: e?.message || String(e) }), true);
@@ -248,6 +309,7 @@ async function onOption(e) {
   if (el.name === 'pp_format') {   // 형식은 설정에 남기지 않는다 — 여는 길(메뉴의 PDF·html)이 정한다
     dlg.format = el.value === 'html' ? 'html' : 'pdf';
     showFormat();
+    showLayout();
     refreshSoon();
     return;
   }
@@ -321,7 +383,7 @@ function paper() {
 }
 
 /**
- * 탭 막대의 [인쇄] (D135): 창 모드의 md 문서(Lectern 슬라이드 포함)면 'PDF·인쇄' 창을 인쇄가 기본 단추로 연다.
+ * 탭 막대의 [인쇄] (D135): 창 모드의 md 문서(Lectern 슬라이드 포함)면 내보내기 창을 인쇄가 기본 단추로 연다.
  * html 문서·브라우저 개발 모드는 인쇄 창, 문서가 아니면(폴더 개요·코드·자료) 까닭을 알린다
  */
 export function printButton() {
@@ -344,7 +406,7 @@ export function applyPrintFont() {
 
 export function initPrint() {
   applyPrintFont();
-  on('print-font', applyPrintFont);   // 설정 창·'PDF·인쇄' 창에서 바꿀 때
+  on('print-font', applyPrintFont);   // 설정 창·내보내기 창에서 바꿀 때
   addEventListener('beforeprint', () => { if (!dlg) preparePage(); });   // 다른 길로 연 인쇄 창도 같은 머리로 (창에서는 이미 적었다)
   box().addEventListener('change', onOption);
   box().addEventListener('click', (e) => { if (e.target === box()) closePrint(); });   // 바깥을 누르면 닫기
@@ -352,6 +414,17 @@ export function initPrint() {
   $('#lec-print-save').addEventListener('click', save);
   $('#lec-print-paper').addEventListener('click', paper);
   $('#lec-print-html').addEventListener('click', saveHtml);
+  $('#lec-pp-layout').addEventListener('change', (e) => {   // 틀은 문서에 적지 않는다 — 문서의 맨 앞 설정 layout 이 처음 값
+    if (!dlg) return;
+    dlg.layout = /** @type {HTMLSelectElement} */ (e.target).value;
+    showLayout();
+    refreshSoon();
+  });
+  $('#lec-pp-layout-sample').addEventListener('click', async () => {   // 비어 있는 맨 앞 설정의 견본 — 문서 맨 앞에 붙여 채운다
+    const info = dlg?.layouts.find((l) => l.id === dlg.layout);
+    if (!info) return;
+    toast(await copyText(fieldSample(info, fieldsOf(dlg.pane))) ? t('맨 앞 설정 견본을 복사했습니다 — 문서 맨 앞에 붙여 값을 채우세요') : t('복사하지 못했습니다'));
+  });
   $('#lec-btn-print').addEventListener('click', printButton);   // 탭 막대의 [인쇄] (D135)
   // 미리보기(PDF 보기)를 누르면 초점이 그 안으로 들어가 Esc 가 오지 않는다 — 마우스가 나가면 창으로 되돌린다
   $('#lec-print .print-preview').addEventListener('mouseleave', () => {

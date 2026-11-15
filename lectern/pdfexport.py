@@ -21,8 +21,9 @@ import os
 import re
 import secrets
 import tempfile
+import time
 from pathlib import Path
-from threading import Lock, Semaphore
+from threading import Event, Lock, Semaphore
 from typing import Any
 
 from .i18n import t
@@ -144,6 +145,32 @@ def write_file(path: Path, data: bytes, ext: str) -> str | None:
                 os.unlink(tmp)
             except OSError:
                 pass
+
+
+def print_hidden(url: str) -> bytes:
+    """주소의 html 을 숨은 창에 열어 PDF 바이트로 (지면 틀 — D145). 다 읽고 글꼴이 준비되면 찍고 창을 닫는다.
+    js_api 의 스레드에서 부른다 (창을 만들고 기다리는 동안 UI 스레드가 돌아야 한다)"""
+    import webview
+
+    hidden = webview.create_window('Lectern', url, hidden=True, width=1000, height=1400)
+    loaded = Event()
+    hidden.events.loaded += lambda: loaded.set()
+    try:
+        if not loaded.wait(60):
+            raise TimeoutError(t('PDF 를 만드는 데 {n}초가 넘게 걸려 멈췄습니다', n=60))
+        for _ in range(50):   # 글꼴 (5초까지)
+            try:
+                if hidden.evaluate_js('document.fonts.status') == 'loaded':
+                    break
+            except Exception:   # noqa: BLE001 — 아직 읽는 중
+                pass
+            time.sleep(0.1)
+        return print_to_pdf(hidden)
+    finally:
+        try:
+            hidden.destroy()
+        except Exception:   # noqa: BLE001 — 이미 닫혔다
+            pass
 
 
 def print_to_pdf(window: Any) -> bytes:

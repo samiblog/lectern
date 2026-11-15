@@ -1,0 +1,47 @@
+<!--lectern-layout
+name: 백서
+name_en: White paper
+group: 연구
+group_en: Research
+pages: A4
+fields: org, title, subtitle, author, date
+slots: 요약
+description: 기술·정책 백서 — 색 띠의 표지(제목·부제·기관·날짜), '요약' 쪽, 넓은 여백에 산뜻한 고딕 본문, 강조글·박스글을 색 상자로
+description_en: A technical or policy white paper — a coloured cover, an executive summary page, a clean sans body with wide margins, callouts and boxes as tinted panels
+-->
+<style>
+:root {
+  --md-font: "Pretendard", "맑은 고딕", "Malgun Gothic", "Segoe UI", sans-serif;
+  --md-heading-font: var(--md-font);
+  --md-size: 13.5px; --md-line: 1.72;
+  --md-fg: #22262b; --md-heading: #3b2a8f; --md-muted: #5c6470; --md-border: #d9dce4; --md-link: #3b2a8f;
+  --md-th-bg: #efecfa; --md-th-fg: #2b1f6b; --md-th-rule: #3b2a8f; --md-stripe: #faf9fe;
+  --lay-pad: 22mm 24mm;
+}
+@page { size: A4; margin: 22mm 24mm 22mm; @bottom-left { content: {{css:title}}; font: 8pt "Malgun Gothic", sans-serif; color: #888; } @bottom-right { content: counter(page); font: 8.5pt "Malgun Gothic", sans-serif; color: #3b2a8f; } }
+@page cover { margin: 0; @bottom-left { content: none; } @bottom-right { content: none; } }
+.lay-white-paper .lay-cover { page: cover; position: relative; height: 296mm; padding: 0; break-after: page; background: #ffffff; overflow: hidden; }
+.lay-white-paper .lay-cover .art { position: absolute; inset: 0 0 auto 0; height: 128mm; background: linear-gradient(135deg, #3b2a8f 0%, #5c4bd1 55%, #00a3a3 100%); }
+.lay-white-paper .lay-cover .kind { position: absolute; left: 24mm; top: 26mm; margin: 0; font: 700 10pt var(--md-font); letter-spacing: .3em; color: rgb(255 255 255 / .85); }
+.lay-white-paper .lay-cover h1 { position: absolute; left: 24mm; right: 24mm; top: 150mm; margin: 0; padding: 0; border: 0; font: 800 30pt/1.25 var(--md-font); color: #1c1640; letter-spacing: -.02em; }
+.lay-white-paper .lay-cover .sub { position: absolute; left: 24mm; right: 40mm; top: 212mm; margin: 0; font: 400 14pt/1.5 var(--md-font); color: #4a4f5a; }
+.lay-white-paper .lay-cover .foot { position: absolute; left: 24mm; right: 24mm; bottom: 22mm; margin: 0; display: flex; justify-content: space-between; font: 10.5pt var(--md-font); color: #3b2a8f; }
+.lay-white-paper .lay-exec { break-after: page; }
+.lay-white-paper .lay-exec .lay-label { margin: 0 0 6mm; font: 800 19pt var(--md-font); color: #3b2a8f; }
+.lay-white-paper .lay-exec .lay-slot { font-size: 1.06em; }
+.lay-white-paper .md-body h2 { margin: 1.6em 0 .6em; padding: 0; border: 0; font: 800 17pt/1.3 var(--md-font); color: #3b2a8f; }
+.lay-white-paper .md-body h3 { margin: 1.2em 0 .45em; font: 700 12.5pt var(--md-font); color: #22262b; }
+.lay-white-paper .md-body blockquote.alert { border: 0; border-radius: 6px; background: color-mix(in srgb, var(--alert) 9%, #fff); padding: .7em 1em; }
+.lay-white-paper .md-body .lec-textbox { border: 0; border-radius: 6px; background: #f3f1fc; }
+.lay-white-paper .md-body .lec-textbox > .lec-textbox-title { background: #3b2a8f; color: #fff; border: 0; border-radius: 6px 6px 0 0; }
+.lay-white-paper .md-body .caption { font-weight: 700; font-size: .9em; color: #3b2a8f; }
+</style>
+<section class="lay-cover">
+  <div class="art"></div>
+  <p class="kind">{{t:백 서|WHITE PAPER}}</p>
+  <h1>{{title}}</h1>
+  <p class="sub" data-if="subtitle">{{subtitle}}</p>
+  <p class="foot"><span>{{org|author|' '}}</span><span>{{date:long}}</span></p>
+</section>
+<section class="lay-exec" data-if="slot:요약"><p class="lay-label">{{t:요약|Executive summary}}</p><div class="lay-slot">{{slot:요약}}</div></section>
+<main class="md-body">{{body}}</main>

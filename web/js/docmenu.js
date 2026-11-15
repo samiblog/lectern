@@ -399,7 +399,7 @@ function printItems() {
   // 'html로 저장…' (D144): 내보내기 창을 html 형식으로 — 보통 md 문서만 (슬라이드는 'html 로 전환'), 브라우저 개발 모드에서도
   const html = canExportHtml(doc?.path) ? [{ label: t('html로 저장…'), tip: t('지금 화면 스타일 그대로 html 파일 하나로 — 그림·차트·수식이 파일 안에 들어갑니다'), action: () => openPrint('html') }] : [];
   if (!canSavePdf(doc?.path)) return [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }, ...html];
-  // 둘 다 'PDF·인쇄' 창을 연다 (D134 — 옵션과 미리보기). 처음 누를 단추만 다르다
+  // 둘 다 내보내기 창을 연다 (D134 — 옵션과 미리보기). 처음 누를 단추만 다르다
   if (S.pane.view.classList.contains('lec-deck')) {   // Lectern 슬라이드: 한 장이 한 쪽 (base.css 의 @page lec-slide)
     return [{ label: t('PDF로 저장…'), tip: t('미리 보고 저장합니다 — 슬라이드 한 장이 한 쪽, 브라우저가 붙이는 날짜·주소는 없습니다'), action: () => openPrint('pdf') },
       { label: t('인쇄…'), tip: t('미리 보고 인쇄합니다 — 슬라이드 한 장이 한 쪽'), action: () => openPrint('print') }];

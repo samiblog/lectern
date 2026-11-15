@@ -1,0 +1,49 @@
+<!--lectern-layout
+name: 잡지
+name_en: Magazine feature
+group: 매체·출판
+group_en: Media and publishing
+pages: A4
+fields: kicker, title, subtitle, author, date
+description: 잡지 기사 — 머리 꼬리표, 큰 제목과 부제, 지은이, 첫 글자를 크게, 두 단 본문, 인용(> 글)은 큰 끌어온 글로, 그림·표·차트는 두 단에 걸쳐
+description_en: A magazine feature — kicker, large headline and deck, byline, a drop cap, a two-column body, quotes as large pull quotes, figures, tables and charts across both columns
+-->
+<style>
+:root {
+  --md-font: "Georgia", "함초롬바탕", "HCR Batang", "바탕", "Batang", serif;
+  --md-heading-font: "Pretendard", "맑은 고딕", "Malgun Gothic", "Helvetica Neue", sans-serif;
+  --md-size: 13.5px; --md-line: 1.62;
+  --md-fg: #161616; --md-heading: #161616; --md-muted: #666; --md-border: #ddd; --md-link: #c8102e;
+  --md-th-bg: #161616; --md-th-fg: #fff; --md-th-rule: #161616; --md-stripe: #f6f4f1;
+  --lay-pad: 16mm 16mm 18mm;
+}
+@page { size: A4; margin: 16mm 16mm 18mm; @bottom-left { content: {{css:title}}; font: 7.5pt "Malgun Gothic", sans-serif; color: #999; letter-spacing: .05em; } @bottom-right { content: counter(page); font: 700 8pt "Malgun Gothic", sans-serif; color: #c8102e; } }
+@page :first { @bottom-left { content: none; } }
+.lay-magazine .lay-hero { margin: 0 0 7mm; padding: 0 0 6mm; border-bottom: 1px solid #161616; }
+.lay-magazine .lay-hero .kicker { margin: 0 0 5mm; font: 800 9pt var(--md-heading-font); letter-spacing: .25em; text-transform: uppercase; color: #c8102e; }
+.lay-magazine .lay-hero h1 { margin: 0; padding: 0; border: 0; font: 800 36pt/1.08 var(--md-heading-font); letter-spacing: -.03em; color: #111; }
+.lay-magazine .lay-hero .deck { margin: 5mm 0 0; max-width: 150mm; font: italic 400 15pt/1.45 var(--md-font); color: #333; }
+.lay-magazine .lay-hero .by { margin: 5mm 0 0; font: 700 8.5pt var(--md-heading-font); letter-spacing: .12em; text-transform: uppercase; color: #555; }
+.lay-magazine .lay-hero .by span + span::before { content: "  ·  "; }
+.lay-magazine .md-body { columns: 2; column-gap: 8mm; column-rule: 1px solid #e6e2dc; text-align: justify; hyphens: auto;
+  word-break: normal; line-break: strict; overflow-wrap: anywhere; }
+.lay-magazine .md-body > p:first-of-type::first-letter { float: left; margin: .05em .08em 0 0; font: 800 3.6em/.82 var(--md-heading-font); color: #c8102e; }
+.lay-magazine .md-body h2 { margin: 1.3em 0 .45em; padding: 0; border: 0; font: 800 13pt/1.3 var(--md-heading-font); letter-spacing: -.01em; break-after: avoid; }
+.lay-magazine .md-body h3 { margin: 1em 0 .3em; font: 700 11pt var(--md-heading-font); color: #c8102e; }
+.lay-magazine .md-body p { margin: 0 0 .6em; }
+.lay-magazine .md-body blockquote:not(.alert) { column-span: all; margin: 6mm 12mm; padding: 4mm 0; border: 0; border-top: 3px solid #c8102e; border-bottom: 1px solid #161616; text-align: center; font: 700 17pt/1.35 var(--md-heading-font); color: #111; }
+.lay-magazine .md-body blockquote:not(.alert) p { margin: 0; }
+.lay-magazine .md-body img, .lay-magazine .md-body .table-wrap, .lay-magazine .md-body pre.mermaid, .lay-magazine .md-body .lec-chart, .lay-magazine .md-body .caption { column-span: all; }
+.lay-magazine .md-body .caption { margin: 4mm 0 1.5mm; font: 700 8.5pt var(--md-heading-font); letter-spacing: .06em; text-transform: uppercase; color: #555; text-align: left; }
+.lay-magazine .md-body p.lec-source { column-span: all; font: italic 8pt var(--md-font); }
+.lay-magazine .md-body table { font: 9pt var(--md-heading-font); }
+.lay-magazine .md-body .lec-textbox { break-inside: avoid; background: #f6f4f1; border: 0; border-top: 3px solid #161616; }
+.lay-magazine .md-body .lec-textbox > .lec-textbox-title { background: none; border: 0; font-family: var(--md-heading-font); }
+</style>
+<header class="lay-hero">
+  <p class="kicker" data-if="kicker">{{kicker}}</p>
+  <h1>{{title}}</h1>
+  <p class="deck" data-if="subtitle">{{subtitle}}</p>
+  <p class="by"><span data-if="author">{{t:글|By}} {{author}}</span><span>{{date:long}}</span></p>
+</header>
+<main class="md-body">{{body}}</main>

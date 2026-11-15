@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, htmlexport, i18n, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
@@ -822,6 +822,27 @@ def create_app(state: AppState) -> Flask:
     def api_styles_folder() -> Any:
         """스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '스타일 폴더 열기'"""
         return open_folder(styles.styles_dir())
+
+    # ---- 지면 틀 (D145): web/layouts 와 설정 폴더의 layouts ------------------------------------------
+
+    @app.get('/api/layouts')
+    def api_layouts() -> Any:
+        """고를 수 있는 틀 — 앱의 틀(묶음 차례) 다음에 내 틀. 내 틀 폴더와 만드는 법(작성 안내)의 경로도"""
+        guide = web_dir() / 'help' / ('layouts.en.md' if i18n.language() == 'en' else 'layouts.md')
+        return jsonify(layouts=layouts.list_layouts(), dir=str(layouts.user_dir()), guide=str(guide), builtin=str(layouts.builtin_dir()))
+
+    @app.get('/api/layouts/<path:lid>')
+    def api_layout(lid: str) -> Any:
+        """틀 하나 — 거른 CSS 와 뼈대, 모든 틀 앞에 들어가는 _base.css. 없으면 404"""
+        got = layouts.read_layout(lid)
+        if got is None:
+            abort(404)
+        return jsonify(got)
+
+    @app.post('/api/layouts/folder')
+    def api_layouts_folder() -> Any:
+        """내 틀 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '틀 폴더 열기'"""
+        return open_folder(layouts.user_dir())
 
     # ---- Lectern 슬라이드 템플릿 (D101): web/templates 와 설정 폴더의 templates ---------------------
 

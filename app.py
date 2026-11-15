@@ -141,6 +141,7 @@ def run_window(state: AppState, port: int, debug: bool, receiver: instance.Recei
     server = make_http_server(state, port)
     threading.Thread(target=server.serve_forever, name='lectern-http', daemon=True).start()
     url = f'http://127.0.0.1:{server.server_port}/'
+    state.base_url = url   # 지면 틀의 PDF 를 찍는 숨은 창이 미리보기 html 을 연다 (D145 — native.layout_pdf)
 
     width, height = window_size(state.config.get('window'))
 
