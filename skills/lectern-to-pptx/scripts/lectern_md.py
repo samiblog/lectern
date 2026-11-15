@@ -48,7 +48,7 @@ def split_front(md):
                 css.append(line.strip('\r'))
                 continue
             block = False
-        m = re.match(r'^([A-Za-z_]+):\s*(.*)$', line.rstrip('\r'))
+        m = re.match(r'^(\w[\w -]*?):\s*(.*)$', line.rstrip('\r'))   # 한국어 키도 (기관:·작성자: — 앱의 layout.js 와 같다)
         if not m:
             continue
         key, value = m[1], m[2].strip()
@@ -98,7 +98,7 @@ def fingerprint(part):
 
 # ---- 글 안의 표시
 
-INLINE = re.compile(r'(\\[\\`*_{}\[\]()#+\-.!|>~$])|(\*\*)|(\*)|(`[^`]*`)|(<br\s*/?>)|(</?(?:sub|sup|u)>)|(!?\[(?:[^\]\\]|\\.)*\]\((?:<[^>]*>|[^)\s]*)\))|(&lt;|&gt;|&amp;|&nbsp;)|(~~)|(<mark(?: class="(green|pink|blue)")?>|</mark>)|(<span style="color:(red|blue|green|goldenrod)">|</span>)')
+INLINE = re.compile(r'(\\[\\`*_{}\[\]()#+\-.!|>~$])|(\*\*)|(\*)|(`[^`]*`)|(<br\s*/?>)|(</?(?:sub|sup|u|b|strong|i|em)>)|(!?\[(?:[^\]\\]|\\.)*\]\((?:<[^>]*>|[^)\s]*)\))|(&lt;|&gt;|&amp;|&nbsp;)|(~~)|(<mark(?: class="(green|pink|blue)")?>|</mark>)|(<span style="color:(red|blue|green|goldenrod)">|</span>)')
 ENTITIES = {'&lt;': '<', '&gt;': '>', '&amp;': '&', '&nbsp;': ' '}
 
 
@@ -134,6 +134,7 @@ def inline(text, base=None):
             add('\n')
         elif tag:
             name = tag.strip('</>')
+            name = {'strong': 'b', 'em': 'i'}.get(name, name)   # html 의 굵게·기울임도 (<b>·<strong>·<i>·<em>)
             state[name] = not tag.startswith('</')
         elif link:
             lm = re.match(r'!?\[((?:[^\]\\]|\\.)*)\]\((<[^>]*>|[^)\s]*)\)', link)

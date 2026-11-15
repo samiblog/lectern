@@ -33,7 +33,7 @@ flowchart LR
 - 한 프로세스 안에 창(메인 스레드), HTTP 서버(데몬 스레드), 파일 감시(열린 프로젝트 탭마다 watchdog 스레드)가 함께 돈다. 터미널을 열면 탭마다 셸(자식 프로세스)과 그 출력을 읽는 스레드가 더해진다 (D38). 셸을 띄우기 전에 이 프로세스의 'Ctrl+C 무시' 표시를 끈다 — 자식에게 물려지기 때문이다.
 - 프로젝트를 여는 창은 하나다. 창 모드로 또 실행하면 새 창을 띄우지 않고 이름 있는 파이프로 첫 실행에 폴더를 넘긴다 (`instance.py`, D34). 그 밖에 프로젝트에 속한 독립창을 띄울 수 있다 (`windows.py`, D95 — 같은 서버·같은 화면, 주소의 `?solo=<프로젝트 id>&w=<창 id>` 만 다르다).
 - 창은 `http://127.0.0.1:<포트>/` 를 연다. 포트는 기본으로 OS가 고른다 (`--port` 로 고정 가능).
-- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59, 저장 대화상자와 WebView2 의 인쇄 창 없는 PDF `save_pdf`·미리보기 `pdf_preview` — D131·D134, 내보내기 창의 html 저장 대화상자 `save_export` — D144, 지면 틀의 html 을 숨은 창이 PDF 로 찍는 `layout_pdf` — D145)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
+- 창에서만 가능한 기능(폴더 선택 대화상자, 창 제목, 발표 모드의 전체 화면 `set_fullscreen` — D59, 저장 대화상자와 WebView2 의 인쇄 창 없는 PDF `save_pdf`·미리보기 `pdf_preview` — D131·D134, 내보내기 창의 html·Word 저장 대화상자 `save_export` — D144·D146, 지면 틀의 html 을 숨은 창이 PDF 로 찍는 `layout_pdf` — D145)만 pywebview `js_api` 로 부르고, 나머지는 전부 HTTP API다. 그래서 `--browser` 모드에서 일반 브라우저로 같은 UI를 확인할 수 있다.
 
 ### 실행 모드
 
@@ -205,6 +205,10 @@ flowchart LR
 | `POST /api/editing` | `{dirty: [이름…], w?}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved_by`, `app.py`). w: 독립창의 창 id (D95) |
 | `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `POST /api/export/keep` | `{text}` | 내보내기 창의 'html 로 저장' (D144) — 화면(mdhtml.js)이 지은 html 한 파일을 메모리에 두고 `{token, size}` (디스크에 쓰지 않음, 형식마다 최근 4개). `<!doctype html>` 과 `generator` 머리가 없거나 300MB 를 넘으면 400. 저장은 창의 js_api `save_export(tab, path, token, 'html')` — 저장 대화상자에서 고른 경로에 그 바이트 그대로 |
+| `POST /api/export/docx` | `{p, path, style}` | 내보내기 창의 Word (D146) — 스킬 `build_docx.py` 로 md 문서를 docx 로 만들어 메모리에 두고 `{token, size, figures, notes}` (임시 폴더에서 만들어 바로 지운다). `style` 은 Word 양식 보관소의 이름(빈 글자면 Lectern 기본 양식), 없으면 404. md 가 아니면 404. 저장은 창의 js_api `save_export(tab, path, token, 'docx')` |
+| `GET /export-file/<토큰>.docx` | | 브라우저 개발 모드의 'Word로 저장…' — 그 docx 를 내려받기로 (`attachment`, 이름은 화면의 `<a download>`). 토큰이 비밀, 모르는 토큰은 404 |
+| `GET /api/docx-styles` | | Word 양식 보관소 (D146 — 설정 폴더 `docx-styles`) `{styles:[{name, file}], dir}` — `.dotx`·`.docx`, Word 잠금 파일 `~$…` 는 뺀다. 폴더가 없으면 빈 목록 |
+| `POST /api/docx-styles/folder` | `{}` | 그 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/layouts` | | 지면 틀 목록 (D145) — `{layouts: [{id, name, name_en, group, group_en, pages, flow, fields, slots, description, description_en, user}], dir(내 틀 폴더), guide(작성 안내), builtin(앱의 틀 폴더)}`. 앱의 틀(묶음 차례) 다음에 내 틀(id `user/이름`) |
 | `GET /api/layouts/<id>` | | 틀 하나 `{id, css, markup, base}` — 스크립트·이벤트 속성·javascript:·바깥 문서·인터넷 그림·인터넷에서 불러오는 CSS 를 지운 것, base 는 모든 틀 앞의 `_base.css`. 없거나 폴더 밖 이름이면 404 |
 | `POST /api/layouts/folder` | | 내 틀 폴더를 탐색기로 (없으면 빈 폴더 하나를 만든다) |

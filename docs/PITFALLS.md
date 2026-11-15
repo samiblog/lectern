@@ -148,3 +148,15 @@
 - **base.css 의 `@media print` 는 뗀다**: 그 안의 `:root:not(.lec-deck-shown) { --md-heading: #000 !important … }` 가 틀의 색을 종이에서 검게 덮는다 (`layout.js` 의 dropPrintBlocks).
 - **두 단의 한글**: base.css 의 `word-break: keep-all` 로 좁은 단을 양쪽 맞춤하면 낱말 사이가 크게 벌어지고, 넓은 표는 단을 넘어 옆 단 글을 덮는다. 두 단 틀은 `word-break: normal; line-break: strict;`, 넓은 표·차트·캡션은 `column-span: all`.
 - **자리의 박스글 제목**: 한 줄짜리 문단으로 시작하는 박스글은 그 문단이 제목(`.lec-textbox-title`)이 된다 — 자리에서 제목을 감췄더니 초록이 통째로 사라졌다. 굵은 글뿐이거나 '박스 1.' 인 제목만 빼고 나머지는 글로 둔다.
+- **본문을 `.md-body` 로 두 겹 감싸지 않는다**: 틀의 `<main class="md-body">{{body}}</main>` 안에 문서의 `<article class="md-body">` 를 그대로 넣었더니 `.lay-… .md-body { columns: 2 }` 가 두 번 걸려 종이에서 4단이 되고, 단 가로지르기(`column-span`)는 안쪽 2단만 가로질렀다. 화면 미리보기에서는 잘 보이지 않고 PDF 의 쪽 나눔에서 드러난다 — 자리가 이미 `.md-body` 안이면 글만 넣는다 (`layout.js` fillMarkup).
+- **종이에는 스크롤 막대가 찍힌다**: base.css 의 `.math-block`·`pre` 는 `overflow: auto` 라 넘치면 PDF 에 막대가 그려진다. 틀의 `@media print` 에서 코드는 줄을 접고 수식·그림은 `overflow: visible` (`_base.css`).
+
+### Word 로 저장 (D146)
+
+- **스타일은 이름으로 찾는다**: 양식의 styleId 는 Word 의 언어마다 다르다 (한국어 Word 가 만든 양식은 '제목 1' 이 `1`, 표준이 `a`). 파일 안의 이름(`heading 1`·`Normal`)은 언어와 상관없이 영어다. COM 으로 스타일을 고칠 때는 `BaseStyle = 'Normal'` 이 한국어 Word 에서 '지정한 이름의 항목이 존재하지 않습니다' 로 실패한다 — `NameLocal` 이나 `Styles(-1)` 을 쓴다.
+- **스킬의 두 파일은 pptx 스킬과 같다**: `lectern_md.py`·`figure_png.py` 를 고치면 두 스킬에 똑같이 (`tests/test_docx_skill.py` 가 잡는다).
+- **`\` 를 한글 글꼴로 쓰지 않는다**: 문장 속 수식을 글 그대로 넣었더니 함초롬바탕에서 `\` 가 ₩ 로 보였다. 수식은 마크다운을 읽기 전에 표시로 빼 두고(`protect_math` — 안 그러면 `\(`·`_`·`*` 가 마크다운으로 읽힌다) 유니코드 글로 바꾼다.
+- **그리다 실패한 차트도 PNG 는 나온다**: 헤드리스 Edge 는 창을 찍을 뿐이라 오류 글이 그림이 됐다. 실패하면 창을 비우고 `figure_png.blank` 가 투명한 그림을 알아본다.
+- **`Content-Disposition` 의 이름이 `<a download>` 를 이긴다**: 내려받기 주소가 `filename=` 을 주면 화면이 정한 '문서 이름.docx' 대신 그 이름으로 받는다 — `attachment` 만 준다.
+- **창을 다시 열면 단추부터 끈다**: 앞에 연 창의 저장 단추가 켜진 채 남아 있어, 양식 목록을 채우기 전에 점검이 단추를 눌렀다 (`openPrint` 의 `setBusy`).
+- **Word 를 자동화한 시험이 실패하면 Word 가 남는다**: 저장하지 않은 문서가 있으면 `Quit()` 이 숨은 확인 창에서 멈춘다. 시험에서 Word 를 띄웠으면 끝에 프로세스를 보고, 시작 시각이 시험의 것인 PID 하나만 끈다.

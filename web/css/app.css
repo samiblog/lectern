@@ -1094,13 +1094,15 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-print fieldset:disabled { opacity: .45; }
 #lec-print .print-note { margin: 8px 4px; color: var(--ui-muted); font-size: 12px; line-height: 1.5; }
 #lec-print .print-note:empty { display: none; }
-#lec-print .print-layouts select { width: 100%; margin: 2px 0 0; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--ui-fg); background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px; }
-#lec-print .print-layouts .print-note { white-space: pre-line; margin: 6px 2px; }
-#lec-print .print-layouts .text-btn { margin: 0 0 6px; padding: 2px 4px; font-size: 12px; }
+#lec-print :is(.print-layouts, .print-docx) select { width: 100%; margin: 2px 0 0; padding: 4px 6px; font: inherit; font-size: 13px; color: var(--ui-fg); background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px; }
+#lec-print :is(.print-layouts, .print-docx) .print-note { white-space: pre-line; margin: 6px 2px; }
+#lec-print :is(.print-layouts, .print-docx) .text-btn { margin: 0 0 6px; padding: 2px 4px; font-size: 12px; }
 #lec-print .print-preview { position: relative; min-height: 0; border: 1px solid var(--ui-border); border-radius: 6px; background: #525659; overflow: hidden; }
 #lec-print iframe { display: block; width: 100%; height: 100%; border: 0; background: #525659; }
 #lec-print .print-wait { position: absolute; inset: auto 0 0 0; margin: 0; padding: 10px 14px; background: rgb(20 24 30 / .82); color: #fff; font-size: 13px; }
 #lec-print .print-wait.error { background: #8a1f1f; }
+/* Word (D146): 미리보기 대신 만든 결과와 알림 */
+#lec-print .print-docx-info { height: 100%; box-sizing: border-box; overflow: auto; margin: 0; padding: 28px 32px; background: var(--ui-bg); color: var(--ui-fg); font-size: 13px; line-height: 1.7; white-space: pre-line; }
 #lec-print .print-btns { display: flex; gap: 8px; align-items: center; }
 #lec-print .print-btns button:not(.text-btn) { height: 30px; padding: 0 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-fg); font: inherit; font-size: 13px; cursor: pointer; }
 #lec-print .print-btns button.primary { background: var(--ui-accent); border-color: var(--ui-accent); color: #fff; }

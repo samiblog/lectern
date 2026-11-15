@@ -397,7 +397,9 @@ function docItems(views = []) {
 /** 'PDF로 저장…'(창 모드의 md 문서 — 보고서 양식, 브라우저 머리글 없이)과 '인쇄…'. 그 밖(html 문서·브라우저 개발 모드)은 인쇄 창 하나 (D131) */
 function printItems() {
   // 'html로 저장…' (D144): 내보내기 창을 html 형식으로 — 보통 md 문서만 (슬라이드는 'html 로 전환'), 브라우저 개발 모드에서도
-  const html = canExportHtml(doc?.path) ? [{ label: t('html로 저장…'), tip: t('지금 화면 스타일 그대로 html 파일 하나로 — 그림·차트·수식이 파일 안에 들어갑니다'), action: () => openPrint('html') }] : [];
+  // 'Word로 저장…' (D146): 같은 창을 Word 형식으로 — 고쳐 쓸 docx, 회사 Word 양식을 빌린다
+  const html = canExportHtml(doc?.path) ? [{ label: t('html로 저장…'), tip: t('지금 화면 스타일 그대로 html 파일 하나로 — 그림·차트·수식이 파일 안에 들어갑니다'), action: () => openPrint('html') },
+    { label: t('Word로 저장…'), tip: t('Word 에서 고쳐 쓸 docx 로 — 회사 Word 양식을 고를 수 있습니다'), action: () => openPrint('docx') }] : [];
   if (!canSavePdf(doc?.path)) return [{ label: t('인쇄 / PDF로 저장…'), tip: t("프린터에서 'Microsoft Print to PDF'를 고르면 PDF로 저장"), action: printDoc }, ...html];
   // 둘 다 내보내기 창을 연다 (D134 — 옵션과 미리보기). 처음 누를 단추만 다르다
   if (S.pane.view.classList.contains('lec-deck')) {   // Lectern 슬라이드: 한 장이 한 쪽 (base.css 의 @page lec-slide)

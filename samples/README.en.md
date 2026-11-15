@@ -19,6 +19,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 10. vi keys [guide/10-vi-키.md](guide/10-vi-키.md) (in Korean) — optional: vi keys for reading (j·k·V·dd·yy·p·o·i·u) and the vi mode of the full editor (:w·:q)
 11. Work management [guide/11-업무-관리.md](guide/11-업무-관리.md) (in Korean) — the sample [WORK.md](WORK.md) at the top: work cards, the work board (Alt+W), adding events (Alt+S) and alerts
 12. Reports and PDF [guide/12-보고서와-PDF.md](guide/12-보고서와-PDF.md) (in Korean) — example requests for the writing style, and a [sample report](reports/3분기-구리-구매-전략.md) written by Claude to save as PDF
+13. Exporting — html, page layouts and Word [guide/13-내보내기-html-틀-Word.md](guide/13-내보내기-html-틀-Word.md) (in Korean) — the same text in 18 page layouts (research report, government report, equity research…), as one html file, or as Word with your company template; three [sample documents](guide/내보내기-예제/연구보고서.md) to try
 
 ## For AI (Claude Code)
 

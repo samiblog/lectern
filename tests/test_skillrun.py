@@ -108,7 +108,7 @@ def test_build_ships_the_licenses():
 
 
 def test_skill_guides_name_the_runner_first():
-    for name in ('pptx-to-lectern', 'lectern-to-pptx'):
+    for name in ('pptx-to-lectern', 'lectern-to-pptx', 'lectern-to-docx'):
         text = (ROOT / 'skills' / name / 'SKILL.md').read_text(encoding='utf-8')
         assert 'lectern-skill.exe' in text
         assert not re.search(r'^python <이 스킬>', text, re.M), '실행기를 먼저 쓰도록 <실행기> 로 적는다'

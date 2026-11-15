@@ -54,7 +54,7 @@ export function applyAiNames() {
   const tip = (id, value) => $(id)?.setAttribute('title', value);
   text('#lec-aiguide-title', t('{cli} 에 Lectern 알려 주기', { cli }));
   text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 그 프로젝트의 {file} 에 규칙을 정리합니다', { cli, file: ruleFile() }));
-  text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬이 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'에 있습니다", { cli }));
+  text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'와 예제 가이드 13 에 있습니다", { cli }));
   text('#lec-wstyle-desc', claude
     ? t('Claude Code 를 개발자가 아닌 리서치 동료·편집자로 바꾸는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다')
     : t('개발자가 아닌 리서치 동료·편집자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 그 프로젝트의 AGENTS.md 에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
@@ -86,15 +86,15 @@ function guidePrompt() {
     { guide: S.writingGuide, where });
 }
 
-// ---- PowerPoint 스킬 (D98) -------------------------------------------------------
+// ---- PowerPoint·Word 스킬 (D98·D146) -------------------------------------------------------
 
 /** AI 도구에 줄 요청 글: 앱이 설치하지 않는다. 도구가 설명하고 물은 뒤 사용자가 허락하면 제 개인 스킬 폴더로 복사한다 (도구들이 같은 SKILL.md 형식) */
 function skillsPrompt() {
   const one = aiInfo();
   const to = one
-    ? t('두 폴더를 {dir}/ 로 복사해', { dir: one.skills })
-    : t('두 폴더를 네 개인 스킬 폴더로 복사해 (Claude Code 는 ~/.claude/skills, Codex 는 ~/.codex/skills, Antigravity 는 ~/.gemini/config/skills, OpenCode 는 ~/.config/opencode/skills)');
-  return t('Lectern 에 {cli} 스킬 두 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 {to}. 이미 있으면 바꿀지 다시 물어봐.',
+    ? t('세 폴더를 {dir}/ 로 복사해', { dir: one.skills })
+    : t('세 폴더를 네 개인 스킬 폴더로 복사해 (Claude Code 는 ~/.claude/skills, Codex 는 ~/.codex/skills, Antigravity 는 ~/.gemini/config/skills, OpenCode 는 ~/.config/opencode/skills)');
+  return t('Lectern 에 {cli} 스킬 세 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx, lectern-to-docx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 {to}. 이미 있으면 바꿀지 다시 물어봐.',
     { cli: aiCli(), dir: S.skillsDir, to });
 }
 

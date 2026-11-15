@@ -251,11 +251,11 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 - When the text really changes, the screen is redrawn and the selection is cleared.
 - If a change was missed, press F5 to reload.
 
-### Print, PDF and html
+### Print, PDF, html and Word
 
-Click **Print** at the right end of the tab bar (between Contents and Notes), or right-click the margin of a document and choose **Save as PDF…**, **Print…** or **Save as html…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
+Click **Print** at the right end of the tab bar (between Contents and Notes), or right-click the margin of a document and choose **Save as PDF…**, **Print…**, **Save as html…** or **Save as Word…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
 
-All of them open the **Export** window. Under **Format** at the top, choose PDF and print or one html file. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
+All of them open the **Export** window. Under **Format** at the top, choose PDF and print, one html file, or Word. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
 
 | Option | Choices |
 |---|---|
@@ -276,13 +276,17 @@ The options are kept for next time.
   - Write `layout: layout id` (for example `layout: research-report`) in the front matter and the window opens with that layout.
   - Your own layouts: open the layouts folder under **Page layouts** in Settings, paste **Copy request for Claude Code** into Claude Code and describe the layout you want; Claude reads the guide and saves one html file there. It appears under **My layouts** at the bottom of the list.
 - **Save as html…**: saves an md document as one html file. It keeps the current screen style as one long page, and pictures, charts, diagrams and math go inside the file, so you can send just that file by e-mail. Folded sections and boxes are unfolded, app marks such as copy buttons and line numbers and the front matter table are left out, and contents, footnote and cross-reference links still work. Links to other documents stay as text. There are no scripts, so it opens safely in the recipient's browser, and printed there it comes out in the same report layout as the PDF. What you previewed is written where you choose in the save dialog (it opens next to the document, with its name). For Lectern slides, use **Convert to html** on the status bar.
+- **Save as Word…**: saves an md document as a docx to keep editing in Word. Text stays text, tables become Word tables (header row repeated on each page), footnotes become Word footnotes, `Table 1.` and `Figure 1.` captions get Word's numbering fields, and cross-references such as `[Table 1](#table-1)` become links to those captions. Highlights, text colours, callouts and boxes come along; charts, diagrams and display math go in as pictures (inline math as text). There is no preview — the window shows what was made (pictures, size, notes), and Word lays out the pages. If the document has a `[toc]` line, Word asks whether to update fields when it opens — answer **Yes** to fill in the contents and page numbers.
+  - **Word template**: the default is the Lectern default template (A4, serif body, the title in the header from page 2, page numbers centred at the foot). Put your organization's Word templates (.dotx, .docx) in the folder that **Open templates folder** opens and they appear in the list; pick one and its styles, page size, margins, headers and footers are borrowed and only the body is written anew. If a template uses its own style names (such as '1.Heading' or 'Body2'), put `template-name.styles.json` (`{"heading 1": "1.Heading", "Normal": "Body2"}`) next to it.
+  - Write `docxStyle: template name` in the front matter and the window opens with that template. Otherwise a template with the same name as the `layout:` (page layout) is chosen — give a layout and a template the same name and PDF, html and Word pair up under one name.
+  - Making the file takes a few seconds (more with many charts). Charts are drawn with Windows' Edge — nothing goes to the internet.
 
 Lectern slides print one slide per slide-sized page (see 'Lectern slides'). A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
 
 - Text size, document width, line numbers, find marks, highlights and the screen style do not reach the paper. Tables longer than 12 rows break across pages with the header row repeated, captions stay on the same page as their table or figure, and figures taller than a page are scaled to fit one page.
 - If you are editing, save and close the editor first (the PDF uses the saved text). In Spread all, the PDF is of the pane you right-clicked.
 
-Sample — [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean): example requests for the writing style, writing for the report layout, and a sample report written by Claude to try.
+Sample — [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean): example requests for the writing style, writing for the report layout, and a sample report written by Claude to try. [13 Exporting — html, page layouts and Word](../../samples/guide/13-내보내기-html-틀-Word.md) (in Korean): the 18 layouts with their front matter and named boxes, using a company Word template, and three sample documents to try.
 
 ## Writing and editing documents
 
@@ -629,7 +633,7 @@ Press **Convert to html** in the status bar. An impress.js presentation html fil
 
 Sample — section 12 of [guide 09, Lectern slides](../../samples/guide/09-Lectern-슬라이드.md), 'Working with Claude Code': installing the skills, example requests, the request menus and the order of polishing together.
 
-Claude Code skills move a pptx into Lectern slides and build slides from a pptx. They come with Lectern and are installed only when you ask. In Settings, under **PowerPoint skills**, use **Copy request for Claude Code** (or the terminal button next to it). Claude explains the skills and asks before installing.
+Claude Code skills move a pptx into Lectern slides and build slides from a pptx. They come with Lectern and are installed only when you ask. In Settings, under **PowerPoint and Word skills**, use **Copy request for Claude Code** (or the terminal button next to it). Claude explains the skills and asks before installing. The same request also installs the skill that makes Word files from md documents (`lectern-to-docx`) — the app's **Save as Word…** works without installing it.
 
 Lectern does not run Claude. You talk to Claude Code in the terminal yourself. Here is how to ask. `@document.md` is **Copy @path** from a right-click in the tree.
 
@@ -908,7 +912,7 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 | Continue a conversation | `claude --continue` | `codex resume --last` | `agy --continue` | `opencode --continue` |
 
 - With **Several**, the name becomes 'AI' and requests list each tool's file and folder. If one project uses several tools, keep the rules in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`, so there is one place to edit.
-- The two PowerPoint skills use the format the four tools share (SKILL.md), so they install as they are. OpenCode also reads `~/.claude/skills`, so skills installed for Claude Code show up without installing again.
+- The three PowerPoint and Word skills use the format the four tools share (SKILL.md), so they install as they are. OpenCode also reads `~/.claude/skills`, so skills installed for Claude Code show up without installing again.
 - Pasting several lines into the terminal (▣ Terminal in a menu, Ctrl+V) leaves them in the input box of all four tools without sending. You press Enter yourself. Punctuation such as the middle dot (·), em dash (—) and ellipsis (…) goes in as it is.
 - Antigravity and Codex may ask before reading files outside the working folder (Lectern's writing guide and skills folder). Allow it and they carry on.
 - A tool that uses the whole screen, such as OpenCode, shows only its lower part when a stacked terminal is short. Drag the border to make it taller, or put the terminal below the document (tabs).
@@ -930,9 +934,9 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Show web images | Load https images in documents. When off, they show as links |
 | AI tool | Claude Code (default), Codex, Antigravity, OpenCode or Several — names on screen and requests follow it (see 'Using Codex, Antigravity or OpenCode') |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to the instruction file (CLAUDE.md or AGENTS.md); open the samples. The name follows the AI tool |
-| PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
+| PowerPoint and Word skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
 | Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code'). For Codex, Antigravity and OpenCode the request adds it to that project's AGENTS.md |
-| Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF and html') |
+| Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF, html and Word') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
 | Work alerts | Work alerts inside the window while Lectern is running. On by default |

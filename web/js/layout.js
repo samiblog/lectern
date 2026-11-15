@@ -189,7 +189,8 @@ function fillMarkup(markup, ctx) {
     for (const m of n.data.matchAll(/\{\{([^}]*)\}\}/g)) {
       frag.append(n.data.slice(last, m.index));
       const e = m[1].trim();
-      if (e === 'body') frag.append(ctx.body);
+      // 틀이 본문 자리를 이미 .md-body 로 감쌌으면 글만 — 두 겹이면 틀의 규칙(columns: 2 등)이 두 번 걸려 4단이 된다
+      if (e === 'body') frag.append(...(n.parentElement?.closest('.md-body') ? [...ctx.body.childNodes].map((c) => c.cloneNode(true)) : [ctx.body]));
       else if (e === 'toc') frag.append(tocOf(doc, ctx.body));
       else if (e.startsWith('slot:')) {
         const [name, ...rest] = e.slice(5).split('|');

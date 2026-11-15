@@ -15,6 +15,9 @@ body { margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; 
   html { background: none; }
   .lec-layout { margin: 0; padding: 0; box-shadow: none; width: auto; }
   .lec-layout .footnote-backref { display: none; }
+  /* 종이에는 스크롤 막대가 찍힌다 — 코드는 줄을 접고, 넓은 수식·그림은 넘쳐도 막대 없이 (base.css 의 overflow: auto) */
+  .lec-layout pre:not(.mermaid):not(.lec-chart), .lec-layout pre:not(.mermaid):not(.lec-chart) code { white-space: pre-wrap; overflow-wrap: anywhere; overflow: visible; max-height: none; }
+  .lec-layout .math-block, .lec-layout pre.mermaid, .lec-layout pre.lec-chart { overflow: visible; }
 }
 .lec-layout .md-body { max-width: none; margin: 0; padding: 0; font-size: var(--md-size); line-height: var(--md-line); }
 .lec-layout .md-body > :first-child { margin-top: 0; }

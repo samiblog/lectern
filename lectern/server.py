@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, docxexport, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
@@ -175,6 +175,45 @@ def create_app(state: AppState) -> Flask:
         except ValueError as exc:
             return jsonify(error=str(exc)), 400
         return jsonify(token=token, size=len(pdfexport.preview_bytes(token, 'html') or b''))
+
+    @app.post('/api/export/docx')
+    def api_export_docx() -> Any:
+        """{p, path, style} — 내보내기 창의 Word (D146): 스킬의 build_docx 로 docx 를 만들어 메모리에 두고 토큰을 준다.
+        디스크에는 쓰지 않는다 (저장은 창의 저장 대화상자 — native.save_export). 보기만 하는 프로젝트의 문서도 된다"""
+        from . import pdfexport
+
+        target = path_from_body()
+        if target.suffix.lower() != '.md':
+            abort(404)
+        try:
+            data, report = docxexport.build(target, body().get('style') or '')
+        except docxexport.ExportError as exc:
+            return jsonify(error=exc.message), exc.status
+        return jsonify(token=pdfexport.keep_preview(data, 'docx'), size=len(data), **report)
+
+    @app.get('/export-file/<token>.docx')
+    def export_file_docx(token: str) -> Response:
+        """브라우저 개발 모드의 'Word로 저장…' — 메모리의 docx 를 내려받기로. 토큰이 비밀이다 (<a download> 는 X-Token 을 보낼 수 없다)"""
+        from . import pdfexport
+
+        data = pdfexport.preview_bytes(token, 'docx')
+        if data is None:
+            abort(404)
+        resp = Response(data, content_type='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
+        resp.headers['Cache-Control'] = 'no-store'
+        resp.headers['Content-Disposition'] = 'attachment'   # 이름은 화면의 <a download> 가 준다 (머리의 이름이 그것을 이긴다)
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        return resp
+
+    @app.get('/api/docx-styles')
+    def api_docx_styles() -> Any:
+        """Word 양식 보관소 (D146 — 설정 폴더의 docx-styles)의 양식 목록과 폴더 경로"""
+        return jsonify(styles=docxexport.list_styles(), dir=str(docxexport.styles_dir()))
+
+    @app.post('/api/docx-styles/folder')
+    def api_docx_styles_folder() -> Any:
+        """Word 양식 보관소를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나)"""
+        return open_folder(docxexport.styles_dir())
 
     @app.get('/export-preview/<token>.html')
     def export_preview(token: str) -> Response:

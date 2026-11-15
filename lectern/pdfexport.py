@@ -37,7 +37,7 @@ TIMEOUT = 180   # 초 — 그림이 많은 긴 문서도 보통 몇 초
 MAX_PREVIEWS = 4   # 형식마다 메모리에 두는 미리보기 수 (창 여럿이 함께 미리 볼 때도 모자라지 않게)
 MAX_HTML = 300 * 1024 * 1024   # html 한 파일 — 그림이 파일 안에 들어간다 (html 로 전환과 같다, D129)
 HTML_MARK = '<meta name="generator" content="Lectern'   # 화면이 짓는 파일의 머리. 다른 글을 받아 쓰지 않게
-KINDS = {'pdf': '.pdf', 'html': '.html'}
+KINDS = {'pdf': '.pdf', 'html': '.html', 'docx': '.docx'}   # 메모리에 두는 미리보기의 형식 (docx 는 미리 보지 않고 저장만 — D146)
 _previews: dict[str, tuple[str, bytes]] = {}
 _previews_lock = Lock()
 
@@ -217,17 +217,25 @@ def save(window: Any, chosen: Any, token: Any = None) -> dict[str, str]:
     return {'error': why} if why else {'path': str(path)}
 
 
-def save_html(chosen: Any, token: Any) -> dict[str, str]:
-    """'html 로 저장' (D144): 대화상자에서 고른 값으로 미리 본 html 을 그 바이트 그대로 쓴다.
+def save_kept(chosen: Any, token: Any, kind: str) -> dict[str, str]:
+    """'html 로 저장'(D144)·'Word로 저장'(D146): 대화상자에서 고른 값으로 메모리에 둔 파일을 그 바이트 그대로 쓴다.
     화면에는 {'path'}·{'error'}, 고르지 않았으면 {}"""
-    path = target_of(chosen, '.html')
+    ext = KINDS.get(kind)
+    if kind == 'pdf' or ext is None:
+        return {}
+    path = target_of(chosen, ext)
     if path is None:
         return {}
     why = refuse(path)
     if why:
         return {'error': why}
-    data = preview_bytes(token, 'html')
+    data = preview_bytes(token, kind)
     if data is None:
-        return {'error': t('미리 본 html 이 없습니다 — 창을 닫고 다시 여세요')}
-    why = write_file(path, data, '.html')
+        return {'error': t('미리 본 html 이 없습니다 — 창을 닫고 다시 여세요') if kind == 'html' else t('만든 Word 파일이 없습니다 — 창을 닫고 다시 여세요')}
+    why = write_file(path, data, ext)
     return {'error': why} if why else {'path': str(path)}
+
+
+def save_html(chosen: Any, token: Any) -> dict[str, str]:
+    """'html 로 저장' (D144) — save_kept 의 html"""
+    return save_kept(chosen, token, 'html')

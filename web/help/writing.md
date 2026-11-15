@@ -280,5 +280,5 @@ due: 2026-12-15
 - 강조글은 `> [!NOTE]` 등, 박스글은 `<!-- box -->`~`<!-- /box -->` 사이(첫 줄 `**박스 1. 제목**`).
 - 차트는 ```vega-lite·```echarts·```plotly·```dot (JSON 값만, 인터넷 주소 안 됨, 데이터는 차트 안의 values 로 — CSV 는 큰 작업용 자료만), 다이어그램은 ```mermaid. HTML 보고서는 스크립트가 돌지 않는다.
 - 사람이 건네는 `@경로 12~17행` 은 그 파일의 그 줄들이다. 그 줄 뒤에 박스글로 정리하라고 하면 그 자리에 박스글 하나만 넣는다.
-- 발표 자료는 Lectern 슬라이드(쓰기 전에 `slides.md`), pptx 는 스킬 `pptx-to-lectern`·`lectern-to-pptx`. 폴더 맨 위의 `WORK.md` 는 업무 카드다.
+- 발표 자료는 Lectern 슬라이드(쓰기 전에 `slides.md`), pptx 는 스킬 `pptx-to-lectern`·`lectern-to-pptx`, Word(docx) 는 스킬 `lectern-to-docx` (회사 Word 양식은 `--template`). 폴더 맨 위의 `WORK.md` 는 업무 카드다.
 ```

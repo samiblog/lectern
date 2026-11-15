@@ -1,15 +1,16 @@
-# Lectern 의 PowerPoint 스킬
+# Lectern 의 PowerPoint·Word 스킬
 
-AI 도구가 쓰는 스킬 두 개가 들어 있습니다 (SKILL.md 형식 — Claude Code·Codex·Antigravity·OpenCode 가 함께 씁니다). 설치하면 그 도구에게 말로 시킬 수 있습니다.
+AI 도구가 쓰는 스킬 세 개가 들어 있습니다 (SKILL.md 형식 — Claude Code·Codex·Antigravity·OpenCode 가 함께 씁니다). 설치하면 그 도구에게 말로 시킬 수 있습니다.
 
 | 스킬 | 하는 일 |
 |---|---|
 | `pptx-to-lectern` | pptx 를 Lectern 슬라이드로 옮긴다. pptx 를 참고해서 md 문서를 슬라이드로 만든다 |
 | `lectern-to-pptx` | Lectern 슬라이드를 스타일을 살려 pptx 로 만든다 |
+| `lectern-to-docx` | md 문서(보고서·연구 문서)를 Word(docx)로 만든다. 회사 Word 양식(.dotx)을 빌릴 수 있다 |
 
 ## 설치
 
-Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 AI 도구가 먼저 묻고, 허락하면 두 폴더를 제 개인 스킬 폴더로 복사합니다.
+Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 AI 도구가 먼저 묻고, 허락하면 세 폴더를 제 개인 스킬 폴더로 복사합니다.
 
 | 도구 | 개인 스킬 폴더 |
 |---|---|
@@ -18,7 +19,7 @@ Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 AI 도�
 | Antigravity | `~/.gemini/config/skills/` |
 | OpenCode | `~/.config/opencode/skills/` (`~/.claude/skills/` 도 읽습니다 — Claude Code 용으로 설치했으면 그대로 보입니다) |
 
-Lectern 설정 창의 'PowerPoint 스킬'에서 요청 글을 복사하면 '쓰는 AI 도구'에 맞는 폴더가 적혀 나옵니다.
+Lectern 설정 창의 'PowerPoint·Word 스킬'에서 요청 글을 복사하면 '쓰는 AI 도구'에 맞는 폴더가 적혀 나옵니다.
 
 Python 을 따로 설치하지 않아도 됩니다. Lectern 설치 폴더의 `lectern-skill.exe` 에 Python, pywin32, Pillow 가 들어 있고 스킬은 이것으로 실행됩니다. PowerPoint 가 있으면 `.ppt`, 띄워 둔 발표, 쪽 그림도 씁니다.
 
@@ -26,7 +27,7 @@ PowerPoint 가 없어도 `.pptx` 파일을 옮기고 내보낼 수 있습니다.
 
 `lectern-skill.exe` 를 못 찾으면 시스템의 `python`(3.10 이상)으로 실행됩니다. 이때는 `pip install pywin32 pillow` 까지 해야 위의 기능을 씁니다.
 
-앱의 **pptx 로 전환** 버튼은 이 스킬 없이도 Lectern 슬라이드를 pptx 로 만듭니다. pptx 를 옮기거나 참고해 만드는 일은 스킬이 합니다.
+앱의 **pptx 로 전환** 버튼은 이 스킬 없이도 Lectern 슬라이드를 pptx 로 만듭니다. pptx 를 옮기거나 참고해 만드는 일은 스킬이 합니다. 앱의 **Word로 저장…** 도 스킬 없이 `lectern-to-docx` 의 스크립트를 부릅니다 — 스킬을 설치하면 Claude 에게 말로 시킬 수 있습니다 (여러 문서를 한꺼번에, 회사 양식 파일을 바로 주며).
 
 ## 프롬프트 예제
 
@@ -116,6 +117,20 @@ pptx 에서 옮겨 온 @보고서.md 를 고쳤어. 고친 쪽만 반영해서 �
 
 ```text
 pptx 로 내보낸 7쪽 표가 넘쳐. @발표.md 는 두고 pptx 만 고칠 방법을 알려 줘.
+```
+
+### md 문서 → Word
+
+```text
+@reports/3분기-구리-구매-전략.md 를 Word 로 만들어 줘. 같은 폴더에 같은 이름으로.
+```
+
+```text
+@보고서.md 를 우리 회사 양식 D:\양식\주간보고.dotx 로 Word 를 만들어 줘. 양식의 제목 스타일 이름이 '1.제목' 이면 styles.json 도 만들어 줘.
+```
+
+```text
+reports 폴더의 md 문서를 모두 Word 로 만들어서 reports/word 폴더에 둬. 그리지 못한 차트가 있으면 알려 줘.
 ```
 
 ## 알아 둘 점

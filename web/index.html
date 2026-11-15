@@ -402,7 +402,7 @@
     </div>
   </div>
 </div>
-<div id="lec-print" class="overlay" hidden><!-- 내보내기 창 (D134 PDF·인쇄, D144 html — printdoc.js): 형식·옵션과 실제 결과의 미리보기 -->
+<div id="lec-print" class="overlay" hidden><!-- 내보내기 창 (D134 PDF·인쇄, D144 html, D146 Word — printdoc.js): 형식·옵션과 실제 결과의 미리보기 -->
   <div class="dialog-box print-box" role="dialog" aria-labelledby="lec-print-title" tabindex="-1">
     <h2 id="lec-print-title">내보내기</h2>
     <div class="print-main">
@@ -411,12 +411,19 @@
           <span class="opt-head"><b id="lec-pp-format-title">형식</b></span>
           <label><input type="radio" name="pp_format" value="pdf"><span>PDF·인쇄<small>A4 보고서 양식</small></span></label>
           <label><input type="radio" name="pp_format" value="html"><span>html 한 파일<small>지금 화면 스타일, 그림·차트가 파일 안에</small></span></label>
+          <label><input type="radio" name="pp_format" value="docx"><span>Word<small>고쳐 쓸 수 있는 docx, 회사 Word 양식을 빌린다</small></span></label>
         </div>
         <div class="opt-choice print-layouts"><!-- 지면 틀 (D145 — layout.js) -->
           <span class="opt-head"><b id="lec-pp-layout-title">틀</b></span>
           <select id="lec-pp-layout" aria-labelledby="lec-pp-layout-title"></select>
           <p id="lec-pp-layout-info" class="print-note"></p>
           <button type="button" id="lec-pp-layout-sample" class="text-btn" hidden title="이 틀이 쓰는데 문서에 비어 있는 맨 앞 설정을 견본으로 복사합니다 — 문서 맨 앞에 붙여 값을 채웁니다">맨 앞 설정 견본 복사</button>
+        </div>
+        <div class="opt-choice print-docx" hidden><!-- Word 양식 (D146 — docxexport.py, 설정 폴더 docx-styles) -->
+          <span class="opt-head"><b id="lec-pp-docx-title">Word 양식</b></span>
+          <select id="lec-pp-docx" aria-labelledby="lec-pp-docx-title"></select>
+          <p class="print-note">회사·기관의 Word 양식(.dotx·.docx)을 양식 폴더에 넣으면 여기에 나옵니다. 스타일·쪽 크기·머리글·바닥글을 그 양식에서 빌립니다.</p>
+          <button type="button" id="lec-pp-docx-folder" class="text-btn">양식 폴더 열기</button>
         </div>
         <fieldset id="lec-print-layout">
           <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-font-title">
@@ -435,10 +442,11 @@
         </fieldset>
         <p id="lec-print-note" class="print-note"></p>
         <p id="lec-print-html-note" class="print-note"></p>
-        <p class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다.</p>
+        <p id="lec-print-same" class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다.</p>
       </div>
       <div class="print-preview">
         <iframe id="lec-print-frame" title="미리보기"></iframe>
+        <div id="lec-print-docx-info" class="print-docx-info" hidden></div>
         <p id="lec-print-wait" class="print-wait" role="status"></p>
       </div>
     </div>
@@ -449,6 +457,7 @@
         <button type="button" id="lec-print-paper" title="미리 본 그대로 인쇄합니다 — 프린터·매수·쪽은 인쇄 창에서 고릅니다">인쇄…</button>
         <button type="button" id="lec-print-save" title="미리 본 그대로 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">PDF로 저장…</button>
         <button type="button" id="lec-print-html" class="primary" hidden title="미리 본 그대로 html 파일 하나로 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">html로 저장…</button>
+        <button type="button" id="lec-print-docx" class="primary" hidden title="만든 Word 파일을 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">Word로 저장…</button>
       </span>
     </div>
   </div>
@@ -489,7 +498,7 @@
       </div>
     </div>
     <div class="opt-block" aria-labelledby="lec-skills-title">
-      <span class="opt-head"><b id="lec-skills-title">PowerPoint 스킬</b><small id="lec-skills-desc"></small></span>
+      <span class="opt-head"><b id="lec-skills-title">PowerPoint·Word 스킬</b><small id="lec-skills-desc"></small></span>
       <div class="opt-btns">
         <button type="button" id="lec-skills-prompt" class="text-btn"></button>
         <button type="button" id="lec-skills-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
