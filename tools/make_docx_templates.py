@@ -155,8 +155,7 @@ def sect_xml(spec, refs, kind=None, cols=1, title_pg=False, restart=False):
     w, h = spec['page']
     t, rt, bt, lt = spec['margins']
     hd, ft = spec.get('hf', (mm(12), mm(10)))
-    x = ''.join(f'<w:{k}Reference w:type="{typ}" r:id="{rid}"/>' for k, typ, rid in refs if k == 'header')
-    x += ''.join(f'<w:{k}Reference w:type="{typ}" r:id="{rid}"/>' for k, typ, rid in refs if k == 'footer')
+    x = ref_xml(refs)
     if kind:
         x += f'<w:type w:val="{kind}"/>'
     x += f'<w:pgSz w:w="{w}" w:h="{h}"/><w:pgMar w:top="{t}" w:right="{rt}" w:bottom="{bt}" w:left="{lt}" w:header="{hd}" w:footer="{ft}" w:gutter="0"/>'
@@ -167,6 +166,17 @@ def sect_xml(spec, refs, kind=None, cols=1, title_pg=False, restart=False):
         x += '<w:titlePg/>'
     x += '<w:docGrid w:linePitch="360"/>'
     return f'<w:sectPr>{x}</w:sectPr>'
+
+
+def ref_xml(refs):
+    """구역의 머리글·바닥글 참조 (머리글 먼저)"""
+    return (''.join(f'<w:headerReference w:type="{typ}" r:id="{rid}"/>' for k, typ, rid in refs if k == 'header')
+            + ''.join(f'<w:footerReference w:type="{typ}" r:id="{rid}"/>' for k, typ, rid in refs if k == 'footer'))
+
+
+def balance(spec):
+    """2단 본문을 끝내는 이어지는 구역 나눔 — Word 는 문서 마지막 구역의 단을 고르게 채우지 않아 짧은 글이 왼쪽 단에만 남는다"""
+    return p(sect=sect_xml(spec, [], kind='continuous', cols=2))
 
 
 def text_w(spec):
@@ -365,9 +375,10 @@ def paper_2col():
                  + p(r('{{if:slot:초록}}' + v('slot:초록')), ind=f'w:left="{mm(8)}" w:right="{mm(8)}" w:firstLine="0"')
                  + p(r('{{if:keywords}}'), r('{{t:주제어|Keywords}} — ', b=True, size=18), r(v('keywords'), size=18), after=240, ind=f'w:left="{mm(8)}" w:right="{mm(8)}" w:firstLine="0"',
                      sect=sect_xml(s, [], kind='continuous'))
-                 + p(r(v('body'))))
+                 + p(r(v('body'))) + balance(s))
     s['footer'] = {'default': page_no(fmt='{}')}
-    s['last_sect'] = {'kind': 'continuous', 'cols': 2}
+    s['last_sect'] = {'kind': 'continuous'}
+    s['refs_all'] = True
     return s
 
 
@@ -497,9 +508,10 @@ def magazine():
                  + p(r('{{if:subtitle}}' + v('subtitle'), i=True, size=28, color='555555'), after=160)
                  + p(r('{{t:글|By}} ' + v('author') + '  ·  ' + v('date:long'), size=18, color='777777'), after=240, border=rule('111111', 24, 8),
                      sect=sect_xml(s, [], kind='continuous'))
-                 + p(r(v('body'))))
+                 + p(r(v('body'))) + balance(s))
     s['footer'] = {'default': page_no(fmt='{}', size=16)}
-    s['last_sect'] = {'kind': 'continuous', 'cols': 2}
+    s['last_sect'] = {'kind': 'continuous'}
+    s['refs_all'] = True
     return s
 
 
@@ -514,9 +526,10 @@ def newsletter():
     mast = table([[cell(p(r(v('series|org'), b=True, size=48, color='D35400')), w - mm(60), valign='bottom'),
                    cell(p(r(v('number'), b=True, size=20), jc='right', after=0) + p(r(v('date:dot') + '  ' + v('org'), size=16, color='777777'), jc='right'), mm(60), valign='bottom')]],
                  [w - mm(60), mm(60)], borders='<w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="single" w:sz="36" w:space="0" w:color="D35400"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>')
-    s['body'] = (mast + p(r(v('title'), b=True, size=36), before=200, after=200, sect=sect_xml(s, [], kind='continuous')) + p(r(v('body'))))
+    s['body'] = (mast + p(r(v('title'), b=True, size=36), before=200, after=200, sect=sect_xml(s, [], kind='continuous')) + p(r(v('body'))) + balance(s))
     s['footer'] = {'default': page_no(fmt='{}', size=16)}
-    s['last_sect'] = {'kind': 'continuous', 'cols': 2}
+    s['last_sect'] = {'kind': 'continuous'}
+    s['refs_all'] = True
     return s
 
 
@@ -592,7 +605,8 @@ def package(tid, s):
             refs.append((kind, typ, rid))
     last = s.get('last_sect', {})
     final = sect_xml(s, refs, kind=last.get('kind'), cols=last.get('cols', 1), title_pg=last.get('title_pg', False), restart=last.get('restart', False))
-    document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {NS}><w:body>{s["body"]}{final}</w:body></w:document>'
+    body = s['body'].replace('<w:sectPr>', '<w:sectPr>' + ref_xml(refs)) if s.get('refs_all') else s['body']   # 이어지는 구역이 첫 쪽에 오면 그 구역의 바닥글이 쓰인다
+    document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {NS}><w:body>{body}{final}</w:body></w:document>'
     styles = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles {NS}>{"".join(B.default_styles("ko", s.get("theme")))}</w:styles>'
     settings = (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings {NS}>{s.get("settings", "")}<w:defaultTabStop w:val="800"/>'
                 '<w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>')

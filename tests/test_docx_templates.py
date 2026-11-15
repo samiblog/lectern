@@ -126,3 +126,23 @@ def test_template_names_resolve(monkeypatch):
     assert b.resolve_template('연구보고서') == TEMPLATES / 'research-report.dotx'   # 지면 틀과 같은 이름
     assert b.resolve_template('Research report') == TEMPLATES / 'research-report.dotx'
     assert b.resolve_template('없는 양식') is None
+
+
+def test_two_column_templates_balance_and_short_tables_stay_whole(tmp_path, monkeypatch):
+    # Word 로 연 실제 시험에서: 짧은 논문의 본문이 왼쪽 단에만 차고(문서 끝 구역은 단을 고르게 나누지 않는다), 첫 쪽에 쪽 번호가 없고,
+    # 3행 표가 두 단에 갈라졌다. 본문 뒤의 이어지는 구역 나눔(2단), 첫 구역의 바닥글, 짧은 표의 '다음 단락과 함께'
+    b = builder(monkeypatch)
+    rows = '\n'.join(f'| {i} | {i} |' for i in range(30))
+    md = tmp_path / 'a.md'
+    md.write_text(f'# 논문\n\n## 1. 서론\n\n글.\n\n| 가 | 나 |\n|---|---:|\n| 1 | 2 |\n| 3 | 4 |\n\n## 2. 긴 표\n\n| 다 | 라 |\n|---|---:|\n{rows}\n', encoding='utf-8')
+    for tid in ('paper-2col', 'magazine', 'newsletter'):
+        out = tmp_path / f'{tid}.docx'
+        b.build(md, out, tid)
+        doc = zipfile.ZipFile(out).read('word/document.xml').decode('utf-8')
+        sects = re.findall(r'<w:sectPr\b.*?</w:sectPr>', doc, re.S)
+        assert len(sects) == 3 and 'w:num="2"' in sects[1] and 'w:num="2"' not in sects[2], tid   # 제목 부분 · 2단 본문 · 빈 끝 구역
+        assert all('<w:footerReference' in s for s in sects), tid
+        assert doc.index('글.') < doc.index(sects[1]), tid   # 본문은 2단 구역 안
+        short, long_ = [t for t in re.findall(r'<w:tbl>.*?</w:tbl>', doc, re.S) if 'LecternTable' in t][:2]   # 본문의 표 (뉴스레터 머리의 표는 빼고)
+        assert short.count('<w:keepNext/>') == 4 and long_.count('<w:keepNext/>') == 2, tid   # 짧은 표(3행)는 마지막 행 말고 두 행, 긴 표는 머리행만 — 행마다 두 칸
+        assert f'<w:tblW w:w="{b.text_width_of(sects[1])}"' in short and b.text_width_of(sects[1]) < b.text_width_of(sects[2]) // 2 + 1, tid   # 표·그림 폭은 본문 구역의 한 단 폭

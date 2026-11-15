@@ -765,15 +765,17 @@ class Builder:
         numeric = [all(re.fullmatch(r'[-+]?[\d,.]+%?p?|[-+]?[\d,.]+\s*[%배원톤t$]?', LM.plain(r[c]).strip() or '0') for r in rows[1:] if c < len(r)) for c in range(cols)]
         grid = ''.join(f'<w:gridCol w:w="{col_w}"/>' for _ in range(cols))
         out = [f'<w:tbl><w:tblPr><w:tblStyle w:val="{self.sid["table"]}"/><w:tblW w:w="{width}" w:type="dxa"/><w:tblLook w:val="04A0" w:firstRow="1" w:lastRow="0" w:firstColumn="1" w:lastColumn="0" w:noHBand="0" w:noVBand="1"/></w:tblPr><w:tblGrid>{grid}</w:tblGrid>']
+        whole = len(rows) <= 15   # 짧은 표는 쪽·단에서 가르지 않는다 (2단 양식에서 3행 표가 두 단에 갈라졌다). 머리행은 늘 첫 행과 함께
         for ri, row in enumerate(rows):
             head = ri == 0
             trpr = '<w:cantSplit/>' + ('<w:tblHeader/>' if head else '')
+            keep = '<w:keepNext/>' if ri < len(rows) - 1 and (whole or head) else ''
             cells = []
             for c in range(cols):
                 runs = row[c] if c < len(row) else []
                 align = aligns[c] or ('right' if numeric[c] and not head else None)
                 jc = f'<w:jc w:val="{ {"right": "right", "center": "center"}.get(align, "left")}"/>'
-                inner = self.para(self.runs(self.inline_runs(runs)), self.sid['cell'], jc)
+                inner = self.para(self.runs(self.inline_runs(runs)), self.sid['cell'], keep + jc)
                 cells.append(self.cell(inner, None, col_w))
             out.append(f'<w:tr><w:trPr>{trpr}</w:trPr>{"".join(cells)}</w:tr>')
         out.append('</w:tbl>')
@@ -1165,7 +1167,9 @@ def build(md_path, out_path, template=None, lang=None):
         blocks.remove(h1[0])
     sects = re.findall(r'<w:sectPr\b.*?</w:sectPr>', doc_xml, re.S)
     sect = sects[-1] if sects else ''
-    width = text_width_of(sect)
+    at = re.search(r'\{\{\s*body\s*\}\}', doc_xml) if framed else None
+    after = re.search(r'<w:sectPr\b.*?</w:sectPr>', doc_xml[at.end():], re.S) if at else None
+    width = text_width_of(after[0] if after else sect)   # 본문이 든 구역의 폭 — 2단 양식은 본문 뒤 구역 나눔이 2단이고 마지막 구역은 1단
     vals = {k: fm_text(v) for k, v in fm.items()}
     vals.update({'title': str(title), 'author': author, 'date': fm_text(fm.get('date')) or TF.today()})
     with tempfile.TemporaryDirectory() as tmp:

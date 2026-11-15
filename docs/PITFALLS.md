@@ -167,5 +167,6 @@
 - **자리의 끝 빈칸을 다듬지 않는다**: `{{t:|To }}` 의 'To ' 처럼 이름표의 빈칸이 글의 일부다. 정규식이 끝 빈칸을 먹으면 'To고객' 이 된다 — 값의 키만 다듬는다 (`Filler.value`).
 - **양식의 차례와 문서의 [목차]**: 양식이 `{{toc}}` 를 쓰면 문서의 `[목차]` 줄은 뺀다 (D145 의 html 과 같다). 표 목차·그림 목차는 둔다.
 - **스타일의 요소 차례**: `w:pPr`·`w:rPr` 의 자식은 Word 가 정한 차례(pPr — keepNext, pageBreakBefore, pBdr, shd, tabs, spacing, ind, jc / rPr — rFonts, b, i, caps, color, sz, shd)로 쓴다. 어긋나면 스키마에 맞지 않는 파일이 되어 Word 가 그 서식을 버리거나 파일을 거절할 수 있다.
+- **Word 의 2단은 문서 끝에서 고르게 나뉘지 않는다**: 2단 구역이 문서의 마지막 구역이면 Word 가 왼쪽 단을 끝까지 채운 뒤에야 오른쪽으로 간다 — 짧은 논문이 왼쪽 단에만 찼다. 2단 본문 뒤에 이어지는 구역 나눔(2단)을 두고 마지막 구역은 1단으로 (`make_docx_templates.balance`). 이어지는 구역이 여럿이면 쪽의 머리글·바닥글은 그 쪽 첫 구역의 것이라 모든 구역에 같은 참조를 단다 (`refs_all`). 표·그림 폭은 `{{body}}` 가 든 구역의 것으로 잰다.
 - **양식 파일은 생성기로만**: `skills/lectern-to-docx/templates/*.dotx` 를 Word 로 고쳐 저장하면 시험(`test_templates_match_the_generator`)이 실패한다. `tools/make_docx_templates.py` 를 고치고 다시 돌린다. 사람이 Word 로 고친 사본은 '내 양식'이다 — Word 는 저장할 때 run 을 나누지만 손대지 않은 자리는 한 run 에 남는다 (시험해 봄).
 - **Word 를 자동화한 시험이 실패하면 Word 가 남는다**: 저장하지 않은 문서가 있으면 `Quit()` 이 숨은 확인 창에서 멈춘다. 시험에서 Word 를 띄웠으면 끝에 프로세스를 보고, 시작 시각이 시험의 것인 PID 하나만 끈다.
