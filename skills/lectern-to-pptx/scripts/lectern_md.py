@@ -98,12 +98,13 @@ def fingerprint(part):
 
 # ---- 글 안의 표시
 
-INLINE = re.compile(r'(\\[\\`*_{}\[\]()#+\-.!|>~$])|(\*\*)|(\*)|(`[^`]*`)|(<br\s*/?>)|(</?(?:sub|sup|u)>)|(!?\[(?:[^\]\\]|\\.)*\]\((?:<[^>]*>|[^)\s]*)\))|(&lt;|&gt;|&amp;|&nbsp;)')
+INLINE = re.compile(r'(\\[\\`*_{}\[\]()#+\-.!|>~$])|(\*\*)|(\*)|(`[^`]*`)|(<br\s*/?>)|(</?(?:sub|sup|u)>)|(!?\[(?:[^\]\\]|\\.)*\]\((?:<[^>]*>|[^)\s]*)\))|(&lt;|&gt;|&amp;|&nbsp;)|(~~)|(<mark(?: class="(green|pink|blue)")?>|</mark>)|(<span style="color:(red|blue|green|goldenrod)">|</span>)')
 ENTITIES = {'&lt;': '<', '&gt;': '>', '&amp;': '&', '&nbsp;': ' '}
 
 
 def inline(text, base=None):
-    """글을 run 목록으로. run 은 {t, b, i, code, u, sub, sup, link}."""
+    """글을 run 목록으로. run 은 {t, b, i, s(취소선), code, u, sub, sup, link, mark(형광펜의 색), color(글자색)} — 형광펜·글자색은 Lectern 의
+    문장 속 서식(D141): <mark>·<mark class="green|pink|blue">, <span style="color:red|blue|green|goldenrod">."""
     state = dict(base or {})
     runs = []
 
@@ -120,7 +121,7 @@ def inline(text, base=None):
     for m in INLINE.finditer(text):
         add(text[pos:m.start()])
         pos = m.end()
-        esc, bold, ital, code, br, tag, link, ent = m.groups()
+        esc, bold, ital, code, br, tag, link, ent, strike, mark, mark_color, span, span_color = m.groups()
         if esc:
             add(esc[1])
         elif bold:
@@ -141,6 +142,17 @@ def inline(text, base=None):
                 runs.append(run)
         elif ent:
             add(ENTITIES[ent])
+        elif strike:
+            state['s'] = not state.get('s')
+        elif mark:
+            state['mark'] = None if mark.startswith('</') else (mark_color or 'yellow')
+        elif span:
+            if not span.startswith('</'):
+                state['color'] = span_color
+            elif state.get('color'):
+                state['color'] = None
+            else:
+                add(span)   # 글자색이 아닌 다른 span 의 닫는 표시 — 글 그대로
     add(text[pos:])
     return runs
 

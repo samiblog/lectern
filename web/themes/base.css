@@ -363,6 +363,30 @@
 .md-body details > summary { cursor: pointer; }
 .md-body kbd { font-size: .85em; padding: .1em .4em; border: 1px solid var(--md-border); border-bottom-width: 2px; border-radius: 4px; }
 .md-body mark { background: color-mix(in srgb, var(--md-alert-warning) 28%, transparent); color: inherit; }
+/* 형광펜의 색과 글자색 (D141 — inlinefmt.js): 이름 있는 몇 가지뿐이고, 색은 스타일의 강조글 색을 따라 어두운 스타일에서도 읽힌다.
+   글자색은 원문이 style="color:red" 라 다른 프로그램에서도 그 색이고, 여기서는 스타일의 색으로 바꿔 그린다 */
+.md-body mark.green { background: color-mix(in srgb, var(--md-alert-tip) 26%, transparent); }
+.md-body mark.pink { background: color-mix(in srgb, var(--md-alert-caution) 22%, transparent); }
+.md-body mark.blue { background: color-mix(in srgb, var(--md-alert-note) 22%, transparent); }
+.md-body span[style="color:red"] { color: var(--md-alert-caution) !important; }
+.md-body span[style="color:blue"] { color: var(--md-alert-note) !important; }
+.md-body span[style="color:green"] { color: var(--md-alert-tip) !important; }
+.md-body span[style="color:goldenrod"] { color: var(--md-alert-warning) !important; }
+/* 칸 안에서 서식을 보이게 (lineedit.js 의 paintCells — 글자는 원문 그대로, 모양만). ::highlight 는 글자 굵기·기울임을 바꾸지 못해
+   굵게는 글자 그림자로, 기울임은 물결 밑줄로 보인다 */
+::highlight(lec-fmt-marks) { color: color-mix(in srgb, var(--md-fg) 36%, transparent); }
+::highlight(lec-fmt-bold) { text-shadow: 0.5px 0 0 currentColor, -0.5px 0 0 currentColor; }
+::highlight(lec-fmt-italic) { text-decoration: underline wavy 1px; text-decoration-color: color-mix(in srgb, var(--md-fg) 60%, transparent); }
+::highlight(lec-fmt-strike) { text-decoration: line-through; }
+::highlight(lec-fmt-code) { background-color: color-mix(in srgb, var(--md-fg) 12%, transparent); }
+::highlight(lec-fmt-mark) { background-color: color-mix(in srgb, var(--md-alert-warning) 28%, transparent); }
+::highlight(lec-fmt-mark-green) { background-color: color-mix(in srgb, var(--md-alert-tip) 26%, transparent); }
+::highlight(lec-fmt-mark-pink) { background-color: color-mix(in srgb, var(--md-alert-caution) 22%, transparent); }
+::highlight(lec-fmt-mark-blue) { background-color: color-mix(in srgb, var(--md-alert-note) 22%, transparent); }
+::highlight(lec-fmt-color-red) { color: var(--md-alert-caution); }
+::highlight(lec-fmt-color-blue) { color: var(--md-alert-note); }
+::highlight(lec-fmt-color-green) { color: var(--md-alert-tip); }
+::highlight(lec-fmt-color-goldenrod) { color: var(--md-alert-warning); }
 
 .md-body .doc-missing { padding: 12vh 0; text-align: center; color: var(--md-muted); }
 .md-body .doc-missing h1 { border: 0; font-size: 1.3em; color: var(--md-fg); overflow-wrap: anywhere; }

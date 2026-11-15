@@ -403,7 +403,10 @@ class Writer:
         X, Y, W, H = self.box(x, y, w, h)
         return f'<a:xfrm{extra}><a:off x="{X}" y="{Y}"/><a:ext cx="{W}" cy="{H}"/></a:xfrm>'
 
-    # 글
+    # 글. 형광펜과 글자색(D141)은 스타일과 상관없이 정한 색이다 — 이름 있는 몇 가지뿐
+    MARKS = {'yellow': 'FFF59D', 'green': 'C8E6C9', 'pink': 'F8BBD0', 'blue': 'BBDEFB'}
+    COLORS = {'red': 'C62828', 'blue': '1565C0', 'green': '2E7D32', 'goldenrod': 'B8860B'}
+
     def rpr(self, run, size, color, bold=False, tag='a:rPr'):
         attrs = 'lang="ko-KR" dirty="0"'
         if size:
@@ -414,14 +417,18 @@ class Writer:
             attrs += ' i="1"'
         if run.get('u'):
             attrs += ' u="sng"'
+        if run.get('s'):
+            attrs += ' strike="sngStrike"'
         if run.get('sup'):
             attrs += ' baseline="30000"'
         if run.get('sub'):
             attrs += ' baseline="-25000"'
         kids = ''
         link = run.get('link')
-        color = self.p['link'] if link and not self.b.template else color
+        color = self.p['link'] if link and not self.b.template else self.COLORS.get(run.get('color'), color)
         kids += solid(color)
+        if run.get('mark') in self.MARKS:   # 차례: 채우기 다음, 글꼴 앞 (CT_TextCharacterProperties)
+            kids += f'<a:highlight><a:srgbClr val="{self.MARKS[run["mark"]]}"/></a:highlight>'
         if run.get('code'):
             kids += f'<a:latin typeface="{esc(self.style.mono)}"/>'
         if link:

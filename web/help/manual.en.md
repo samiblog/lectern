@@ -331,7 +331,7 @@ Change the structure in a cell or on picked lines (on the current line alone, pr
 
 Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The keys work in a cell or on picked lines; on the current line alone, press them twice.
 
-- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution), **B** the whole text in bold. Pressing the same key again goes back to a paragraph (a to-do goes back to a list item, and B removes the bold). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
+- **One-letter keys**: pick lines (Shift+↑ ↓, Shift+click) and press a single key. On the current line alone, press it twice — **1–6** heading, **0** or **P** paragraph, **H** heading levels in turn (heading 2 → 3 → 1 → paragraph), **L** or **-** list, **N** numbered list, **T** to-do, **Q** quote, **C** callout (on a callout, the next kind — note → tip → important → warning → caution), **B** the whole text in bold, **I** italic, **S** strikethrough, **M** highlight, **F** text color (highlight and color step to the next color each press). Pressing the same key again goes back to a paragraph (a to-do goes back to a list item, and B removes the bold). The lines stay picked, so you can go on with **Tab** for the level. They work whatever the input language is, and they are the same keys as in Lectern mobile. On the current line the first press only holds the line, so a stray key while reading never changes the file.
 - In a cell the letters are typed, so use **Ctrl+Alt+1–6** (heading) and **Ctrl+Alt+0** (paragraph) there; they work on picked lines too. Right-click **Change this line…** for lists, numbered lists, to-dos, quotes and callouts.
 - **Alt+Shift+← →** change the level. Headings take their subsections along and lists take their sub-items. On list lines **Tab** and **Shift+Tab** do the same. **Tab** does not change headings.
 - With several lines picked, a key changes all of them at once. Pick several paragraphs and press **L** for one list or **C** for one callout. With the mouse it is right-click **Change picked lines…** — each item shows its key.
@@ -363,7 +363,23 @@ On the current line, press **/** to open a new line below it with the insert box
 
 ### Formatting and pasting
 
-- In a cell, **Ctrl+B** is bold, **Ctrl+I** italic and **Ctrl+\`** code. They wrap the selected text in `**`, `*` or `` ` ``.
+- **Inline formatting**: select text in a cell and press a key. The same key again removes it. It works in table cells too.
+
+  | Format | Key in a cell | Whole line (outside a cell) | Source |
+  |---|---|---|---|
+  | Bold | **Ctrl+B** | **B** | `**text**` |
+  | Italic | **Ctrl+I** | **I** | `*text*` |
+  | Strikethrough | **Ctrl+Shift+X** | **S** | `~~text~~` |
+  | Code | **Ctrl+\`** | — | `` `text` `` |
+  | Highlight | **Ctrl+Shift+H** | **M** | `<mark>text</mark>` |
+  | Text color | **Ctrl+Shift+C** | **F** | `<span style="color:red">text</span>` |
+
+- **Highlight and text color step through their colors each time you press the key, and the last press removes them.** Highlight goes yellow → green → pink → sky blue; text color goes red → blue → green → yellow. These are the only colors, and each style shows them in a shade that reads well (dark styles included).
+- **Formatting shows inside the cell.** The characters stay as the source and only their look changes — bold text looks bold, colored text takes its color, highlight gets a background, strikethrough gets a line, and markers such as `**` or `<mark>` are dimmed. Italic alone cannot be slanted there and shows as a wavy underline (it is slanted once saved).
+- **With nothing selected**: the key puts the cursor between empty markers so you keep typing. If the cursor is already inside that format, the key removes it.
+- **Right-click**: right-clicking in a cell opens a formatting box — formats and colors, link and footnote, **Clear formatting**, each with its key. It acts on the selected text, or on the whole text of the line when nothing is selected. The box closes and your selection stays, so you keep writing.
+- **A whole line at once**: without opening a cell, press **B**, **I**, **S**, **M** or **F** on the current line or on picked lines (twice on the current line alone). List and heading markers stay and only the text is wrapped. You can also choose them under 'Whole-line formatting' in right-click **Change this line…** / **Change picked lines…**.
+- Highlight and text color carry over to PDF, print and pptx export.
 - Pasting several lines puts them on separate lines. In a list they become items. One undo brings it back.
 - Pasting an Excel range makes a table.
 

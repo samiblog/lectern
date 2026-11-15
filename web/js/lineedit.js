@@ -39,7 +39,7 @@ import {
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
   setKind, shiftHeadings, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
-  toggledKind, boldLines, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+  toggledKind, boldLines, formatLines, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
@@ -55,7 +55,11 @@ import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
 import { t, LANG } from './i18n.js';
 import { aiName } from './aitool.js';
+import { applyFormat, clearFormats, paintOf } from './inlinefmt.js';
+import { showMenu } from './ui.js';
 
+const FMT_PAINT = ['marks', 'bold', 'italic', 'strike', 'code', 'mark', 'mark-green', 'mark-pink', 'mark-blue', 'color-red', 'color-blue', 'color-green', 'color-goldenrod'];
+let paintRaf = 0;
 let session = null;   // 편집 중 {pane, tab, path, line, kind, original, parts, places:[{span, frag}], cell, el, fence, fresh?:{plan, lines, remove}}
 // 되돌리기 기록 — 파일마다 ('탭 id|경로' → {done, undone}). done 은 저장한 변경(마지막 것이 끝), undone 은 되돌린 변경.
 // 변경 {line, before: [줄], after: [줄], hash(적용한 뒤의 파일), prior(되돌린 뒤의 파일)}
@@ -543,6 +547,7 @@ async function finish(save) {
   const s = session;
   if (!s) return { ok: true, saved: false };
   session = null;
+  paintSoon();
   s.pane.lineEdit = null;
   document.removeEventListener('mousedown', onOutside, true);
   if (s.fresh) return finishNew(s, save);
@@ -730,7 +735,7 @@ async function commit(pane, path, old, next, { numbers = true } = {}) {
 
 /** 칸 밖을 누르면: 고친 것이 있으면 저장, 없으면 그만둔다 (그 블록 — 표면 그 행 — 안은 그대로) */
 function onOutside(e) {
-  if (!session || session.el.contains(e.target) || e.target.closest?.('#lec-put')) return;
+  if (!session || session.el.contains(e.target) || e.target.closest?.('#lec-put') || (cellMenuOpen && e.target.closest?.('#lec-menu'))) return;
   finish(true);
 }
 
@@ -1750,11 +1755,142 @@ async function noteHere() {
 }
 
 /** 고른 글을 표시로 감싼다 (Ctrl+B·I·`). 고른 글이 없으면 표시 사이에 커서를 둔다 */
-function wrapText(mark) {
+/** 칸 안에서 고른 글의 자리 [a, b] (글자 수 — 커서면 a = b). 칸 밖이면 null */
+function selOffsets(span) {
   const sel = getSelection();
-  const text = sel.toString();
-  document.execCommand('insertText', false, `${mark}${text}${mark}`);
-  if (!text) for (let i = 0; i < mark.length; i++) sel.modify('move', 'backward', 'character');
+  if (!sel.rangeCount) return null;
+  const r = sel.getRangeAt(0);
+  if (!span.contains(r.startContainer) || !span.contains(r.endContainer)) return null;
+  const pre = document.createRange();
+  pre.selectNodeContents(span);
+  pre.setEnd(r.startContainer, r.startOffset);
+  const a = pre.toString().length;
+  return [a, a + r.toString().length];
+}
+
+/** 칸의 글에서 글자 자리 a~b 의 범위 — 글 노드가 여럿이어도 (없으면 null) */
+function rangeIn(span, a, b) {
+  const walker = document.createTreeWalker(span, NodeFilter.SHOW_TEXT);
+  const r = document.createRange();
+  let at = 0;
+  let started = false;
+  for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+    const len = node.nodeValue.length;
+    if (!started && a <= at + len) {
+      r.setStart(node, a - at);
+      started = true;
+    }
+    if (started && b <= at + len) {
+      r.setEnd(node, b - at);
+      return r;
+    }
+    at += len;
+  }
+  if (a !== 0 || b !== 0) return null;
+  r.selectNodeContents(span);   // 빈 칸
+  return r;
+}
+
+/**
+ * 칸의 글에서 고른 곳(없으면 커서 자리, whole 이면 칸의 글 통째)에 서식을 한다 (D141 — 계산은 inlinefmt.js).
+ * kind: bold·italic·strike·code·mark·color·clear(모두 풀기). 칸의 글을 insertText 로 바꿔 칸의 Ctrl+Z 한 걸음으로 남는다
+ * @param {HTMLElement} span
+ * @param {string} kind
+ * @param {{ value?: string, whole?: boolean }} [opt] value: 형광펜·글자색의 색 (없으면 다음 색), whole: 고른 글이 없으면 칸의 글 통째에
+ */
+function formatHere(span, kind, { value, whole = false } = {}) {
+  const at = selOffsets(span);
+  if (!at) return;
+  const text = span.textContent;
+  const [a, b] = whole && at[0] === at[1] ? [0, text.length] : at;
+  const r = kind === 'clear' ? clearFormats(text, a, b) : applyFormat(text, a, b, kind, value);
+  if (r.text === text) return;
+  const sel = getSelection();
+  sel.selectAllChildren(span);
+  document.execCommand('insertText', false, r.text);
+  const back = rangeIn(span, r.a, r.b);
+  if (back) {
+    sel.removeAllRanges();
+    sel.addRange(back);
+  }
+  paintCells();
+}
+
+/**
+ * 칸 안에서 서식이 보이게 한다 (D141): 글자는 원문 그대로 두고 모양만 입힌다 — 굵게는 굵게, 색은 그 색, 형광펜은 바탕, 취소선은 줄,
+ * 표시 글자(** · <mark> …)는 흐리게. CSS Custom Highlight 라 칸의 DOM 은 바뀌지 않는다 (base.css 의 ::highlight(lec-fmt-…)).
+ * 기울임은 이 방식으로 글자를 기울일 수 없어 물결 밑줄이다
+ */
+function paintCells() {
+  paintRaf = 0;
+  const registry = /** @type {any} */ (globalThis).CSS?.highlights;
+  const Mark = /** @type {any} */ (globalThis).Highlight;
+  if (!registry || !Mark) return;
+  /** @type {Record<string, Range[]>} */
+  const found = {};
+  if (session && session.kind !== 'code') {
+    for (const p of session.places) {
+      const text = p.span.textContent;
+      if (!/[*~`<]/.test(text)) continue;
+      for (const [name, list] of Object.entries(paintOf(text))) {
+        for (const [a, b] of list) {
+          const r = rangeIn(p.span, a, b);
+          if (r) (found[name] ||= []).push(r);
+        }
+      }
+    }
+  }
+  for (const name of FMT_PAINT) {
+    if (found[name]) registry.set(`lec-fmt-${name}`, new Mark(...found[name]));
+    else registry.delete(`lec-fmt-${name}`);
+  }
+}
+
+/** 다음 그리기 때 칸의 서식을 다시 칠한다 — 글을 칠 때마다, 칸을 열고 닫을 때 */
+function paintSoon() {
+  if (!paintRaf) paintRaf = requestAnimationFrame(paintCells);
+}
+
+let cellMenuOpen = false;
+
+/**
+ * 칸 안의 우클릭 (D141): 서식의 선택 상자 — 키를 몰라도 쓰게, 항목 옆에 키를 보인다. 고른 글에 하고, 고른 글이 없으면 칸의 글 통째에.
+ * 고르면 상자가 닫히고 고른 글과 커서가 그대로 남아 이어서 쓴다 (서식 막대는 두지 않는다 — 사용자 결정)
+ */
+function onCellMenu(e) {
+  e.stopPropagation();
+  const s = session;
+  const span = e.currentTarget;
+  if (!s || !textOn(s.pane.view) || (s.kind !== 'text' && s.kind !== 'table') || span.closest('.lec-tag')) return;
+  e.preventDefault();
+  if (!selOffsets(span)) focusPlace(Number(span.dataset.i) || 0);
+  const keep = keepCaret();
+  const picked = !!getSelection().toString();
+  const run = (kind, value) => () => {
+    backTo(s, keep);
+    if (session === s) formatHere(span, kind, { value, whole: true });
+  };
+  const marks = [['', t('노랑')], ['green', t('초록')], ['pink', t('분홍')], ['blue', t('하늘')]];
+  const colors = [['red', t('빨강')], ['blue', t('파랑')], ['green', t('초록')], ['goldenrod', t('노랑')]];
+  cellMenuOpen = true;
+  showMenu(e.clientX, e.clientY, [
+    { header: picked ? t('고른 글의 서식') : t('이 줄의 서식') },
+    { label: t('굵게'), hint: 'Ctrl+B', action: run('bold') },
+    { label: t('기울임'), hint: 'Ctrl+I', action: run('italic') },
+    { label: t('취소선'), hint: 'Ctrl+Shift+X', action: run('strike') },
+    { label: t('코드'), hint: 'Ctrl+`', action: run('code') },
+    '-',
+    ...marks.map(([v, name], i) => ({ label: t('형광펜 — {color}', { color: name }), hint: i ? '' : 'Ctrl+Shift+H', tip: t('같은 색을 다시 고르면 풉니다. 키는 거듭 누르면 다음 색'), action: run('mark', v) })),
+    '-',
+    ...colors.map(([v, name], i) => ({ label: t('글자색 — {color}', { color: name }), hint: i ? '' : 'Ctrl+Shift+C', tip: t('같은 색을 다시 고르면 풉니다. 키는 거듭 누르면 다음 색'), action: run('color', v) })),
+    '-',
+    ...(s.kind === 'text' ? [{ label: t('링크…'), hint: 'Ctrl+K', action: () => { backTo(s, keep); linkHere(); } },
+      { label: t('주…'), hint: 'Ctrl+Alt+F', action: () => { backTo(s, keep); noteHere(); } }] : []),
+    { label: t('서식 풀기'), tip: t('고른 곳의 굵게·색·형광펜 같은 서식을 모두'), action: run('clear') },
+  ], () => {
+    cellMenuOpen = false;
+    if (session === s && !document.activeElement?.closest?.('.lec-line-edit')) backTo(s, keep);   // Esc 로 닫아도 칸으로 돌아온다
+  });
 }
 
 /** 칸의 줄 앞의 목록 표시 — 붙여 넣은 줄도 같은 표시로 */
@@ -1969,7 +2105,9 @@ async function changeLine(line, at) {
   const chosen = await pick({ items: changeItems(), title: t('이 줄 바꾸기'), at });
   if (!chosen) return;
   const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
+  const fmt = /^fmt:(\w+)$/.exec(chosen.id)?.[1];
   menuOp((src) => {
+    if (fmt) return formatOp(fmt)(src, line, line);
     if (box) return boxAt(src, line) ? setBox(src, line, box) : wrapBox(src, line, line, box);
     const r = setKind(src, line, line, chosen.id, { bare: bareOf(src) });
     return r.error ? r : { lines: r.lines, line: r.line };
@@ -2030,6 +2168,11 @@ async function changeLit() {
   const chosen = await pick({ items: changeItems(true), title: litOneLine() ? t('이 줄 바꾸기') : t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
   if (!chosen) return;
   const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
+  const fmt = /^fmt:(\w+)$/.exec(chosen.id)?.[1];
+  if (fmt) {
+    turn = turn.then(() => opLitNow(formatOp(fmt)));
+    return;
+  }
   if (!box) {
     turn = turn.then(() => kindLitNow(chosen.id));
     return;
@@ -2144,6 +2287,11 @@ async function opLitNow(op) {
   if (shift != null && S.pane === pane) setLitSpan(r.a + shift, r.b + shift);
 }
 
+/** 줄 전체에 하는 서식 (D141 — 굵게는 boldLines) */
+const LINE_FORMATS = new Set(['italic', 'strike', 'mark', 'color']);
+/** 줄 a~b 를 통째로 서식 fmt 로 */
+const formatOp = (fmt) => (src, a, b) => (fmt === 'bold' ? boldLines(src, a, b) : formatLines(src, a, b, fmt));
+
 /** 고른 줄의 종류를 바꾼다 (D107). toggle: 한 글자 키 — 이미 그 종류면 문단으로, H 는 제목 차례로 (D128) */
 const kindLitNow = (kind, toggle = false) => opLitNow((src, a, b) => setKind(src, a, b, toggle ? toggledKind(src, a, b, kind) : kind, { bare: bareOf(src) }));
 
@@ -2178,7 +2326,8 @@ export function litKey(e) {
   if (!litSpan() || isCodeView(S.pane.view)) return false;
   const key = kindKey(e);
   if (key) {
-    turn = turn.then(() => (key === 'bold' ? opLitNow(boldLines) : key === 'box' ? opLitNow(cycleBox) : kindLitNow(key, true)));
+    turn = turn.then(() => (key === 'bold' ? opLitNow(boldLines) : key === 'box' ? opLitNow(cycleBox)
+      : LINE_FORMATS.has(key) ? opLitNow((src, a, b) => formatLines(src, a, b, key)) : kindLitNow(key, true)));
     return true;
   }
   const mod = e.ctrlKey || e.metaKey;
@@ -2222,21 +2371,31 @@ function onKey(e) {
     return;
   }
   const typing = textOn(session.pane.view) && session.kind === 'text' && !span.closest('.lec-tag');
+  const fmt = textOn(session.pane.view) && (session.kind === 'text' || session.kind === 'table') && !span.closest('.lec-tag');   // 문장 속 서식 (D141) — 표의 칸에서도
   if (k === '/' && !mod && !e.altKey && typing && session.fresh && !span.textContent) {   // 넣기 창 (D109)
     e.preventDefault();
     openPut();
   } else if (mod && e.shiftKey && !e.altKey && e.code === 'Slash' && typing) {
     e.preventDefault();
     openPut();
-  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyB') {
+  } else if (mod && !e.shiftKey && !e.altKey && fmt && e.code === 'KeyB') {
     e.preventDefault();
-    wrapText('**');
-  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyI') {
+    formatHere(span, 'bold');
+  } else if (mod && !e.shiftKey && !e.altKey && fmt && e.code === 'KeyI') {
     e.preventDefault();
-    wrapText('*');
-  } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'Backquote') {
+    formatHere(span, 'italic');
+  } else if (mod && !e.shiftKey && !e.altKey && fmt && e.code === 'Backquote') {
     e.preventDefault();
-    wrapText('`');
+    formatHere(span, 'code');
+  } else if (mod && e.shiftKey && !e.altKey && fmt && e.code === 'KeyX') {
+    e.preventDefault();
+    formatHere(span, 'strike');
+  } else if (mod && e.shiftKey && !e.altKey && fmt && e.code === 'KeyH') {   // 형광펜 — 거듭 누르면 다음 색, 마지막에 풀린다
+    e.preventDefault();
+    formatHere(span, 'mark');
+  } else if (mod && e.shiftKey && !e.altKey && fmt && e.code === 'KeyC') {   // 글자색 — 거듭 누르면 다음 색, 마지막에 풀린다
+    e.preventDefault();
+    formatHere(span, 'color');
   } else if (mod && !e.shiftKey && !e.altKey && typing && e.code === 'KeyK') {
     e.preventDefault();
     linkHere();
@@ -2333,7 +2492,13 @@ function bind(span) {
     else document.execCommand('insertText', false, text.replace(/\r\n?|\n/g, ' '));
   });
   // 칸 안을 누르는 것은 제목 접기·링크·현재 위치로 가지 않는다
-  for (const type of ['mousedown', 'click', 'dblclick', 'contextmenu']) span.addEventListener(type, (e) => e.stopPropagation());
+  for (const type of ['mousedown', 'click', 'dblclick']) span.addEventListener(type, (e) => e.stopPropagation());
+  span.addEventListener('mousedown', (e) => {   // 글을 고른 채 우클릭하면 고른 것을 그대로 둔다 — 고른 글 밖을 눌러도 커서가 옮겨 가지 않게 (선택 상자가 그 글에 한다)
+    if (e.button === 2 && selOffsets(span) && getSelection().toString()) e.preventDefault();
+  });
+  span.addEventListener('contextmenu', onCellMenu);   // 서식의 선택 상자 (D141)
+  span.addEventListener('input', paintSoon);
+  paintSoon();
   span.addEventListener('focus', () => {
     if (session) session.cell = Number(span.dataset.i);
   });

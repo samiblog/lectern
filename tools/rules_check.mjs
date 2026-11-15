@@ -55,6 +55,10 @@ const notes = await load('web/js/notesdata.js');
   say('문서 구성 요소 표 점검', r.fails, r.n);
 }
 {
+  const r = new Function('m', 'd', readFileSync(join(root, 'tools/edges/inlinefmt_cases.js'), 'utf-8'))(await load('web/js/inlinefmt.js'), await load('web/js/docops.js'));
+  say('문장 속 서식 표 점검', r.fails, r.n);
+}
+{
   const r = new Function('m', 'refs', readFileSync(join(root, 'tools/edges/textbox_cases.js'), 'utf-8'))(await load('web/js/docops.js'), await load('web/js/refs.js'));
   say('박스글 표 점검', r.fails, r.n);
 }

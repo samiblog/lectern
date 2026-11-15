@@ -113,6 +113,13 @@ Lectern 은 강조글에 제목 줄('참고'·'팁' 같은 종류 이름)을 붙
 - 코드 블록: 언어를 적는다 (```` ```python ````). 색이 입혀지고 복사 버튼이 생긴다.
 - HTML 조각: `<details><summary>…</summary>…</details>` 로 접는 내용. `<script>`·`<style>`·`<form>`·이벤트 속성(`onclick` 등)은 지워진다.
 
+### 글 속의 강조
+
+- 굵게 `**글**`, 기울임 `*글*`, 취소선 `~~글~~`, 코드 `` `글` ``.
+- 형광펜은 `<mark>글</mark>` (노랑). 다른 색은 `<mark class="green">`·`<mark class="pink">`·`<mark class="blue">` 세 가지뿐이다.
+- 글자색은 `<span style="color:red">글</span>` — `red`·`blue`·`green`·`goldenrod` 네 가지뿐이다. 다른 색 이름이나 `#rrggbb` 는 쓰지 않는다 (스타일마다 읽히는 농도로 바꿔 그리는 색이 이 넷이다).
+- 색은 아껴 쓴다. 사람이 Lectern 에서 직접 칠하는 표시라, AI 가 쓴 글에 색이 많으면 사람이 칠한 곳이 묻힌다.
+
 ### 링크와 위치
 
 - 다른 문서·그림·자료는 **이 문서 기준 상대경로**로: `[계획](../plans/구현-계획.md)`, `![그림](images/x.svg)`.

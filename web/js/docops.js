@@ -5,6 +5,7 @@
 // - 제목 줄은 절의 손잡이다: 수준 바꾸기(shiftHeadings)는 하위 절까지, 옮기기(moveSection)·지우기(sectionSpan)는 본문까지 함께.
 
 import { quoteOf, itemOf, isBlank, fencesOf, fenceAt, frontEnd, blocksOf, blockAt, tableIn, deckOf, bodyEnd, notesStart } from './lineops.js';
+import { wholeOf, stripFormat, wrapWhole, nextValue, SIMPLE } from './inlinefmt.js';
 
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
 
@@ -155,6 +156,34 @@ export function boldLines(lines, a, b) {
     if (undo) next[p.n - 1] = `${p.head}${wholeBold(p.text)}${p.end}`;
     else if (inner) next[p.n - 1] = `${p.head}**${inner}**${p.end}`;
   }
+  return { lines: next, line: a, a, b };
+}
+
+/**
+ * 줄 a~b 의 글을 통째로 서식 kind 로 (D141 — 기울임 italic·취소선 strike·형광펜 mark·글자색 color. 굵게는 boldLines).
+ * 기울임·취소선: 글 줄이 모두 이미 통째로 그 서식이면 풀고, 아니면 모두 그 서식으로. 형광펜·글자색: 첫 글 줄의 색 다음 색으로 모두 —
+ * 없으면 첫 색, 마지막 색이면 모두 푼다. 일부에만 있던 같은 서식은 걷고 통째로. 표시(목록·제목·인용)는 그대로.
+ * 코드 블록·표·머리 설정·구분 줄은 바꾸지 않는다. {lines, line, a, b}
+ */
+export function formatLines(lines, a, b, kind) {
+  const fences = fencesOf(lines);
+  const blocks = blocksOf(lines);
+  const parts = [];
+  for (let n = a; n <= b; n++) {
+    const s = lines[n - 1];
+    if (isBlank(s)) continue;
+    const blk = blockAt(blocks, n);
+    if (fenceAt(fences, n) || blk?.kind === 'front' || blk?.kind === 'wall') return { error: 'kind' };
+    if (tableIn(lines, blk)) return { error: 'table-kind' };
+    const p = markedParts(s);
+    if (p.text.trim()) parts.push({ n, ...p });
+  }
+  if (!parts.length) return { error: 'kind' };
+  const simple = kind in SIMPLE;
+  const undo = simple ? parts.every((p) => wholeOf(p.text, kind)) : nextValue(parts[0].text, kind) === undefined;
+  const value = simple ? undefined : nextValue(parts[0].text, kind);
+  const next = lines.slice();
+  for (const p of parts) next[p.n - 1] = `${p.head}${undo ? stripFormat(p.text, kind) : wrapWhole(p.text, kind, value)}${p.end}`;
   return { lines: next, line: a, a, b };
 }
 

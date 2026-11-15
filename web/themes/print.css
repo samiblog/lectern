@@ -132,3 +132,13 @@ html body .md-body:not(.lec-deck) .footnotes { font-size: 8.5pt; color: #222; }
 html body .md-body:not(.lec-deck) .footnote-backref { display: none; }
 /* 문서 정보(맨 앞 설정)는 종이에 싣지 않는다 — 날짜는 머리에 */
 html body .md-body:not(.lec-deck) .front-matter { display: none !important; }
+
+/* 형광펜과 글자색 (D141): 사람이 일부러 준 색이라 종이에도 남긴다 — 스타일과 상관없이 정한 색으로 */
+html body .md-body:not(.lec-deck) mark { background: #fff3a3 !important; color: inherit; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+html body .md-body:not(.lec-deck) mark.green { background: #cdeac8 !important; }
+html body .md-body:not(.lec-deck) mark.pink { background: #f9cfd8 !important; }
+html body .md-body:not(.lec-deck) mark.blue { background: #cfe3f8 !important; }
+html body .md-body:not(.lec-deck) span[style="color:red"] { color: #c62828 !important; }
+html body .md-body:not(.lec-deck) span[style="color:blue"] { color: #1558b0 !important; }
+html body .md-body:not(.lec-deck) span[style="color:green"] { color: #1b7a3a !important; }
+html body .md-body:not(.lec-deck) span[style="color:goldenrod"] { color: #9a6b00 !important; }

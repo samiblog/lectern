@@ -59,6 +59,7 @@
 | basket.js | 담기·보내기 (D63·D65) — 조각 만들기(`snippetOf`), 사이드바 '담기' 탭(`tab.basket`), 보낼 곳 고르기 창(`#lec-insert` — 편집 중인 곳·새 문서·문서 탭에 열린 문서 → 자리, 새 문서 경로 — 새로 만들기 `askNewDoc` 도 이 창), `editor.js` 의 `insertIntoDoc` 으로 보내기, Claude 에 맡기기 요청 글 |
 | rename.js | 이름 바꾸기 (D66) — 사이드바 파일의 우클릭 '이름 바꾸기…'·F2 (`rename` 이벤트), 이름을 묻는 창(`#lec-rename`), `POST /api/rename`, 바뀐 뒤 보던 문서 탭·뒤로 기록(`nav.renamePath`)·담은 조각을 새 이름으로 |
 | newdoc.js | 새 문서 (D65·D105) — 처음 경로(`newDocGuess`), 만들기(`createDoc` — `/api/new-doc` 으로 묻고 `/api/save` create 로 `# 제목`과 스타일의 보기 머리글), 새 문서 탭의 md 문서 화면에서 바로 쓰기(`openCreated`) |
+| inlinefmt.js | 문장 속 서식의 계산 (D141, DOM 없음) — 굵게·기울임·취소선·코드·형광펜·글자색을 감싸고 풀고 색을 차례로(`applyFormat`), 모두 풀기(`clearFormats`), 줄 통째(`wholeOf`·`wrapWhole`·`nextValue`), 칸 안에서 칠할 범위(`paintOf`). 칸의 키·우클릭은 lineedit.js, 줄 전체는 docops.js 의 `formatLines` |
 | docops.js | 문서 구성 요소의 계산 (D107, DOM 없음) — 줄 종류(`setKind`), 제목 수준(`shiftHeadings`), 절 옮기기·지우기(`moveSection`·`deleteSection`) |
 | chartops.js | 차트의 계산 (D115, DOM 없음) — 값 표로 읽고 쓰기(`readValues`·`writeValues`), 종류 바꾸기(`setChartKind`), 표에서 차트(`chartFromTable`). 차트의 데이터 (D136): 설정에서 표로(`chartData` — Vega-Lite·Vega·ECharts·Plotly), 긴 표 줄이기(`thinRows`), CSV 를 문서 안의 값으로(`csvRecords`·`inlineUrlData`). 표 점검은 tools/edges/chartops_cases.js |
 | chartdata.js | 차트의 [표]·[복사] (D136) — 그린 차트에 단추(`addChartTools` — charts.js 가 그릴 때마다), 차트 아래 데이터 표(`.lec-chart-data`, 30행 넘으면 줄여서·모두 보기), 데이터 복사, CSV 차트의 '데이터를 문서 안으로 넣기'(CSV 를 읽어 `chart-inline` → lineedit.js 가 저장) |

@@ -64,11 +64,20 @@ const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표
 
 /** 넣을 수 있는 것 */
 export const putItems = (deck = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS().filter((x) => !deck || !NOT_IN_DECK.has(x.id)), ...(deck ? [SPEAKER()] : [])];
+/** 줄 전체의 서식 (D141 — 굵게·기울임·취소선은 다시 고르면 풀고, 형광펜·글자색은 다시 고르면 다음 색) */
+const FORMAT_ITEMS = () => [
+  { id: 'fmt:bold', group: t('줄 전체의 서식'), name: t('굵게'), words: 'bold 진하게 ** 서식' },   // i18n-ok (찾는 말)
+  { id: 'fmt:italic', group: t('줄 전체의 서식'), name: t('기울임'), words: 'italic 이탤릭 * 서식' },   // i18n-ok (찾는 말)
+  { id: 'fmt:strike', group: t('줄 전체의 서식'), name: t('취소선'), words: 'strike ~~ 줄 긋기 서식' },   // i18n-ok (찾는 말)
+  { id: 'fmt:mark', group: t('줄 전체의 서식'), name: t('형광펜 (다시 고르면 다음 색)'), words: 'mark highlight 형광 색 서식' },   // i18n-ok (찾는 말)
+  { id: 'fmt:color', group: t('줄 전체의 서식'), name: t('글자색 (다시 고르면 다음 색)'), words: 'color 색깔 빨강 파랑 서식' },   // i18n-ok (찾는 말)
+];
+
 /** 줄을 바꿀 수 있는 것 */
-export const changeItems = (picked = false) => [...TEXT_ITEMS(), ...BOX_ITEMS()].map((x) => (picked && PICK_KEYS[x.id] ? { ...x, hint: PICK_KEYS[x.id] } : x));
+export const changeItems = (picked = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...FORMAT_ITEMS()].map((x) => (picked && PICK_KEYS[x.id] ? { ...x, hint: PICK_KEYS[x.id] } : x));
 
 /** 고른 줄의 한 글자 키 (D128 — spotlight.kindKey) — '고른 줄 바꾸기' 창에 보인다 */
-const PICK_KEYS = { h1: '1', h2: '2', h3: '3', h4: '4', para: 'P', bullet: 'L', number: 'N', task: 'T', quote: 'Q', 'box:NOTE': 'C' };
+const PICK_KEYS = { h1: '1', h2: '2', h3: '3', h4: '4', para: 'P', bullet: 'L', number: 'N', task: 'T', quote: 'Q', 'box:NOTE': 'C', 'fmt:bold': 'B', 'fmt:italic': 'I', 'fmt:strike': 'S', 'fmt:mark': 'M', 'fmt:color': 'F' };
 
 function draw() {
   const q = find().value.trim().toLowerCase();

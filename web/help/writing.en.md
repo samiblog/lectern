@@ -113,6 +113,13 @@ Source: LME
 - Code blocks: give the language (```` ```python ````) for colors and a copy button.
 - HTML fragments: `<details><summary>…</summary>…</details>` for folded content. `<script>`, `<style>`, `<form>` and event attributes (`onclick` and so on) are removed.
 
+### Emphasis inside text
+
+- Bold `**text**`, italic `*text*`, strikethrough `~~text~~`, code `` `text` ``.
+- Highlight is `<mark>text</mark>` (yellow). The only other colors are `<mark class="green">`, `<mark class="pink">` and `<mark class="blue">`.
+- Text color is `<span style="color:red">text</span>` — only `red`, `blue`, `green` and `goldenrod`. Do not use other color names or `#rrggbb` (these four are the ones each style redraws in a readable shade).
+- Use color sparingly. People mark text themselves in Lectern, and color all over an AI-written document buries what they marked.
+
 ### Links and locations
 
 - Link documents, images and files with **paths relative to the document**: `[Plan](../plans/plan.md)`, `![Figure](images/x.svg)`.

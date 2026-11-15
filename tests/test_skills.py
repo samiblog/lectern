@@ -358,3 +358,13 @@ def test_skill_files_are_complete():
         for script in re.findall(r'scripts/(\w+\.py)', text):
             assert (ROOT / 'skills' / name / 'scripts' / script).exists(), script
     assert "('skills', 'skills')" in (ROOT / 'lectern.spec').read_text(encoding='utf-8')
+
+
+def test_inline_colors_reach_pptx(tmp_path):
+    # 문장 속 서식 (D141): 취소선·형광펜·글자색이 글 그대로 새지 않고 pptx 의 글자 속성이 된다
+    md = tmp_path / 'c.md'
+    md.write_text('---\nmarp: true\n---\n\n# 색\n\n보통 ~~지운 글~~ <mark>노랑</mark> <mark class="green">초록</mark> <span style="color:red">빨강</span> 끝\n', encoding='utf-8')
+    assert run(BACK / 'build_pptx.py', md, '--style', 'deck').returncode == 0
+    xml = b''.join(slide_parts(tmp_path / 'c.pptx')).decode('utf-8')
+    assert 'strike="sngStrike"' in xml and '<a:highlight><a:srgbClr val="FFF59D"/></a:highlight>' in xml and 'val="C8E6C9"' in xml and 'val="C62828"' in xml
+    assert '&lt;mark' not in xml and '&lt;span' not in xml and '~~' not in xml

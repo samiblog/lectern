@@ -370,9 +370,10 @@ export const stepHere = (dir) => moveHere(dir, true);
 const KIND_CODES = {
   Digit0: 'para', Numpad0: 'para', KeyP: 'para', KeyH: 'heading', KeyL: 'bullet', Minus: 'bullet', NumpadSubtract: 'bullet',
   KeyN: 'number', KeyT: 'task', KeyQ: 'quote', KeyC: 'box', KeyB: 'bold',
+  KeyI: 'italic', KeyS: 'strike', KeyM: 'mark', KeyF: 'color',   // 줄 전체의 서식 (D141 — 형광펜·글자색은 거듭 누르면 다음 색)
 };
 
-/** 고른 줄을 바꾸는 한 글자 키면 그 종류 ('h1'~'h6'·'para'·'heading'·'bullet'·'number'·'task'·'quote'·'box'·'bold'), 아니면 null */
+/** 고른 줄을 바꾸는 한 글자 키면 그 종류 ('h1'~'h6'·'para'·'heading'·'bullet'·'number'·'task'·'quote'·'box'·'bold'·'italic'·'strike'·'mark'·'color'), 아니면 null */
 export function kindKey(e) {
   if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey || e.repeat || !isMdDoc()) return null;
   const level = /^(?:Digit|Numpad)([1-6])$/.exec(e.code)?.[1];
