@@ -30,7 +30,7 @@ const PAGE_FONT = {
 export const MARGINS = { normal: '25mm 22mm 22mm 22mm', narrow: '15mm 15mm 15mm 15mm', wide: '30mm 30mm 25mm 30mm' };
 const TITLE_MAX = 60;
 const box = () => $('#lec-print');
-/** @type {{ tab: Tab, pane: Pane, path: string, deck: boolean, format: 'pdf' | 'html' | 'docx', layout: string, layouts: any[], docx: string, token: string, seq: number, busy: boolean } | null} */
+/** @type {{ tab: Tab, pane: Pane, path: string, deck: boolean, format: 'pdf' | 'html' | 'docx', layout: string, layouts: any[], docx: string, docxBuiltin: any[], token: string, seq: number, busy: boolean } | null} */
 let dlg = null;
 /** 미리보기를 만들 때마다 하나씩 — 창을 닫았다 다시 열어도 이어서 센다. 창마다 0부터 세면 닫은 창의 늦은 결과가 새 창의
     같은 번호로 통과해, 다른 문서의 파일이 저장 단추에 들어간다 */
@@ -149,7 +149,7 @@ export function openPrint(kind = 'pdf') {
   const format = kind === 'html' ? 'html' : kind === 'docx' ? 'docx' : 'pdf';
   if (format === 'pdf' ? !canSavePdf() : !canExportHtml()) return;
   const view = S.pane.view;
-  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], docx: '', token: '', seq: ++builds, busy: false };
+  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], docx: '', docxBuiltin: [], token: '', seq: ++builds, busy: false };
   for (const r of $$('#lec-print input[name="pp_font"]')) r.checked = r.value === printFont();
   for (const r of $$('#lec-print input[name="pp_margin"]')) r.checked = r.value === printMargin();
   $('#lec-pp-header').checked = S.config?.print_header !== false;
@@ -167,27 +167,68 @@ export function openPrint(kind = 'pdf') {
   showFormat();
   $('#lec-print-docx-info').textContent = '';   // 앞에 연 문서의 결과가 남지 않게
   $('#lec-print-info').textContent = '';
+  // 앞에 연 문서의 틀·양식 목록과 그 선택도 — 새 목록이 오기 전까지 기본 양식만 (점검이 앞 문서의 선택을 읽었다)
+  setHtml($('#lec-pp-layout'), html`<option value="">${t('보고서 (기본 양식)')}</option>`);
+  setHtml($('#lec-pp-docx'), html`<option value="">${t('Lectern 기본 양식')}</option>`);
+  $('#lec-pp-layout-info').textContent = '';
+  $('#lec-pp-docx-info').textContent = '';
+  $('#lec-pp-layout-sample').hidden = true;
+  $('#lec-pp-docx-sample').hidden = true;
   setBusy(t('미리보기를 만드는 중입니다…'));   // 만들기 전에는 단추를 끈다 (앞에 연 창의 것이 켜진 채 남지 않게)
   (format === 'html' ? $('#lec-print-html') : format === 'docx' ? $('#lec-print-docx') : kind === 'print' ? $('#lec-print-paper') : $('#lec-print-save')).focus();
   Promise.all([fillLayouts(), fillDocx()]).then(refresh);
 }
 
-/** Word 양식 목록을 채운다 — 맨 앞 설정 docxStyle(양식 이름)이 있으면 그것, 없으면 layout(틀)과 같은 이름의 양식 (D146) */
+/**
+ * Word 양식 목록을 채운다 — 'Lectern 기본 양식', 묶음별 Lectern 양식 18가지(D147 — 값은 'lectern:<id>'), 맨 아래 '내 양식'(보관소, D146).
+ * 처음 값: 맨 앞 설정 docxStyle(내 양식 이름, Lectern 양식의 id·이름), 없으면 layout(틀)과 같은 이름의 내 양식, 그다음 같은 id 의 Lectern 양식
+ */
 async function fillDocx() {
   const d = dlg;
   let list = [];
+  let builtin = [];
   try {
-    list = d.deck ? [] : (await getJSON('/api/docx-styles')).styles || [];
+    const got = d.deck ? {} : await getJSON('/api/docx-styles');
+    list = got.styles || [];
+    builtin = got.builtin || [];
   } catch { /* 목록을 못 읽으면 기본 양식만 */ }
   if (dlg !== d) return;
+  d.docxBuiltin = builtin;
+  const en = LANG === 'en';
+  const groups = new Map();
+  for (const b of builtin) {
+    const g = (en ? b.group_en : b.group) || t('그 밖');
+    if (!groups.has(g)) groups.set(g, []);
+    groups.get(g).push(b);
+  }
   const sel = $('#lec-pp-docx');
-  setHtml(sel, [html`<option value="">${t('Lectern 기본 양식')}</option>`, ...list.map((s) => html`<option value="${s.name}">${s.name}</option>`)]);
+  setHtml(sel, [html`<option value="">${t('Lectern 기본 양식')}</option>`,
+    ...[...groups].map(([g, bs]) => html`<optgroup label="${g}">${bs.map((b) => html`<option value="${`lectern:${b.id}`}">${en ? b.name_en : b.name}</option>`)}</optgroup>`),
+    list.length ? html`<optgroup label="${t('내 양식')}">${list.map((s) => html`<option value="${s.name}">${s.name}</option>`)}</optgroup>` : '']);
   const fields = fieldsOf(d.pane);
   const named = String(fields.docxStyle ?? fields['Word 양식'] ?? '').trim();   // i18n-ok (맨 앞 설정의 한국어 키)
   const layout = String(fields.layout ?? fields['틀'] ?? '').trim().replace(/^user\//, '');   // i18n-ok (맨 앞 설정의 한국어 키)
-  const hit = list.find((s) => s.name === named || s.file === named) || list.find((s) => s.name === layout);
-  d.docx = hit ? hit.name : '';
+  const mine = (n) => n && list.find((s) => s.name === n || s.file === n);
+  const ours = (n) => n && builtin.find((b) => b.id === n || b.name === n || b.name_en === n);
+  const hit = mine(named) || ours(named) || mine(layout) || ours(layout);
+  d.docx = !hit ? '' : hit.id ? `lectern:${hit.id}` : hit.name;
   sel.value = d.docx;
+  showDocx();
+}
+
+/** 고른 Word 양식의 설명과 비어 있는 맨 앞 설정·박스글 자리 — Lectern 양식만 (내 양식은 무엇을 쓰는지 모른다) */
+function showDocx() {
+  const info = dlg.docxBuiltin.find((b) => `lectern:${b.id}` === dlg.docx);
+  const en = LANG === 'en';
+  const fields = fieldsOf(dlg.pane);
+  const empty = (info?.fields || []).filter((k) => !['title', 'date'].includes(k) && fields[k] == null && fields[ALIAS[k]] == null
+    && !Object.keys(ALIAS).some((ko) => ALIAS[ko] === k && fields[ko] != null));
+  const slots = (info?.slots || []).map((n) => `<!-- box: ${n} -->`).join(' ');
+  const lines = info ? [en ? info.description_en : info.description, t('쪽: {size}', { size: info.pages })] : [];
+  if (empty.length) lines.push(t('이 양식이 쓰는 맨 앞 설정 중 비어 있는 것: {keys}', { keys: empty.join(', ') }));
+  if (slots) lines.push(t('박스글 자리: {slots}', { slots }));
+  $('#lec-pp-docx-info').textContent = lines.join('\n');
+  $('#lec-pp-docx-sample').hidden = !empty.length;
 }
 
 /** 틀 목록을 채운다 — 맨 앞 설정의 layout(틀 id·이름)이 있으면 그것을 고른다. 슬라이드는 틀이 없다 */
@@ -374,7 +415,9 @@ async function refreshDocx(seq) {
     if (!dlg || seq !== dlg.seq) return;
     dlg.token = r.token;
     const kb = Math.max(1, Math.round(r.size / 1024));
-    const lines = [t('Word 파일을 만들었습니다 — 그림 {n}개 · {kb}KB', { n: r.figures || 0, kb }), dlg.docx ? t('양식: {name}', { name: dlg.docx }) : t('양식: Lectern 기본 양식 (A4, 명조 본문, 2쪽부터 머리에 제목, 바닥에 쪽 번호)')];
+    const ours = dlg.docxBuiltin.find((b) => `lectern:${b.id}` === dlg.docx);
+    const name = ours ? (LANG === 'en' ? ours.name_en : ours.name) : dlg.docx;
+    const lines = [t('Word 파일을 만들었습니다 — 그림 {n}개 · {kb}KB', { n: r.figures || 0, kb }), dlg.docx ? t('양식: {name}', { name }) : t('양식: Lectern 기본 양식 (A4, 명조 본문, 2쪽부터 머리에 제목, 바닥에 쪽 번호)')];
     if (r.notes?.length) lines.push('', ...r.notes.slice(0, 8));
     lines.push('', t("미리보기는 없습니다 — 저장한 뒤 Word 에서 엽니다. 목차·캡션 번호가 있으면 Word 가 열 때 필드를 업데이트할지 묻습니다 — '예'를 누르면 채워집니다"));
     info.textContent = lines.join('\n');
@@ -529,7 +572,13 @@ export function initPrint() {
   $('#lec-pp-docx').addEventListener('change', (e) => {   // 양식은 문서에 적지 않는다 — 문서의 맨 앞 설정 docxStyle 이 처음 값
     if (!dlg) return;
     dlg.docx = /** @type {HTMLSelectElement} */ (e.target).value;
+    showDocx();
     remake();
+  });
+  $('#lec-pp-docx-sample').addEventListener('click', async () => {   // Word 양식이 쓰는데 비어 있는 맨 앞 설정의 견본
+    const info = dlg?.docxBuiltin.find((b) => `lectern:${b.id}` === dlg.docx);
+    if (!info) return;
+    toast(await copyText(fieldSample(info, fieldsOf(dlg.pane))) ? t('맨 앞 설정 견본을 복사했습니다 — 문서 맨 앞에 붙여 값을 채우세요') : t('복사하지 못했습니다'));
   });
   $('#lec-pp-docx-folder').addEventListener('click', async () => {   // Word 양식 보관소 (없으면 빈 폴더를 만든다)
     try {

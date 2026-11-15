@@ -268,11 +268,18 @@ try:
         check('Word 로 바꾸면 만든다', docx_ready(page))
         info = page.inner_text('#lec-print-docx-info')
         check('그림 1개 (CSV 차트)', '그림 1개' in info, info)
-        check('틀 이름과 같은 Word 양식이 없으면 기본 양식', page.input_value('#lec-pp-docx') == '' and '양식: Lectern 기본 양식' in info)
+        check('틀과 같은 id 의 Lectern Word 양식(연구보고서)이 골라진다', page.input_value('#lec-pp-docx') == 'lectern:research-report' and '양식: 연구보고서' in info, info)
         name, data = download(page)
         doc = text_of(part(data))
-        check('Word: 문서 이름·제목·부제·연구진·요약 박스 이름', name == '공급망-연구.docx' and all(s in doc for s in ('구리 공급망 연구', '비축과 분할 구매', '김연구, 이분석', '요약', '시험용 수치') if s != '시험용 수치')
-              and '시험용 수치' in text_of(part(data, 'word/footnotes.xml')), (name, doc[:200]))
+        check('Word: 표지(보고서 번호·제목·부제·연구진·기관)·요약 쪽·차례 쪽 — 한국어 맨 앞 설정으로', name == '공급망-연구.docx'
+              and all(s in doc for s in ('연구보고서 2026-14', '구리 공급망 연구', '비축과 분할 구매', '김연구, 이분석', '한국자원연구원', '요   약', '차   례'))
+              and '시험용 수치' in text_of(part(data, 'word/footnotes.xml')) and part(data).count(' TOC \\o') == 1, (name, doc[:200]))
+        export(page, 'Word로 저장…')   # 내려받으면 창이 닫힌다 — 다시 열어 양식을 바꾼다
+        docx_ready(page)
+        page.select_option('#lec-pp-docx', '')
+        check('Lectern 기본 양식으로 바꾸면 표지 없이', docx_ready(page) and '양식: Lectern 기본 양식' in page.inner_text('#lec-print-docx-info'))
+        _, data = download(page)
+        check('기본 양식 — 제목 바로 아래 부제·연구진', '연구보고서 2026-14' not in text_of(part(data)) and '김연구, 이분석' in text_of(part(data)))
         check('Word: 같은 각주를 두 번 — 두 번째는 NOTEREF', part(data).count('<w:footnoteReference') == 1 and 'NOTEREF _RefLecFn1' in part(data))
 
         print('[2. 공무원 — 정부 보고서와 한 장 보고서]')

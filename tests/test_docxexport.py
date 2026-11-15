@@ -95,5 +95,12 @@ def test_server_routes(tmp_path, config):
     assert client.post('/api/export/docx', json={'p': project.id, 'path': '그림.png'}).status_code == 404
     r = client.post('/api/export/docx', json={'p': project.id, 'path': '보고서.md', 'style': '없는 양식'})
     assert r.status_code == 404 and r.get_json()['error']
-    assert client.get('/api/docx-styles').get_json() == {'styles': [], 'dir': str(Path(config) / 'docx-styles')}
+    got = client.get('/api/docx-styles').get_json()
+    assert got['styles'] == [] and got['dir'] == str(Path(config) / 'docx-styles')
+    assert len(got['builtin']) == 18 and {'id', 'name', 'group', 'fields', 'slots'} <= set(got['builtin'][0])   # Lectern 양식 (D147)
+    r = client.post('/api/export/docx', json={'p': project.id, 'path': '보고서.md', 'style': 'lectern:research-report'})
+    assert r.status_code == 200, r.get_json()
+    doc = zipfile.ZipFile(io.BytesIO(client.get(f"/export-file/{r.get_json()['token']}.docx").data)).read('word/document.xml').decode('utf-8')
+    assert '{{' not in doc and '보고서' in doc
+    assert client.post('/api/export/docx', json={'p': project.id, 'path': '보고서.md', 'style': 'lectern:없는것'}).status_code == 404
     state.close()

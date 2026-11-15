@@ -3,6 +3,7 @@
 만드는 것은 스킬의 build_docx.py 가 한다 (pptx 로 전환과 같은 길 — 정해진 프로그램을 인자로만 부르고 셸을 거치지 않는다).
 결과는 임시 폴더에 만들어 바로 메모리로 옮기고 지운다. 디스크에 쓰는 것은 사용자가 저장 대화상자에서 고른 곳 하나뿐이다
 (pdfexport.save_kept). Word 양식은 Lectern 전체가 함께 쓰는 설정 폴더 docx-styles 에 두고 읽기만 한다.
+Lectern 이 넣어 둔 양식 18가지(D147 — 지면 틀과 같은 id)는 스킬의 templates 폴더에 있고 'lectern:<id>' 로 고른다.
 """
 from __future__ import annotations
 
@@ -43,8 +44,25 @@ def list_styles() -> list[dict[str, str]]:
     return [{'name': p.stem, 'file': p.name} for p in files]
 
 
+def builtin_dir() -> Path:
+    """Lectern 이 넣어 둔 Word 양식 (스킬의 templates — tools/make_docx_templates.py 가 만든다)"""
+    return skills_dir() / 'lectern-to-docx' / 'templates'
+
+
+def list_builtin() -> list[dict[str, Any]]:
+    """Lectern 양식 18가지 — index.json 그대로 (id·이름·묶음·설명·쓰는 맨 앞 설정·박스글 자리). 파일이 없는 것은 뺀다"""
+    try:
+        items = json.loads((builtin_dir() / 'index.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+    return [t for t in items if isinstance(t, dict) and isinstance(t.get('id'), str) and (builtin_dir() / f"{t['id']}.dotx").is_file()]
+
+
 def style_path(name: Any) -> Path | None:
-    """보관소의 양식 하나 — 파일 이름이나 확장자를 뗀 이름으로. 보관소 밖·다른 형식은 None"""
+    """양식 하나 — 'lectern:<id>' 는 Lectern 양식, 그 밖은 보관소의 파일 이름이나 확장자를 뗀 이름. 보관소 밖·다른 형식은 None"""
+    if isinstance(name, str) and name.startswith('lectern:'):
+        tid = name[8:]
+        return builtin_dir() / f'{tid}.dotx' if any(t['id'] == tid for t in list_builtin()) else None
     if not isinstance(name, str) or not name or any(c in name for c in '\\/:') or name.startswith('.'):
         return None
     for s in list_styles():

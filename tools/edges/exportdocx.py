@@ -112,7 +112,10 @@ try:
         check('단추는 Word로 저장 하나', page.is_visible('#lec-print-docx') and page.is_hidden('#lec-print-save') and page.is_hidden('#lec-print-paper') and page.is_hidden('#lec-print-html'))
         check('미리보기 대신 알림 칸', page.is_hidden('#lec-print-frame') and page.is_visible('#lec-print-docx-info'))
         opts = page.evaluate("() => [...document.querySelectorAll('#lec-pp-docx option')].map((o) => [o.value, o.textContent])")
-        check('양식 목록 — 기본 양식과 보관소의 양식 (잠금 파일은 빼고)', opts == [['', 'Lectern 기본 양식'], ['회사', '회사']], opts)
+        groups = page.evaluate("() => [...document.querySelectorAll('#lec-pp-docx optgroup')].map((g) => g.label)")
+        check('양식 목록 — 기본 양식, Lectern 양식 18가지(묶음별), 맨 아래 내 양식 (잠금 파일은 빼고)',
+              opts[0] == ['', 'Lectern 기본 양식'] and len([o for o in opts if o[0].startswith('lectern:')]) == 18 and opts[-1] == ['회사', '회사']
+              and groups == ['업무·공공', '연구', '금융·컨설팅', '매체·출판', '안내', '내 양식'], (opts[:3], groups))
         check('맨 앞 설정이 없으면 기본 양식', page.input_value('#lec-pp-docx') == '')
         check('만들기를 마친다', ready())
         info = page.inner_text('#lec-print-docx-info')

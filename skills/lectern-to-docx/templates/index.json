@@ -1,0 +1,355 @@
+[
+ {
+  "id": "gov-report",
+  "name": "정부 보고서",
+  "name_en": "Government report",
+  "group": "업무·공공",
+  "group_en": "Office and public sector",
+  "pages": "A4",
+  "description": "정부·공공기관 보고서 — 위에 굵은 두 줄 사이의 제목 상자, 오른쪽에 날짜·부서·작성자, 요약 상자, 함초롬바탕 13pt 본문(□ ○ - ※ 문단). 바닥에 쪽 번호",
+  "description_en": "A government report — a title box between heavy double rules, date, department and author on the right, a summary box, 13 pt serif body. Page numbers at the foot",
+  "fields": [
+   "title",
+   "dept",
+   "author"
+  ],
+  "slots": [
+   "요약"
+  ]
+ },
+ {
+  "id": "one-page",
+  "name": "한 장 보고서",
+  "name_en": "One-page brief",
+  "group": "업무·공공",
+  "group_en": "Office and public sector",
+  "pages": "A4",
+  "description": "경영진 보고용 한 장 — 위에 제목과 결재란(맨 앞 설정 결재: [담당, 팀장, 본부장]), 결론 상자, 촘촘한 맑은 고딕 10pt 본문",
+  "description_en": "A one-page brief for executives — title and sign-off boxes on top (front matter 결재: [...]), a conclusion box, a compact 10 pt sans body",
+  "fields": [
+   "title",
+   "dept",
+   "author",
+   "결재"
+  ],
+  "slots": [
+   "결론"
+  ]
+ },
+ {
+  "id": "official-letter",
+  "name": "공문 (기안문)",
+  "name_en": "Official letter (Korean)",
+  "group": "업무·공공",
+  "group_en": "Office and public sector",
+  "pages": "A4",
+  "description": "공문(기안문) — 위에 기관 이름, 수신·(경유)·제목 줄, 본문 끝의 \"끝.\", 가운데 발신 명의, 아래에 기안자·검토자·결재권자와 시행·접수·주소·전화. 여백 위 30·아래 15·왼쪽 20·오른쪽 15mm",
+  "description_en": "An official letter — organisation name on top, recipient, via and subject lines, \"끝.\" after the body, the sender in the centre, and drafter, reviewer, approver, enforcement, receipt and contact at the bottom",
+  "fields": [
+   "org",
+   "수신",
+   "경유",
+   "title",
+   "발신",
+   "기안자",
+   "검토자",
+   "결재권자",
+   "시행",
+   "접수",
+   "주소",
+   "전화",
+   "전자우편",
+   "공개구분"
+  ],
+  "slots": []
+ },
+ {
+  "id": "press-release",
+  "name": "보도자료",
+  "name_en": "Press release",
+  "group": "업무·공공",
+  "group_en": "Office and public sector",
+  "pages": "A4",
+  "description": "보도자료 — 위에 \"보도자료\" 띠와 기관, 보도·배포 일시 표, 큰 제목과 부제(박스글 자리 부제), 본문, 끝에 담당 부서·담당자·연락처",
+  "description_en": "A press release — a \"press release\" banner with the organisation, embargo and release times, a large title and subhead, the body, and the contact at the end",
+  "fields": [
+   "org",
+   "보도일시",
+   "배포일시",
+   "title",
+   "subtitle",
+   "dept",
+   "담당자",
+   "author",
+   "연락처"
+  ],
+  "slots": [
+   "부제"
+  ]
+ },
+ {
+  "id": "minutes",
+  "name": "회의록",
+  "name_en": "Meeting minutes",
+  "group": "업무·공공",
+  "group_en": "Office and public sector",
+  "pages": "A4",
+  "description": "회의록 — \"회 의 록\" 제목, 회의명·일시·장소·참석자·작성자 표, 그 아래 안건과 결정. 맑은 고딕 10.5pt",
+  "description_en": "Minutes — a \"minutes\" heading, a table of meeting, date and time, place, attendees and recorder, then agenda and decisions",
+  "fields": [
+   "title",
+   "시간",
+   "장소",
+   "참석자",
+   "author"
+  ],
+  "slots": []
+ },
+ {
+  "id": "research-report",
+  "name": "연구보고서",
+  "name_en": "Research report",
+  "group": "연구",
+  "group_en": "Research",
+  "pages": "A4",
+  "description": "연구기관 보고서 — 표지(보고서 번호·제목·부제·연구진·기관·날짜), 요약 쪽(박스글 자리 요약), 차례 쪽, 큰 절마다 새 쪽, 쪽 머리에 보고서 제목",
+  "description_en": "A research report — a cover (number, title, subtitle, authors, organisation, date), a summary page, a contents page, each chapter on a new page, the title in the header",
+  "fields": [
+   "number",
+   "title",
+   "subtitle",
+   "author",
+   "org"
+  ],
+  "slots": [
+   "요약"
+  ]
+ },
+ {
+  "id": "issue-brief",
+  "name": "이슈 브리프",
+  "name_en": "Issue brief",
+  "group": "연구",
+  "group_en": "Research",
+  "pages": "A4",
+  "description": "정책·이슈 브리프 — 위에 기관·시리즈·호수 띠, 제목·부제·작성자, 왼쪽 줄이 있는 핵심 상자(박스글 자리 핵심), 2~4쪽에 맞춘 촘촘한 본문",
+  "description_en": "An issue brief — an organisation, series and number band, title, subtitle and author, a key points box, a compact body for two to four pages",
+  "fields": [
+   "org",
+   "series",
+   "number",
+   "title",
+   "subtitle",
+   "author"
+  ],
+  "slots": [
+   "핵심"
+  ]
+ },
+ {
+  "id": "paper-2col",
+  "name": "학술 논문 (2단)",
+  "name_en": "Journal paper (two columns)",
+  "group": "연구",
+  "group_en": "Research",
+  "pages": "A4",
+  "description": "학술 논문 2단 — 가운데 제목·저자·소속, 한 단의 초록(박스글 자리 초록)과 주제어, 그 아래 두 단의 10pt 본문, 가운데 맞춘 작은 캡션",
+  "description_en": "A two-column journal paper — centred title, authors and affiliation, a full-width abstract and keywords, then a two-column 10 pt body",
+  "fields": [
+   "title",
+   "author",
+   "affiliation",
+   "keywords"
+  ],
+  "slots": [
+   "초록"
+  ]
+ },
+ {
+  "id": "manuscript",
+  "name": "투고 원고",
+  "name_en": "Manuscript (double-spaced)",
+  "group": "연구",
+  "group_en": "Research",
+  "pages": "Letter",
+  "description": "투고 원고 — Letter, 12pt 두 줄 간격, 첫 줄 들여쓰기, 머리에 짧은 제목과 쪽 번호, 제목 쪽(제목·저자·소속), 초록 쪽, 본문",
+  "description_en": "A manuscript for submission — Letter, 12 pt double spacing, first-line indents, a running head with page numbers, a title page, an abstract page, then the body",
+  "fields": [
+   "title",
+   "author",
+   "affiliation",
+   "short_title"
+  ],
+  "slots": [
+   "초록"
+  ]
+ },
+ {
+  "id": "white-paper",
+  "name": "백서",
+  "name_en": "White paper",
+  "group": "연구",
+  "group_en": "Research",
+  "pages": "A4",
+  "description": "백서 — 표지(기관·제목·부제·작성자·날짜, 짙은 초록 띠), 요약 상자(박스글 자리 요약), 쪽 머리에 제목과 기관",
+  "description_en": "A white paper — a cover with a dark green band (organisation, title, subtitle, author, date), a summary box, the title and organisation in the header",
+  "fields": [
+   "org",
+   "title",
+   "subtitle",
+   "author"
+  ],
+  "slots": [
+   "요약"
+  ]
+ },
+ {
+  "id": "equity-research",
+  "name": "증권사 리포트",
+  "name_en": "Equity research",
+  "group": "금융·컨설팅",
+  "group_en": "Finance and consulting",
+  "pages": "A4",
+  "description": "증권사 리포트 — 위에 회사·종목코드·업종과 리서치센터, 왼쪽 칸에 투자의견·목표가·현재가·상승여력과 애널리스트, 오른쪽에 제목과 핵심 수치(박스글 자리), 끝에 면책(박스글 자리)",
+  "description_en": "An equity research note — company, ticker and sector with the research house on top, a left panel of rating, target and current price, upside and analysts, the title and key figures on the right, a disclaimer at the end",
+  "fields": [
+   "company",
+   "ticker",
+   "sector",
+   "org",
+   "투자의견",
+   "목표가",
+   "현재가",
+   "상승여력",
+   "author",
+   "title"
+  ],
+  "slots": [
+   "면책",
+   "핵심 수치"
+  ]
+ },
+ {
+  "id": "consulting",
+  "name": "컨설팅 보고서",
+  "name_en": "Consulting report",
+  "group": "금융·컨설팅",
+  "group_en": "Finance and consulting",
+  "pages": "A4",
+  "description": "컨설팅 보고서 — 표지(고객·제목·부제·회사·날짜), 요약 쪽(박스글 자리 요약), 결론 문장으로 쓰는 제목, 쪽 머리에 회사와 제목",
+  "description_en": "A consulting report — a cover (client, title, subtitle, firm, date), an executive summary page, action titles, the firm and title in the header",
+  "fields": [
+   "client",
+   "title",
+   "subtitle",
+   "org"
+  ],
+  "slots": [
+   "요약"
+  ]
+ },
+ {
+  "id": "proposal",
+  "name": "제안서",
+  "name_en": "Proposal",
+  "group": "금융·컨설팅",
+  "group_en": "Finance and consulting",
+  "pages": "A4",
+  "description": "제안서 — 표지(고객 귀중·제목·부제·제안사·날짜), 제안 요약(박스글 자리 요약), 목차 쪽, 쪽 머리에 제목",
+  "description_en": "A proposal — a cover (to the client, title, subtitle, proposer, date), a proposal summary, a contents page, the title in the header",
+  "fields": [
+   "client",
+   "title",
+   "subtitle",
+   "org"
+  ],
+  "slots": [
+   "요약"
+  ]
+ },
+ {
+  "id": "magazine",
+  "name": "잡지",
+  "name_en": "Magazine feature",
+  "group": "매체·출판",
+  "group_en": "Media and publishing",
+  "pages": "A4",
+  "description": "잡지 기사 — 꼬리표(작은 빨간 대문자), 큰 제목과 기울인 부제, 글쓴이·날짜, 굵은 줄 아래 두 단의 본문",
+  "description_en": "A magazine feature — a small red kicker, a large title and italic standfirst, byline and date, then a two-column body under a heavy rule",
+  "fields": [
+   "kicker",
+   "title",
+   "subtitle",
+   "author"
+  ],
+  "slots": []
+ },
+ {
+  "id": "newsletter",
+  "name": "뉴스레터",
+  "name_en": "Newsletter",
+  "group": "매체·출판",
+  "group_en": "Media and publishing",
+  "pages": "A4",
+  "description": "뉴스레터 — 위에 시리즈 이름(굵은 주황)과 호수·날짜·기관, 굵은 주황 줄, 제목, 두 단의 촘촘한 본문",
+  "description_en": "A newsletter — a masthead with the series name in bold orange and the issue, date and organisation, a heavy orange rule, the title, then a compact two-column body",
+  "fields": [
+   "series",
+   "org",
+   "number",
+   "title"
+  ],
+  "slots": []
+ },
+ {
+  "id": "book",
+  "name": "책",
+  "name_en": "Book chapter",
+  "group": "매체·출판",
+  "group_en": "Media and publishing",
+  "pages": "152×225mm",
+  "description": "책 — 152×225mm, 마주 보는 쪽(안쪽 여백이 넓다), 장 시작 쪽(장·제목·부제), 짝수 쪽 머리에 책 이름·홀수 쪽 머리에 장 제목, 첫 줄 들여쓰기",
+  "description_en": "A book — 152 × 225 mm, facing pages, a chapter opener (chapter, title, subtitle), the book title on even pages and the chapter title on odd pages, first-line indents",
+  "fields": [
+   "chapter",
+   "title",
+   "subtitle",
+   "book"
+  ],
+  "slots": []
+ },
+ {
+  "id": "longform",
+  "name": "웹 장문",
+  "name_en": "Long-form web article",
+  "group": "매체·출판",
+  "group_en": "Media and publishing",
+  "pages": "A4",
+  "description": "웹 장문 — 꼬리표, 큰 제목과 부제, 글쓴이·날짜, 넉넉한 11.5pt 본문과 줄 간격 — 화면에서 오래 읽는 긴 글",
+  "description_en": "A long-form article — kicker, large title and standfirst, byline and date, a roomy 11.5 pt body for long reading",
+  "fields": [
+   "kicker",
+   "title",
+   "subtitle",
+   "author"
+  ],
+  "slots": []
+ },
+ {
+  "id": "manual",
+  "name": "매뉴얼·가이드",
+  "name_en": "Manual or guide",
+  "group": "안내",
+  "group_en": "Guides",
+  "pages": "A4",
+  "description": "매뉴얼·가이드 — 표지(제목·부제·판·기관·날짜), 목차 쪽, 쪽 머리에 제목과 판, 파란 제목과 줄",
+  "description_en": "A manual — a cover (title, subtitle, version, organisation, date), a contents page, the title and version in the header, blue headings with rules",
+  "fields": [
+   "title",
+   "subtitle",
+   "version",
+   "org"
+  ],
+  "slots": []
+ }
+]

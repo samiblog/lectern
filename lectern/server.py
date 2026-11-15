@@ -207,8 +207,8 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/docx-styles')
     def api_docx_styles() -> Any:
-        """Word 양식 보관소 (D146 — 설정 폴더의 docx-styles)의 양식 목록과 폴더 경로"""
-        return jsonify(styles=docxexport.list_styles(), dir=str(docxexport.styles_dir()))
+        """Word 양식: Lectern 양식 18가지(D147 — builtin)와 보관소(D146 — 설정 폴더의 docx-styles)의 양식, 그 폴더 경로"""
+        return jsonify(styles=docxexport.list_styles(), builtin=docxexport.list_builtin(), dir=str(docxexport.styles_dir()))
 
     @app.post('/api/docx-styles/folder')
     def api_docx_styles_folder() -> Any:

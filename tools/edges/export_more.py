@@ -7,7 +7,8 @@
 5 틀의 가장자리 — 모르는 틀·양식 이름은 기본으로, 같은 이름 박스글 둘·틀에 없는 이름, 닫지 않은 박스글
 6 만드는 중에 창을 닫고 다른 문서로 — 앞의 결과가 섞이지 않는다
 7 독립창 — 메뉴에 'Word로 저장…', 그 문서를 내보낸다
-8 차트가 많은 문서 — 만드는 동안의 알림, 그림 수"""
+8 차트가 많은 문서 — 만드는 동안의 알림, 그림 수
+9 Lectern Word 양식 18가지(D147) — 하나씩 골라 내려받기, 설명·비어 있는 맨 앞 설정·견본 복사"""
 import io
 import re
 import tempfile
@@ -32,6 +33,7 @@ def w(rel, text):
 
 w('문서/편집.md', '# 편집 중인 문서\n\n저장한 글이다.\n')
 w('문서/가.md', '# 가 문서\n\n가의 글.\n')
+w('문서/양식시험.md', '---\ntitle: 양식 시험 보고서\norg: 예제연구원\nauthor: 김연구\n결재: [담당, 팀장]\n---\n\n# 양식 시험 보고서\n\n<!-- box: 요약 -->\n요약의 글.\n<!-- /box -->\n\n## 1. 절\n\n본문의 글.\n')
 w('문서/나.md', '# 나 문서\n\n나의 글.\n')
 w('문서/영문 보고서 #1 (100%).md', '---\nlang: en\n---\n\n# Quarterly Note\n\nSee [Table 1](#table-1).\n\nTable 1. Prices\n\n| Month | Price |\n|---|---:|\n| Oct | 11,220 |\n')
 w('문서/틀-가장자리.md', """
@@ -282,6 +284,41 @@ try:
             name, data = download(solo)
             check('그 문서', name == '가.docx' and '가의 글' in text_of(part(data)), name)
         solo.close()
+
+        print('[9. Lectern Word 양식 18가지]')
+        open_doc('문서/양식시험.md')
+        menu_at(page.locator('#lec-view'))
+        page.locator('#lec-menu button', has_text='Word로 저장…').click()
+        page.wait_for_selector('#lec-print:not([hidden])')
+        word_ready()
+        ids = page.evaluate("() => [...document.querySelectorAll('#lec-pp-docx option')].map((o) => o.value).filter((v) => v.startsWith('lectern:'))")
+        check('Lectern 양식 18가지', len(ids) == 18, ids)
+        page.select_option('#lec-pp-docx', 'lectern:research-report')
+        info = page.inner_text('#lec-pp-docx-info')
+        check('고른 양식의 설명·쪽·비어 있는 맨 앞 설정·박스글 자리', '연구기관 보고서' in info and '쪽: A4' in info and 'number' in info and '<!-- box: 요약 -->' in info, info)
+        page.context.grant_permissions(['clipboard-read', 'clipboard-write'])
+        page.click('#lec-pp-docx-sample')
+        clip = page.evaluate('navigator.clipboard.readText()').replace('\r\n', '\n')
+        check('견본 복사 — 비어 있는 키만', clip.startswith('---\n') and 'number: ' in clip and '\norg: ' not in clip and '\ntitle: ' not in clip, clip)
+        bad = []
+        for tid in ids:
+            if page.is_hidden('#lec-print'):
+                menu_at(page.locator('#lec-view'))
+                page.locator('#lec-menu button', has_text='Word로 저장…').click()
+                page.wait_for_selector('#lec-print:not([hidden])')
+                word_ready()
+            page.select_option('#lec-pp-docx', tid)
+            if not word_ready():
+                bad.append((tid, '만들지 못함', page.inner_text('#lec-print-wait')))
+                continue
+            _, data = download()
+            parts = []
+            with zipfile.ZipFile(io.BytesIO(data)) as z:
+                parts = [z.read(n).decode('utf-8') for n in z.namelist() if re.match(r'word/(document|header\d*|footer\d*)\.xml$', n)]
+            t = ''.join(text_of(x) for x in parts)
+            if '{{' in t or '양식 시험 보고서' not in t or '본문의 글' not in t:
+                bad.append((tid, t[:120]))
+        check('18가지 모두 만들어지고 자리 표시가 남지 않는다 — 제목·본문이 들어간다', not bad, bad)
 
         print('[8. 차트가 많은 문서]')
         open_doc('문서/차트-여럿.md')

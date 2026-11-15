@@ -30,6 +30,7 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import figure_png  # noqa: E402
 import lectern_md as LM  # noqa: E402
+import template_fill as TF  # noqa: E402
 
 W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
@@ -216,11 +217,23 @@ def _font(name, east=None):
     return f'<w:rFonts w:ascii="{name}" w:hAnsi="{name}" w:eastAsia="{east}" w:cs="{name}"/>'
 
 
-def default_styles(lang):
+THEME = {   # 기본 보고서 양식의 모양 — 양식(tools/make_docx_templates.py)이 이 중 몇을 바꾼다
+    'body_font': None, 'body_east': None, 'head_font': None, 'head_east': '맑은 고딕', 'mono_east': 'D2Coding',
+    'body_size': 21, 'line': 264, 'after': 120, 'jc': 'both', 'indent': 0,
+    'head_color': '1B2A3A', 'head_sizes': {1: 30, 2: 26, 3: 23, 4: 22, 5: 21, 6: 21}, 'h1_page': False, 'h1_rule': None, 'h_center': False,
+    'title_size': 40, 'title_color': '111111', 'title_jc': 'center', 'subtitle_size': 24, 'subtitle_color': '444444', 'subtitle_jc': 'center',
+    'caption_color': '1B2A3A', 'caption_jc': 'left', 'quote_rule': '999999',
+    'th_fill': 'E9EDF2', 'th_color': '111111', 'rule': '333333', 'inner': 'BBBBBB', 'cell_size': 18,
+    'header_color': '666666', 'footer_color': '333333', 'link': '1F5F9F',
+}
+
+
+def default_styles(lang, theme=None):
+    th = {**THEME, **(theme or {})}
     f = FONTS_EN if lang == 'en' else FONTS_KO
-    body = _font(f['body'] if lang == 'en' else 'Times New Roman', f['body'])
-    head = _font(f['head'], '맑은 고딕')
-    mono = _font(f['mono'], 'D2Coding')
+    body = _font(th['body_font'] or (f['body'] if lang == 'en' else 'Times New Roman'), th['body_east'] or f['body'])
+    head = _font(th['head_font'] or f['head'], th['head_east'])
+    mono = _font(f['mono'], th['mono_east'])
 
     def para(sid, name, ppr='', rpr='', based='Normal', nxt='Normal', extra=''):
         return (f'<w:style w:type="paragraph" w:styleId="{sid}"><w:name w:val="{name}"/>'
@@ -228,37 +241,42 @@ def default_styles(lang):
                 + f'<w:qFormat/>{extra}<w:pPr>{ppr}</w:pPr><w:rPr>{rpr}</w:rPr></w:style>')
 
     heads = []
-    sizes = {1: 30, 2: 26, 3: 23, 4: 22, 5: 21, 6: 21}
     for n in range(1, 7):
-        heads.append(para(f'Heading{n}', f'heading {n}', f'<w:keepNext/><w:keepLines/><w:spacing w:before="{360 if n == 1 else 280}" w:after="120"/><w:outlineLvl w:val="{n - 1}"/>',
-                          f'{head}<w:b/><w:bCs/><w:color w:val="1B2A3A"/><w:sz w:val="{sizes[n]}"/><w:szCs w:val="{sizes[n]}"/>'))
+        size = th['head_sizes'][n]
+        page = '<w:pageBreakBefore/>' if n == 1 and th['h1_page'] else ''
+        rule = f'<w:pBdr><w:bottom w:val="single" w:sz="8" w:space="4" w:color="{th["h1_rule"]}"/></w:pBdr>' if n == 1 and th['h1_rule'] else ''
+        jc = '<w:jc w:val="center"/>' if th['h_center'] and n <= 2 else '<w:jc w:val="left"/>'
+        heads.append(para(f'Heading{n}', f'heading {n}', f'<w:keepNext/><w:keepLines/>{page}{rule}<w:spacing w:before="{360 if n == 1 else 280}" w:after="120"/>{jc}<w:outlineLvl w:val="{n - 1}"/>',
+                          f'{head}<w:b/><w:bCs/><w:color w:val="{th["head_color"]}"/><w:sz w:val="{size}"/><w:szCs w:val="{size}"/>'))
+    indent = f'<w:ind w:firstLine="{th["indent"]}"/>' if th['indent'] else ''
     return [
-        '<w:docDefaults><w:rPrDefault><w:rPr>' + body + f'<w:sz w:val="21"/><w:szCs w:val="21"/><w:lang w:val="{"en-US" if lang == "en" else "ko-KR"}" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault>'
-        '<w:pPrDefault><w:pPr><w:widowControl/><w:spacing w:after="120" w:line="264" w:lineRule="auto"/><w:jc w:val="both"/></w:pPr></w:pPrDefault></w:docDefaults>',
-        '<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:widowControl/></w:pPr></w:style>',
-        para('Title', 'Title', '<w:keepNext/><w:spacing w:before="240" w:after="120"/><w:jc w:val="center"/>', f'{head}<w:b/><w:sz w:val="40"/><w:szCs w:val="40"/><w:color w:val="111111"/>'),
-        para('Subtitle', 'Subtitle', '<w:keepNext/><w:spacing w:after="360"/><w:jc w:val="center"/>', f'{head}<w:sz w:val="24"/><w:color w:val="444444"/>'),
+        '<w:docDefaults><w:rPrDefault><w:rPr>' + body + f'<w:sz w:val="{th["body_size"]}"/><w:szCs w:val="{th["body_size"]}"/><w:lang w:val="{"en-US" if lang == "en" else "ko-KR"}" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault>'
+        f'<w:pPrDefault><w:pPr><w:widowControl/><w:spacing w:after="{th["after"]}" w:line="{th["line"]}" w:lineRule="auto"/><w:jc w:val="{th["jc"]}"/></w:pPr></w:pPrDefault></w:docDefaults>',
+        f'<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:widowControl/>{indent}</w:pPr></w:style>',
+        para('Title', 'Title', f'<w:keepNext/><w:spacing w:before="240" w:after="120"/><w:ind w:firstLine="0"/><w:jc w:val="{th["title_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["title_color"]}"/><w:sz w:val="{th["title_size"]}"/><w:szCs w:val="{th["title_size"]}"/>'),
+        para('Subtitle', 'Subtitle', f'<w:keepNext/><w:spacing w:after="360"/><w:ind w:firstLine="0"/><w:jc w:val="{th["subtitle_jc"]}"/>', f'{head}<w:color w:val="{th["subtitle_color"]}"/><w:sz w:val="{th["subtitle_size"]}"/><w:szCs w:val="{th["subtitle_size"]}"/>'),
         *heads,
-        para('Caption', 'caption', '<w:keepNext/><w:spacing w:before="120" w:after="80"/><w:jc w:val="left"/>', f'{head}<w:b/><w:sz w:val="19"/><w:color w:val="1B2A3A"/>'),
-        para('Source', 'Source', '<w:spacing w:before="40" w:after="200"/><w:jc w:val="left"/>', f'{head}<w:sz w:val="16"/><w:color w:val="555555"/>'),
-        para('Quote', 'Quote', '<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="999999"/></w:pBdr><w:ind w:left="340"/>', '<w:color w:val="444444"/>'),
-        para('ListParagraph', 'List Paragraph', '<w:spacing w:after="60"/><w:ind w:left="720"/><w:contextualSpacing/>'),
-        para('Code', 'Code', '<w:shd w:val="clear" w:color="auto" w:fill="F4F6F8"/><w:spacing w:before="60" w:after="180" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/>', f'{mono}<w:sz w:val="17"/>'),
-        para('TableText', 'Table Text', '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:jc w:val="left"/>', '<w:sz w:val="18"/>'),
-        para('FootnoteText', 'footnote text', '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/>', '<w:sz w:val="17"/>'),
-        para('TOC1', 'toc 1', '<w:spacing w:after="60"/>', '<w:b/>'),
-        para('TOC2', 'toc 2', '<w:spacing w:after="40"/><w:ind w:left="240"/>'),
-        para('TOC3', 'toc 3', '<w:spacing w:after="40"/><w:ind w:left="480"/>'),
-        para('Header', 'header', '<w:tabs><w:tab w:val="right" w:pos="9412"/></w:tabs><w:spacing w:after="0"/>', f'{head}<w:sz w:val="16"/><w:color w:val="666666"/>'),
-        para('Footer', 'footer', '<w:spacing w:after="0"/><w:jc w:val="center"/>', f'{head}<w:sz w:val="18"/><w:color w:val="333333"/>'),
+        para('Caption', 'caption', f'<w:keepNext/><w:spacing w:before="120" w:after="80"/><w:ind w:firstLine="0"/><w:jc w:val="{th["caption_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["caption_color"]}"/><w:sz w:val="19"/><w:szCs w:val="19"/>'),
+        para('Source', 'Source', '<w:spacing w:before="40" w:after="200"/><w:ind w:firstLine="0"/><w:jc w:val="left"/>', f'{head}<w:color w:val="555555"/><w:sz w:val="16"/><w:szCs w:val="16"/>'),
+        para('Quote', 'Quote', f'<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="{th["quote_rule"]}"/></w:pBdr><w:ind w:left="340" w:firstLine="0"/>', '<w:color w:val="444444"/>'),
+        para('ListParagraph', 'List Paragraph', '<w:spacing w:after="60"/><w:ind w:left="720" w:firstLine="0"/><w:contextualSpacing/>'),
+        para('Code', 'Code', '<w:shd w:val="clear" w:color="auto" w:fill="F4F6F8"/><w:spacing w:before="60" w:after="180" w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/><w:jc w:val="left"/>', f'{mono}<w:sz w:val="17"/><w:szCs w:val="17"/>'),
+        para('TableText', 'Table Text', '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/><w:jc w:val="left"/>', f'<w:sz w:val="{th["cell_size"]}"/><w:szCs w:val="{th["cell_size"]}"/>'),
+        para('FootnoteText', 'footnote text', '<w:spacing w:after="0" w:line="240" w:lineRule="auto"/><w:ind w:firstLine="0"/>', '<w:sz w:val="17"/><w:szCs w:val="17"/>'),
+        para('TOC1', 'toc 1', '<w:spacing w:after="60"/><w:ind w:firstLine="0"/>', '<w:b/>'),
+        para('TOC2', 'toc 2', '<w:spacing w:after="40"/><w:ind w:left="240" w:firstLine="0"/>'),
+        para('TOC3', 'toc 3', '<w:spacing w:after="40"/><w:ind w:left="480" w:firstLine="0"/>'),
+        para('Header', 'header', '<w:tabs><w:tab w:val="right" w:pos="9412"/></w:tabs><w:spacing w:after="0"/><w:ind w:firstLine="0"/>', f'{head}<w:color w:val="{th["header_color"]}"/><w:sz w:val="16"/><w:szCs w:val="16"/>'),
+        para('Footer', 'footer', '<w:spacing w:after="0"/><w:ind w:firstLine="0"/><w:jc w:val="center"/>', f'{head}<w:color w:val="{th["footer_color"]}"/><w:sz w:val="18"/><w:szCs w:val="18"/>'),
         '<w:style w:type="character" w:styleId="FootnoteReference"><w:name w:val="footnote reference"/><w:rPr><w:vertAlign w:val="superscript"/></w:rPr></w:style>',
-        '<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="1F5F9F"/><w:u w:val="single"/></w:rPr></w:style>',
+        f'<w:style w:type="character" w:styleId="Hyperlink"><w:name w:val="Hyperlink"/><w:rPr><w:color w:val="{th["link"]}"/><w:u w:val="single"/></w:rPr></w:style>',
         '<w:style w:type="table" w:default="1" w:styleId="TableNormal"><w:name w:val="Normal Table"/><w:tblPr><w:tblInd w:w="0" w:type="dxa"/>'
         '<w:tblCellMar><w:top w:w="0" w:type="dxa"/><w:left w:w="108" w:type="dxa"/><w:bottom w:w="0" w:type="dxa"/><w:right w:w="108" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>',
         '<w:style w:type="table" w:styleId="LecternTable"><w:name w:val="Lectern Table"/><w:basedOn w:val="TableNormal"/><w:tblPr>'
-        '<w:tblBorders><w:top w:val="single" w:sz="12" w:space="0" w:color="333333"/><w:bottom w:val="single" w:sz="12" w:space="0" w:color="333333"/>'
-        '<w:insideH w:val="single" w:sz="4" w:space="0" w:color="BBBBBB"/></w:tblBorders>'
-        '<w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr></w:style>',
+        f'<w:tblBorders><w:top w:val="single" w:sz="12" w:space="0" w:color="{th["rule"]}"/><w:bottom w:val="single" w:sz="12" w:space="0" w:color="{th["rule"]}"/>'
+        f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="{th["inner"]}"/></w:tblBorders>'
+        '<w:tblCellMar><w:top w:w="40" w:type="dxa"/><w:left w:w="100" w:type="dxa"/><w:bottom w:w="40" w:type="dxa"/><w:right w:w="100" w:type="dxa"/></w:tblCellMar></w:tblPr>'
+        f'<w:tblStylePr w:type="firstRow"><w:rPr><w:b/><w:bCs/><w:color w:val="{th["th_color"]}"/></w:rPr><w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="{th["th_fill"]}"/></w:tcPr></w:tblStylePr></w:style>',
     ]
 
 
@@ -489,9 +507,9 @@ class Builder:
         self.list_nums: list[tuple[int, int, int]] = []     # 번호 목록마다 (numId, 단계, 첫 번호)
         self.figures = 0
         self.report_notes: list[str] = []
-        self.bm = 0
+        self.bm = 1000                                      # 양식이 쓴 번호와 겹치지 않게
         self.heads: dict[str, str] = {}                     # 제목 앵커 → 책갈피
-        self.drawing_id = 0
+        self.drawing_id = 1000
         self.texts: list[str] = []                           # 문장 속 수식 (protect_math 가 모은 것)
 
     # -- 관계
@@ -755,9 +773,8 @@ class Builder:
                 runs = row[c] if c < len(row) else []
                 align = aligns[c] or ('right' if numeric[c] and not head else None)
                 jc = f'<w:jc w:val="{ {"right": "right", "center": "center"}.get(align, "left")}"/>'
-                rpr = '<w:b/><w:bCs/>' if head else ''
-                inner = self.para(self.runs(self.inline_runs(runs), rpr), self.sid['cell'], jc)
-                cells.append(self.cell(inner, 'E9EDF2' if head else None, col_w))
+                inner = self.para(self.runs(self.inline_runs(runs)), self.sid['cell'], jc)
+                cells.append(self.cell(inner, None, col_w))
             out.append(f'<w:tr><w:trPr>{trpr}</w:trPr>{"".join(cells)}</w:tr>')
         out.append('</w:tbl>')
         return ''.join(out)
@@ -894,6 +911,41 @@ class Builder:
         self.report_notes.append('수식을 그림으로 그리지 못해 원문을 넣었습니다')   # i18n-ok
         return self.para(self.runs([{'t': tex, 'i': True, 'math': True}]), None, '<w:jc w:val="center"/>')
 
+    def toc_field(self, what='toc'):
+        """Word 목차 필드만 (양식의 {{toc}} — 이름 줄은 양식이 쓴다)"""
+        en = self.lang == 'en'
+        if what == 'toc':
+            instr = ' TOC \\o "1-3" \\h \\z \\u '
+        else:
+            word = ('Table' if en else '표') if what == 'tables' else ('Figure' if en else '그림')   # i18n-ok
+            instr = f' TOC \\h \\z \\c "{word}" '
+        hint = 'Update the field (F9) to fill this in' if en else '필드 업데이트(F9)를 하면 채워집니다'   # i18n-ok
+        return (f'<w:p><w:r><w:fldChar w:fldCharType="begin" w:dirty="true"/></w:r><w:r><w:instrText xml:space="preserve">{x(instr)}</w:instrText></w:r>'
+                f'<w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:rPr><w:color w:val="888888"/></w:rPr><w:t>{x(hint)}</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>')
+
+    def signoff(self, roles):
+        """결재란 — 맨 앞 설정의 목록(결재: [담당, 팀장, 본부장])으로 직위 줄과 서명 칸"""
+        w = 1150
+        grid = ''.join(f'<w:gridCol w:w="{w}"/>' for _ in roles)
+        border = ''.join(f'<w:{side} w:val="single" w:sz="6" w:space="0" w:color="555555"/>' for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'))
+        head = ''.join(self.cell(self.para(f'<w:r><w:rPr><w:sz w:val="17"/></w:rPr><w:t xml:space="preserve">{x(r)}</w:t></w:r>', self.sid['cell'], '<w:jc w:val="center"/>'), 'EEF1F5', w) for r in roles)
+        sign = ''.join(self.cell(self.para('', self.sid['cell']), None, w) for _ in roles)
+        return (f'<w:tbl><w:tblPr><w:tblW w:w="{w * len(roles)}" w:type="dxa"/><w:jc w:val="right"/><w:tblBorders>{border}</w:tblBorders></w:tblPr>'
+                f'<w:tblGrid>{grid}</w:tblGrid><w:tr><w:trPr><w:cantSplit/></w:trPr>{head}</w:tr>'
+                f'<w:tr><w:trPr><w:cantSplit/><w:trHeight w:val="760" w:hRule="exact"/></w:trPr>{sign}</w:tr></w:tbl>'
+                + self.para('', None, '<w:spacing w:after="0" w:line="120" w:lineRule="exact"/>'))
+
+    def slot(self, blocks):
+        """양식의 박스글 자리({{slot:요약}})에 들어갈 글 — 박스 테두리 없이. '박스 1.'·굵은 글뿐인 제목 줄은 뺀다 (자리 이름은 양식이 쓴다)"""
+        blocks = list(blocks)
+        if blocks and blocks[0]['kind'] == 'para' and '\n' not in LM.plain(blocks[0]['runs']):
+            first = blocks[0]['runs']
+            bold_only = all(r.get('b') for r in first if r['t'].strip())
+            if bold_only or CAPTION.match(LM.plain(first)):
+                blocks = blocks[1:]
+        out = ''.join(self.blocks(blocks))
+        return out or self.para('')
+
     def toc(self, what):
         en = self.lang == 'en'
         if what == 'toc':
@@ -986,12 +1038,41 @@ def header_footer(kind, title):
 
 
 def text_width_of(sect):
+    """그 구역의 글 폭 (twip) — 단이 여럿이면 한 단의 폭"""
     w = re.search(r'<w:pgSz\b[^>]*w:w="(\d+)"', sect or '')
     left = re.search(r'<w:pgMar\b[^>]*w:left="(\d+)"', sect or '')
     right = re.search(r'<w:pgMar\b[^>]*w:right="(\d+)"', sect or '')
-    if w and left and right:
-        return int(w[1]) - int(left[1]) - int(right[1])
-    return A4[0] - MARGINS[1] - MARGINS[3]
+    width = int(w[1]) - int(left[1]) - int(right[1]) if w and left and right else A4[0] - MARGINS[1] - MARGINS[3]
+    cols = re.search(r'<w:cols\b[^>]*w:num="(\d+)"[^>]*>', sect or '')
+    if cols and int(cols[1]) > 1:
+        space = re.search(r'w:space="(\d+)"', cols[0])
+        n = int(cols[1])
+        width = (width - (n - 1) * (int(space[1]) if space else 425)) // n
+    return width
+
+
+TEMPLATES = HERE.parent / 'templates'   # Lectern 이 넣어 둔 Word 양식 (D147 — tools/make_docx_templates.py 가 만든다)
+
+
+def template_index():
+    try:
+        return json.loads((TEMPLATES / 'index.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+
+
+def resolve_template(name):
+    """--template 의 값: 파일 경로, 또는 Lectern 양식의 id·이름 (research-report, 연구보고서). 못 찾으면 None"""
+    if not name:
+        return None
+    path = Path(name)
+    if path.is_file():
+        return path
+    for t in template_index():
+        if name in (t['id'], t.get('name'), t.get('name_en')):
+            found = TEMPLATES / f"{t['id']}.dotx"
+            return found if found.is_file() else None
+    return None
 
 
 def core_xml(title, author):
@@ -1004,7 +1085,10 @@ def core_xml(title, author):
 
 
 FM_ALIAS = {'제목': 'title', '부제': 'subtitle', '부제목': 'subtitle', '작성자': 'author', '저자': 'author', '지은이': 'author', '연구진': 'author',
-            '날짜': 'date', '일자': 'date', '언어': 'lang'}   # 앱의 layout.js ALIAS 와 같은 이름 (Word 가 쓰는 것만)
+            '날짜': 'date', '일자': 'date', '언어': 'lang', '기관': 'org', '기관명': 'org', '부서': 'dept', '담당부서': 'dept', '번호': 'number',
+            '보고서번호': 'number', '호수': 'number', '시리즈': 'series', '고객': 'client', '발주처': 'client', '소속': 'affiliation', '주제어': 'keywords',
+            '키워드': 'keywords', '판': 'version', '버전': 'version', '회사': 'company', '기업': 'company', '종목코드': 'ticker', '업종': 'sector',
+            '장': 'chapter', '책': 'book', '꼬리표': 'kicker', '짧은제목': 'short_title'}   # 앱의 layout.js ALIAS 와 같다
 
 
 def fm_text(value):
@@ -1018,6 +1102,9 @@ def fm_text(value):
 
 
 def build(md_path, out_path, template=None, lang=None):
+    """md 문서 → docx. template 은 .dotx·.docx 경로나 Lectern 양식의 id·이름 (resolve_template).
+    양식 본문에 {{body}} 문단이 있으면 양식의 본문(표지·요약 자리·차례…)을 두고 그 자리에 본문을 넣는다 (D147 — template_fill.py).
+    없으면 양식의 스타일·머리글·바닥글·쪽 설정만 빌리고 본문은 새로 쓴다"""
     md_path = Path(md_path)
     raw_fm, _css, body = LM.split_front(md_path.read_text(encoding='utf-8-sig'))
     fm = {FM_ALIAS.get(k, k): v for k, v in raw_fm.items() if not (k in FM_ALIAS and FM_ALIAS[k] in raw_fm)}   # 영어 키가 있으면 그것
@@ -1034,6 +1121,11 @@ def build(md_path, out_path, template=None, lang=None):
                 b['level'] -= 1
     title = fm_text(fm.get('title')) or (LM.plain(h1[0]['runs']) if h1 else md_path.stem)
     author = fm_text(fm.get('author'))
+    if template and not Path(template).is_file():
+        found = resolve_template(str(template))
+        if found is None:
+            raise SystemExit(f'양식을 찾지 못했습니다: {template} — 파일 경로나 Lectern 양식 이름(--templates 로 목록)을 주세요')   # i18n-ok
+        template = found
     tpl = zipfile.ZipFile(template) if template else None
     names = set(tpl.namelist()) if tpl else set()
 
@@ -1056,34 +1148,80 @@ def build(md_path, out_path, template=None, lang=None):
         styles = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:styles {NS}>{"".join(default_styles(lang))}</w:styles>'
         sid, _ = style_ids(styles, {})
     doc_xml = tpl_text('word/document.xml')
-    sect = re.search(r'<w:sectPr\b.*?</w:sectPr>', doc_xml, re.S)
-    sect = sect.group(0) if sect else ''
+    hf_parts = sorted(n for n in names if re.fullmatch(r'word/(header|footer)\d*\.xml', n))
+    framed = '{{body}}' in TF.plain_text(doc_xml).replace(' ', '')
+    parts_text = [doc_xml] + [tpl_text(n) for n in hf_parts]
+    slot_names = TF.slots_in([doc_xml]) if framed else []
+    slot_blocks = {}
+    for name in slot_names:   # 양식에 자리가 있는 이름 있는 박스글은 본문에서 떼어 그 자리로 (같은 이름이 둘이면 첫째만)
+        hit = next((b for b in blocks if b['kind'] == 'box' and b.get('name') == name), None)
+        if hit is not None:
+            slot_blocks[name] = hit['blocks']
+            blocks.remove(hit)
+    if framed and TF.uses([doc_xml], 'toc'):   # 양식이 차례 쪽을 쓰면 문서의 [목차] 줄은 뺀다 — 두 번 나오지 않게 (표 목차·그림 목차는 둔다)
+        blocks = [b for b in blocks if not (b['kind'] == 'toc' and b['what'] == 'toc')]
+    drop_title = framed and TF.uses(parts_text, 'title')   # 양식이 제목을 쓰면(표지) 본문의 '# 제목' 줄은 뺀다
+    if drop_title and h1 and h1[0]['level'] == 0 and h1[0] in blocks:
+        blocks.remove(h1[0])
+    sects = re.findall(r'<w:sectPr\b.*?</w:sectPr>', doc_xml, re.S)
+    sect = sects[-1] if sects else ''
     width = text_width_of(sect)
+    vals = {k: fm_text(v) for k, v in fm.items()}
+    vals.update({'title': str(title), 'author': author, 'date': fm_text(fm.get('date')) or TF.today()})
     with tempfile.TemporaryDirectory() as tmp:
         bld = Builder(md_path, lang, sid, width, notes, tmp)
         bld.texts = math
         bld.name_heads(blocks)
         content = bld.blocks(blocks)
-        # 표지 머리: 제목 바로 뒤에 부제·작성자·날짜 (맨 앞 설정에 있을 때)
-        meta = [v for v in (fm_text(fm.get('subtitle')), ' · '.join(v for v in (author, fm_text(fm.get('date'))) if v)) if v]
-        sub = ''.join(bld.para(f'<w:r><w:t xml:space="preserve">{x(m)}</w:t></w:r>', sid['subtitle']) for m in meta)
-        if h1 and h1[0]['level'] == 0:   # 문서의 '# 제목' 바로 뒤에 부제·작성자·날짜
-            content.insert(1, sub)
-        elif fm_text(fm.get('title')):   # 제목 줄이 없으면 맨 앞 설정의 제목을 맨 위에
-            content.insert(0, bld.para(f'<w:r><w:t xml:space="preserve">{x(title)}</w:t></w:r>', sid['title']) + sub)
+        if not drop_title:
+            # 표지 머리: 제목 바로 뒤에 부제·작성자·날짜 (맨 앞 설정에 있을 때)
+            meta = [v for v in (fm_text(fm.get('subtitle')), ' · '.join(v for v in (author, fm_text(fm.get('date'))) if v)) if v]
+            sub = ''.join(bld.para(f'<w:r><w:t xml:space="preserve">{x(m)}</w:t></w:r>', sid['subtitle']) for m in meta)
+            if h1 and h1[0]['level'] == 0:   # 문서의 '# 제목' 바로 뒤에 부제·작성자·날짜
+                content.insert(1, sub)
+            elif fm_text(fm.get('title')):   # 제목 줄이 없으면 맨 앞 설정의 제목을 맨 위에
+                content.insert(0, bld.para(f'<w:r><w:t xml:space="preserve">{x(title)}</w:t></w:r>', sid['title']) + sub)
+        slots = {name: bld.slot(b) for name, b in slot_blocks.items()}
+        roles = {}
+        for m in re.finditer(r'\{\{\s*signoff:\s*([^{}]+?)\s*\}\}', TF.plain_text(doc_xml)):
+            key = FM_ALIAS.get(m[1], m[1])
+            items = [v.strip() for v in fm_text(fm.get(key) or raw_fm.get(m[1])).split(',') if v.strip()]
+            roles[m[1]] = bld.signoff(items) if items else None
+        toc_used = any(b['kind'] == 'toc' for b in blocks) or (framed and TF.uses([doc_xml], 'toc'))
+        frag = {'toc': bld.toc_field('toc') if framed else None}
         numbering, bullet = numbering_xml(tpl_text('word/numbering.xml'), bld.list_nums)
-        body_xml = ''.join(content)
-        if bullet != 1:
-            body_xml = body_xml.replace('<w:numId w:val="1"/>', f'<w:numId w:val="{bullet}"/>')
-        # 쪽 설정 — 양식의 것, 없으면 Lectern 의 보고서 양식 (첫 쪽은 머리 없이)
-        if not sect:
-            hid = bld.rel('header', 'header1.xml')
-            fid = bld.rel('footer', 'footer1.xml')
-            sect = (f'<w:sectPr><w:headerReference w:type="default" r:id="{hid}"/><w:footerReference w:type="default" r:id="{fid}"/>'
-                    f'<w:footerReference w:type="first" r:id="{fid}"/>'
-                    f'<w:pgSz w:w="{A4[0]}" w:h="{A4[1]}"/><w:pgMar w:top="{MARGINS[0]}" w:right="{MARGINS[1]}" w:bottom="{MARGINS[2]}" w:left="{MARGINS[3]}" '
-                    'w:header="709" w:footer="567" w:gutter="0"/><w:titlePg/><w:docGrid w:linePitch="360"/></w:sectPr>')
-        document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {NS}><w:body>{body_xml}{sect}</w:body></w:document>'
+
+        def ours(xml):   # 우리 글머리표의 numId — 양식에 번호 정의가 있으면 다른 번호로
+            return xml.replace('<w:numId w:val="1"/>', f'<w:numId w:val="{bullet}"/>') if bullet != 1 else xml
+        body_xml = ours(''.join(content))
+
+        def render(key):
+            if key == 'body':
+                return body_xml
+            if key == 'toc':
+                return frag['toc']
+            if key.startswith('slot:'):
+                got = slots.get(key[5:].strip())
+                return ours(got) if got else None
+            if key.startswith('signoff:'):
+                return roles.get(key[8:].strip())
+            return None
+        filler = TF.Filler(vals, render, lang)
+        filled_parts = {}
+        if framed:
+            document = filler.fill(doc_xml)
+        else:
+            # 쪽 설정 — 양식의 것, 없으면 Lectern 의 보고서 양식 (첫 쪽은 머리 없이)
+            if not sect:
+                hid = bld.rel('header', 'header1.xml')
+                fid = bld.rel('footer', 'footer1.xml')
+                sect = (f'<w:sectPr><w:headerReference w:type="default" r:id="{hid}"/><w:footerReference w:type="default" r:id="{fid}"/>'
+                        f'<w:footerReference w:type="first" r:id="{fid}"/>'
+                        f'<w:pgSz w:w="{A4[0]}" w:h="{A4[1]}"/><w:pgMar w:top="{MARGINS[0]}" w:right="{MARGINS[1]}" w:bottom="{MARGINS[2]}" w:left="{MARGINS[3]}" '
+                        'w:header="709" w:footer="567" w:gutter="0"/><w:titlePg/><w:docGrid w:linePitch="360"/></w:sectPr>')
+            document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {NS}><w:body>{body_xml}{sect}</w:body></w:document>'
+        for n in hf_parts:   # 머리글·바닥글의 {{title}}·{{org}} … — 양식이 쓰면
+            filled_parts[n] = filler.fill(tpl_text(n))
         fn = footnotes_xml(tpl_text('word/footnotes.xml'), bld.fn_xml)
         fn_rels = tpl_text('word/_rels/footnotes.xml.rels')
         if bld.note_rels:
@@ -1093,19 +1231,19 @@ def build(md_path, out_path, template=None, lang=None):
         # 관계: 양식의 것을 지키고 우리 것을 더한다
         rels_xml = tpl_text('word/_rels/document.xml.rels')
         have = set(re.findall(r'Type="([^"]+)"', rels_xml))
-        ours = list(bld.rels)
+        rel_list = list(bld.rels)
         for kind, target in (('styles', 'styles.xml'), ('numbering', 'numbering.xml'), ('footnotes', 'footnotes.xml'), ('settings', 'settings.xml')):
             if REL[kind] not in have:
-                ours.append((f'rIdLecS{kind}', kind, target, False))
+                rel_list.append((f'rIdLecS{kind}', kind, target, False))
         rel_items = ''.join(f'<Relationship Id="{rid}" Type="{REL[kind]}" Target="{x(target)}"' + (' TargetMode="External"' if ext else '') + '/>'
-                            for rid, kind, target, ext in ours)
+                            for rid, kind, target, ext in rel_list)
         if rels_xml:
             rels_xml = rels_xml.replace('</Relationships>', rel_items + '</Relationships>')
         else:
             rels_xml = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="{RELS}">{rel_items}</Relationships>'
         settings = tpl_text('word/settings.xml') or (f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:settings {NS}><w:defaultTabStop w:val="800"/>'
                                                       '<w:characterSpacingControl w:val="doNotCompress"/><w:compat><w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/></w:compat></w:settings>')
-        if any(b['kind'] == 'toc' for b in blocks) and '<w:updateFields' not in settings:   # 목차 필드 — 열 때 Word 가 채우게
+        if toc_used and '<w:updateFields' not in settings:   # 목차 필드 — 열 때 Word 가 채우게
             settings = re.sub(r'(<w:settings\b[^>]*>)', r'\1<w:updateFields w:val="true"/>', settings, count=1)
         types = tpl_text('[Content_Types].xml')
         if not types:
@@ -1126,7 +1264,7 @@ def build(md_path, out_path, template=None, lang=None):
                                                  f'<Relationship Id="rId2" Type="{REL["core"]}" Target="docProps/core.xml"/></Relationships>')
         out_path = Path(out_path)
         written = {'[Content_Types].xml', '_rels/.rels', 'word/document.xml', 'word/_rels/document.xml.rels', 'word/styles.xml', 'word/numbering.xml',
-                   'word/footnotes.xml', 'word/settings.xml', 'docProps/core.xml', 'word/_rels/footnotes.xml.rels'}
+                   'word/footnotes.xml', 'word/settings.xml', 'docProps/core.xml', 'word/_rels/footnotes.xml.rels', *filled_parts}
         with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED) as z:
             z.writestr('[Content_Types].xml', types)
             z.writestr('_rels/.rels', root_rels)
@@ -1139,12 +1277,14 @@ def build(md_path, out_path, template=None, lang=None):
                 z.writestr('word/_rels/footnotes.xml.rels', fn_rels)
             z.writestr('word/settings.xml', settings)
             z.writestr('docProps/core.xml', core_xml(str(title), author))
+            for n, xml in filled_parts.items():
+                z.writestr(n, xml)
             if not tpl:
                 z.writestr('word/header1.xml', header_footer('header', str(title)))
                 z.writestr('word/footer1.xml', header_footer('footer', str(title)))
             for name, data in bld.media:
                 z.writestr(f'word/media/{name}', data)
-            if tpl:   # 양식의 나머지 (테마·글꼴 표·머리글·바닥글·그림·문서 정보 …) 그대로 — 관계가 가리키는 파일이 빠지지 않게
+            if tpl:   # 양식의 나머지 (테마·글꼴 표·그림·문서 정보 …) 그대로 — 관계가 가리키는 파일이 빠지지 않게
                 for name in names:
                     if name not in written and not name.endswith('/'):
                         z.writestr(name, tpl.read(name))
@@ -1156,11 +1296,17 @@ def build(md_path, out_path, template=None, lang=None):
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description='Lectern md → docx')
-    ap.add_argument('md')
-    ap.add_argument('--out', required=True)
-    ap.add_argument('--template')
+    ap.add_argument('md', nargs='?')
+    ap.add_argument('--out')
+    ap.add_argument('--template', help='양식 — .dotx·.docx 경로, 또는 Lectern 양식의 id·이름 (--templates 로 목록)')   # i18n-ok
     ap.add_argument('--lang', choices=['ko', 'en'])
+    ap.add_argument('--templates', action='store_true', help='Lectern 양식 목록을 JSON 으로')   # i18n-ok
     a = ap.parse_args(argv)
+    if a.templates:
+        print(json.dumps(template_index(), ensure_ascii=False, indent=1))
+        return 0
+    if not a.md or not a.out:
+        ap.error('md 와 --out 이 필요합니다')   # i18n-ok
     report = build(a.md, a.out, a.template, a.lang)
     print(json.dumps(report, ensure_ascii=False))
     return 0

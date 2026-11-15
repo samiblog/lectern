@@ -9,29 +9,59 @@ Lectern 에서 쓴 md 문서를 Word 에서 고칠 수 있는 docx 로 만든다
 
 ## 양식
 
-양식은 `--template` 으로 준다. 스크립트가 스스로 고르지 않는다 — 아래 차례대로 찾아 경로를 넘긴다 (Lectern 의 내보내기 창도 같은 차례다).
+양식은 `--template` 으로 준다 — `.dotx`·`.docx` 경로, 또는 스킬에 든 **Lectern 양식**의 id·이름. 스크립트가 스스로 고르지 않는다 — 아래 차례대로 찾아 넘긴다 (Lectern 의 내보내기 창도 같은 차례다).
 
 | 차례 | 양식 |
 |---|---|
-| 1 | 사용자가 이번에 말한 양식 파일 (`.dotx`·`.docx`) |
-| 2 | 문서 맨 앞 설정의 `docxStyle: 이름` — 보관소 `%APPDATA%\Lectern\docx-styles` 의 `이름.dotx`(또는 `.docx`) |
-| 3 | 맨 앞 설정의 `layout: 이름` 과 같은 이름의 양식이 보관소에 있으면 그것 (지면 틀과 짝 — 이름 하나로 PDF·html·Word) |
+| 1 | 사용자가 이번에 말한 양식 (파일, 또는 '연구보고서 양식으로' 처럼 Lectern 양식 이름) |
+| 2 | 문서 맨 앞 설정의 `docxStyle: 이름` — 보관소 `%APPDATA%\Lectern\docx-styles` 의 `이름.dotx`(또는 `.docx`), 없으면 그 이름의 Lectern 양식 |
+| 3 | 맨 앞 설정의 `layout: 이름` 과 같은 이름의 양식 — 보관소를 먼저, 다음은 Lectern 양식 (지면 틀과 짝 — 이름 하나로 PDF·html·Word) |
 | 4 | 없으면 `--template` 없이 — Lectern 의 기본 보고서 양식 (A4, 명조 본문·고딕 제목, 2쪽부터 머리에 제목, 바닥 가운데 쪽 번호) |
 
-양식의 스타일·번호 매기기·머리글·바닥글·쪽 크기·여백·글꼴을 빌리고 본문만 새로 쓴다. 보관소의 `~$` 로 시작하는 파일은 Word 가 열어 둔 잠금 파일이다 — 양식이 아니다.
+보관소의 `~$` 로 시작하는 파일은 Word 가 열어 둔 잠금 파일이다 — 양식이 아니다.
 
-양식의 스타일은 이름으로 찾는다 — Word 의 기본 스타일(`heading 1`, `Title`, `Caption`, `Quote`, `List Bullet` …)은 파일 안에 영어 이름으로 적혀 있어 한국어 Word 의 '제목 1' 과 같다. 회사 양식이 자기 이름의 스타일을 쓰면 양식 옆에 `이름.styles.json` 을 둔다:
+### Lectern 양식 18가지 (D147)
+
+지면 틀(D145)과 같은 id·이름이다 — 같은 문서를 PDF·html(틀)과 Word(양식)로 내면 같은 꼴(표지·요약 상자·결재란·쪽 머리)이 된다. 목록과 각 양식이 쓰는 맨 앞 설정 키·박스글 자리는 `<실행기> scripts/build_docx.py --templates` 가 JSON 으로 준다 (`templates/index.json`).
+
+| 묶음 | id — 이름 |
+|---|---|
+| 업무·공공 | `gov-report` 정부 보고서 · `one-page` 한 장 보고서 · `official-letter` 공문 (기안문) · `press-release` 보도자료 · `minutes` 회의록 |
+| 연구 | `research-report` 연구보고서 · `issue-brief` 이슈 브리프 · `paper-2col` 학술 논문 (2단) · `manuscript` 투고 원고 (Letter) · `white-paper` 백서 |
+| 금융·컨설팅 | `equity-research` 증권사 리포트 · `consulting` 컨설팅 보고서 · `proposal` 제안서 |
+| 매체·출판 | `magazine` 잡지 · `newsletter` 뉴스레터 · `book` 책 (152×225mm) · `longform` 웹 장문 |
+| 안내 | `manual` 매뉴얼·가이드 |
+
+양식은 문서의 맨 앞 설정으로 표지·정보 표를 채운다 (`title`·`subtitle`·`author`·`org`·`date`·`number` … 한국어 키 `기관`·`부제`·`연구진` 도). 비어 있는 키의 줄은 빠진다. 이름 있는 박스글 `<!-- box: 요약 -->` 은 양식의 그 자리(요약 상자·결론 상자·초록)로 옮겨지고, 자리가 없는 박스글은 본문에 남는다. 결재란은 `결재: [담당, 팀장, 원장]` 같은 목록이다. 이름표(요약·차례·회의록 …)는 맨 앞 설정 `lang: en` 이면 영어로. 사용자가 양식을 골랐는데 쓰는 키가 비어 있으면 무엇을 채우면 좋은지 알려 준다 (문서를 고치는 것은 사용자가 시킬 때만).
+
+### 회사 양식 (.dotx·.docx)
+
+양식의 스타일·번호 매기기·머리글·바닥글·쪽 크기·여백·글꼴을 빌리고 본문만 새로 쓴다. 양식의 스타일은 이름으로 찾는다 — Word 의 기본 스타일(`heading 1`, `Title`, `Caption`, `Quote`, `List Bullet` …)은 파일 안에 영어 이름으로 적혀 있어 한국어 Word 의 '제목 1' 과 같다. 회사 양식이 자기 이름의 스타일을 쓰면 양식 옆에 `이름.styles.json` 을 둔다:
 
 ~~~json
 {"heading 1": "1.제목", "Normal": "본문2", "Caption": "표제목"}
 ~~~
+
+회사 양식에 표지를 두고 싶으면 Lectern 양식처럼 Word 글 속에 자리를 쓴다. 양식 본문에 `{{body}}` 문단이 있으면 양식의 문단(표지·결재란 …)을 두고 그 자리에 본문을 넣는다 — 없으면 위처럼 본문만 새로 쓴다. 자리 하나는 한 번에 쳐서 한 서식으로 둔다 (Word 가 자리를 여러 조각으로 나누면 그 문단은 첫 조각의 서식이 된다).
+
+| 자리 | 들어가는 것 |
+|---|---|
+| `{{title}}` `{{subtitle}}` `{{author}}` `{{org}}` `{{키}}` | 맨 앞 설정의 값 (양식이 `{{title}}` 을 쓰면 본문의 `# 제목` 줄은 뺀다) |
+| `{{a\|b\|'글'}}` | a 가 비면 b, 그것도 비면 '글' |
+| `{{date:ko}}` `{{date:dot}}` `{{date:en}}` `{{date:long}}` | 2026년 11월 15일 · 2026. 11. 15. · November 15, 2026 · 문서 언어에 맞춰 |
+| `{{t:요약\|Summary}}` | 문서 언어(lang)에 맞는 이름표 |
+| 문단 맨 앞 `{{if:키}}` | 키가 비면 그 문단을 뺀다 — 표 행의 첫 칸 첫 문단이면 그 행을 |
+| 문단 하나 `{{body}}` `{{toc}}` | 본문 · Word 목차 필드 (양식이 쓰면 문서의 `[목차]` 줄은 뺀다) |
+| 문단 하나 `{{slot:요약}}` | 이름 있는 박스글의 글 — 없으면 `{{if:}}` 처럼 뺀다 |
+| 문단 하나 `{{signoff:결재}}` | 맨 앞 설정 목록으로 결재란 표 |
 
 ## 스크립트 돌리기
 
 `<실행기>` 는 `%LOCALAPPDATA%\Programs\Lectern\lectern-skill.exe` (Python·Pillow 가 들어 있다), 없으면 Python 3.10 이상.
 
 ```
-<실행기> scripts/build_docx.py 문서.md --out 문서.docx [--template 양식.dotx]
+<실행기> scripts/build_docx.py 문서.md --out 문서.docx [--template 양식.dotx | research-report]
+<실행기> scripts/build_docx.py --templates          :: Lectern 양식 목록 (JSON)
 ```
 
 - 결과의 마지막 줄은 `{"docx": 경로, "figures": 그림 수, "notes": [알릴 것]}` JSON 이다. `notes` 는 사용자에게 그대로 전한다 (그리지 못한 차트, 없는 그림 파일 등).
