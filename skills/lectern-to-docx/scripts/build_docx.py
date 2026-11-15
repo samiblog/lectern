@@ -484,7 +484,9 @@ class Builder:
         self.media: list[tuple[str, bytes]] = []
         self.footnotes: dict[str, int] = {}                # 이름 → Word 각주 번호
         self.fn_xml: list[str] = []
-        self.list_nums: list[int] = []                      # 번호 목록마다 하나 — 목록마다 1부터
+        self.in_note = False                                # 각주의 글을 짓는 중 — 링크의 관계를 footnotes.xml 쪽에
+        self.note_rels: list[tuple[str, str]] = []          # (rId, 주소)
+        self.list_nums: list[tuple[int, int, int]] = []     # 번호 목록마다 (numId, 단계, 첫 번호)
         self.figures = 0
         self.report_notes: list[str] = []
         self.bm = 0
@@ -557,7 +559,8 @@ class Builder:
             style = f'<w:rStyle w:val="{self.sid["link"]}"/>'
             body = f'<w:r><w:rPr>{style}{rpr}</w:rPr>{"".join(pieces)}</w:r>'
             if re.match(r'^(https?:|mailto:)', link, re.I):
-                return f'<w:hyperlink r:id="{self.rel("link", link, True)}">{body}</w:hyperlink>'
+                rid = self.note_rel(link) if self.in_note else self.rel('link', link, True)
+                return f'<w:hyperlink r:id="{rid}">{body}</w:hyperlink>'
             if link.startswith('#'):
                 target = self.anchor(link[1:])
                 if target:
@@ -574,6 +577,11 @@ class Builder:
             return f'lec_{CAP_KEY[m[1].lower()]}_{m[2]}'
         return self.heads.get(frag)
 
+    def note_rel(self, target):
+        rid = f'rIdLecFn{len(self.note_rels) + 1}'
+        self.note_rels.append((rid, target))
+        return rid
+
     def footnote_ref(self, name):
         if name not in self.notes_src:
             return f'<w:r><w:t xml:space="preserve">[^{x(name)}]</w:t></w:r>'
@@ -587,8 +595,11 @@ class Builder:
         n = len(self.footnotes) + 1
         self.footnotes[name] = n
         runs = LM.inline(protect_math(self.notes_src[name], self.texts))
+        self.in_note = True
+        note_runs = self.runs(runs)
+        self.in_note = False
         self.fn_xml.append(f'<w:footnote w:id="{n}"><w:p><w:pPr><w:pStyle w:val="{self.sid["fn"]}"/></w:pPr>'
-                           f'<w:r>{style}<w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> </w:t></w:r>{self.runs(runs)}</w:p></w:footnote>')
+                           f'<w:r>{style}<w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> </w:t></w:r>{note_runs}</w:p></w:footnote>')
         return self.bookmark(f'_RefLecFn{n}', f'<w:r>{style}<w:footnoteReference w:id="{n}"/></w:r>')
 
     # -- 단락
@@ -703,9 +714,11 @@ class Builder:
         num_ids = {}
         for it in b['items']:
             lvl = min(it['lvl'], 8)
+            for deeper in [k for k in num_ids if k > lvl]:   # 윗 단계 항목이 나오면 그 아래 번호 목록은 끝 — 다음은 새 목록 (앱과 같다)
+                del num_ids[deeper]
             if it['ordered']:
                 if lvl not in num_ids:
-                    num_ids[lvl] = self.new_list()
+                    num_ids[lvl] = self.new_list(lvl, it.get('start') or 1)
                 num = num_ids[lvl]
             else:
                 num = 1   # 글머리표 목록
@@ -713,10 +726,10 @@ class Builder:
                                  f'<w:numPr><w:ilvl w:val="{lvl}"/><w:numId w:val="{num}"/></w:numPr>'))
         return out
 
-    def new_list(self):
-        """번호 목록 하나 — 목록마다 1부터 (같은 번호 정의를 쓰는 새 num)"""
+    def new_list(self, lvl=0, start=1):
+        """번호 목록 하나 — 같은 번호 정의를 쓰는 새 num, 그 단계의 번호는 원문의 첫 번호부터 (3. 으로 시작하면 3)"""
         num_id = 100 + len(self.list_nums)
-        self.list_nums.append(num_id)
+        self.list_nums.append((num_id, lvl, start))
         return num_id
 
     def cell(self, inner, fill=None, width=None, header=False):
@@ -797,11 +810,14 @@ class Builder:
         return self.boxed(blocks, '1B3A5C', 'FAFBFC', title=title, title_bm=bm)
 
     def code(self, lines):
-        inner = '<w:r><w:rPr></w:rPr>' + ''.join((f'<w:br/>' if k else '') + f'<w:t xml:space="preserve">{x(line)}</w:t>' for k, line in enumerate(lines)) + '</w:r>'
+        """코드 블록 — 문단 하나에 줄바꿈으로. 탭은 Word 의 탭 (w:t 안의 탭 글자는 빈칸으로 보일 수 있다)"""
+        def line_xml(line):
+            return '<w:tab/>'.join(f'<w:t xml:space="preserve">{x(bit)}</w:t>' for bit in line.split('\t'))
+        inner = '<w:r>' + ''.join(('<w:br/>' if k else '') + line_xml(line) for k, line in enumerate(lines)) + '</w:r>'
         return self.para(inner, self.sid['code'])
 
     # -- 그림
-    def picture(self, data, ext, alt='', width_frac=1.0, px_scale=1.0):
+    def picture(self, data, ext, alt='', width_frac=1.0, px_scale=1.0, want=(None, None)):
         size = image_size(data)
         if not size:
             self.report_notes.append(f'그림을 읽지 못했습니다: {alt or ext}')   # i18n-ok (스킬의 보고)
@@ -815,6 +831,10 @@ class Builder:
         max_h = int((A4[1] - 3500) * EMU * 0.62)
         cx = min(max_w, int(px_w / px_scale * 9525))   # 96dpi 의 1px = 9525 EMU, px_scale 배로 그린 그림은 그만큼 줄여 제 크기로
         cy = int(cx * px_h / px_w)
+        ww, wh = want   # 원문의 w:300·h:200 (화면 px) — 한쪽만 있으면 비율대로
+        if ww or wh:
+            cx = min(max_w, int((ww or wh * px_w / px_h) * 9525))
+            cy = int(wh * 9525) if ww and wh else int(cx * px_h / px_w)
         if cy > max_h:
             cy = max_h
             cx = int(cy * px_w / px_h)
@@ -841,14 +861,17 @@ class Builder:
         if ext == 'svg':
             out = self.tmp / f'svg{self.figures}.png'
             if figure_png.svg(path, out):
-                return self.picture(out.read_bytes(), 'png', b.get('alt', ''))
+                data = out.read_bytes()
+                natural = figure_png.svg_size(path)   # 그림의 제 크기 (viewBox) — 크게 그린 PNG 를 그만큼 줄인다
+                scale = (image_size(data) or (1, 1))[0] / natural[0] if natural else 1.0
+                return self.picture(data, 'png', b.get('alt', ''), px_scale=max(scale, 1.0), want=(b.get('w'), b.get('h')))
             self.report_notes.append(f'SVG 를 그림으로 바꾸지 못했습니다: {src}')   # i18n-ok
             return self.para(f'<w:r><w:t xml:space="preserve">[{x(b.get("alt") or src)}]</w:t></w:r>')
         if ext == 'jpg':
             ext = 'jpeg'
         if ext not in ('png', 'jpeg', 'gif', 'bmp'):
             return self.para(f'<w:r><w:t xml:space="preserve">[{x(b.get("alt") or src)}]</w:t></w:r>')
-        return self.picture(path.read_bytes(), ext, b.get('alt', ''))
+        return self.picture(path.read_bytes(), ext, b.get('alt', ''), want=(b.get('w'), b.get('h')))
 
     def figure(self, b):
         out = self.tmp / f'fig{self.figures + 1}.png'
@@ -925,13 +948,14 @@ def numbering_xml(existing, nums):
     bullets = ['•', '◦', '▪', '•', '◦', '▪', '•', '◦', '▪']
     lv_b = ''.join(f'<w:lvl w:ilvl="{i}"><w:start w:val="1"/><w:numFmt w:val="bullet"/><w:lvlText w:val="{b}"/><w:lvlJc w:val="left"/>'
                    f'<w:pPr><w:ind w:left="{360 + 360 * i}" w:hanging="300"/></w:pPr></w:lvl>' for i, b in enumerate(bullets))
-    fmts = ['decimal', 'lowerLetter', 'lowerRoman', 'decimal', 'lowerLetter', 'lowerRoman', 'decimal', 'lowerLetter', 'lowerRoman']
+    fmts = ['decimal'] * 9   # 안쪽 단계도 1. 2. — 앱 화면과 같다
     lv_n = ''.join(f'<w:lvl w:ilvl="{i}"><w:start w:val="1"/><w:numFmt w:val="{f}"/><w:lvlText w:val="%{i + 1}."/><w:lvlJc w:val="left"/>'
                    f'<w:pPr><w:ind w:left="{400 + 360 * i}" w:hanging="360"/></w:pPr></w:lvl>' for i, f in enumerate(fmts))
     abstract = (f'<w:abstractNum w:abstractNumId="9101"><w:multiLevelType w:val="hybridMultilevel"/>{lv_b}</w:abstractNum>'
                 f'<w:abstractNum w:abstractNumId="9102"><w:multiLevelType w:val="hybridMultilevel"/>{lv_n}</w:abstractNum>')
     num = '<w:num w:numId="1"><w:abstractNumId w:val="9101"/></w:num>' if not existing else ''
-    num += ''.join(f'<w:num w:numId="{n}"><w:abstractNumId w:val="9102"/><w:lvlOverride w:ilvl="0"><w:startOverride w:val="1"/></w:lvlOverride></w:num>' for n in nums)
+    num += ''.join(f'<w:num w:numId="{n}"><w:abstractNumId w:val="9102"/><w:lvlOverride w:ilvl="{lvl}"><w:startOverride w:val="{start}"/></w:lvlOverride></w:num>'
+                   for n, lvl, start in nums)
     if existing:
         # 양식의 번호 정의를 지키고 우리 것을 더한다 — abstractNum 은 num 보다 앞에 와야 한다
         bullet_num = 9001
@@ -1061,6 +1085,11 @@ def build(md_path, out_path, template=None, lang=None):
                     'w:header="709" w:footer="567" w:gutter="0"/><w:titlePg/><w:docGrid w:linePitch="360"/></w:sectPr>')
         document = f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:document {NS}><w:body>{body_xml}{sect}</w:body></w:document>'
         fn = footnotes_xml(tpl_text('word/footnotes.xml'), bld.fn_xml)
+        fn_rels = tpl_text('word/_rels/footnotes.xml.rels')
+        if bld.note_rels:
+            items = ''.join(f'<Relationship Id="{rid}" Type="{REL["link"]}" Target="{x(t)}" TargetMode="External"/>' for rid, t in bld.note_rels)
+            fn_rels = (fn_rels.replace('</Relationships>', items + '</Relationships>') if fn_rels
+                       else f'<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Relationships xmlns="{RELS}">{items}</Relationships>')
         # 관계: 양식의 것을 지키고 우리 것을 더한다
         rels_xml = tpl_text('word/_rels/document.xml.rels')
         have = set(re.findall(r'Type="([^"]+)"', rels_xml))
@@ -1097,7 +1126,7 @@ def build(md_path, out_path, template=None, lang=None):
                                                  f'<Relationship Id="rId2" Type="{REL["core"]}" Target="docProps/core.xml"/></Relationships>')
         out_path = Path(out_path)
         written = {'[Content_Types].xml', '_rels/.rels', 'word/document.xml', 'word/_rels/document.xml.rels', 'word/styles.xml', 'word/numbering.xml',
-                   'word/footnotes.xml', 'word/settings.xml', 'docProps/core.xml'}
+                   'word/footnotes.xml', 'word/settings.xml', 'docProps/core.xml', 'word/_rels/footnotes.xml.rels'}
         with zipfile.ZipFile(out_path, 'w', zipfile.ZIP_DEFLATED) as z:
             z.writestr('[Content_Types].xml', types)
             z.writestr('_rels/.rels', root_rels)
@@ -1106,6 +1135,8 @@ def build(md_path, out_path, template=None, lang=None):
             z.writestr('word/styles.xml', styles)
             z.writestr('word/numbering.xml', numbering)
             z.writestr('word/footnotes.xml', fn)
+            if fn_rels:
+                z.writestr('word/_rels/footnotes.xml.rels', fn_rels)
             z.writestr('word/settings.xml', settings)
             z.writestr('docProps/core.xml', core_xml(str(title), author))
             if not tpl:

@@ -270,6 +270,27 @@ def test_scenario_findings(tmp_path, monkeypatch):
     assert 'Pt = Pt−1(1 + gt)' in text
 
 
+def test_second_scenario_findings(tmp_path, monkeypatch):
+    # 두 번째 시나리오: 각주 안의 링크(관계는 footnotes.xml 쪽 — 아니면 Word 가 손상된 파일로 거절), 3. 으로 시작하는 목록,
+    # 윗 항목이 바뀌면 안쪽 번호는 새로, 그림의 w: 크기
+    (tmp_path / 'a.png').write_bytes(png(120, 80, b'\x10\x20\x30\xff'))
+    md = tmp_path / 'doc.md'
+    md.write_text('# 문서\n\n각주[^l].\n\n3. 셋\n4. 넷\n   1. 안쪽\n5. 다섯\n   1. 다시 안쪽\n\n![작은 w:300](a.png)\n\n![그대로](a.png)\n\n'
+                  '[^l]: [LME](https://www.lme.com) 의 자료.\n', encoding='utf-8')
+    out = tmp_path / 'doc.docx'
+    builder(monkeypatch).build(md, out)
+    xml = parts(out)
+    note = xml['word/footnotes.xml']
+    rid = re.search(r'<w:hyperlink r:id="([^"]+)"', note)[1]
+    assert f'Id="{rid}"' in xml['word/_rels/footnotes.xml.rels'] and 'https://www.lme.com' in xml['word/_rels/footnotes.xml.rels']
+    assert f'Id="{rid}"' not in xml['word/_rels/document.xml.rels']
+    nums = re.findall(r'<w:num w:numId="(\d+)"><w:abstractNumId w:val="9102"/><w:lvlOverride w:ilvl="(\d)"><w:startOverride w:val="(\d+)"/>', xml['word/numbering.xml'])
+    assert ('0', '3') in [(lvl, start) for _, lvl, start in nums]   # 3 부터
+    assert len([n for n in nums if n[1] == '1']) == 2   # 안쪽 목록 둘 — 따로 1부터
+    extents = re.findall(r'<wp:extent cx="(\d+)" cy="(\d+)"/>', xml['word/document.xml'])
+    assert (str(300 * 9525), str(200 * 9525)) in extents and (str(120 * 9525), str(80 * 9525)) in extents
+
+
 def test_split_front_reads_korean_keys():
     sys.path.insert(0, str(DOCX))
     try:

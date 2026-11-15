@@ -253,7 +253,8 @@ def read_blocks(lines):
                     if check:
                         prefix = '☑ ' if check[1].lower() == 'x' else '☐ '
                         body = check[2]
-                    items.append({'lvl': len(lm[1].expandtabs(2)) // 2, 'ordered': lm[2][0].isdigit(), 'runs': inline(prefix + body)})
+                    ordered = lm[2][0].isdigit()
+                    items.append({'lvl': len(lm[1].expandtabs(2)) // 2, 'ordered': ordered, 'start': int(lm[2][:-1]) if ordered else None, 'runs': inline(prefix + body)})
                     i += 1
                     continue
                 if lines[i].strip() and lines[i].startswith((' ', '\t')) and items:

@@ -32,6 +32,9 @@ const TITLE_MAX = 60;
 const box = () => $('#lec-print');
 /** @type {{ tab: Tab, pane: Pane, path: string, deck: boolean, format: 'pdf' | 'html' | 'docx', layout: string, layouts: any[], docx: string, token: string, seq: number, busy: boolean } | null} */
 let dlg = null;
+/** 미리보기를 만들 때마다 하나씩 — 창을 닫았다 다시 열어도 이어서 센다. 창마다 0부터 세면 닫은 창의 늦은 결과가 새 창의
+    같은 번호로 통과해, 다른 문서의 파일이 저장 단추에 들어간다 */
+let builds = 0;
 
 /** CSS content 의 글자 하나로: 따옴표·역슬래시를 막고 줄바꿈·제어 문자는 빈칸으로 */
 export const cssString = (s) => `"${String(s).replace(/[\u0000-\u001f\u007f]+/g, ' ').replace(/[\\"]/g, '\\$&')}"`;
@@ -146,7 +149,7 @@ export function openPrint(kind = 'pdf') {
   const format = kind === 'html' ? 'html' : kind === 'docx' ? 'docx' : 'pdf';
   if (format === 'pdf' ? !canSavePdf() : !canExportHtml()) return;
   const view = S.pane.view;
-  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], docx: '', token: '', seq: 0, busy: false };
+  dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], docx: '', token: '', seq: ++builds, busy: false };
   for (const r of $$('#lec-print input[name="pp_font"]')) r.checked = r.value === printFont();
   for (const r of $$('#lec-print input[name="pp_margin"]')) r.checked = r.value === printMargin();
   $('#lec-pp-header').checked = S.config?.print_header !== false;
@@ -281,7 +284,7 @@ function setBusy(text, error = false) {
 /** 지금 옵션으로 미리보기 PDF 를 만들어 띄운다. 그사이 옵션이 또 바뀌면 앞의 결과는 버린다 */
 async function refresh() {
   if (!dlg) return;
-  const seq = ++dlg.seq;
+  const seq = dlg.seq = ++builds;
   dlg.token = '';
   if (dlg.format === 'docx') {
     await refreshDocx(seq);
@@ -317,7 +320,7 @@ const refreshSoon = debounce(refresh, 250);
  */
 function remake() {
   if (!dlg) return;
-  dlg.seq++;
+  dlg.seq = ++builds;
   dlg.token = '';
   $('#lec-print-info').textContent = '';
   $('#lec-print-docx-info').textContent = '';
