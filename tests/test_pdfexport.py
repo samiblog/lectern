@@ -161,3 +161,64 @@ def test_print_options_settings():
     assert value_ok('print_margin', 'narrow') and not value_ok('print_margin', '10mm')
     assert value_ok('print_header', False) and not value_ok('print_header', 'no')
     assert value_ok('print_page_numbers', True)
+
+
+# ---- 내보내기 창의 'html 로 저장' (D144) ------------------------------------------------------------
+
+HTML = '<!doctype html>\n<html lang="ko">\n<head>\n<meta charset="utf-8">\n<meta name="generator" content="Lectern">\n<title>t</title>\n</head>\n<body></body>\n</html>\n'
+
+
+def test_keep_html_takes_only_what_the_screen_built():
+    token = pdfexport.keep_html(HTML)
+    assert pdfexport.preview_bytes(token, 'html') == HTML.encode('utf-8')
+    assert pdfexport.preview_bytes(token) is None   # 형식이 다른 토큰으로는 꺼내지 못한다 (PDF 미리보기와 섞이지 않게)
+    for bad in ('<html><script>x</script>', '<!doctype html><title>남의 글</title>', None, 3):
+        with pytest.raises(ValueError):
+            pdfexport.keep_html(bad)
+
+
+def test_previews_are_counted_per_kind():
+    pdf = pdfexport.keep_preview(b'%PDF-1.7 keep')
+    for _ in range(pdfexport.MAX_PREVIEWS + 1):
+        pdfexport.keep_html(HTML)
+    assert pdfexport.preview_bytes(pdf) == b'%PDF-1.7 keep'   # html 을 많이 만들어도 PDF 미리보기는 남는다
+
+
+def test_html_save_places_and_targets(tmp_path):
+    (tmp_path / 'report').mkdir()
+    (tmp_path / 'report' / '의견서.md').write_text('# 의견서\n', encoding='utf-8')
+    folder, name = pdfexport.start_place(tmp_path, 'report/의견서.md', '.html')
+    assert Path(folder) == tmp_path / 'report' and name == '의견서.html'
+    assert pdfexport.target_of(str(tmp_path / 'a'), '.html').name == 'a.html'
+    assert pdfexport.target_of(str(tmp_path / 'a.htm'), '.html').name == 'a.htm'
+    assert pdfexport.target_of(str(tmp_path / 'a.pdf'), '.html').name == 'a.pdf.html'
+
+
+def test_save_html_writes_the_previewed_bytes(tmp_path):
+    token = pdfexport.keep_html(HTML)
+    r = pdfexport.save_html(str(tmp_path / '보고서'), token)
+    assert r == {'path': str(tmp_path / '보고서.html')} and (tmp_path / '보고서.html').read_bytes() == HTML.encode('utf-8')
+    assert not [p for p in tmp_path.iterdir() if p.name.startswith('.lectern-')]   # 임시 파일이 남지 않는다
+    assert pdfexport.save_html(None, token) == {}   # 대화상자 취소
+    assert 'error' in pdfexport.save_html(str(tmp_path / '다른'), 'nope')
+    assert 'error' in pdfexport.save_html(str(samples_dir().resolve() / '안.html'), token)   # 프로그램 폴더 안 (D71)
+
+
+def test_export_routes():
+    """/api/export/keep 은 토큰이 있어야 하고, /export-preview/<토큰>.html 은 토큰만으로 — sandbox CSP 로 스크립트를 막는다"""
+    from lectern.config import Config
+    from lectern.server import create_app
+    from lectern.state import AppState
+    st = AppState(Config(), mode='window')
+    st.token = 'secret'
+    c = create_app(st).test_client()
+    assert c.post('/api/export/keep', json={'text': HTML}).status_code == 403
+    r = c.post('/api/export/keep', json={'text': HTML}, headers={'X-Token': 'secret'})
+    assert r.status_code == 200 and r.json['size'] == len(HTML.encode('utf-8'))
+    assert c.post('/api/export/keep', json={'text': '<p>x</p>'}, headers={'X-Token': 'secret'}).status_code == 400
+    page = c.get(f"/export-preview/{r.json['token']}.html")
+    assert page.status_code == 200 and page.data == HTML.encode('utf-8') and page.content_type.startswith('text/html')
+    csp = page.headers['Content-Security-Policy']
+    assert csp.startswith('sandbox;') and "default-src 'none'" in csp and 'script' not in csp
+    assert c.get('/export-preview/nope.html').status_code == 404
+    st.close()

@@ -402,11 +402,16 @@
     </div>
   </div>
 </div>
-<div id="lec-print" class="overlay" hidden><!-- PDF·인쇄 창 (D134 — printdoc.js): 옵션과 실제 PDF 의 미리보기 -->
+<div id="lec-print" class="overlay" hidden><!-- 내보내기 창 (D134 PDF·인쇄, D144 html — printdoc.js): 형식·옵션과 실제 결과의 미리보기 -->
   <div class="dialog-box print-box" role="dialog" aria-labelledby="lec-print-title" tabindex="-1">
-    <h2 id="lec-print-title">PDF·인쇄</h2>
+    <h2 id="lec-print-title">내보내기</h2>
     <div class="print-main">
       <div class="print-opts">
+        <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-format-title">
+          <span class="opt-head"><b id="lec-pp-format-title">형식</b></span>
+          <label><input type="radio" name="pp_format" value="pdf"><span>PDF·인쇄<small>A4 보고서 양식</small></span></label>
+          <label><input type="radio" name="pp_format" value="html"><span>html 한 파일<small>지금 화면 스타일, 그림·차트가 파일 안에</small></span></label>
+        </div>
         <fieldset id="lec-print-layout">
           <div class="opt-choice" role="radiogroup" aria-labelledby="lec-pp-font-title">
             <span class="opt-head"><b id="lec-pp-font-title">글꼴</b></span>
@@ -423,6 +428,7 @@
           <label class="opt"><input type="checkbox" id="lec-pp-pages"><span><b>쪽 번호</b><small>바닥 가운데 '- 1 -'</small></span></label>
         </fieldset>
         <p id="lec-print-note" class="print-note"></p>
+        <p id="lec-print-html-note" class="print-note"></p>
         <p class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다.</p>
       </div>
       <div class="print-preview">
@@ -436,6 +442,7 @@
         <button type="button" id="lec-print-close" class="text-btn">닫기</button>
         <button type="button" id="lec-print-paper" title="미리 본 그대로 인쇄합니다 — 프린터·매수·쪽은 인쇄 창에서 고릅니다">인쇄…</button>
         <button type="button" id="lec-print-save" title="미리 본 그대로 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">PDF로 저장…</button>
+        <button type="button" id="lec-print-html" class="primary" hidden title="미리 본 그대로 html 파일 하나로 저장합니다 — 저장할 곳은 대화상자에서 고릅니다">html로 저장…</button>
       </span>
     </div>
   </div>

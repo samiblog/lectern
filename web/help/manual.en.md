@@ -251,11 +251,11 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 - When the text really changes, the screen is redrawn and the selection is cleared.
 - If a change was missed, press F5 to reload.
 
-### Print and PDF
+### Print, PDF and html
 
-Click **Print** at the right end of the tab bar (between Contents and Notes), or right-click the margin of a document and choose **Save as PDF…** or **Print…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
+Click **Print** at the right end of the tab bar (between Contents and Notes), or right-click the margin of a document and choose **Save as PDF…**, **Print…** or **Save as html…**. Paper and PDF always use the same **report layout**, whatever the screen style — A4, margins 25 mm top, 22 mm bottom and sides, the title centred on the first page, the document title and date in the header from page 2 (the front matter's `date`, or today), and page numbers centred at the foot. Tables get heavy top and bottom rules, links print as plain text and addresses are added only in the lists of a 'Sources', 'References' or 'Data' section. The front matter table is left out. Choose the body font, serif (default) or sans-serif, under **Print and PDF font** in Settings.
 
-Both open the **PDF and print** window. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
+All of them open the **Export** window. Under **Format** at the top, choose PDF and print or one html file. Choose options on the left and the preview on the right is made again with them — the preview is exactly the PDF that will be saved or printed (the bar above it has contents, zoom and page turning).
 
 | Option | Choices |
 |---|---|
@@ -270,6 +270,7 @@ The options are kept for next time.
 - **Print…**: sends the previewed PDF to the print dialog. Choose the printer, copies, pages and colour there. It prints the PDF, so no date and address header is added.
 - Close the window with Esc or **Close** (after clicking inside the preview, move the mouse out of it first).
 - HTML documents keep their own style and have only the print dialog (**Print / Save as PDF…**) — choose 'Microsoft Print to PDF' as the printer for a PDF.
+- **Save as html…**: saves an md document as one html file. It keeps the current screen style as one long page, and pictures, charts, diagrams and math go inside the file, so you can send just that file by e-mail. Folded sections and boxes are unfolded, app marks such as copy buttons and line numbers and the front matter table are left out, and contents, footnote and cross-reference links still work. Links to other documents stay as text. There are no scripts, so it opens safely in the recipient's browser, and printed there it comes out in the same report layout as the PDF. What you previewed is written where you choose in the save dialog (it opens next to the document, with its name). For Lectern slides, use **Convert to html** on the status bar.
 
 Lectern slides print one slide per slide-sized page (see 'Lectern slides'). A **Page break** line from the insert window starts a new page, and a **Contents** line prints as a table of contents in its place (see 'Adding components').
 
@@ -926,7 +927,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to the instruction file (CLAUDE.md or AGENTS.md); open the samples. The name follows the AI tool |
 | PowerPoint skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
 | Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code'). For Codex, Antigravity and OpenCode the request adds it to that project's AGENTS.md |
-| Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print and PDF') |
+| Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF and html') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
 | Work alerts | Work alerts inside the window while Lectern is running. On by default |

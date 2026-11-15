@@ -10,6 +10,8 @@
 - 미리보기 (D134): 'PDF·인쇄' 창이 옵션을 바꿀 때마다 같은 길로 PDF 를 만들어 메모리에 두고(디스크에 쓰지 않는다), 서버가
   /pdf-preview/<토큰>.pdf 로 내준다 — 창의 iframe 이 WebView2 의 PDF 보기로 띄운다. 저장은 미리 본 그 바이트를 그대로 쓴다.
   토큰은 추측할 수 없는 값이고 최근 몇 개만 둔다 (/api 가 아니라 토큰 헤더가 없다 — iframe 은 헤더를 보낼 수 없다).
+- 내보내기 창의 'html 로 저장' (D144): 화면이 지은 html 한 파일도 같은 길이다 — 메모리에 두고(/api/export/keep) /export-preview/<토큰>.html
+  로 미리 보이고, 저장 대화상자에서 고른 경로에 그 바이트를 그대로 쓴다 (native.save_export). 미리보기는 형식(kind)마다 따로 센다.
 """
 from __future__ import annotations
 
@@ -31,27 +33,42 @@ from .scanner import resolve_inside
 PDF_PARAMS = {'preferCSSPageSize': True, 'printBackground': True, 'displayHeaderFooter': False,
               'generateTaggedPDF': True, 'generateDocumentOutline': True}
 TIMEOUT = 180   # 초 — 그림이 많은 긴 문서도 보통 몇 초
-MAX_PREVIEWS = 4   # 메모리에 두는 미리보기 PDF 수 (창 여럿이 함께 미리 볼 때도 모자라지 않게)
-_previews: dict[str, bytes] = {}
+MAX_PREVIEWS = 4   # 형식마다 메모리에 두는 미리보기 수 (창 여럿이 함께 미리 볼 때도 모자라지 않게)
+MAX_HTML = 300 * 1024 * 1024   # html 한 파일 — 그림이 파일 안에 들어간다 (html 로 전환과 같다, D129)
+HTML_MARK = '<meta name="generator" content="Lectern'   # 화면이 짓는 파일의 머리. 다른 글을 받아 쓰지 않게
+KINDS = {'pdf': '.pdf', 'html': '.html'}
+_previews: dict[str, tuple[str, bytes]] = {}
 _previews_lock = Lock()
 
 
-def keep_preview(data: bytes) -> str:
-    """미리보기 PDF 를 메모리에 두고 토큰을 준다. 오래된 것부터 버린다"""
+def keep_preview(data: bytes, kind: str = 'pdf') -> str:
+    """미리보기(PDF·html)를 메모리에 두고 토큰을 준다. 형식마다 오래된 것부터 버린다"""
     token = secrets.token_urlsafe(24)
     with _previews_lock:
-        _previews[token] = data
-        while len(_previews) > MAX_PREVIEWS:
-            _previews.pop(next(iter(_previews)))
+        _previews[token] = (kind, data)
+        same = [k for k, (kd, _) in _previews.items() if kd == kind]
+        for old in same[:max(0, len(same) - MAX_PREVIEWS)]:
+            _previews.pop(old, None)
     return token
 
 
-def preview_bytes(token: Any) -> bytes | None:
-    """토큰의 미리보기 PDF (없거나 버렸으면 None)"""
+def preview_bytes(token: Any, kind: str = 'pdf') -> bytes | None:
+    """토큰의 미리보기 (없거나 버렸거나 형식이 다르면 None)"""
     if not isinstance(token, str) or not token:
         return None
     with _previews_lock:
-        return _previews.get(token)
+        got = _previews.get(token)
+    return got[1] if got and got[0] == kind else None
+
+
+def keep_html(text: Any) -> str:
+    """'html 로 저장' 의 미리보기 (D144): 화면이 지은 html 한 파일을 메모리에 둔다. 화면이 지은 것이 아니거나 너무 크면 ValueError"""
+    if not isinstance(text, str) or not text.startswith('<!doctype html>') or HTML_MARK not in text[:2000]:
+        raise ValueError(t('내보낸 html 이 아닙니다 — 창을 닫고 다시 여세요'))
+    data = text.encode('utf-8')
+    if len(data) > MAX_HTML:
+        raise ValueError(t('html 이 300MB 를 넘습니다 — 큰 그림을 줄인 뒤 다시 하세요'))
+    return keep_preview(data, 'html')
 
 
 def page_count(data: bytes) -> int:
@@ -66,26 +83,27 @@ def documents_dir() -> str:
     return str(docs if docs.is_dir() else home)
 
 
-def start_place(root: Path | None, rel: str) -> tuple[str, str]:
-    """저장 대화상자가 처음 보일 폴더와 파일 이름: 문서 옆에 '문서 이름.pdf'.
+def start_place(root: Path | None, rel: str, ext: str = '.pdf') -> tuple[str, str]:
+    """저장 대화상자가 처음 보일 폴더와 파일 이름: 문서 옆에 '문서 이름.pdf'(html 이면 .html).
     문서가 보기만 하는 폴더(D71 — 설치된 예제)에 있으면 내 문서 폴더에서 시작한다"""
     doc = resolve_inside(root, rel) if root is not None and rel else None
     if doc is None:
-        return documents_dir(), 'document.pdf'
+        return documents_dir(), f'document{ext}'
     folder = str(doc.parent)
     if is_protected(doc.parent):
         folder = documents_dir()
-    return folder, doc.with_suffix('.pdf').name
+    return folder, doc.with_suffix(ext).name
 
 
-def target_of(chosen: Any) -> Path | None:
-    """대화상자가 준 값(글자 하나·목록·None) → 쓸 경로. 확장자가 .pdf 가 아니면 붙인다"""
+def target_of(chosen: Any, ext: str = '.pdf') -> Path | None:
+    """대화상자가 준 값(글자 하나·목록·None) → 쓸 경로. 확장자가 ext 가 아니면 붙인다 (html 은 .htm 도 받는다)"""
     if isinstance(chosen, (list, tuple)):
         chosen = chosen[0] if chosen else None
     if not chosen:
         return None
     path = Path(os.path.abspath(str(chosen)))
-    return path if path.suffix.lower() == '.pdf' else path.with_name(path.name + '.pdf')
+    ok = (ext,) if ext != '.html' else ('.html', '.htm')
+    return path if path.suffix.lower() in ok else path.with_name(path.name + ext)
 
 
 def refuse(path: Path) -> str | None:
@@ -101,16 +119,23 @@ def refuse(path: Path) -> str | None:
 
 def write_pdf(path: Path, data: bytes) -> str | None:
     """PDF 를 쓴다 — 같은 폴더의 임시 파일에 쓰고 바꿔 끼운다. 못 쓰면 화면에 보일 까닭"""
+    return write_file(path, data, '.pdf')
+
+
+def write_file(path: Path, data: bytes, ext: str) -> str | None:
+    """내보낸 파일(PDF·html)을 쓴다 — 같은 폴더의 임시 파일에 쓰고 바꿔 끼운다 (쓰다 멈춰도 반쪽 파일이 남지 않게). 못 쓰면 화면에 보일 까닭"""
     tmp = None
     try:
-        fd, tmp = tempfile.mkstemp(prefix='.lectern-', suffix='.pdf.tmp', dir=path.parent)
+        fd, tmp = tempfile.mkstemp(prefix='.lectern-', suffix=f'{ext}.tmp', dir=path.parent)
         with os.fdopen(fd, 'wb') as f:
             f.write(data)
         os.replace(tmp, path)
         tmp = None
         return None
     except PermissionError:
-        return t('{name} 을 쓰지 못했습니다 — PDF 보기 프로그램이 그 파일을 열고 있으면 닫고 다시 저장하세요', name=path.name)
+        if ext == '.pdf':
+            return t('{name} 을 쓰지 못했습니다 — PDF 보기 프로그램이 그 파일을 열고 있으면 닫고 다시 저장하세요', name=path.name)
+        return t('{name} 을 쓰지 못했습니다 — 다른 프로그램이 그 파일을 열고 있으면 닫고 다시 저장하세요', name=path.name)
     except OSError as e:
         return t('{name} 을 쓰지 못했습니다: {error}', name=path.name, error=e.strerror or str(e))
     finally:
@@ -162,4 +187,20 @@ def save(window: Any, chosen: Any, token: Any = None) -> dict[str, str]:
     except Exception as e:   # noqa: BLE001 — WebView2 가 없는 PC, 시간 초과 등
         return {'error': t('PDF 를 만들지 못했습니다: {error}', error=str(e)[:300])}
     why = write_pdf(path, data)
+    return {'error': why} if why else {'path': str(path)}
+
+
+def save_html(chosen: Any, token: Any) -> dict[str, str]:
+    """'html 로 저장' (D144): 대화상자에서 고른 값으로 미리 본 html 을 그 바이트 그대로 쓴다.
+    화면에는 {'path'}·{'error'}, 고르지 않았으면 {}"""
+    path = target_of(chosen, '.html')
+    if path is None:
+        return {}
+    why = refuse(path)
+    if why:
+        return {'error': why}
+    data = preview_bytes(token, 'html')
+    if data is None:
+        return {'error': t('미리 본 html 이 없습니다 — 창을 닫고 다시 여세요')}
+    why = write_file(path, data, '.html')
     return {'error': why} if why else {'path': str(path)}

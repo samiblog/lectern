@@ -10,6 +10,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, getText, postJSON } from './api.js';
+import { sha256, appCss, styleText, packClone } from './htmlpack.js';
 import { $, $$, toast, dirname, basename, blockedReadOnly } from './util.js';
 import { esc, html, setHtml } from './html.js';
 import { t } from './i18n.js';
@@ -171,35 +172,6 @@ async function send(url) {
 
 // ---- 짓기 ----------------------------------------------------------------------------------------
 
-async function dataUrl(url) {
-  const res = await fetch(url, { cache: 'no-store' });
-  if (!res.ok) throw new Error(String(res.status));
-  const blob = await res.blob();
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(blob);
-  });
-}
-
-async function sha256(text) {
-  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(text)));
-  return `'sha256-${btoa(String.fromCharCode(...digest))}'`;
-}
-
-/** KaTeX CSS — 글꼴(woff2)을 파일 안에. woff·ttf 대체는 지운다 (바깥에 묻지 않게) */
-async function katexCss() {
-  const href = $('link[href*="katex"]')?.getAttribute('href') || '/static/vendor/katex/katex.min.css';
-  const css = await getText(href);
-  const base = new URL('.', new URL(href, location.href)).href;
-  const fonts = new Map();
-  for (const m of css.matchAll(/url\((fonts\/[\w-]+\.woff2)\)/g)) fonts.set(m[1], '');
-  for (const name of fonts.keys()) fonts.set(name, await dataUrl(base + name));
-  return css.replace(/url\((fonts\/[\w-]+\.woff2)\) format\("woff2"\)(?:,url\(fonts\/[\w-]+\.(?:woff|ttf)\) format\("(?:woff|truetype)"\))*/g,
-    (_, name) => `url(${fonts.get(name)}) format("woff2")`);
-}
-
 /** 이 파일만의 CSS: impress 의 장 크기·흐린 장·진행 막대, 스크립트 없이 열 때(Lectern) 위에서 아래로 놓는 모양 */
 function frameCss(w, h) {
   const fits = [];
@@ -228,78 +200,16 @@ ${fits.join('\n')}`;
 
 /** 스타일: 앱 화면과 같은 차례 (KaTeX, 코드 색, base, 스타일, 내 스타일) + 문서의 style:·장별 CSS + 이 파일의 CSS */
 async function gatherCss(pane, math, w, h) {
-  const hrefs = [
-    $('#lec-hljs-css')?.getAttribute('href'),
-    $('link[href$="/themes/base.css"]')?.getAttribute('href'),
-    $('#lec-theme-css')?.getAttribute('href'),
-    $('#lec-user-css')?.getAttribute('href'),
-  ].filter(Boolean);
-  const texts = math ? [await katexCss()] : [];
-  for (const href of hrefs) texts.push(await getText(href));
+  const texts = await appCss({ math });
   for (const st of $$('style.lec-deck-style', pane.view)) texts.push(st.textContent.split(DECK_SCOPE).join('#impress'));
   texts.push(frameCss(w, h));
-  return texts.join('\n').replace(/<\/(style)/gi, '<\\/$1');   // 글 안의 </style> 이 틀을 닫지 않게
+  return styleText(texts);
 }
 
-/** 장 하나의 복제: 앱 표시·스크립트·이벤트 속성을 떼고, 그림은 파일 안으로, 앱 안 링크는 글로 */
+/** 장 하나의 복제: 앱 표시·스크립트·이벤트 속성을 떼고, 그림은 파일 안으로, 앱 안 링크는 글로 (htmlpack.js) */
 async function cleanSlide(section, images, found) {
-  const clone = /** @type {HTMLElement} */ (section.cloneNode(true));
-  const canvases = $$('canvas', section);
-  $$('canvas', clone).forEach((c, i) => {   // 복제한 canvas 는 비어 있다 — 그림으로
-    const img = document.createElement('img');
-    try {
-      img.src = canvases[i].toDataURL('image/png');
-      img.style.cssText = c.style.cssText;
-      img.width = canvases[i].width;
-      img.height = canvases[i].height;
-    } catch { /* 바깥 그림이 그려진 canvas */ }
-    c.replaceWith(img);
-  });
-  for (const el of $$(DROP, clone)) {
-    if (el.matches('video, audio')) found.media += 1;
-    el.remove();
-  }
-  for (const el of [clone, ...$$('*', clone)]) {
-    el.classList.remove(...MARKS, ...[...el.classList].filter((c) => c.startsWith('impress-')));
-    if (/^impress/i.test(el.id)) el.removeAttribute('id');
-    for (const at of [...el.attributes]) {
-      const name = at.name.toLowerCase();
-      const js = /^(href|xlink:href|src|action|formaction)$/.test(name) && /^\s*javascript:/i.test(at.value);
-      if (name.startsWith('on') || js || DROP_ATTRS.has(name)) el.removeAttribute(at.name);
-    }
-  }
-  for (const a of $$('a', clone)) {
-    const href = a.getAttribute('href') || '';
-    a.removeAttribute('xlink:href');
-    if (/^https?:\/\//i.test(href)) {
-      a.setAttribute('target', '_blank');
-      a.setAttribute('rel', 'noopener noreferrer');
-    } else if (!/^mailto:/i.test(href)) {   // 프로젝트 안 문서·절 링크는 이 파일에서 갈 곳이 없다 — 글로 (제목의 경로도 떼고)
-      a.removeAttribute('href');
-      a.removeAttribute('title');
-    }
-  }
-  for (const input of $$('input', clone)) input.setAttribute('disabled', '');
-  for (const el of $$('.chart-ok, pre.mermaid, img.zoomable', clone)) el.removeAttribute('title');   // '누르면 크게 봅니다' — 이 파일에서는 커지지 않는다
-  for (const img of $$('img', clone)) {
-    img.removeAttribute('srcset');
-    img.removeAttribute('loading');
-    const src = img.getAttribute('src') || '';
-    if (!src || src.startsWith('data:')) continue;
-    const url = new URL(src, location.href);
-    if (url.origin === location.origin) {
-      try {
-        if (!images.has(url.href)) images.set(url.href, await dataUrl(url.href));
-        img.setAttribute('src', images.get(url.href));
-      } catch {
-        img.removeAttribute('src');
-        found.missing += 1;
-      }
-    } else if (/^https?:$/.test(url.protocol)) {
-      img.setAttribute('referrerpolicy', 'no-referrer');
-      found.external += 1;
-    } else img.removeAttribute('src');
-  }
+  const clone = await packClone(section, { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS, images, found, dropClass: (c) => c.startsWith('impress-') });
+  for (const el of [clone, ...$$('[id]', clone)]) if (/^impress/i.test(el.id)) el.removeAttribute('id');
   return clone;
 }
 

@@ -88,6 +88,22 @@ class NativeApi:
         chosen = self._window.create_file_dialog(kind, directory=folder, save_filename=name, file_types=(t('PDF 파일 (*.pdf)'),))
         return pdfexport.save(self._window, chosen, token)
 
+    def save_export(self, tab: str, path: str, token: str, kind: str = 'html') -> dict[str, str]:
+        """내보내기 창의 'html 로 저장…' (D144): 미리 본 html 한 파일(메모리 — /api/export/keep)을 저장 대화상자에서 사용자가
+        고른 경로에 그대로 쓴다. 대화상자는 문서 옆, '문서 이름.html' 로 연다. 화면에는 {'path'}·{'error'}, 취소면 {}"""
+        import webview
+
+        from . import pdfexport
+
+        if self._window is None or kind != 'html':
+            return {}
+        project = self._state.get(tab)
+        folder, name = pdfexport.start_place(project.root if project else None, str(path or ''), '.html')
+        dialog = getattr(webview, 'FileDialog', None)
+        mode = dialog.SAVE if dialog else webview.SAVE_DIALOG
+        chosen = self._window.create_file_dialog(mode, directory=folder, save_filename=name, file_types=(t('html 파일 (*.html;*.htm)'),))
+        return pdfexport.save_html(chosen, token)
+
     def set_title(self, title: str) -> None:
         if self._window is not None:
             self._window.title = str(title)

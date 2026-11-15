@@ -163,6 +163,36 @@ def create_app(state: AppState) -> Flask:
         resp.headers['Referrer-Policy'] = 'no-referrer'
         return resp
 
+    @app.post('/api/export/keep')
+    def api_export_keep() -> Any:
+        """내보내기 창의 'html 로 저장' (D144): 화면이 지은 html 한 파일을 메모리에 두고 토큰을 준다 — 미리보기와 저장이 같은 바이트를 쓴다.
+        디스크에는 쓰지 않는다 (저장은 창의 저장 대화상자 — native.save_export)"""
+        from . import pdfexport
+
+        data = body()
+        try:
+            token = pdfexport.keep_html(data.get('text'))
+        except ValueError as exc:
+            return jsonify(error=str(exc)), 400
+        return jsonify(token=token, size=len(pdfexport.preview_bytes(token, 'html') or b''))
+
+    @app.get('/export-preview/<token>.html')
+    def export_preview(token: str) -> Response:
+        """내보내기 창의 html 미리보기 (D144 — /api/export/keep 이 메모리에 둔 것). 토큰이 비밀이다 (iframe 은 X-Token 을 보낼 수 없다).
+        스크립트가 없는 파일이지만 sandbox 로 한 번 더 막는다 — 미리보기 안에서는 무엇도 돌지 않고 앱의 출처도 쓰지 못한다"""
+        from . import pdfexport
+
+        data = pdfexport.preview_bytes(token, 'html')
+        if data is None:
+            abort(404)
+        resp = Response(data, content_type='text/html; charset=utf-8')
+        imgs = 'data: https: http:' if state.config.get('external_images') is not False else 'data:'
+        resp.headers['Content-Security-Policy'] = f"sandbox; default-src 'none'; style-src 'unsafe-inline'; img-src {imgs}; font-src data:"
+        resp.headers['Cache-Control'] = 'no-store'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Referrer-Policy'] = 'no-referrer'
+        return resp
+
     @app.get('/')
     def index() -> Response:
         html = (web / 'index.html').read_text(encoding='utf-8')
