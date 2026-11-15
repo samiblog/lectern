@@ -149,7 +149,8 @@ try:
         check('되돌린 메모도 파일에', until(lambda: all(k in saved() for k in keep if k)), keep)
 
         print('[새 메모로 보내기]')
-        page.locator('#lec-view p', has_text='둘째 문단').click(modifiers=['Shift'])
+        page.locator('#lec-view p', has_text='둘째 문단').click()
+        page.keyboard.press('Shift+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)
         settle(200)
         page.locator('#lec-view p', has_text='둘째 문단').click(button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')

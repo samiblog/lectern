@@ -1,4 +1,4 @@
-"""고른 줄의 한 글자 키와 화살표의 가장자리 (D128).
+"""고른 줄의 한 글자 키와 화살표의 가장자리 (D128). 현재 줄 하나면 처음 누른 키는 그 줄을 잡기만 한다 (D139).
 
 - 한 글자 키: 줄을 고른 뒤 수식 키 없이 1~6·0·P·H·L·-·N·T·Q·C·B — 같은 키를 다시 누르면 되돌아간다, 고른 채 남는다, 한글 입력 상태, 누르고 있는 키,
   고르지 않았으면 알리기만.
@@ -62,7 +62,7 @@ try:
         def pick(text):
             page.keyboard.press('Escape')
             page.locator('#lec-view :is(p, li, h1, h2, h3, blockquote p)', has_text=text).first.click()
-            page.keyboard.press('Insert')
+            page.keyboard.press('p')   # 바꾸는 키의 첫 누름은 그 줄을 잡기만 한다 (D139) — P(문단)로 잡는다
             return until(page, PICKED)
 
         def becomes(name, want, ms=6000):
@@ -74,8 +74,11 @@ try:
         page.locator('#lec-view p', has_text='첫 문단').click()
         page.keyboard.press('Escape')
         page.keyboard.press('l')
-        expect(page, '고르지 않고 누르면 고르라고 알리기만', lambda: '줄을 먼저 고르세요' in (page.text_content('#lec-toast') or ''), lambda: page.text_content('#lec-toast'))
+        expect(page, '현재 줄에서 처음 누르면 잡기만 하고 알린다', lambda: '한 번 더 누르면' in (page.text_content('#lec-toast') or ''), lambda: page.text_content('#lec-toast'))
         check('파일은 그대로', read(doc) == DOC, read(doc))
+        check("상태줄에 '현재 줄 … 바꾸기'", '현재 줄' in (page.evaluate(PICKED) or '') and '바꾸기' in (page.evaluate(PICKED) or ''), page.evaluate(PICKED))
+        page.keyboard.press('Escape')
+        check('Esc 로 그만둔다', until(page, lambda: not page.evaluate(PICKED)), page.evaluate(PICKED))
 
         steps = [
             ('l', 'L: 목록', DOC.replace('첫 문단', '- 첫 문단')),
@@ -96,7 +99,7 @@ try:
             ('b', 'B: 통째로 굵게', DOC.replace('첫 문단입니다.', '**첫 문단입니다.**')),
             ('b', 'B 다시: 굵게를 풂', DOC),
         ]
-        check('Insert 로 현재 줄을 고름', pick('첫 문단'), page.evaluate(PICKED))
+        check('첫 누름이 현재 줄을 잡음 — 파일은 그대로', pick('첫 문단') and read(doc) == DOC, page.evaluate(PICKED))
         for key, name, want in steps:
             page.keyboard.press(key)
             becomes(name, want)
@@ -140,10 +143,12 @@ try:
         page.wait_for_timeout(200)
         page.keyboard.press('2')
         page.wait_for_timeout(400)
-        check('고른 줄을 풀면 숫자를 눌러도 그대로', read(doc) == DOC, read(doc))
+        check('풀고 나면 숫자를 한 번 눌러도 그대로 (잡기만)', read(doc) == DOC, read(doc))
 
         print('[고른 줄 바꾸기 창의 키]')
-        pick('셋째 문단')
+        pick('둘째 문단')
+        page.keyboard.press('Shift+ArrowDown')
+        until(page, lambda: '고른 줄' in (page.evaluate(PICKED) or ''))
         page.locator('#lec-view p', has_text='셋째 문단').click(button='right')
         page.locator('#lec-menu button, #lec-menu li', has_text='고른 줄 바꾸기').first.click()
         page.wait_for_selector('#lec-put:not([hidden])')

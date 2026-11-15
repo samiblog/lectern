@@ -7,7 +7,7 @@ import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold, foldHere } from './fold.js';
-import { initSpotlight, spotKey, escSpotlight, docKeyTarget, lightBlocks, overlayOpen, spotButton, herePoint } from './spotlight.js';
+import { initSpotlight, spotKey, escSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint, armHeld, putKey } from './spotlight.js';
 import { initViKeys, viKey } from './vikeys.js';
 import { initLineEdit, undoLineEdit, redoLineEdit, focusLineEdit, moveLit, litKey } from './lineedit.js';
 import { initLineNumbers, toggleLineNumbers } from './linenums.js';
@@ -299,7 +299,7 @@ function bindKeys() {
       else if (S.tab) openPalette({ newTab: true });
     } else if (mod && e.shiftKey && !e.altKey && (e.key === 'PageDown' || e.key === 'PageUp') && !typing(e) && $('#lec-view')?.classList.contains('lec-deck')) {   // 슬라이드: 장 옮기기 (D96)
       e.preventDefault();
-      if (!lightBlocks()) emit('slide-op', { op: 'move', dir: e.key === 'PageUp' ? -1 : 1 });
+      emit('slide-op', { op: 'move', dir: e.key === 'PageUp' ? -1 : 1 });
     } else if (mod && !e.altKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) {   // 다음·이전 문서 탭 (D91)
       e.preventDefault();
       cycleDocTab(e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1);
@@ -340,9 +340,13 @@ function bindKeys() {
     } else if (e.key === 'F1') {
       e.preventDefault();
       toggleManual();
+    } else if (mod && e.shiftKey && !e.altKey && e.code === 'Slash' && !typing(e) && docKeyTarget(e) && !overlayOpen() && !manualOpen() && putKey()) {
+      e.preventDefault();   // 현재 줄 아래에 넣기 창 — 칸 안의 Ctrl+Shift+/ 와 같은 키 (spotlight.js, D139)
     } else if (helpKey) {   // Ctrl+/
       e.preventDefault();
       toggleShortcuts();
+    } else if (!typing(e) && armHeld(e)) {
+      e.preventDefault();   // 현재 줄을 잡은 키를 누르고 있다 — 되풀이되는 그 키로 바꾸지 않는다 (spotlight.js, D139)
     } else if (mod && !e.shiftKey && !e.altKey && (e.code === 'KeyZ' || key === 'z') && !typing(e) && docKeyTarget(e) && undoLineEdit()) {
       e.preventDefault();   // 한 줄 편집으로 저장한 것 되돌리기 (lineedit.js, D76)
     } else if (mod && !e.shiftKey && !e.altKey && (e.code === 'KeyY' || key === 'y') && !typing(e) && docKeyTarget(e) && redoLineEdit()) {

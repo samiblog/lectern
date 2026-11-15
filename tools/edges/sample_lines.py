@@ -183,10 +183,11 @@ try:
         # 11. 지우기
         settle()
         page.locator('#lec-view li', has_text='지워도 되는 메모').click()
-        page.keyboard.press('Shift+Enter')
-        settle(200)
+        page.keyboard.press('Delete')   # 처음은 그 줄을 잡기만 한다 (D139)
+        settle(300)
+        held = '지워도 되는 메모' in read()
         page.keyboard.press('Delete')
-        check('사례 11: 고르고 Delete', until(lambda: '지워도 되는 메모' not in read().split('## 사례 12')[0].split('## 사례 11')[1]))
+        check('사례 11: Delete 두 번 — 처음은 지우지 않는다', held and until(lambda: '지워도 되는 메모' not in read().split('## 사례 12')[0].split('## 사례 11')[1]))
         settle(500)
 
         # 12. 코드 블록

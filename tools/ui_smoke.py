@@ -610,8 +610,7 @@ def run(headed: bool) -> None:
               .filter((u) => u.a < 33).map((u) => `${u.a}-${u.b}`).join(' '))""", lines_src)
             here_on = page.locator('#lec-content > .lec-here').count() == 1
             page.locator('#lec-view p', has_text='첫 문단').click()
-            page.keyboard.press('Shift+Enter')
-            s1 = page.evaluate(lit_status)
+            s1 = page.evaluate(lit_status)   # 한 줄은 현재 줄 — 고른 줄이 아니다 (D139)
             steps = []
             for key in ('Shift+ArrowDown', 'Shift+ArrowDown', 'Shift+ArrowDown', 'Shift+ArrowUp'):
                 page.keyboard.press(key)
@@ -629,10 +628,10 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+Enter')
             moved = page.evaluate(lit_status)
             check(here_on and unit_list == '1-1 3-3 5-5 6-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
-                  and s1 == '고른 줄 3행 · 1줄' and steps == ['고른 줄 3~5행 · 3줄', '고른 줄 3~6행 · 4줄', '고른 줄 3~8행 · 6줄', '고른 줄 3~6행 · 4줄']
-                  and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '고른 줄 8행 · 1줄',
-                  f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+Enter·Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
-                  f"↓ 는 하이라이트를 풀고 다음 줄로 ({released}, {moved})")
+                  and s1 is None and steps == ['고른 줄 3~5행 · 3줄', '고른 줄 3~6행 · 4줄', '고른 줄 3~8행 · 6줄', '고른 줄 3~6행 · 4줄']
+                  and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '하이라이트 8행 · 1줄',
+                  f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
+                  f"↓ 는 고른 줄을 풀고 다음 줄로, Shift+Enter 는 그 줄의 하이라이트 ({released}, {moved})")
             page.keyboard.press('Escape')
             page.evaluate("document.querySelector('#lec-view .code-block').scrollIntoView({ block: 'center' })")
             row34 = page.locator('#lec-view tr', has_text='3').last.bounding_box()
@@ -657,9 +656,9 @@ def run(headed: bool) -> None:
             drag_sel = page.evaluate('getSelection().toString()')
             page.mouse.click(one['x'] + 30, one['y'] - 120)   # 흐린 곳을 누르면 푼다
             by_grey = page.evaluate(lit_status)
-            check(by_shift_click == '고른 줄 21행 · 1줄' and extended == '고른 줄 21~26행 · 6줄' and by_drag == '고른 줄 11~13행 · 3줄'
+            check(by_shift_click == '고른 줄 8~21행 · 14줄' and extended == '고른 줄 8~26행 · 19줄' and by_drag == '고른 줄 11~13행 · 3줄'
                   and not drag_sel and by_grey is None,
-                  f"Shift+누르기는 그 줄(있으면 거기까지 넓힘), Shift+끌기는 끈 줄들(글은 고르지 않음), 흐린 곳을 누르면 풂 ({by_shift_click}, {extended}, {by_drag})")
+                  f"Shift+누르기는 사용자가 둔 현재 줄(8행 — 스크롤한 뒤에도)부터 그 줄까지(있으면 거기까지 넓힘), Shift+끌기는 끈 줄들(글은 고르지 않음), 흐린 곳을 누르면 풂 ({by_shift_click}, {extended}, {by_drag})")
             # 현재 위치는 스크롤하면 화면 안으로 따라오고, ↓ 로 옮기면 화면이 따라간다
             here_y = "parseFloat(document.querySelector('#lec-content > .lec-here').style.getPropertyValue('--here-y'))"
             visible = f"(() => {{ const sc = document.querySelector('#lec-content'), y = {here_y}; return y >= sc.scrollTop && y <= sc.scrollTop + sc.clientHeight; }})()"
@@ -719,9 +718,9 @@ def run(headed: bool) -> None:
             finished = f"(() => {{ const v = {shade_js}; return !!v && !v[0]; }})()"
 
             def start(locator, **kw):
-                """줄을 Shift+누르기로 고른 뒤 F2 — 글 칸이 생길 때까지 (D118 — 하이라이트 중에는 칸을 열지 않는다)"""
+                """줄을 눌러 현재 줄로 삼은 뒤 F2 — 글 칸이 생길 때까지 (D139 — Shift+누르기는 현재 줄부터 고른다)"""
                 page.keyboard.press('Escape')
-                locator.click(modifiers=['Shift'], **kw)
+                locator.click(**kw)
                 page.keyboard.press('F2')
                 wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
                 return editing()
@@ -774,9 +773,7 @@ def run(headed: bool) -> None:
               const w = document.createTreeWalker(p, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.nodeValue.indexOf('둘째 줄');
                 if (i >= 0) { const r = document.createRange(); r.setStart(n, i); r.setEnd(n, i + 2); const b = r.getBoundingClientRect(); return [b.left + 3, b.top + b.height / 2]; } } })()""")
             page.keyboard.press('Escape')
-            page.keyboard.down('Shift')
-            page.mouse.click(*second)
-            page.keyboard.up('Shift')
+            page.mouse.click(*second)   # 누른 줄이 현재 줄 (D139 — Shift+누르기는 현재 줄부터 고른다)
             page.keyboard.press('F2')
             wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
             para = editing()
@@ -786,9 +783,7 @@ def run(headed: bool) -> None:
             saved_para = file_line(edit_doc, 19, '둘째 줄입니다. 더')
             code_box = page.locator('#lec-view .code-block code').first.bounding_box()
             page.keyboard.press('Escape')
-            page.keyboard.down('Shift')
             page.mouse.click(code_box['x'] + 20, code_box['y'] + code_box['height'] - 6)
-            page.keyboard.up('Shift')
             page.keyboard.press('F2')
             wait_until(page, "!!document.querySelector('#lec-view .lec-line-edit')", 5000)
             code_row = editing()
@@ -815,16 +810,16 @@ def run(headed: bool) -> None:
             f2_here = [editing(), page.evaluate(lit_status), page.evaluate(shade_js)]
             page.keyboard.press('Escape')
             f2_done = [editing(), page.evaluate(lit_status), page.evaluate(shade_js)]
-            first_p.click(modifiers=['Shift'])
+            first_p.click()
             page.keyboard.press('Shift+ArrowDown')
-            page.keyboard.press('F2')   # 여러 줄을 골랐어도 현재 위치를 열고 고르기는 풀린다 (D119)
-            wait_edit()
-            f2_one = editing()
+            page.keyboard.press('F2')   # 여러 줄을 골랐으면 열지 않고 알린다 — 쓰기는 현재 줄에서 (D139)
+            page.wait_for_timeout(400)
+            f2_one = [editing(), '여러 줄을 고른' in page.evaluate("document.querySelector('#lec-toast').textContent")]
             page.keyboard.press('Escape')
             f2_many = page.evaluate(lit_status)
             check(f2_here == [['P:첫 문단은 **굵게** 한 줄입니다.'], '한 줄 편집 3행', None] and f2_done == [[], None, None]
-                  and f2_many is None and f2_one == ['H2:고칠 제목'],
-                  f"F2 는 현재 줄을 한 줄 편집 (하이라이트를 만들지 않음), 여러 줄 하이라이트면 알림만, 한 줄 하이라이트면 그 줄 ({f2_here}, {f2_done}, {f2_many}, {f2_one})")
+                  and f2_many is None and f2_one == [[], True],
+                  f"F2 는 현재 줄을 한 줄 편집 (하이라이트를 만들지 않음), 여러 줄을 골랐으면 열지 않고 알림만 ({f2_here}, {f2_done}, {f2_many}, {f2_one})")
             # 꺾인 글의 ↑·↓: 칸 안의 화면 줄 먼저, 맨 윗줄·맨 아랫줄에서 앞뒤 원문 줄로. 칸이 block(.whole)인 목록 항목도
             caret_js = """(() => { const sp = document.activeElement; const c = getSelection().getRangeAt(0).cloneRange(); c.collapse(true);
               if (c.startContainer === sp) { c.setStart(sp.firstChild, c.startOffset ? sp.firstChild.length : 0); c.collapse(true); }
@@ -2001,7 +1996,6 @@ def run(headed: bool) -> None:
                   f"코드 화면에서도 Ctrl+F 찾기, 줄 우클릭 메뉴 — Claude용 위치 ({copied!r})")
             # 코드 화면의 현재 위치·줄 하이라이트 (D75): 줄을 누르고 Shift+Enter·Shift+↓, Shift+← 는 위치 복사, 우클릭은 선택 상자(담기 없이)
             page.locator('#lec-view .cv-line[data-line="5"]').click()
-            page.keyboard.press('Shift+Enter')
             page.keyboard.press('Shift+ArrowDown')
             page.keyboard.press('Shift+ArrowDown')
             code_lit = page.evaluate(lit_status)

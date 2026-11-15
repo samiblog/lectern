@@ -110,9 +110,10 @@ try:
             page.wait_for_selector(cell)
 
         def lit(selector, text, more=0):
-            """그 글의 줄을 눌러 Shift+Enter 로 하이라이트, more 줄만큼 넓힌다"""
+            """그 글의 줄을 눌러 more 줄만큼 넓혀 고른다. 한 줄이면 Shift+Enter 로 하이라이트 — 켠 줄은 바꾸는 키가 한 번에 듣는다 (D139)"""
             page.locator(f'#lec-view {selector}', has_text=text).first.click(position={'x': 14, 'y': 8})
-            press('Shift+Enter')
+            if not more:
+                press('Shift+Enter')
             for _ in range(more):
                 press('Shift+ArrowDown')
             settle(120)
@@ -438,7 +439,6 @@ try:
         fresh('long.md', '긴 글')
         count_before = len(dialogs)
         page.locator('#lec-view p', has_text='줄 1').first.click(position={'x': 20, 'y': 6})
-        press('Shift+Enter')
         for _ in range(10):
             press('Shift+ArrowDown')
         settle(120)
@@ -462,7 +462,6 @@ try:
         check('표 전체면 표째', until('table.md', TABLE.replace('| 품목 | 값 |\n|---|---|\n| 구리 | 1 |\n| 니켈 | 2 |\n| 아연 | 3 |\n\n', ''), page))
         fresh('code.md', '코드')
         page.locator('#lec-view p', has_text='앞 글').click()
-        press('Shift+Enter')
         press('Shift+ArrowDown')
         settle(120)
         press('Delete')

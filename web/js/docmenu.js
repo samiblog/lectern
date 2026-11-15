@@ -222,7 +222,7 @@ function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…
 function litMenu(hl, selected, blockMenu, own = []) {
   const { range, ref, text } = hl;
   const chart = hl.chapter ? null : litChart(range);
-  const name = hl.chapter ? t('하이라이트한 곳') : t('고른 줄');
+  const name = hl.chapter ? t('하이라이트한 곳') : litOneLine() ? t('현재 줄') : t('고른 줄');
   /** @type {MenuItem[]} */
   const uniques = own.filter((it) => !(chart && it !== '-' && 'label' in it && it.label === t('차트로 보기')));
   if (chart) uniques.push(chart);
@@ -462,7 +462,7 @@ function codeLineMenu(e, view, x, y) {
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
 function openMenu(e, view, x, y) {
-  if (lightOn()) {   // 하이라이트는 끄기만 (D118)
+  if (lightOn() && !litAt(e.clientY, e.target)) {   // 흐린 곳은 끄기만 (D118) — 하이라이트한 줄 안은 고른 줄의 선택 상자 (D139)
     e.preventDefault();
     showMenu(x, y, [releaseItem()]);
     return;

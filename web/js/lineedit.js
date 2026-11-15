@@ -48,8 +48,8 @@ import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './char
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
-  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, lightOn, lightBlocks, releasePick,
-  kindKey, stepHere,
+  currentUnits, sourceLines, followLine, unitAtPoint, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
+  kindKey, stepHere, litOneLine, manyBlocks,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
@@ -445,7 +445,8 @@ async function beginNew(base, below, { end = false, after = false, around = fals
 }
 
 /**
- * 칸 없이 새 줄을 연다 (D117): Ctrl+Enter·Ctrl+Shift+Enter. 고른 줄이면 첫 줄 위·끝 줄 아래에 열고 고르기를 푼다.
+ * 칸 없이 새 줄을 연다 (D117): Ctrl+Enter·Ctrl+Shift+Enter. 현재 줄(잡은 줄·한 줄의 하이라이트도)의 위·아래에 열고 고르기를 푼다 — 여러 줄을
+ * 골랐으면 spotlight.js 가 보내지 않는다 (D139).
  * 표의 행은 새 행을, 차트·수식은 그 블록의 앞뒤 문단을 연다
  */
 function addHere(below) {
@@ -473,7 +474,7 @@ function addHere(below) {
 /** 마지막 줄의 ↓ 로 줄을 더할 수 있는 화면인지 — md 문서와 Lectern 슬라이드. 코드 파일은 그대로 (D106) */
 function canGrow(pane) {
   const view = pane?.view;
-  return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session && !lightOn();
+  return !!view?.dataset.docPath && !isCodeView(view) && linesEditable() && !session;
 }
 
 /**
@@ -1820,7 +1821,7 @@ async function putImageFile(file) {
   turn = turn.then(async () => {
     if (!await settled(pane) || S.pane !== pane) return;
     const src = sourceLines();
-    const here = litSpan()?.[1] ?? pane.here?.line;   // 고른 줄이면 끝 줄 아래 (D119)
+    const here = litSpan()?.[1] ?? pane.here?.line;   // 잡은 줄·한 줄의 하이라이트면 그 줄 (여러 줄을 골랐으면 받지 않는다 — D139)
     const r = make(src, here ? blockEnd(src, here) : 0);
     const shift = await commit(pane, path, src, r.lines);
     if (shift == null || S.pane !== pane) return;
@@ -1854,6 +1855,22 @@ function menuOp(op, after = null) {
 async function putBelow(line, target) {
   await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table`), after: true });   // 표의 행이면 표 아래에 — 행을 더하는 것은 표 메뉴
   if (session) await openPut();
+}
+
+/** 현재 줄의 '/'·Ctrl+Shift+/ (D139 — spotlight.js 의 putKey): 그 줄 아래에 새 줄을 열고 넣기 창을 연다. 우클릭 '여기에 넣기…' 와 같다 */
+async function putHere() {
+  const pane = S.pane;
+  const view = pane?.view;
+  if (!view || session || pane.lineEditHold || pane.unfold) return;
+  if (pane.tab && blockedReadOnly(pane.tab)) return;
+  if (!linesEditable() || !pathIn(view) || !textOn(view)) return;
+  const line = litSpan()?.[1] ?? pane.here?.line;
+  stopSpotlight();
+  if (!line) {
+    growEnd();
+    return;
+  }
+  await putBelow(line, blockOfLine(view, line) ?? view);
 }
 
 /** 지금 칸이 든 장의 줄 범위 */
@@ -1963,8 +1980,9 @@ async function changeLine(line, at) {
 const textboxesAround = (src, at) => { const box = textboxAt(src, at); return !!box && at < box.end; };
 
 /** 고른 줄을 바꾼다 (우클릭 — docmenu.js): 문단 여러 개를 목록·강조글로, 고른 줄을 박스글로 (D126 — 슬라이드에는 없다) */
-export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [{ label: t('아래에 넣기…'), hint: '/', tip: t('고른 줄의 끝 줄 아래에'), action: putPicked },
-  { label: t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·강조글로'), action: changeLit },
+export const pickedItems = () => (litSpan() && S.pane?.view && textOn(S.pane.view) ? [
+  ...(litOneLine() ? [{ label: t('아래에 넣기…'), hint: '/', tip: t('이 줄 아래에'), action: putPicked }] : []),   // 넣기는 한 줄(현재 줄)에서만 (D139)
+  { label: litOneLine() ? t('이 줄 바꾸기…') : t('고른 줄 바꾸기…'), tip: t('제목·문단·목록·인용·강조글로'), action: changeLit },
   ...(deckOn(S.pane.view) ? [] : [{ label: t('박스글로 묶기'), tip: t('고른 줄을 본문과 따로 읽는 상자로'), action: wrapLit }, askTextboxItem(litSpan()[1])])] : []);
 
 /**
@@ -1985,15 +2003,19 @@ function askTextbox(after) {
 
 const askTextboxItem = (after) => ({ label: t('{ai} 에 박스글 요청', { ai: aiName() }), tip: t('대화를 정리해 이 자리 뒤에 박스글로 — 터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)'), action: () => askTextbox(after) });
 
-/** 고른 줄을 박스글로 묶는다 — 여는 줄·제목 줄·닫는 줄을 넣는다 */
-function wrapLit() {
-  const span = litSpan();
-  if (!span) return;
+/** 원문 줄 a~b 를 박스글로 묶는다 — 여는 줄·제목 줄·닫는 줄을 넣는다 */
+function wrapSpan(a, b) {
   const isCaption = (s) => /^(?:박스|Box)$/.test(captionAt(s)?.word ?? '');   // i18n-ok (원문의 캡션 낱말)
-  menuOp((src) => wrapTextbox(src, span[0], span[1], textboxTitle(t('박스'), nextCaption(src, t('박스')), t('제목')), isCaption), () => stopSpotlight());
+  menuOp((src) => wrapTextbox(src, a, b, textboxTitle(t('박스'), nextCaption(src, t('박스')), t('제목')), isCaption), () => stopSpotlight());
 }
 
-/** 고른 줄의 '아래에 넣기…': 끝 줄 아래에 새 줄을 열고 넣기 창을 연다 (D119) */
+/** 고른 줄을 박스글로 묶는다 */
+function wrapLit() {
+  const span = litSpan();
+  if (span) wrapSpan(span[0], span[1]);
+}
+
+/** 잡은 현재 줄·한 줄 하이라이트의 '아래에 넣기…': 그 줄 아래에 새 줄을 열고 넣기 창을 연다 (D119·D139) */
 async function putPicked() {
   const span = litSpan();
   if (!span) return;
@@ -2005,7 +2027,7 @@ async function putPicked() {
 async function changeLit() {
   const span = litSpan();
   if (!span) return;
-  const chosen = await pick({ items: changeItems(true), title: t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
+  const chosen = await pick({ items: changeItems(true), title: litOneLine() ? t('이 줄 바꾸기') : t('고른 줄 바꾸기'), at: { x: 240, y: 200 } });
   if (!chosen) return;
   const box = /^box:(\w+)$/.exec(chosen.id)?.[1];
   if (!box) {
@@ -2089,6 +2111,8 @@ export function lineMenuItems(target) {
   }
   if (!target.closest?.('pre, .math-block, .front-matter, img')) {
     items.push({ label: t('이 줄 바꾸기…'), tip: t('제목·문단·목록·인용·강조글로'), action: () => changeLine(line, target) });
+    const own = /^(\d+)-(\d+)$/.exec(target.closest?.('[data-lines]')?.dataset.lines ?? '');   // 그 줄이 든 블록 — 한 줄은 고르지 않고 메뉴에서 묶는다 (D139)
+    if (!deck && own && !textboxAt(src, line)) items.push({ label: t('박스글로 묶기'), tip: t('이 줄을 본문과 따로 읽는 상자로'), action: () => wrapSpan(Number(own[1]), Number(own[2])) });
   }
   if (deck) return [...items, ...cellItems(target, line)];
   if (headLevel(src[line - 1] ?? '')) {
@@ -2355,7 +2379,7 @@ async function onTaskClick(e) {
   e.preventDefault();
   const pane = S.panes.find((p) => p.view.contains(e.target));
   if (!pane?.tab || e.detail > 1 || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey || session || taskSaving) return;
-  if (blockedReadOnly(pane.tab) || lightBlocks()) return;   // Lectern 프로그램 폴더 안 (D71), 하이라이트 중 (D118)
+  if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
   const line = Number(/^\d+/.exec(e.target.closest('li')?.dataset.lines || '')?.[0]);
   const before = pane.source?.lines[line - 1];
   const m = before == null ? null : TASK_LINE.exec(before);
@@ -2474,6 +2498,7 @@ export function initLineEdit() {
   on('line-end', (d) => growEnd({ peek: !!d?.arrow }));   // 마지막 줄의 ↓, 빈 문서의 F2·↓ (spotlight.js, D106)
   on('line-step', ({ dir }) => { if (S.pane?.lineEditHold && queued.length < 30) queued.push(dir); });   // 넘어가는 사이의 ↑·↓ (spotlight.js, D128)
   on('line-add', ({ below }) => addHere(below));   // 칸 없이 새 줄 (spotlight.js, D117)
+  on('line-put', () => { turn = turn.then(putHere); });   // 현재 줄의 / — 아래에 넣기 창 (spotlight.js, D139)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)
   on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
@@ -2488,7 +2513,7 @@ export function initLineEdit() {
     const file = imageIn(e.clipboardData);
     if (!file || session || !docKeyTarget(e) || !canPutImage()) return;
     e.preventDefault();
-    putImageFile(file);
+    if (!manyBlocks()) putImageFile(file);   // 넣기는 현재 줄에서 (D139)
   });
   panes.addEventListener('dragover', (e) => {
     if ([...(e.dataTransfer?.types ?? [])].includes('Files') && canPutImage()) e.preventDefault();
@@ -2497,7 +2522,7 @@ export function initLineEdit() {
     const file = imageIn(e.dataTransfer);
     if (!file || !canPutImage()) return;
     e.preventDefault();
-    putImageFile(file);
+    if (session || !manyBlocks()) putImageFile(file);
   });
   panes.addEventListener('dblclick', onDoubleClick);   // fold.js 뒤에 — 첫 누르기의 접기를 되돌린 다음
   panes.addEventListener('click', onTaskClick);

@@ -264,6 +264,8 @@ try:
                 for key in keys:
                     page.keyboard.press(key)
                 page.wait_for_timeout(250)
+                if not page.locator('#lec-st-lit').is_visible():   # 풀렸다 — 한 줄의 메뉴에도 '박스글로 묶기'가 있어 그대로 누르면 한 줄만 묶는다 (D139)
+                    continue
                 labels = menu(target, word)   # Esc 는 고른 줄을 풀므로 메뉴를 한 번만 연다
                 if any(word in x for x in labels):
                     break
@@ -282,7 +284,7 @@ try:
         print('[번호]')
         reset(f'# 편집\n\n가 문단\n\n[박스 1](#박스-1) 을 보라.\n\n{OPEN}\n**박스 1. 먼저 있던 것**\n\n글\n{CLOSE}\n')
         until(lambda: len(boxes()) == 1)
-        labels = picked_menu(['Insert'])   # 현재 줄 하나를 고른다
+        labels = picked_menu(['Shift+Enter'])   # 현재 줄 하나의 하이라이트 — 우클릭은 선택 상자 (D139)
         if any('박스글로 묶기' in x for x in labels):
             want = f'# 편집\n\n{OPEN}\n**박스 1. 제목**\n\n가 문단\n{CLOSE}\n\n[박스 2](#박스-2) 을 보라.\n\n{OPEN}\n**박스 2. 먼저 있던 것**\n\n글\n{CLOSE}\n'
             check('앞에 박스글이 생기면 번호와 참조 링크가 밀린다', until(lambda: src() == want), src())
@@ -309,7 +311,7 @@ try:
         page.keyboard.press('Escape')
         page.locator('#lec-view > p').nth(1).click()
         page.wait_for_timeout(200)
-        page.keyboard.press('Insert')
+        page.keyboard.press('Shift+ArrowUp')   # 위로 넓혀 고른다 — 끝 줄은 그대로 6행 (D139)
         page.wait_for_timeout(200)
         menu(page.locator('#lec-view > p').nth(1), 'Claude 에 박스글 요청')
         got = until(lambda: len(sent()) >= 3 and sent()[-1]) or ''

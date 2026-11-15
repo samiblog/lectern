@@ -95,7 +95,7 @@ try:
         page.keyboard.press('Escape')
         page.keyboard.press('F6')
         wait("document.activeElement?.id === 'lec-content'", 3000)
-        page.locator('#lec-view tr.cv-line', has_text='니켈').click(modifiers=['Shift'])
+        page.locator('#lec-view tr.cv-line', has_text='니켈').click()
         settle(200)
         page.keyboard.press('F2')
         told = wait("document.querySelector('#lec-toast').textContent.includes('엑셀 보기는 보기만')", 3000)
