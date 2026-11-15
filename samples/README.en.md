@@ -20,6 +20,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 11. Work management [guide/11-업무-관리.md](guide/11-업무-관리.md) (in Korean) — the sample [WORK.md](WORK.md) at the top: work cards, the work board (Alt+W), adding events (Alt+S) and alerts
 12. Reports and PDF [guide/12-보고서와-PDF.md](guide/12-보고서와-PDF.md) (in Korean) — example requests for the writing style, and a [sample report](reports/3분기-구리-구매-전략.md) written by Claude to save as PDF
 13. Exporting — html, page layouts and Word [guide/13-내보내기-html-틀-Word.md](guide/13-내보내기-html-틀-Word.md) (in Korean) — the same text in 18 page layouts (research report, government report, equity research…), as one html file, or as Word with your company template; three [sample documents](guide/내보내기-예제/연구보고서.md) to try
+14. Report writing [guide/14-보고서-글쓰기.md](guide/14-보고서-글쓰기.md) (in Korean) — writing to the kind of document without developer habits, with bullet-point and narrative samples; a polish check of your own writing on a [practice report](guide/글쓰기-예제/연습-구매-계획-검토.md); a style note from your own writing
 
 ## For AI (Claude Code)
 

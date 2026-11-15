@@ -110,7 +110,34 @@ def test_writing_style_files():
         head = text.split('---', 2)[1]
         assert f'name: {title}' in head and 'description:' in head
         assert 'keep-coding-instructions' not in head
-        assert len(text) < 6000   # 세션마다 함께 가는 글이라 짧게
+        # 세션마다 함께 가는 글이라 짧게 — D148 에서 글 종류·개발자 글버릇·남의 글을 다듬을 때를 더해 6,000자 → 10,000자
+        assert len(text) < 10000
+
+
+def test_writing_style_kinds_habits_and_review():
+    """글쓰기 스타일 2판 (D148): 글 종류마다 기준(개조식을 나쁜 글로 보지 않는다), 개발자 글버릇, 남의 글을 다듬을 때(표를 먼저, 인용·숫자 값은 그대로),
+    한 쪽의 글자 수, 내 문체 노트의 세 칸. 다듬기 점검·내 문체 안내는 두 언어 모두 있고 같은 절을 가진다"""
+    ko = (web_dir() / 'help' / 'research-writing.md').read_text(encoding='utf-8')
+    for part in ('## 글 종류마다 기준이 다르다', '**개조식 보고서**', '## 개발자 글버릇을 쓰지 않는다', '## AI 글버릇을 쓰지 않는다',
+                 '## 남의 글을 옮기거나 다듬을 때', '1,000자', '## 내 문체', '지킬 것', '따라 하지 않을 것'):
+        assert part in ko, part
+    en = (web_dir() / 'help' / 'research-writing.en.md').read_text(encoding='utf-8')
+    for part in ('## Each kind of document has its own standard', '**Bullet-point report or brief**', '## Do not write like a developer',
+                 '## Do not write like an AI', "## When you carry over or edit someone else's writing", '500 words', '## My style', 'Do not copy'):
+        assert part in en, part
+    heads = lambda s: [line for line in s.splitlines() if line.startswith('## ')]
+    assert len(heads(ko)) == len(heads(en))
+    for name in ('review', 'voice'):
+        k = (web_dir() / 'help' / f'{name}.md').read_text(encoding='utf-8')
+        e = (web_dir() / 'help' / f'{name}.en.md').read_text(encoding='utf-8')
+        assert k.startswith('# ') and e.startswith('# ')
+        assert len(heads(k)) == len(heads(e)) >= 4, name
+    review = (web_dir() / 'help' / 'review.md').read_text(encoding='utf-8')
+    for part in ('**틀림**', '**읽기 어려움**', '**취향**', '**확인 필요**', '이 단계에서는 파일을 고치지 않는다', '**인용**', '**숫자 값**'):
+        assert part in review, part
+    voice = (web_dir() / 'help' / 'voice.md').read_text(encoding='utf-8')
+    for part in ('**지킬 것**', '**참고할 것**', '**따라 하지 않을 것**', '이 단계에서는 파일을 쓰지 않는다', '새로 짓는다'):
+        assert part in voice, part
 
 
 def test_writing_guide_summary_is_short_and_quality_first():

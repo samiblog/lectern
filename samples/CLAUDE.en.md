@@ -5,8 +5,8 @@ People read and edit in place this project's documents with **Lectern** (an Inte
 ## Writing first
 
 - In this sample, the research notes and the weekly report are read by a buyer at a company that purchases copper, who uses them to decide when and how much to buy next quarter (the sample's assumption — if a request names another reader, follow that reader). Before writing, decide what that reader must judge.
-- Write in paragraphs rather than bullet lists, conclusion first. Give every number its comparison (against what, by how much), and keep sources (document path or URL) for facts you bring in.
-- When done, reread from the start as the reader and fix paragraphs that only list and repeated sentence endings. The formatting below comes after that.
+- Follow the request for the kind of document (narrative or bullet-point); without one, write research notes as narrative. Either way, conclusion first, give every number its comparison (against what, by how much), and keep sources (document name and link) for facts you bring in. No file paths or code formatting in the body.
+- When done, reread from the start as the reader and fix sections without a conclusion and repeated sentence openings. The formatting below comes after that.
 
 ## Files
 

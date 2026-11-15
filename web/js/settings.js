@@ -8,7 +8,7 @@ import { confirmReload } from './editor.js';
 import { openSamples } from './tabs.js';
 import { $, $$, toast, copyText } from './util.js';
 import { t } from './i18n.js';
-import { aiTool, aiInfo, aiName, aiCli } from './aitool.js';
+import { aiTool, aiInfo, aiName, aiCli, voicePrompt } from './aitool.js';
 
 const box = () => $('#lec-settings');
 const TERM_FONT_BASE = 14;   // 터미널 글자 크기의 기본 (D130 — terminal.js 의 TERM_FONT.base, config.py 의 기본값과 같게. 범위는 입력 칸의 min·max)
@@ -56,13 +56,15 @@ export function applyAiNames() {
   text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 그 프로젝트의 {file} 에 규칙을 정리합니다', { cli, file: ruleFile() }));
   text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'와 예제 가이드 13 에 있습니다", { cli }));
   text('#lec-wstyle-desc', claude
-    ? t('Claude Code 를 개발자가 아닌 리서치 동료·편집자로 바꾸는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다')
-    : t('개발자가 아닌 리서치 동료·편집자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 폴더 밖 자료와 웹으로 넓히고, 문단으로 쓰고 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 그 프로젝트의 AGENTS.md 에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
-  for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-mystyles-prompt', '#lec-layouts-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
+    ? t('Claude Code 가 개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 파일 경로·굵은 이름 나열 같은 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다')
+    : t('개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 그 프로젝트의 AGENTS.md 에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
+  text('#lec-voice-desc', t("내가 직접 쓴 글을 견본으로 {cli} 가 내 문체 노트를 만듭니다 — 용어·말투처럼 지킬 것, 즐겨 쓰는 방식, 따라 하지 않을 버릇(겹말·번역투 같은)을 나눠 적고, 글을 쓰거나 다듬을 때 참고합니다. 요청 글 끝에 견본을 @경로로 이어 붙이거나, 문서 여백을 우클릭해 '내 문체 견본으로 보내기'를 고릅니다. 저장하기 전에 무엇을 찾았는지 먼저 보여 줍니다", { cli }));
+  for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-voice-prompt', '#lec-mystyles-prompt', '#lec-layouts-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
   tip('#lec-layouts-prompt', t('틀 작성 안내의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적습니다', { cli }));
   tip('#lec-aiguide-prompt', t('작성 안내의 위치를 적은 요청 글 — 작업할 프로젝트의 {cli} 에 붙여 넣습니다', { cli }));
   tip('#lec-skills-prompt', t('스킬의 위치를 적은 요청 글 — {cli} 에 붙여 넣습니다', { cli }));
   tip('#lec-wstyle-prompt', t('글쓰기 스타일 파일의 위치를 적은 요청 글 — {cli} 에 붙여 넣습니다', { cli }));
+  tip('#lec-voice-prompt', t('내 문체 안내의 위치를 적은 요청 글 — {cli} 에 붙여 넣고 견본을 @경로로 이어서 적습니다', { cli }));
   tip('#lec-mystyles-prompt', t('스타일 설명서의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 모양을 이어서 적습니다', { cli }));
   // 설정 창 밖의 단추들 (담기·템플릿·md 문서 스타일·pptx·html)
   text('#lec-basket-claude', t('{ai} 에 맡기기', { ai }));
@@ -106,12 +108,12 @@ function skillsPrompt() {
 function writingStylePrompt() {
   const file = S.writingStyle;
   if (aiTool() === 'claude') {
-    return t('Lectern 에 Claude Code 의 글쓰기용 출력 스타일이 들어 있어: {file}. 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 내 개인 출력 스타일로 설치할지 나에게 물어봐. 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사해 (폴더가 없으면 만들고, 같은 이름이 있으면 바꿀지 다시 물어봐). 설치한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것과, 보고서를 쓰는 폴더에서 /output-style 로 그 스타일을 고르면 그 폴더에서만 쓴다는 것을 알려 줘.', { file });
+    return t("Lectern 에 Claude Code 의 글쓰기용 출력 스타일이 들어 있어: {file}. 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 내 개인 출력 스타일로 설치할지 나에게 물어봐. 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사해 (폴더가 없으면 만들고, 같은 이름이 있으면 바꿀지 다시 물어봐. 바꿀 때 있던 파일 끝에 '## 내 문체'(영어판은 '## My style') 절이 있으면 그 절은 새 파일 끝에 그대로 옮겨). 설치한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것과, 보고서를 쓰는 폴더에서 /output-style 로 그 스타일을 고르면 그 폴더에서만 쓴다는 것을 알려 줘.", { file });
   }
   if (aiInfo()) {
-    return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 이 프로젝트의 AGENTS.md 에 넣을지 나에게 물어봐. 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (그 절이 이미 있으면 바꿀지 다시 물어봐). 그 뒤로 이 프로젝트의 글은 그 규칙대로 써.", { file });
+    return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 이 프로젝트의 AGENTS.md 에 넣을지 나에게 물어봐. 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (본문의 ## 제목은 ### 로 한 단계 내리고, 그 절이 이미 있으면 바꿀지 다시 물어보고, 그 안의 '내 문체' 부분은 그대로 남겨). 그 뒤로 이 프로젝트의 글은 그 규칙대로 써.", { file });
   }
-  return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 줘. 네가 Claude Code 면 내 개인 출력 스타일로 설치할지 물어보고, 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사한 뒤 다시 시작해서 보고서를 쓰는 폴더에서 /output-style 로 고르라고 알려 줘. 다른 도구면 이 프로젝트의 AGENTS.md 에 넣을지 물어보고, 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (그 절이 이미 있으면 바꿀지 다시 물어봐).", { file });
+  return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 줘. 네가 Claude Code 면 내 개인 출력 스타일로 설치할지 물어보고, 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사한 뒤 다시 시작해서 보고서를 쓰는 폴더에서 /output-style 로 고르라고 알려 줘. 다른 도구면 이 프로젝트의 AGENTS.md 에 넣을지 물어보고, 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (본문의 ## 제목은 ### 로 한 단계 내리고, 그 절이 이미 있으면 바꿀지 다시 물어봐). 어느 쪽이든 있던 것을 바꿀 때 '내 문체' 절은 그대로 남겨.", { file });
 }
 
 // ---- 내 스타일 (D53) --------------------------------------------------------------
@@ -275,6 +277,13 @@ export function initSettings() {
   $('#lec-wstyle-term').addEventListener('click', () => {
     closeSettings();
     emit('term-paste', writingStylePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-voice-prompt').addEventListener('click', async () => {
+    toast(await copyText(voicePrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 견본을 @경로로 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
+  });
+  $('#lec-voice-term').addEventListener('click', () => {
+    closeSettings();
+    emit('term-paste', voicePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이). 견본은 사람이 이어서 적는다
   });
   $('#lec-aiguide-samples').addEventListener('click', () => {
     closeSettings();

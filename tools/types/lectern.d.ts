@@ -155,6 +155,8 @@ declare global {
   slidesGuide: string;
   skillsDir: string;
   writingStyle: string;
+  reviewGuide: string;
+  voiceGuide: string;
 
     root: string | null;
     name: string;

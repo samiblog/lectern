@@ -67,6 +67,8 @@ export const S = /** @type {AppState} */ ({
   slidesGuide: '',     // AI 용 Lectern 슬라이드 작성 안내 (web/help/slides.md — D96)
   skillsDir: '',       // Claude Code 스킬이 든 폴더 (skills/ — D98)
   writingStyle: '',    // Claude Code 의 글쓰기용 출력 스타일 파일 (web/help/research-writing.md — D132)
+  reviewGuide: '',     // 다듬기 점검 안내 (web/help/review.md — D148)
+  voiceGuide: '',      // 내 문체 노트 안내 (web/help/voice.md — D148)
 });
 
 // 선택된 탭의 프로젝트 값. 선택된 탭만 다루는 모듈(트리·팔레트·검색 등)은 S.root·S.files 처럼 읽고 쓰면 된다.

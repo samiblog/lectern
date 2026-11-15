@@ -327,4 +327,7 @@ class AppState:
             'skills_dir': str(skills_dir()),
             # Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창의 요청 글이 이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가)
             'writing_style': str(web_dir() / 'help' / ('research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md')),
+            # 다듬기 점검·내 문체 안내 (D148 — 문서 우클릭과 설정 창의 요청 글이 이 경로를 준다. 고치는 것은 사람이 고를 때 AI 도구가)
+            'review_guide': str(web_dir() / 'help' / ('review.en.md' if i18n.language() == 'en' else 'review.md')),
+            'voice_guide': str(web_dir() / 'help' / ('voice.en.md' if i18n.language() == 'en' else 'voice.md')),
         }

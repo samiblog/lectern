@@ -32,7 +32,7 @@ import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
-import { aiName } from './aitool.js';
+import { aiName, reviewPrompt, voicePrompt } from './aitool.js';
 import { printDoc, openPrint, canSavePdf, canExportHtml } from './printdoc.js';
 import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
@@ -253,7 +253,8 @@ function litMenu(hl, selected, blockMenu, own = []) {
   /** @type {MenuItem[]} */
   const danger = !hl.chapter && linesEditable() ? [{ label: t('줄 지우기'), hint: 'Delete', tip: rangeText(range), action: () => emit('line-delete', {}) }] : [];
   return menuGroups([{ header: `${name} · ${rangeText(range)}` }], uniques,
-    [{ label: t('{ai}로 보내기', { ai: aiName() }), hint: 'Shift+→', tip: t('맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit }], copies, takes, edits, views, danger);
+    [{ label: t('{ai}로 보내기', { ai: aiName() }), hint: 'Shift+→', tip: t('맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit },
+      ...(!hl.code && isMd(hl.path) ? [reviewItem(ref, t('이 범위 다듬기 점검 요청'))] : [])], copies, takes, edits, views, danger);
 }
 
 /** 표를 차트로 — 캡션은 제목과 단위를 어림하는 데 쓴다 (D86). range: 이 원문 줄의 행만 */
@@ -387,11 +388,23 @@ function canStyle() {
   return !!view?.dataset.docPath && view.dataset.docPath === doc?.path && isMd(view.dataset.docPath) && !view.classList.contains('lec-marp') && linesEditable();
 }
 
+/** 이 범위의 다듬기 점검 요청 (D148) — ref: '@경로' 또는 '@경로 a~b행'. 터미널에 Enter 없이 (D51) */
+const reviewItem = (ref, label = t('다듬기 점검 요청')) => ({ label, tip: t('{ai} 에게 틀린 말과 읽기 어려운 곳을 표로 먼저 찾아 달라는 요청 — 터미널에 (Enter 는 누르지 않음)', { ai: aiName() }),
+  action: () => emit('term-paste', reviewPrompt(ref)) });
+
+/** 다듬기 점검·내 문체 견본 (D148): md 문서만. Lectern 슬라이드는 다듬기만 — 문체의 견본은 글이다 */
+function writingItems() {
+  if (!isMd(doc?.path)) return [];
+  const deck = ['lec-marp', 'lec-deck'].some((c) => S.pane?.view?.classList.contains(c));
+  return [reviewItem(`@${doc.path}`), ...(deck ? [] : [{ label: t('내 문체 견본으로 보내기'), tip: t('내가 직접 쓴 글이면 — 내 문체 노트를 만들거나 보태 달라는 요청을 터미널에 (Enter 는 누르지 않음)'),
+    action: () => emit('term-paste', voicePrompt(`@${doc.path}`)) }])];
+}
+
 function docItems(views = []) {
   /** @type {MenuItem[]} */
   const folds = hasFolds() ? [{ label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) }] : [];
-  return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [...(canStyle() ? [{ label: t('md 문서 스타일…'), tip: t('문서 방식과 머리글 모양을 고릅니다'), action: () => emit('md-style') }] : []), { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }], [...folds, ...views],
-    printItems());
+  return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [...(canStyle() ? [{ label: t('md 문서 스타일…'), tip: t('문서 방식과 머리글 모양을 고릅니다'), action: () => emit('md-style') }] : []), { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }],
+    writingItems(), [...folds, ...views], printItems());
 }
 
 /** 'PDF로 저장…'(창 모드의 md 문서 — 보고서 양식, 브라우저 머리글 없이)과 '인쇄…'. 그 밖(html 문서·브라우저 개발 모드)은 인쇄 창 하나 (D131) */

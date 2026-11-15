@@ -894,8 +894,69 @@ Sample — [guide 03, Claude Code](../../samples/guide/03-Claude-Code와-함께.
 4. To ask about a document, right-click it in the tree, choose `Copy @path` and paste it into your prompt. For example: `@docs/report.md summarize the conclusion in three lines`
 5. To point at one part of a document, right-click the text and choose **Copy location**.
 6. To have Claude Code write documents that read well in Lectern, paste **Teach Claude Code about Lectern** → **Copy request for Claude Code** from the settings into Claude Code (the terminal button next to it pastes into the current tab's terminal). Claude Code reads Lectern's writing guide (`web/help/writing.en.md`) and adds the rules to that project's `CLAUDE.md`. The samples' `CLAUDE.en.md` shows the result.
-7. When writing for people — reports, review notes — paste **Writing style** → **Copy request for Claude Code** from the settings into Claude Code. Claude Code's default role is a developer, so its writing drifts into short lists. This output style turns Claude into a research partner and editor: it decides the reader and the purpose first, widens the evidence with earlier material outside the folder and the web, writes in paragraphs and rereads as the reader to revise. Claude asks before installing; after installing, restart Claude Code and choose **Research writing** with `/output-style` in a report folder — it then applies to that folder only (code folders stay as they are). Requests that were actually tried, with their results, are in the sample [12 Reports and PDF](../../samples/guide/12-보고서와-PDF.md) (in Korean).
-8. Adding the reader and the purpose to a request changes the writing. For example: "The reader is the executive in charge of purchasing and must accept the downside risk to second-half prices. Read this folder and the earlier reports, look on the web for counter-evidence and footnote the sources. Show me an outline first." When it is done, asking once more "read it from the start as the reader and fix whatever reads mechanically" helps.
+7. For writing people read — reports, review notes — see **Report writing** below: the writing style, the polish check and your style note.
+
+### Report writing — writing style, polish check, my style
+
+Sample — [14 Report writing](../../samples/guide/14-보고서-글쓰기.md) (in Korean): the same request written as bullet points and as narrative, a practice report for the polish check, and how a style note is made, with results from real runs.
+
+Claude Code's default role is a developer. Even when it writes a report, developer habits creep in: file paths in the body, "**Bold label** — explanation" lists, arrows, "as follows:". Lectern helps in three ways.
+
+| What | What it does | Where |
+|---|---|---|
+| Writing style | Claude writes like a practitioner who writes reports | Settings **Writing style** (install once) |
+| Polish check | Shows errors and hard-to-read spots in your own writing as a table first, then fixes only what you pick | Right-click a document's margin → **Ask for a polish check** |
+| My style | Keeps a note of what to keep and which habits not to copy, from writing you wrote yourself | Right-click a document's margin → **Send as a style sample**; Settings **My style** |
+
+In all three, Lectern only puts a request into the terminal (Enter is not pressed). Files are changed or installed only after Claude shows what it will do, asks, and you say yes.
+
+**Writing style — install once**
+
+1. In the settings (**Ctrl+,**) press the terminal button next to **Writing style**.
+2. Press Enter. Claude says what changes and asks whether to install. If you say yes it copies the file to `~/.claude/output-styles/`.
+3. Quit Claude Code (`/exit`), start it again, and type `/output-style Research writing` in a folder where you write reports. It applies to that folder only. Do not choose it in folders where you write code: this style drops the development instructions (stay in scope, check after changing).
+4. After updating Lectern, install again with the same request. Your style note is moved to the end of the new file.
+
+With this style:
+
+- **It writes to the kind of document.** Narrative in paragraphs (the first sentence is the claim); bullet points with the conclusion in the top item and the evidence under it. Bullet points are not treated as bad writing. Add "as bullet points" or "as narrative" to the request and it writes that way.
+- **It drops developer habits.** No file paths, code formatting, bold-label lists, arrows or task-report phrasing in the body; sources go by document name in a closing sources section.
+- **It cuts AI habits.** Repeated frames ("First, ... Second, ..."), "Moreover" chains, a summary sentence at the end of every section, empty modifiers.
+- **It writes headings as the section's claim** ("June prices sit at the top of the forecast range"), so the headings alone carry the argument.
+- **It keeps to the length.** In the PDF layout one A4 page holds about 500 words of narrative, about 400 in bullet form.
+- **It rewrites awkward wording from the material** and leaves quotations and the values of numbers as they are.
+
+Adding the reader, the purpose, the kind of document and the length to the request changes the writing most. For example: "So the purchasing manager can decide when to buy in Q3 — bullet points, one A4 page. Write it straight away, no outline." For a long piece Claude first shows an outline of the key claims and page split, then stops.
+
+**Polish check — fix your own writing, by choice**
+
+1. Right-click the margin of a md document you wrote (or edited) and choose **Ask for a polish check**. For a few lines only, pick the lines (Shift+↓) or highlight the section, right-click and choose **Ask for a polish check of this range**.
+2. Press Enter in the terminal. Before changing anything Claude shows a table: number, group, where, original, proposed, why.
+3. Say what to apply: "errors only", "1, 3 and 7", "everything but preferences". Only the picked spots change; every other character stays. The changes show in Lectern right away.
+
+| Group | What | Examples |
+|---|---|---|
+| Error | Only one right fix | spelling, a word in the wrong sense, two words swapped so the sentence says the opposite |
+| Hard to read | Not wrong, but the reader stumbles | redundancy, nominalisations, long sentences with tangled conditions, unexplained abbreviations |
+| Preference | Both are fine | two accepted forms, set phrases that are convention in some kinds of document |
+| To check | Content, not wording | numbers that disagree, claims without visible support — reported, never changed |
+
+Quotations (in quotation marks or quote blocks, sentences taken from regulations), the values of numbers, names of institutions and laws, and words that are used correctly are left alone. Habits that keep coming back are listed at the end under "Came up often". If you just say "polish this", Claude tends to rewrite content as well without asking; the polish check request makes it show the table first.
+
+In a view-only project such as the samples folder (inside Lectern's program folder) no terminal opens, so the request is not pasted. Copy the sample practice report into your own folder to try it.
+
+**My style — a note of what to keep and which habits to drop**
+
+1. Right-click the margin of something you wrote yourself (not with an AI) and choose **Send as a style sample**. To send several at once, add `@paths` after the request from **My style** in the settings (right-click a document → **Copy location**). Old reports written in Word or saved as PDF work too.
+2. Claude shows a draft note in three groups. Nothing is saved yet.
+   - **Keep**: conventions the reader expects — register, terms, how numbers, units and dates are written.
+   - **Lean towards**: what you like to do — sentence length, where the conclusion goes. Used only when the kind of document and the reader match.
+   - **Do not copy**: habits that make writing hard to read — redundancy, nominalisations, very long sentences. Not copied when writing, and looked for first in a polish check.
+3. Tell it what to move or drop ("this is how I write, follow it", "drop this"), then say yes to save. Claude Code adds it as a "My style" section at the end of the installed writing style file, used in folders where the writing style is chosen. That file is inside the `.claude` folder, so Claude Code asks once more whether it may change it — allow it. Restart Claude Code so it reads the note.
+4. Every new sample adds to the note. Only what shows up in two or more samples is noted, and examples are written fresh rather than copied, so figures and names from a confidential sample do not leak into the note.
+5. Each item says which kind of document it was seen in ("Memos:", "Narrative reports:", "All:"), so a memo's register does not spill into a report, and for a kind the note does not cover only the "All:" items (terms, notation of numbers and dates, how sources are given) are used.
+
+Your style does not override the basics of report writing. Conventions such as terms and register are kept, but habits that make writing hard to read are not copied. Rules that differ by folder (an institution's template, a register) belong in that folder's `CLAUDE.md`.
 
 ### Using Codex, Antigravity or OpenCode
 
@@ -910,6 +971,7 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 | Project instruction file | `CLAUDE.md` | `AGENTS.md` | `AGENTS.md` | `AGENTS.md` |
 | Personal skills folder | `~/.claude/skills` | `~/.codex/skills` | `~/.gemini/config/skills` | `~/.config/opencode/skills` |
 | Writing style | Output style (`/output-style`) | A 'Writing' section in `AGENTS.md` | A 'Writing' section in `AGENTS.md` | A 'Writing' section in `AGENTS.md` |
+| Style note | A 'My style' section at the end of the output style | 'My style' under the 'Writing' section | 'My style' under the 'Writing' section | 'My style' under the 'Writing' section |
 | Continue a conversation | `claude --continue` | `codex resume --last` | `agy --continue` | `opencode --continue` |
 
 - With **Several**, the name becomes 'AI' and requests list each tool's file and folder. If one project uses several tools, keep the rules in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`, so there is one place to edit.
@@ -936,7 +998,8 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | AI tool | Claude Code (default), Codex, Antigravity, OpenCode or Several — names on screen and requests follow it (see 'Using Codex, Antigravity or OpenCode') |
 | Teach Claude Code about Lectern | Copy, or paste into the terminal, a request to read the writing guide and add its rules to the instruction file (CLAUDE.md or AGENTS.md); open the samples. The name follows the AI tool |
 | PowerPoint and Word skills | Copy, or paste into the terminal, a request to install the skills (see 'Asking Claude') |
-| Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Working with Claude Code'). For Codex, Antigravity and OpenCode the request adds it to that project's AGENTS.md |
+| Writing style | Copy, or paste into the terminal, a request to install the Claude Code output style for writing (see 'Report writing' above). For Codex, Antigravity and OpenCode the request adds it to that project's AGENTS.md |
+| My style | Copy, or paste into the terminal, a request to make your style note from writing you wrote yourself — add the samples as `@paths` at the end (see 'Report writing' above) |
 | Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF, html and Word') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
