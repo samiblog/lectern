@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.83.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
+현재 버전 0.84.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -82,7 +82,9 @@ web/
   help/slides.md        Lectern 슬라이드를 쓰는 AI 용 작성 안내 (D96 — 문법·배치·분량 기준. 영어판은 slides.en.md)
   help/writing.md       Lectern 에서 잘 보이는 문서를 쓰는 AI 용 작성 안내 (D57 — 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 글이 경로를 준다. 이름과 지시 파일(CLAUDE.md·AGENTS.md)은 설정 '쓰는 AI 도구'를 따른다 — D138, `aitool.js`). 영어판은 writing.en.md
   help/layouts.md       지면 틀을 만드는 AI 용 작성 안내 (D145 — 설정 창 '지면 틀'의 요청 글이 경로를 준다). 영어판은 layouts.en.md
-  help/research-writing.md  Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창 '글쓰기 스타일'의 요청 글이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가. Codex·Antigravity·OpenCode 는 그 프로젝트의 AGENTS.md 에 넣는 요청 글 — D138). 영어판은 .en.md
+  help/research-writing.md  Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창 '글쓰기 스타일'의 요청 글이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가. Codex·Antigravity·OpenCode 는 그 프로젝트의 AGENTS.md 에 넣는 요청 글 — D138. 2판은 글 종류·개발자 글버릇·남의 글 다듬기 — D148). 영어판은 .en.md
+  help/review.md        다듬기 점검 안내 (D148 — 문서 여백 우클릭 '다듬기 점검 요청'의 요청 글이 경로를 준다. 표를 먼저, 고친 것은 사람이 고른 뒤). 영어판은 .en.md
+  help/voice.md         내 문체 노트 안내 (D148 — 문서 우클릭 '내 문체 견본으로 보내기'·설정 창 '내 문체'의 요청 글이 경로를 준다. 지킬 것·참고할 것·따라 하지 않을 것). 영어판은 .en.md
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
 samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 Lectern 슬라이드 예제의 입구 — 기초, 상황별 모범 예제 10개와 만드는 과정, 복잡한 배치. 시험에서 나온 문서는 tests/corpus/slides — D96)
