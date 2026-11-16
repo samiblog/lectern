@@ -136,7 +136,7 @@ try:
         page.keyboard.press('/')
         page.wait_for_selector('#lec-put:not([hidden])', timeout=3000)
         items = page.inner_text('#lec-put-list')
-        check('칸의 빈 줄에서 넣기 창이 열린다', all(w in items for w in ('제목 2', '표', '강조글 — 참고', '그림', '차트', '발표자 노트')), items[:120])
+        check('칸의 빈 줄에서 넣기 창이 열린다', all(w in items for w in ('제목 2', '표', '강조글', '참고', '그림', '차트', '발표자 노트')), items[:120])
         check('슬라이드에 맞지 않는 것은 뺀다', not any(w in items for w in ('구분선', '첨부', '부록', '표 주')), items)
         page.keyboard.press('Escape')
         page.wait_for_timeout(150)

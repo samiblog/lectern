@@ -995,7 +995,7 @@ try:
         page.keyboard.press('/')
         page.wait_for_selector('#lec-put:not([hidden])', timeout=3000)
         check('빈 줄의 / 로 넣기 창이 열린다', put_open() and page.evaluate("document.activeElement?.id") == 'lec-put-find')
-        check('구성 요소가 나온다', all(w in page.inner_text('#lec-put-list') for w in ('제목 2', '표', '강조글 — 참고', '주', '그림', '첨부')), page.inner_text('#lec-put-list')[:120])
+        check('구성 요소가 나온다', all(w in page.inner_text('#lec-put-list') for w in ('제목 2', '표', '강조글', '참고', '주', '그림', '첨부')), page.inner_text('#lec-put-list')[:120])
         page.keyboard.type('zzz')
         page.wait_for_timeout(100)
         check('거른다', '맞는 것이 없습니다' in page.inner_text('#lec-put-list'))

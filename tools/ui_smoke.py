@@ -2048,7 +2048,7 @@ def run(headed: bool) -> None:
                   f"({ed_state()}, {dict(in_editor=in_editor, dirty=dirty, cm_find=cm_find, saved=saved, tail=on_disk[-30:].decode('utf-8', 'replace'), closed=closed, shown=shown)})")
             # 그사이 다른 곳(Claude Code 등)에서 바뀌면 덮어쓰지 않고 묻는다. 저장하지 않은 채 닫으면 묻는다
             page.locator('#lec-view li').last.click(button='right')
-            page.locator('#lec-menu button', has_text='여기서 편집').click()
+            page.locator('#lec-menu button', has_text='전체 편집으로 열기').click()   # D152 — 보통 줄 메뉴의 이름
             page.wait_for_selector('.lec-editor .CodeMirror')
             at_line = page.evaluate("document.querySelector('.CodeMirror').CodeMirror.getCursor().line + 1")
             want_line = int(page.evaluate("[...document.querySelectorAll('#lec-view li')].pop().closest('[data-lines]').dataset.lines.split('-')[0]"))
@@ -2066,7 +2066,7 @@ def run(headed: bool) -> None:
             closed2 = wait_until(page, "!document.querySelector('.lec-editor')", 3000)
             plan.write_bytes(original)
             check(at_line == want_line and asked and '바뀌었습니다' in asked[0] and kept and asked2 and '저장하지 않은' in asked2[0] and closed2,
-                  f"우클릭 '여기서 편집'은 그 줄에서, 그사이 다른 곳에서 바뀌면 덮어쓰지 않고 물음, 저장하지 않고 닫으면 물음 ({at_line}/{want_line}, {asked[:1]})")
+                  f"우클릭 '전체 편집으로 열기'는 그 줄에서, 그사이 다른 곳에서 바뀌면 덮어쓰지 않고 물음, 저장하지 않고 닫으면 물음 ({at_line}/{want_line}, {asked[:1]})")
             page.click('#lec-code-head')   # 사이드바는 한 묶음씩 (D143)
             code_dir = page.locator('#lec-code-list .row[data-path="code"]')
             if code_dir.get_attribute('aria-expanded') != 'true':   # 앞에서 코드 화면을 보며 펼쳐 두었을 수 있다
@@ -2483,8 +2483,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Control+Comma')
             dialog = page.locator('#lec-settings')
             boxes = page.evaluate("[...document.querySelectorAll('#lec-settings input[data-key]')].map(i => i.dataset.key + '=' + i.checked)")
-            check(dialog.is_visible() and boxes == ['work_alerts=true', 'restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'vi_keys=false', 'external_images=false',
-                                                   'terminal_follow_style=true'],
+            check(dialog.is_visible() and boxes == ['restore_last=true', 'expand_first_level=true', 'math=true', 'md_breaks=true', 'external_images=false', 'vi_keys=false', 'terminal_follow_style=true', 'work_alerts=true'],   # 분류 차례 — 일반·보기·편집·터미널·업무 (D154)
                   f'Ctrl+, 로 설정 창, 지금 설정이 표시됨 ({boxes})')
             shot('07-settings')
             page.locator('#lec-settings input[data-key="expand_first_level"]').click()
