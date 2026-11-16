@@ -6,7 +6,7 @@ import { S } from './store.js';
 import { getJSON, saveConfig } from './api.js';
 import { $ } from './util.js';
 import { html, setHtml } from './html.js';
-import { t } from './i18n.js';
+import { t, LANG } from './i18n.js';
 
 const box = () => $('#lec-put');
 const find = () => $('#lec-put-find');
@@ -49,14 +49,17 @@ const BOX_ITEMS = () => [
   { id: 'box:CAUTION', group: t('강조글'), name: t('강조글 — 주의'), words: 'caution callout 상자' },   // i18n-ok (찾는 말)
 ];
 
+/** '자료' 묶음의 이름 — 영어 화면에서는 사이드바의 '자료' 목록(Other files)과 다른 말이라 따로 (표·그림·차트·수식·코드) */
+const DATA = LANG === 'en' ? t('표·그림') : t('자료');
+
 const BLOCK_ITEMS = () => [
-  { id: 'table', group: t('자료'), name: t('표'), words: 'table' },
-  { id: 'image', group: t('자료'), name: t('그림'), words: 'image picture 이미지 사진' },   // i18n-ok (찾는 말)
-  { id: 'chart', group: t('자료'), name: t('차트'), words: 'chart graph 그래프' },   // i18n-ok (찾는 말)
-  { id: 'diagram', group: t('자료'), name: t('다이어그램'), words: 'diagram mermaid 흐름도' },   // i18n-ok (찾는 말)
-  { id: 'math', group: t('자료'), name: t('수식'), words: 'math equation 공식' },   // i18n-ok (찾는 말)
-  { id: 'code', group: t('자료'), name: t('코드'), words: 'code' },
-  { id: 'textbox', group: t('자료'), name: t('박스글'), words: 'box 박스 상자 참고 sidebar inset 글상자' },   // i18n-ok (찾는 말)
+  { id: 'table', group: DATA, name: t('표'), words: 'table' },
+  { id: 'image', group: DATA, name: t('그림'), words: 'image picture 이미지 사진' },   // i18n-ok (찾는 말)
+  { id: 'chart', group: DATA, name: t('차트'), words: 'chart graph 그래프' },   // i18n-ok (찾는 말)
+  { id: 'diagram', group: DATA, name: t('다이어그램'), words: 'diagram mermaid 흐름도' },   // i18n-ok (찾는 말)
+  { id: 'math', group: DATA, name: t('수식'), words: 'math equation 공식' },   // i18n-ok (찾는 말)
+  { id: 'code', group: DATA, name: t('코드'), words: 'code' },
+  { id: 'textbox', group: DATA, name: t('박스글'), words: 'box 박스 상자 참고 sidebar inset 글상자' },   // i18n-ok (찾는 말)
   { id: 'note', group: t('주·참조'), name: t('주'), hint: 'Ctrl+Alt+F', words: 'footnote 각주 미주' },   // i18n-ok (찾는 말)
   { id: 'source', group: t('주·참조'), name: t('출처 줄'), words: 'source 자료 출처' },   // i18n-ok (찾는 말)
   { id: 'tablenote', group: t('주·참조'), name: t('표 주'), words: 'table note 주석' },   // i18n-ok (찾는 말)

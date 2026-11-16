@@ -59,6 +59,10 @@ const notes = await load('web/js/notesdata.js');
   say('레벨·줄 종류 표 점검', r.fails, r.n);
 }
 {
+  const r = new Function('d', 'lo', readFileSync(join(root, 'tools/edges/levels_fuzz.js'), 'utf-8'))(await load('web/js/docops.js'), lineops);
+  say('레벨 바꾸기 임의의 문서', r.problems, r.runs);
+}
+{
   const r = new Function('m', 'd', readFileSync(join(root, 'tools/edges/inlinefmt_cases.js'), 'utf-8'))(await load('web/js/inlinefmt.js'), await load('web/js/docops.js'));
   say('문장 속 서식 표 점검', r.fails, r.n);
 }
