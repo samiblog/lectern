@@ -1002,6 +1002,11 @@ function bindResizer() {
 }
 
 export function initTerminal() {
+  $('#lec-term .term-head')?.addEventListener('contextmenu', (e) => {   // 머리줄 우클릭 — 터미널 설정 (D154)
+    if (e.target.closest('#lec-term-tabs')) return;
+    e.preventDefault();
+    import('./ui.js').then(({ showMenu }) => showMenu(e.clientX, e.clientY, [{ label: t('터미널 설정…'), action: () => emit('open-settings', 'term') }]));
+  });
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
   $('#lec-term-stuck-restart').addEventListener('click', () => restartTerminal());

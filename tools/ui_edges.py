@@ -19,7 +19,7 @@ from pathlib import Path
 import close_windows
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt']
+SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile']),
@@ -44,6 +44,7 @@ AREAS = [
     (r'samples/.*', ['sample_lines']),
     (r'web/js/(tabs|doctabs|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure', 'hostile', 'solo', 'solo_cases', 'termfont', 'closeall', 'termstack', 'aitool', 'fastopen']),
     (r'web/js/ui\.js|lectern/terminal\.py', ['termstack', 'aitool']),
+    (r'web/js/(putmenu|settings|theme|vikeys|printdoc|work|main)\.js|web/index\.html|lectern/config\.py', ['put_settings']),
     (r'web/js/(aitool|basket)\.js|lectern/config\.py|web/index\.html', ['aitool', 'reading', 'combos']),
     (r'web/js/(printdoc|docmenu)\.js|lectern/pdfexport\.py|web/help/(research-)?writing.*', ['printpdf', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more']),
     (r'lectern/docxexport\.py|skills/lectern-to-docx/.*', ['exportdocx', 'export_scenarios', 'export_more']),

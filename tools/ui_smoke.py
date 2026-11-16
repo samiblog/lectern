@@ -1308,7 +1308,7 @@ def run(headed: bool) -> None:
                 return wait_until(page, f"""(() => {{ const s = document.querySelector('#lec-theme-css').sheet;
                     return document.documentElement.dataset.theme === '{theme}' && s && s.href.endsWith('/{theme}.css') && s.cssRules.length > 0; }})()""")
 
-            themes = [t for t in page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)') if t != 'auto']
+            themes = [t for t in page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)') if t not in ('auto', '__settings')]   # 맨 아래 '스타일 설정…' 은 스타일이 아니다 (D154)
             groups = page.eval_on_selector_all('#lec-theme optgroup', 'gs => gs.map(g => g.label)')
             check(len(themes) == 25 and len(set(themes)) == 25 and groups == ['업무·보고', '읽기·출판', '개발·기술', '어두운'],
                   f'스타일 {len(themes)}종, 처음에는 용도별 묶음 ({groups})')
@@ -1330,7 +1330,7 @@ def run(headed: bool) -> None:
                   and page.input_value('#lec-theme') == picked,
                   f'설정 창에서 스타일 목록 묶는 방식(용도별·분위기별·밝기별)을 바꾸면 같은 스타일이 다시 묶임 ({labels})')
             # 목록 옆 위·아래 버튼: 목록에서 바로 위·아래 스타일로, 맨 처음·맨 끝이면 누를 수 없음
-            order = page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value)')
+            order = page.eval_on_selector_all('#lec-theme option', 'os => os.map(o => o.value).filter(v => v !== "__settings")')   # '스타일 설정…' 빼고 (D154)
             use_theme('default')
             below = order[order.index('default') + 1]
             page.click('#lec-theme-next')

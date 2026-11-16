@@ -995,6 +995,18 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-put-list li.sel { background: var(--ui-active-bg); }
 #lec-put-list .t { flex: none; max-width: 60%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #lec-put-list .p { flex: 1; min-width: 0; color: var(--ui-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 넣기의 판 (D154): 묶음을 열로 — 내리지 않고 한 번에, 맨 앞 열은 최근 넣은 것 */
+#lec-put.board { width: min(780px, 94vw); }
+#lec-put-list.board { display: grid; grid-template-columns: repeat(var(--cols, 5), minmax(0, 1fr)); gap: 2px 6px; max-height: min(460px, 70vh); padding: 6px; }
+#lec-put-list.board > li.col { display: block; padding: 0; cursor: default; }
+#lec-put-list.board > li.col:hover { background: none; }
+#lec-put-list.board > li.col > .head { display: block; padding: 4px 8px 4px; color: var(--ui-faint); font-size: 11.5px; font-weight: 650; }
+#lec-put-list.board > li.recent > .head { color: var(--ui-accent); }
+#lec-put-list.board ul { list-style: none; margin: 0; padding: 0; }
+#lec-put-list.board ul li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 5px; cursor: pointer; font-size: 13px; }
+#lec-put-list.board ul li:hover { background: var(--ui-hover); }
+#lec-put-list.board ul li.sel { background: var(--ui-active-bg); }
+#lec-put-list.board kbd { margin-left: auto; font-size: 10.5px; }
 #lec-put-list kbd { margin-left: auto; color: var(--ui-faint); font: inherit; font-size: 11.5px; }
 .delete-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; }   /* 문서 삭제 (deletedoc.js, D104) */
 .delete-actions button { height: 32px; padding: 0 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-text); font: inherit; }
@@ -1056,6 +1068,44 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .dialog-box h2 { margin: 0 0 10px; font-size: 16px; }
 /* 설정 창: 낮은 창에서도 '닫기'까지 보이게 — 넘치면 상자 안에서 스크롤 */
 #lec-settings .dialog-box { margin-top: 6vh; max-height: 88vh; overflow: auto; }
+/* 설정 창 (D154): 왼쪽 분류, 오른쪽 절 — 분류를 누르면 그 절로, 오른쪽만 내린다 */
+#lec-settings .dialog-box.set-box { width: min(800px, 94vw); height: 86vh; display: flex; flex-direction: column; overflow: hidden; }
+.set-body { flex: 1; min-height: 0; display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 0 18px; }
+.set-nav { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; border-right: 1px solid var(--ui-border); padding-right: 10px; }
+.set-nav button { padding: 7px 12px; border: 0; border-radius: 7px; background: none; color: var(--ui-muted); text-align: left; font-size: 13.5px; }
+.set-nav button:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.set-nav button.on { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); color: var(--ui-fg); font-weight: 650; }
+.set-content { position: relative; min-height: 0; overflow: auto; padding-right: 8px; }
+.set-sec { padding-bottom: 10px; }
+.set-sec > h3 { margin: 16px 0 4px; font-size: 13px; font-weight: 700; color: var(--ui-accent); }
+.set-sec:first-child > h3 { margin-top: 2px; }
+.set-sec:last-child { min-height: 100%; }
+.set-values { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 10px 4px; font-size: 12.5px; }
+.set-values dt { color: var(--ui-muted); }
+.set-values dd { margin: 0; overflow-wrap: anywhere; font-family: var(--mono-font, ui-monospace, monospace); }
+/* 고르기: 한 줄 단추 — 단추 안의 설명은 감추고, 고른 것의 설명만 아래에 (settings.js 의 segDescs) */
+.set-box .opt-choice { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 0 10px; }
+.set-box .opt-choice > .opt-head { flex-basis: 100%; padding: 2px 4px 2px; }
+.set-box .opt-choice .lang-opts { display: contents; }
+.set-box .opt-choice label { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 10px; border: 1px solid var(--ui-border); border-radius: 999px; }
+.set-box .opt-choice label:has(input:checked) { border-color: var(--ui-accent); background: color-mix(in srgb, var(--ui-accent) 12%, transparent); font-weight: 650; }
+.set-box .opt-choice input { margin: 0; }
+.set-box .opt-choice label small { display: none; }
+.set-box .opt-choice .seg-desc { flex-basis: 100%; padding: 0 4px; color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+.set-box .opt-choice .seg-desc:empty { display: none; }
+/* 켜고 끄기: 오른쪽 끝의 스위치 */
+.set-box label.opt { align-items: center; }
+.set-box label.opt input[type="checkbox"] { order: 2; flex: none; position: relative; width: 34px; height: 20px; margin: 0 0 0 auto; border-radius: 999px; background: var(--ui-border); appearance: none; cursor: pointer; transition: background .15s; }
+.set-box label.opt input[type="checkbox"]::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .3); transition: left .15s; }
+.set-box label.opt input[type="checkbox"]:checked { background: var(--ui-accent); }
+.set-box label.opt input[type="checkbox"]:checked::after { left: 16px; }
+.set-box label.opt input[type="checkbox"]:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 2px; }
+.st-vi { cursor: pointer; }
+@media (max-width: 760px) {
+  .set-body { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .set-nav { flex-direction: row; overflow-x: auto; border-right: 0; border-bottom: 1px solid var(--ui-border); padding: 0 0 6px; }
+  .set-nav button { flex: none; }
+}
 .opt { display: flex; gap: 10px; align-items: flex-start; padding: 8px 4px; border-radius: 6px; cursor: pointer; }
 /* 설정 창의 '내 스타일' (D53): 설명과 버튼들 */
 .opt-block { margin: 0 0 6px; padding: 8px 4px 10px; border-bottom: 1px solid var(--ui-border); }

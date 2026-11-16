@@ -1739,7 +1739,7 @@ async function putCite(s) {
 async function openPut() {
   const s = session;
   const keep = keepCaret();
-  const chosen = await pick({ items: putItems(deckOn(s.pane.view)), title: t('넣기'), at: s.places[s.cell].span });
+  const chosen = await pick({ items: putItems(deckOn(s.pane.view)), title: t('넣기'), at: s.places[s.cell].span, board: true });
   if (session !== s) return;
   if (chosen) await putItem(s, chosen.id);
   else backTo(s, keep);

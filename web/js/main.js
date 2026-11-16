@@ -205,6 +205,9 @@ function menuHere() {
 
 function bindKeys() {
   document.addEventListener('copy', noteCopy);   // 고른 글을 복사하면 알림 (D151)
+  $('#lec-btn-put')?.addEventListener('click', () => {   // 탭 막대의 [넣기] (D154) — 현재 줄 아래에 넣기 창, / 와 같다
+    if (!putKey()) toast(t('넣기는 md 문서에서 씁니다 — 문서를 열고 넣을 자리의 줄을 누른 뒤 [넣기]나 / 를 누릅니다'));
+  });
   document.addEventListener('keydown', (e) => {
     if (presenting()) {   // 발표 중(present.js, D59): 키는 모두 발표의 것 — 넘기기·노트·전체 화면·Esc
       presentKey(e);

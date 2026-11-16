@@ -331,7 +331,7 @@ def run():
         page.wait_for_timeout(150)
 
         print('[어두운 장의 글이 모든 스타일에서 보인다]')
-        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && !v.startsWith('user:'))")
+        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && !v.startsWith('user:') && v !== '__settings')")
         check('스타일 목록', len(themes) >= 20, len(themes))
         show('어두운장')
         bad = {}

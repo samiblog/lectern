@@ -177,16 +177,19 @@ export function fillPicker() {
   const mine = userStyles.length
     ? html`<optgroup label="${t('내 스타일')}">${userStyles.map((s) => html`<option value="${s.id}">${s.name}</option>`)}</optgroup>`
     : '';
-  setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}`);
+  setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}<option value="${SETTINGS}">${t('스타일 설정…')}</option>`);   // 맨 아래 — 설정 창의 '보기' (D154)
   $('#lec-theme').value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
   updateSteps();
 }
 
-/** 위·아래 버튼: 목록의 맨 처음·맨 끝이면 누를 수 없다 */
+/** 목록 맨 아래의 '스타일 설정…' — 스타일이 아니라 설정 창을 연다 (D154) */
+const SETTINGS = '__settings';
+
+/** 위·아래 버튼: 목록의 맨 처음·맨 끝(설정 줄 앞)이면 누를 수 없다 */
 function updateSteps() {
   const sel = $('#lec-theme');
   $('#lec-theme-prev').disabled = sel.selectedIndex <= 0;
-  $('#lec-theme-next').disabled = sel.selectedIndex >= sel.options.length - 1;
+  $('#lec-theme-next').disabled = sel.selectedIndex >= sel.options.length - 2;
 }
 
 function choose(value) {
@@ -199,7 +202,7 @@ function choose(value) {
 function step(dir) {
   const sel = $('#lec-theme');
   const next = sel.options[sel.selectedIndex + dir];
-  if (next) choose(next.value);
+  if (next && next.value !== SETTINGS) choose(next.value);
 }
 
 export function initTheme() {
@@ -209,7 +212,14 @@ export function initTheme() {
     link.addEventListener('error', done);
   }
   fillPicker();
-  $('#lec-theme').addEventListener('change', (e) => choose(e.target.value));
+  $('#lec-theme').addEventListener('change', (e) => {
+    if (e.target.value === SETTINGS) {   // 스타일 설정… — 고른 스타일은 그대로 두고 설정 창의 '보기'로
+      e.target.value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
+      emit('open-settings', 'view');
+      return;
+    }
+    choose(e.target.value);
+  });
   $('#lec-theme-prev').addEventListener('click', () => step(-1));
   $('#lec-theme-next').addEventListener('click', () => step(1));
   media.addEventListener('change', () => {

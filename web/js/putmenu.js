@@ -3,7 +3,7 @@
 // 고르는 일만 한다: 고른 것을 돌려주면 lineedit.js 가 넣는다. 파일을 고르는 단계(그림·첨부·링크)와 글을 묻는 단계(주·표 크기)도 이 창이 맡는다.
 
 import { S } from './store.js';
-import { getJSON } from './api.js';
+import { getJSON, saveConfig } from './api.js';
 import { $ } from './util.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
@@ -12,7 +12,21 @@ const box = () => $('#lec-put');
 const find = () => $('#lec-put-find');
 const list = () => $('#lec-put-list');
 
-let waiting = null;   // {resolve, items, sel, free} — free: 찾기 칸의 글을 그대로 돌려줄 수 있다
+let waiting = null;   // {resolve, items, sel, free, board, cols} — free: 찾기 칸의 글을 그대로 돌려줄 수 있다, board: 넣기의 판 (D154)
+const RECENT = 5;   // 판 맨 앞의 '최근' (D154 — 설정 recent_puts 에 이름만)
+const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';   // i18n-ok (초성)
+/** 한글 낱자의 첫소리만: '쪽 나눔' → 'ㅉ ㄴㄴ' (D154 — 초성으로 거르기) */
+const initials = (s) => [...s].map((c) => {
+  const n = c.charCodeAt(0) - 0xac00;
+  return n >= 0 && n < 11172 ? CHO[Math.floor(n / 588)] : c;
+}).join('');
+/** 거르기: 이름·찾는 말에 든 글, 또는 자음만 친 글이면 첫소리 (빈칸은 보지 않음) */
+function matches(x, q) {
+  const text = `${x.name} ${x.words || ''} ${x.sub || ''}`.toLowerCase();
+  if (text.includes(q)) return true;
+  const bare = q.replace(/\s+/g, '');
+  return /^[ㄱ-ㅎ]+$/.test(bare) && initials(x.name).replace(/\s+/g, '').includes(bare);   // i18n-ok (자음)
+}
 
 /** 글의 종류 — 넣기와 '이 줄 바꾸기' 가 함께 쓴다 */
 const TEXT_ITEMS = () => [
@@ -42,7 +56,7 @@ const BLOCK_ITEMS = () => [
   { id: 'diagram', group: t('자료'), name: t('다이어그램'), words: 'diagram mermaid 흐름도' },   // i18n-ok (찾는 말)
   { id: 'math', group: t('자료'), name: t('수식'), words: 'math equation 공식' },   // i18n-ok (찾는 말)
   { id: 'code', group: t('자료'), name: t('코드'), words: 'code' },
-  { id: 'textbox', group: t('자료'), name: t('박스글'), words: 'box 박스 상자 참고 sidebar inset' },   // i18n-ok (찾는 말)
+  { id: 'textbox', group: t('자료'), name: t('박스글'), words: 'box 박스 상자 참고 sidebar inset 글상자' },   // i18n-ok (찾는 말)
   { id: 'note', group: t('주·참조'), name: t('주'), hint: 'Ctrl+Alt+F', words: 'footnote 각주 미주' },   // i18n-ok (찾는 말)
   { id: 'source', group: t('주·참조'), name: t('출처 줄'), words: 'source 자료 출처' },   // i18n-ok (찾는 말)
   { id: 'tablenote', group: t('주·참조'), name: t('표 주'), words: 'table note 주석' },   // i18n-ok (찾는 말)
@@ -51,7 +65,7 @@ const BLOCK_ITEMS = () => [
   { id: 'cite', group: t('주·참조'), name: t('본문 인용'), words: 'citation cite 인용 문헌 참고문헌' },   // i18n-ok (찾는 말)
   { id: 'attach', group: t('주·참조'), name: t('첨부'), words: 'attachment 붙임 별첨 파일' },   // i18n-ok (찾는 말)
   { id: 'appendix', group: t('주·참조'), name: t('부록'), words: 'appendix' },
-  { id: 'rule', group: t('쪽'), name: t('구분선'), words: '--- rule line' },
+  { id: 'rule', group: t('쪽'), name: t('구분선'), words: '--- rule line hr 줄 가로줄 선' },   // i18n-ok (찾는 말)
   { id: 'pagebreak', group: t('쪽'), name: t('쪽 나눔'), words: 'page break 페이지 나누기 인쇄' },   // i18n-ok (찾는 말)
   { id: 'toc', group: t('쪽'), name: t('목차'), words: 'toc contents 차례' },   // i18n-ok (찾는 말)
   { id: 'tables', group: t('쪽'), name: t('표 목차'), words: 'list of tables 표 차례' },   // i18n-ok (찾는 말)
@@ -84,10 +98,65 @@ export const changeItems = (picked = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(),
 /** 고른 줄의 한 글자 키 (D128 — spotlight.kindKey) — '고른 줄 바꾸기' 창에 보인다 */
 const PICK_KEYS = { h1: '1', h2: '2', h3: '3', h4: '4', para: 'P', bullet: 'L', number: 'N', task: 'T', quote: 'Q', 'box:NOTE': 'C', 'fmt:bold': 'B', 'fmt:italic': 'I', 'fmt:strike': 'S', 'fmt:mark': 'M', 'fmt:color': 'F' };
 
+/** 판에 놓을까 — 넣기 창이고, 거르는 글이 없고, 창이 넓을 때 (D154) */
+const boardOn = () => !!waiting?.board && !find().value.trim() && innerWidth >= 720;
+
+/**
+ * 넣기의 판 (D154): 묶음(글·강조글·자료·주·참조·쪽)을 열로 — 내리지 않고 한 번에. 맨 앞 열은 최근 넣은 것.
+ * waiting.shown 은 열 차례로 이은 목록이고(최근은 겹쳐 들어간다), waiting.cols 는 열마다 [첫 자리, 개수]
+ */
+function drawBoard() {
+  const { items } = waiting;
+  const recent = (S.config?.recent_puts || []).map((id) => items.find((x) => x.id === id)).filter(Boolean).slice(0, RECENT);
+  const cols = recent.length ? [{ name: t('최근'), items: recent }] : [];
+  for (const x of items) {
+    const col = cols.find((c, i) => (recent.length ? i > 0 : true) && c.name === x.group);
+    if (col) col.items.push(x);
+    else cols.push({ name: x.group, items: [x] });
+  }
+  waiting.shown = cols.flatMap((c) => c.items);
+  let at = 0;
+  waiting.cols = cols.map((c) => {
+    const span = [at, c.items.length];
+    at += c.items.length;
+    return span;
+  });
+  waiting.sel = Math.min(waiting.sel, waiting.shown.length - 1);
+  box().classList.add('board');
+  list().classList.add('board');
+  list().style.setProperty('--cols', String(cols.length));
+  setHtml(list(), cols.map((c, ci) => html`<li class="col${ci === 0 && recent.length ? ' recent' : ''}"><span class="head">${c.name}</span><ul>${c.items.map((x, k) => {
+    const i = waiting.cols[ci][0] + k;
+    return html`<li role="option" data-i="${i}" class="${i === waiting.sel ? 'sel' : ''}" aria-selected="${i === waiting.sel}"><span class="t" title="${x.name}">${x.name.startsWith(`${x.group} — `) ? x.name.slice(x.group.length + 3) : x.name}</span>${x.hint ? html`<kbd>${x.hint}</kbd>` : ''}</li>`;   // 판에서는 묶음 이름을 빼고 ('강조글 — 참고' → '참고')
+  })}</ul></li>`));
+  list().querySelector('li.sel')?.scrollIntoView({ block: 'nearest' });
+}
+
+/** 판에서 ←→↑↓ (D154): ↑↓ 는 열 안에서, ←→ 는 옆 열의 같은 줄로 */
+function moveOnBoard(key) {
+  const { cols } = waiting;
+  let ci = cols.findIndex(([a, n]) => waiting.sel >= a && waiting.sel < a + n);
+  if (ci < 0) ci = 0;
+  const [a, n] = cols[ci];
+  const row = waiting.sel - a;
+  if (key === 'ArrowDown' || key === 'ArrowUp') waiting.sel = a + ((row + (key === 'ArrowDown' ? 1 : -1) + n) % n);
+  else {
+    const next = cols[(ci + (key === 'ArrowRight' ? 1 : -1) + cols.length) % cols.length];
+    waiting.sel = next[0] + Math.min(row, next[1] - 1);
+  }
+  drawBoard();
+}
+
 function draw() {
+  if (boardOn()) {
+    drawBoard();
+    return;
+  }
+  box().classList.remove('board');
+  list().classList.remove('board');
   const q = find().value.trim().toLowerCase();
   const { items } = waiting;
-  const shown = (q ? items.filter((x) => `${x.name} ${x.words || ''} ${x.sub || ''}`.toLowerCase().includes(q)) : items);
+  const shown = (q ? items.filter((x) => matches(x, q)) : items);
   waiting.shown = shown;
   waiting.sel = Math.min(waiting.sel, Math.max(0, shown.length - 1));
   let group = null;
@@ -115,15 +184,16 @@ function place(at) {
 
 /**
  * 고르는 창을 띄운다. 고른 것(또는 free 면 쓴 글 {text}), 그만두면 null.
- * items: [{id, name, group?, sub?, hint?, words?}], title, at: 옆에 놓을 곳, value: 찾기 칸의 처음 글, free: 쓴 글도 받는다
+ * items: [{id, name, group?, sub?, hint?, words?}], title, at: 옆에 놓을 곳, value: 찾기 칸의 처음 글, free: 쓴 글도 받는다,
+ * board: 넣기의 판 — 묶음을 열로, 맨 앞에 최근 넣은 것 (D154)
  */
-export function pick({ items, title, at = null, value = '', free = false, placeholder = '' }) {
+export function pick({ items, title, at = null, value = '', free = false, placeholder = '', board = false }) {
   return new Promise((resolve) => {
     waiting?.resolve(null);
-    waiting = { resolve, items, sel: 0, free, shown: items };
+    waiting = { resolve, items, sel: 0, free, shown: items, board, cols: [] };
     $('#lec-put-title').textContent = title;
     find().value = value;
-    find().placeholder = placeholder || t('이름으로 거르기');
+    find().placeholder = placeholder || (board ? t('이름·초성으로 거르기 — ㅍ 표, ㅉㄴ 쪽 나눔') : t('이름으로 거르기'));
     draw();
     place(at);
     find().focus();
@@ -148,6 +218,7 @@ function choose() {
   if (!item && !(w.free && text)) return;
   box().hidden = true;
   waiting = null;
+  if (w.board && item?.id) saveConfig({ recent_puts: [item.id, ...(S.config?.recent_puts || []).filter((x) => x !== item.id)].slice(0, RECENT) });   // 최근 넣은 것 (D154)
   w.resolve(item ?? { text });
 }
 
@@ -182,7 +253,10 @@ export function initPut() {
   });
   find().addEventListener('keydown', (e) => {
     if (e.isComposing || e.keyCode === 229 || !waiting) return;
-    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    if (boardOn() && ['ArrowDown', 'ArrowUp', 'ArrowLeft', 'ArrowRight'].includes(e.key)) {   // 판 (D154)
+      e.preventDefault();
+      moveOnBoard(e.key);
+    } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       const n = waiting.shown.length;
       if (n) {

@@ -608,7 +608,7 @@ try:
         page.locator('#lec-view .csv-head th[data-col="1"]').click(button='right')
         menu('누적')
         page.wait_for_selector('#lec-view th.csv-calc')
-        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && v !== 'auto')")
+        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && v !== 'auto' && v !== '__settings')")
         CONTRAST = """(() => { const nums = (c) => { const m = c.match(/[\\d.]+/g).map(Number); return c.startsWith('color(') ? m.slice(0, 3).map((v) => v * 255) : m.slice(0, 3); };
           const alpha = (c) => { const a = /\\/\\s*([\\d.]+)\\)|rgba\\([^)]*,\\s*([\\d.]+)\\)/.exec(c); return a ? Number(a[1] ?? a[2]) : 1; };
           const back = (el) => { for (let e = el; e; e = e.parentElement) { const c = getComputedStyle(e).backgroundColor; if (alpha(c) > 0.99) return nums(c); } return [255, 255, 255]; };

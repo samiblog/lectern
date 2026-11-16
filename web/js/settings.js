@@ -7,6 +7,7 @@ import { fillPicker, grouping, userStyleInfo } from './theme.js';
 import { confirmReload } from './editor.js';
 import { openSamples } from './tabs.js';
 import { $, $$, toast, copyText } from './util.js';
+import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
 import { aiTool, aiInfo, aiName, aiCli, voicePrompt } from './aitool.js';
 
@@ -24,7 +25,8 @@ async function setTermFont(value) {
   emit('term-font');
 }
 
-export function openSettings() {
+/** 설정 창 (D154 — 왼쪽 분류, 오른쪽 절). section: 그 분류의 절에서 연다 — 없으면 마지막에 고른 분류 */
+export function openSettings(section) {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
   for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
@@ -36,8 +38,62 @@ export function openSettings() {
   renderMyStyles();
   emit('settings-open');   // 업무 관리 칸 (work.js, D124)
   $('#lec-aiguide-samples').hidden = !S.samples;
+  renderValues();
+  segDescs();
   box().hidden = false;
-  $('#lec-settings input')?.focus();
+  const sec = typeof section === 'string' && SECTIONS.includes(section) ? section : SECTIONS.includes(S.config.settings_section) ? S.config.settings_section : SECTIONS[0];
+  goSection(sec, false);
+  $(`#lec-settings .set-nav button[data-set="${sec}"]`)?.focus();
+}
+
+// ---- 분류 (D154) — 왼쪽 분류를 누르면 그 절로, 내리면 지금 절을 강조. 고르는 칸은 숨기지 않는다 -----------------
+
+const SECTIONS = ['general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more'];
+const content = () => $('#lec-set-content');
+
+function setActive(sec) {
+  for (const b of $$('#lec-settings .set-nav button')) b.classList.toggle('on', b.dataset.set === sec);
+}
+
+function goSection(sec, smooth = true) {
+  const el = $(`#lec-settings .set-sec[data-set="${sec}"]`);
+  if (!el) return;
+  content().scrollTo({ top: el.offsetTop, behavior: smooth ? 'smooth' : 'auto' });
+  setActive(sec);
+}
+
+/** 내린 자리의 절을 강조 — 맨 끝까지 내렸으면 마지막 절 */
+function onScroll() {
+  const c = content();
+  let cur = SECTIONS[0];
+  for (const el of $$('#lec-settings .set-sec')) if (el.offsetTop <= c.scrollTop + 24) cur = el.dataset.set;
+  if (c.scrollTop + c.clientHeight >= c.scrollHeight - 2) cur = SECTIONS.at(-1);
+  setActive(cur);
+}
+
+/** 고르기 묶음: 고른 것의 설명만 묶음 아래에 한 줄 (한 줄 단추 — 단추 안의 설명은 감춘다) */
+function segDescs() {
+  for (const group of $$('#lec-settings .opt-choice')) {
+    let d = group.querySelector(':scope > .seg-desc');
+    if (!d) {
+      d = document.createElement('small');
+      d.className = 'seg-desc';
+      group.append(d);
+    }
+    d.textContent = group.querySelector('label:has(input:checked) small')?.textContent || '';
+  }
+}
+
+/** 고급: 파일에서만 고치는 설정의 지금 값 (보기만) */
+function renderValues() {
+  const dl = $('#lec-set-values');
+  if (!dl) return;
+  const row = (name, value) => [html`<dt>${name}</dt>`, html`<dd>${value}</dd>`];
+  setHtml(dl, [
+    ...row(t('편집기 경로 (editor)'), S.config.editor || t('기본 — VS Code')),
+    ...row(t('제외 폴더 (exclude_dirs)'), (S.config.exclude_dirs || []).join(', ') || t('없음')),
+    ...row(t('터미널 셸 (terminal_shell)'), S.config.terminal_shell || t('기본 — Windows PowerShell')),
+  ]);
 }
 
 // ---- 쓰는 AI 도구 (D138) ------------------------------------------------------------
@@ -236,6 +292,23 @@ async function openConfigFile() {
 }
 
 export function initSettings() {
+  $('#lec-settings .set-nav')?.addEventListener('click', (e) => {   // 분류 (D154)
+    const b = e.target.closest('button[data-set]');
+    if (!b) return;
+    goSection(b.dataset.set);
+    saveConfig({ settings_section: b.dataset.set });
+  });
+  $('#lec-settings .set-nav')?.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return;
+    e.preventDefault();
+    const all = $$('#lec-settings .set-nav button');
+    const next = all[(all.indexOf(document.activeElement) + (e.key === 'ArrowDown' ? 1 : -1) + all.length) % all.length];
+    next.focus();
+    next.click();
+  });
+  content()?.addEventListener('scroll', onScroll, { passive: true });
+  box().addEventListener('change', segDescs);
+  on('open-settings', (sec) => openSettings(sec));   // 관련 화면에서 그 분류로 (D154 — 터미널 머리줄·스타일 목록·업무 현황·vi 표시·내보내기 창)
   applyAiNames();   // 고른 AI 도구의 이름으로 (D138)
   $('#lec-mystyles-folder').addEventListener('click', openStylesFolder);
   $('#lec-layouts-folder').addEventListener('click', openLayoutsFolder);

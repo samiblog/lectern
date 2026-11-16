@@ -406,7 +406,7 @@ Markers (`#`, `-`, `>`) are locked, so you change them with keys and menus. The 
 
 ### Inserting elements
 
-On the current line, press **/** to open a new line below it with the insert box. Type to filter. Inside a cell it is **/** on an empty line and **Ctrl+Shift+/** on a line with text (that key also works on the current line, and with vi keys on `/` is Find, so use it there). With the mouse, right-click **Insert here…** — on a table it inserts below the table. Nothing is inserted while several lines are picked.
+On the current line, press **/** (or the **Insert** button at the right end of the tab bar) to open a new line below it with the insert box. In a wide window the five groups — text, callouts, data, notes and references, page — are laid out as columns at once: ↑↓ move within a column and ←→ to the next one. The first column, **Recent**, holds the last five things you inserted with the first one picked, so inserting the same thing again is just / and Enter. Type to filter. Inside a cell it is **/** on an empty line and **Ctrl+Shift+/** on a line with text (that key also works on the current line, and with vi keys on `/` is Find, so use it there). With the mouse, right-click **Insert here…** — on a table it inserts below the table. Nothing is inserted while several lines are picked.
 
 - **Text**: headings, paragraph, list, numbered list, to-do, quote. They reach the file when you write something. Typing `## ` or `- ` works too.
 - **Table**: give the size like `3x4` (columns x rows). A `Table 1. Title` caption comes with the next number, with 'Title' selected so you can type it. Press ↓ to go into the table and fill cells with **Tab**. Tab in the last cell and **Ctrl+Enter** add a row, **Ctrl+Shift+Enter** adds one above. Right-click a cell to add, delete, move or align columns.
@@ -1085,7 +1085,9 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 
 ## Settings
 
-The gear button in the toolbar (Ctrl+,) opens Settings.
+The gear button in the toolbar (Ctrl+,) opens Settings. Click a section on the left (General, View, Editing, Print and export, Terminal, AI tool, Work, Advanced) and the right side moves to it; as you scroll, the current section is highlighted. Next time Settings opens at the section you chose last. Choices are one-line buttons (the chosen one's description shows below), and on/off settings are switches at the right end. Changes apply at once; there is no save button.
+
+You can also open a section straight from where you use it — right-click the terminal header for **Terminal settings…**, **Style settings…** at the bottom of the toolbar style list, **Work settings…** on the work board, the **vi** sign in the status bar, and **Font and layout settings…** in the export window. **Advanced** shows the current values of settings kept only in the file: the editor path, excluded folders and terminal shell.
 
 | Setting | What it does |
 |---|---|

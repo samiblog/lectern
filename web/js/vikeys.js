@@ -9,7 +9,7 @@
 // - 두 글자 명령(dd·yy·gg·zz·[[·>>…)은 1초 안에 다음 글자를 기다리고, 그동안 상태줄에 'd…' 처럼 보인다. 앞의 숫자는 그 수만큼 (3j, 2dd).
 // - 칸 안의 Esc 는 저장하고 나온다 (lineedit.js — vi 의 Insert → Normal). 전체 편집기의 vim 키맵은 따로 고른다 (설정 editor_keys — editor.js).
 
-import { S, on } from './store.js';
+import { S, on, emit } from './store.js';
 import { openFind, findStep } from './find.js';
 import { foldAll } from './fold.js';
 import { openPalette } from './palette.js';
@@ -250,5 +250,6 @@ export function viKey(e) {
 
 export function initViKeys() {
   show();
+  $('#lec-st-vi')?.addEventListener('click', () => emit('open-settings', 'edit'));   // 상태줄의 vi 표시 — 설정 창의 '편집' (D154)
   on('vi-keys', reset);   // 설정 창에서 켜고 끌 때 (settings.js)
 }

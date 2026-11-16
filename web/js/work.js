@@ -114,7 +114,7 @@ const pathTitle = (r) => [...trail(r), r.title].join(' › ');
 function boardHtml(b) {
   const parts = [];
   parts.push(html`<div class="wk-head"><h2>${t('업무 현황')}</h2><span class="wk-today">${b.today} (${weekday(b.today)})</span>
-    <span class="wk-tools"><button type="button" data-wk="event" title="${t('일정 더하기 (Alt+S)')}">${t('일정 더하기')}</button><button type="button" data-wk="add" title="${t('WORK.md 가 있는 폴더를 열지 않고 목록에 더합니다')}">${t('폴더 더하기')}</button>${b.home ? html`<button type="button" data-wk="home-card">${t('공통 WORK.md 열기')}</button>` : ''}<button type="button" data-wk="refresh" title="${t('다시 읽기')}" aria-label="${t('다시 읽기')}">↻</button></span></div>`);
+    <span class="wk-tools"><button type="button" data-wk="event" title="${t('일정 더하기 (Alt+S)')}">${t('일정 더하기')}</button><button type="button" data-wk="add" title="${t('WORK.md 가 있는 폴더를 열지 않고 목록에 더합니다')}">${t('폴더 더하기')}</button>${b.home ? html`<button type="button" data-wk="home-card">${t('공통 WORK.md 열기')}</button>` : ''}<button type="button" data-wk="settings" title="${t('공통 폴더·업무 폴더 목록·업무 알림 — 설정 창')}">${t('업무 설정…')}</button><button type="button" data-wk="refresh" title="${t('다시 읽기')}" aria-label="${t('다시 읽기')}">↻</button></span></div>`);
   if (!b.home) {
     parts.push(html`<p class="wk-note">${t('공통 폴더에 WORK.md 가 없습니다. 과제 밖의 일정·할 일을 적는 곳입니다.')} <button type="button" data-wk="make-home">${t('공통 WORK.md 만들기')}</button></p>`);
   }
@@ -687,6 +687,7 @@ function onBoardClick(e) {
   if (act === 'event') openEventDialog();
   else if (act === 'add') addFolder();
   else if (act === 'refresh') redrawBoard();
+  else if (act === 'settings') emit('open-settings', 'work');   // D154
   else if (act === 'home-card' || act === 'make-home') askCard(S.tab);
   if (act) return;
   const drop = e.target.closest('button[data-wk-drop]');

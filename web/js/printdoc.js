@@ -565,6 +565,10 @@ export function initPrint() {
   box().addEventListener('change', onOption);
   box().addEventListener('click', (e) => { if (e.target === box()) closePrint(); });   // 바깥을 누르면 닫기
   $('#lec-print-close').addEventListener('click', closePrint);
+  $('#lec-print-settings')?.addEventListener('click', () => {   // 글꼴·틀 설정 — 설정 창의 '인쇄·내보내기' (D154)
+    closePrint();
+    emit('open-settings', 'print');
+  });
   $('#lec-print-save').addEventListener('click', save);
   $('#lec-print-paper').addEventListener('click', paper);
   $('#lec-print-html').addEventListener('click', saveHtml);

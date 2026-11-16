@@ -300,7 +300,7 @@ try:
 
         print('[탭 막대의 [인쇄] 버튼 (D135)]')
         order = page.evaluate("() => [...document.querySelectorAll('#lec-tabbar .tabbar-btn')].map((b) => b.id)")
-        check('순서: 편집·목차·인쇄·메모·터미널', order == ['lec-btn-edit', 'lec-btn-toc', 'lec-btn-print', 'lec-btn-notes', 'lec-btn-term'], order)
+        check('순서: 넣기·편집·목차·인쇄·메모·터미널 (D154)', order == ['lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-print', 'lec-btn-notes', 'lec-btn-term'], order)
         page.evaluate(OPEN, 'docs/보고서.md')
         page.wait_for_selector('#lec-view h1', timeout=20000)
         page.click('#lec-btn-print')
