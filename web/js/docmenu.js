@@ -204,9 +204,9 @@ function sourceCopies(range, label = t('원문 복사'), note = '') {
   ];
 }
 
-/** 원문 줄 범위의 편집 항목: 여기서 편집 (편집 모드 — D54), 외부 편집기로 이 줄 열기 */
+/** 원문 줄 범위의 편집 항목: 전체 편집으로 열기 (편집 모드 — D54. '여기서 편집'은 칸 — D152), 외부 편집기로 이 줄 열기 */
 const sourceEdits = (range) => [
-  { label: t('여기서 편집'), hint: 'Ctrl+E', tip: t('{a}행', { a: range[0] }), action: () => emit('edit', { line: range[0] }) },
+  { label: t('전체 편집으로 열기'), hint: 'Ctrl+E', tip: t('{a}행', { a: range[0] }), action: () => emit('edit', { line: range[0] }) },
   editorItem(range[0]),
 ];
 

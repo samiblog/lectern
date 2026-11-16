@@ -267,6 +267,32 @@ function renumber(lines, n, info) {
   }
 }
 
+/** 줄 n 이 든 목록 항목의 범위 [항목 줄, 끝 줄] — 하위 항목·이어진 줄까지. 목록 밖이면 null (D152) */
+export function itemSpan(lines, n) {
+  const own = ownerItem(lines, n);
+  return own ? [own, itemEnd(lines, own)] : null;
+}
+
+/** 줄 a~b 의 들여쓰기를 delta 칸 옮긴 새 배열 (빈 줄은 그대로, 0 칸 아래로는 가지 않는다 — D152) */
+export function indentLines(lines, a, b, delta) {
+  const next = lines.slice();
+  for (let i = a; i <= b; i++) next[i - 1] = shifted(next[i - 1], delta);
+  return next;
+}
+
+/** 줄 n 이 든 번호 목록의 번호를 첫 항목의 번호부터 다시 매긴 새 배열 — 모두 같은 번호로 쓴 목록·번호 목록이 아니면 그대로 (D152 — vi 의 p·P) */
+export function renumberAt(lines, n) {
+  if (!itemOf(lines[n - 1] ?? '')?.ordered) return lines;
+  let first = n;
+  for (let p = prevSibling(lines, first); p; p = prevSibling(lines, first)) first = p;
+  const nums = [];
+  for (let i = first; i; i = nextSibling(lines, i)) nums.push(itemOf(lines[i - 1]).num);
+  if (nums.length < 2 || nums.every((x) => x === nums[0])) return lines;
+  const next = lines.slice();
+  renumber(next, first, { start: nums[0], flat: false });
+  return next;
+}
+
 // ---- 범위 바꾸기로 ----------------------------------------------------------------
 
 /** 두 줄 배열의 다른 곳 {start, before, after} — replaceLines 로 그대로. before 는 한 줄 이상, 빈 줄뿐이면 앞의 글 줄까지 (밀린 줄을 찾을 수 있게) */

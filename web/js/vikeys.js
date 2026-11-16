@@ -1,6 +1,6 @@
 // vi 키 (D122): 설정 'vi 키'(vi_keys, 기본 꺼짐)를 켜면 읽는 화면(md 문서·코드 화면·Lectern 슬라이드)에서 글자 키로 움직이고 고친다.
 // 있는 기능을 부르는 번역표다 — 글자 키를 같은 일을 하는 기존 키(↓·Delete·Ctrl+Enter…)로 바꿔 다시 보내거나 있는 함수를 부른다.
-// 새로 만든 편집은 p·P(담아 둔 줄 넣기)와 J(고른 줄 합치기)뿐이다 (lineedit.js).
+// 새로 만든 편집은 p·P(담아 둔 줄 넣기)와 J(고른 줄 합치기)뿐이다 (lineedit.js). > < 는 고른 줄의 레벨을 그 줄만 (D152 — 제목의 하위 절까지는 Alt+Shift).
 //
 // - 현재 줄 = Normal, 고른 줄 = Visual Line(V — 한 줄이면 잡은 현재 줄, spotlight.armHere), 칸 = Insert. 하이라이트를 켠 줄도 고른 줄이다 (D139).
 // - Ctrl·Alt 가 붙은 키는 하나도 바꾸지 않는다 (Ctrl+D 장 복제·Ctrl+F 찾기·Ctrl+B 사이드바 그대로). 쪽 넘기기는 PageUp·PageDown.
@@ -14,7 +14,7 @@ import { openFind, findStep } from './find.js';
 import { foldAll } from './fold.js';
 import { openPalette } from './palette.js';
 import { followLine, sourceLines, litSpan, armHere } from './spotlight.js';
-import { putLinesHere, joinPicked } from './lineedit.js';
+import { putLinesHere, joinPicked, levelPicked } from './lineedit.js';
 import { headsOf } from './docops.js';
 import { $ } from './util.js';
 import { t } from './i18n.js';
@@ -167,19 +167,20 @@ const NORMAL = {
     press(e, 'c', { ctrl: true });
     press(e, 'Escape');
   },
-  '>>': (e, n) => {
+  '>>': (e, n) => {   // 그 줄만 — 제목도 그 줄의 수준만 (D152. 하위 절까지는 Alt+Shift+→)
     pickLines(e, n);
     if (!litSpan()) return;
-    press(e, 'ArrowRight', { alt: true, shift: true });
+    levelPicked(1);
     press(e, 'Escape');
   },
   '<<': (e, n) => {
     pickLines(e, n);
     if (!litSpan()) return;
-    press(e, 'ArrowLeft', { alt: true, shift: true });
+    levelPicked(-1);
     press(e, 'Escape');
   },
   u: (e, n) => times(n, () => press(e, 'z', { ctrl: true })),
+  Y: (e, n) => NORMAL.yy(e, n),   // vim 의 Y = yy (D152 — Yp 로 복제)
   p: () => putLinesHere(register, false),
   P: () => putLinesHere(register, true),
 };
@@ -201,8 +202,8 @@ const VISUAL = {
     press(e, 'c', { ctrl: true });
     press(e, 'Escape');
   },
-  '>': (e, n) => times(n, () => press(e, 'ArrowRight', { alt: true, shift: true })),
-  '<': (e, n) => times(n, () => press(e, 'ArrowLeft', { alt: true, shift: true })),
+  '>': (e, n) => times(n, () => levelPicked(1)),   // 그 줄만 (D152)
+  '<': (e, n) => times(n, () => levelPicked(-1)),
   J: () => joinPicked(),
   V: (e) => press(e, 'Escape'),
   v: (e) => press(e, 'Escape'),

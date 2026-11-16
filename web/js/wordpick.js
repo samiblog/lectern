@@ -199,6 +199,7 @@ const CROSS = () => t('글은 한 줄 안에서만 골라 서식을 줍니다 �
  */
 export function wordKey(e) {
   if (e.altKey || e.metaKey || e.isComposing) return false;
+  if (!e.ctrlKey && !e.shiftKey && e.code === 'KeyI' && S.config?.vi_keys === true) return false;   // vi 키면 i 는 칸 열기 (D152 — 기울임은 Ctrl+I)
   const kind = formatOf(e);
   if (kind) {
     const p = shownPick();

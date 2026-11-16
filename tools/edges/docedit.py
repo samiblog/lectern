@@ -1634,7 +1634,10 @@ try:
         page.wait_for_timeout(450)
         page.keyboard.press('Control+Alt+2')
         page.wait_for_timeout(800)
-        check('같은 수준의 키는 번호를 지우지 않는다', '## Ⅰ. 첫째\n' in src(), src())
+        check('같은 수준의 키는 문단으로 (D152 — 숫자 키와 같게)', '\n첫째\n' in src() and '## Ⅰ. 첫째' not in src(), src())
+        page.keyboard.press('Control+Alt+2')
+        page.wait_for_timeout(800)
+        check('다시 누르면 번호와 함께 제목으로', '## Ⅰ. 첫째\n' in src(), src())
         page.keyboard.press('Escape')
         page.wait_for_timeout(250)
 

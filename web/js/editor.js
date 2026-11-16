@@ -136,9 +136,23 @@ function editorKeys(pane) {
     Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
     'Shift-Tab': (cm) => cm.indentSelection('subtract'),
     'Ctrl-;': (cm) => dateAt(cm),   // 날짜 넣기 (D149 — 달력에서 골라 커서 자리에)
+    // 줄 지우기·복제는 칸 안과 같은 키 (D152). 편집기 라이브러리의 Ctrl+D(줄 지우기)는 끈다 — Lectern 슬라이드의 Ctrl+D 는 장 복제다
+    'Ctrl-D': () => {},
+    'Shift-Ctrl-K': 'deleteLine',
+    'Shift-Ctrl-D': (cm) => duplicateLines(cm),
   };
   if (vimOn()) delete keys.Esc;
   return keys;
+}
+
+/** Ctrl+Shift+D: 커서가 있는 줄(여러 줄을 골랐으면 그 줄들)을 아래에 한 벌 더 — 커서는 복제한 줄로 (D152) */
+function duplicateLines(cm) {
+  const from = cm.getCursor('from').line;
+  const to = cm.getCursor('to').line;
+  const head = cm.getCursor();
+  const text = cm.getRange({ line: from, ch: 0 }, { line: to, ch: cm.getLine(to).length });
+  cm.replaceRange(`\n${text}`, { line: to, ch: cm.getLine(to).length });
+  cm.setCursor({ line: head.line + (to - from + 1), ch: head.ch });
 }
 
 /** Ctrl+;: 달력에서 고른 날을 'YYYY-MM-DD' 로 커서 자리에 (D149) */

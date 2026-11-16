@@ -234,7 +234,7 @@ function bindKeys() {
       else toggleTerminal();
       return;
     }
-    const helpKey = e.key === 'F1' || (mod && (e.key === '/' || e.code === 'Slash'));   // 사용설명서·단축키 표 (help.js)
+    const helpKey = e.key === 'F1' || (mod && !e.shiftKey && (e.key === '/' || e.code === 'Slash'));   // 사용설명서·단축키 표 (help.js). Ctrl+Shift+/ 는 넣기 창뿐 (D152)
     // 터미널 모음(gather.js)이 문서 화면을 가리는 동안: 칸 사이 옮기기(Ctrl+Tab)와 탭·폴더·설정·도움말 몇 가지만. 칸 안의 키는 셸 것.
     // 사용설명서가 모음 위를 덮고 있으면 보통 때처럼
     if (gatherOn() && !manualOpen()) {
