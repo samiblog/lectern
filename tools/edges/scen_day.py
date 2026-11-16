@@ -48,12 +48,14 @@ try:
         page.goto(url)
         page.wait_for_selector('#lec-tree .row.file')
         settle = lambda ms=400: page.wait_for_timeout(ms)
-        B = '.wk-board:visible'
+        B = '.wk-board:not(.wk-under):not(.wk-folder-work):visible'   # 업무 현황의 칸만 — Alt+W 직후에는 앞 화면의 하위 업무 칸이 아직 보인다
         OPEN = "(path) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path }))"
         HOOK = "() => import('/static/js/store.js').then((m) => { window.__pasted = []; m.on('term-paste', (x) => window.__pasted.push(typeof x === 'string' ? x : x.text)); })"
 
         def board(mode=None):
             page.keyboard.press('Escape')
+            # 방금 닫은 창의 입력 칸이 아직 초점을 쥐고 있으면(다음 화면을 그릴 때 풀린다) Alt+W 가 글 입력으로 여겨진다 — 사람 손으로는 못 누를 틈
+            page.wait_for_function("() => !document.activeElement?.closest('[hidden]')")
             page.keyboard.press('Alt+w')
             page.wait_for_selector(f'{B} .wk-mode', timeout=10000)
             settle()

@@ -64,12 +64,14 @@ try:
         page.goto(url)
         page.wait_for_selector('#lec-tree .row.file')
         settle = lambda ms=400: page.wait_for_timeout(ms)
-        B = '.wk-board:visible'
+        B = '.wk-board:not(.wk-under):not(.wk-folder-work):visible'   # 업무 현황의 칸만 — Alt+W 직후에는 앞 화면의 하위 업무 칸이 아직 보인다
         OPEN = "(o) => import('/static/js/store.js').then((m) => m.emit('open', o))"
         grow = lambda scope, title: f'{scope} .wk-g-row:has(button.wk-open:text-is("{title}"))'
 
         def board(mode=None):
             page.keyboard.press('Escape')
+            # 방금 닫은 창의 입력 칸이 아직 초점을 쥐고 있으면(다음 화면을 그릴 때 풀린다) Alt+W 가 글 입력으로 여겨진다 — 사람 손으로는 못 누를 틈
+            page.wait_for_function("() => !document.activeElement?.closest('[hidden]')")
             page.keyboard.press('Alt+w')
             page.wait_for_selector(f'{B} .wk-mode', timeout=15000)
             settle()
@@ -167,7 +169,8 @@ try:
         check('— 날짜는 누른 날', page.locator('#lec-workevent-date').input_value().endswith('-10'), page.locator('#lec-workevent-date').input_value())
         page.keyboard.press('Escape')
         board()
-        check('업무 현황은 간트 그대로 (칸마다 기억)', page.locator(f'{B} button[data-wk-mode="gantt"]').first.get_attribute('aria-pressed') == 'true')
+        expect(page, '업무 현황은 간트 그대로 (칸마다 기억)', lambda: page.locator(f'{B} button[data-wk-mode="gantt"]').first.get_attribute('aria-pressed') == 'true',
+               lambda: page.locator(f'{B} .wk-mode').first.inner_html()[:300])
 
         print('[날짜가 하나도 없는 프로젝트]')
         browser.close()

@@ -3,6 +3,7 @@
 (스타일 목록·vi 표시·업무 현황·내보내기 창·터미널 머리줄)"""
 import json
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -24,7 +25,18 @@ config.mkdir()
 (config / 'config.json').write_text(json.dumps({'work_home': str(home.resolve()), 'work_alerts': False}), encoding='utf-8')
 BREAK = '<div style="page-break-after: always;"></div>'
 src = lambda: doc.read_text(encoding='utf-8')
-saved = lambda: json.loads((config / 'config.json').read_text(encoding='utf-8'))
+
+
+def saved():
+    """설정 파일 — 앱이 바꿔 끼우는 순간에는 못 읽거나 비어 있다. 다시 읽는다"""
+    for _ in range(40):
+        try:
+            return json.loads((config / 'config.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            time.sleep(0.05)
+    return {}
+
+
 
 server, url, port = serve(proj, config)
 try:

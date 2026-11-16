@@ -3,6 +3,7 @@
 설정 창의 내리면 따라오는 분류·켜고 끄기·열려 있을 때 다른 분류로, 영어 화면."""
 import json
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -24,7 +25,18 @@ config.mkdir()
 (config / 'config.json').write_text(json.dumps({'work_alerts': False, 'recent_puts': ['speaker', '없는것', 'table']}), encoding='utf-8')
 BREAK = '<div style="page-break-after: always;"></div>'
 src = lambda: doc.read_text(encoding='utf-8')
-saved = lambda: json.loads((config / 'config.json').read_text(encoding='utf-8'))
+
+
+def saved():
+    """설정 파일 — 앱이 바꿔 끼우는 순간에는 못 읽거나 비어 있다. 다시 읽는다"""
+    for _ in range(40):
+        try:
+            return json.loads((config / 'config.json').read_text(encoding='utf-8'))
+        except (OSError, ValueError):
+            time.sleep(0.05)
+    return {}
+
+
 HANGUL = "(s) => (s.match(/[가-힣]+/g) || [])"
 CONTRAST = """(sel) => { const lum = (c) => { const [r, g, b] = c.match(/[\\d.]+/g).slice(0, 3).map((v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; });
     return 0.2126 * r + 0.7152 * g + 0.0722 * b; };
