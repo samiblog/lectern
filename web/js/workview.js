@@ -8,11 +8,12 @@ import { S, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { showMenu } from './ui.js';
 import { html, setHtml } from './html.js';
-import { toast, timeAgo, formatDateTime, rangeText } from './util.js';
+import { toast, timeAgo, formatDateTime, rangeText, copyText } from './util.js';
 import { t, LANG } from './i18n.js';
 import { pickDate } from './datepick.js';
 import {
   STATUSES, CLOSED, LANES, laneOf, leafCounts, trail, daysBetween, setMeta, setTodo, insertTodo, todoLine, statusWord, byDue, STALE_DAYS,
+  spanOf, ganttRange, ganttTicks, monthWeeks, calendarOf, weekLanes, mermaidGantt, addDays,
 } from './workdata.js';
 
 export const STATUS_LABEL = {
@@ -29,11 +30,12 @@ const OPEN_DEPTH = 2;   // 처음에 펼쳐 두는 깊이 — 세 단계(0·1·2
 const MAX_LANE = 40;    // 칸반 한 칸에 보이는 카드 수
 
 let openCard = async (_path, _line) => {};
+let addEvent = async (_date, _folder) => {};   // 일정 더하기 (work.js — D153 의 달력에서 날짜를 누르면)
 const hosts = new WeakMap();   // 칸 요소 → {b, kind, scope}
 const toggled = new Map();     // 경로 → 펼침(true)·접음(false) — 사용자가 바꾼 것만 (이번 실행 동안)
 const todoOpen = new Set();    // 할 일을 펼친 업무의 경로
 const closedOpen = new Set();  // 끝난 하위를 펼친 업무의 경로
-const modes = { board: 'list', folder: 'list', under: 'list' };   // 칸마다 목록·칸반 (이번 실행 동안)
+const modes = { board: 'list', folder: 'list', under: 'list' };   // 칸마다 목록·칸반·간트·달력 (이번 실행 동안 — D153)
 
 const key = (p) => String(p || '').replace(/\\/g, '/').toLowerCase();
 const leftText = (left) => (left < 0 ? t('{n}일 지남', { n: -left }) : left === 0 ? t('오늘') : `D-${left}`);
@@ -147,11 +149,134 @@ export function mountTree(host, b, { kind, scope = null }) {
   const leaves = roots.flatMap((r) => (r.kids?.length ? r.leaves : [r]));
   const live = kind === 'board' ? roots.filter((r) => !CLOSED.has(r.eff)) : roots;
   const closed = kind === 'board' ? roots.filter((r) => CLOSED.has(r.eff)) : [];
-  const switcher = html`<span class="wk-mode" role="group" aria-label="${t('보기')}"><button type="button" data-wk-mode="list" aria-pressed="${mode === 'list' ? 'true' : 'false'}">${t('목록')}</button><button type="button" data-wk-mode="kanban" aria-pressed="${mode === 'kanban' ? 'true' : 'false'}">${t('칸반')}</button></span>`;
+  const names = { list: t('목록'), kanban: t('칸반'), gantt: t('간트'), calendar: t('달력') };
+  const switcher = html`<span class="wk-mode" role="group" aria-label="${t('보기')}">${Object.entries(names).map(([k, name]) => html`<button type="button" data-wk-mode="${k}" aria-pressed="${mode === k ? 'true' : 'false'}">${name}</button>`)}</span>`;
+  const none = html`<p class="wk-none">${t('업무가 없습니다')}</p>`;
   const body = mode === 'kanban'
-    ? (leaves.length ? kanbanHtml(b, leaves, kind === 'board' ? null : kind === 'under' ? scope : scope?.parent) : html`<p class="wk-none">${t('업무가 없습니다')}</p>`)
-    : html`${live.length ? treeHtml(b, live) : html`<p class="wk-none">${t('업무가 없습니다')}</p>`}${closed.length ? html`<details class="wk-closed"><summary>${t('완료·중단 {n}개', { n: closed.length })}</summary>${treeHtml(b, closed)}</details>` : ''}`;
-  setHtml(host, html`<div class="wk-tree-head">${switcher}${mode === 'kanban' ? html`<span class="wk-faint">${t('카드를 다른 칸으로 끌어 놓으면 그 업무의 WORK.md 상태가 바뀝니다')}</span>` : ''}</div>${body}`);
+    ? (leaves.length ? kanbanHtml(b, leaves, kind === 'board' ? null : kind === 'under' ? scope : scope?.parent) : none)
+    : mode === 'gantt' ? (live.length ? ganttHtml(b, live) : none)
+    : mode === 'calendar' ? calendarHtml(b, live.length ? live : roots, kind)
+    : html`${live.length ? treeHtml(b, live) : none}${closed.length ? html`<details class="wk-closed"><summary>${t('완료·중단 {n}개', { n: closed.length })}</summary>${treeHtml(b, closed)}</details>` : ''}`;
+  const hint = { kanban: t('카드를 다른 칸으로 끌어 놓으면 그 업무의 WORK.md 상태가 바뀝니다'), gantt: t('막대를 누르면 그 업무를 열고, 시작·마감 칸을 누르면 달력으로 고칩니다'),
+    calendar: t('날짜를 누르면 그날로 일정 더하기, 항목을 누르면 그 업무의 그 줄로') }[mode];
+  const copy = mode === 'gantt' && live.length ? html`<button type="button" class="text-btn" data-wk-mermaid="1" title="${t('지금 보이는 업무를 Mermaid 간트 글로 — md 문서에 붙여 넣으면 그림이 됩니다')}">${t('Mermaid 간트로 복사')}</button>` : '';
+  setHtml(host, html`<div class="wk-tree-head">${switcher}${hint ? html`<span class="wk-faint">${hint}</span>` : ''}${copy}</div>${body}`);
+}
+
+// ---- 간트·달력 (D153) ------------------------------------------------------------------------
+
+const UI_LANG = LANG === 'en' ? 'en' : 'ko';
+const monthName = (day) => dayDate(day).toLocaleString(UI_LANG, { month: 'short' });
+const dayDate = (day) => new Date(`${day}T12:00:00`);
+const md = (day) => `${Number(day.slice(5, 7))}/${Number(day.slice(8))}`;
+const months = {};   // 칸마다 달력이 보이는 달 'YYYY-MM' (이번 실행 동안)
+
+/** 목록에서 보이는 차례대로의 행 — 펼침·접힘, 끝난 하위는 '완료·중단 n건 보이기' 한 줄 ({row, depth} | {more, n, depth}) */
+function visibleRows(rows, depth, out = []) {
+  for (const row of rows) {
+    out.push({ row, depth });
+    if (!row.kids?.length || !isOpen(row)) continue;
+    const sorted = sortKids(row.kids);
+    const done = sorted.filter((r) => CLOSED.has(r.eff));
+    const live = sorted.filter((r) => !CLOSED.has(r.eff));
+    visibleRows(live, depth + 1, out);
+    if (done.length && (closedOpen.has(key(row.path)) || !live.length)) visibleRows(done, depth + 1, out);
+    else if (done.length) out.push({ more: row, n: done.length, depth: depth + 1 });
+  }
+  return out;
+}
+
+/** 간트 — 행은 업무 나무와 같고, 오른쪽에 날짜 막대. 막대·이름을 누르면 열고, 시작·마감 칸은 달력으로 고친다 */
+function ganttHtml(b, roots) {
+  const list = visibleRows(sortKids(roots), 0);
+  const spans = list.filter((x) => x.row).map((x) => spanOf(x.row)).filter(Boolean);
+  if (!spans.length) return html`<p class="wk-none">${t('시작·마감 날짜가 있는 업무가 없습니다 — 마감 칸이나 머리 설정의 start: 로 정합니다')}</p>`;
+  const range = ganttRange(spans, b.today);
+  const pos = (day) => ((daysBetween(range.from, day) / range.days) * 100).toFixed(3);
+  const wide = (from, to) => (((daysBetween(from, to) + 1) / range.days) * 100).toFixed(3);
+  const ticks = ganttTicks(range.from, range.to);
+  const today = html`<i class="wk-g-today" style="left: ${pos(b.today)}%" title="${t('오늘')} ${b.today}"></i>`;
+  const head = html`<div class="wk-g-row wk-g-head"><span>${t('업무')}</span><span>${t('시작')}</span><span>${t('마감')}</span>
+    <div class="wk-g-scale">${ticks.map((tk) => html`<span style="left: ${pos(tk.day)}%">${tk.month ? monthName(tk.day) : md(tk.day)}</span>`)}</div></div>`;
+  const rows = list.map((x) => {
+    if (x.more) {
+      return html`<div class="wk-g-row wk-more" data-wk-i="${b.rows.indexOf(x.more)}"><span class="wk-title" style="--wk-depth: ${x.depth}"><button type="button" data-wk-act="closed">${t('완료·중단 {n}건 보이기', { n: x.n })}</button></span></div>`;
+    }
+    const { row, depth } = x;
+    const { card } = row;
+    const s = spanOf(row);
+    const lane = laneOf(row.eff);
+    const kids = row.kids?.length;
+    const expanded = kids && isOpen(row);
+    const tip = s ? (s.milestone ? `${row.title} — ${s.from}` : `${row.title} — ${s.from} ~ ${s.to}`) : '';
+    const mark = !s ? '' : s.milestone
+      ? html`<button type="button" class="wk-g-mile lane-${lane}" data-wk-act="open" style="left: ${pos(s.from)}%" title="${tip}" aria-label="${tip}"></button>`
+      : html`<button type="button" class="wk-g-bar lane-${lane}${s.group ? ' group' : ''}" data-wk-act="open" style="left: ${pos(s.from)}%; width: ${wide(s.from, s.to)}%" title="${tip}" aria-label="${tip}"></button>`;
+    return html`<div class="wk-g-row${row.why?.length ? ' wk-hot' : ''}${CLOSED.has(row.eff) ? ' wk-done' : ''}" data-wk-i="${b.rows.indexOf(row)}">
+      <span class="wk-title" style="--wk-depth: ${depth}">${kids ? html`<button type="button" class="wk-twist" data-wk-act="twist" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="${expanded ? t('접기') : t('펼치기')}">${expanded ? '▾' : '▸'}</button>` : html`<span class="wk-twist-sp"></span>`}<button type="button" class="wk-open" data-wk-act="open" title="${row.path}">${row.title}</button></span>
+      <button type="button" class="wk-cell" data-wk-act="start" title="${kids ? t('비워 두면 하위 업무의 가장 이른 시작 — 달력') : t('시작 정하기 — 달력')}">${card.start ? md(card.start) : card.startText || html`<span class="wk-faint">—</span>`}</button>
+      <button type="button" class="wk-cell" data-wk-act="due" title="${t('마감 정하기 — 달력')}">${card.due ? md(card.due) : card.dueText || html`<span class="wk-faint">—</span>`}</button>
+      <div class="wk-g-track">${today}${mark}</div></div>`;
+  });
+  return html`<div class="wk-gantt">${head}${rows}</div>`;
+}
+
+/** 칸의 모든 업무 (나무 아래까지) */
+const allRows = (roots) => {
+  const out = [];
+  const walk = (r) => {
+    out.push(r);
+    (r.kids || []).forEach(walk);
+  };
+  roots.forEach(walk);
+  return out;
+};
+
+const ITEM_MARK = { due: '■', start: '▶', todo: '☐', event: '•' };
+const MAX_DAY = 5;   // 한 날에 보이는 항목 수
+
+/** 달력 — 달 격자(일요일 시작), 주마다 여러 날 막대를 칸으로 쌓고 그 아래 날마다의 마감·시작·할 일 기한·일정 */
+function calendarHtml(b, roots, kind) {
+  const ym = months[kind] || b.today.slice(0, 7);
+  const [y, m] = ym.split('-').map(Number);
+  const weeks = monthWeeks(y, m);
+  const home = kind === 'board' && b.home ? [{ ...b.home, eff: null, kids: [] }] : [];   // 업무 현황이면 공통 WORK.md 의 일정·할 일도
+  const { bars, days } = calendarOf([...allRows(roots), ...home], weeks[0][0], weeks.at(-1)[6]);
+  const title = dayDate(`${ym}-01`).toLocaleString(UI_LANG, { year: 'numeric', month: 'long' });
+  const dows = weeks[0].map((d) => dayDate(d).toLocaleString(UI_LANG, { weekday: 'short' }));
+  const nav = html`<div class="wk-cal-nav"><button type="button" data-wk-cal="-1" aria-label="${t('앞 달')}">‹</button><b>${title}</b><button type="button" data-wk-cal="0">${t('이번 달')}</button><button type="button" data-wk-cal="1" aria-label="${t('다음 달')}">›</button></div>`;
+  const body = weeks.map((week) => {
+    const lanes = weekLanes(bars, week);
+    const n = lanes.reduce((x, l) => Math.max(x, l.lane + 1), 0);
+    const nums = week.map((d, i) => html`<button type="button" class="wk-cal-day${d.slice(0, 7) !== ym ? ' out' : ''}${d === b.today ? ' today' : ''}${i === 0 || i === 6 ? ' weekend' : ''}" style="grid-column: ${i + 1}" data-wk-day="${d}" title="${t('{day} 에 일정 더하기', { day: d })}">${Number(d.slice(8))}</button>`);
+    const strips = lanes.map((l) => html`<button type="button" class="wk-cal-bar lane-${laneOf(l.bar.row.eff)}${l.left ? ' cont-l' : ''}${l.right ? ' cont-r' : ''}" style="grid-column: ${l.a} / ${l.b + 1}; grid-row: ${l.lane + 2}" data-wk-i="${b.rows.indexOf(l.bar.row)}" data-wk-act="open" title="${l.bar.row.title} — ${l.bar.from} ~ ${l.bar.to}">${l.bar.row.title}</button>`);
+    const items = week.map((d, i) => {
+      const list = days.get(d) || [];
+      return html`<ul class="wk-cal-items" style="grid-column: ${i + 1}; grid-row: ${n + 2}">${list.slice(0, MAX_DAY).map((it) => html`<li class="k-${it.kind}"><button type="button" data-wk-i="${b.rows.indexOf(it.row)}" data-wk-home="${it.row.home ? '1' : ''}" ${it.line ? '' : 'data-wk-act="open"'} data-wk-line="${it.line || ''}" title="${it.row.title} — ${it.text}">${ITEM_MARK[it.kind]} ${it.time ? `${it.time} ` : ''}${it.text}</button></li>`)}${list.length > MAX_DAY ? html`<li class="wk-faint">${t('그 밖에 {n}개', { n: list.length - MAX_DAY })}</li>` : ''}</ul>`;
+    });
+    return html`<div class="wk-cal-week" style="--lanes: ${n}">${nums}${strips}${items}</div>`;
+  });
+  return html`<div class="wk-cal">${nav}<div class="wk-cal-dows">${dows.map((d) => html`<span>${d}</span>`)}</div>${body}</div>`;
+}
+
+/** 시작을 달력으로 (D153 — 머리 설정의 start:) */
+async function pickStart(b, row, at) {
+  const day = await pickDate({ at, value: row.card.start || '', marks: marksOf(b), clear: true, title: t('시작 — {name}', { name: row.title }) });
+  if (day === null || day === (row.card.start || '')) return;
+  await editRow(row, (text) => setMeta(text, 'start', day), day ? t('{name}: 시작을 {day}(으)로 — WORK.md 에 반영했습니다', { name: row.title, day }) : t('{name}: 시작을 비웠습니다', { name: row.title }));
+}
+
+/** 보이는 업무를 Mermaid 간트 글로 복사 — md 문서에 붙여 넣으면 그림으로 */
+async function copyGantt(roots, title) {
+  const { text, count, skipped } = mermaidGantt(roots, title);
+  if (!count) {
+    toast(t('시작·마감 날짜가 있는 업무가 없습니다 — 마감 칸이나 머리 설정의 start: 로 정합니다'));
+    return;
+  }
+  const done = await copyText(`\`\`\`mermaid\n${text}\n\`\`\`\n`);
+  if (!done) toast(t('복사하지 못했습니다'), 'error');
+  else toast(skipped ? t('Mermaid 간트로 복사했습니다 — 업무 {n}개 (날짜가 없는 {m}개는 뺐습니다). md 문서에 붙여 넣으면 그림이 됩니다', { n: count, m: skipped })
+    : t('Mermaid 간트로 복사했습니다 — 업무 {n}개. md 문서에 붙여 넣으면 그림이 됩니다', { n: count }));
 }
 
 // ---- 고치기 — 그 업무의 WORK.md 한 줄 ---------------------------------------------------------
@@ -266,6 +391,29 @@ async function onClick(e) {
     redraw(at.host);
     return;
   }
+  const cal = e.target.closest('button[data-wk-cal]');
+  if (cal) {   // 달력의 달 옮기기 (D153)
+    const step = Number(cal.dataset.wkCal);
+    const now = months[at.kind] || at.b.today.slice(0, 7);
+    months[at.kind] = step ? addDays(`${now}-15`, step * 30).slice(0, 7) : at.b.today.slice(0, 7);
+    redraw(at.host);
+    return;
+  }
+  const dayBtn = e.target.closest('button[data-wk-day]');
+  if (dayBtn) {   // 그날로 일정 더하기 — 묶음·하위 칸이면 그 업무에
+    addEvent(dayBtn.dataset.wkDay, at.kind === 'board' ? null : at.scope?.path ?? null);
+    return;
+  }
+  const homeItem = e.target.closest('button[data-wk-home="1"]');
+  if (homeItem && at.b.home) {   // 달력의 공통 WORK.md 항목 — 그 줄로
+    openCard(at.b.home.path, Number(homeItem.dataset.wkLine) || 0);
+    return;
+  }
+  if (e.target.closest('button[data-wk-mermaid]')) {
+    const roots = at.kind === 'board' ? at.b.roots.filter((r) => !CLOSED.has(r.eff)) : at.kind === 'folder' ? [at.scope] : at.scope.kids;
+    copyGantt(roots, at.kind === 'board' ? '' : at.scope?.title || '');
+    return;
+  }
   const { b, row } = at;
   if (!row) return;
   const act = e.target.closest('[data-wk-act]')?.dataset.wkAct;
@@ -286,6 +434,7 @@ async function onClick(e) {
   } else if (act === 'status') statusMenu(row, r.left, r.bottom + 2);
   else if (act === 'priority') priorityMenu(row, r.left, r.bottom + 2);
   else if (act === 'due') pickDue(b, row, btn);
+  else if (act === 'start') pickStart(b, row, btn);
   else if (act === 'adddue') {
     const input = btn.parentElement.querySelector('input[data-wk-add]');
     const day = await pickDate({ at: btn, value: btn.dataset.day || '', marks: marksOf(b), clear: true, title: t('새 할 일의 기한') });
@@ -301,7 +450,7 @@ async function onClick(e) {
     const day = await pickDate({ at: btn, value: td.due || '', marks: marksOf(b), clear: true, title: t('기한 — {text}', { text: td.text }) });
     if (day === null || day === (td.due || '')) return;
     editRow(row, (text) => setTodo(text, line, td.text, { due: day }));
-  } else if (e.target.closest('button[data-wk-line]')) openCard(row.path, Number(e.target.closest('button[data-wk-line]').dataset.wkLine));
+  } else if (e.target.closest('button[data-wk-line]')?.dataset.wkLine) openCard(row.path, Number(e.target.closest('button[data-wk-line]').dataset.wkLine));
   else if (!btn && !e.target.closest('input, label, .wk-todos-row') && e.target.closest('tr.wk-tr:not(.wk-more)')) openCard(row.path);
 }
 
@@ -384,6 +533,7 @@ function onDragEnd() {
 /** work.js 가 부른다 — 업무를 여는 함수(그 폴더의 WORK.md, line 이면 그 줄로)를 넘긴다 */
 export function initWorkView(o) {
   openCard = o.openCard;
+  addEvent = o.addEvent || addEvent;
   const root = document.getElementById('lec-panes') || document.body;
   root.addEventListener('click', onClick);
   root.addEventListener('change', onChange);

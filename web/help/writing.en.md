@@ -241,7 +241,7 @@ This task in one line.
 ## Materials
 ```
 
-- **Only three front-matter keys are read**: `status` (`planned`, `active`, `at-risk`, `blocked`, `on-hold`, `done`, `dropped` — the Korean values 예정·진행·지연위험·막힘·보류·완료·중단 work too), `priority` (high, medium, low), `due` (`YYYY-MM-DD`). Don't rename the keys or decorate the values. Adding other keys is fine (they group in Gather view's 'Document info').
+- **Only four front-matter keys are read**: `status` (`planned`, `active`, `at-risk`, `blocked`, `on-hold`, `done`, `dropped` — the Korean values 예정·진행·지연위험·막힘·보류·완료·중단 work too), `priority` (high, medium, low), `due` (`YYYY-MM-DD`), `start` (`YYYY-MM-DD` — the start in the Gantt chart and calendar; may be left empty). Don't rename the keys or decorate the values. Adding other keys is fine (they group in Gather view's 'Document info').
 - **To-dos**: `- [ ] what (YYYY-MM-DD)` — the date in parentheses at the end is the due date (`(11/14)` works too). Mark done with `[x]`.
 - **Events**: `- YYYY-MM-DD HH:MM what`, an end time as `HH:MM-HH:MM`, a whole day as `all-day`. Always write absolute dates — not 'tomorrow' or 'Friday'. Events with a time are announced 10 minutes before.
 - **Log**: a `### YYYY-MM-DD` per day, newest first, one line each under it. Don't rewrite past entries.

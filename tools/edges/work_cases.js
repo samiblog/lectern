@@ -285,4 +285,44 @@ same('B9 닫는 --- 를 지운 파일에도 일정 절을 찾아 넣음', insert
   same('M10 할 일 더하기도 할 일 절에', insertTodo(MEMO, todoLine('새 일')).line, 20);
 }
 
+// ---- 간트·달력 (D153) — start:, 막대, 기간·눈금, 달의 주, 달력 항목·칸, Mermaid -----------------------------
+{
+  const { spanOf, ganttRange, ganttTicks, monthWeeks, calendarOf, weekLanes, mermaidGantt } = m;
+  const rc = (front, body = '') => readWork(`---\n${front}\n---\n\n# 일\n\n${body}`, TODAY);
+  same('G1 start: 를 읽는다', [rc('start: 2026-11-12\ndue: 2026-11-30').start, rc('start: 11/12').start], ['2026-11-12', '2026-11-12']);
+  same('G2 읽지 못한 start 는 확인할 줄', rc('start: 다음주').problems.map((p) => p.kind), ['start']);
+  same('G3 시작이 마감보다 늦으면 확인할 줄', rc('start: 2026-12-10\ndue: 2026-12-01').problems.map((p) => p.kind), ['start-after-due']);
+  same('G4 키 이름 오타 stat → start 가 아니라 status', rc('strat: 2026-11-12').problems.map((p) => [p.kind, p.hint]), [['key', 'start']]);
+  const row = (path, front, extra = {}) => { const card = rc(front); return { path, card, title: card.title, mtime: 0, ...extra }; };
+  const rows = [
+    row('/p', 'status:'), row('/p/a', 'status: 진행\nstart: 2026-11-10\ndue: 2026-11-20'), row('/p/b', 'status: 막힘\ndue: 2026-11-25'),
+    row('/p/c', 'status: 완료\nstart: 2026-11-01\ndue: 2026-11-05'), row('/q', 'status: 예정'),
+  ];
+  const roots = linkTree(rows);
+  const [p, a, bb, c] = rows;
+  same('G5 끝 업무의 막대 — 시작~마감, 마감만이면 점', [spanOf(a), spanOf(bb)], [{ from: '2026-11-10', to: '2026-11-20', milestone: false }, { from: '2026-11-25', to: '2026-11-25', milestone: true }]);
+  same('G6 묶음의 막대 — 하위의 가장 이른 날 ~ 가장 늦은 날', spanOf(p), { from: '2026-11-01', to: '2026-11-25', milestone: false, group: true });
+  same('G7 날짜가 없으면 null', spanOf(rows[4]), null);
+  same('G8 기간 — 오늘과 막대를 품고 앞 3일·뒤 7일', ganttRange([spanOf(a), spanOf(bb)], TODAY), { from: '2026-11-07', to: '2026-12-02', days: 26 });
+  same('G9 눈금 — 70일 안이면 월요일', ganttTicks('2026-11-07', '2026-11-30').map((x) => x.day), ['2026-11-09', '2026-11-16', '2026-11-23', '2026-11-30']);
+  same('G10 눈금 — 넘으면 달의 첫날', ganttTicks('2026-10-20', '2027-02-10').map((x) => [x.day, x.month]), [['2026-11-01', true], ['2026-12-01', true], ['2027-01-01', true], ['2027-02-01', true]]);
+  const w = monthWeeks(2026, 11);
+  same('G11 2026년 11월 — 일요일 시작, 다섯 주', [w.length, w[0][0], w.at(-1)[6]], [5, '2026-11-01', '2026-12-05']);
+  same('G12 2027년 2월 — 앞 달의 날부터', [monthWeeks(2027, 2)[0][0], monthWeeks(2027, 2).length], ['2027-01-31', 5]);
+  const cal = calendarOf(rows, '2026-11-01', '2026-11-30');
+  same('G13 달력의 막대 — 시작~마감이 있는 열린 끝 업무만', cal.bars.map((x) => [x.row.path, x.from, x.to]), [['/p/a', '2026-11-10', '2026-11-20']]);
+  same('G14 달력의 날 항목 — 마감, 끝난 업무는 빼고', [...cal.days.entries()].map(([d, l]) => [d, l.map((x) => x.kind)]), [['2026-11-20', ['due']], ['2026-11-25', ['due']]]);
+  const ev = calendarOf([row('/r', 'status: 진행\nstart: 2026-11-12\ndue: 2026-11-12', {})].map((r) => Object.assign(r, { eff: 'active', kids: [] })), '2026-11-01', '2026-11-30');
+  same('G15 막대가 없는 업무의 start 는 날 항목 (마감과 같은 날이면 한 번)', [...ev.days.values()].flat().map((x) => x.kind), ['due']);
+  const week = ['2026-11-08', '2026-11-09', '2026-11-10', '2026-11-11', '2026-11-12', '2026-11-13', '2026-11-14'];
+  const lanes = weekLanes([{ from: '2026-11-01', to: '2026-11-10' }, { from: '2026-11-09', to: '2026-11-20' }, { from: '2026-11-12', to: '2026-11-13' }], week);
+  same('G16 한 주의 칸 쌓기 — 겹치면 아래 칸, 이어지면 left·right', lanes.map((l) => [l.a, l.b, l.lane, l.left, l.right]), [[1, 3, 0, true, false], [2, 7, 1, false, true], [5, 6, 0, false, false]]);
+  const mg = mermaidGantt(roots, '업무');
+  same('G17 Mermaid 간트 — section·경로 이름·상태 태그·점, 날짜 없는 업무는 셈', mg, {
+    text: 'gantt\n  dateFormat YYYY-MM-DD\n  title 업무\n  section 일\n    일 :active, t1, 2026-11-10, 2026-11-20\n    일 :crit, milestone, t2, 2026-11-25, 0d\n    일 :done, t3, 2026-11-01, 2026-11-05',
+    count: 3, skipped: 1 });
+  same('G18 Mermaid 가 읽지 못하는 글자는 바꾼다', mermaidGantt([Object.assign(row('/x', 'status: 진행\ndue: 2026-11-30'), { eff: 'active', kids: [], title: '1차: 보고 #2; 끝' })]).text.split('\n').at(-1),
+    '    1차： 보고 ＃2； 끝 :active, milestone, t1, 2026-11-30, 0d');
+}
+
 return { fails, n };

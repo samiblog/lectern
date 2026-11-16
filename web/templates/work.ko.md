@@ -1,6 +1,7 @@
 ---
 status: 예정
 priority: {{priority}}
+start:
 due: {{due}}
 ---
 

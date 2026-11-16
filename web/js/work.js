@@ -28,6 +28,8 @@ const PROBLEM = {
   key: t('머리 설정의 키 이름이 틀린 것 같습니다'),
   status: t('정해진 상태 값이 아닙니다 — 예정·진행·지연위험·막힘·보류·완료·중단'),
   due: t('마감 날짜를 읽지 못했습니다 — YYYY-MM-DD'),
+  start: t('시작 날짜를 읽지 못했습니다 — YYYY-MM-DD'),
+  'start-after-due': t('시작이 마감보다 늦습니다 — 간트에는 마감 날의 점으로 보입니다'),
   'todo-due': t('할 일의 기한을 읽지 못했습니다 — 줄 끝에 (YYYY-MM-DD) 또는 (M/D)'),
   'todo-box': t('체크 칸 모양이 아닙니다 — - [ ] 할 일'),
   'event-date': t('일정의 날짜가 없는 날입니다'),
@@ -523,7 +525,8 @@ export function askCard(tab = S.tab, folder = '') {
 // ---- 일정 더하기 ---------------------------------------------------------------------
 
 /** 일정 더하기 창 — 날짜·시각·내용·넣을 곳. 넣을 곳은 공통과 끝나지 않은 과제들 (지금 탭에 WORK.md 가 있으면 그것) */
-export async function openEventDialog() {
+/** 일정 더하기 창. date·folder: 처음 날짜와 넣을 곳 (D153 — 달력에서 날짜를 누르면). 단축키·단추로 열면 오늘·지금 보는 업무 */
+export async function openEventDialog({ date = null, folder = null } = {}) {
   if (solo) return;
   let b;
   try {
@@ -549,12 +552,13 @@ export async function openEventDialog() {
   // 지금 보는 문서·폴더가 속한 가장 깊은 업무가 기본 (하위 폴더의 문서를 보고 있으면 그 하위 업무)
   const viewing = S.tab && !isHome(S.tab) ? rowFor(b, absPath(S.tab, S.view?.path || '')) : null;
   const here = viewing ? targets.find((x) => samePath(x.folder, viewing.path)) : null;
-  const chosen = here || targets[0];
+  const asked = typeof folder === 'string' ? targets.find((x) => samePath(x.folder, folder)) : null;
+  const chosen = asked || here || targets[0];
   const today = b.today;
   const dows = LANG === 'en' ? ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'] : ['월', '화', '수', '목', '금'];   // i18n-ok — 요일 단추, 화면 언어마다
   const box = overlay('lec-workevent', html`<div class="palette-box insert-box" role="dialog" aria-labelledby="lec-workevent-head">
     <div class="gallery-head"><span id="lec-workevent-head">${t('일정 더하기')}</span></div>
-    <div class="newdoc-title"><label for="lec-workevent-date">${t('날짜')}</label>${dateInput('lec-workevent-date', today)}
+    <div class="newdoc-title"><label for="lec-workevent-date">${t('날짜')}</label>${dateInput('lec-workevent-date', typeof date === 'string' && date ? date : today)}
       <span class="wk-days"><button type="button" data-day="0">${t('오늘')}</button><button type="button" data-day="1">${t('내일')}</button>${dows.map((d, i) => html`<button type="button" data-dow="${i + 1}">${d}</button>`)}</span></div>
     <div class="newdoc-title"><label for="lec-workevent-time">${t('시각')}</label><input id="lec-workevent-time" type="time"><span>~</span><input id="lec-workevent-end" type="time" aria-label="${t('끝나는 시각')}">
       <label class="wk-allday"><input id="lec-workevent-allday" type="checkbox">${t('종일')}</label></div>
@@ -699,7 +703,7 @@ function onBoardClick(e) {
 
 export function initWork() {
   if (solo) return;   // 업무 현황·알림은 메인 창에서만
-  initWorkView({ openCard });
+  initWorkView({ openCard, addEvent: (date, folder) => openEventDialog({ date, folder }) });
   // 'rendered' 는 nav.js 가 pane.current 를 새 화면으로 바꾸기 전에 온다 — 한 박자 뒤에 본다 (같은 칸에서 문서를 바꿔 열 때)
   on('rendered', (pane) => setTimeout(() => {
     const overview = pane.view.classList.contains('overview');

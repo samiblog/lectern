@@ -1,6 +1,7 @@
 ---
 status: planned
 priority: {{priority}}
+start:
 due: {{due}}
 ---
 

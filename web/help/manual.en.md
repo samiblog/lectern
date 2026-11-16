@@ -807,7 +807,7 @@ Sample — [11 Work management](../../samples/guide/11-업무-관리.md) (in Kor
 
 | Part | What goes there | Read by the work board |
 |---|---|---|
-| Front matter | `status` (planned, active, at-risk, blocked, on-hold, done, dropped), `priority` (high, medium, low), `due` (YYYY-MM-DD) | Yes — status, priority, due date |
+| Front matter | `status` (planned, active, at-risk, blocked, on-hold, done, dropped), `priority` (high, medium, low), `due` (YYYY-MM-DD), `start` (YYYY-MM-DD — the start in the Gantt chart and calendar) | Yes — status, priority, due date, start |
 | `# Title` | The task name | Yes |
 | To-dos | `- [ ] Draft chapter 3 (11/14)` — the parentheses at the end are the due date | Yes — checkbox and due date |
 | Events | `- 2026-11-12 14:00-15:00 Report to the lead`, `- 2026-11-20 all-day Workshop` | Yes — today's events and alerts |
@@ -890,6 +890,17 @@ Choose **Kanban** above the tree (**List · Kanban**) and the leaf tasks (tasks 
 - Click a card to open its WORK.md. With the keyboard: Enter or Space on a card opens it, the menu key opens its menu (open, change status, due date or priority).
 - A column shows up to 40 cards; the rest is given as a count.
 
+
+### Gantt chart and calendar
+
+Choose from **List · Kanban · Gantt · Calendar** above the tree. Dates come from `start:` (start) and `due:` (due date) in each WORK.md's front matter.
+
+- **Gantt**: the rows are the same work tree as the list (same expanded and collapsed rows). On the right are date bars — a bar from start to due, a point (◆) on the day when there is only one date, and a thin bar from the earliest to the latest day of the sub-tasks for a group. Colours match the kanban lanes, and the red vertical line is today. Ticks are weekly when the span is within 70 days, monthly otherwise.
+- Click a bar or a name to open that WORK.md. Click the **Start** or **Due** cell to pick a day in the calendar; it is written to that work's front matter. Dragging to change dates is not supported — a wrong drag would change the file straight away.
+- **Copy as Mermaid Gantt**: copies the work shown as Mermaid Gantt text. Paste it into a md document and a schedule chart is drawn there — handy for putting a schedule in a report. Each top-level work is a section; done work is faded, blocked and at-risk work is red, and active work is highlighted. Work without dates is left out and you are told how many.
+- **Calendar**: a month grid (weeks start on Sunday) with work spanning more than a day drawn as multi-day bars, and below them each day's due dates (■), starts (▶), to-do due dates (☐) and events (•, with the time). Finished work shows events only, and the work board's calendar also shows the common WORK.md's events and to-dos. Move between months with ‹ · This month · ›.
+- **Click a date number** to open Add event on that day. In a group's folder overview or the sub-tasks pane, that work is chosen as the target. Click an item to go to its line in the WORK.md.
+- An unreadable `start:`, or a start after the due date, shows among the lines to check.
 ### Calendar
 
 Wherever you enter a date — the due date of a work card, the date of an event, due dates in the tree — a calendar opens. While editing a document (the line-editing cell or edit mode), **Ctrl+;** puts the day picked in the calendar at the cursor as `YYYY-MM-DD`. **Date** in the insert menu (/) does the same.

@@ -112,7 +112,7 @@ function editDistance(a, b) {
   }
   return prev[b.length];
 }
-const KEYS = ['status', 'priority', 'due'];
+const KEYS = ['status', 'priority', 'due', 'start'];   // start — 간트·달력의 시작 (D153)
 /** 키 이름 오타로 보이면 맞는 키 (stauts → status). 아니면 null */
 const keyTypo = (key) => (KEYS.includes(key) ? null : KEYS.find((k) => editDistance(key, k) <= (k.length > 3 ? 2 : 1)) || null);
 
@@ -143,11 +143,11 @@ const goodClock = (s) => !s || (Number(s.slice(0, 2)) < 24 && Number(s.slice(3))
  * front 머리 설정이 닫히지 않음 · key 키 이름 오타 · status 정해지지 않은 상태 값 · due 마감을 읽지 못함 · todo-due 할 일의 기한을 읽지 못함 ·
  * todo-box 체크 칸 모양이 아님 · event-date 일정의 날짜가 없는 날 · event-time 일정의 시각을 읽지 못함 (시각 없는 일정으로 둠) · event-text 일정에 내용이 없음
  */
-export const PROBLEM_KINDS = ['front', 'key', 'status', 'due', 'todo-due', 'todo-box', 'event-date', 'event-time', 'event-text'];
+export const PROBLEM_KINDS = ['front', 'key', 'status', 'due', 'start', 'start-after-due', 'todo-due', 'todo-box', 'event-date', 'event-time', 'event-text'];
 
 /**
  * WORK.md 하나를 읽는다
- * @returns {{status: string|null, statusText: string, priority: string, due: string|null, dueText: string, title: string,
+ * @returns {{status: string|null, statusText: string, priority: string, due: string|null, dueText: string, start: string|null, startText: string, title: string,
  *   todos: {text: string, done: boolean, due: string|null, line: number}[], events: {date: string, time: string|null, end: string|null, allDay: boolean, text: string, line: number}[],
  *   problems: {kind: string, line: number, text: string, hint?: string}[]}}
  */
@@ -170,6 +170,10 @@ export function readWork(text, today) {
   if (statusText && !status) note('status', at.status - 1);
   const due = dueDay(dueText, today);
   if (dueText && !due) note('due', at.due - 1);
+  const startText = meta.start || '';
+  const startDay = dueDay(startText, today);   // 시작 (D153 — 간트·달력. start 는 머리 설정이 끝나는 줄)
+  if (startText && !startDay) note('start', at.start - 1);
+  else if (startDay && due && startDay > due) note('start-after-due', at.start - 1);
   let fenced = false;
   let memo = 0;   // 기획 메모 절의 수준 (D150 — 0 이면 그 밖). 같거나 높은 수준의 다음 제목에서 끝난다
   for (let i = start; i < lines.length; i++) {
@@ -218,7 +222,7 @@ export function readWork(text, today) {
     const loose = EVENT_LOOSE.exec(line);
     if (loose) note(normDay(loose[1]) ? 'event-text' : 'event-date', i);
   }
-  return { status, statusText, priority: meta.priority || '', due, dueText, title, todos, events, problems };
+  return { status, statusText, priority: meta.priority || '', due, dueText, start: startDay, startText, title, todos, events, problems };
 }
 
 /**
@@ -391,6 +395,137 @@ export function trail(r, upTo = null) {
   const out = [];
   for (let p = r.parent; p && p !== upTo; p = p.parent) out.unshift(p.title);
   return out;
+}
+
+// ---- 간트·달력 (D153) ------------------------------------------------------------------
+
+/** 업무 하나의 날짜 막대 {from, to, milestone} — 시작~마감, 하나뿐이거나 시작이 마감보다 늦으면 그날(마감 쪽)의 점. 날짜가 없으면 null */
+function ownSpan(card) {
+  const { start, due } = card;
+  if (start && due && start <= due) return { from: start, to: due, milestone: start === due };
+  const day = due || start;
+  return day ? { from: day, to: day, milestone: true } : null;
+}
+
+/** 간트의 막대: 끝 업무는 자기 날짜, 묶음은 자기와 하위의 가장 이른 날 ~ 가장 늦은 날 {from, to, milestone, group}. 날짜가 없으면 null */
+export function spanOf(r) {
+  const own = ownSpan(r.card);
+  if (!r.kids?.length) return own;
+  const all = [own, ...r.kids.map(spanOf)].filter(Boolean);
+  if (!all.length) return null;
+  const from = all.reduce((m, s) => (s.from < m ? s.from : m), all[0].from);
+  const to = all.reduce((m, s) => (s.to > m ? s.to : m), all[0].to);
+  return { from, to, milestone: false, group: true };
+}
+
+/** 간트의 기간 — 막대들과 오늘을 품고 앞 3일·뒤 7일 여유. {from, to, days} */
+export function ganttRange(spans, today) {
+  let from = today;
+  let to = today;
+  for (const s of spans) {
+    if (s.from < from) from = s.from;
+    if (s.to > to) to = s.to;
+  }
+  from = addDays(from, -3);
+  to = addDays(to, 7);
+  return { from, to, days: daysBetween(from, to) + 1 };
+}
+
+/** 간트의 눈금 — 기간이 70일 안이면 월요일마다, 넘으면 달의 첫날마다. [{day, month}] (month: 달이 바뀌는 눈금) */
+export function ganttTicks(from, to) {
+  const weekly = daysBetween(from, to) <= 70;
+  const out = [];
+  for (let d = from; d <= to; d = addDays(d, 1)) {
+    if (weekly ? dayOf(d).getDay() === 1 : d.endsWith('-01')) out.push({ day: d, month: !weekly });
+  }
+  return out;
+}
+
+/** 그 달을 덮는 주들 (일요일 시작) — [[YYYY-MM-DD × 7], …]. month: 1~12 */
+export function monthWeeks(year, month) {
+  const first = `${year}-${pad(month)}-01`;
+  let d = addDays(first, -dayOf(first).getDay());
+  const weeks = [];
+  do {
+    const week = [];
+    for (let i = 0; i < 7; i++) {
+      week.push(d);
+      d = addDays(d, 1);
+    }
+    weeks.push(week);
+  } while (d.slice(0, 7) === first.slice(0, 7));
+  return weeks;
+}
+
+/**
+ * 달력에 놓을 것 (from~to 사이): bars — 시작~마감이 이틀 넘는 끝 업무 [{row, from, to}],
+ * days — 날마다의 항목 Map(day → [{kind: 'due'|'start'|'todo'|'event', row, text, time, line}]). 막대가 있는 업무의 시작은 날 항목에 넣지 않는다
+ */
+export function calendarOf(rows, from, to) {
+  const bars = [];
+  const days = new Map();
+  const add = (day, item) => {
+    if (!day || day < from || day > to) return;
+    if (!days.has(day)) days.set(day, []);
+    days.get(day).push(item);
+  };
+  for (const r of rows) {
+    const c = r.card;
+    const open = !CLOSED.has(r.eff);   // 끝난 업무는 일정만
+    const bar = open && !r.kids?.length && c.start && c.due && c.start < c.due;
+    if (bar && c.start <= to && c.due >= from) bars.push({ row: r, from: c.start, to: c.due });
+    if (open && c.due) add(c.due, { kind: 'due', row: r, text: r.title, time: null, line: 0 });
+    if (open && c.start && !bar && c.start !== c.due) add(c.start, { kind: 'start', row: r, text: r.title, time: null, line: 0 });
+    for (const td of open ? c.todos : []) if (td.due && !td.done) add(td.due, { kind: 'todo', row: r, text: td.text, time: null, line: td.line });
+    for (const ev of c.events) add(ev.date, { kind: 'event', row: r, text: ev.text, time: ev.allDay ? null : ev.time, line: ev.line });
+  }
+  const rank = { due: 0, start: 1, todo: 2, event: 3 };
+  for (const list of days.values()) list.sort((a, b) => rank[a.kind] - rank[b.kind] || String(a.time || '').localeCompare(String(b.time || '')));
+  bars.sort((a, b) => (a.from < b.from ? -1 : a.from > b.from ? 1 : a.to < b.to ? -1 : 1));
+  return { bars, days };
+}
+
+/** 한 주에 걸친 막대를 칸(줄)에 쌓는다 — [{bar, a, b, lane}] (a·b: 1~7 의 첫 칸·끝 칸, 그 주 밖으로 이어지면 left·right) */
+export function weekLanes(bars, week) {
+  const ends = [];   // 칸마다 마지막 막대가 끝나는 칸
+  const out = [];
+  for (const bar of bars) {
+    if (bar.to < week[0] || bar.from > week[6]) continue;
+    const a = bar.from < week[0] ? 1 : week.indexOf(bar.from) + 1;
+    const b = bar.to > week[6] ? 7 : week.indexOf(bar.to) + 1;
+    let lane = ends.findIndex((e) => e < a);
+    if (lane < 0) lane = ends.push(0) - 1;
+    ends[lane] = b;
+    out.push({ bar, a, b, lane, left: bar.from < week[0], right: bar.to > week[6] });
+  }
+  return out;
+}
+
+/**
+ * 보이는 업무를 Mermaid 간트 글로 (D153): 맨 위 업무마다 section, 그 아래 끝 업무를 경로 이름으로.
+ * 완료·중단 done, 막힘·지연위험 crit, 진행 active, 날짜가 하나면 milestone. 날짜가 없는 업무는 빼고 센다. {text, count, skipped}
+ */
+export function mermaidGantt(roots, title = '') {
+  const clean = (s) => String(s ?? '').replace(/:/g, '：').replace(/#/g, '＃').replace(/;/g, '；').replace(/\s+/g, ' ').trim() || '-';
+  const out = ['gantt', '  dateFormat YYYY-MM-DD', ...(title ? [`  title ${clean(title)}`] : [])];
+  let count = 0;
+  let skipped = 0;
+  for (const root of roots) {
+    const lines = [];
+    for (const r of root.kids?.length ? root.leaves : [root]) {
+      const s = ownSpan(r.card);
+      if (!s) {
+        skipped += 1;
+        continue;
+      }
+      count += 1;
+      const tags = [...(CLOSED.has(r.eff) ? ['done'] : []), ...(r.eff === 'blocked' || r.eff === 'at-risk' ? ['crit'] : []), ...(r.eff === 'active' ? ['active'] : []), ...(s.milestone ? ['milestone'] : [])];
+      const name = clean([...trail(r, root), r.title].join(' › '));
+      lines.push(`    ${name} :${[...tags, `t${count}`, s.from, s.milestone ? '0d' : s.to].join(', ')}`);
+    }
+    if (lines.length) out.push(`  section ${clean(root.title)}`, ...lines);
+  }
+  return { text: out.join('\n'), count, skipped };
 }
 
 /** 칸반의 칸: 상태 다섯 묶음 (D149 — 막힘·지연위험은 '주의', 중단은 '완료' 칸에). 상태를 모르는 업무는 'none' */
