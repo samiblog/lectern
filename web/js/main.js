@@ -68,7 +68,7 @@ import { initWork, openBoard, openEventDialog } from './work.js';
 import { initWorkAlert } from './workalert.js';
 import { forgetFailedImages } from './doc.js';
 import { html, setHtml } from './html.js';
-import { $, basename, toast } from './util.js';
+import { $, basename, toast, noteCopy } from './util.js';
 import { t, translatePage } from './i18n.js';
 
 function updateWindowTitle() {
@@ -204,6 +204,7 @@ function menuHere() {
 }
 
 function bindKeys() {
+  document.addEventListener('copy', noteCopy);   // 고른 글을 복사하면 알림 (D151)
   document.addEventListener('keydown', (e) => {
     if (presenting()) {   // 발표 중(present.js, D59): 키는 모두 발표의 것 — 넘기기·노트·전체 화면·Esc
       presentKey(e);

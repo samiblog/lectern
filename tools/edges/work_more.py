@@ -206,7 +206,7 @@ try:
             check('H 2MB 넘는 WORK.md 는 읽지 않고 까닭', '2MB' in board.locator('.wk-bad').inner_text(), board.locator('.wk-bad').inner_text() if board.locator('.wk-bad').count() else '')
             width = page.evaluate("() => { const b = document.querySelector('.wk-board'); return [b.scrollWidth, b.clientWidth]; }")
             check('H 아주 긴 제목도 표가 옆으로 넘치지 않음', width[0] <= width[1] + 2, width)
-            todo_items = board.locator('.wk-list').nth(0).locator('li')
+            todo_items = board.locator('h3:has-text("기한 있는 할 일") + ul.wk-list > li')   # 위에 '주의할 것' 목록이 생겼다 (D149)
             check('H 할 일 500개는 50개만 보이고 나머지는 개수로', todo_items.count() == 51 and '그 밖에 450개' in todo_items.last.inner_text(), todo_items.count())
 
             print('[J 키보드만으로]')

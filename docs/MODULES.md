@@ -29,9 +29,11 @@
 | outline.js | 코드 화면의 목차 — 언어마다 클래스·함수·메서드·구분 주석, 설정 파일은 키·섹션 (줄 단위 규칙), 확장자 → 언어 |
 | notes.js | 프로젝트 메모 (D92) — 탭 막대 '메모'·Alt+M 의 오른쪽 패널, 카드(제목·본문·할 일·색·고정), 저장과 합치기. `tab.notes`, 'new-note' 로 더한다 |
 | notesdata.js | 메모의 글 (D92, DOM 없음) — `.lectern/notes.md` ↔ 메모 목록, 할 일 줄 다루기 (`parseNotes`·`writeNotes`·`toggleTask`) |
-| work.js | 업무 관리 (D124) — 업무 현황(공통 폴더의 폴더 개요 맨 위, 'rendered' 를 듣고 그린다), 툴바 '업무'·Alt+W, 업무 카드 만들기('work-card' — 기본 틀 `web/templates/work*.md` 로 POST /api/save 의 create), 일정 더하기 창(Alt+S — POST /api/work/card, 되돌리기), 폴더 더하기, 공통 폴더 정하기, 설정 창의 '업무 관리' 칸('settings-open'), 알림 칸(`notice` — 닫을 때까지 남는다) |
+| work.js | 업무 관리 (D124) — 업무 현황(공통 폴더의 폴더 개요 맨 위, 'rendered' 를 듣고 그린다 — 주의할 것·업무 나무·할 일·일정), 업무 나무의 칸(D149 — 총괄·묶음 폴더의 폴더 개요 '이 폴더의 업무', 상위 WORK.md 아래의 '하위 업무' — 본문 밖 `.wk-under`, 'work-changed' 에 다시 그림), 하위 업무는 품은 프로젝트의 탭에서 연다(`openCard`), 툴바 '업무'·Alt+W, 업무 카드 만들기('work-card' {folder} — 업무·묶음·작은 업무의 기본 틀 `web/templates/work*.md` 로 POST /api/save 의 create, 하위 폴더에도), 일정 더하기 창(Alt+S — POST /api/work/card, 되돌리기), 폴더 더하기, 공통 폴더 정하기, 설정 창의 '업무 관리' 칸('settings-open'), 알림 칸(`notice` — 닫을 때까지 남는다) |
 | workalert.js | 업무 알림 (D124) — 메인 창에서 1분마다 GET /api/work 를 읽어 시작 요약(날짜마다 한 번)·일정 10분 전·17:30 기록 알림. 띄운 것은 메모리에만, 설정 `work_alerts` 로 끈다 |
-| workdata.js | 업무 관리의 글 (D124, DOM 없음) — WORK.md 읽기(`readWork` — 머리 설정 status·priority·due, 제목, 할 일과 끝의 기한, 일정 줄), 오늘 기준 계산(`attention`·`dueTodos`·`dayEvents`·`eventsToRemind`·`quietToday`), 일정 줄(`eventLine`)과 넣을 자리(`insertEvent`) |
+| workdata.js | 업무 관리의 글 (D124, DOM 없음) — WORK.md 읽기(`readWork` — 머리 설정 status·priority·due, 제목, 할 일과 끝의 기한, 일정 줄), 오늘 기준 계산(`attention`·`dueTodos`·`dayEvents`·`eventsToRemind`·`quietToday`), 일정 줄(`eventLine`)과 넣을 자리(`insertEvent`). 업무 나무(D149 — `linkTree` 부모 잇기·하위에서 상태 셈, `treeWhy` 어긋남, 칸반의 칸 `LANES`)와 줄 하나 고치기(`setMeta`·`setTodo`·`insertTodo`) |
+| workview.js | 업무 나무와 칸반 (D149) — 나무 표(펼치기·접기, 끝난 하위 접기, 할 일 펼치기)와 칸반(끝 업무를 상태 다섯 칸에, 끌어 놓아 상태 바꾸기). 상위에서 고치기 — 상태·마감·우선·할 일 체크·기한·할 일 더하기를 그 업무의 WORK.md 한 줄로(`editRow` — GET·POST /api/work/card, 그사이 바뀌었으면 다시 그림). 업무를 여는 함수는 work.js 가 넘긴다 (`initWorkView` — 순환을 피하려고) |
+| datepick.js | 달력 입력 (D149) — 날짜 하나를 고르는 작은 달력(`pickDate` — 키보드, 빠른 단추, 점 찍을 날). 업무 카드·일정 더하기의 날짜 칸, 업무 나무의 마감·기한, 한 줄 편집·전체 편집의 Ctrl+; 와 넣기 창의 '날짜' |
 | html.js | 자동 이스케이프 (D89, DOM 없음) — `html` 태그의 값은 글로 들어간다. 화면에 넣는 길은 `setHtml`·`addHtml`, 이미 안전한 HTML 은 `raw`, 결과는 `Safe`. 조각은 배열로 잇는다 |
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
 | help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |

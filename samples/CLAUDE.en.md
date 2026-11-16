@@ -41,3 +41,4 @@ People read and edit in place this project's documents with **Lectern** (an Inte
 - Research documents go in `research/`, plans in `plans/`, reports in `reports/`.
 - When numbers change, update the research tables and the report numbers together.
 - This task's status, due date, to-dos and events are in `WORK.md` at the top (the work card). Front matter `status`, `priority`, `due` only; to-dos `- [ ] what (YYYY-MM-DD)`; events `- YYYY-MM-DD HH:MM what` (absolute dates). When work is done, add one line under today's date in the log section.
+- The `## 기획 메모` section of WORK.md (`## Planning notes` in English cards) is where people write freely. When asked to apply it, move items into to-dos, events, decisions and current status — skip lines that are already there, ask when a date is unclear, and never edit or delete the notes themselves. Afterwards add one line to the log section.

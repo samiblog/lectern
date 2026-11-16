@@ -40,6 +40,12 @@ export const voicePrompt = (refs = '') => (refs
   ? t('Lectern 의 내 문체 안내({guide})를 읽고, 내가 직접 쓴 {refs} 를 견본으로 내 문체 노트를 만들거나 보태 줘. 저장하기 전에 무엇을 찾았는지 먼저 보여 줘.', { guide: S.voiceGuide, refs })
   : t('Lectern 의 내 문체 안내({guide})를 읽고, 내가 직접 쓴 글을 견본으로 내 문체 노트를 만들어 줘. 저장하기 전에 무엇을 찾았는지 먼저 보여 줘. 견본: ', { guide: S.voiceGuide }));
 
+/**
+ * 기획 메모 반영 요청 (D150): ref 는 WORK.md 의 '@경로'. 옮길 곳·겹치는 줄·날짜·메모를 건드리지 않음·기록 한 줄은
+ * 작성 안내(web/help/writing.md 의 '업무 카드' 절)가 정한다. 문서 우클릭(docmenu.js)이 터미널에 Enter 없이 넣는다 (D51)
+ */
+export const memoPrompt = (ref) => t("Lectern 작성 안내({guide})의 '업무 카드' 절을 읽고, {ref} 의 '기획 메모' 절을 이 업무 카드의 할 일·일정·결정·현재 상태에 반영해 줘. 메모 글은 그대로 두고, 날짜가 분명하지 않으면 묻고, 반영한 것은 기록 절에 한 줄 남겨 줘.", { guide: S.writingGuide, ref });
+
 /** 하던 대화를 잇는 법 — 멈춘 프로그램을 다시 시작한 뒤의 안내 (terminal.js) */
 export function aiResume() {
   const one = aiInfo();

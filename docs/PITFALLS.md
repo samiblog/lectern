@@ -18,6 +18,7 @@
 
 ## 한 줄 편집·줄 구조·편집 모드·보내기
 
+- 앱 안의 이벤트(store.js 의 emit·on) 이름 하나에는 값 모양 하나만 — 문서 글자 크기의 'text-size'(배율 숫자)를 슬라이드 구성 요소의 글자 크기({dir})가 함께 들어서, Ctrl+=·Ctrl+- 마다 슬라이드 처리기가 dir 없이 돌아 md 문서에는 엉뚱한 알림이, Lectern 슬라이드에는 파일에 NaN 을 쓸 수 있었다 (0.85.0 에 'slide-text-size' 로 나눔). 새 이벤트를 만들기 전에 그 이름을 grep 한다.
 - 현재 위치·줄 하이라이트(D75)의 줄은 `lineunits.js` 가 그린 DOM 과 `data-lines` 로 센다 — 여러 줄로 나눠 쓴 문단은 markdown-it 이 softbreak 자리에 남긴 글 노드의 `\n` 으로 나누므로, 문단 안의 글 노드를 바꾸는 후처리(강조글 표시 떼기처럼)를 더하면 줄 수가 맞는지 본다 (조각이 모자라면 남는 줄을 붙인다). 블록 렌더러가 `data-lines` 를 빠뜨리면 그 줄은 고를 수 없다. 칸 위에 새 상자를 덮으면 `.lec-spot`·`.lec-here`(z-index 5)와의 순서를 본다 — 코드 화면 머리줄은 6.
 - 한 줄 편집(D76)은 문서 DOM 안에 글 칸을 넣는다 (편집 상자처럼 덮지 않는다) — 편집하는 동안(`pane.lineEdit`) `refreshView` 가 그 칸을 다시 그리지 않으니, 칸을 다시 그리는 새 길을 만들면 `refreshView` 를 거치거나 `pane.lineEdit` 을 본다. 이미 그리던 것은 끝날 때 화면째 바꾸므로 칸은 다시 그리는 중(`pane.pending`·`pane.redrawing`)이 아닐 때만 넣는다. 칸 안의 키는 거품을 막으므로 main.js 의 단축키는 편집 중에 오지 않는다. 저장은 편집 모드와 같은 `/api/save` 만 — 편집이 파일을 고치는 새 길은 `replaceLines` 를 거쳐야 되돌리기 기록에 쌓인다. 기록은 저장 응답이 온 뒤에 쌓이니 되돌리기는 저장 중인 것(`saving`)을 기다린다 — 기다리지 않으면 칸의 Enter 바로 뒤 Ctrl+Z 가 방금 저장한 파일을 '그사이 바뀌었다'고 보고 그 파일의 기록을 모두 버린다 (2026-11-08 무작위 시험에서 찾음). F2·두 번 누르기는 하이라이트를 만들지 않으니 편집 중 줄을 옮기는 코드는 `followLine` 을 쓴다. 본문의 체크 칸은 `doc.js` 가 `disabled` 를 뗀 것이고 슬라이드·사용설명서는 그대로 표시만이다.
 - 줄 구조 편집(D83)의 새 줄은 글을 쓸 때까지 화면에만 있다 (`session.fresh`, `.lec-new-line` — `data-lines`·`data-line` 이 없어 줄 단위에 들지 않는다). 구조를 바꾸는 새 키는 `lineedit.restructure` 를 거친다 — 고친 글을 저장하고 `lineops` 로 계산해 `commit`(`diffRange` + `replaceLines`) 한 뒤 그 줄에서 편집을 잇는다. `lineops.js` 의 계산은 들여쓰기로 목록을 읽으므로 markdown-it 설정을 바꾸면 `tools/edges/lineops_cases.js` 를 같이 본다. 넘어가는 사이(`pane.lineEditHold`)에는 Ctrl+Z 와 하이라이트 옮기기가 쉰다. 그사이의 ↑·↓ 는 초점이 문서에 있어 `spotKey` 로 오는데, 현재 줄을 옮기면 곧 열리는 칸과 엇갈린다 — `line-step` 으로 모아 칸이 열리면 잇는다 (D128, `drainSteps`). 넘어가는 새 길(`hold`·`step` 말고)을 만들면 끝에서 `drainSteps` 를 부른다.
@@ -51,6 +52,8 @@
 - 코드 파일의 확장자 목록은 두 곳이다 — 화면 `icons.js` 의 code 종류('코드' 목록·코드 화면·Ctrl+P)와 서버 `scanner.CODE_EXT`(전체 검색의 코드, D44). 함께 고친다 (`tests/test_search.py` 가 맞춰 본다).
 
 ## 화면 구조·칸·탭
+
+- `'rendered'` 는 렌더러(doc.js·overview.js)가 다 그린 직후에 오고, `nav.js` 가 `pane.current` 를 새 화면으로 바꾸는 것은 그 뒤다 — 같은 칸에서 문서를 바꿔 열면 듣는 쪽이 본 `pane.current` 는 앞 화면이다. 그린 화면의 경로가 필요하면 한 박자 뒤(`setTimeout`)에 보거나 `view.dataset.docPath`(md 문서만)를 본다 (D149 — 업무 나무의 '하위 업무' 칸이 이것으로 앞 문서를 보고 그리지 않았다).
 
 - 문서를 여는 길마다 어디에 열지가 다르다 (D91): 사이드바 목록·빠른 열기는 `util.openHow`(누르기 = 새 문서 탭), 본문의 링크는 `util.linkHow`(누르기 = 지금 탭). 새 여는 길을 만들면 둘 중 하나를 고르고 두 번 누르기의 둘째를 `repeatClick` 으로 거른다. Enter 로 여는 곳은 `clickFromKey` 로 Ctrl·Alt 를 넘긴다. `behind` 로 연 탭은 고르지 않으므로 이어서 그 문서 안으로 가는 코드(찾기·줄로 가기)는 돌리지 않는다. 화면 점검에서 옛 흐름(지금 탭)을 쓰려면 `click(modifiers=['Alt'])`.
 - Lectern 슬라이드는 창 모드에서 슬라이드 창으로 연다 (`doctabs.openTarget`, D96) — 판정은 `tab.fileMap` 의 `deck` 이니 막 만든 문서는 `target.deck` 을 넘긴다. 슬라이드 창의 스타일 키는 `theme.js` 의 `themeKey()`.

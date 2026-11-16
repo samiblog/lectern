@@ -192,8 +192,8 @@ flowchart LR
 | `GET /api/new-doc?p=<id>&path=<경로>` | | 그 자리에 새 문서를 만들 수 있는지 (D65 — 경로를 정하면 먼저 묻고, 되면 `POST /api/save` 의 create 로 만든다). 읽기만. `{path}`(폴더는 실제 이름) 또는 `{error, status}` — 물음의 답이라 늘 200 |
 | `GET /api/notes?p=<id>` | | 프로젝트 메모의 글 (D92 — `.lectern/notes.md`, 없으면 빈 글): `{text, hash, exists}` |
 | `POST /api/notes` | `{p, text, hash}` | 프로젝트 메모를 쓴다. 경로는 정해져 있고 처음이면 만든다. 그사이 바뀌었으면 409. `{hash, size}` |
-| `GET /api/work` | | 업무 현황의 재료 (D124) — 공통 폴더(`work_home`)와 기억한 폴더들(`work_folders`)의 WORK.md 글. 탭이 닫혀 있어도 읽고, 열린 탭에 그사이 생긴 WORK.md 는 목록에 더한다. 폴더마다 따로 읽어 늦는 드라이브는 3초 뒤 `slow`. `{home: {path, name, text, hash, mtime} \| {path, name, error} \| null, folders: [같은 모양…], alerts}` — error 는 `missing-folder`·`missing-card`·`unreadable`·`slow` |
-| `GET /api/work/card?folder=` | | 목록·공통 폴더의 WORK.md 원문 (일정 더하기가 고친다) — `/api/source` 와 같은 모양. 목록에 없는 폴더는 403 |
+| `GET /api/work` | | 업무 현황의 재료 (D124) — 공통 폴더(`work_home`)와 기억한 폴더들(`work_folders`)의 WORK.md 글. 탭이 닫혀 있어도 읽고, 열린 탭에 그사이 생긴 WORK.md 는 목록에 더한다. 열린 프로젝트의 하위 폴더 WORK.md 도 찾아 더하고, 그 프로젝트 안에서 사라진 하위 업무는 뺀다 (D149 — `work.discover`, 스캔 캐시를 쓴다). 나무로 잇는 것(부모·하위에서 셈)은 화면이 한다 (`workdata.linkTree`). 폴더마다 따로 읽어 늦는 드라이브는 3초 뒤 `slow`. `{home: {path, name, text, hash, mtime} \| {path, name, error} \| null, folders: [같은 모양…], alerts}` — error 는 `missing-folder`·`missing-card`·`unreadable`·`slow` |
+| `GET /api/work/card?folder=` | | 목록·공통 폴더의 WORK.md 원문 (일정 더하기·상위에서 고치기가 고친다 — D149) — `/api/source` 와 같은 모양. 목록에 없는 폴더는 403 |
 | `POST /api/work/card` | `{folder, text, hash}` | 목록·공통 폴더의 WORK.md 를 쓴다 (일정 더하기 — 사용자가 넣을 곳을 고르고 누를 때). 그사이 바뀌었으면 409, 목록에 없는 폴더는 403. `{hash, size}` |
 | `POST /api/work/folders` | `{add: 경로}` 또는 `{remove: 경로}` | 업무 폴더 목록에 더하거나 뺀다 (파일은 그대로). 더할 폴더에 WORK.md 가 없으면 404 와 `code: no-card`, 프로그램 폴더 안은 403. `{folders, path?}` |
 | `POST /api/work/home` | `{path}` | 공통 폴더를 정한다 (null·빈 글이면 비운다). 목록에 같은 폴더가 있으면 뺀다. `{home}` |

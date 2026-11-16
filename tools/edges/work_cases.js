@@ -1,6 +1,6 @@
 // workdata.js 의 표 점검 — rules_check.mjs 가 돌린다 (m: workdata.js 모듈)
 const { readWork, dueDay, daysBetween, addDays, attention, groupOf, dueTodos, dayEvents, eventsToRemind, pastLogTime, quietToday, nextWeekday,
-  eventLine, insertEvent, fillTemplate, isoDay } = m;
+  eventLine, insertEvent, fillTemplate, isoDay, linkTree, treeWhy, leafCounts, trail, laneOf, statusWord, setMeta, setTodo, insertTodo, todoLine } = m;
 const fails = [];
 let n = 0;
 const same = (name, got, want) => {
@@ -213,5 +213,76 @@ same('B10 제목이 일정으로 시작해도 일정 절이 아님 (# 일정 관
   `# T\n\n## 일정표 정리\n\n글\n\n## 일정\n\n${L}\n`,
 ]);
 same('B9 닫는 --- 를 지운 파일에도 일정 절을 찾아 넣음', insertEvent('---\nstatus: 진행\n\n## 일정\n\n## 기록\n', L).text, `---\nstatus: 진행\n\n## 일정\n\n${L}\n\n## 기록\n`);
+
+// ---- 업무 나무 (D149) ----
+{
+  const card = (status, due = '') => `---\nstatus: ${status}\ndue: ${due}\n---\n\n# T\n`;
+  const row = (path, status, due = '') => ({ path, card: { ...readWork(card(status, due), TODAY), title: path.split('/').pop() }, title: path.split('/').pop() });
+  const rows = [
+    row('D:/w/총괄', ''),                       // 비움 — 하위에서 셈
+    row('D:/w/총괄/이슈리포트', '', '2026-11-30'),
+    row('D:/w/총괄/이슈리포트/01', '완료'),
+    row('D:/w/총괄/이슈리포트/02', '막힘', '2026-11-20'),
+    row('D:/w/총괄/이슈리포트/03', '진행', '2026-12-05'),   // 묶음 마감(11-30)보다 늦다
+    row('D:/w/총괄/정기보고/주간', '진행', '2026-11-18'),   // 정기보고 에는 WORK.md 가 없다 — 총괄 바로 아래
+    row('D:/w/다른', '예정'),
+  ];
+  const roots = linkTree(rows);
+  const [top, group, a, b, c, weekly, other] = rows;
+  same('T1 맨 위 행', roots.map((r) => r.title), ['총괄', '다른']);
+  same('T2 부모는 가장 가까운 위 폴더의 업무 (WORK.md 없는 폴더는 건너뜀)', [a.parent.title, group.parent.title, weekly.parent.title, other.parent], ['이슈리포트', '총괄', '총괄', null]);
+  same('T3 깊이', rows.map((r) => r.depth), [0, 1, 2, 2, 2, 1, 0]);
+  same('T4 비운 묶음은 하위에서 셈 — 막힘이 하나라도 있으면 막힘', [group.eff, group.derived, top.eff, top.derived], ['blocked', true, 'blocked', true]);
+  same('T5 적은 상태는 그대로', [b.eff, b.derived, other.eff], ['blocked', false, 'planned']);
+  same('T6 하위 끝 업무 셈', leafCounts(top), { total: 4, open: 3, byStatus: { done: 1, blocked: 1, active: 2 } });
+  same('T7 다음 마감 = 열린 하위 가운데 가장 이른 것', [group.next, top.next], ['2026-11-20', '2026-11-18']);
+  same('T8 하위 마감이 묶음 마감보다 늦음', treeWhy(group), ['kid-late']);
+  same('T9 위 이름', [trail(b), trail(b, top)], [['총괄', '이슈리포트'], ['이슈리포트']]);
+  const done = [row('D:/x', ''), row('D:/x/a', '완료'), row('D:/x/b', '중단')];
+  linkTree(done);
+  same('T10 하위가 모두 끝나면 완료 (모두 중단이면 중단)', done[0].eff, 'done');
+  const closedTop = [row('D:/y', '완료'), row('D:/y/a', '진행')];
+  linkTree(closedTop);
+  same('T11 완료인데 하위가 열림', treeWhy(closedTop[0]), ['kids-open']);
+  same('T12 칸반의 칸', ['planned', 'active', 'blocked', 'at-risk', 'on-hold', 'done', 'dropped', null].map(laneOf), ['planned', 'active', 'watch', 'watch', 'hold', 'closed', 'closed', 'none']);
+  same('T13 파일에 쓸 상태 값 — 그 파일의 말을 따름', [statusWord('blocked', '진행', 'en'), statusWord('blocked', 'active', 'ko'), statusWord('blocked', '', 'ko'), statusWord('blocked', '', 'en')], ['막힘', 'blocked', '막힘', 'blocked']);
+}
+{
+  const src = '---\nstatus: 진행\npriority: 상\n---\n\n# T\n\n## 할 일\n\n- [ ] 초안 (11/14)\n- [x] 자료\n\n## 기록\n';
+  same('E1 머리 설정의 값만 바꿈', setMeta(src, 'status', '막힘'), src.replace('status: 진행', 'status: 막힘'));
+  same('E2 없는 키는 닫는 --- 앞에', setMeta(src, 'due', '2026-11-30'), src.replace('priority: 상\n', 'priority: 상\ndue: 2026-11-30\n'));
+  same('E3 비우기', setMeta(src, 'status', ''), src.replace('status: 진행', 'status:'));
+  same('E4 머리 설정이 없으면 만듦', setMeta('# T\n', 'due', '2026-11-30'), '---\ndue: 2026-11-30\n---\n# T\n');
+  same('E5 닫히지 않은 머리 설정은 고치지 않음', setMeta('---\nstatus: 진행\n# T\n', 'status', '완료'), null);
+  same('E6 키 이름의 대소문자는 그대로', setMeta('---\nStatus: 진행\n---\n', 'status', '완료'), '---\nStatus: 완료\n---\n');
+  same('E7 할 일 체크 — 기한은 그대로', setTodo(src, 10, '초안', { done: true }), src.replace('- [ ] 초안 (11/14)', '- [x] 초안 (11/14)'));
+  same('E8 할 일 기한 바꾸기·빼기', [setTodo(src, 10, '초안', { due: '2026-11-21' }), setTodo(src, 10, '초안', { due: '' })],
+    [src.replace('초안 (11/14)', '초안 (2026-11-21)'), src.replace('초안 (11/14)', '초안')]);
+  same('E9 기한이 없던 할 일에 기한', setTodo(src, 11, '자료', { due: '2026-11-21' }), src.replace('- [x] 자료', '- [x] 자료 (2026-11-21)'));
+  same('E10 그 줄이 바뀌었으면 고치지 않음', [setTodo(src, 10, '다른 글', { done: true }), setTodo(src, 9, '초안', { done: true })], [null, null]);
+  same('E11 할 일 더하기는 할 일 절 끝에', insertTodo(src, todoLine('새 일', '2026-11-25')).text, src.replace('- [x] 자료\n', '- [x] 자료\n- [ ] 새 일 (2026-11-25)\n'));
+  same('E12 할 일 절이 없으면 끝에 만듦', insertTodo('# T\n', todoLine('a')).text, '# T\n\n## 할 일\n\n- [ ] a\n');
+  same('E13 영어 절 이름 (To do)', insertTodo('# T\n\n## To do\n\n- [ ] a\n\n## Log\n', todoLine('b'), 'Todo').text, '# T\n\n## To do\n\n- [ ] a\n- [ ] b\n\n## Log\n');
+}
+
+// ---- 기획 메모 (D150) — 사람이 자유롭게 쓰는 절은 읽지 않는다 -----------------------------------------------------
+{
+  const MEMO = [
+    '---', 'status: 진행', '---', '', '# 과제', '', '## 기획 메모', '',
+    '- [ ] 메모 속 체크 칸', '- 2026-11-25 초안 회의?', '- [] 오타 같은 칸', '', '### 메모 안의 소제목', '', '- [ ] 여기도 메모',
+    '', '## 할 일', '', '- [ ] 진짜 할 일 (11/14)', '', '## 일정', '', '- 2026-11-20 10:00 진짜 일정', '',
+  ].join('\n');
+  const r = readWork(MEMO, TODAY);
+  same('M1 메모 속 할 일은 세지 않음', r.todos.map((x) => [x.text, x.line]), [['진짜 할 일', 19]]);
+  same('M2 메모 속 날짜 줄은 일정이 아님', r.events.map((x) => [x.date, x.text]), [['2026-11-20', '진짜 일정']]);
+  same('M3 메모 속 오타는 확인할 줄에 없음', r.problems, []);
+  same('M4 이름 뒤 괄호·콜론, 영어, 자유 서술', ['## 기획 메모 (11월)', '## 기획 메모:', '### Planning notes', '## 자유 서술', '##기획 메모'].map((h) => readWork(`# T\n\n${h}\n\n- [ ] a\n`, TODAY).todos.length), [0, 0, 0, 0, 0]);
+  same('M5 비슷한 이름은 메모가 아님', ['## 기획 메모 정리 방법', '# 기획 메모', '## 메모'].map((h) => readWork(`# T\n\n${h}\n\n- [ ] a\n`, TODAY).todos.length), [1, 1, 1]);
+  same('M6 ### 메모는 다음 ### 에서 끝남', readWork('# T\n\n## 일\n\n### 기획 메모\n\n- [ ] 메모\n\n### 다음\n\n- [ ] 할 일\n', TODAY).todos.map((x) => x.text), ['할 일']);
+  same('M7 코드 블록 안의 ## 기획 메모 는 절이 아님', readWork('# T\n\n```\n## 기획 메모\n```\n\n- [ ] a\n', TODAY).todos.length, 1);
+  same('M8 제목은 메모 앞의 # 줄', readWork('## 기획 메모\n\n# 메모 뒤 제목\n', TODAY).title, '메모 뒤 제목');
+  same('M9 일정 더하기는 메모를 건너뛰고 일정 절에', insertEvent(MEMO, '- 2026-11-30 새 일정').line, 24);
+  same('M10 할 일 더하기도 할 일 절에', insertTodo(MEMO, todoLine('새 일')).line, 20);
+}
 
 return { fails, n };

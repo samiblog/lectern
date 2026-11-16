@@ -203,3 +203,71 @@ def test_bad_values_in_the_file_fall_back(tmp_path):
     cfg.path.write_text('{"work_folders": "C:/x", "work_home": 3}', encoding='utf-8')
     cfg = Config()
     assert cfg.get('work_folders') == [] and cfg.get('work_home') is None
+
+
+# ---- 업무 나무 (D149) ------------------------------------------------------------------------
+
+
+def test_open_projects_remember_nested_work_md(state, client, tmp_path):
+    """열린 프로젝트의 하위 폴더 WORK.md 도 업무 폴더 목록에 — 숨김·제외 폴더 안의 것은 빼고"""
+    root = folder(tmp_path, 'p')
+    write(root / '이슈' / '01' / 'WORK.md', CARD)
+    write(root / '이슈' / '02' / 'WORK.md', CARD)
+    write(root / 'node_modules' / 'x' / 'WORK.md', CARD)
+    write(root / '.hidden' / 'WORK.md', CARD)
+    state.open(root)
+    got = client.get('/api/work').get_json()
+    paths_ = {f['path'] for f in got['folders']}
+    assert paths_ == {str(root), str(root / '이슈' / '01'), str(root / '이슈' / '02')}
+
+
+def test_moved_nested_cards_drop_out_while_the_project_is_open(state, client, tmp_path):
+    """하위 폴더의 이름을 바꾸면 옛 경로는 빠지고 새 경로가 들어온다 (프로젝트가 열려 있을 때)"""
+    root = folder(tmp_path, 'p')
+    write(root / 'a' / 'WORK.md', CARD)
+    project = state.open(root)
+    client.get('/api/work')
+    assert str(root / 'a') in state.config.get('work_folders')
+    (root / 'a').rename(root / 'b')
+    project.log.push(None, structure=True)   # 감시가 알리는 것과 같게 — 트리를 다시 훑는다
+    client.get('/api/work')
+    listed = state.config.get('work_folders')
+    assert str(root / 'b') in listed and str(root / 'a') not in listed and str(root) in listed
+
+
+def test_closed_project_keeps_its_nested_cards(state, client, tmp_path):
+    """탭을 닫아도 하위 업무는 목록에 남아 업무 현황에 나온다 (그 WORK.md 한 파일씩만 읽는다)"""
+    root = folder(tmp_path, 'p')
+    write(root / 'a' / 'WORK.md', CARD)
+    write(root / 'a' / 'note.md', '# 다른 글\n')
+    project = state.open(root)
+    client.get('/api/work')
+    state.close_tab(project.id)
+    got = client.get('/api/work').get_json()
+    assert {f['path'] for f in got['folders']} == {str(root), str(root / 'a')}
+    assert '다른 글' not in str(got)
+
+
+def test_card_made_in_a_subfolder_is_remembered(state, client, tmp_path):
+    """하위 폴더에 업무 카드 만들기 (POST /api/save 의 create) — 그 폴더가 목록에"""
+    root = folder(tmp_path, 'p', card=None)
+    (root / '이슈').mkdir()
+    project = state.open(root)
+    r = client.post('/api/save', json={'p': project.id, 'path': '이슈/WORK.md', 'text': CARD, 'create': True})
+    assert r.status_code == 200
+    assert str(root / '이슈') in state.config.get('work_folders')
+
+
+def test_nested_card_can_be_edited_through_the_work_api(state, client, tmp_path):
+    """상위에서 고치기는 일정 더하기와 같은 길 — 목록의 하위 WORK.md 를 읽고, 그사이 바뀌었으면 409"""
+    root = folder(tmp_path, 'p')
+    sub = root / 'a'
+    write(sub / 'WORK.md', CARD)
+    state.open(root)
+    client.get('/api/work')
+    src = client.get(f'/api/work/card?folder={sub}').get_json()
+    new = src['text'].replace('status: 진행', 'status: 막힘')
+    assert client.post('/api/work/card', json={'folder': str(sub), 'text': new, 'hash': src['hash']}).status_code == 200
+    assert 'status: 막힘' in (sub / 'WORK.md').read_text(encoding='utf-8')
+    stale = client.post('/api/work/card', json={'folder': str(sub), 'text': CARD, 'hash': src['hash']})
+    assert stale.status_code == 409

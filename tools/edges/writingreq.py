@@ -1,5 +1,5 @@
 """보고서 글쓰기의 요청 글 (D148): 문서 여백 우클릭의 '다듬기 점검 요청'·'내 문체 견본으로 보내기', 고른 줄의 '이 범위 다듬기 점검 요청',
-설정 창의 '내 문체'. 요청 글이 안내 파일(review.md·voice.md)의 경로와 문서 위치를 담는지, Lectern 슬라이드·코드에는 무엇이 나오는지,
+설정 창의 '내 문체', 업무 카드의 '기획 메모 반영 요청'(D150). 요청 글이 안내 파일(review.md·voice.md)의 경로와 문서 위치를 담는지, Lectern 슬라이드·코드에는 무엇이 나오는지,
 글쓰기 스타일 설치 요청이 '내 문체' 절을 옮기라고 하는지, 영어 화면. 앱은 요청 글만 터미널에 넣는다 (D51 — Enter 없이)"""
 import json
 import tempfile
@@ -18,6 +18,9 @@ config = base / 'config'
 (proj / 'docs' / 'a.md').write_text('# 검토 보고서\n\n첫째 문단입니다. 결제를 받은 뒤 발주한다.\n\n둘째 문단입니다.\n', encoding='utf-8')
 (proj / 'docs' / 'deck.md').write_text('---\nmarp: true\n---\n\n# 발표\n\n---\n\n## 둘째 장\n\n- 항목\n', encoding='utf-8')
 (proj / 'src' / 'x.py').write_text('print(1)\n', encoding='utf-8')
+(proj / 'WORK.md').write_text('---\nstatus: 진행\n---\n\n# 과제\n\n## 기획 메모\n\n- [ ] 메모 속 체크 칸\n\n## 할 일\n\n- [ ] 진짜 할 일\n', encoding='utf-8')
+(proj / 'docs' / '하위').mkdir()
+(proj / 'docs' / '하위' / 'WORK.md').write_text('# 하위 업무\n\n## 기획 메모\n\n- 생각\n', encoding='utf-8')
 
 OPEN = "(path) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path }))"
 # 터미널에 넣는 글을 함께 받아 둔다 (터미널도 그대로 받는다 — Enter 없이)
@@ -122,8 +125,24 @@ try:
         page.keyboard.press('Escape')
         check('코드에는 없다', not any('다듬기' in x or '내 문체' in x for x in items), items)
 
+        print('[업무 카드의 기획 메모 반영 요청 (D150)]')
+        open_doc(page, 'docs/a.md')
+        check('보통 문서에는 없다', '기획 메모 반영 요청' not in menu(page))
+        writing = page.evaluate("() => import('/static/js/store.js').then((m) => m.S.writingGuide)")
+        open_doc(page, 'WORK.md')
+        items = menu(page, keep=True)
+        check('WORK.md 에는 있다 — 다듬기 요청 뒤', '기획 메모 반영 요청' in items and items.index('다듬기 점검 요청') < items.index('기획 메모 반영 요청'), items)
+        click_item(page, '기획 메모 반영 요청')
+        got = page.evaluate(PASTED)[-1]
+        check('요청 글: 작성 안내 경로·업무 카드 절·@WORK.md·기획 메모', writing.endswith('writing.md') and writing in got and "'업무 카드'" in got and '@WORK.md' in got and "'기획 메모'" in got and '\n' not in got, got)
+        open_doc(page, 'docs/하위/WORK.md')
+        menu(page, keep=True)
+        click_item(page, '기획 메모 반영 요청')
+        check('하위 폴더의 WORK.md 는 그 경로로', '@docs/하위/WORK.md' in page.evaluate(PASTED)[-1], page.evaluate(PASTED)[-1:])
+
         print('[설정 창의 내 문체]')
         open_doc(page, 'docs/a.md')
+        page.locator('#lec-view p').first.click()   # 요청 글을 넣으면 초점이 터미널로 간다 — 문서로 되돌린다
         open_settings(page)
         check('내 문체 칸과 두 버튼', page.is_visible('#lec-voice-prompt') and page.is_visible('#lec-voice-term'))
         check('설명', '내 문체 견본으로 보내기' in page.evaluate("() => document.querySelector('#lec-voice-desc').textContent"))

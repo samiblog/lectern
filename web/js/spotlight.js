@@ -723,7 +723,7 @@ function updateStatus() {
   if (edit && painted === view()) {
     el.hidden = false;
     el.textContent = `${t('한 줄 편집')} ${rangeText([edit.line, edit.line])}`;
-    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄 · Shift+→(글 끝) 저장하고 {ai} 로 보내기', { ai: aiName() });
+    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄');
     return;
   }
   const r = lit() && painted === view() ? litLines() : null;
@@ -978,7 +978,7 @@ export function spotKey(e) {
     if (e.shiftKey && termDigit(e) != null) return e.repeat || sendHere(true, termDigit(e));   // Ctrl+Shift+숫자 (D137)
     if (view().classList.contains('lec-deck')) {   // 슬라이드 (D96): 구성 요소의 글자 크기, 장 더하기·복제
       if (e.shiftKey && (e.code === 'Period' || e.code === 'Comma')) {
-        emit('text-size', { dir: e.code === 'Period' ? 1 : -1 });
+        emit('slide-text-size', { dir: e.code === 'Period' ? 1 : -1 });
         return true;
       }
       if (!e.shiftKey && (e.code === 'KeyM' || e.code === 'KeyD')) {

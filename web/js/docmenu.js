@@ -32,7 +32,7 @@ import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
-import { aiName, reviewPrompt, voicePrompt } from './aitool.js';
+import { aiName, reviewPrompt, voicePrompt, memoPrompt } from './aitool.js';
 import { printDoc, openPrint, canSavePdf, canExportHtml } from './printdoc.js';
 import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
@@ -400,11 +400,18 @@ function writingItems() {
     action: () => emit('term-paste', voicePrompt(`@${doc.path}`)) }])];
 }
 
+/** 기획 메모 반영 요청 (D150): 업무 카드(WORK.md)만 */
+function workItems() {
+  if (!/(^|\/)work\.md$/i.test(doc?.path || '')) return [];
+  return [{ label: t('기획 메모 반영 요청'), tip: t('{ai} 에게 이 업무 카드의 기획 메모를 할 일·일정·결정에 옮겨 달라는 요청 — 터미널에 (Enter 는 누르지 않음)', { ai: aiName() }),
+    action: () => emit('term-paste', memoPrompt(`@${doc.path}`)) }];
+}
+
 function docItems(views = []) {
   /** @type {MenuItem[]} */
   const folds = hasFolds() ? [{ label: t('모두 접기'), action: () => foldAll(true) }, { label: t('모두 펴기'), action: () => foldAll(false) }] : [];
   return menuGroups([{ header: doc.path }], pathMenuItems(doc.path, true), [...(canStyle() ? [{ label: t('md 문서 스타일…'), tip: t('문서 방식과 머리글 모양을 고릅니다'), action: () => emit('md-style') }] : []), { label: t('이 문서 편집'), hint: 'Ctrl+E', action: () => emit('edit') }],
-    writingItems(), [...folds, ...views], printItems());
+    [...writingItems(), ...workItems()], [...folds, ...views], printItems());
 }
 
 /** 'PDF로 저장…'(창 모드의 md 문서 — 보고서 양식, 브라우저 머리글 없이)과 '인쇄…'. 그 밖(html 문서·브라우저 개발 모드)은 인쇄 창 하나 (D131) */

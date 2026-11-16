@@ -204,6 +204,12 @@ try:
         page.keyboard.press('Control+Shift+Period')
         page.wait_for_timeout(800)
         check('그림 폭을 키운다', '![w:420 그림]' in src(), src()[:240])
+        before = src()
+        page.keyboard.press('Control+=')
+        page.wait_for_timeout(800)
+        page.keyboard.press('Control+0')
+        page.wait_for_timeout(800)
+        check('문서 글자 크기(Ctrl+= · Ctrl+0)는 슬라이드 파일을 바꾸지 않는다', src() == before and 'NaN' not in src(), src()[:240])
         reset()
 
         print('[표의 메뉴]')

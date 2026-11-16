@@ -114,6 +114,18 @@ export async function copyText(text) {
   }
 }
 
+/**
+ * 브라우저가 바로 복사한 것을 알린다 (D151 — 끌어 고른 글·고른 낱말의 Ctrl+C, 우클릭의 복사). 입력 칸·편집기·터미널(모두 글 상자)은 빼고,
+ * 앱이 복사하는 길(copyText — 고른 줄의 원문·위치)은 저마다 알린다. main.js 가 앱 문서에, htmldoc.js 가 html 문서(iframe)에 단다
+ */
+export function noteCopy(e) {
+  const el = e.target?.closest ? e.target : e.target?.parentElement;
+  if (el?.closest?.('input, textarea, select')) return;
+  const text = (el?.ownerDocument ?? document).getSelection()?.toString().replace(/\s+/g, ' ').trim();
+  if (!text) return;
+  toast(t('복사했습니다: {what}', { what: text.length > 40 ? `${text.slice(0, 40)}…` : text }));
+}
+
 let toastTimer = 0;
 /**
  * 보기만 하는 프로젝트(D71 — Lectern 프로그램 폴더 안: 설치된 예제 등)면 알리고 true. 터미널·편집·새 문서·이름 바꾸기·보내기 앞에서 부른다

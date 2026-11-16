@@ -2849,6 +2849,9 @@ def run(headed: bool) -> None:
             meta_keys = list(mk())
             page.click('#lec-parts-kinds button[data-mkey="status"]')
             meta_rows = page.evaluate("[...document.querySelectorAll('#lec-parts-list .pt-val .label, #lec-parts-list .pt-mdoc .label')].map(e => e.textContent)")
+            # '진행' 묶음에 견본 WORK.md (예제의 업무 나무 — D149 의 하위 업무도 '진행'), 그다음 '진행 중' 묶음에 계획 문서
+            cut = meta_rows.index('진행 중') if '진행 중' in meta_rows else len(meta_rows)
+            meta_ok = meta_rows[:1] == ['진행'] and '구리 시장 리서치 자동화' in meta_rows[1:cut] and meta_rows[cut + 1:cut + 2] == ['리서치 자동화 구현 계획']
             shot('23-parts-meta')
             page.click('#lec-parts-mode button[data-mode="parts"]')
             page.click('#lec-parts-kinds button[data-kind="table"]')
@@ -2856,9 +2859,9 @@ def run(headed: bool) -> None:
             check(all(more_kinds.get(k, 0) > 0 for k in ('chart', 'task', 'link', 'source')) and more_kinds['diagram'] > 0 and chart_thumbs
                   and task_sub == ['open*', 'done', 'all'] and open_tasks and done_tasks and links['n'] > 10 and links['bad'] == 0 and links['code']
                   and any(n.startswith('각주') for n in notes) and 'status' in meta_keys and 'tags' in meta_keys
-                  and meta_rows[:4] == ['진행', '구리 시장 리서치 자동화', '진행 중', '리서치 자동화 구현 계획'] and '구리 시장 2분기 리뷰' not in meta_rows,
+                  and meta_ok and '구리 시장 2분기 리뷰' not in meta_rows,
                   f"모아 보기의 차트(작은 그림)·할 일(안 한 것/한 것)·링크(코드 위치·깨짐 없음)·출처(각주), 문서 정보(frontmatter 키·값) "
-                  f"({more_kinds}, {chart_thumbs}, {task_sub}, {links}, {notes[:2]}, {meta_keys}, {meta_rows[:4]})")
+                  f"({more_kinds}, {chart_thumbs}, {task_sub}, {links}, {notes[:2]}, {meta_keys}, {meta_rows[:6]})")
 
             tab_el(1).locator('.tab-close').click()   # 예제 탭을 닫고 점검 프로젝트로
             back = n_tabs(1) and tree_root() == 'samples'

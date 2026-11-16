@@ -62,8 +62,13 @@ const BLOCK_ITEMS = () => [
 const NOT_IN_DECK = new Set(['textbox', 'note', 'tablenote', 'attach', 'appendix', 'rule', 'pagebreak', 'toc', 'tables', 'figures', 'ref', 'cite']);
 const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표자 노트'), words: 'speaker note 노트 메모' });   // i18n-ok (찾는 말)
 
+/** 글 속에 넣는 것 (D149 — 날짜는 달력에서 골라 커서 자리에) */
+const INLINE_ITEMS = () => [
+  { id: 'date', group: t('글'), name: t('날짜'), hint: 'Ctrl+;', words: 'date today calendar 오늘 달력 기한 마감' },   // i18n-ok (찾는 말)
+];
+
 /** 넣을 수 있는 것 */
-export const putItems = (deck = false) => [...TEXT_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS().filter((x) => !deck || !NOT_IN_DECK.has(x.id)), ...(deck ? [SPEAKER()] : [])];
+export const putItems = (deck = false) => [...TEXT_ITEMS(), ...INLINE_ITEMS(), ...BOX_ITEMS(), ...BLOCK_ITEMS().filter((x) => !deck || !NOT_IN_DECK.has(x.id)), ...(deck ? [SPEAKER()] : [])];
 /** 줄 전체의 서식 (D141 — 굵게·기울임·취소선은 다시 고르면 풀고, 형광펜·글자색은 다시 고르면 다음 색) */
 const FORMAT_ITEMS = () => [
   { id: 'fmt:bold', group: t('줄 전체의 서식'), name: t('굵게'), words: 'bold 진하게 ** 서식' },   // i18n-ok (찾는 말)

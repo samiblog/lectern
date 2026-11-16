@@ -28,6 +28,7 @@ import { html, setHtml } from './html.js';
 import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
 import { isCode } from './icons.js';
 import { t } from './i18n.js';
+import { pickDate } from './datepick.js';
 import { aiCli } from './aitool.js';
 
 const LIB = '/static/vendor/codemirror';
@@ -134,9 +135,18 @@ function editorKeys(pane) {
     // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다
     Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
     'Shift-Tab': (cm) => cm.indentSelection('subtract'),
+    'Ctrl-;': (cm) => dateAt(cm),   // 날짜 넣기 (D149 — 달력에서 골라 커서 자리에)
   };
   if (vimOn()) delete keys.Esc;
   return keys;
+}
+
+/** Ctrl+;: 달력에서 고른 날을 'YYYY-MM-DD' 로 커서 자리에 (D149) */
+async function dateAt(cm) {
+  const at = cm.cursorCoords(true, 'window');
+  const day = await pickDate({ at: { x: at.left, y: at.bottom }, title: t('날짜 넣기') });
+  cm.focus();
+  if (day) cm.replaceSelection(day);
 }
 
 /** 설정의 전체 편집 방식을 바꾸면 열린 편집기에도 (settings.js 의 'editor-keys') */

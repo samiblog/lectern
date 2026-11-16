@@ -2,7 +2,7 @@
 
 Lectern is a workspace for Markdown-centered research with AI. You read, review and fix in place the documents and data that Claude Code or Claude writes into a project folder. It shows Markdown (`.md`) and HTML (`.html`) documents in a readable layout, and shows code in a read-only code view.
 
-- **Files change only when you choose.** Lectern never creates, edits or deletes documents on its own; it writes only its settings file and the files you choose to save, create or rename. Commands you type yourself in the right-hand terminal are also an exception.
+- **Files change only when you choose.** Lectern never creates, edits or deletes documents on its own; it writes only to its settings folder (the settings file and remembered titles) and to the files that change or appear because of something you chose (see 'Good to know'). Commands you type yourself in the right-hand terminal are also an exception.
 - **It does not connect to the internet on its own.** Only web images inside documents are loaded, and you can turn that off in Settings.
 - **It only looks inside the folder you open.** Hidden files and folders (`.git`, `.claude` and so on) are not shown. Excluded folders such as `node_modules` and `dist` stay out of the document tree and search, and appear dimmed only in the 'Other files' list.
 
@@ -27,7 +27,7 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 
 | Area | What it does |
 |---|---|
-| Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, document width, **line numbers**, style, section focus, settings, **?** (keyboard shortcuts), all terminals |
+| Toolbar (top) | Sidebar, back, forward, **Quick open** (Ctrl+P), text size − 100% +, document width, **line numbers**, style, section focus, settings, **?** (keyboard shortcuts), **Work** (Alt+W), all terminals |
 | Tab bar | One tab per open project, open folder (+), and the **Edit**, **Contents**, **Print**, **Notes** and **Terminal** buttons at the right end |
 | Document tab row | Just above the document — the documents open in this project (up to 40), open a document in a new tab (+), the list of open document tabs (∨) and Spread all (▦) at the right end |
 | Sidebar (left) | The **Files**, **Recent**, **Search**, **Elements** and **Clip** tabs. Drag its edge to resize (double-click to reset) |
@@ -150,7 +150,7 @@ The **Files** tab is split into three groups.
   - To-dos, links and sources are not shown in the contents (only here).
 - When a table, figure or diagram has a **caption**, the caption is shown as its name, with the number and size below (such as 'Table 3 · 6 rows 2 columns'). A caption is a line such as 'Table 1. …', '<Table 2>' or '[Figure 1]' (or the same forms in Korean) directly above a table or below a picture, a short whole-bold line, or `<caption>`/`<figcaption>` in HTML. Without one, tables show their header row and pictures their alt text.
 - Click an item to go to that place in its document; it is outlined briefly.
-- **Right-click** an item for Show in document, **Copy location** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents), **Clip**, **Send…** and **Clip all shown** (see Clip below) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
+- **Right-click** an item for Show in document, **Copy location** (`@document lines 12-17 ('caption')`), **Copy source** (Markdown documents), **Clip**, **Send to a document…** and **Clip all shown** (see Clip below) and copying the document path. The **▣ Terminal** button next to a copy item puts that text into the terminal (Enter is not pressed).
 - The 'Elements' buttons on a folder overview, or right-clicking a folder in the tree, collect just that folder ('All' switches back to the whole project).
 - The first time it opens, it takes a moment to read the documents.
 - Doc info: a button for each key in the documents' front matter (such as `status: review`, `owner: research`, `tags: [a, b]`); documents are grouped by the values of the chosen key (dates newest first). Indented sub-keys appear joined with a dot, such as `author.name`. Documents without that key are under 'No value' at the end. Click a document to open it; right-click to copy its `@path` or put it into the terminal.
@@ -209,7 +209,7 @@ Click the arrow in the margin left of a heading to fold its section, and click i
 
 ### Text size and style
 
-- The − / + buttons in the toolbar set the document text size from 80% to 200% (100% is already set slightly large for comfortable reading). Click '100%' in the middle to reset. To zoom the whole app, use Ctrl+Wheel.
+- The − / + buttons in the toolbar set the document text size from 80% to 200% (100% is already set slightly large for comfortable reading). Click '100%' in the middle to reset. From the keyboard: **Ctrl+=**, **Ctrl+-** and **Ctrl+0** (100%). To zoom the whole app, use Ctrl+Wheel.
 - The **document width** buttons next to them (narrower · Width 100% · wider) set how wide the body of a Markdown document is, from 80% to 200%, and finally **Full width** (the whole document pane). The text size stays the same; lines just get longer or shorter. Click the middle to reset; the width you pick is kept for next time. If the window is narrow and the pane is narrower than the document, it only widens up to the pane. Code views, slide decks and HTML documents with their own style are not affected.
 - In tables, the header row and the leftmost column are not broken in the middle of a word (they wrap at spaces; if a long word would make the table overflow sideways, that table breaks words as before).
 - The **line numbers** button in the toolbar, or **Alt+L**, shows and hides source line numbers in the left margin of a Markdown document. They are the same lines as the `@path line 12` you send to Claude. Lines that do not appear on screen, such as blank ones, are skipped, and text that wraps on screen is numbered on its first line only. The code view always has numbers. Line numbers are not printed.
@@ -230,7 +230,7 @@ Click the arrow in the margin left of a heading to fold its section, and click i
 In Markdown documents and the code view (including csv and txt), lines are counted as lines of the source file — a paragraph, list item, heading or table row written on one line is one line, a paragraph wrapped over several lines goes line by line, and code goes line by line. So the `@path lines 12-20` sent to Claude matches what you picked on screen.
 
 - **Current line**: the small triangle to the left of the line you are reading. Click or right-click the text to move it there; **↑ ↓** move it one line at a time and the view follows. If you scroll it off screen with the wheel or PageUp PageDown, it follows to the nearest line on screen. Going somewhere with the contents, Find or Search moves it there too. The status bar shows it as `Current line 12`, and each document tab keeps its own.
-- **Send to Claude**: **Shift+→** puts the location of the current line (or of the picked lines — while words are selected it widens the selection instead), `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away. To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. With several terminals, **Shift+number** (Ctrl+Shift+number) puts it into the terminal with that number. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if you dragged to select text, Ctrl+C copies that text).
+- **Send to Claude**: **Shift+→** puts the location of the current line (or of the picked lines — while words are selected it widens the selection instead), `@path lines 12-20`, into the first terminal (usually terminal 1, where Claude Code runs). Enter is not pressed and focus moves to the terminal, so you can type your request straight away. To add several places in a row, press **Ctrl+Shift+→** — focus stays in the document. With several terminals, **Shift+number** (Ctrl+Shift+number) puts it into the terminal with that number. **Shift+←** copies the location and **Ctrl+C** copies the source of those lines (if you dragged to select text, Ctrl+C copies that text). After copying, 'Copied: …' shows briefly at the bottom of the window.
 - **Section focus**: the **Focus** button in the toolbar or **Alt+H** keeps the section with the current line sharp. ↑ ↓, PageUp PageDown or the ∧ ∨ buttons next to it move to the previous or next section. Click a dimmed area to move the focus there. Shift+↑ ↓ turn the section into picked lines. Press Esc or the button to turn it off, or right-click the text and choose 'Focus this section'. In documents without sections and in the code view, the button works like Shift+Enter.
 - Picking and editing lines are described in 'Writing and editing documents'.
 
@@ -238,6 +238,8 @@ In Markdown documents and the code view (including csv and txt), lines are count
 
 - Ctrl+F finds text in the document or code you are viewing, even across formatting such as bold or code.
 - Enter goes to the next result, Shift+Enter to the previous one, and Esc closes the find bar.
+- **Ctrl+H** finds and replaces in a Markdown document. **Replace** (Enter) changes the first match after the current line, **Replace all** (Ctrl+Enter) the whole document; it is saved at once and **Ctrl+Z** undoes it.
+- **Ctrl+G** goes to a line — type the line number and press Enter.
 
 ### HTML documents
 
@@ -295,7 +297,7 @@ Write and edit an md document from start to finish without opening the full edit
 
 Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): picking lines and twenty-two cases to try.
 
-**There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z** (picked lines and focus stay on the lines you undid). A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor saves with Ctrl+S. Moving the current line, picking lines, focus and folding do not change the file.
+**There is no separate save.** Enter in a cell, moving and deleting lines, changing line types and levels, table rows and columns, to-do checkboxes and pasted pictures are saved to the source file the moment you do them, and each one is undone with **Ctrl+Z** (picked lines and focus stay on the lines you undid). A new line is saved when you write in it, and Esc in a cell drops your change. Lectern slides work the same way. Only the full editor needs Ctrl+S to save (Ctrl+S in a cell works like Enter). Moving the current line, picking lines, focus and folding do not change the file.
 
 ### Four states of a line
 
@@ -304,7 +306,7 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 | **Current line** | One line — where you read, write and insert | Click, right-click, ↑ ↓ | — |
 | **Picked lines** | Several lines — to delete, move or change together | **Shift+↑ ↓** from the current line, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, shrinking to one line |
 | **Focus** | A light over the current line or the picked lines — dims the rest | **Shift+Enter** | Shift+Enter, Esc or a click on a dimmed area |
-| **Cell** | A text box that edits the line right where it is | **F2**, right-click 'Edit here', Ctrl+Enter | Enter saves, Esc cancels |
+| **Cell** | A text box that edits the line right where it is | **F2**, Ctrl+Enter (new line) | Enter saves, Esc cancels |
 
 - **There is one selection**: one line is the current line; extend it with Shift+↑ ↓ or Shift+click and several lines are picked lines. The first line stays and the last one moves, so the range grows or shrinks, and back at one line it is the current line again. Shift+click picks from the current line (the line you last clicked or moved to — scrolling afterwards does not change it) to the line you click; Shift+drag picks from the line you press to the line you drag to. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
 - **Writing and inserting happen at the current line**: editing the line (F2), a new line below or above (Ctrl+Enter, Ctrl+Shift+Enter), the insert box below (`/`), pasting a picture. They are off while several lines are picked — a note says to release them with Esc first.
@@ -326,7 +328,7 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md) (i
 | **→** / **←** with a selection | Moves to the next / previous word |
 | **Shift+→** / **Shift+←** with a selection | Extends or shrinks it word by word |
 | **Home** / **End** with a selection | First / last word (with Shift, extends to it) |
-| **B** · **I** · **S** · **M** · **F** | Bold · italic · strikethrough · highlight · text color on the selection (also Ctrl+B, Ctrl+I, Ctrl+Shift+X, H, C) |
+| **B** · **I** · **S** · **M** · **F** | Bold · italic · strikethrough · highlight · text color on the selection (also Ctrl+B, Ctrl+I, Ctrl+Shift+X, Ctrl+Shift+H, Ctrl+Shift+C — plain H and C are line-type keys) |
 | **F2** | Opens the line's cell with the same text selected |
 | **Esc**, **↑ ↓** | Clear the selection (↑ ↓ also move the current line) |
 
@@ -359,10 +361,10 @@ Sample — [guide 02, reading](../../samples/guide/02-읽기-기능.md) (in Kore
 
 ### Line editing
 
-You can edit a line right where it is. Press **F2** on the current line or right-click **Edit here** to open it. A double-click only selects a word and does not open the cell — press F2 with a word selected and the cell opens with that word selected. A heading keeps its heading size, a list item its bullet and a callout its box; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
+You can edit a line right where it is. Press **F2** on the current line to open it. A double-click only selects a word and does not open the cell — press F2 with a word selected (or right-click it and choose **Edit here**) and the cell opens with that word selected. **Edit here** (Ctrl+E) in the right-click menu of an ordinary line opens the full editor at that line instead of a cell (see 'Full editor' below). A heading keeps its heading size, a list item its bullet and a callout its callout look; markers such as `#`, `-`, `>`, `1.` and `[ ]` are locked so only the text changes. Inline formatting shows as source text, such as `**bold**` or `[link](url)`.
 
 - **Enter** saves straight into the source file and **Esc** cancels. Clicking outside saves if you changed something. After saving, the view is redrawn and the change briefly highlighted.
-- **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. At the end of the line, **Shift+→** saves and puts the line's location into Claude Code in the terminal.
+- **↑ ↓** save and go on editing the line above or below. In text that wraps on screen they move inside it first, and go on from its top or bottom screen line. To send the line to Claude, close the cell with Enter (or Esc) and press **Shift+→**.
 - **Tables**: F2 on a row opens its first cell; double-click a word in a cell and press F2 to open that cell. You edit cell by cell. **Tab** and Shift+Tab move between cells — Tab in the last cell of a row goes to the first cell of the next row and Shift+Tab in the first cell to the last cell of the row above, so you can fill a table row by row. ↑ ↓ go to the same cell in the row above or below. A `|` typed into a cell is saved as `\|` so the cell is not split.
 - In a paragraph wrapped over several source lines only that line is edited; code blocks and the code view edit that line. F2 on a picture opens its source line. F2 on math, diagrams and charts opens the source to edit line by line. HTML and comments are edited in **Source lines** from the status bar. Data files like CSV, text and Excel are view only.
 - Clicking outside a cell without changing anything ends without saving.
@@ -507,6 +509,7 @@ Turn on **vi keys** in Settings (Ctrl+,) to move and edit documents with letter 
 - **Picking and changing**: `V` holds the current line (like the first press of a change key) and `j`·`k` extend it. On picked lines, `d` deletes, `y` copies the source, `>`·`<` change the level, `J` joins them into one line, `V` or Esc releases.
 - **In one go**: `dd` deletes the line, `yy` copies its source, `>>`·`<<` change its level — the same as picking it first. Lines you deleted or copied go back with `p`·`P` below / above the current line (they are kept inside the app, separate from the clipboard). `u` undoes; redo is Ctrl+Y.
 - Two-letter commands wait one second for the next letter; meanwhile the status bar shows `vi d…`.
+- One-letter line-type keys (L, N, T, Q, C and so on) are pressed after holding the line with `V` — a double press on the current line does not hold it. On picked lines numbers are counts, so 1–6 do not make headings — use **H** or **Ctrl+Alt+1~6**.
 - Keys with Ctrl are not changed (Ctrl+D still duplicates a slide, Ctrl+F still finds). Page with PageUp and PageDown.
 - They work whether the keyboard is in Korean or English mode.
 - The full editor is set separately — **Full editor keys** in Settings (see 'Full editor' above).
@@ -574,15 +577,15 @@ When the templates are not enough, build the cells yourself.
 - Each `---` starts a slide. The size is 1280×720.
 - `::: a card` to `:::` is a cell. Put text, tables, charts and pictures in cells.
 - Pick a layout like `<!-- layout: quad -->` or draw one with `<!-- grid: a a b / c d b -->`. `::: a at 100 200 300 120` places a cell directly.
-- Right-click a slide and pick **Insert layout…** to add that layout's empty cells. Existing cells only get new names, and text on a slide with no cells goes into the first cell. Fill them with F2.
+- Right-click a slide and pick **Set layout…** to add that layout's empty cells. Existing cells only get new names, and text on a slide with no cells goes into the first cell. Fill them with F2.
 - `<!-- links: a>b, c--d -->` draws arrows and lines between cells. The text in the cells stays editable.
 - Lectern reads Marp's `paginate`, `header`, `footer`, `class: lead`, `invert`, background color, background images like `![bg right:40%](image)` and their filters, and CSS in `style:` and `<style scoped>`. It does not read `theme` (gaia and so on).
 
 ### Text size
 
-- On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that slide's tables, boxes, titles and so on by 1pt. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z brings it back.
+- On the current line, **Ctrl+Shift+>** and **Ctrl+Shift+<** change that slide's tables, callouts, titles and so on by 1pt. A line like `<!-- text: table 14 -->` appears in the source, and Ctrl+Z brings it back.
 - In a cell with its own size (`::: b 16`) the cell's size changes. Set the whole document with `text: title 26, table 12` in the front matter.
-- The defaults are title 30, subtitle 20, body 18, table 14, box 16. Changing style keeps these sizes. Text inside charts and diagrams follows the cell size.
+- The defaults are title 30, subtitle 20, body 18, table 14, box 16 (callouts). Changing style keeps these sizes. Text inside charts and diagrams follows the cell size.
 - Tables below 12pt and body text below 14pt show up in Check. For slides that are read rather than shown, write `reading: true` in the front matter (limits 10pt and 12pt).
 
 ### Structure and Check
@@ -676,7 +679,7 @@ Make @deck.md into a pptx using D:\templates\company.pptx.
 - `.pptx` files can be moved and exported without PowerPoint. An open presentation, `.ppt` files and DRM files need PowerPoint.
 - Remove the password from a protected file first. For a DRM file, open it in PowerPoint and move it from there.
 
-More examples are in `skills\README.md` in the program folder. The guide Claude reads is `web/help/slides.en.md` there.
+More examples are in `_internal\skills\README.md` in the program folder. The guide Claude reads is `_internal\web\help\slides.en.md` there.
 
 ### Samples
 
@@ -692,9 +695,9 @@ The installed samples are read-only, so follow along in your own project.
 
 ## Reading code
 
-- Click a file once in the 'Code' list (or press Enter) to show it in the main area with line numbers and language colors. It is never edited or run.
+- Click a file once in the 'Code' list (or press Enter) to show it in the main area with line numbers and language colors. It is never run. To edit it, use F2 (line editing) or Ctrl+E (the full editor).
 - The contents on the right list classes, functions, methods and divider comments such as `# ---- drawing ----`; click one to jump to that line. Config files list their keys and sections.
-- The **Open in external editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location and Open this line in the editor.
+- The **Open in external editor** and **Copy all** buttons sit at the top. Right-click a line for Copy line, Copy location, Edit here (the full editor) and Open this line in external editor.
 - When the code you are viewing changes, it is redrawn within two seconds and the changed lines are highlighted briefly.
 - Clicking a path such as `src/app.py:42` or a link to a code file in a document jumps to that line. Go back (Alt+←) to return to the document.
 - Files over 4 MB, or files that are not text, show a note to open them in an editor instead.
@@ -709,7 +712,7 @@ Click a `csv`, `tsv`, `txt` or `log` file once in the 'Other files' list (also i
 - **Sort**: click a column header for ascending → descending → original order.
 - **Stats**: a row above the table shows, per column — count, sum, mean, min, max and median for numbers; count, distinct values and the most common value for text. Filtering recounts them. The **Stats** button in the bar hides the row.
 - Row numbers are the source line numbers. Right-click a row for Copy line (the source line) and Copy location.
-- CSV files saved by Excel (CP949) and 'Unicode text' (UTF-16) are read too (the encoding shows in the status bar). Edit mode works only on UTF-8 files.
+- CSV files saved by Excel (CP949) and 'Unicode text' (UTF-16) are read too (the encoding shows in the status bar). Lectern only shows them — to edit one, double-click it to open the default app.
 - Up to 2,000 rows are shown; filter to narrow down larger files (counts and stats use all rows).
 
 ### Excel files
@@ -794,7 +797,7 @@ Each project has its own notes. The **Notes** button in the tab bar or **Alt+M**
 
 Put one `WORK.md` at the top of a folder, and Lectern remembers that folder and gathers the status, due dates, to-dos and events of many folders in one **work board**. While Lectern is running it also shows alerts inside the window. WORK.md is plain Markdown that you can write and edit without Claude, and Claude may read and write it too.
 
-Sample — [11 Work management](../../samples/guide/11-업무-관리.md) (in Korean): the sample WORK.md at the top of the samples and a walkthrough.
+Sample — [11 Work management](../../samples/guide/11-업무-관리.md) (in Korean): the sample WORK.md at the top of the samples and a walkthrough, asking to fold in the planning notes (6-1), the work tree, changing from the top, kanban and the calendar (7–10), and trying them on the work tree sample (11).
 
 ### WORK.md
 
@@ -804,24 +807,108 @@ Sample — [11 Work management](../../samples/guide/11-업무-관리.md) (in Kor
 | `# Title` | The task name | Yes |
 | To-dos | `- [ ] Draft chapter 3 (11/14)` — the parentheses at the end are the due date | Yes — checkbox and due date |
 | Events | `- 2026-11-12 14:00-15:00 Report to the lead`, `- 2026-11-20 all-day Workshop` | Yes — today's events and alerts |
+| Planning notes | Whatever comes to mind — to-dos and dates too | No — moved out when you tidy up |
 | Current state, decisions, log, materials | Anything | No |
 
 - Section names and order are up to you. Lectern reads only the front matter and the shape of to-do and event lines.
 - A due date without a year, `(11/14)`, is read as the nearest such date to today. The Korean values work too.
 - Dates are normally written `2026-11-14`, but `2026.11.14`, `2026/11/14` and `2026-11-5` are read too. Upper-case keys (`Status`) and a space before the colon also work.
 - Change status and due date by right-clicking the front matter and choosing **Edit document info**, tick to-dos with their checkboxes, and add log lines with line editing.
-- Only the `WORK.md` at the top of a folder opened as a project counts. One in a subfolder becomes a card when that subfolder is opened on its own.
+- Subfolders can have their own `WORK.md` too. See 'The work tree' below.
+
+### Planning notes
+
+The `## Planning notes` section of a work card is where you jot things down as they come. In the templates it sits right under the one-line summary. Lectern does not read this section, so a `- [ ] …` or `- 2026-11-25 draft meeting?` written there does not show on the work board, in alerts or among the lines to check. The section runs to the next heading of the same or a higher level (such as `## To do`). The Korean section names used by the Korean templates work the same way.
+
+There are two ways to tidy it up.
+
+- **Yourself**: read the notes, move items to the to-do, schedule and decision sections, and delete the notes you moved.
+- **With AI**: open the WORK.md, right-click the margin and choose **Ask to fold in the planning notes** — the request goes into the front terminal (Enter is not pressed). Following the writing guide, the AI moves items to the to-dos, schedule, decisions and current state, skips anything already there, asks when a date is unclear, and adds one line to the log saying what it folded in. It does not edit or delete the notes — removing notes that have been folded in is up to you.
 
 ### Making a work card
 
-Right-click a project tab or an empty spot of the document tree and choose **Make work card…**. Set the title (the folder name at first), due date and priority and press **Create**: `WORK.md` is created from the basic template and opened. If it already exists the menu says **Open work card**. The folder joins the work folder list.
+Right-click a project tab or an empty spot of the document tree and choose **Make work card…**. For a subfolder, right-click that folder in the document tree and choose **Make a work card in this folder…** (a folder without documents is not in the tree, so make a document in it first). Set the kind (table below), title (the folder name at first), due date and priority and press **Create**: `WORK.md` is created from the template and opened. If it already exists the menu says **Open work card**. The folder joins the work folder list.
+
+| Kind | Template | Chosen by default |
+|---|---|---|
+| Task | Planning notes, current state, to-dos, schedule, decisions, log, materials; status 'planned' | Top of a project |
+| Group · overview | Same sections, status left empty — worked out from the sub-tasks | (when you pick it) |
+| Small task | Only planning notes, to-dos, schedule and log; status 'planned' — something like one issue report | Subfolders |
+
+Write the due date as `YYYY-MM-DD` (`2026.11.20` is read too) or pick it with the calendar button next to it or **Ctrl+;**.
+
+### The work tree — folders inside folders
+
+The WORK.md of a project folder oversees everything, and the WORK.md of a subfolder covers one piece of work in it (for example one issue report). In between you can have a group folder (for example 'Issue reports' — several sub-tasks working as one).
+
+```text
+2026 metals research/      WORK.md   overview
+├─ issue-reports/          WORK.md   group
+│  ├─ 01-copper/           WORK.md   small task
+│  └─ 02-lithium/          WORK.md   small task
+└─ regular/                (no WORK.md — skipped)
+   └─ weekly/              WORK.md   directly under the overview
+```
+
+- **The parent is the WORK.md of the nearest folder above.** Folders without a WORK.md are skipped.
+- **Gathered at the top.** Each file holds only its own work; Lectern gathers them in three places — the work board, the folder overview of an overview or group folder ('Work in this folder'), and the **Sub-tasks** panel below a parent WORK.md when you open it (a panel that is not in the file and does not print).
+- **An empty status is worked out from the sub-tasks.** If any sub-task is blocked the group is blocked, then at risk, active, planned and on hold in that order; when all are finished it is done. Worked-out values carry a `*`. A status written in the file wins.
+- **What comes up**: rows show a summary such as '5 sub-tasks · active 3 · blocked 1' and the earliest due date among open sub-tasks ('next 11-20'). Sub-tasks' to-dos, events and alerts come with their path, such as 'Overview › Issue reports › 02 Lithium'.
+- **Needs attention**: the top of the work board gathers items needing attention at any depth of the tree, including mismatches in the tree — a parent marked done while sub-tasks are open ('Sub-tasks still open'), and a sub-task due later than its parent ('Sub-task due later').
+- **Expanding**: three levels show at first; ▸ expands and folds. Finished sub-tasks fold behind 'Show n done or dropped'.
+- **Clicking a sub-task** opens its WORK.md in the project tab that contains it, without opening the subfolder on its own.
+- **Remembering**: opening a project finds the WORK.md files in its subfolders and adds them to the work folder list (not inside hidden or excluded folders). They stay on the board after the tab is closed, and while closed Lectern still reads only those WORK.md files. If you rename or move a subfolder while the project is open, the next reading follows it.
+
+### Changing from the top
+
+Choosing something on a row of the tree (work board, folder overview, Sub-tasks panel) changes **one line of that task's WORK.md**. The changed file gets an amber dot in the tree.
+
+| Where you choose | Line that changes |
+|---|---|
+| Status cell → status menu (groups also have 'Clear — work out from sub-tasks') | `status:` in the front matter |
+| Due cell → calendar | `due:` in the front matter |
+| Priority cell → menu | `priority:` in the front matter |
+| To-do cell (2 / 5) → checkbox in the expanded list | `[ ]` ↔ `[x]` on that to-do line |
+| Due button in the expanded list → calendar | `(YYYY-MM-DD)` at the end of that to-do line |
+| 'Add a to-do' field in the expanded list → Enter | One `- [ ] text (due)` line at the end of the 'To do' section |
+
+- Right-click a row for **Open this task · Change status · Change due date · Change priority**.
+- The text of a to-do or of the log is changed by opening that WORK.md (the 'line n' button in the expanded list).
+- The file is read again right before the change. If that line or the file changed in the meantime (elsewhere, or by Claude), nothing is written; the view is redrawn and you are told — just choose again.
+- Status values are written in the words the file uses — a file with English values such as `status: active` gets English.
+
+### Kanban
+
+Choose **Kanban** above the tree (**List · Kanban**) and the leaf tasks (tasks without sub-tasks) become cards in five status columns: planned · active · watch (blocked, at risk) · on hold · done, dropped. If a leaf task has an empty or unreadable status, a 'No status' column is added. Groups are not cards; they show as the path above each card.
+
+- A card shows the path of the tasks above, the title, status, due date (D-n), priority, to-do progress (3/5) and the next to-do.
+- **Drag a card to another column** to change the status in that task's WORK.md. The watch column asks for blocked or at risk, the done column for done or dropped.
+- Click a card to open its WORK.md. With the keyboard: Enter or Space on a card opens it, the menu key opens its menu (open, change status, due date or priority).
+- A column shows up to 40 cards; the rest is given as a count.
+
+### Calendar
+
+Wherever you enter a date — the due date of a work card, the date of an event, due dates in the tree — a calendar opens. While editing a document (the line-editing cell or edit mode), **Ctrl+;** puts the day picked in the calendar at the cursor as `YYYY-MM-DD`. **Date** in the insert menu (/) does the same.
+
+| Key | Does |
+|---|---|
+| ← → | A day |
+| ↑ ↓ | A week |
+| PageUp · PageDown | A month |
+| Home · End | Start · end of the week |
+| T | Today |
+| Enter | Pick |
+| Esc | Cancel (closes only the calendar) |
+
+There are buttons for today, tomorrow, this Friday and next Monday, plus **Clear** when changing a date. Days with due dates, to-do dates or events have a dot.
 
 ### Work board
 
 The **Work** button in the toolbar or **Alt+W**. It opens the common folder as a tab and shows at the top of that folder's overview.
 
 - **Common folder**: an ordinary folder for a WORK.md with events and to-dos outside any task, and for weekly and monthly reviews. Pick it the first time you open the work board (for example `Documents\Lectern work` — you can make a new folder in the picker). Make the common WORK.md with **Make the common WORK.md** on the board.
-- **Task table**: one row per remembered folder — status, task (title and folder name), priority, due date (D-n), open to-dos, updated. Items needing attention come first (blocked or at risk, overdue or due within 3 days, active but WORK.md unchanged for over 14 days), then active and planned (earliest due first), on hold, and done or dropped (folded). Click a row to open that folder as a tab and open its WORK.md.
+- **Needs attention**: blocked or at risk, overdue or due within 3 days, active but WORK.md unchanged for over 14 days, and mismatches in the tree — gathered at the top with their path, at any depth of the tree.
+- **Work tree**: one row per remembered task — status, task (title, folder name and a sub-task summary), priority, due date (D-n), open to-dos, updated. Active and planned come first (earliest due first), then on hold, then done or dropped (folded); sub-tasks are indented below their parent. Click the status, due, priority or to-do cell to change it in place (see 'Changing from the top' above); click the title to open the WORK.md. **List · Kanban** above switches to the kanban.
 - **To-dos with a due date** (overdue, today, this week) and **today's events**: those from the common WORK.md are marked 'Common'. Click one to go to its line.
 - **Lines to check**: lines that could not be read because of a typo or something deleted are not dropped but gathered here. Click one to go to that line of that WORK.md. This covers a status that is not a known value, a misspelled key (`stauts` — the right key is shown), a due date or to-do date that cannot be read (`(11/31)`, a missing parenthesis), a mistyped checkbox (`- []`, `-[ ]`), an event on a date that does not exist (`2026-11-31`), an unreadable time (`25:00`, `14:00-1500` — kept as an event without a time), an event without a description, and front matter whose closing `---` is missing. The task row shows 'n lines to check', and the start summary mentions them.
 - **Folders that could not be read**: listed when a folder moved, was deleted or its drive is not connected, or when WORK.md is not UTF-8 (for example ANSI from an old Notepad) or is over 2MB. **Remove from list** removes it (the files stay).
@@ -832,7 +919,7 @@ The **Work** button in the toolbar or **Alt+W**. It opens the common folder as a
 
 ### Adding events
 
-**Add event** on the board or **Alt+S**. Set the date (today, tomorrow and weekday buttons), time (end time, all day), what, and where to add it (common or an unfinished task), then press **Insert**. One line goes at the end of the 'Schedule' section of that WORK.md (the section is created at the end if missing). The target starts as the WORK.md of the project you are looking at. Enter adds and Esc cancels.
+**Add event** on the board or **Alt+S**. Set the date (today, tomorrow and weekday buttons, the calendar button or Ctrl+;), time (end time, all day), what, and where to add it (common or an unfinished task — in tree order, sub-tasks with the path of the tasks above), then press **Insert**. One line goes at the end of the 'Schedule' section of that WORK.md (the section is created at the end if missing). The target starts as the deepest task containing the document or folder you are looking at — a sub-task when you are reading a document in its subfolder. Enter adds and Esc cancels.
 
 - An empty description or an end time before the start is not added; the reason is shown. Adding the same event twice is not prevented.
 - **Undo** at the bottom right takes it out again. If the file was edited after that, it is not undone, to keep your edit, and you are told.
@@ -856,7 +943,7 @@ Shown at the bottom right of the window while Lectern is running. They stay unti
 
 ### With Claude
 
-WORK.md works the same when Claude reads and writes it. Give Claude the writing guide with **Teach Claude Code about Lectern** in Settings and it writes the same format. For example: "Make a WORK.md for this folder", "Take the to-dos from the meeting notes and add them to WORK.md", "Write what I did today in the log section".
+WORK.md works the same when Claude reads and writes it. Give Claude the writing guide with **Teach Claude Code about Lectern** in Settings and it writes the same format. For example: "Make a WORK.md for this folder", "Take the to-dos from the meeting notes and add them to WORK.md", "Write what I did today in the log section". Hand over planning notes with **Ask to fold in the planning notes** in the document's right-click menu (see 'Planning notes' above).
 
 ## Terminal
 
@@ -930,7 +1017,7 @@ Adding the reader, the purpose, the kind of document and the length to the reque
 
 **Polish check — fix your own writing, by choice**
 
-1. Right-click the margin of a md document you wrote (or edited) and choose **Ask for a polish check**. For a few lines only, pick the lines (Shift+↓) or highlight the section, right-click and choose **Ask for a polish check of this range**.
+1. Right-click the margin of a md document you wrote (or edited) and choose **Ask for a polish check**. For a few lines only, pick the lines (Shift+↓) or focus the section (Alt+H), right-click and choose **Ask for a polish check of this range**.
 2. Press Enter in the terminal. Before changing anything Claude shows a table: number, group, where, original, proposed, why.
 3. Say what to apply: "errors only", "1, 3 and 7", "everything but preferences". Only the picked spots change; every other character stays. The changes show in Lectern right away.
 
@@ -992,6 +1079,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | Resume where I left off | Opening a folder returns to the last document and position |
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
+| Show line breaks inside paragraphs | Lines you break with Enter in the source break on screen too (like Shift+Enter in Word). When off, they run on as in standard Markdown |
 | vi keys | Move and edit documents with letter keys (see 'vi keys' above). Off by default |
 | Full editor keys | Default (Esc closes) or vi (like vim — `:w`, `:q`). Default by default |
 | Show web images | Load https images in documents. When off, they show as links |
@@ -1002,6 +1090,7 @@ The gear button in the toolbar (Ctrl+,) opens Settings.
 | My style | Copy, or paste into the terminal, a request to make your style note from writing you wrote yourself — add the samples as `@paths` at the end (see 'Report writing' above) |
 | Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF, html and Word') |
 | My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
+| Page layouts | Open layouts folder, Copy request for Claude Code (see your own layouts under 'Print, PDF, html and Word') |
 | Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
 | Work alerts | Work alerts inside the window while Lectern is running. On by default |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
@@ -1023,11 +1112,13 @@ Write backslashes in paths twice (`\\`). If the file has a syntax error, Lectern
 
 You can bring up this table at any time with the **?** button in the toolbar or Ctrl+/. **Shift+F1** opens the sample project.
 
+Sample — [15 Keyboard shortcuts, step by step](../../samples/guide/15-단축키-따라-하기.md) (in Korean): press the keys in order on a practice document, and the twenty keys to learn first.
+
 <!-- 단축키 표 -->
 
 ## Good to know
 
-- Lectern changes files only when you save in edit mode. The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
+- Lectern never changes files on its own; files change only when you choose — line editing, line structure, format keys and checkboxes (saved as you press), saving in the full editor, the work tree, kanban and Add event, new documents and folders, renaming and deleting (to the Recycle Bin), pasted pictures, notes and exports (PDF, html, Word, pptx). Apart from that it writes only settings and remembered titles in its settings folder (`%APPDATA%\Lectern`). The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
 - The terminal needs Windows 10 (1809) or later. A shell's history is gone once Lectern closes.
 - Document titles in the tree are read from the beginning of each document. If a document starts with a very long frontmatter, its file name is shown instead.
 - Web images that cannot be loaded (blocked on a company network, or taking more than 15 seconds) turn into links.

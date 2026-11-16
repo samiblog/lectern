@@ -20,7 +20,7 @@ from concurrent.futures import TimeoutError as FutureTimeout
 from pathlib import Path
 from typing import Any
 
-from . import editing, paths
+from . import editing, paths, scanner
 from .config import Config
 from .editing import EditError
 from .i18n import t
@@ -65,6 +65,37 @@ def note_opened(config: Config, root: Path) -> None:
         return
     if usable(root) is not None:
         config.add_work_folder(str(root))
+
+
+def note_card(config: Config, root: Path, card: Path) -> None:
+    """업무 카드 만들기로 만든 WORK.md (D124 — 맨 위, D149 — 하위 폴더도) 의 폴더를 목록에 더한다"""
+    if card.name != WORK_FILE:
+        return
+    if card.parent == root:
+        note_opened(config, root)
+    elif usable(card.parent) is not None:
+        config.add_work_folder(str(card.parent))
+
+
+def discover(config: Config, root: Path, nodes: list) -> None:
+    """업무 나무 (D149): 열린 프로젝트의 트리에서 하위 폴더의 WORK.md 를 찾아 업무 폴더 목록에 더하고, 그 프로젝트 안에 있었는데
+    이제 WORK.md 가 없는 폴더(옮김·이름 바꿈·지움)는 뺀다. 트리는 이미 훑은 것(스캔 캐시)을 쓴다 — 숨김·제외 폴더는 트리에 없어 찾지 않는다.
+    맨 위(프로젝트 폴더)의 WORK.md 는 note_opened 가 맡고 여기서는 빼지 않는다 (닫힌 뒤에도 '읽지 못한 폴더'로 알리려고)"""
+    found: set[str] = set()
+    for node in scanner.iter_files(nodes):
+        rel = node.get('path') or ''
+        if node.get('name') != WORK_FILE or '/' not in rel:
+            continue
+        folder = root / rel.rsplit('/', 1)[0]
+        if usable(folder) is not None:
+            found.add(_norm(str(folder)))
+            config.add_work_folder(str(folder))
+    base = _norm(str(root)) + os.sep
+    for listed in [f for f in config.get('work_folders') or [] if isinstance(f, str)]:
+        key = _norm(listed)
+        if key.startswith(base) and key not in found:
+            config.remove_work_folder(listed)
+            _cache.pop(key, None)
 
 
 def _read_one(folder: str) -> dict[str, Any]:

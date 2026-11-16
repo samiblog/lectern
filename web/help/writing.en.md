@@ -201,7 +201,7 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 
 ## Work card — WORK.md
 
-`WORK.md` at the top of a project folder is that folder's **work card**. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without AI — when an AI tool writes it, keep the same format so people can carry on editing it.
+A folder's `WORK.md` is that folder's **work card** — the one at the top of a project covers the whole task, one in a subfolder covers a piece of work inside it. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without AI — when an AI tool writes it, keep the same format so people can carry on editing it.
 
 ```markdown
 ---
@@ -213,6 +213,11 @@ due: 2026-12-15
 # Market analysis report
 
 This task in one line.
+
+## Planning notes
+
+- Ask the team lead whether to widen the scope to Southeast Asia
+- First-draft meeting around next Wednesday?
 
 ## Current state
 
@@ -240,6 +245,13 @@ This task in one line.
 - **To-dos**: `- [ ] what (YYYY-MM-DD)` — the date in parentheses at the end is the due date (`(11/14)` works too). Mark done with `[x]`.
 - **Events**: `- YYYY-MM-DD HH:MM what`, an end time as `HH:MM-HH:MM`, a whole day as `all-day`. Always write absolute dates — not 'tomorrow' or 'Friday'. Events with a time are announced 10 minutes before.
 - **Log**: a `### YYYY-MM-DD` per day, newest first, one line each under it. Don't rewrite past entries.
+- **Planning notes**: a section where people jot things down as they come (`## Planning notes`, Korean `## 기획 메모`). Lectern does not read it — checkboxes and dates there do not reach the work board. When people ask you to fold the notes in:
+  - Move to-dos to 'To do', appointments with a set date and time to 'Schedule', things decided to 'Decisions', and how things stand to 'Current state', in the formats above.
+  - Skip anything already there.
+  - When a date is unclear ('around next Wednesday'), ask rather than guess — proposing a date counted from today is fine.
+  - Don't edit or delete the notes. They are the person's writing — removing notes that have been folded in is up to them.
+  - Afterwards add one line under today's date in the log — 'Folded in from planning notes: 2 to-dos, 1 event'.
+- **Sub-tasks**: a subfolder can have its own WORK.md. Its parent is the WORK.md of the nearest folder above. Write a sub-task's to-dos and events only in its own file and don't copy them into the parent — Lectern gathers them there. A WORK.md that groups several sub-tasks can leave `status:` empty to have it worked out from them.
 - Section names and order are a recommendation. Lectern reads only the front matter and the shape of to-do and event lines. Keep event lines in the 'Schedule' section (where people add events with Add event).
 - Events and to-dos outside any task (meetings, admin) go in the common folder's `WORK.md`. Facts of one task (status, due date, to-dos, events) live only in that task's WORK.md — don't repeat them in review documents.
 - The work board is a view. Don't write the board out as a file.

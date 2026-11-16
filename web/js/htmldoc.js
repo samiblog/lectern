@@ -14,7 +14,7 @@ import { setDocSource, frameContextMenu } from './docmenu.js';
 import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { textScale, mdScale } from './textsize.js';
 import { docWidth } from './docwidth.js';
-import { $, docUrl, formatDateTime } from './util.js';
+import { $, docUrl, formatDateTime, noteCopy } from './util.js';
 import { t } from './i18n.js';
 
 const LOAD_TIMEOUT_MS = 20000;
@@ -191,6 +191,7 @@ function prepare(frame, path, tab) {
   }
   for (const a of doc.querySelectorAll('a[href], area[href]')) bindLink(a, baseUrl, path, tab, doc);
   doc.addEventListener('contextmenu', (e) => frameContextMenu(e, frame));
+  doc.addEventListener('copy', noteCopy);   // 고른 글을 복사하면 알림 (D151)
   // iframe 안의 키·마우스는 앱 문서로 올라오지 않는다. 단축키(Ctrl+F, Esc, Alt+← …)와 마우스 뒤로 버튼, 메뉴 닫기를 위해 넘겨 준다
   doc.addEventListener('keydown', (e) => {
     if (!document.dispatchEvent(new KeyboardEvent('keydown', e))) e.preventDefault();

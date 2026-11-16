@@ -1331,6 +1331,83 @@ button.primary:hover { filter: brightness(1.08); }
 .wk-set-list li { display: flex; align-items: center; gap: 8px; padding: 2px 0; color: var(--ui-muted); }
 .wk-set-list li span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
+/* 업무 나무·칸반 (workview.js, D149): 업무 현황, 총괄·묶음 폴더 개요, 상위 WORK.md 아래의 '하위 업무' */
+.wk-tree-head { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 4px 0 8px; font-size: 12.5px; }
+.wk-mode { display: inline-flex; border: 1px solid var(--ui-border); border-radius: 7px; overflow: hidden; }
+.wk-mode button { padding: 3px 12px; font-size: 12.5px; color: var(--ui-muted); cursor: pointer; }
+.wk-mode button[aria-pressed="true"] { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); color: var(--ui-fg); font-weight: 650; }
+.wk-tree td.wk-title { padding-left: calc(8px + var(--wk-depth, 0) * 18px); }
+.wk-tree tr.wk-tr { cursor: default; }
+.wk-tree tr.wk-done { opacity: .62; }
+.wk-twist, .wk-twist-sp { display: inline-block; width: 16px; margin-right: 2px; color: var(--ui-muted); font-size: 11px; text-align: center; }
+.wk-twist { cursor: pointer; }
+.wk-open { font-weight: 650; color: inherit; cursor: pointer; text-align: left; }
+.wk-open:hover { text-decoration: underline; }
+.wk-cell { padding: 1px 4px; margin: -1px -4px; border-radius: 5px; color: inherit; cursor: pointer; font: inherit; text-align: left; }
+.wk-cell:hover, .wk-cell:focus-visible { background: var(--ui-hover); outline: 1px solid var(--ui-border); }
+.wk-faint { color: var(--ui-faint); }
+.wk-kids { display: inline-block; margin-left: 8px; color: var(--ui-muted); font-size: 12px; }
+.wk-next { display: block; color: var(--ui-muted); font-size: 11.5px; }
+.wk-st.derived { font-style: italic; }
+.wk-tr.wk-more td { padding-top: 2px; padding-bottom: 2px; }
+.wk-tr.wk-more button { color: var(--ui-muted); font-size: 12px; cursor: pointer; }
+.wk-tr.wk-more button:hover { color: var(--ui-fg); text-decoration: underline; }
+.wk-todos-row td { padding-top: 0; background: color-mix(in srgb, var(--ui-hover) 55%, transparent); }
+.wk-todos { list-style: none; margin: 0; padding: 4px 0 0 calc(var(--wk-depth, 0) * 18px + 26px); font-size: 13px; }
+.wk-todos li { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; padding: 2px 0; }
+.wk-todos li label { display: inline-flex; align-items: center; gap: 6px; min-width: 0; cursor: pointer; }
+.wk-todos li.done label span { color: var(--ui-muted); text-decoration: line-through; }
+.wk-chip { padding: 0 7px; border: 1px solid var(--ui-border); border-radius: 999px; background: var(--ui-panel); color: var(--ui-muted); font-size: 11.5px; line-height: 20px; cursor: pointer; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.wk-chip:hover { border-color: var(--ui-accent); color: var(--ui-fg); }
+.wk-addtodo { display: flex; gap: 6px; align-items: center; padding: 6px 0 4px calc(var(--wk-depth, 0) * 18px + 26px); }
+.wk-addtodo input { flex: 1; min-width: 0; max-width: 420px; height: 26px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); color: var(--ui-fg); font-size: 13px; }
+.wk-kanban { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; align-items: start; }
+.wk-lane { min-height: 80px; padding: 8px; border-radius: 9px; background: color-mix(in srgb, var(--ui-hover) 70%, transparent); border: 1px solid transparent; }
+.wk-lane.over { border-color: var(--ui-accent); background: color-mix(in srgb, var(--ui-accent) 10%, transparent); }
+.wk-lane h4 { margin: 0 0 8px; font-size: 12.5px; color: var(--ui-muted); }
+.wk-lane h4 span { margin-left: 4px; font-weight: 400; }
+.wk-lane.lane-watch h4 { color: var(--ui-danger); }
+.wk-kcard { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--ui-panel); cursor: grab; font-size: 13px; }
+.wk-kcard.wk-hot { box-shadow: inset 3px 0 0 var(--ui-fresh); }
+.wk-kcard.dragging { opacity: .45; }
+.wk-kcard:focus-visible { outline: 2px solid var(--ui-accent); outline-offset: 1px; }
+.wk-k-trail { color: var(--ui-faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-k-title { font-weight: 650; color: inherit; text-align: left; cursor: pointer; }
+.wk-k-title:hover { text-decoration: underline; }
+.wk-k-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; font-size: 12px; }
+.wk-k-next { color: var(--ui-muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wk-pri { color: var(--ui-muted); }
+/* 상위 WORK.md 아래의 '하위 업무' (본문 밖 — 칸의 스크롤 상자에, 본문과 같은 폭으로). 종이에는 싣지 않는다 */
+.wk-under { max-width: calc(var(--md-width, 860px) * var(--md-scale, 1) * var(--md-wide, 1)); margin: -80px auto 0; padding: 0 52px 90px; color: var(--md-fg, var(--ui-fg)); font-family: var(--ui-font); }
+.wk-under .wk-head { padding-top: 14px; border-top: 1px solid var(--md-border, var(--ui-border)); }
+@media print { .wk-under { display: none !important; } }
+.wk-hotlist .wk-folder { color: var(--ui-danger); }
+/* 날짜 칸 (D149): 글로 쓰거나 달력으로 */
+.wk-datefield { display: inline-flex; align-items: center; gap: 2px; }
+.wk-datefield input { width: 118px; font-variant-numeric: tabular-nums; }
+/* 달력 (datepick.js, D149) */
+.datepick { position: fixed; z-index: 120; width: 252px; padding: 10px; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--ui-panel); color: var(--ui-fg); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font: 13px/1.4 var(--ui-font); }
+.datepick[hidden] { display: none; }
+.dp-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.dp-head b { font-size: 13.5px; }
+.dp-head button { width: 28px; height: 26px; border-radius: 6px; color: var(--ui-muted); font-size: 17px; cursor: pointer; }
+.dp-head button:hover { background: var(--ui-hover); color: var(--ui-fg); }
+.dp-title { margin: -2px 0 6px; color: var(--ui-muted); font-size: 12px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dp-week, .dp-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.dp-week span { color: var(--ui-muted); font-size: 11.5px; text-align: center; }
+.dp-grid button { position: relative; height: 30px; border-radius: 6px; color: inherit; font-variant-numeric: tabular-nums; cursor: pointer; }
+.dp-grid button:hover { background: var(--ui-hover); }
+.dp-grid .dp-out { color: var(--ui-faint); }
+.dp-sun { color: #c94a4a; }
+.dp-sat { color: #3a6fc4; }
+.dp-grid .dp-today { box-shadow: inset 0 0 0 1px var(--ui-accent); }
+.dp-grid .dp-value { background: var(--ui-accent); color: var(--ui-panel); font-weight: 700; }
+.dp-grid .dp-cursor { outline: 2px solid var(--ui-accent); outline-offset: -2px; }
+.dp-grid .dp-mark::after { content: ""; position: absolute; left: 50%; bottom: 3px; width: 4px; height: 4px; margin-left: -2px; border-radius: 50%; background: var(--ui-fresh); }
+.dp-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ui-border); }
+.dp-quick button { padding: 2px 8px; border: 1px solid var(--ui-border); border-radius: 999px; font-size: 12px; color: var(--ui-muted); cursor: pointer; }
+.dp-quick button:hover { border-color: var(--ui-accent); color: var(--ui-fg); }
+
 /* 알림 칸 (work.js·workalert.js, D124): 닫을 때까지 남는다 — 창 오른쪽 아래 */
 #lec-work-notes { position: fixed; right: 16px; bottom: 34px; z-index: 90; display: flex; flex-direction: column; gap: 8px; width: min(360px, 90vw); pointer-events: none; }
 .wk-notice {

@@ -61,6 +61,7 @@
     <symbol id="i-restart" viewBox="0 0 20 20"><path d="M15.6 10.6A5.6 5.6 0 1 1 13.9 6M14.4 3.4V6.6H11.2"/></symbol>
     <!-- 모아 보기의 종류 (toc.js 의 PARTS, D62): 차트, 할 일, 링크, 출처 -->
     <symbol id="i-chart" viewBox="0 0 20 20"><path d="M3 16.5h14"/><rect x="4" y="10" width="2.8" height="6.5" rx=".6"/><rect x="8.6" y="6" width="2.8" height="10.5" rx=".6"/><rect x="13.2" y="3.5" width="2.8" height="13" rx=".6"/></symbol>
+    <symbol id="i-cal" viewBox="0 0 20 20"><rect x="2.5" y="4" width="15" height="13" rx="1.8"/><path d="M2.5 8h15M6.5 2.5v3M13.5 2.5v3"/><path d="M6 11h1.5M9.3 11h1.5M12.6 11h1.5M6 14h1.5M9.3 14h1.5"/></symbol>
     <symbol id="i-task" viewBox="0 0 20 20"><rect x="3" y="3" width="14" height="14" rx="2.5"/><path d="m6.5 10.2 2.4 2.4 4.6-5"/></symbol>
     <symbol id="i-link" viewBox="0 0 20 20"><path d="M8.6 11.4a3 3 0 0 0 4.2 0l2.7-2.7a3 3 0 0 0-4.2-4.2l-1.1 1.1"/><path d="M11.4 8.6a3 3 0 0 0-4.2 0l-2.7 2.7a3 3 0 0 0 4.2 4.2l1.1-1.1"/></symbol>
     <symbol id="i-source" viewBox="0 0 20 20"><path d="M5 3.5h8.5a2 2 0 0 1 2 2v11H7a2 2 0 0 1-2-2z"/><path d="M5 14.5a2 2 0 0 1 2-2h8.5M8 6.5h4.5M8 9h3"/></symbol>
@@ -229,7 +230,7 @@
       <!-- 담기 (basket.js, D63·D65): 담은 조각을 차례대로 — 문서로 보내기(보낼 곳 고르기 창), AI 도구에 맡기기(이름은 설정 ai_tool — D138), 편집 중이면 항목의 '보내기'가 커서 자리로 -->
       <div id="lec-basket" hidden>
         <div class="basket-bar">
-          <button type="button" id="lec-basket-insert" class="primary small" title="담은 것을 차례대로 열린 문서 탭이나 새 문서로 보내기 — 편집 모드로 열고, 저장은 직접">문서로 보내기…</button>
+          <button type="button" id="lec-basket-insert" class="primary small" title="담은 것을 차례대로 열린 문서 탭이나 새 문서로 보내기 — 바로 저장하고, Ctrl+Z 한 번으로 되돌립니다">문서로 보내기…</button>
           <button type="button" id="lec-basket-claude" class="text-btn"></button>
           <span class="tb-spacer"></span>
           <button type="button" id="lec-basket-clear" class="text-btn" title="담은 것을 모두 빼기 (문서는 그대로)">비우기</button>
@@ -542,7 +543,7 @@
       </div>
     </div>
     <div class="opt-block" aria-labelledby="lec-work-title">
-      <span class="opt-head"><b id="lec-work-title">업무 관리</b><small>폴더마다 맨 위의 WORK.md 를 모아 업무 현황(Alt+W)과 알림으로 보여 줍니다. 공통 폴더에는 과제 밖의 일정·할 일을 적는 WORK.md 와 정리 문서를 둡니다</small></span>
+      <span class="opt-head"><b id="lec-work-title">업무 관리</b><small>폴더마다의 WORK.md 를 하위 폴더의 것까지 업무 나무로 모아 업무 현황(Alt+W)과 알림으로 보여 줍니다. 공통 폴더에는 과제 밖의 일정·할 일을 적는 WORK.md 와 정리 문서를 둡니다</small></span>
       <div class="opt-btns">
         <span id="lec-work-home" class="wk-home-path"></span>
         <button type="button" id="lec-work-pick" class="text-btn">공통 폴더 고르기…</button>

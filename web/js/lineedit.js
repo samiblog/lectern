@@ -42,6 +42,7 @@ import {
   toggledKind, boldLines, formatLines, clearMarksIn, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
+import { pickDate } from './datepick.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK } from './refs.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './chartops.js';
@@ -1634,6 +1635,7 @@ async function putItem(s, id) {
   else if (id === 'note') await noteHere();
   else if (id === 'speaker') await speakerNote(s);
   else if (id === 'link') await linkHere();
+  else if (id === 'date') await dateHere();
   else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
   else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
@@ -1672,7 +1674,7 @@ async function putRef(s) {
     toast(t('가리킬 표·그림·절이 없습니다 — 캡션(표 1. 제목)이나 제목을 먼저 쓰세요'));
     return;
   }
-  const items = targets.map((x, i) => ({ id: String(i), name: x.name, group: x.kind === 'caption' ? t('표·그림') : t('절'), sub: t('{n}행', { n: x.line }) }));
+  const items = targets.map((x, i) => ({ id: String(i), name: x.name, group: x.kind === 'caption' ? t('표·그림') : t('절'), sub: rangeText([x.line, x.line]) }));
   const chosen = await pick({ items, title: t('상호 참조'), at });
   backTo(s, keep);
   if (!chosen || session !== s) return;
@@ -1708,6 +1710,18 @@ async function openPut() {
   if (session !== s) return;
   if (chosen) await putItem(s, chosen.id);
   else backTo(s, keep);
+}
+
+/** Ctrl+;: 날짜 넣기 (D149 — 달력 입력). 달력에서 고른 날을 'YYYY-MM-DD' 로 커서 자리에 — 할 일 줄 끝의 (기한)·일정 줄의 날짜 */
+async function dateHere() {
+  const s = session;
+  if (!s) return;
+  const span = s.places[s.cell].span;
+  const keep = keepCaret();
+  const day = await pickDate({ at: span, title: t('날짜 넣기') });
+  backTo(s, keep);
+  if (!day || session !== s) return;
+  document.execCommand('insertText', false, day);
 }
 
 /** Ctrl+K: 링크 — 프로젝트의 파일을 고르거나 주소를 쓴다. 고른 글이 있으면 그 글에 건다 */
@@ -2504,12 +2518,15 @@ function onKey(e) {
   } else if (mod && e.altKey && !e.shiftKey && typing && e.code === 'KeyF') {
     e.preventDefault();
     noteHere();
+  } else if (mod && !e.altKey && !e.shiftKey && e.code === 'Semicolon') {   // 날짜 넣기 (D149)
+    e.preventDefault();
+    dateHere();
   } else if (k === 'Enter' && mod && !e.altKey) {
     e.preventDefault();
     addLine(!e.shiftKey);
   } else if (mod && e.shiftKey && !e.altKey && (e.code === 'Period' || e.code === 'Comma') && session.pane.view.classList.contains('lec-deck')) {
     e.preventDefault();   // 글자 크기 (D96): 고친 글을 저장하고 크기를 바꾼다
-    finish(true).then(() => emit('text-size', { dir: e.code === 'Period' ? 1 : -1 }));
+    finish(true).then(() => emit('slide-text-size', { dir: e.code === 'Period' ? 1 : -1 }));
   } else if (mod && e.shiftKey && !e.altKey && e.code === 'KeyK') {
     e.preventDefault();
     deleteHere();
@@ -2748,7 +2765,9 @@ export function initLineEdit() {
   on('clear-marks', (op) => { turn = turn.then(() => clearMarksNow(op)); });   // 형광펜 지우기 (tree.js — D143)   // 현재 줄의 / — 아래에 넣기 창 (spotlight.js, D139)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)
-  on('text-size', ({ dir }) => { turn = turn.then(() => resizeHere(dir)); });
+  // 슬라이드 구성 요소의 글자 크기 (Ctrl+Shift+>·<). 문서 글자 크기(textsize.js 의 'text-size' — 배율 숫자)와 이름을 나눈다:
+  // 같은 이름이었을 때는 Ctrl+=·Ctrl+- 마다 이 처리기가 dir 없이 돌아 슬라이드 파일에 NaN 을 쓸 수 있었다
+  on('slide-text-size', ({ dir }) => { if (dir === 1 || dir === -1) turn = turn.then(() => resizeHere(dir)); });
   on('slide-op', (op) => { turn = turn.then(() => slideOp(op)); });
   on('md-headings', (op) => { turn = turn.then(() => restyle(op)); });
   on('pane', () => {   // 다른 탭을 고르면 고친 것은 저장하고 끝낸다

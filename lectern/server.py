@@ -653,8 +653,7 @@ def create_app(state: AppState) -> Flask:
                 made = editing.create_source(target, text) | {'path': target.relative_to(project.root).as_posix()}
             except editing.EditError as exc:
                 return jsonify(error=exc.message), exc.status
-            if target == work.card_path(project.root):   # 업무 카드 만들기 (D124) — 업무 폴더 목록에
-                work.note_opened(state.config, project.root)
+            work.note_card(state.config, project.root, target)   # 업무 카드 만들기 (D124·D149) — 만든 WORK.md 의 폴더를 업무 폴더 목록에
             return jsonify(made)
         target = resolve_inside(project.root, rel)
         if target is None:   # 없음·밖·숨김 — 새로 만들지 않는다
@@ -686,6 +685,7 @@ def create_app(state: AppState) -> Flask:
         for project in list(state.projects.values()):
             if not project.readonly:
                 work.note_opened(state.config, project.root)
+                work.discover(state.config, project.root, project.scan_quick()[0])   # 하위 폴더의 WORK.md (D149 — 업무 나무)
         return jsonify(work.board(state.config))
 
     @app.get('/api/work/card')

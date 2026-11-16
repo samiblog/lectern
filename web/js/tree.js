@@ -241,8 +241,9 @@ function openSort(e) {
   showMenu(r.left, r.bottom + 2, [{ header: t('폴더 먼저, 그 안의 차례') }, item('name', t('이름순')), item('time', t('시간순')), item('type', t('형식순'))]);
 }
 
-/** 업무 카드 만들기 (D124 — work.js). 프로젝트 맨 위의 WORK.md 가 있으면 연다 */
-const workCardItem = () => ({ label: S.fileMap.has('WORK.md') ? t('업무 카드 열기') : t('업무 카드 만들기…'), action: () => emit('work-card', {}) });
+/** 업무 카드 만들기 (D124 — work.js). 그 폴더(dir — '' 이면 맨 위)의 WORK.md 가 있으면 연다. 하위 폴더에도 (D149 — 업무 나무) */
+const workCardItem = (dir = '') => ({ label: S.fileMap.has(dir ? `${dir}/WORK.md` : 'WORK.md') ? t('업무 카드 열기') : dir ? t('이 폴더에 업무 카드 만들기…') : t('업무 카드 만들기…'),
+  tip: dir ? t('이 폴더에 WORK.md — 위 폴더의 업무가 모아 봅니다') : '', action: () => emit('work-card', { folder: dir }) });
 
 /** 폴더 모두 펼치기·접기 (D125) — 문서 트리는 여기서, 코드·자료 목록은 others.js 가 'side-open' 을 듣는다. mode: all | none | first */
 function setAllOpen(mode) {
@@ -444,7 +445,7 @@ function onContextMenu(e) {
     const items = [...docMenuItems(path), ...(currentKind().id === 'marks' ? clearItems(path) : [])];
     showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), deleteItem(path)]);
   }
-  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), '-', ...pathMenuItems(row.dataset.dir, false)]);
+  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 
 export function focusFilter() {
