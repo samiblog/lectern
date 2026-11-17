@@ -19,12 +19,12 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, docxexport, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, aistatus, docxexport, rawfiles, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
 from .i18n import t
-from .paths import web_dir
+from .paths import skills_dir, web_dir
 from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, list_folders, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
 from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
@@ -391,7 +391,8 @@ def create_app(state: AppState) -> Flask:
             decks = []
         state.board.seen(window, request.args.get('wp', ''), request.args.get('wt', ''), [d for d in decks if isinstance(d, str)] if isinstance(decks, list) else [])
         news = {'windows': state.board.others(window), 'inbox': state.board.take(window)}
-        return jsonify(tabs_seq=state.tabs_seq, projects=projects, **{k: v for k, v in news.items() if v})
+        # config: 설정의 판 번호 (D159) — 바뀌었으면 창이 설정을 다시 읽어 입힌다
+        return jsonify(tabs_seq=state.tabs_seq, projects=projects, config=state.config.revision(), **{k: v for k, v in news.items() if v})
 
     @app.post('/api/window-send')
     def api_window_send() -> Any:
@@ -431,7 +432,40 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/config')
     def api_config_get() -> Any:
-        return jsonify(state.config.public())
+        # _rev: 이 설정의 판 번호 (D159 — 창이 변경 확인의 config 와 견준다. 저장되지 않는다)
+        return jsonify(state.config.public() | {'_rev': state.config.rev})
+
+    @app.get('/api/ai-status')
+    def api_ai_status() -> Any:
+        """?p=<탭 id> — AI 도구에 건네는 것의 지금 상태 (D159, aistatus.py). 개인 폴더와 그 프로젝트의 정해진 파일만 읽기만 한다.
+        p 가 없거나 닫힌 탭이면 프로젝트 쪽은 빈다"""
+        project = state.get(request.args.get('p'))
+        lang = 'research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md'
+        return jsonify(aistatus.status(aistatus.home_dir(), state.config.get('ai_tool'), skills_dir(), web_dir() / 'help' / lang,
+                                       project.root if project is not None else None))
+
+    def raw_catalog() -> tuple[list[dict[str, Any]], str]:
+        """설정 원문 보기의 목록 (D160 — rawfiles.py). 경로는 여기서만 정한다"""
+        project = state.get(request.args.get('p'))
+        lang = 'research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md'
+        tool = state.config.get('ai_tool')
+        groups = rawfiles.catalog(aistatus.home_dir(), tool, state.config.path, skills_dir(), web_dir() / 'help' / lang,
+                                  project.root if project is not None else None, project.name if project is not None else '')
+        return groups, {'codex': 'Codex', 'antigravity': 'Antigravity', 'opencode': 'OpenCode'}.get(tool, 'Claude Code')
+
+    @app.get('/api/raw/list')
+    def api_raw_list() -> Any:
+        """?p=<탭 id> — 원문을 볼 수 있는 것들 (D160): [{group, items:[{id, label, path, exists, kind}]}]"""
+        return jsonify(groups=raw_catalog()[0])
+
+    @app.get('/api/raw')
+    def api_raw() -> Any:
+        """?id=<목록의 id>&f=<스킬 폴더 안의 파일>&p=<탭 id> — 원문 줄과 Lectern 이 단 설명 줄 (D160). 읽기만 한다"""
+        groups, cli = raw_catalog()
+        got = rawfiles.read(groups, request.args.get('id', ''), request.args.get('f', ''), cli)
+        if got is None:
+            abort(404)
+        return jsonify(got)
 
     @app.post('/api/config')
     def api_config_set() -> Any:

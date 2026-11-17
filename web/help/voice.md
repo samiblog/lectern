@@ -35,8 +35,10 @@
 
 ## 어디에
 
-- **Claude Code**: 설치한 글쓰기 스타일 파일(`~/.claude/output-styles/research-writing.md`) 끝에 `## 내 문체` 절로 넣는다. 그 파일이 없으면 Lectern 설정 창의 '글쓰기 스타일'로 먼저 설치하라고 알린다. 저장한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것과, 글쓰기 스타일을 고른 폴더(`/output-style`)에서만 쓰인다는 것을 알린다.
-- **Codex·Antigravity·OpenCode**: 그 프로젝트의 AGENTS.md '글쓰기' 절 아래에 `### 내 문체` 로 넣는다. 그 도구가 모든 프로젝트에서 읽는 개인 지시 파일이 있으면 거기에 넣을지 묻는다.
+노트는 사람의 개인 폴더에 하나 둔다 — 어느 폴더에서나, 어느 글쓰기 스타일을 고르든 같은 노트를 읽게 (D159).
+
+- **Claude Code**: 개인 규칙 폴더의 한 파일 `~/.claude/rules/내-문체.md` (모든 프로젝트에서 읽힌다). 예전 판처럼 글쓰기 스타일 파일(`~/.claude/output-styles/research-writing.md`) 끝에 `## 내 문체` 절이 있으면, 그 절을 이 파일로 옮길지 묻는다 — 옮기면 스타일 파일에서는 뺀다. 저장한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것을 알린다.
+- **Codex·Antigravity·OpenCode**: 그 도구가 모든 프로젝트에서 읽는 개인 지시 파일(Codex 는 `~/.codex/AGENTS.md`, Antigravity 는 `~/.gemini/AGENTS.md`, OpenCode 는 `~/.config/opencode/AGENTS.md`)에 `## 내 문체` 절로 넣는다. 예전 판처럼 그 프로젝트의 AGENTS.md '글쓰기' 절 아래에 있으면 옮길지 묻는다.
 - 폴더마다 다른 규칙(기관마다 다른 양식, 존댓말 여부)은 노트가 아니라 그 폴더의 CLAUDE.md·AGENTS.md 에 둔다. 폴더 규칙이 노트보다 앞선다.
 
 ## 노트 모양

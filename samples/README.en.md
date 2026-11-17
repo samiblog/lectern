@@ -25,7 +25,7 @@ An example project for looking around Lectern. Think of it as a **copper market 
 
 ## For AI (Claude Code)
 
-[CLAUDE.en.md](CLAUDE.en.md) is the set of rules Claude Code follows when writing documents here (Korean: [CLAUDE.md](CLAUDE.md)). To give your own project the same rules, use **Teach Claude Code about Lectern** → **Copy request for Claude Code** in the settings (Ctrl+,) and paste it into Claude Code.
+[CLAUDE.en.md](CLAUDE.en.md) is the set of rules Claude Code follows when writing documents here (Korean: [CLAUDE.md](CLAUDE.md)). To give your own project the same rules, use **Teach Claude Code about Lectern** → **Copy request for Claude Code** in the settings (Ctrl+,) and paste it into Claude Code. Claude Code reads Lectern's writing guide and writes the rules where you chose — by default all folders (one personal rule file), or that project's CLAUDE.md with Only this folder.
 
 > [!NOTE]
 > These samples live inside Lectern's program folder, so they are **view-only** — this tab has no terminal, edit mode, new documents or renaming (so that no commands run and no files change next to the program files). To edit them or try Claude Code with them, copy this folder elsewhere (for example to Documents) and open the copy. All numbers are examples. To reopen them, use **∨** (recent folders) on the tab bar → **Open samples**, or **Open samples** on the start screen.

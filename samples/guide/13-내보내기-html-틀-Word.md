@@ -324,7 +324,7 @@ Word 양식 목록에는 지면 틀 18가지와 같은 이름·묶음의 Word �
 | 도구 | 개인 스킬 폴더 |
 |---|---|
 | Claude Code | `~/.claude/skills/` |
-| Codex | `~/.codex/skills/` |
+| Codex | `~/.agents/skills/` |
 | Antigravity | `~/.gemini/config/skills/` |
 | OpenCode | `~/.config/opencode/skills/` — `~/.claude/skills/` 도 읽어서 Claude Code 용으로 설치했으면 그대로 보인다 |
 

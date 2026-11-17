@@ -35,8 +35,10 @@ Rules for the note:
 
 ## Where
 
-- **Claude Code**: add it as a `## My style` section at the end of the installed writing style file (`~/.claude/output-styles/research-writing.en.md`, or `research-writing.md` if that is the one installed). If there is no such file, tell the person to install it first from "Writing style" in Lectern's settings window. After saving, tell them to restart Claude Code and that the note applies only in folders where the writing style is chosen (`/output-style`).
-- **Codex, Antigravity, OpenCode**: add it as `### My style` under the "Writing" section of that project's AGENTS.md. If the tool has a personal instruction file it reads in every project, ask whether to put it there.
+Keep the note once in the person's personal folder, so that every folder and every writing style reads the same note (D159).
+
+- **Claude Code**: one file in the personal rules folder, `~/.claude/rules/my-voice.md` (read in every project). If, as in earlier versions, the writing style file (`~/.claude/output-styles/research-writing.en.md` or `research-writing.md`) ends with a `## My style` section, ask whether to move that section into this file — if so, remove it from the style file. After saving, tell them to restart Claude Code.
+- **Codex, Antigravity, OpenCode**: add it as a `## My style` section to the personal instruction file the tool reads in every project (Codex `~/.codex/AGENTS.md`, Antigravity `~/.gemini/AGENTS.md`, OpenCode `~/.config/opencode/AGENTS.md`). If, as in earlier versions, it sits under the "Writing" section of the project's AGENTS.md, ask whether to move it.
 - Rules that differ by folder (a different template for each institution, a different register) belong in that folder's CLAUDE.md or AGENTS.md, not in the note. Folder rules come before the note.
 
 ## Shape of the note

@@ -79,7 +79,12 @@ Claude Code 가 파일을 고치면 Lectern 이 1~2초 안에 다시 그린다. 
 
 ## Claude Code 에 Lectern 알려 주기
 
-Claude Code 가 Lectern 에서 잘 보이는 문서를 쓰게 하려면, 설정(Ctrl+,)의 **Claude Code 에 Lectern 알려 주기** → **Claude Code용 요청 복사**를 Claude Code 에 붙인다. Claude Code 가 Lectern 의 작성 안내를 읽고 그 프로젝트의 `CLAUDE.md` 에 규칙을 정리한다. 이 예제의 [CLAUDE.md](../CLAUDE.md) 가 그 결과의 본보기다.
+Claude Code 가 Lectern 에서 잘 보이는 문서를 쓰게 하려면, 설정(Ctrl+,)의 **Claude Code 에 Lectern 알려 주기**에서 넣을 곳을 고르고 **Claude Code용 요청 복사**를 Claude Code 에 붙인다. 넣을 곳은 둘이다.
+
+- **모든 폴더 (개인)** — 기본. 형식 규칙을 개인 규칙 파일 `~/.claude/rules/lectern.md` 하나에 넣는다. 어느 폴더에서 Claude Code 를 띄워도 읽는다. 한 번이면 된다.
+- **이 폴더만** — 그 프로젝트의 `CLAUDE.md` 에 그 폴더의 글을 누가 읽고 무엇에 쓰는지와 말투를 적는다. 형식 규칙이 개인 폴더에 이미 있으면 다시 넣지 않는다. 이 예제의 [CLAUDE.md](../CLAUDE.md) 맨 앞 '글' 절이 그 본보기다.
+
+고르면 아래 **바뀌는 파일**에 어느 파일이 새로 생기거나 바뀌는지 전체 경로로 보인다. Claude Code 는 지금 상태를 알리고 넣을 글을 보인 뒤 묻는다 — Lectern 은 그 파일을 쓰지 않는다.
 
 ## Codex·Antigravity·OpenCode 를 쓸 때
 

@@ -3,7 +3,7 @@
 // 서버의 탭 목록이 바뀌었으면(다른 실행이 넘긴 폴더) 탭을 다시 맞춘다.
 
 import { S, emit } from './store.js';
-import { getJSON } from './api.js';
+import { getJSON, followConfig } from './api.js';
 import { loadTree } from './project.js';
 import { knownTabsSeq, resyncTabs } from './tabs.js';
 import { paneShown } from './panes.js';
@@ -67,6 +67,7 @@ async function tick() {
     const me = `&wt=${encodeURIComponent(windowName())}${solo ? `&w=${solo.id}&wp=${solo.project}&wd=${encodeURIComponent(JSON.stringify(windowDecks()))}` : ''}`;   // 창끼리 서로 알게 (D95)
     const d = await getJSON(`/api/changes?since=${encodeURIComponent(since)}${me}`);
     emit('window-news', d);
+    if (typeof d.config === 'number') await followConfig(d.config).catch(() => {});   // 다른 창·설정 파일에서 바뀐 설정 (D159)
     if (d.tabs_seq !== knownTabsSeq()) {
       await resyncTabs();
       return;

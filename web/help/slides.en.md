@@ -331,7 +331,7 @@ The user picks templates in the gallery, slide by slide. One Lectern slides file
 
 When the user asks to move a pptx into Lectern slides, to build slides from a md document using a pptx as a reference, or to export slides to pptx, use the skills `pptx-to-lectern` and `lectern-to-pptx` (the SKILL.md format that Claude Code, Codex, Antigravity and OpenCode share). They are in `skills/` in the Lectern program folder (`_internal\skills` when installed).
 
-If the skills are not installed yet, ask the user first. If they agree, copy both folders to your personal skills folder (`~/.claude/skills/` for Claude Code, `~/.codex/skills/` for Codex, `~/.gemini/config/skills/` for Antigravity, `~/.config/opencode/skills/` for OpenCode). If not, read `SKILL.md` in that folder and run its scripts from there.
+If the skills are not installed yet, ask the user first. If they agree, copy both folders to your personal skills folder (`~/.claude/skills/` for Claude Code, `~/.agents/skills/` for Codex, `~/.gemini/config/skills/` for Antigravity, `~/.config/opencode/skills/` for OpenCode). If not, read `SKILL.md` in that folder and run its scripts from there.
 
 ## 13. Convert to html
 

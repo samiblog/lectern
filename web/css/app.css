@@ -1083,6 +1083,48 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .set-nav button.on { background: color-mix(in srgb, var(--ui-accent) 14%, transparent); color: var(--ui-fg); font-weight: 650; }
 .set-content { position: relative; min-height: 0; overflow: auto; padding-right: 8px; }
 .set-sec { padding-bottom: 10px; }
+/* 설정 원문 보기 (D160 — rawview.js): 왼쪽 목록, 오른쪽 원문. 설명 줄은 번호 없이 흐리게 기울여 */
+#lec-raw .dialog-box.raw-box { display: flex; flex-direction: column; width: min(1180px, calc(100vw - 32px)); height: calc(100vh - 6vh - 24px); margin-top: 3vh; overflow: hidden; }
+.raw-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
+.raw-head h2 { margin: 0; }
+.raw-head small { color: var(--ui-muted); font-size: 12px; }
+.raw-body { display: flex; flex: 1; min-height: 0; gap: 12px; }
+.raw-list { flex: none; width: 250px; overflow: auto; padding-right: 6px; border-right: 1px solid var(--ui-border); }
+.raw-group { margin: 10px 4px 2px; color: var(--ui-muted); font-size: 11px; font-weight: 700; }
+.raw-group:first-child { margin-top: 0; }
+.raw-item { display: flex; justify-content: space-between; gap: 6px; width: 100%; padding: 4px 8px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; font-size: 13px; text-align: left; cursor: pointer; }
+.raw-item:hover { background: var(--ui-hover); }
+.raw-item.on { background: var(--ui-active-bg); color: var(--ui-active-fg); font-weight: 650; }
+.raw-item.missing { color: var(--ui-muted); }
+.raw-item small { flex: none; font-size: 11px; }
+.raw-main { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 6px; }
+.raw-pathbar { display: flex; align-items: baseline; gap: 10px; }
+.raw-path { flex: 1; min-width: 0; overflow-wrap: anywhere; font: inherit; font-size: 12px; color: var(--ui-muted); }   /* 화면 글꼴 — 고정폭 한글 글꼴은 역슬래시를 ₩ 로 그린다 */
+.raw-files { display: flex; flex-wrap: wrap; gap: 4px; max-height: 92px; overflow: auto; }
+.raw-file { padding: 1px 8px; border: 1px solid var(--ui-border); border-radius: 999px; background: none; color: inherit; font: inherit; font-size: 12px; cursor: pointer; }
+.raw-file.on { border-color: var(--ui-accent); color: var(--ui-accent); font-weight: 650; }
+.raw-text { flex: 1; min-height: 0; overflow: auto; padding: 6px 0; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-panel); font: 12.5px/1.55 Consolas, 'Cascadia Mono', 'Malgun Gothic', ui-monospace, monospace; }
+.raw-line { display: flex; padding-right: 12px; }
+.raw-n { flex: none; width: 4em; padding-right: 10px; color: var(--ui-faint); text-align: right; user-select: none; }
+.raw-t { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }   /* 긴 줄은 접어 보인다 — 번호는 파일의 줄 그대로 */
+.raw-note .raw-t { max-width: 100ch; padding: 1px 0; color: var(--ui-muted); font: 12px/1.5 var(--ui-font); white-space: pre-wrap; }
+.raw-empty { padding: 16px; color: var(--ui-muted); font-family: var(--ui-font); }
+/* 설정의 범위 (D159): 설정 창 머리 아래의 한 줄, 분류 안의 작은 제목, AI 도구에 건네는 것의 넣을 곳·바뀌는 파일 (aisetup.js) */
+.set-scope { margin: -6px 0 8px; color: var(--ui-muted); font-size: 12px; }
+.set-sec > .set-sub { margin: 14px 0 2px; padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--ui-muted); }
+.set-sec > .set-note { margin: 0 0 6px; padding: 0 4px; color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+.set-box .opt-block .ai-where { margin: 4px 0 0; padding: 4px 0 2px; border-bottom: 0; }
+.set-box .opt-block .ai-where label small { display: none; }
+.set-box .opt-block .ai-where label[hidden] { display: none; }
+.ai-files-head { margin: 6px 4px 2px; color: var(--ui-muted); font-size: 11px; font-weight: 650; }
+.ai-files { display: grid; grid-template-columns: max-content minmax(0, 1fr); align-items: baseline; gap: 3px 10px; margin: 0; padding: 0 4px; list-style: none; font-size: 12px; line-height: 1.5; }
+.ai-files li { display: contents; }   /* 할 일은 왼쪽 한 칸 — 모든 줄의 경로가 같은 자리에서 시작한다 */
+.ai-files .ai-act { color: var(--ui-accent); font-weight: 650; }
+.ai-files .ai-act-keep, .ai-files .ai-act-tool, .ai-files .ai-act-wait, .ai-files .ai-act-unknown { color: var(--ui-muted); }
+.ai-files .ai-path { overflow-wrap: anywhere; font: inherit; }   /* 화면 글꼴 — 고정폭 한글 글꼴은 역슬래시를 ₩ 로 그린다 */
+.ai-files small { grid-column: 2; color: var(--ui-muted); }
+.opt-block .ai-now { display: block; margin: 4px 4px 0; }
+.opt-block .ai-warn { margin: 4px 4px 0; padding: 6px 8px; border-left: 3px solid var(--ui-danger); background: color-mix(in srgb, var(--ui-danger) 10%, transparent); font-size: 12px; line-height: 1.45; }
 .set-sec > h3 { margin: 16px 0 4px; font-size: 13px; font-weight: 700; color: var(--ui-accent); }
 .set-sec:first-child > h3 { margin-top: 2px; }
 .set-sec:last-child { min-height: 100%; }

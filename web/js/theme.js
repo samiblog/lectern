@@ -4,7 +4,7 @@
 // 그 파일(/userstyle/<파일> — 서버가 인터넷 길을 지운 것)을 #lec-user-css 로 얹는다. 목록 맨 아래 '내 스타일' 묶음.
 // 3초마다 목록을 다시 받아, 파일이 생기거나 고쳐지면(Claude Code 가 저장하면) 바로 반영한다.
 
-import { S, emit } from './store.js';
+import { S, emit, on } from './store.js';
 import { html, setHtml } from './html.js';
 import { $ } from './util.js';
 import { saveConfig, getJSON } from './api.js';
@@ -226,6 +226,12 @@ export function initTheme() {
     if ((S.config[themeKey()] || 'auto') !== 'auto') return;
     applyTheme();
     emit('refresh-view');
+  });
+  on('config-follow', (keys) => {   // 다른 창에서 바꾼 스타일·스타일 목록 묶기 (D159 — 슬라이드 창은 slide_theme 만)
+    if (keys.has('theme_groups')) fillPicker();
+    if (!keys.has(themeKey())) return;
+    applyTheme();
+    redrawAfterLoad();
   });
   applyTheme();
   setInterval(syncUserStyles, USER_POLL_MS);

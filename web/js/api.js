@@ -1,6 +1,6 @@
 // 서버 API 호출과 네이티브(pywebview) 기능 연결
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { solo } from './solo.js';
 import { toast } from './util.js';
 import { t } from './i18n.js';
@@ -65,15 +65,51 @@ export async function getText(path) {
   return (await check(res)).text();
 }
 
+const saving = new Map();   // 저장하러 보낸 설정 열쇠와 그 수 (D159 — 다른 창의 변경을 받을 때 이 창이 막 바꾼 값을 덮지 않게)
+
 /** 설정 일부를 저장한다. 실패해도 화면 동작에는 영향이 없다. */
 export async function saveConfig(patch) {
   Object.assign(S.config, patch);
   if (solo && !(solo.deck && ['slide_theme', 'pptx_style', 'recent_templates'].some((k) => k in patch))) return;   // 독립창의 화면 설정은 그 창에서만 (D95 — 설정은 메인 창의 것이다). 슬라이드 창의 스타일만 저장한다 (D96)
+  const keys = Object.keys(patch);
+  for (const k of keys) saving.set(k, (saving.get(k) || 0) + 1);
   try {
     await postJSON('/api/config', patch);
   } catch (e) {
     console.warn('설정 저장 실패', e);   // i18n-ok (개발자 도구에만)
+  } finally {
+    for (const k of keys) saving.set(k, saving.get(k) - 1);
   }
+}
+
+// ---- 설정 따르기 (D159) — 설정은 Lectern 전체에 하나다. 다른 창(독립창·슬라이드 창·메인 창)이나 설정 파일에서 바뀐 값을 이 창에도 입힌다 ----
+// 변경 확인(watch.js)의 대답에 설정의 판 번호가 오고, 이 창이 아는 번호와 다르면 설정을 다시 받는다. 이 창이 마지막으로 받은 서버의 값과
+// 달라진 열쇠만 고른다 — 독립창에서만 바꾼 화면 설정(D95)은 다른 창이 그 열쇠를 바꿀 때까지 그대로 둔다.
+// 사이드바·목차·터미널의 폭과 보임, 검색·최근 변경의 단추, 사이드바의 펼친 묶음처럼 창마다의 화면 상태는 따르지 않는다.
+const FOLLOW = ['language', 'theme', 'slide_theme', 'theme_groups', 'pptx_style', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'side_sort',
+  'toc_hidden_parts', 'math', 'md_breaks', 'external_images', 'vi_keys', 'editor_keys', 'restore_last', 'expand_first_level', 'terminal_position',
+  'terminal_follow_style', 'terminal_font_size', 'csv_stats', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers',
+  'ai_tool', 'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'recent_md_styles', 'recent_templates', 'recent_puts'];
+let served = null;   // 이 창이 마지막으로 받은 서버의 설정
+
+/** 처음 설정을 받는다 (main.js) — 따르기의 기준도 이것 */
+export async function loadConfig() {
+  const config = await getJSON('/api/config');
+  served = structuredClone(config);
+  return config;
+}
+
+/** 변경 확인이 알려 준 판 번호 rev 가 이 창의 것과 다르면 설정을 다시 받아, 달라진 열쇠를 입히고 'config-follow' (열쇠의 Set) 를 알린다 */
+export async function followConfig(rev) {
+  if (rev === S.config._rev) return;
+  const fresh = await getJSON('/api/config');
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const keys = FOLLOW.filter((k) => !same(fresh[k], served?.[k]) && !same(fresh[k], S.config[k]) && !(saving.get(k) > 0));
+  served = fresh;
+  S.config._rev = fresh._rev;
+  if (!keys.length) return;
+  for (const k of keys) S.config[k] = fresh[k];
+  emit('config-follow', new Set(keys));
 }
 
 const OPEN_RESULT = {

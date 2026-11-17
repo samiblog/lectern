@@ -4,12 +4,14 @@
 import { S, emit, on } from './store.js';
 import { saveConfig, postJSON, getJSON } from './api.js';
 import { fillPicker, grouping, userStyleInfo } from './theme.js';
-import { confirmReload } from './editor.js';
+import { confirmReload, hasUnsavedEdits } from './editor.js';
 import { openSamples } from './tabs.js';
 import { $, $$, toast, copyText } from './util.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
 import { aiTool, aiInfo, aiName, aiCli, voicePrompt } from './aitool.js';
+import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, writingStylePrompt } from './aisetup.js';
+import { openRaw } from './rawview.js';
 
 const box = () => $('#lec-settings');
 const TERM_FONT_BASE = 14;   // 터미널 글자 크기의 기본 (D130 — terminal.js 의 TERM_FONT.base, config.py 의 기본값과 같게. 범위는 입력 칸의 min·max)
@@ -25,8 +27,8 @@ async function setTermFont(value) {
   emit('term-font');
 }
 
-/** 설정 창 (D154 — 왼쪽 분류, 오른쪽 절). section: 그 분류의 절에서 연다 — 없으면 마지막에 고른 분류 */
-export function openSettings(section) {
+/** 고르는 칸들을 지금 설정에 맞춘다 (창을 열 때, 다른 창에서 설정이 바뀌었을 때 — D159) */
+function fillControls() {
   for (const input of $$('#lec-settings input[data-key]')) input.checked = S.config[input.dataset.key] !== false;
   for (const radio of $$('#lec-settings input[name="theme_groups"]')) radio.checked = radio.value === grouping();
   for (const radio of $$('#lec-settings input[name="language"]')) radio.checked = radio.value === (S.config.language || 'auto');
@@ -35,10 +37,16 @@ export function openSettings(section) {
   for (const radio of $$('#lec-settings input[name="print_font"]')) radio.checked = radio.value === (S.config.print_font === 'sans' ? 'sans' : 'serif');
   for (const radio of $$('#lec-settings input[name="ai_tool"]')) radio.checked = radio.value === aiTool();
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
+}
+
+/** 설정 창 (D154 — 왼쪽 분류, 오른쪽 절). section: 그 분류의 절에서 연다 — 없으면 마지막에 고른 분류 */
+export function openSettings(section) {
+  fillControls();
   renderMyStyles();
   emit('settings-open');   // 업무 관리 칸 (work.js, D124)
   $('#lec-aiguide-samples').hidden = !S.samples;
   renderValues();
+  refreshAiSetup();   // AI 도구에 건네는 것의 넣을 곳·바뀌는 파일 (D159 — 지금 상태는 받는 대로 다시 그린다)
   segDescs();
   box().hidden = false;
   const sec = typeof section === 'string' && SECTIONS.includes(section) ? section : SECTIONS.includes(S.config.settings_section) ? S.config.settings_section : SECTIONS[0];
@@ -102,6 +110,31 @@ function renderValues() {
 /** 프로젝트의 지시 파일 이름 — 여럿이면 둘을 함께 */
 const ruleFile = () => aiInfo()?.file ?? t('지시 파일(CLAUDE.md·AGENTS.md)');
 
+// 다른 창이나 설정 파일에서 바뀐 설정 (D159 — api.js 의 followConfig). 이 창에도 입힌다 — 다시 불러와야 하는 것은 편집 중이면 알리기만
+on('config-follow', (keys) => {
+  if (keys.has('language') || keys.has('external_images')) {
+    if (hasUnsavedEdits()) toast(t('다른 창에서 다시 불러와야 하는 설정을 바꿨습니다 — 편집을 저장한 뒤 F5 를 누르면 다시 불러옵니다'), '', 8000);
+    else location.reload();
+    return;
+  }
+  if (keys.has('math') || keys.has('md_breaks')) emit('refresh-view');
+  if (keys.has('vi_keys')) emit('vi-keys');
+  if (keys.has('editor_keys')) emit('editor-keys');
+  if (keys.has('print_font')) emit('print-font');
+  if (keys.has('terminal_follow_style')) emit('term-colors');
+  if (keys.has('terminal_font_size')) emit('term-font');
+  if (keys.has('terminal_position')) emit('term-place');
+  if (keys.has('ai_tool')) {
+    applyAiNames();
+    emit('ai-tool');
+  }
+  if (box().hidden) return;
+  fillControls();
+  if (keys.has('ai_tool')) refreshAiSetup();
+  else if (['ai_scope_guide', 'ai_scope_skills', 'ai_style_where'].some((k) => keys.has(k))) redrawAiSetup();
+  segDescs();
+});
+
 export function applyAiNames() {
   const ai = aiName();
   const cli = aiCli();
@@ -109,12 +142,12 @@ export function applyAiNames() {
   const text = (id, value) => { const el = $(id); if (el) el.textContent = value; };
   const tip = (id, value) => $(id)?.setAttribute('title', value);
   text('#lec-aiguide-title', t('{cli} 에 Lectern 알려 주기', { cli }));
-  text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 그 프로젝트의 {file} 에 규칙을 정리합니다', { cli, file: ruleFile() }));
+  text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 고른 곳에 규칙을 정리합니다 — 모든 폴더면 개인 폴더에, 한 폴더면 그 폴더의 {file} 에 그 폴더의 읽는 사람·목적을', { cli, file: ruleFile() }));
   text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'와 예제 가이드 13 에 있습니다", { cli }));
   text('#lec-wstyle-desc', claude
-    ? t('Claude Code 가 개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 파일 경로·굵은 이름 나열 같은 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 Claude Code 에 붙이면 설치할지 먼저 묻습니다. 설치한 뒤 보고서를 쓰는 폴더에서 /output-style 로 고르면 그 폴더에서만 씁니다')
-    : t('개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 그 프로젝트의 AGENTS.md 에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
-  text('#lec-voice-desc', t("내가 직접 쓴 글을 견본으로 {cli} 가 내 문체 노트를 만듭니다 — 용어·말투처럼 지킬 것, 즐겨 쓰는 방식, 따라 하지 않을 버릇(겹말·번역투 같은)을 나눠 적고, 글을 쓰거나 다듬을 때 참고합니다. 요청 글 끝에 견본을 @경로로 이어 붙이거나, 문서 여백을 우클릭해 '내 문체 견본으로 보내기'를 고릅니다. 저장하기 전에 무엇을 찾았는지 먼저 보여 줍니다", { cli }));
+    ? t('Claude Code 가 개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 파일 경로·굵은 이름 나열 같은 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 파일은 개인 폴더에 하나 두고 켜는 곳을 고릅니다. 요청 글을 Claude Code 에 붙이면 지금 상태를 알리고 물은 뒤 설치하고 켭니다')
+    : t('개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 고른 곳(개인 지시 파일이나 그 폴더의 AGENTS.md)에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
+  text('#lec-voice-desc', t("내가 직접 쓴 글을 견본으로 {cli} 가 내 문체 노트를 만듭니다 — 용어·말투처럼 지킬 것, 즐겨 쓰는 방식, 따라 하지 않을 버릇(겹말·번역투 같은)을 나눠 적고, 글을 쓰거나 다듬을 때 참고합니다. 노트는 개인 폴더에 하나 두어 어느 폴더·스타일에서나 같은 노트를 씁니다. 요청 글 끝에 견본을 @경로로 이어 붙이거나, 문서 여백을 우클릭해 '내 문체 견본으로 보내기'를 고릅니다. 저장하기 전에 무엇을 찾았는지 먼저 보여 줍니다", { cli }));
   for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-voice-prompt', '#lec-mystyles-prompt', '#lec-layouts-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
   tip('#lec-layouts-prompt', t('틀 작성 안내의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적습니다', { cli }));
   tip('#lec-aiguide-prompt', t('작성 안내의 위치를 적은 요청 글 — 작업할 프로젝트의 {cli} 에 붙여 넣습니다', { cli }));
@@ -130,46 +163,6 @@ export function applyAiNames() {
   text('#lec-pptx-ask', t('{ai} 에게 스타일 요청', { ai }));
   text('#lec-mdstyle-claude', t('머리글을 바꾸고 본문은 {ai} 에게 요청', { ai }));
   text('#lec-html-ask', t('{ai} 에게 배치 요청', { ai }));
-}
-
-// ---- AI 도구에 Lectern 알려 주기 (D57·D138) ----------------------------------------------
-
-/** AI 도구에 줄 요청 글: 작성 안내(web/help/writing.md)를 읽고 그 프로젝트의 지시 파일(CLAUDE.md·AGENTS.md)에 규칙을 정리하게 */
-function guidePrompt() {
-  const one = aiInfo();
-  const where = one
-    ? t('이 프로젝트의 {file} 에 넣어 줘', { file: one.file })
-    : t('이 프로젝트의 지시 파일에 넣어 줘 (Claude Code 는 CLAUDE.md, Codex·Antigravity·OpenCode 는 AGENTS.md — 둘 다 쓰는 프로젝트면 AGENTS.md 에 넣고 CLAUDE.md 에는 @AGENTS.md 한 줄만 둬)');
-  return t("이 프로젝트의 문서는 사람이 Lectern(Markdown을 중심으로 AI와 함께 작업하는 통합 리서치 작업 환경)으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 '지시 파일에 넣을 요약'을 이 프로젝트에 맞게 다듬어 {where}. 이 프로젝트의 글을 누가 읽고 무엇에 쓰는지 모르면 나에게 물어서 형식 규칙보다 앞에 적어 줘. 앞으로 문서는 그 규칙대로 써.",
-    { guide: S.writingGuide, where });
-}
-
-// ---- PowerPoint·Word 스킬 (D98·D146) -------------------------------------------------------
-
-/** AI 도구에 줄 요청 글: 앱이 설치하지 않는다. 도구가 설명하고 물은 뒤 사용자가 허락하면 제 개인 스킬 폴더로 복사한다 (도구들이 같은 SKILL.md 형식) */
-function skillsPrompt() {
-  const one = aiInfo();
-  const to = one
-    ? t('세 폴더를 {dir}/ 로 복사해', { dir: one.skills })
-    : t('세 폴더를 네 개인 스킬 폴더로 복사해 (Claude Code 는 ~/.claude/skills, Codex 는 ~/.codex/skills, Antigravity 는 ~/.gemini/config/skills, OpenCode 는 ~/.config/opencode/skills)');
-  return t('Lectern 에 {cli} 스킬 세 개가 들어 있어: {dir} 의 pptx-to-lectern, lectern-to-pptx, lectern-to-docx. 먼저 그 폴더의 README.md 를 읽고 무엇을 하는지 짧게 알려 준 뒤, 내 개인 스킬로 설치할지 나에게 물어봐. 내가 그렇다고 하면 {to}. 이미 있으면 바꿀지 다시 물어봐.',
-    { cli: aiCli(), dir: S.skillsDir, to });
-}
-
-// ---- 글쓰기 스타일 (D132) -------------------------------------------------------
-
-/** AI 도구에 줄 요청 글: 글쓰기 규칙(web/help/research-writing.md). 앱이 설치하지 않는다 — 도구가 설명하고 물은 뒤 사용자가 허락하면.
-    Claude Code 는 출력 스타일로 ~/.claude/output-styles 에 (고르는 것은 사용자가 보고서 폴더에서 /output-style 로),
-    출력 스타일이 없는 Codex·Antigravity·OpenCode 는 그 프로젝트의 AGENTS.md 에 '글쓰기' 절로 (D138) */
-function writingStylePrompt() {
-  const file = S.writingStyle;
-  if (aiTool() === 'claude') {
-    return t("Lectern 에 Claude Code 의 글쓰기용 출력 스타일이 들어 있어: {file}. 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 내 개인 출력 스타일로 설치할지 나에게 물어봐. 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사해 (폴더가 없으면 만들고, 같은 이름이 있으면 바꿀지 다시 물어봐. 바꿀 때 있던 파일 끝에 '## 내 문체'(영어판은 '## My style') 절이 있으면 그 절은 새 파일 끝에 그대로 옮겨). 설치한 뒤에는 Claude Code 를 다시 시작해야 읽는다는 것과, 보고서를 쓰는 폴더에서 /output-style 로 그 스타일을 고르면 그 폴더에서만 쓴다는 것을 알려 줘.", { file });
-  }
-  if (aiInfo()) {
-    return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 준 뒤, 이 프로젝트의 AGENTS.md 에 넣을지 나에게 물어봐. 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (본문의 ## 제목은 ### 로 한 단계 내리고, 그 절이 이미 있으면 바꿀지 다시 물어보고, 그 안의 '내 문체' 부분은 그대로 남겨). 그 뒤로 이 프로젝트의 글은 그 규칙대로 써.", { file });
-  }
-  return t("Lectern 에 글쓰기 규칙이 들어 있어: {file} (Claude Code 의 출력 스타일 형식으로 쓴 파일이야). 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 줘. 네가 Claude Code 면 내 개인 출력 스타일로 설치할지 물어보고, 내가 그렇다고 하면 ~/.claude/output-styles/ 폴더에 같은 파일 이름으로 복사한 뒤 다시 시작해서 보고서를 쓰는 폴더에서 /output-style 로 고르라고 알려 줘. 다른 도구면 이 프로젝트의 AGENTS.md 에 넣을지 물어보고, 내가 그렇다고 하면 맨 앞 설정(--- 사이)은 빼고 본문을 AGENTS.md 의 '글쓰기' 절로 넣어 (본문의 ## 제목은 ### 로 한 단계 내리고, 그 절이 이미 있으면 바꿀지 다시 물어봐). 어느 쪽이든 있던 것을 바꿀 때 '내 문체' 절은 그대로 남겨.", { file });
 }
 
 // ---- 내 스타일 (D53) --------------------------------------------------------------
@@ -239,6 +232,7 @@ async function onChange(e) {
   if (e.target.name === 'ai_tool') {   // 쓰는 AI 도구 (D138 — aitool.js): 화면의 이름과 요청 글
     const saving = saveConfig({ ai_tool: e.target.value });   // S.config 는 바로 바뀐다 — 이름부터 고친다
     applyAiNames();
+    refreshAiSetup();   // 도구마다 자리가 다르다 (D159)
     emit('ai-tool');
     await saving;
     return;
@@ -310,6 +304,7 @@ export function initSettings() {
   box().addEventListener('change', segDescs);
   on('open-settings', (sec) => openSettings(sec));   // 관련 화면에서 그 분류로 (D154 — 터미널 머리줄·스타일 목록·업무 현황·vi 표시·내보내기 창)
   applyAiNames();   // 고른 AI 도구의 이름으로 (D138)
+  initAiSetup();   // 넣을 곳 고르기 (D159)
   $('#lec-mystyles-folder').addEventListener('click', openStylesFolder);
   $('#lec-layouts-folder').addEventListener('click', openLayoutsFolder);
   $('#lec-layouts-prompt').addEventListener('click', async () => {
@@ -368,5 +363,11 @@ export function initSettings() {
   box().addEventListener('click', (e) => { if (e.target === box()) closeSettings(); });   // 바깥을 누르면 닫기
   $('#lec-settings-close').addEventListener('click', closeSettings);
   $('#lec-settings-file').addEventListener('click', openConfigFile);
+  // 원문 보기 (D160 — rawview.js): 설정 창 위에 연다. 여럿을 주면 있는 파일 가운데 앞의 것 (설치한 것 → Lectern 에 든 것)
+  $('#lec-settings-raw').addEventListener('click', () => openRaw('config'));
+  $('#lec-aiguide-raw').addEventListener('click', () => openRaw(['rules']));
+  $('#lec-skills-raw').addEventListener('click', () => openRaw(['skill:pptx-to-lectern', 'pskill:pptx-to-lectern', 'lskill:pptx-to-lectern']));
+  $('#lec-wstyle-raw').addEventListener('click', () => openRaw(['style:research-writing.md', 'style:research-writing.en.md', 'lstyle']));
+  $('#lec-voice-raw').addEventListener('click', () => openRaw(['voice']));
   $('#lec-btn-settings').addEventListener('click', openSettings);
 }

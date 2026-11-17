@@ -381,7 +381,7 @@ Lectern 의 예제 프로젝트 `slides/README.md` 가 입구다. 설치 폴더�
 
 사용자가 pptx 를 Lectern 슬라이드로 옮기거나, pptx 를 참고해 md 를 슬라이드로 만들거나, 슬라이드를 pptx 로 내보내라고 하면 스킬 `pptx-to-lectern`·`lectern-to-pptx` 를 쓴다 (SKILL.md 형식 — Claude Code·Codex·Antigravity·OpenCode 가 함께 쓴다). 이 스킬들은 Lectern 프로그램 폴더의 `skills/` 에 들어 있다 (설치본은 `_internal\skills`).
 
-스킬이 아직 설치되어 있지 않으면 먼저 사용자에게 설치할지 묻는다. 그렇다고 하면 두 폴더를 네 개인 스킬 폴더로 복사한다 (Claude Code 는 `~/.claude/skills/`, Codex 는 `~/.codex/skills/`, Antigravity 는 `~/.gemini/config/skills/`, OpenCode 는 `~/.config/opencode/skills/`). 아니라고 하면 그 폴더의 `SKILL.md` 를 읽고 그 자리의 스크립트로 한다.
+스킬이 아직 설치되어 있지 않으면 먼저 사용자에게 설치할지 묻는다. 그렇다고 하면 두 폴더를 네 개인 스킬 폴더로 복사한다 (Claude Code 는 `~/.claude/skills/`, Codex 는 `~/.agents/skills/`, Antigravity 는 `~/.gemini/config/skills/`, OpenCode 는 `~/.config/opencode/skills/`). 아니라고 하면 그 폴더의 `SKILL.md` 를 읽고 그 자리의 스크립트로 한다.
 
 ## 15. html 로 전환
 

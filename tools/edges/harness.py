@@ -120,8 +120,9 @@ def _watch_pages() -> None:
 _watch_pages()
 
 
-def serve(proj, config):
+def serve(proj, config, env=None):
     """proj 를 여는 서버를 띄운다. 설정은 config 폴더에 (설치된 Lectern 과 섞이지 않게). (서버, 주소, 포트).
+    AI 설정의 지금 상태(D159)가 읽는 개인 폴더도 config 폴더 안의 home 으로 — 이 PC 의 실제 ~/.claude 를 읽지 않게. env 로 바꾼다
     서버가 뜨지 않으면 그 자리에서 멈춘다 — 뜨지 않은 서버로 점검을 이어 가면 까닭 모를 시간 초과만 남는다"""
     global _server_log
     with socket.socket() as s:
@@ -131,7 +132,8 @@ def serve(proj, config):
     _server_log = Path(config) / 'server.log'
     log = _server_log.open('w', encoding='utf-8', errors='replace')
     server = subprocess.Popen([sys.executable, str(ROOT / 'tools' / 'quiet_app.py'), '--browser', '--port', str(port), str(proj)], cwd=ROOT,
-                              env=os.environ | {'LECTERN_CONFIG_DIR': str(config), 'PYTHONIOENCODING': 'utf-8'}, stdout=log, stderr=subprocess.STDOUT)
+                              env=os.environ | {'LECTERN_CONFIG_DIR': str(config), 'PYTHONIOENCODING': 'utf-8', 'LECTERN_HOME': str(Path(config) / 'home')} | (env or {}),
+                              stdout=log, stderr=subprocess.STDOUT)
     log.close()
     url = f'http://127.0.0.1:{port}/'
     end = time.monotonic() + 30 * SLOW

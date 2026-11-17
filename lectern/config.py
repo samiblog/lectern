@@ -90,6 +90,10 @@ DEFAULTS: dict[str, Any] = {
     'print_page_numbers': True,  # 인쇄·PDF 의 바닥 쪽 번호 (D134)
     'ai_tool': 'claude',     # 터미널에서 쓰는 AI 도구: claude(Claude Code) | codex(Codex CLI) | antigravity(Antigravity CLI) | opencode(OpenCode) | any(여럿 — 이름을 정하지 않음)
                              # (D138 — 설정 창. 화면의 이름과 요청 글의 지시 파일·스킬 폴더가 이것을 따른다. 앱이 그 도구를 실행하지는 않는다)
+    # AI 도구에 건네는 것을 넣을 곳 (D159 — 설정 창. 요청 글이 이것을 적는다. 쓰는 것은 사용자가 시킬 때 AI 도구가)
+    'ai_scope_guide': 'all',   # Lectern 작성 안내 요약: all(개인 규칙 파일 — 모든 폴더) | folder(그 폴더의 지시 파일)
+    'ai_scope_skills': 'all',  # PowerPoint·Word 스킬: all(개인 스킬 폴더) | folder(그 폴더의 스킬 폴더)
+    'ai_style_where': 'folder',  # 글쓰기 스타일을 켤 곳: folder(그 폴더에서) | all(모든 폴더의 기본) | off(그 폴더에서 끄기). 파일은 늘 개인 폴더에
 }
 
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
@@ -102,7 +106,8 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool'})
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
+                         'ai_scope_guide', 'ai_scope_skills', 'ai_style_where'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'terminal_shell', 'terminal_width',
@@ -137,6 +142,10 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('normal', 'narrow', 'wide')
     if key == 'ai_tool':
         return value in AI_TOOLS
+    if key in ('ai_scope_guide', 'ai_scope_skills'):
+        return value in ('all', 'folder')
+    if key == 'ai_style_where':
+        return value in ('folder', 'all', 'off')
     if key == 'settings_section':
         return value in ('general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more')
     if key == 'terminal_font_size':
@@ -177,6 +186,9 @@ class Config:
         self._disk: tuple[int, int] | None = None   # 마지막으로 읽거나 쓴 파일의 (수정 시각, 크기)
         # 파일이 있는데 읽지 못하면 그 이유. 이때는 기본값으로 돌고, 파일이 고쳐질 때까지 저장하지 않는다
         self.load_error: str | None = None
+        # 설정의 판 번호 (D159): 화면에서 바꾼 값이나 밖에서 고친 파일을 읽을 때마다 하나 올린다. 창들은 변경 확인(/api/changes)으로
+        # 이 번호를 보고, 바뀌었으면 설정을 다시 읽어 그 창에도 입힌다 — 열린 독립창·슬라이드 창도 바로 따르게. 위치·탭 기록은 올리지 않는다
+        self.rev = 0
         data, self.load_error = self._read()
         self.data = data or copy.deepcopy(DEFAULTS)
 
@@ -233,6 +245,8 @@ class Config:
         data, error = self._read()
         self.load_error = error
         if data is not None:
+            if data != self.data:
+                self.rev += 1
             self.data = data
 
     def save(self) -> None:
@@ -262,11 +276,19 @@ class Config:
 
     def update_client(self, patch: dict[str, Any]) -> None:
         def change(data: dict[str, Any]) -> bool:
-            keys = [k for k in patch if k in CLIENT_KEYS and value_ok(k, patch[k])]
+            keys = [k for k in patch if k in CLIENT_KEYS and value_ok(k, patch[k]) and data.get(k) != patch[k]]
             for key in keys:
                 data[key] = patch[key]
+            if keys:
+                self.rev += 1
             return bool(keys)
         self._update(change)
+
+    def revision(self) -> int:
+        """설정의 판 번호 (D159). 밖에서 고친 파일도 여기서 읽어 들인다 (변경 확인이 1초마다 부른다)"""
+        with self._lock:
+            self._refresh()
+            return self.rev
 
     def set_window(self, width: int, height: int) -> None:
         self._update(lambda data: data.update(window={'width': int(width), 'height': int(height)}))

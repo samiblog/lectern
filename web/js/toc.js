@@ -563,6 +563,9 @@ async function togglePart(kind) {
 }
 
 export function initToc() {
+  on('config-follow', (keys) => {   // 다른 창에서 감추고 보인 구성 요소 종류 (D159)
+    if (keys.has('toc_hidden_parts') && S.pane?.tocRoot) buildToc(S.pane.tocRoot);
+  });
   // 스크롤은 거품처럼 올라오지 않으므로 잡기 단계에서 듣는다. 선택된 칸(#lec-content)의 스크롤만
   document.addEventListener('scroll', (e) => {
     if (e.target === S.pane?.scroller && !raf) raf = requestAnimationFrame(spy);

@@ -141,8 +141,8 @@ def test_writing_style_kinds_habits_and_review():
 
 
 def test_writing_guide_summary_is_short_and_quality_first():
-    """작성 안내의 '지시 파일에 넣을 요약' (D132 — 이름은 D138: CLAUDE.md·AGENTS.md): 첫 줄이 글의 질, 열 줄을 넘지 않는다"""
-    for name, head in (('writing.md', '## 지시 파일에 넣을 요약'), ('writing.en.md', '## Summary for the instruction file')):
+    """작성 안내 끝의 요약 (D132 — 이름은 D159: 개인 규칙이나 지시 파일에 넣는 것): 첫 줄이 글의 질, 열 줄을 넘지 않는다"""
+    for name, head in (('writing.md', '## 요약 — 개인 규칙이나 지시 파일에 넣는 것'), ('writing.en.md', '## Summary — what goes into the personal rules or the instruction file')):
         text = (web_dir() / 'help' / name).read_text(encoding='utf-8')
         block = text.split(head, 1)[1].split('```markdown', 1)[1].split('```', 1)[0]
         bullets = [s for s in block.splitlines() if s.startswith('- ')]

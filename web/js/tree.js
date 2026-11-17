@@ -483,6 +483,12 @@ export function initTree() {
     emit('titles');   // 최근 변경·검색·폴더 보기의 문서 행도
   });
   $('#lec-btn-sort').addEventListener('click', openSort);
+  on('config-follow', (keys) => {   // 다른 창에서 바꾼 제목 보이기·차례 (D159)
+    if (!keys.has('show_titles') && !keys.has('side_sort')) return;
+    render();
+    if (keys.has('show_titles')) emit('titles');
+    if (keys.has('side_sort')) emit('side-sort');
+  });
   $('#lec-btn-expand').addEventListener('click', openExpand);
   for (const box of $$('#lec-docs .doc-kinds')) {   // 하위 묶음의 머리줄 (D143)
     box.addEventListener('click', (e) => {

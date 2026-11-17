@@ -15,7 +15,7 @@ Lectern 이 저절로 설치하지 않습니다. 사용자가 시키면 AI 도�
 | 도구 | 개인 스킬 폴더 |
 |---|---|
 | Claude Code | `~/.claude/skills/` |
-| Codex | `~/.codex/skills/` |
+| Codex | `~/.agents/skills/` |
 | Antigravity | `~/.gemini/config/skills/` |
 | OpenCode | `~/.config/opencode/skills/` (`~/.claude/skills/` 도 읽습니다 — Claude Code 용으로 설치했으면 그대로 보입니다) |
 

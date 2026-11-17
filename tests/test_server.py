@@ -288,7 +288,7 @@ def test_changes_endpoint(client, state, pid, other):
     assert set(r['projects']) == {pid, second.id} and r['tabs_seq'] == state.tabs_seq
     assert r['projects'][pid]['paths'] == ['README.md'] and r['projects'][pid]['seq'] == seq + 1
     assert r['projects'][second.id]['structure'] is True   # 처음 열 때 트리를 그리라는 기록
-    assert client.get('/api/changes').get_json() == {'tabs_seq': state.tabs_seq, 'projects': {}}
+    assert client.get('/api/changes').get_json() == {'tabs_seq': state.tabs_seq, 'projects': {}, 'config': state.config.rev}   # config: 설정의 판 번호 (D159)
 
 
 def test_reveal(client, monkeypatch, pid, project):

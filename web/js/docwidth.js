@@ -2,7 +2,7 @@
 // '가득'은 칸 폭 전체. 글자 크기는 그대로다 (줄이 길어지거나 짧아진다). 값은 설정 doc_width 에 저장되어 다음 실행에도 쓰인다.
 // md 문서와 스타일 없는 html 은 CSS 변수 --md-wide (base.css — htmldoc.js 가 iframe 에도). 코드 화면·Lectern 슬라이드·스타일 있는 html 은 그대로.
 
-import { S, emit } from './store.js';
+import { S, emit, on } from './store.js';
 import { saveConfig } from './api.js';
 import { keepPlace } from './textsize.js';
 import { $ } from './util.js';
@@ -44,5 +44,10 @@ export function initDocWidth() {
   $('#lec-width-narrower').addEventListener('click', () => step(-1));
   $('#lec-width-wider').addEventListener('click', () => step(1));
   $('#lec-width-reset').addEventListener('click', () => { if (docWidth() !== 1) setWidth(1); });
+  on('config-follow', (keys) => {   // 다른 창에서 바꾼 문서 폭 (D159)
+    if (!keys.has('doc_width')) return;
+    keepPlace(render);
+    emit('doc-width', docWidth());
+  });
   render();
 }

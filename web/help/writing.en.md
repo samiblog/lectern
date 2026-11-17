@@ -4,7 +4,12 @@ This guide is for AI tools such as Claude Code, Codex, Antigravity and OpenCode.
 
 **Formatting makes writing visible; the quality of the writing comes first.** The rules below only make documents show correctly in Lectern — they do not make good writing. Before writing, decide who reads it and what they must judge after reading. Do not stop at the folder: look for background and counter-evidence in earlier material and on the web, and keep the sources. Write to the kind of document (narrative or bullet-point; even bullets must each carry their evidence and meaning), keep developer habits such as file paths and code formatting out of the body, and when done, reread from the start as the reader and revise. For people who write reports often, the 'Writing style' in Lectern's settings (a Claude Code output style) keeps this on for the whole session.
 
-If the task is "put these rules into this project's instruction file" (the instruction file is `CLAUDE.md` for Claude Code and `AGENTS.md` for Codex, Antigravity and OpenCode — if the project uses both, put them in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`), trim the **Summary for the instruction file** at the end to fit that project, and write down this guide's full path with it so it is read again when writing tables, charts or slides. Keep the project's instruction file from becoming a formatting rulebook: put that project's readers, purpose and tone before the formatting rules. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
+If the task is to put these rules somewhere, it is one of two things, depending on where the person chose (the request from Lectern's settings window says which — D159).
+
+- **All folders (personal folder)**: put the **Summary** at the end into the person's personal rules — for Claude Code the one file `~/.claude/rules/lectern.md` (do not change the person's own `~/.claude/CLAUDE.md`), for Codex a section of `~/.codex/AGENTS.md`, for Antigravity of `~/.gemini/AGENTS.md`, for OpenCode of `~/.config/opencode/AGENTS.md`. Write down this guide's full path with it so it is read again when writing tables, charts or slides. Leave out what differs by project (readers, purpose, tone).
+- **One folder**: in that project's instruction file (`CLAUDE.md` for Claude Code and `AGENTS.md` for Codex, Antigravity and OpenCode — if the project uses both, put it in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`), write that project's readers, purpose and tone. If the personal rules already have the Lectern summary, leave out the formatting rules; if not, trim the summary to fit the project and add it too. Keep the project's instruction file from becoming a formatting rulebook: put readers, purpose and tone before the formatting rules.
+
+Either way, before writing, say whether the file exists now and whether it already has the Lectern summary, show the text you will add, and ask. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
 
 ## 1. What Lectern shows
 
@@ -281,7 +286,7 @@ This task in one line.
 - Don't mix units or notes into table cells (it breaks number alignment).
 - Don't put long text on one slide (the bottom is cut off).
 
-## Summary for the instruction file (CLAUDE.md or AGENTS.md)
+## Summary — what goes into the personal rules or the instruction file
 
 ```markdown
 ## Documents (read with Lectern)

@@ -153,7 +153,7 @@ try:
         page.click('#lec-wstyle-prompt')
         page.wait_for_timeout(250)
         clip = page.evaluate('() => navigator.clipboard.readText()')
-        check("글쓰기 스타일 설치 요청: '## 내 문체' 절은 새 파일로 옮긴다", "'## 내 문체'" in clip and '옮겨' in clip, clip[-250:])
+        check("글쓰기 스타일 설치 요청: 예전 판의 '## 내 문체' 절은 개인 규칙 파일로 옮길지 묻는다 (D159)", "'## 내 문체'" in clip and '내-문체.md 로 옮길지' in clip, clip[-250:])
         page.click('#lec-voice-term')
         expect(page, '터미널 버튼: 설정 창이 닫히고 같은 글을 터미널에', lambda: page.evaluate("() => document.querySelector('#lec-settings').hidden") and page.evaluate(PASTED)[-1].endswith('견본: '),
                lambda: page.evaluate(PASTED)[-1:])

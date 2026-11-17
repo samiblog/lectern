@@ -99,6 +99,7 @@ export function initLineNumbers() {
   });
   on('pane', updateButton);
   on('view', updateButton);
+  on('config-follow', (keys) => { if (keys.has('line_numbers')) keepPlace(apply); });   // 다른 창에서 바꾼 줄 번호 (D159)
   document.documentElement.classList.toggle('line-numbers', wanted());
   updateButton();
 }

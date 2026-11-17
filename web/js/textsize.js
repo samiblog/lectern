@@ -2,7 +2,7 @@
 // 앱 UI 와 그림은 그대로다. 값은 설정 font_scale 에 저장되어 다음 실행에도 쓰인다.
 // md 문서와 스타일 없는 html 은 CSS 변수 --md-scale (base.css), 스타일 있는 html 은 iframe 문서의 zoom (htmldoc.js).
 
-import { S, emit } from './store.js';
+import { S, emit, on } from './store.js';
 import { saveConfig } from './api.js';
 import { $ } from './util.js';
 
@@ -65,5 +65,10 @@ export function initTextSize() {
   $('#lec-text-smaller').addEventListener('click', () => step(-1));
   $('#lec-text-bigger').addEventListener('click', () => step(1));
   $('#lec-text-reset').addEventListener('click', resetText);
+  on('config-follow', (keys) => {   // 다른 창에서 바꾼 글자 크기 (D159)
+    if (!keys.has('font_scale')) return;
+    keepPlace(render);
+    emit('text-size', textScale());
+  });
   render();
 }

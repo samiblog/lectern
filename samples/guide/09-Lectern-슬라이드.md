@@ -244,7 +244,7 @@ Lectern 은 Claude 를 실행하지 않는다. 오른쪽 터미널(**Ctrl+\`** �
 
 ### 처음 한 번: Claude 에게 Lectern 알려 주기
 
-설정(Ctrl+,)의 **Claude Code 에 Lectern 알려 주기** → **Claude Code용 요청 복사**(또는 옆의 터미널 버튼)로 요청 글을 넣는다. Claude 가 Lectern 의 작성 안내를 읽고 그 프로젝트의 `CLAUDE.md` 에 규칙을 정리한다. 슬라이드 규칙(`slides.md`)을 먼저 읽으라는 줄도 들어가서, 그 뒤로 Claude 는 분량 기준과 배치 규칙을 지켜 넘치지 않게 쓴다.
+설정(Ctrl+,)의 **Claude Code 에 Lectern 알려 주기** → **Claude Code용 요청 복사**(또는 옆의 터미널 버튼)로 요청 글을 넣는다. Claude 가 Lectern 의 작성 안내를 읽고 고른 곳(기본은 모든 폴더 — 개인 규칙 파일 `~/.claude/rules/lectern.md`)에 규칙을 정리한다. 슬라이드 규칙(`slides.md`)을 먼저 읽으라는 줄도 들어가서, 그 뒤로 Claude 는 분량 기준과 배치 규칙을 지켜 넘치지 않게 쓴다.
 
 ### 스킬 설치
 
@@ -256,8 +256,8 @@ pptx 와 Lectern 슬라이드를 오가는 일은 Lectern 에 든 스킬 두 개
 | `lectern-to-pptx` | Lectern 슬라이드를 pptx 로 만든다 — 회사 양식으로, 또는 pptx 에서 옮겨 온 문서면 원본 장을 살려 고친 장만 반영해서 |
 
 1. 설정(Ctrl+,)의 **PowerPoint·Word 스킬** → **Claude Code용 요청 복사**, 또는 옆의 터미널 버튼으로 요청 글을 넣고 Enter 를 누른다.
-2. Claude 가 스킬들이 무엇을 하는지 짧게 알려 주고 설치할지 묻는다. 그렇다고 하면 개인 스킬 폴더(`~/.claude/skills/`)에 복사한다. Codex·Antigravity·OpenCode 의 폴더는 [13 내보내기](13-내보내기-html-틀-Word.md) 7절의 표 8.
-3. 새 판의 Lectern 을 설치한 뒤에는 같은 요청을 한 번 더 한다. 이미 있으면 바꿀지 묻는다.
+2. Claude 가 스킬들이 무엇을 하는지와 지금 설치돼 있는지 알려 주고 설치할지 묻는다. 그렇다고 하면 고른 곳(기본은 개인 스킬 폴더 `~/.claude/skills/`)에 없는 것과 다른 것만 복사한다. Codex·Antigravity·OpenCode 의 폴더는 [13 내보내기](13-내보내기-html-틀-Word.md) 7절의 표 8.
+3. 새 판의 Lectern 을 설치한 뒤 설정 창의 바뀌는 파일에 '바꿈 — Lectern 의 것과 다름'이 보이면 같은 요청을 한 번 더 한다. 다른 것을 바꾸기 전에 묻는다.
 
 Lectern 이 스킬을 설치하지는 않는다 — Claude 가 묻고 사람이 허락할 때만 들어간다.
 

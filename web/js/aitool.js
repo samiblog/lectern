@@ -6,12 +6,17 @@
 import { S } from './store.js';
 import { t } from './i18n.js';
 
-/** name: 짧은 이름('Codex로 보내기'), cli: 프로그램 이름, file: 프로젝트 지시 파일, skills: 개인 스킬 폴더, resume: 하던 대화를 잇는 명령 */
+/**
+ * name: 짧은 이름('Codex로 보내기'), cli: 프로그램 이름, file: 프로젝트 지시 파일, skills: 개인 스킬 폴더, projectSkills: 프로젝트 스킬 폴더,
+ * rules: Lectern 작성 안내 요약을 넣는 개인 파일 (D159 — Claude Code 는 개인 규칙 폴더의 한 파일, 다른 도구는 개인 지시 파일의 한 절),
+ * resume: 하던 대화를 잇는 명령. 경로는 각 도구의 공식 문서로 확인했다 (2026-11-17 — 서버 aistatus.py 의 TOOLS 와 같게, 시험이 견준다)
+ */
 export const AI_TOOLS = {
-  claude: { name: 'Claude', cli: 'Claude Code', file: 'CLAUDE.md', skills: '~/.claude/skills', resume: 'claude --continue' },
-  codex: { name: 'Codex', cli: 'Codex', file: 'AGENTS.md', skills: '~/.codex/skills', resume: 'codex resume --last' },
-  antigravity: { name: 'Antigravity', cli: 'Antigravity', file: 'AGENTS.md', skills: '~/.gemini/config/skills', resume: 'agy --continue' },
-  opencode: { name: 'OpenCode', cli: 'OpenCode', file: 'AGENTS.md', skills: '~/.config/opencode/skills', resume: 'opencode --continue' },   // ~/.claude/skills 도 읽는다
+  claude: { name: 'Claude', cli: 'Claude Code', file: 'CLAUDE.md', skills: '~/.claude/skills', projectSkills: '.claude/skills', rules: '~/.claude/rules/lectern.md', resume: 'claude --continue' },
+  // Codex 의 개인 스킬은 ~/.agents/skills (~/.codex/skills 는 옛 자리), 개인 지시 파일은 ~/.codex/AGENTS.md (AGENTS.override.md 가 있으면 그것만 읽힌다)
+  codex: { name: 'Codex', cli: 'Codex', file: 'AGENTS.md', skills: '~/.agents/skills', projectSkills: '.agents/skills', rules: '~/.codex/AGENTS.md', resume: 'codex resume --last' },
+  antigravity: { name: 'Antigravity', cli: 'Antigravity', file: 'AGENTS.md', skills: '~/.gemini/config/skills', projectSkills: '.agents/skills', rules: '~/.gemini/AGENTS.md', resume: 'agy --continue' },
+  opencode: { name: 'OpenCode', cli: 'OpenCode', file: 'AGENTS.md', skills: '~/.config/opencode/skills', projectSkills: '.agents/skills', rules: '~/.config/opencode/AGENTS.md', resume: 'opencode --continue' },   // ~/.claude/skills 도 읽는다
 };
 
 /** 고른 도구: 'claude'·'codex'·'antigravity'·'opencode'·'any' */

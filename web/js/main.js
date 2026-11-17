@@ -1,7 +1,7 @@
 // 시작점: 초기화, 툴바, 단축키
 
 import { S, on, emit } from './store.js';
-import { getJSON, saveConfig, native } from './api.js';
+import { saveConfig, native, loadConfig } from './api.js';
 import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
@@ -34,6 +34,7 @@ import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded, openSamples,
 } from './tabs.js';
 import { initSettings, openSettings, closeSettings } from './settings.js';
+import { initRaw, closeRaw } from './rawview.js';
 import { initPrint, closePrint } from './printdoc.js';
 import {
   initHelp, toggleManual, closeManual, manualOpen, toggleShortcuts, closeShortcuts,
@@ -186,7 +187,7 @@ function bindToolbar() {
 }
 
 const typing = (e) => e.target.closest?.('input, textarea, select, [contenteditable]:not([contenteditable="false"])')
-  || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-keys').hidden || manualOpen();
+  || !$('#lec-menu').hidden || !$('#lec-palette').hidden || !$('#lec-settings').hidden || !$('#lec-raw').hidden || !$('#lec-keys').hidden || manualOpen();
 const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 /** 독립창(D95)에 없는 것의 키: 메모·프로젝트 탭·터미널·터미널 모음·설정·폴더 열기 */
 const mainOnlyKey = (e, mod, key) => (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyM' || e.code === 'KeyW' || e.code === 'KeyS' || e.key === 'PageDown' || e.key === 'PageUp'))
@@ -382,7 +383,7 @@ function bindKeys() {
     } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
         || clearPick() || escSpotlight()) e.preventDefault();
     }
   });
@@ -414,7 +415,7 @@ async function boot() {
   initPanes();   // 시작 화면 칸 — 연결을 기다리는 안내도 여기에
   await waitForBridge();
   try {
-    S.config = await getJSON('/api/config');
+    S.config = await loadConfig();   // 설정 따르기의 기준도 (D159)
   } catch {
     S.config = {};
   }
@@ -444,6 +445,7 @@ async function boot() {
   initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다
   initRecent();  // 같은 까닭 (트리가 사이드바 탭을 바꾸면 숨은 목록의 스크롤 위치를 읽지 못한다)
   initSettings();
+  initRaw();   // 설정 원문 보기 (D160)
   initHelp();
   initPosition();
   initResize();
