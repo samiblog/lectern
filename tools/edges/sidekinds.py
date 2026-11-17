@@ -2,6 +2,7 @@
 (전체·문서·슬라이드·HTML·업무·형광펜·할 일 — 없는 종류는 감춤), 형광펜 하위 묶음에서 그 자리로·메모 달기·지우기, 문서 안의 F8·Shift+F8."""
 import json
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -34,8 +35,18 @@ ITEMS = "() => [...document.querySelectorAll('#lec-tree .row.item')].map((r) => 
 SECS = "() => ['#lec-docs', '#lec-code', '#lec-others'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
 
 
+def text(path):
+    """앱이 파일을 쓰는 사이 Windows 가 잠가 PermissionError 가 나면 잠깐 뒤에 다시 읽는다"""
+    for _ in range(40):
+        try:
+            return path.read_text(encoding='utf-8')
+        except OSError:
+            time.sleep(0.05)
+    return path.read_text(encoding='utf-8')
+
+
 def read():
-    return doc.read_text(encoding='utf-8').replace('\r\n', '\n')
+    return text(doc).replace('\r\n', '\n')
 
 
 def saved():
@@ -118,8 +129,8 @@ try:
         notes = proj / '.lectern' / 'notes.md'
         page.wait_for_selector('.note-card')
         page.keyboard.type('나중에 다시 볼 것')
-        check('메모가 생기고 칠한 글이 제목, 그 자리와 찾을 글이 남는다', until(page, lambda: notes.exists() and '## 크게 올랐다' in notes.read_text(encoding='utf-8')
-              and 'line=3' in notes.read_text(encoding='utf-8') and 'find=' in notes.read_text(encoding='utf-8'), 8000), notes.read_text(encoding='utf-8')[:300] if notes.exists() else None)
+        check('메모가 생기고 칠한 글이 제목, 그 자리와 찾을 글이 남는다', until(page, lambda: notes.exists() and '## 크게 올랐다' in text(notes)
+              and 'line=3' in text(notes) and 'find=' in text(notes), 8000), text(notes)[:300] if notes.exists() else None)
         doc.write_text('# 시장 점검\n\n새로 넣은 문단.\n\n또 넣은 문단.\n\n' + MARKED.split('\n', 2)[2], encoding='utf-8')
         until(page, lambda: page.evaluate("import('/static/js/store.js').then(({ S }) => S.tab.files.length)") > 0)
         page.wait_for_timeout(1500)
@@ -206,7 +217,7 @@ try:
         menu_at('노랑 말')
         page.locator('#lec-menu button', has_text='메모 달기').click()
         page.wait_for_selector('.note-card')
-        check('칠한 글 안의 낱말에서도 메모 달기 — 칠한 글 통째가 제목', until(page, lambda: '## 노랑 말' in notes.read_text(encoding='utf-8'), 8000), notes.read_text(encoding='utf-8')[-200:])
+        check('칠한 글 안의 낱말에서도 메모 달기 — 칠한 글 통째가 제목', until(page, lambda: '## 노랑 말' in text(notes), 8000), text(notes)[-200:])
         page.keyboard.press('Alt+m')
         end_p = page.locator('#lec-view p', has_text='끝 문단')
         end_p.dblclick(position={'x': 8, 'y': 8})   # 글 위를 — 문단 가운데는 빈 곳이라 아무것도 고르지 않는다
@@ -217,7 +228,7 @@ try:
         check('칠하지 않은 글: 담기·문서로 보내기·새 메모로 보내기, 형광펜 항목은 없음',
               '고른 글 담기' in got and '고른 글을 문서로 보내기…' in got and '새 메모로 보내기' in got and '메모 달기' not in got and '이 형광펜 지우기' not in got, got)
         page.locator('#lec-menu button', has_text='새 메모로 보내기').click()
-        check('고른 글의 새 메모는 그 글로 다시 찾는다 (find)', until(page, lambda: 'find=' in notes.read_text(encoding='utf-8').split('lectern-note')[-1], 8000), notes.read_text(encoding='utf-8')[-200:])
+        check('고른 글의 새 메모는 그 글로 다시 찾는다 (find)', until(page, lambda: 'find=' in text(notes).split('lectern-note')[-1], 8000), text(notes)[-200:])
         page.keyboard.press('Alt+m')
         check('페이지 오류 없음', not errors, errors[:3])
         b.close()

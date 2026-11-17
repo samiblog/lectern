@@ -2,6 +2,7 @@
 묻기·프로젝트 밖 막기), ECharts·Plotly, Graphviz·슬라이드에는 없음, 표의 [복사], 데이터 표 칸에는 표 메뉴 없음, 인쇄에는 없음"""
 import json
 import tempfile
+import time
 import traceback
 from pathlib import Path
 
@@ -90,6 +91,16 @@ def clip(page):
 
 
 server, url, port = serve(proj, config)
+
+def read(path):
+    """앱이 파일을 쓰는 사이 Windows 가 잠가 PermissionError 가 나면 잠깐 뒤에 다시 읽는다"""
+    for _ in range(40):
+        try:
+            return path.read_text(encoding='utf-8')
+        except OSError:
+            time.sleep(0.05)
+    return path.read_text(encoding='utf-8')
+
 try:
     with sync_playwright() as p:
         b = p.chromium.launch()
@@ -186,10 +197,10 @@ try:
         press(page, 3, 'copy')
         expect(page, '복사는 까닭을 알린다', "() => document.querySelector('#lec-toast')?.textContent.includes('복사할 값이 없습니다')")
         before_svg = page.evaluate("() => document.querySelectorAll('#lec-view pre.lec-chart')[3].querySelector(':scope > svg').outerHTML")
-        before = (proj / 'docs' / 'a.md').read_text(encoding='utf-8')
+        before = read(proj / 'docs' / 'a.md')
         page.locator('#lec-view pre.lec-chart >> nth=3').locator('[data-act="inline"]').click()
-        check('파일에 values 로 들어갔다', until(page, lambda: '"values"' in (proj / 'docs' / 'a.md').read_text(encoding='utf-8').split('파일 차트')[1].split('```')[0], ms=10000))
-        after = (proj / 'docs' / 'a.md').read_text(encoding='utf-8')
+        check('파일에 values 로 들어갔다', until(page, lambda: '"values"' in read(proj / 'docs' / 'a.md').split('파일 차트')[1].split('```')[0], ms=10000))
+        after = read(proj / 'docs' / 'a.md')
         part = after.split('"title": "파일 차트"')[1].split('```')[0]
         check('url 은 빠지고 빈 칸은 null, 수는 수로', '"url"' not in part and '{"월":"2026-02","가격":9340,"비고":"추정"}' in part and '"비고":null' in part, part[:400])
         check('다른 줄은 그대로', after.split('"title": "파일 차트"')[0] == before.split('"title": "파일 차트"')[0]
@@ -201,20 +212,20 @@ try:
         check('같은 그림 (SVG 가 같다)', after_svg == before_svg, (len(before_svg), len(after_svg)))
         page.locator('#lec-view p').first.click()
         page.keyboard.press('Control+z')
-        check('Ctrl+Z 로 되돌린다', until(page, lambda: (proj / 'docs' / 'a.md').read_text(encoding='utf-8') == before, ms=10000))
+        check('Ctrl+Z 로 되돌린다', until(page, lambda: read(proj / 'docs' / 'a.md') == before, ms=10000))
 
         print('[큰 CSV — 묻는다]')
         page.evaluate(OPEN, 'docs/big.md')
         until(page, "() => document.querySelector('#lec-view pre.lec-chart.chart-ok')", ms=20000)
-        big_before = (proj / 'docs' / 'big.md').read_text(encoding='utf-8')
+        big_before = read(proj / 'docs' / 'big.md')
         press(page, 0, 'table')
         page.locator('#lec-view pre.lec-chart >> nth=0').locator('[data-act="inline"]').click()
         expect(page, '600행이면 묻는다', lambda: any('600' in d for d in dialogs), dialogs)
         page.wait_for_timeout(500)
-        check('그만두면 그대로', (proj / 'docs' / 'big.md').read_text(encoding='utf-8') == big_before)
+        check('그만두면 그대로', read(proj / 'docs' / 'big.md') == big_before)
         answer['accept'] = True
         page.locator('#lec-view pre.lec-chart >> nth=0').locator('[data-act="inline"]').click()
-        check('넣으면 600행', until(page, lambda: (proj / 'docs' / 'big.md').read_text(encoding='utf-8').count('{"n":') == 600, ms=10000))
+        check('넣으면 600행', until(page, lambda: read(proj / 'docs' / 'big.md').count('{"n":') == 600, ms=10000))
         answer['accept'] = False
 
         print('[프로젝트 밖의 파일]')
@@ -228,7 +239,7 @@ try:
             expect(page, '프로젝트 밖은 읽지 않는다고 알린다', "() => document.querySelector('#lec-toast')?.textContent.includes('이 프로젝트 안의 파일만')")
         else:
             check('프로젝트 밖 파일의 차트는 그려지지 않는다 (단추도 없다)', not page.evaluate("() => !!document.querySelector('#lec-view .lec-chart-tools')"))
-        check('파일은 그대로', '"url"' in (proj / 'docs' / 'out.md').read_text(encoding='utf-8'))
+        check('파일은 그대로', '"url"' in read(proj / 'docs' / 'out.md'))
 
         print('[Lectern 슬라이드에는 없다]')
         page.evaluate(OPEN, 'docs/deck.md')
