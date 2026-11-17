@@ -223,9 +223,16 @@ export function pick({ items, title, at = null, value = '', free = false, placeh
   });
 }
 
+/** 창을 닫은 뒤 초점이 창 안에 남았으면 문서 칸으로 (D158) — 칸이 열려 있으면 lineedit.js 가 칸으로 옮긴다 */
+function hide() {
+  box().hidden = true;
+  const act = document.activeElement;
+  if (!act || act === document.body || box().contains(act)) S.pane?.scroller?.focus({ preventScroll: true });
+}
+
 export function closePut() {
   if (box().hidden) return false;
-  box().hidden = true;
+  hide();
   const w = waiting;
   waiting = null;
   w?.resolve(null);
@@ -242,7 +249,7 @@ function choose() {
     toast(w.off[item.id]);
     return;
   }
-  box().hidden = true;
+  hide();
   waiting = null;
   if (w.board && !w.first && item?.id) saveConfig({ recent_puts: [item.id, ...(S.config?.recent_puts || []).filter((x) => x !== item.id)].slice(0, RECENT) });   // 최근 넣은 것 (D154)
   w.resolve(item ?? { text });

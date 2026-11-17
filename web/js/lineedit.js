@@ -544,9 +544,24 @@ function restore(s) {
 }
 
 /**
- * 편집을 끝낸다. save: 고친 것이 있으면 저장하고 그 칸을 다시 그린다. {ok, saved} — ok 가 false 면 저장하지 못했다(알렸다)
+ * 편집을 끝낸다. save: 고친 것이 있으면 저장하고 그 칸을 다시 그린다. {ok, saved} — ok 가 false 면 저장하지 못했다(알렸다).
+ * 칸이 닫히면 키보드 초점을 문서 칸으로 돌린다 (D158 — 이어 누르는 ↑·↓·PageDown 이 그 줄에서 듣게)
  */
 async function finish(save) {
+  const r = await finishCell(save);
+  refocus();
+  return r;
+}
+
+/** 칸이 닫힌 뒤 초점이 페이지 바닥이나 사라진 칸에 남았으면 문서 칸으로 — 사용자가 다른 곳(창·입력 칸)에 둔 초점은 그대로 */
+function refocus() {
+  if (session) return;
+  const act = document.activeElement;
+  if (act && act !== document.body && act.isConnected && !act.closest?.('.lec-line-edit, .lec-new-line')) return;
+  S.pane?.scroller?.focus({ preventScroll: true });
+}
+
+async function finishCell(save) {
   const s = session;
   if (!s) return { ok: true, saved: false };
   session = null;
@@ -810,10 +825,14 @@ function rowEdge(at, back) {
 
 /**
  * ↑·↓: 저장하고 위·아래 줄을 이어서 편집 (표는 같은 칸 차례). 넘어가는 사이에도 하이라이트의 회색은 걷어 둔다 (lineEditHold).
- * 마지막 줄의 ↓ 는 새 줄을 연다 (D106 — repeat: 누르고 있는 키는 마지막 줄에서 멈춘다). 빈 새 항목의 ↓ 는 한 레벨 밖으로 — 목록이 끝난다
+ * 마지막 줄의 ↓ 는 칸을 그대로 두고 줄을 더하는 키를 알린다 (D158 — 문서 중간과 끝이 같은 키 Shift+Enter). 빈 새 항목의 ↓ 는 한 레벨 밖으로 — 목록이 끝난다
  */
 async function step(dir, repeat = false, cell = null) {
   const s = session;
+  if (dir > 0 && s.line && neighbor(s.line, 1) == null && (!s.fresh || read(s.places[0]).trim())) {   // 마지막 줄 — 옮길 곳이 없다
+    if (!repeat) toast(t('마지막 줄입니다 — 아래에 새 줄은 Shift+Enter'));
+    return;
+  }
   if (dir > 0 && s.fresh && !read(s.places[0]).trim()) {
     if (repeat || shiftFresh(s, -1) || (s.line ? neighbor(s.line, 1) == null : true)) return;
   }
@@ -2063,7 +2082,7 @@ function menuOp(op, after = null) {
 
 /** 메뉴의 '여기에 넣기…'·'이 줄 바꾸기…' 를 칸 없이 쓸 때: 그 줄 아래에 새 줄을 열고 고른다 */
 async function putBelow(line, target) {
-  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table`), after: true });   // 표의 행이면 표 아래에 — 행을 더하는 것은 표 메뉴
+  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table, pre`), after: true });   // 표·코드 블록의 줄이면 그 블록 아래에 — 행·코드 줄을 더하는 것은 Ctrl+Enter (D158 — 문서 끝에서도 같다)
   if (session) await openPut();
 }
 
@@ -2741,13 +2760,16 @@ function onKey(e) {
     }
     e.preventDefault();
     joinUp();
-  } else if (k === 'Enter' && !mod && !e.altKey && !e.shiftKey && session.fresh) {   // 이어 쓰기 (D106): 새 줄의 Enter 는 저장하고 다음 새 줄로, 빈 줄이면 끝낸다
+  } else if (k === 'Enter' && e.shiftKey && !mod && !e.altKey) {   // 저장하고 아래에 새 줄 (D158 — Ctrl+Enter 와 같다, 글 가운데면 두 줄로)
     e.preventDefault();
-    if (read(session.places[0]).trim()) addLine(true);
-    else finish(false);
+    if (session.fresh && !read(session.places[0]).trim()) return;   // 빈 새 줄 — 쓴 것이 없다
+    addLine(true);
+  } else if (k === 'Enter' && !mod && !e.altKey && session.fresh && !read(session.places[0]).trim()) {   // 빈 새 줄의 Enter — 넣지 않고 끝낸다
+    e.preventDefault();
+    finish(false);
   } else if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
     e.preventDefault();
-    finish(true);
+    finish(true);   // 새 줄도 저장하고 닫는다 — 현재 줄은 그 줄 (D158 — 이어 쓰려면 Shift+Enter·Ctrl+Enter, D106 의 이어 쓰기를 바꿈)
   } else if (k === 'Escape') {
     e.preventDefault();
     finish(S.config?.vi_keys === true);   // vi 키(D122)를 켰으면 vi 처럼 저장하고 나온다 — 아니면 그만두기

@@ -2,7 +2,7 @@
 
 - 한 글자 키: 줄을 고른 뒤 수식 키 없이 1~6·0·P·H·L·-·N·T·Q·C·B — 같은 키를 다시 누르면 되돌아간다, 고른 채 남는다, 한글 입력 상태, 누르고 있는 키,
   고르지 않았으면 알리기만.
-- 화살표: 끝을 지나친 ↓ 가 연 빈 새 줄의 ↑ 는 읽기로 돌아온다 (줄마다 칸이 열리지 않는다). 이어서 편집할 때 빠르게 누른 ↑·↓ 도 빠지지 않는다.
+- 화살표: ↓ 는 옮기기만 — 마지막 줄에서 멈추고 줄을 더하는 키를 알린다 (D158), 다시 ↑ 로 올라갈 때 줄마다 칸이 열리지 않는다. 이어서 편집할 때 빠르게 누른 ↑·↓ 도 빠지지 않는다.
 
 기다릴 때는 고정 시간이 아니라 조건을 본다 (until).
 """
@@ -156,7 +156,7 @@ try:
         check('창의 항목 옆에 한 글자 키', hints.get('목록') == 'L' and hints.get('할 일') == 'T' and hints.get('제목 2') == '2' and hints.get('참고') == 'C', hints)   # 바꾸기 창도 판 — 묶음 이름을 뺀 이름 (D155)
         page.keyboard.press('Escape')
 
-        print('[화살표 — 끝을 지나친 ↓ 와 다시 ↑]')
+        print('[화살표 — 끝에서 멈추는 ↓ 와 다시 ↑ (D158)]')
         open_doc('평문.md', '#lec-view p')
         page.locator('#lec-view p').first.click()
         page.keyboard.press('Escape')
@@ -165,15 +165,16 @@ try:
         for _ in range(15):
             page.keyboard.press('ArrowDown')
             page.wait_for_timeout(60)
-        check('끝을 지나친 ↓: 문서 끝에 빈 새 줄', until(page, f'({CELL}) === ""'), page.evaluate(CELL))
+        expect(page, '끝까지 ↓: 마지막 줄에서 멈추고 새 줄은 열지 않는다', lambda: page.evaluate(CELL) is None and page.evaluate(HERE) == 23, lambda: (page.evaluate(CELL), page.evaluate(HERE)))
+        check('— 줄을 더하는 키를 알린다', 'Ctrl+Enter' in (page.text_content('#lec-toast') or ''), page.text_content('#lec-toast'))
         page.keyboard.press('ArrowUp')
-        expect(page, '빈 새 줄의 ↑: 칸을 걷고 읽기로, 마지막 줄에', lambda: page.evaluate(CELL) is None and page.evaluate(HERE) == 23, lambda: (page.evaluate(CELL), page.evaluate(HERE)))
+        page.wait_for_timeout(60)
         for _ in range(11):
             page.keyboard.press('ArrowUp')
             page.wait_for_timeout(60)
         expect(page, '다시 ↑ 로 맨 위까지 — 줄마다 칸이 열리지 않는다', lambda: page.evaluate(HERE) == 1 and page.evaluate(CELL) is None, lambda: (page.evaluate(HERE), page.evaluate(CELL)))
         ups = page.evaluate('window.__up')
-        check('↑ 를 누를 때 칸이 열려 있던 것은 첫 번째(빈 새 줄)뿐', ups[:1] == [True] and not any(ups[1:]), ups)
+        check('↑ 를 누를 때 칸이 열려 있던 적이 없다', not any(ups), ups)
         check('파일은 그대로', read(plain) == PARAS)
 
         print('[화살표 — 이어서 편집할 때 빠르게]')

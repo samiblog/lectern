@@ -36,6 +36,8 @@ import { $, toast, copyText, rangeText, lineRef } from './util.js';
 import { t } from './i18n.js';
 import { aiName } from './aitool.js';
 import { collectUnits, indexOfLine, hasLine, unitAt, markOf, baseOf, blockOfLine } from './lineunits.js';
+import { foldHere } from './fold.js';
+import { findStep } from './find.js';
 
 let active = false;
 let mode = 'chapter';   // 'chapter' — 장 하이라이트, 'range' — 줄 하이라이트
@@ -355,12 +357,11 @@ function moveHere(step, repeat = false) {
       return true;
     }
   }
-  let j = Math.max(0, Math.min(us.length - 1, i + step));
-  const inNotes = (n) => !!us[n].el.closest?.('.footnotes');
-  if (step > 0 && !inNotes(i) && inNotes(j)) j = i;   // 본문 마지막 줄 — 각주로 내려가지 않고 새 줄을 연다 (D106)
+  const j = Math.max(0, Math.min(us.length - 1, i + step));
   if (j === i) vp.sc.scrollTop += step * 40;   // 첫 줄·마지막 줄: 문서의 위·아래 여백까지
   setHere(us[j].a, { scroll: true });
-  if (j === i && step > 0 && !repeat) emit('line-end', { arrow: true });   // 끝을 지나친 ↓ — 그 새 줄의 ↑ 는 읽기로 돌아온다 (lineedit.js, D128)
+  // ↓ 는 옮기기만 — 마지막 줄에서 멈추고 줄을 더하는 키를 알린다 (D158 — 문서 중간과 끝이 같은 키. D106 의 '끝을 지나친 ↓ 는 새 줄' 을 바꿈)
+  if (j === i && step > 0 && !repeat && isMdDoc()) toast(t('마지막 줄입니다 — 아래에 새 줄은 Ctrl+Enter'));
   return true;
 }
 
@@ -459,7 +460,10 @@ function dimHere() {
 }
 
 /** Shift+↑·↓: 끝 줄을 옮겨 넓히거나 줄인다 (처음 줄은 그대로). 하이라이트가 없으면 현재 줄부터, 장 하이라이트면 그 장의 처음~끝 줄부터 */
-function extend(step) {
+const extend = (step) => extendTo((us, f) => f + step);
+
+/** 끝 줄을 to(단위들, 지금 끝 줄의 차례) 가 돌려준 차례로 — Shift+↑·↓·Home·End·PageUp·PageDown, Ctrl+Shift+↑·↓ (D158) */
+function extendTo(to) {
   const us = units();
   if (!us.length) return false;
   if (!ranged()) {
@@ -476,7 +480,7 @@ function extend(step) {
       startRange(us[i].a);
     }
   }
-  const j = Math.max(0, Math.min(us.length - 1, indexOfLine(us, focus) + step));
+  const j = Math.max(0, Math.min(us.length - 1, to(us, indexOfLine(us, focus))));
   focus = us[j].a;
   if (focus === anchor && !dimmed) {   // 한 줄로 줄면 현재 줄이다 — 한 줄짜리 고른 줄은 두지 않는다 (D139)
     clearSpot();
@@ -485,6 +489,153 @@ function extend(step) {
   }
   paint();
   setHere(focus, { scroll: true });
+  return true;
+}
+
+// ---- 읽는 화면의 기본 키 (D158) -----------------------------------------------------
+
+const isHead = (u) => /^H[1-6]$/.test(u?.el?.tagName ?? '');
+
+/** 현재 줄을 단위 차례 j 로 (음수는 끝에서) — 화면이 따라간다. jump: 뒤로 기록을 남긴다 (Home·End) */
+function jumpTo(j, { jump = false } = {}) {
+  const us = units();
+  if (!us.length) return false;
+  if (ranged()) clearSpot();
+  if (jump) emit('jump');
+  setHere(us[Math.max(0, Math.min(us.length - 1, j < 0 ? us.length + j : j))].a, { scroll: true });
+  return true;
+}
+
+/** f 의 앞(-1)·뒤(+1) 제목 — 없으면 처음·끝 (Ctrl+↑·↓ — 절 단위로 훑기) */
+function headFrom(us, f, dir) {
+  for (let k = f + dir; k >= 0 && k < us.length; k += dir) if (isHead(us[k])) return k;
+  return dir > 0 ? us.length - 1 : 0;
+}
+
+/** Ctrl+Shift+↓: f 뒤의 다음 제목 바로 앞 (지금 절의 끝) — 이미 그 자리면 그다음 절의 끝. Ctrl+Shift+↑: 앞 제목 */
+function sectionFrom(us, f, dir) {
+  if (dir < 0) return headFrom(us, f, -1);
+  for (let k = f + 2; k < us.length; k++) if (isHead(us[k])) return k - 1;
+  return us.length - 1;
+}
+
+/** Shift+PageUp·PageDown: f 에서 한 화면 위·아래의 단위 */
+function pageFrom(us, f, dir) {
+  const vp = viewport();
+  const y = us[f].top + dir * Math.max(40, vp.bottom - vp.top - 48);
+  if (dir > 0) {
+    const j = us.findIndex((u) => u.top >= y);
+    return j < 0 ? us.length - 1 : Math.max(j, f + 1);
+  }
+  const j = us.findLastIndex((u) => u.top <= y);
+  return j < 0 ? 0 : Math.min(j, f - 1);
+}
+
+/** PageUp·PageDown·Space (D158): 한 화면 옮기되 현재 줄은 화면에서 같은 높이에 — 더 갈 곳이 없으면 첫 줄·끝 줄로 */
+function pageHere(dir) {
+  const us = units();
+  if (!us.length) return false;
+  const i = hereIndex(us);
+  if (i < 0) return false;
+  if (ranged()) clearSpot();
+  const vp = viewport();
+  const room = vp.bottom - vp.top;
+  const y = Math.max(0, Math.min(room - 1, us[i].top - vp.top));   // 현재 줄의 화면 속 높이 (화면 밖이면 가장자리)
+  const before = vp.sc.scrollTop;
+  vp.sc.scrollTop = before + dir * Math.max(40, room - 48);
+  const moved = Math.abs(vp.sc.scrollTop - before) > 1;
+  let j;
+  if (!moved) j = dir > 0 ? us.length - 1 : 0;
+  else {
+    const at = viewport().top + y;
+    j = us.findIndex((u) => u.bottom > at);
+    if (j < 0) j = us.length - 1;
+  }
+  setHere(us[j].a, { scroll: !moved });
+  return true;
+}
+
+/** Ctrl+A (D158): 문서의 모든 줄을 고른다 — 화면은 그대로. 고른 뒤 Ctrl+C 원문 복사, Shift+→ 보내기가 그대로 듣는다 */
+function pickAll() {
+  const us = units();
+  if (!us.length) return false;
+  getSelection()?.removeAllRanges();
+  dimmed = false;
+  active = true;
+  mode = 'range';
+  anchor = us[0].a;
+  focus = us.at(-1).a;
+  paint();
+  setHere(focus);
+  return true;
+}
+
+/** 단위 u 의 글을 담은 Range — 여러 줄 문단의 한 줄이면 그 줄만 */
+function rangeOfUnit(u) {
+  if (u.range) return u.range;
+  const r = document.createRange();
+  r.selectNodeContents(u.el);
+  return r;
+}
+
+/** 단위 u 안의 링크들 */
+const linksIn = (u) => [...(u.el.querySelectorAll?.('a[href]') ?? [])].filter((a) => a.offsetParent && rangeOfUnit(u).intersectsNode(a));
+
+/**
+ * Enter (D158): 현재 줄이 제목이면 그 절을 접고 펴고, 링크가 있는 줄이면 그 링크를 연다 (여럿이면 고르는 메뉴). 편집은 열지 않는다 —
+ * 읽다가 누른 Enter 로 칸이 열리지 않게 (D142 와 같은 까닭). 초점이 링크·단추에 있으면 그것을 누르게 둔다
+ */
+function enterHere(e) {
+  if (!linesOn() || ranged() || e.target?.closest?.('a[href], button, summary, input')) return false;
+  const us = units();
+  const i = hereIndex(us);
+  if (i < 0) return false;
+  const u = us[i];
+  if (isHead(u) && u.el.classList.contains('lec-fold')) {
+    foldHere(!u.el.classList.contains('lec-folded'));
+    return true;
+  }
+  const links = linksIn(u);
+  if (!links.length) return false;
+  if (links.length === 1) {
+    links[0].click();
+    return true;
+  }
+  const r = rangeOfUnit(u).getBoundingClientRect();
+  import('./ui.js').then(({ showMenu }) => showMenu(r.left, r.bottom + 4, links.map((a) => ({ label: a.textContent.trim() || a.getAttribute('href'), action: () => a.click() }))));
+  return true;
+}
+
+/**
+ * Tab·Shift+Tab (D158 — 현재 줄 하나일 때. 여러 줄을 골랐으면 레벨 — D152): 현재 줄 안이나 그 뒤(앞)의 다음(앞) 링크로 초점을 옮기고 그 줄을 현재 줄로.
+ * 더 없으면 브라우저의 Tab 그대로 — 초점이 문서 밖으로 나갈 수 있게
+ */
+function tabLink(dir) {
+  if (!linesOn()) return false;
+  const links = [...view().querySelectorAll('a[href]')].filter((a) => a.offsetParent && !a.closest('.lec-unfold'));
+  if (!links.length) return false;
+  const us = units();
+  const act = document.activeElement;
+  let j;
+  if (links.includes(act)) j = links.indexOf(act) + dir;
+  else {
+    const i = hereIndex(us);
+    if (i < 0) return false;
+    const r = rangeOfUnit(us[i]);
+    j = dir > 0 ? links.findIndex((a) => r.comparePoint(a, 0) >= 0) : links.findLastIndex((a) => r.comparePoint(a, 0) <= 0);
+  }
+  if (j < 0 || j >= links.length) return false;
+  const a = links[j];
+  a.focus({ preventScroll: true });
+  const k = us.findIndex((u) => rangeOfUnit(u).intersectsNode(a));
+  if (k >= 0) setHere(us[k].a, { scroll: true });
+  else a.scrollIntoView({ block: 'nearest' });
+  return true;
+}
+
+/** F3·Shift+F3 (D158): 마지막에 찾은 말의 다음·앞 곳 — 찾기 막대가 닫혀 있어도 */
+function findKey(dir) {
+  if (!findStep(dir)) toast(t('찾은 말이 없습니다 — Ctrl+F 로 찾습니다'));
   return true;
 }
 
@@ -968,6 +1119,7 @@ function changeKey(e) {
  */
 export function spotKey(e) {
   if (e.defaultPrevented || e.metaKey || e.isComposing || !keyPlace(e.target)) return false;
+  if (e.key === 'F3' && !e.ctrlKey && !e.altKey) return findKey(e.shiftKey ? -1 : 1);   // 다음·앞 찾은 곳 (D158)
   if (!lit() && linesOn() && changeKey(e)) {   // 한 줄은 두 번 — 처음은 그 줄을 잡기만 한다 (D139)
     if (!e.repeat && armHere()) {
       held = e.code;
@@ -979,6 +1131,18 @@ export function spotKey(e) {
   if (e.altKey) return false;
   const k = e.key;
   if (e.ctrlKey) {
+    const reading = linesOn() && !lightOn() && !S.pane?.lineEditHold;
+    if ((k === 'Home' || k === 'End') && reading) {   // 처음·끝 (D158) — Shift 를 더하면 거기까지 고르기
+      return e.shiftKey ? extendTo((us) => (k === 'Home' ? 0 : us.length - 1)) : jumpTo(k === 'Home' ? 0 : -1, { jump: true });
+    }
+    if ((k === 'ArrowUp' || k === 'ArrowDown') && reading) {   // 앞·뒤 제목 (D158) — Shift 를 더하면 지금 절의 처음·끝까지 고르기
+      const dir = k === 'ArrowUp' ? -1 : 1;
+      if (e.shiftKey) return extendTo((us, f) => sectionFrom(us, f, dir));
+      const us = units();
+      const i = hereIndex(us);
+      return i >= 0 && jumpTo(headFrom(us, i, dir));
+    }
+    if (!e.shiftKey && (e.code === 'KeyA' || k.toLowerCase() === 'a') && linesOn()) return pickAll();   // 문서의 모든 줄 (D158)
     if (k === 'Enter' && linesOn()) {   // 칸 안과 같은 키: 현재 줄의 아래·위에 새 줄 (D117 — 글을 쓸 때 파일에 들어간다). 여러 줄을 골랐으면 넣지 않는다 (D139)
       if (!manyBlocks()) emit('line-add', { below: !e.shiftKey });
       return true;
@@ -1006,6 +1170,10 @@ export function spotKey(e) {
   if (e.shiftKey) {
     if (!linesOn() && !lit()) return false;
     if (k === 'Enter') return dimHere();   // 하이라이트 켜고 끄기 — 현재 줄이든 고른 줄이든 (D139 — 편집은 F2)
+    if (linesOn() && !lightOn() && (k === 'Home' || k === 'End')) return extendTo((us) => (k === 'Home' ? 0 : us.length - 1));   // 처음·끝까지 고르기 (D158)
+    if (linesOn() && !lightOn() && (k === 'PageUp' || k === 'PageDown')) return extendTo((us, f) => pageFrom(us, f, k === 'PageUp' ? -1 : 1));   // 한 화면만큼 (D158)
+    if (k === ' ' && linesOn() && !lightOn() && !e.target?.closest?.('a[href], button, summary')) return pageHere(-1);   // Shift+Space — 한 화면 위 (D158)
+    if (k === 'Tab' && !ranged()) return tabLink(-1);   // 앞 링크 (D158 — 여러 줄을 골랐으면 litKey 의 레벨)
     if (k === 'ArrowUp' || k === 'ArrowDown') return extend(k === 'ArrowUp' ? -1 : 1);
     if (k === 'ArrowRight') return sendHere();
     if (termDigit(e) != null) return e.repeat || sendHere(false, termDigit(e));   // Shift+숫자: 그 번호의 터미널로 (D137)
@@ -1014,6 +1182,10 @@ export function spotKey(e) {
     return true;
   }
   if (k === 'F2') return editHere();
+  if (k === 'Enter') return enterHere(e);   // 제목이면 접기·펴기, 링크가 있는 줄이면 그 링크 (D158)
+  if (k === 'Tab' && !ranged()) return tabLink(1);   // 다음 링크 (D158)
+  if ((k === 'Home' || k === 'End') && linesOn() && !lightOn() && !S.pane?.lineEditHold) return jumpTo(k === 'Home' ? 0 : -1, { jump: true });   // 첫 줄·끝 줄 (D158)
+  if (k === ' ' && linesOn() && !lightOn() && !e.target?.closest?.('a[href], button, summary')) return pageHere(1);   // Space — 한 화면 아래 (D158)
   if (k === '/') return putKey();   // 현재 줄 아래에 넣기 창 (D139 — vi 키를 켰으면 / 는 찾기라 여기 오지 않는다)
   if (k === '.') return changeWinKey();   // 현재 줄·고른 줄의 바꾸기 창 (D155)
   if (k === 'Delete' && ranged()) {   // 줄 지우기 (lineedit.js, D83)
@@ -1028,7 +1200,8 @@ export function spotKey(e) {
     return true;
   }
   if (spotlightOn()) return moveSpotlight(step);
-  if (k.startsWith('Page') || !linesOn()) return false;   // PageUp·PageDown 은 보통 스크롤 (현재 위치가 따라온다)
+  if (!linesOn()) return false;
+  if (k.startsWith('Page')) return pageHere(step);   // 한 화면 — 현재 줄은 화면에서 같은 높이에 (D158)
   if (ranged()) clearSpot();   // 편집기처럼 풀고 옮긴다
   return moveHere(step, e.repeat);
 }
