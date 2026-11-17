@@ -964,7 +964,7 @@ def run(headed: bool) -> None:
             edit_doc.write_text('앞에 더한 문단\n\n' + base_text, encoding='utf-8')
             page.keyboard.press('Enter')
             moved_line = file_line(edit_doc, 5, first_line + ' 끝')
-            moved_toast = toast_has('97-편집.md 5행')
+            moved_toast = True   # 칸의 저장은 알리지 않는다 (D156) — 밀린 자리(5행)에 저장한 것은 moved_line 이 파일로 본다
             shown('줄입니다. 끝')
             page.wait_for_timeout(300)
             page.locator('#lec-view h1').first.click()
