@@ -287,7 +287,7 @@ function showHereLine() {
   const us = linesOn() && !lit() && !lineEditing() ? units() : [];
   const i = us.length ? hereIndex(us) : -1;
   el.hidden = i < 0;
-  if (i >= 0) el.textContent = `${t('현재 줄')} ${rangeText([us[i].a, us[i].b])}`;
+  if (i >= 0) el.textContent = t('현재 줄 {where}', { where: rangeText([us[i].a, us[i].b]) });   // 묶은 문구 — 영어에서 'line' 이 겹치지 않게
 }
 
 function drawHere() {
@@ -732,8 +732,8 @@ function updateStatus() {
   if (!r) return;
   const pick = ranged() && !dimmed;
   const one = pick && litOneLine();   // 바꾸는 키의 첫 누름이 잡은 현재 줄 (D139)
-  if (one) el.textContent = `${t('현재 줄')} ${rangeText(r)} · ${t('바꾸기')}`;
-  else el.textContent = `${pick ? t('고른 줄') : t('하이라이트')} ${rangeText(r)} · ${t('{n}줄', { n: r[1] - r[0] + 1 })}`;
+  if (one) el.textContent = t('현재 줄 {where} · 바꾸기', { where: rangeText(r) });
+  else el.textContent = pick ? t('고른 줄 {where} · {n}줄', { where: rangeText(r), n: r[1] - r[0] + 1 }) : t('하이라이트 {where} · {n}줄', { where: rangeText(r), n: r[1] - r[0] + 1 });
   if (one) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+↑·↓ 여러 줄 고르기 · Esc 그만두기');
   else if (pick) el.title = t('Delete 지우기 · Alt+↑·↓ 옮기기 · Tab 레벨 · Shift+→ {ai} 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Shift+Enter 하이라이트 · Esc 풀기', { ai: aiName() });
   else if (ranged()) el.title = t('Shift+Enter·Esc 하이라이트 끄기 — 켠 동안에도 고른 줄의 키가 듣습니다');

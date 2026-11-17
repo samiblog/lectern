@@ -1927,5 +1927,9 @@ export default {
   "키나 하는 일로 찾기 — 예: 표, Ctrl+K": "Search keys or actions — e.g. table, Ctrl+K",
   "단축키 찾기": "Search shortcuts",
   "단축키 묶음": "Shortcut groups",
-  "인용·강조글 안과 밖의 줄은 함께 바꾸지 않습니다 — 나눠서 고르세요": "Lines inside and outside a quote or callout are not changed together — pick them separately"
+  "인용·강조글 안과 밖의 줄은 함께 바꾸지 않습니다 — 나눠서 고르세요": "Lines inside and outside a quote or callout are not changed together — pick them separately",
+  "현재 줄 {where}": "Current {where}",
+  "현재 줄 {where} · 바꾸기": "Current {where} · change",
+  "고른 줄 {where} · {n}줄": ["Picked {where} · {n} line", "Picked {where} · {n} lines"],
+  "하이라이트 {where} · {n}줄": ["Focus {where} · {n} line", "Focus {where} · {n} lines"]
 };
