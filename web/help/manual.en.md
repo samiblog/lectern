@@ -306,12 +306,13 @@ Sample — [guide 08, line editing](../../samples/guide/08-한-줄-편집.md): p
 
 | State | What it is | Get there | Leave |
 |---|---|---|---|
-| **Current line** | One line — where you read, write and insert | Click, right-click, ↑ ↓ | — |
-| **Picked lines** | Several lines — to delete, move or change together | **Shift+↑ ↓** from the current line, Shift+click or drag | Esc, ↑ ↓, a click elsewhere, shrinking to one line |
+| **Current line** | One line — where you read, write and insert | Click, right-click, ↑ ↓, Home End, PageUp PageDown, Ctrl+↑ ↓ | — |
+| **Picked lines** | Several lines — to delete, move or change together | **Shift+↑ ↓** from the current line, Shift+click or drag, Ctrl+A (all lines) | Esc, ↑ ↓, a click elsewhere, shrinking to one line |
 | **Focus** | A light over the current line or the picked lines — dims the rest | **Shift+Enter** | Shift+Enter, Esc or a click on a dimmed area |
-| **Cell** | A text box that edits the line right where it is | **F2**, Ctrl+Enter (new line) | Enter saves, Esc cancels |
+| **Cell** | A text box that edits the line right where it is | **F2**, Ctrl+Enter (new line) | Enter saves and closes, Shift+Enter saves and opens a line below, Esc cancels |
 
 - **There is one selection**: one line is the current line; extend it with Shift+↑ ↓ or Shift+click and several lines are picked lines. The first line stays and the last one moves, so the range grows or shrinks, and back at one line it is the current line again. Shift+click picks from the current line (the line you last clicked or moved to — scrolling afterwards does not change it) to the line you click; Shift+drag picks from the line you press to the line you drag to. While lines are picked, the status bar shows `Picked lines 3-5 · 3 lines`.
+- **Picking a lot at once**: **Shift+Home End** pick from the current line to the start or end of the document, **Shift+PageUp PageDown** a screen at a time, **Ctrl+Shift+↑ ↓** up to the section heading or the section end. **Ctrl+A** picks every line of the document without moving the view — then Ctrl+C copies the source or Shift+→ sends it to Claude.
 - **Writing and inserting happen at the current line**: editing the line (F2), a new line below or above (Ctrl+Enter, Ctrl+Shift+Enter), the insert box below (`/`), pasting a picture. They are off while several lines are picked — a note says to release them with Esc first.
 - **Change keys take two presses on one line, one on several**: delete (Delete, Ctrl+X), move (Alt+↑ ↓), line type (one-letter keys, Ctrl+Alt+number) and level (Alt+Shift+← →). On the current line the first press only puts a band on the line and shows `Current line 12 · change` in the status bar — the file is untouched, so a stray key while reading never changes it (the notice at the bottom appears only the first time after Lectern starts). Press again to change it; while the band is there, further keys (Alt+↑ again, Tab) act at once. ↑ ↓, Esc or a click elsewhere cancels. Holding a key down counts as one press. Keys that do not change the file — copy, copy location, send to the terminal — act at once on the current line or the picked lines.
 - **Writing ends picking**: opening a cell releases the band and a one-line focus.
