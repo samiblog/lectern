@@ -155,6 +155,10 @@ declare global {
   slidesGuide: string;
   skillsDir: string;
   writingStyle: string;
+  /** Lectern 에 든 글쓰기 스타일 넷 (D161) */
+  writingStyles: { id: string; file: string; path: string; name: string; description: string }[];
+  /** 새 글쓰기 스타일 만들기 안내의 경로 (D161) */
+  styleGuide: string;
   reviewGuide: string;
   voiceGuide: string;
 

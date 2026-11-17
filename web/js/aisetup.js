@@ -18,7 +18,7 @@ const KEYS = { guide: 'ai_scope_guide', skills: 'ai_scope_skills', wstyle: 'ai_s
 const SKILLS = ['pptx-to-lectern', 'lectern-to-pptx', 'lectern-to-docx'];
 
 /** '이 폴더'로 고를 수 있는지 — 프로젝트가 열려 있고, 보기만 하는 폴더(D71 — 프로그램 폴더 안의 예제)가 아닐 때 */
-const canFolder = () => !!S.tab && !S.tab.readonly;
+export const canFolder = () => !!S.tab && !S.tab.readonly;
 
 /** 고른 넣을 곳: guide·skills 는 all|folder, wstyle 은 folder|all|off. 이 폴더를 고를 수 없으면 모든 폴더 (글쓰기 스타일의 끄기는 Claude Code 만) */
 export function scope(item) {
@@ -34,7 +34,25 @@ export function scope(item) {
 const claude = () => aiTool() === 'claude';
 const folderName = () => S.tab?.name || '';
 const inFolder = (...parts) => [S.tab?.root || '', ...parts].join(S.sep || '\\');
-const styleName = () => now?.claude?.style?.name || t('리서치 글쓰기');
+/**
+ * 고른 글쓰기 스타일 (D161 — 설정 ai_style, 고르기 창 stylepick.js): {id, name, path, file?, mine?}.
+ * Lectern 에 든 것이면 file(web/help 의 이름)과 path(그 판), 내 스타일(mine:<파일>)이면 개인 폴더의 그 파일
+ */
+export function chosenStyle() {
+  const v = S.config?.ai_style || 'research';
+  if (v.startsWith('mine:') && claude()) {   // 내 글쓰기 스타일은 Claude Code 의 출력 스타일 — 다른 도구면 Lectern 의 처음 것
+    const file = v.slice(5);
+    const got = now?.claude?.other_styles?.find((x) => x.file === file);
+    return { id: v, mine: file, name: got?.name || file.replace(/\.md$/, ''), path: got?.path || `~/.claude/output-styles/${file}` };
+  }
+  const s = (S.writingStyles || []).find((x) => x.id === v) || S.writingStyles?.[0];
+  return s ? { id: s.id, name: s.name, path: s.path, file: s.file } : { id: 'research', name: t('리서치 글쓰기'), path: S.writingStyle };
+}
+
+/** 마지막으로 받은 지금 상태 (고르기 창이 함께 쓴다 — 받는 중이면 undefined) */
+export const aiStatus = () => now;
+
+const styleName = () => chosenStyle().name;
 const voicePath = () => now?.claude?.voice || now?.claude?.voice_path || t('~/.claude/rules/내-문체.md');
 
 // ---- 바뀌는 파일 --------------------------------------------------------------------------------------
@@ -102,10 +120,13 @@ function styleRows() {
   }
   const c = now?.claude;
   const out = [];
-  if (where !== 'off') {
-    const st = c?.style;
+  const chosen = chosenStyle();
+  if (where !== 'off' && chosen.mine) {
+    out.push({ act: 'keep', path: chosen.path, note: t('내 글쓰기 스타일') });
+  } else if (where !== 'off') {
+    const st = c?.styles?.[chosen.id];
     const act = st ? ({ missing: 'new', same: 'keep', differs: 'change' })[st.state] : pending();
-    out.push({ act, path: st?.path || t('~/.claude/output-styles/research-writing.md'), note: st?.state === 'same' ? t('Lectern 의 것과 같음') : st?.state === 'differs' ? t('Lectern 의 것과 다름') : '' });
+    out.push({ act, path: st?.path || `~/.claude/output-styles/${chosen.file}.md`, note: st?.state === 'same' ? t('Lectern 의 것과 같음') : st?.state === 'differs' ? t('Lectern 의 것과 다름') : '' });
     if (st?.voice) out.push({ act: 'move', path: voicePath(), note: t("스타일 파일 끝의 '내 문체' 절을 이 노트로") });
   }
   const local = now?.project?.settings?.local;
@@ -126,7 +147,8 @@ function voiceRows() {
   if (!claude()) return [{ act: now?.rules ? (now.rules.exists ? 'add' : 'new') : pending(), path: now?.rules?.path || one.rules, note: t("'내 문체' 절") }];
   const c = now?.claude;
   const out = [{ act: c ? (c.voice ? 'change' : 'new') : pending(), path: voicePath(), note: c?.voice ? t('고칠 곳만 보이고 고른 것만') : t('어느 폴더·스타일에서나 같은 노트') }];
-  if (c?.style?.voice) out.push({ act: 'move', path: c.style.path, note: t("끝의 '내 문체' 절을 이 노트로") });
+  const old = Object.values(c?.styles || {}).find((s) => s.voice);   // 예전 판: 스타일 파일 끝의 내 문체 절
+  if (old) out.push({ act: 'move', path: old.path, note: t("끝의 '내 문체' 절을 이 노트로") });
   return out;
 }
 
@@ -163,7 +185,7 @@ function labels() {
       folder: [only, t('그 폴더의 스킬 폴더에 — 그 폴더를 git 으로 함께 쓰는 사람도 씁니다')],
     },
     wstyle: claude() ? {
-      folder: [name ? t('{name} 폴더에서 켜기', { name }) : t('이 폴더에서 켜기'), t('보고서를 쓰는 폴더에 — 스타일 파일은 개인 폴더에 하나 둡니다')],
+      folder: [name ? t('{name} 폴더에서 켜기', { name }) : t('이 폴더에서 켜기'), t('보고서를 쓰는 폴더에 — 스타일 파일은 개인 폴더에 두고, 폴더마다 다른 스타일을 켤 수 있습니다')],
       all: [t('모든 폴더에서 켜기'), t('모든 폴더의 기본으로 — 코드를 쓰는 폴더에서도 Claude Code 의 개발 지침이 빠집니다')],
       off: [name ? t('{name} 폴더에서 끄기', { name }) : t('이 폴더에서 끄기'), t('코드를 쓰는 폴더에 — Claude Code 의 기본 스타일로 둡니다')],
     } : {
@@ -194,6 +216,7 @@ function renderAll() {
   rows('#lec-wstyle-files', styleRows());
   rows('#lec-voice-files', voiceRows());
   $('#lec-wstyle-warn').hidden = !(claude() && scope('wstyle') === 'all');
+  $('#lec-wstyle-chosen').textContent = t('고른 스타일: {name}', { name: claude() && scope('wstyle') === 'off' ? t('Claude Code 기본') : styleName() });
   styleNow();
 }
 
@@ -257,19 +280,28 @@ export function skillsPrompt() {
 
 /** 글쓰기 스타일 (D132·D159): 파일은 늘 개인 폴더에, 켜는 곳은 고른 대로 (Claude Code). 다른 도구는 '글쓰기' 절로 (D138) */
 export function writingStylePrompt() {
-  const file = S.writingStyle;
+  const chosen = chosenStyle();
+  const file = chosen.path;
   const where = scope('wstyle');
   if (claude()) {
-    const check = t('먼저 ~/.claude/settings.json 과 이 프로젝트의 .claude/settings.local.json·.claude/settings.json 의 outputStyle 값을 확인해 알려 줘.');
+    const check = t('먼저 ~/.claude/settings.json 과 이 프로젝트의 .claude/settings.local.json·.claude/settings.json 의 outputStyle 값을 확인해 알려 줘.');   // 끄기 — 이 글의 첫 할 일
+    const also = t('~/.claude/settings.json 과 이 프로젝트의 .claude/settings.local.json·.claude/settings.json 의 outputStyle 값도 확인해 알려 줘.');   // 켜기 — 스타일 파일을 읽은 다음
     if (where === 'off') {
       return t('이 프로젝트에서는 Claude Code 의 기본 출력 스타일을 쓰고 싶어. {check} 그 뒤 이 프로젝트의 .claude/settings.local.json 에 {value} 한 값만 적을지 물어보고 (다른 값은 그대로, 파일이 없으면 만들어), 내가 그렇다고 하면 적어 줘.',
         { check, value: jsonValue('Default') });
+    }
+    if (chosen.mine) {   // 내 스타일 (D161) — 이미 개인 폴더에 있다. 켜기만
+      const set = where === 'all'
+        ? t('~/.claude/settings.json 에 {value} 한 값만 적을지 물어봐 (다른 값은 그대로). 이 스타일이 Claude Code 의 개발 지침을 빼는지(맨 앞 설정에 keep-coding-instructions: true 가 없으면 뺀다) 알려 주고, 빼면 코드를 쓰는 프로젝트에서는 그 프로젝트의 .claude/settings.local.json 에 {off} 를 두라고 알려 줘.', { value: jsonValue(styleName()), off: jsonValue('Default') })
+        : t('이 프로젝트의 .claude/settings.local.json 에 {value} 한 값만 적을지 물어봐 (다른 값은 그대로, 파일이 없으면 만들어).', { value: jsonValue(styleName()) });
+      return t('내 출력 스타일 {name} ({file})을 켜고 싶어. 먼저 그 파일을 읽고 어떤 스타일인지 짧게 알려 줘. {check} 그 뒤 {set} 내가 그렇다고 하면 적어 주고, 스타일 파일을 고친 지 얼마 안 됐으면 Claude Code 를 다시 시작해야 읽는다는 것을 알려 줘.',
+        { name: styleName(), file, check: also, set });
     }
     const set = where === 'all'
       ? t('~/.claude/settings.json 에 {value} 한 값만 적기 — 다른 값은 그대로. 이 스타일은 Claude Code 의 개발 지침을 빼니, 코드를 쓰는 프로젝트에서는 그 프로젝트의 .claude/settings.local.json 에 {off} 를 두거나 /output-style 로 기본을 고르라고 알려 줘. 프로젝트에 따로 고른 값이 있으면 그 프로젝트에서는 그것이 이긴다는 것도.', { value: jsonValue(styleName()), off: jsonValue('Default') })
       : t('이 프로젝트의 .claude/settings.local.json 에 {value} 한 값만 적기 — 다른 값은 그대로, 파일이 없으면 만들어.', { value: jsonValue(styleName()) });
     return t("Lectern 에 Claude Code 의 글쓰기용 출력 스타일이 들어 있어: {file}. 먼저 그 파일을 읽고 무엇이 바뀌는지 짧게 알려 줘. 그다음 ~/.claude/output-styles/ 에 같은 이름의 파일이 있는지와 Lectern 의 것과 같은지 알려 줘. {check} 그 뒤 두 가지를 할지 나에게 물어봐. (1) 파일이 없거나 다르면 ~/.claude/output-styles/ 에 같은 파일 이름으로 복사하기 — 바꿀 때 있던 파일 끝에 '## 내 문체'(영어판은 '## My style') 절이 있으면 그 절은 내 개인 규칙 {voice} 로 옮길지 따로 물어봐. (2) {set} 내가 그렇다고 하면 해 주고, 새로 설치한 스타일은 Claude Code 를 다시 시작해야 읽는다는 것을 알려 줘.",
-      { file, check, voice: voicePath(), set });
+      { file, check: also, voice: voicePath(), set });
   }
   const one = aiInfo();
   if (one) {

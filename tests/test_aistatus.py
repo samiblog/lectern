@@ -17,6 +17,7 @@ from lectern.state import AppState
 
 ROOT = Path(__file__).resolve().parent.parent
 STYLE = web_dir() / 'help' / 'research-writing.md'
+STYLES = aistatus.lectern_styles(web_dir() / 'help')   # 글쓰기 스타일 넷 (D161)
 
 
 def copy_tree(src: Path, dst: Path) -> None:
@@ -36,13 +37,14 @@ def home(tmp_path: Path) -> Path:
 def test_empty_home_reports_nothing_installed(home, tmp_path):
     proj = tmp_path / 'proj'
     proj.mkdir()
-    st = aistatus.status(home, 'claude', skills_dir(), STYLE, proj)
+    st = aistatus.status(home, 'claude', skills_dir(), STYLES, proj)
     assert st['tool'] == 'claude'
     assert st['skills']['items'] == {n: 'missing' for n in aistatus.LECTERN_SKILLS}
     assert st['rules'] == {'path': str(home / '.claude' / 'rules' / 'lectern.md'), 'exists': False, 'lectern': False}
     c = st['claude']
     assert c['voice'] is None and c['voice_path'].endswith('내-문체.md')
-    assert c['style']['state'] == 'missing' and c['style']['name'] == '리서치 글쓰기'
+    assert c['styles']['research']['state'] == 'missing' and c['styles']['research']['name'] == '리서치 글쓰기'
+    assert [c['styles'][k]['name'] for k in ('brief', 'academic', 'plain')] == ['업무 보고', '학술 글', '쉬운 설명']
     assert c['settings']['user'] == {'path': str(home / '.claude' / 'settings.json'), 'value': None, 'ok': True}
     p = st['project']
     assert p['root'] == str(proj) and p['name'] == 'proj'
@@ -65,13 +67,13 @@ def test_installed_things_are_seen(home, tmp_path):
     copy_tree(skills_dir() / 'lectern-to-pptx', sk / 'lectern-to-pptx')
     (sk / 'lectern-to-pptx' / 'SKILL.md').write_text('옛 판\n', encoding='utf-8')
     (sk / 'pptx-to-lectern' / '내가-더한.txt').write_text('더한 파일은 보지 않는다', encoding='utf-8')
-    st = aistatus.status(home, 'claude', skills_dir(), STYLE, proj)
+    st = aistatus.status(home, 'claude', skills_dir(), STYLES, proj)
     assert st['skills']['items'] == {'pptx-to-lectern': 'same', 'lectern-to-pptx': 'differs', 'lectern-to-docx': 'missing'}
     assert st['rules']['exists'] and st['rules']['lectern']
     c = st['claude']
     assert c['voice'] == str(home / '.claude' / 'rules' / '내-문체.md')
-    assert c['style']['state'] == 'same' and not c['style']['voice']
-    assert c['other_styles'] == ['짧게']
+    assert c['styles']['research']['state'] == 'same' and not c['styles']['research']['voice'] and c['styles']['brief']['state'] == 'missing'
+    assert c['other_styles'] == [{'file': 'terse.md', 'path': str(home / '.claude' / 'output-styles' / 'terse.md'), 'name': '짧게', 'description': '짧은 답'}]
     assert c['settings']['user']['value'] == 'Explanatory'
     assert st['project']['settings']['local']['value'] == '리서치 글쓰기'
     assert st['project']['rules'][0] == {'path': str(proj / 'CLAUDE.md'), 'exists': True, 'lectern': True}
@@ -83,18 +85,18 @@ def test_installed_things_are_seen(home, tmp_path):
 def test_old_voice_section_in_style_still_counts_as_same(home):
     body = STYLE.read_text(encoding='utf-8')
     write(home / '.claude' / 'output-styles' / 'research-writing.md', body.rstrip('\n') + '\n\n## 내 문체\n\n- 지킬 것: 합니다체\n')
-    st = aistatus.status(home, 'claude', skills_dir(), STYLE)['claude']['style']
+    st = aistatus.status(home, 'claude', skills_dir(), STYLES)['claude']['styles']['research']
     assert st == {'path': str(home / '.claude' / 'output-styles' / 'research-writing.md'), 'name': '리서치 글쓰기', 'state': 'same', 'voice': True}
     write(home / '.claude' / 'output-styles' / 'research-writing.md', body.replace('동료이자 편집자', '편집자'))
-    assert aistatus.status(home, 'claude', skills_dir(), STYLE)['claude']['style']['state'] == 'differs'
+    assert aistatus.status(home, 'claude', skills_dir(), STYLES)['claude']['styles']['research']['state'] == 'differs'
 
 
 def test_broken_settings_file_is_not_read(home, tmp_path):
     write(home / '.claude' / 'settings.json', '{ "outputStyle": "x", }')
-    st = aistatus.status(home, 'claude', skills_dir(), STYLE)
+    st = aistatus.status(home, 'claude', skills_dir(), STYLES)
     assert st['claude']['settings']['user'] == {'path': str(home / '.claude' / 'settings.json'), 'value': None, 'ok': False}
     write(home / '.claude' / 'settings.json', '["outputStyle"]')
-    assert aistatus.status(home, 'claude', skills_dir(), STYLE)['claude']['settings']['user']['value'] is None
+    assert aistatus.status(home, 'claude', skills_dir(), STYLES)['claude']['settings']['user']['value'] is None
 
 
 def test_other_tools(home, tmp_path):
@@ -102,13 +104,13 @@ def test_other_tools(home, tmp_path):
     write(proj / 'AGENTS.md', '# 지침\n')
     write(home / '.codex' / 'AGENTS.md', '# 내 지침\n\n## 문서 (Lectern 으로 읽음)\n')
     write(home / '.codex' / 'AGENTS.override.md', '# 덮어쓰기\n')
-    st = aistatus.status(home, 'codex', skills_dir(), STYLE, proj)
+    st = aistatus.status(home, 'codex', skills_dir(), STYLES, proj)
     assert 'claude' not in st
     assert st['skills']['dir'] == str(home / '.agents' / 'skills')
     assert st['rules'] == {'path': str(home / '.codex' / 'AGENTS.md'), 'exists': True, 'lectern': True, 'override': str(home / '.codex' / 'AGENTS.override.md')}
     assert st['project']['rules'] == [{'path': str(proj / 'AGENTS.md'), 'exists': True, 'lectern': False}]
     assert st['project']['skills']['dir'] == str(proj / '.agents' / 'skills')
-    many = aistatus.status(home, 'any', skills_dir(), STYLE, proj)
+    many = aistatus.status(home, 'any', skills_dir(), STYLES, proj)
     assert [Path(r['path']).name for r in many['project']['rules']] == ['CLAUDE.md', 'AGENTS.md']
 
 

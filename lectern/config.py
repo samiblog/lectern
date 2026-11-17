@@ -94,9 +94,11 @@ DEFAULTS: dict[str, Any] = {
     'ai_scope_guide': 'all',   # Lectern 작성 안내 요약: all(개인 규칙 파일 — 모든 폴더) | folder(그 폴더의 지시 파일)
     'ai_scope_skills': 'all',  # PowerPoint·Word 스킬: all(개인 스킬 폴더) | folder(그 폴더의 스킬 폴더)
     'ai_style_where': 'folder',  # 글쓰기 스타일을 켤 곳: folder(그 폴더에서) | all(모든 폴더의 기본) | off(그 폴더에서 끄기). 파일은 늘 개인 폴더에
+    'ai_style': 'research',   # 고른 글쓰기 스타일 (D161 — 고르기 창): research·brief·academic·plain(Lectern 에 든 것, web/help/writing-styles.json) | mine:<파일 이름>(개인 폴더의 내 스타일)
 }
 
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
+AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
 FILES_OPEN = ('docs', 'code', 'others')   # 설정 files_open (D143 — 화면은 others.js)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
@@ -107,7 +109,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
-                         'ai_scope_guide', 'ai_scope_skills', 'ai_style_where'})
+                         'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
 NULLABLE = frozenset({'last_folder', 'editor', 'sidebar_width', 'toc_width', 'terminal_shell', 'terminal_width',
@@ -146,6 +148,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('all', 'folder')
     if key == 'ai_style_where':
         return value in ('folder', 'all', 'off')
+    if key == 'ai_style':
+        return isinstance(value, str) and (value in AI_STYLES or (value.startswith('mine:') and value.endswith('.md') and '/' not in value and '\\' not in value))
     if key == 'settings_section':
         return value in ('general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more')
     if key == 'terminal_font_size':

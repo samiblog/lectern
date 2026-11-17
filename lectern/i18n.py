@@ -346,4 +346,5 @@ EN: dict[str, str] = {
     '할 때마다 묻는 일': 'Asked about each time',
     '형식이 틀려 기본값으로 돌고 있습니다': 'The value has the wrong form, so the default is used',
     '화면 언어 — auto(Windows 표시 언어)·ko·en. 바꾸면 화면을 다시 불러온다': 'Display language — auto (Windows display language), ko or en. Changing it reloads the screen',
+    '고른 글쓰기 스타일 — research(리서치 글쓰기)·brief(업무 보고)·academic(학술 글)·plain(쉬운 설명), mine:파일 이름(내 스타일)': 'The chosen writing style — research (Research writing), brief (Business report), academic (Academic writing), plain (Plain explanation), or mine:file name (your own style)',
 }

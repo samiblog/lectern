@@ -1084,7 +1084,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .set-content { position: relative; min-height: 0; overflow: auto; padding-right: 8px; }
 .set-sec { padding-bottom: 10px; }
 /* 설정 원문 보기 (D160 — rawview.js): 왼쪽 목록, 오른쪽 원문. 설명 줄은 번호 없이 흐리게 기울여 */
-#lec-raw .dialog-box.raw-box { display: flex; flex-direction: column; width: min(1180px, calc(100vw - 32px)); height: calc(100vh - 6vh - 24px); margin-top: 3vh; overflow: hidden; }
+#lec-raw .dialog-box.raw-box, #lec-stylepick .dialog-box.pick-box { display: flex; flex-direction: column; width: min(1180px, calc(100vw - 32px)); height: calc(100vh - 6vh - 24px); margin-top: 3vh; overflow: hidden; }
 .raw-head { display: flex; flex-direction: column; gap: 2px; margin-bottom: 8px; }
 .raw-head h2 { margin: 0; }
 .raw-head small { color: var(--ui-muted); font-size: 12px; }
@@ -1109,6 +1109,22 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .raw-t { flex: 1; min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; }   /* 긴 줄은 접어 보인다 — 번호는 파일의 줄 그대로 */
 .raw-note .raw-t { max-width: 100ch; padding: 1px 0; color: var(--ui-muted); font: 12px/1.5 var(--ui-font); white-space: pre-wrap; }
 .raw-empty { padding: 16px; color: var(--ui-muted); font-family: var(--ui-font); }
+/* 글쓰기 스타일 고르기 (D161 — stylepick.js): 원문 보기와 같은 틀, 오른쪽은 이런 글에·바뀌는 것·견본 둘 */
+.raw-item span { min-width: 0; }
+.pick-main { flex: 1; min-width: 0; overflow: auto; padding: 0 6px 12px 2px; }
+.pick-name { margin: 0 0 2px; font-size: 17px; }
+.pick-desc { margin: 0 0 10px; color: var(--ui-muted); }
+.pick-sub { margin: 12px 0 4px; color: var(--ui-muted); font-size: 11px; font-weight: 700; }
+.pick-use { margin: 0; }
+.pick-changes { margin: 0; padding-left: 20px; line-height: 1.55; }
+.pick-request { margin: 0 0 6px; font-style: italic; }
+.pick-request small { font-style: normal; color: var(--ui-muted); }
+.pick-samples { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.pick-cap { margin-bottom: 3px; font-size: 12px; font-weight: 650; }
+.pick-text { max-height: 300px; overflow: auto; padding: 8px 10px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); font-size: 12.5px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere; }
+.pick-now { margin: 12px 0 4px; color: var(--ui-muted); font-size: 12px; }
+@media (max-width: 760px) { .pick-samples { grid-template-columns: 1fr; } }
+.opt-block .ai-chosen { margin-top: 4px; }
 /* 설정의 범위 (D159): 설정 창 머리 아래의 한 줄, 분류 안의 작은 제목, AI 도구에 건네는 것의 넣을 곳·바뀌는 파일 (aisetup.js) */
 .set-scope { margin: -6px 0 8px; color: var(--ui-muted); font-size: 12px; }
 .set-sec > .set-sub { margin: 14px 0 2px; padding: 0 4px; font-size: 12px; font-weight: 700; color: var(--ui-muted); }

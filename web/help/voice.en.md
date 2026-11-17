@@ -68,4 +68,4 @@ Summed up from 4 pieces this person wrote (2 narrative reports, 2 bullet-point r
 ## Adding to the note
 
 - You can add to the note from writing the person edited in Lectern, or from "Came up often" in a polish check. Only what repeats, and only after showing the change and asking.
-- When the person reinstalls the writing style from a new Lectern version, move this section to the end of the new file (the install request in the settings window says so).
+- If, as in earlier versions, the note still sits as a "## My style" section at the end of a writing style file, ask when the style is reinstalled whether to move that section into the personal rule file (see "Where" above) — do not attach it to the end of the new style file again.

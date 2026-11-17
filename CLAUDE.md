@@ -4,7 +4,7 @@ Lectern(렉턴, 독서대)은 Markdown을 중심으로 AI와 함께 작업하는
 Markdown(`.md`)과 HTML(`.html`) 문서를 본다. HTML은 문서로 보기만 하고 스크립트는 돌리지 않는다 (D27). 문서 형식은 서버가 `scanner.DOC_TYPES`, 화면이 `util.js` 의 `isMd`·`isHtml` 로 정한다 (형식을 더하면 둘 다).
 구성: Python(pywebview 창 + Flask 로컬 서버, waitress 로 띄움 — D82) + 빌드 단계 없는 순수 JS(ES modules).
 
-현재 버전 0.90.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
+현재 버전 0.91.0. 판마다 바뀐 것은 `docs/HISTORY.md`, 방향은 `docs/VISION.md`, 다음 할 일은 `docs/ROADMAP.md` 에서 고른다.
 
 ## 반드시 지킬 원칙
 
@@ -85,6 +85,7 @@ web/
   help/writing.md       Lectern 에서 잘 보이는 문서를 쓰는 AI 용 작성 안내 (D57 — 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 글이 경로를 준다. 이름과 지시 파일(CLAUDE.md·AGENTS.md)은 설정 '쓰는 AI 도구'를 따른다 — D138, `aitool.js`). 영어판은 writing.en.md
   help/layouts.md       지면 틀을 만드는 AI 용 작성 안내 (D145 — 설정 창 '지면 틀'의 요청 글이 경로를 준다). 영어판은 layouts.en.md
   help/research-writing.md  Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창 '글쓰기 스타일'의 요청 글이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가. Codex·Antigravity·OpenCode 는 그 프로젝트의 AGENTS.md 에 넣는 요청 글 — D138. 2판은 글 종류·개발자 글버릇·남의 글 다듬기 — D148). 영어판은 .en.md
+  help/business-report.md·academic-writing.md·plain-explainer.md  글쓰기 스타일 셋 더 — 업무 보고·학술 글·쉬운 설명 (D161 — 목록·이런 글에·바뀌는 것·견본은 help/writing-styles.json, 고르기 창 stylepick.js. 공통 절 넷은 리서치 글쓰기와 같게 — tools/sync_writing_styles.py). 새 스타일 만들기 안내는 help/new-style.md. 영어판은 .en.md
   help/review.md        다듬기 점검 안내 (D148 — 문서 여백 우클릭 '다듬기 점검 요청'의 요청 글이 경로를 준다. 표를 먼저, 고친 것은 사람이 고른 뒤). 영어판은 .en.md
   help/voice.md         내 문체 노트 안내 (D148 — 문서 우클릭 '내 문체 견본으로 보내기'·설정 창 '내 문체'의 요청 글이 경로를 준다. 지킬 것·참고할 것·따라 하지 않을 것). 영어판은 .en.md
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
@@ -94,7 +95,7 @@ skills/                 AI 도구의 스킬 (D98 — pptx-to-lectern, lectern-to
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
-tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), make_sample_html.py(예제의 html 발표를 다시 만듦 — html 로 전환을 고치면, D129), make_docx_templates.py(Word 양식 18가지 — 양식을 고치면 이것을 고치고 다시 돌린다, D147), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
+tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), make_sample_html.py(예제의 html 발표를 다시 만듦 — html 로 전환을 고치면, D129), make_docx_templates.py(Word 양식 18가지 — 양식을 고치면 이것을 고치고 다시 돌린다, D147), sync_writing_styles.py(글쓰기 스타일의 공통 절을 리서치 글쓰기에서 옮김 — D161), make_style_samples.py(글쓰기 스타일의 견본과 가린 비교 — 실제 Claude Code 로, 스타일을 고치면 다시 돌린다, D161), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
 docs/                   VISION(방향 — 마름모형 리서치 방법), ARCHITECTURE, MODULES, PITFALLS, DECISIONS, ROADMAP, HISTORY, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다

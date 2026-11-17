@@ -134,15 +134,30 @@ def home_dir() -> Path:
     return Path(override) if override else Path.home()
 
 
-def home_voice(home: Path, bundled_style: Path) -> Path:
+def home_voice(home: Path, en: bool = False) -> Path:
     """Claude Code 의 내 문체 노트 — 있으면 그 파일, 없으면 화면 언어의 이름 (D159)"""
     rules = home / '.claude' / 'rules'
     found = next((rules / f for f in VOICE_FILES if (rules / f).is_file()), None)
-    return found or rules / (VOICE_FILES[1] if bundled_style.name.endswith('.en.md') else VOICE_FILES[0])
+    return found or rules / (VOICE_FILES[1] if en else VOICE_FILES[0])
 
 
-def status(home: Path, tool: str, skills_dir: Path, bundled_style: Path, project: Path | None = None) -> dict[str, Any]:
-    """설정 창에 보일 지금 상태. tool: config ai_tool (any 면 Claude Code 의 것을 보인다 — 도구마다의 파일은 요청 글이 적는다)"""
+def lectern_styles(help_dir: Path, en: bool = False) -> list[dict[str, Any]]:
+    """Lectern 에 든 글쓰기 스타일 (D161 — help_dir 의 writing-styles.json 차례): [{id, file, path, name, description}]. 화면 언어의 판"""
+    try:
+        meta = json.loads((help_dir / 'writing-styles.json').read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return []
+    out = []
+    for s in meta.get('styles', []):
+        path = help_dir / f"{s['file']}{'.en' if en else ''}.md"
+        head = _head(_read(path) or '')
+        out.append({'id': s['id'], 'file': s['file'], 'path': str(path), 'name': head.get('name', s['file']), 'description': head.get('description', '')})
+    return out
+
+
+def status(home: Path, tool: str, skills_dir: Path, styles: list[dict[str, Any]], project: Path | None = None, en: bool = False) -> dict[str, Any]:
+    """설정 창에 보일 지금 상태. tool: config ai_tool (any 면 Claude Code 의 것을 보인다 — 도구마다의 파일은 요청 글이 적는다).
+    styles: lectern_styles() — 스타일마다 설치됐는지 (D161)"""
     key = tool if tool in TOOLS else 'claude'
     info = TOOLS[key]
     at = lambda *parts: home.joinpath(*parts)   # noqa: E731
@@ -160,24 +175,31 @@ def status(home: Path, tool: str, skills_dir: Path, bundled_style: Path, project
         rules_dir = at('.claude', 'rules')
         voice = next((rules_dir / f for f in VOICE_FILES if (rules_dir / f).is_file()), None)
         styles_dir = at(*STYLES_DIR)
-        installed = styles_dir / bundled_style.name
-        if not installed.is_file():   # 다른 언어판을 설치했을 수도 있다
-            other = bundled_style.with_name('research-writing.md' if bundled_style.name.endswith('.en.md') else 'research-writing.en.md')
-            installed = styles_dir / other.name if (styles_dir / other.name).is_file() else installed
+        found: dict[str, Any] = {}
+        ours = set()
+        for s in styles:
+            bundled = Path(s['path'])
+            names = (f"{s['file']}.md", f"{s['file']}.en.md")
+            ours.update(names)
+            installed = styles_dir / bundled.name
+            if not installed.is_file():   # 다른 언어판을 설치했을 수도 있다
+                other = next((styles_dir / n for n in names if (styles_dir / n).is_file()), None)
+                installed = other or installed
+            found[s['id']] = {'path': str(installed), 'name': s['name'], **style_state(bundled, installed)}
         others = []
         try:
             for f in sorted(styles_dir.glob('*.md')) if styles_dir.is_dir() else []:
-                if f.name not in ('research-writing.md', 'research-writing.en.md'):
-                    others.append(_head(_read(f) or '').get('name') or f.stem)
+                if f.name not in ours:
+                    head = _head(_read(f) or '')
+                    others.append({'file': f.name, 'path': str(f), 'name': head.get('name') or f.stem, 'description': head.get('description', '')})
         except OSError:
             pass
         user_style, user_ok = output_style(at(*USER_SETTINGS))
-        mine = _head(_read(bundled_style) or '')
         out['claude'] = {
             'voice': str(voice) if voice else None,
-            'voice_path': str(rules_dir / (VOICE_FILES[1] if bundled_style.name.endswith('.en.md') else VOICE_FILES[0])),
+            'voice_path': str(rules_dir / (VOICE_FILES[1] if en else VOICE_FILES[0])),
             'styles_dir': str(styles_dir),
-            'style': {'path': str(installed), 'name': mine.get('name', ''), **style_state(bundled_style, installed)},
+            'styles': found,
             'other_styles': others,
             'settings': {'user': {'path': str(at(*USER_SETTINGS)), 'value': user_style, 'ok': user_ok}},
         }

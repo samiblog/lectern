@@ -82,6 +82,8 @@ function syncTabs(info) {
   S.slidesGuide = info.slides_guide || '';
   S.skillsDir = info.skills_dir || '';
   S.writingStyle = info.writing_style || '';
+  S.writingStyles = info.writing_styles || [];
+  S.styleGuide = info.style_guide || '';
   S.reviewGuide = info.review_guide || '';
   S.voiceGuide = info.voice_guide || '';
   if (info.sep) S.sep = info.sep;

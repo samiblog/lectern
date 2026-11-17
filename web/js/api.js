@@ -89,7 +89,7 @@ export async function saveConfig(patch) {
 const FOLLOW = ['language', 'theme', 'slide_theme', 'theme_groups', 'pptx_style', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'side_sort',
   'toc_hidden_parts', 'math', 'md_breaks', 'external_images', 'vi_keys', 'editor_keys', 'restore_last', 'expand_first_level', 'terminal_position',
   'terminal_follow_style', 'terminal_font_size', 'csv_stats', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers',
-  'ai_tool', 'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'recent_md_styles', 'recent_templates', 'recent_puts'];
+  'ai_tool', 'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style', 'recent_md_styles', 'recent_templates', 'recent_puts'];
 let served = null;   // 이 창이 마지막으로 받은 서버의 설정
 
 /** 처음 설정을 받는다 (main.js) — 따르기의 기준도 이것 */

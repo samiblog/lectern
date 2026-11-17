@@ -440,17 +440,17 @@ def create_app(state: AppState) -> Flask:
         """?p=<탭 id> — AI 도구에 건네는 것의 지금 상태 (D159, aistatus.py). 개인 폴더와 그 프로젝트의 정해진 파일만 읽기만 한다.
         p 가 없거나 닫힌 탭이면 프로젝트 쪽은 빈다"""
         project = state.get(request.args.get('p'))
-        lang = 'research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md'
-        return jsonify(aistatus.status(aistatus.home_dir(), state.config.get('ai_tool'), skills_dir(), web_dir() / 'help' / lang,
-                                       project.root if project is not None else None))
+        en = i18n.language() == 'en'
+        return jsonify(aistatus.status(aistatus.home_dir(), state.config.get('ai_tool'), skills_dir(), aistatus.lectern_styles(web_dir() / 'help', en),
+                                       project.root if project is not None else None, en))
 
     def raw_catalog() -> tuple[list[dict[str, Any]], str]:
         """설정 원문 보기의 목록 (D160 — rawfiles.py). 경로는 여기서만 정한다"""
         project = state.get(request.args.get('p'))
-        lang = 'research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md'
+        en = i18n.language() == 'en'
         tool = state.config.get('ai_tool')
-        groups = rawfiles.catalog(aistatus.home_dir(), tool, state.config.path, skills_dir(), web_dir() / 'help' / lang,
-                                  project.root if project is not None else None, project.name if project is not None else '')
+        groups = rawfiles.catalog(aistatus.home_dir(), tool, state.config.path, skills_dir(), aistatus.lectern_styles(web_dir() / 'help', en),
+                                  project.root if project is not None else None, project.name if project is not None else '', en)
         return groups, {'codex': 'Codex', 'antigravity': 'Antigravity', 'opencode': 'OpenCode'}.get(tool, 'Claude Code')
 
     @app.get('/api/raw/list')

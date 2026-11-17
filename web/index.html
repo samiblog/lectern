@@ -587,8 +587,9 @@
     </div>
     <div class="opt-block" aria-labelledby="lec-wstyle-title">
       <span class="opt-head"><b id="lec-wstyle-title">글쓰기 스타일</b><small id="lec-wstyle-desc"></small></span>
+      <div class="opt-btns ai-chosen"><b id="lec-wstyle-chosen"></b><button type="button" id="lec-wstyle-pick" class="text-btn">스타일 고르기…</button></div>
       <div class="opt-choice ai-where" role="radiogroup" aria-label="넣을 곳"><label><input type="radio" name="ai_style_where" value="folder"><span><span class="ai-lab"></span><small class="ai-lab-desc"></small></span></label><label><input type="radio" name="ai_style_where" value="all"><span><span class="ai-lab"></span><small class="ai-lab-desc"></small></span></label><label><input type="radio" name="ai_style_where" value="off"><span><span class="ai-lab"></span><small class="ai-lab-desc"></small></span></label></div>
-      <p id="lec-wstyle-warn" class="ai-warn" hidden>이 스타일은 Claude Code 의 개발 지침(고칠 범위 지키기, 고친 뒤 확인하기)을 뺍니다. 코드를 쓰는 폴더에서는 그 폴더를 열고 '이 폴더에서 끄기'로 요청하거나, Claude Code 에서 /output-style 로 기본을 고르세요.</p>
+      <p id="lec-wstyle-warn" class="ai-warn" hidden>Lectern 의 글쓰기 스타일은 넷 모두 Claude Code 의 개발 지침(고칠 범위 지키기, 고친 뒤 확인하기)을 뺍니다. 코드를 쓰는 폴더에서는 그 폴더를 열고 '… 폴더에서 끄기'로 요청하거나, Claude Code 에서 /output-style 로 기본을 고르세요.</p>
       <small id="lec-wstyle-now" class="ai-now"></small>
       <div class="ai-files-head">바뀌는 파일</div>
       <ul id="lec-wstyle-files" class="ai-files" aria-label="바뀌는 파일"></ul>
@@ -634,6 +635,20 @@
     <div class="dialog-foot">
       <span id="lec-settings-ver"></span>
       <button type="button" id="lec-settings-close" class="primary">닫기</button>
+    </div>
+  </div>
+</div>
+<div id="lec-stylepick" class="overlay" hidden>
+  <!-- 글쓰기 스타일 고르기 (D161 — stylepick.js): 왼쪽 목록(Lectern 에 든 넷·Claude Code 기본·내 스타일·새로), 오른쪽 이런 글에·바뀌는 것·견본 -->
+  <div class="dialog-box raw-box pick-box" role="dialog" aria-labelledby="lec-stylepick-title">
+    <div class="raw-head"><h2 id="lec-stylepick-title">글쓰기 스타일 고르기</h2><small>고르면 설정 창의 '글쓰기 스타일'이 그 스타일로 요청 글을 만듭니다. 견본은 같은 요청을 Claude Code 에 스타일 없이와 그 스타일로 실제로 시킨 결과의 앞부분입니다</small></div>
+    <div class="raw-body">
+      <nav id="lec-stylepick-list" class="raw-list" aria-label="글쓰기 스타일"></nav>
+      <div id="lec-stylepick-main" class="pick-main"></div>
+    </div>
+    <div class="dialog-foot">
+      <span></span>
+      <button type="button" id="lec-stylepick-close" class="primary">닫기</button>
     </div>
   </div>
 </div>

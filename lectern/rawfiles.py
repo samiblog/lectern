@@ -103,6 +103,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'ai_scope_guide': (N_('작성 안내 요약을 넣을 곳 — all(개인 폴더, 모든 폴더에 듣는다)·folder(그 폴더)'), W_AI),
     'ai_scope_skills': (N_('PowerPoint·Word 스킬을 넣을 곳 — all(개인 스킬 폴더)·folder(그 폴더)'), W_AI),
     'ai_style_where': (N_('글쓰기 스타일을 켤 곳 — folder(그 폴더)·all(모든 폴더의 기본)·off(그 폴더에서 끄기)'), W_AI),
+    'ai_style': (N_('고른 글쓰기 스타일 — research(리서치 글쓰기)·brief(업무 보고)·academic(학술 글)·plain(쉬운 설명), mine:파일 이름(내 스타일)'), W_AI),
 }
 
 # Claude Code 설정 파일(settings.json)의 열쇠 — 자주 쓰는 것만. 그 밖은 GENERIC (뜻을 지어내지 않는다)
@@ -273,8 +274,8 @@ def _style_files(folder: Path) -> list[Path]:
         return []
 
 
-def catalog(home: Path, tool: str, config_path: Path, skills_dir: Path, bundled_style: Path, project: Path | None,
-            project_name: str = '') -> list[dict[str, Any]]:
+def catalog(home: Path, tool: str, config_path: Path, skills_dir: Path, styles: list[dict[str, Any]], project: Path | None,
+            project_name: str = '', en: bool = False) -> list[dict[str, Any]]:
     """보일 수 있는 것: 묶음마다 [{id, label, path, exists, kind}]. id 는 read() 가 받는 것 — 경로는 여기서만 정한다"""
     key = tool if tool in aistatus.TOOLS else 'claude'
     info = aistatus.TOOLS[key]
@@ -286,7 +287,7 @@ def catalog(home: Path, tool: str, config_path: Path, skills_dir: Path, bundled_
     groups = [{'group': 'Lectern', 'items': [item('config', t('Lectern 설정'), config_path, 'config')]}]
     mine = [item('rules', t('작성 안내 요약'), home.joinpath(*info['rules']), 'rules')]
     if key == 'claude':
-        mine.append(item('voice', t('내 문체 노트'), aistatus.home_voice(home, bundled_style), 'voice'))
+        mine.append(item('voice', t('내 문체 노트'), aistatus.home_voice(home, en), 'voice'))
         mine.append(item('csettings', t('Claude Code 개인 설정'), home.joinpath(*aistatus.USER_SETTINGS), 'csettings'))
         mine += [item(f'style:{f.name}', t('글쓰기 스타일: {name}', name=f.stem), f, 'style') for f in _style_files(home.joinpath(*aistatus.STYLES_DIR))]
     sk = home.joinpath(*info['skills'])
@@ -301,7 +302,7 @@ def catalog(home: Path, tool: str, config_path: Path, skills_dir: Path, bundled_
         psk = project.joinpath(*info['project_skills'])
         here += [item(f'pskill:{n}', t('스킬: {name}', name=n), psk / n, 'skill') for n in aistatus.LECTERN_SKILLS if (psk / n).is_dir()]
         groups.append({'group': t('이 폴더 — {name}', name=project_name or project.name), 'items': here})
-    groups.append({'group': t('Lectern 에 든 것'), 'items': [item('lstyle', t('글쓰기 스타일: {name}', name=bundled_style.stem), bundled_style, 'lstyle')]
+    groups.append({'group': t('Lectern 에 든 것'), 'items': [item(f"lstyle:{s['id']}", t('글쓰기 스타일: {name}', name=s['name']), Path(s['path']), 'lstyle') for s in styles]
                    + [item(f'lskill:{n}', t('스킬: {name}', name=n), skills_dir / n, 'lskill') for n in aistatus.LECTERN_SKILLS]})
     return groups
 

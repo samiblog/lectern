@@ -10,13 +10,14 @@ import pytest
 
 from conftest import write
 
-from lectern import rawfiles
+from lectern import aistatus, rawfiles
 from lectern.config import DEFAULTS, Config
 from lectern.paths import skills_dir, web_dir
 from lectern.server import create_app
 from lectern.state import AppState
 
 STYLE = web_dir() / 'help' / 'research-writing.md'
+STYLES = aistatus.lectern_styles(web_dir() / 'help')
 
 
 def lines_of(got):
@@ -57,7 +58,7 @@ def env(tmp_path):
     write(home / '.claude' / 'output-styles' / 'terse.md', '---\nname: 짧게\ndescription: 짧은 답\nkeep-coding-instructions: true\n---\n본문\n')
     shutil.copytree(skills_dir() / 'lectern-to-docx', home / '.claude' / 'skills' / 'lectern-to-docx', ignore=shutil.ignore_patterns('__pycache__'))
     write(proj / '.claude' / 'settings.local.json', json.dumps({'outputStyle': '리서치 글쓰기'}))
-    groups = rawfiles.catalog(home, 'claude', cfg, skills_dir(), STYLE, proj, 'proj')
+    groups = rawfiles.catalog(home, 'claude', cfg, skills_dir(), STYLES, proj, 'proj')
     return groups, home, proj, cfg
 
 
@@ -71,7 +72,8 @@ def test_catalog(env):
     assert ids['voice']['path'].endswith('내-문체.md')
     assert ids['style:terse.md']['exists'] and ids['skill:lectern-to-docx']['exists'] and not ids['skill:pptx-to-lectern']['exists']
     assert ids['csettings-local']['exists'] and not ids['csettings-shared']['exists']
-    assert ids['lstyle']['path'] == str(STYLE) and ids['lskill:lectern-to-pptx']['exists']
+    assert ids['lstyle:research']['path'] == str(STYLE) and ids['lskill:lectern-to-pptx']['exists']
+    assert [i for i in ids if i.startswith('lstyle:')] == ['lstyle:research', 'lstyle:brief', 'lstyle:academic', 'lstyle:plain']
     assert not any(i.startswith('pskill:') for i in ids)   # 이 폴더에 없는 스킬은 목록에 넣지 않는다
 
 
@@ -93,7 +95,7 @@ def test_config_rows_keep_the_file_and_explain_each_key(env):
 def test_broken_config_is_still_shown(tmp_path):
     cfg = tmp_path / 'config.json'
     cfg.write_text('{ "language": "ko", }', encoding='utf-8')
-    groups = rawfiles.catalog(tmp_path, 'claude', cfg, skills_dir(), STYLE, None)
+    groups = rawfiles.catalog(tmp_path, 'claude', cfg, skills_dir(), STYLES, None)
     got = rawfiles.read(groups, 'config')
     assert lines_of(got) == ['{ "language": "ko", }']
     assert any('JSON 으로 읽지 못하는 파일입니다' in r.get('note', '') for r in got['rows'])
@@ -117,7 +119,7 @@ def test_style_and_skill_heads(env):
     got = rawfiles.read(groups, 'style:terse.md')
     assert notes_before(got, 'keep-coding-instructions: true') == ['true 면 Claude Code 의 개발 지침을 남긴다 — 없거나 false 면 뺀다']
     assert notes_before(got, 'name: 짧게')[0] == '스타일 이름 — /output-style 목록과 설정 값 outputStyle 에 쓰인다'
-    lst = rawfiles.read(groups, 'lstyle')
+    lst = rawfiles.read(groups, 'lstyle:research')
     assert lst['rows'][0]['note'].startswith('Lectern 에 든 글쓰기 스타일') and lines_of(lst) == STYLE.read_text(encoding='utf-8').split('\n')
     sk = rawfiles.read(groups, 'skill:lectern-to-docx')
     assert sk['sub'] == 'SKILL.md' and sk['rows'][0]['note'].startswith('스킬 — ')
@@ -147,13 +149,13 @@ def test_big_file(tmp_path, monkeypatch):
     cfg = tmp_path / 'config.json'
     cfg.write_text('{}', encoding='utf-8')
     monkeypatch.setattr(rawfiles, 'MAX_TEXT', 1)
-    groups = rawfiles.catalog(tmp_path, 'claude', cfg, skills_dir(), STYLE, None)
+    groups = rawfiles.catalog(tmp_path, 'claude', cfg, skills_dir(), STYLES, None)
     assert rawfiles.read(groups, 'config')['reason'] == 'big'
 
 
 def test_other_tool(tmp_path):
     write(tmp_path / '.codex' / 'AGENTS.md', '# 내 지침\n')
-    groups = rawfiles.catalog(tmp_path, 'codex', tmp_path / 'c.json', skills_dir(), STYLE, None)
+    groups = rawfiles.catalog(tmp_path, 'codex', tmp_path / 'c.json', skills_dir(), STYLES, None)
     ids = [it['id'] for g in groups for it in g['items']]
     assert 'csettings' not in ids and 'voice' not in ids and groups[1]['group'] == 'Codex — 개인 폴더'
     got = rawfiles.read(groups, 'rules', cli='Codex')

@@ -12,7 +12,7 @@ import threading
 from pathlib import Path
 from typing import Any, Callable
 
-from . import __version__, i18n, work
+from . import __version__, aistatus, i18n, work
 from .changes import ChangeLog, Watcher
 from .config import MAX_TABS, Config
 from .i18n import t
@@ -327,6 +327,9 @@ class AppState:
             'skills_dir': str(skills_dir()),
             # Claude Code 의 글쓰기용 출력 스타일 (D132 — 설정 창의 요청 글이 이 경로를 준다. 설치는 사용자가 시킬 때 Claude 가)
             'writing_style': str(web_dir() / 'help' / ('research-writing.en.md' if i18n.language() == 'en' else 'research-writing.md')),
+            # 글쓰기 스타일 넷 (D161 — 고르기 창과 요청 글이 고른 스타일의 경로를 준다), 새 스타일 만들기 안내
+            'writing_styles': aistatus.lectern_styles(web_dir() / 'help', i18n.language() == 'en'),
+            'style_guide': str(web_dir() / 'help' / ('new-style.en.md' if i18n.language() == 'en' else 'new-style.md')),
             # 다듬기 점검·내 문체 안내 (D148 — 문서 우클릭과 설정 창의 요청 글이 이 경로를 준다. 고치는 것은 사람이 고를 때 AI 도구가)
             'review_guide': str(web_dir() / 'help' / ('review.en.md' if i18n.language() == 'en' else 'review.md')),
             'voice_guide': str(web_dir() / 'help' / ('voice.en.md' if i18n.language() == 'en' else 'voice.md')),

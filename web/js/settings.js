@@ -10,7 +10,8 @@ import { $, $$, toast, copyText } from './util.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
 import { aiTool, aiInfo, aiName, aiCli, voicePrompt } from './aitool.js';
-import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, writingStylePrompt } from './aisetup.js';
+import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, writingStylePrompt, chosenStyle } from './aisetup.js';
+import { openStylePick } from './stylepick.js';
 import { openRaw } from './rawview.js';
 
 const box = () => $('#lec-settings');
@@ -131,7 +132,7 @@ on('config-follow', (keys) => {
   if (box().hidden) return;
   fillControls();
   if (keys.has('ai_tool')) refreshAiSetup();
-  else if (['ai_scope_guide', 'ai_scope_skills', 'ai_style_where'].some((k) => keys.has(k))) redrawAiSetup();
+  else if (['ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style'].some((k) => keys.has(k))) redrawAiSetup();
   segDescs();
 });
 
@@ -145,8 +146,8 @@ export function applyAiNames() {
   text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 고른 곳에 규칙을 정리합니다 — 모든 폴더면 개인 폴더에, 한 폴더면 그 폴더의 {file} 에 그 폴더의 읽는 사람·목적을', { cli, file: ruleFile() }));
   text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'와 예제 가이드 13 에 있습니다", { cli }));
   text('#lec-wstyle-desc', claude
-    ? t('Claude Code 가 개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 출력 스타일이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 파일 경로·굵은 이름 나열 같은 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 파일은 개인 폴더에 하나 두고 켜는 곳을 고릅니다. 요청 글을 Claude Code 에 붙이면 지금 상태를 알리고 물은 뒤 설치하고 켭니다')
-    : t('개발자가 아니라 보고서를 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 들어 있습니다 — 읽는 사람을 먼저 정하고, 서술식·개조식 같은 글 종류에 맞게 쓰고, 개발자 글버릇을 빼고, 다 쓴 뒤 다시 읽어 고칩니다. 요청 글을 {cli} 에 붙이면 고른 곳(개인 지시 파일이나 그 폴더의 AGENTS.md)에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)', { cli }));
+    ? t("Claude Code 가 개발자가 아니라 그 글을 쓰는 실무자처럼 쓰게 하는 출력 스타일이 넷 들어 있습니다 — 리서치 글쓰기·업무 보고·학술 글·쉬운 설명. 모두 개발자·AI 글버릇을 빼고 다 쓴 뒤 다시 읽어 고칩니다. '스타일 고르기…'에서 견본을 보고 고르고, 고른 스타일의 파일을 개인 폴더에 두고 켜는 곳을 고릅니다. 요청 글을 Claude Code 에 붙이면 지금 상태를 알리고 물은 뒤 설치하고 켭니다")
+    : t("개발자가 아니라 그 글을 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 넷 들어 있습니다 — 리서치 글쓰기·업무 보고·학술 글·쉬운 설명. '스타일 고르기…'에서 견본을 보고 고르고, 요청 글을 {cli} 에 붙이면 고른 곳(개인 지시 파일이나 그 폴더의 AGENTS.md)에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)", { cli }));
   text('#lec-voice-desc', t("내가 직접 쓴 글을 견본으로 {cli} 가 내 문체 노트를 만듭니다 — 용어·말투처럼 지킬 것, 즐겨 쓰는 방식, 따라 하지 않을 버릇(겹말·번역투 같은)을 나눠 적고, 글을 쓰거나 다듬을 때 참고합니다. 노트는 개인 폴더에 하나 두어 어느 폴더·스타일에서나 같은 노트를 씁니다. 요청 글 끝에 견본을 @경로로 이어 붙이거나, 문서 여백을 우클릭해 '내 문체 견본으로 보내기'를 고릅니다. 저장하기 전에 무엇을 찾았는지 먼저 보여 줍니다", { cli }));
   for (const id of ['#lec-aiguide-prompt', '#lec-skills-prompt', '#lec-wstyle-prompt', '#lec-voice-prompt', '#lec-mystyles-prompt', '#lec-layouts-prompt']) text(id, t('{cli}용 요청 복사', { cli }));
   tip('#lec-layouts-prompt', t('틀 작성 안내의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적습니다', { cli }));
@@ -367,7 +368,13 @@ export function initSettings() {
   $('#lec-settings-raw').addEventListener('click', () => openRaw('config'));
   $('#lec-aiguide-raw').addEventListener('click', () => openRaw(['rules']));
   $('#lec-skills-raw').addEventListener('click', () => openRaw(['skill:pptx-to-lectern', 'pskill:pptx-to-lectern', 'lskill:pptx-to-lectern']));
-  $('#lec-wstyle-raw').addEventListener('click', () => openRaw(['style:research-writing.md', 'style:research-writing.en.md', 'lstyle']));
+  $('#lec-wstyle-raw').addEventListener('click', () => {   // 고른 스타일 — 설치한 것 → Lectern 에 든 것 (D161)
+    const s = chosenStyle();
+    openRaw(s.mine ? [`style:${s.mine}`] : [`style:${s.file}.md`, `style:${s.file}.en.md`, `lstyle:${s.id}`]);
+  });
+  $('#lec-wstyle-pick').addEventListener('click', openStylePick);   // 글쓰기 스타일 고르기 (D161)
+  on('settings-redraw', () => { if (!box().hidden) { redrawAiSetup(); segDescs(); } });   // 고르기 창에서 고른 뒤
+  on('close-settings', closeSettings);
   $('#lec-voice-raw').addEventListener('click', () => openRaw(['voice']));
   $('#lec-btn-settings').addEventListener('click', openSettings);
 }

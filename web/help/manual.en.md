@@ -1015,21 +1015,33 @@ Claude Code's default role is a developer. Even when it writes a report, develop
 
 | What | What it does | Where |
 |---|---|---|
-| Writing style | Claude writes like a practitioner who writes reports | Settings **Writing style** (install once, choose where it is on) |
+| Writing style | Claude writes like a practitioner of that kind of writing — choose Research writing, Business report, Academic writing or Plain explanation | Settings **Writing style** → **Choose a style…** (install once, choose where it is on) |
 | Polish check | Shows errors and hard-to-read spots in your own writing as a table first, then fixes only what you pick | Right-click a document's margin → **Ask for a polish check** |
 | My style | Keeps a note of what to keep and which habits not to copy, from writing you wrote yourself | Right-click a document's margin → **Send as a style sample**; Settings **My style** |
 
 In all three, Lectern only puts a request into the terminal (Enter is not pressed). Files are changed or installed only after Claude shows what it will do, asks, and you say yes.
 
-**Writing style — install once, choose where it is on**
+**Writing style — choose one, install once, choose where it is on**
 
-1. With a folder where you write reports open, choose where it is on under **Writing style** in the settings (**Ctrl+,**) — **Turn on in this folder** (the default), **Turn on in all folders** or **Turn off in this folder**. **Files that change** below shows, with full paths, the style file (one in `~/.claude/output-styles/`) and the settings file that gets the value, and also the style that applies in this folder now.
-2. Press the terminal button and Enter. Claude says how things stand and asks whether to install the style file (if it is missing or different) and turn it on. If you say yes it installs it and writes just the one value `"outputStyle"` in that settings file. Both files are inside a `.claude` folder, so Claude Code asks once more before writing — allow it if it matches what Files that change showed.
-3. If the style file was newly installed, quit Claude Code (`/exit`) and start it again.
-4. Do not turn it on in folders where you write code: this style drops the development instructions (stay in scope, check after changing). Choosing **Turn on in all folders** shows this warning. If you turned it on in all folders anyway, open a folder where you write code and send **Turn off in this folder**, or pick the default with `/output-style` in Claude Code (a folder's value comes before the all-folders value).
-5. After updating Lectern, if Files that change shows 'Change — Different from Lectern's', install again with the same request.
+Lectern includes four writing styles. All four drop developer and AI habits and reread when done; they differ in the standard they write to.
 
-With this style:
+| Style | For | What is different |
+|---|---|---|
+| Research writing | Reports, review comments, analysis memos | The reader and the decision first, evidence beyond the folder and on the web, a standard for each kind of document |
+| Business report | One-page reports for approval, meeting papers | Bullet points by default, the conclusion and what the approver must do at the top, numbers against plan or last year, who does what by when, attachments |
+| Academic writing | Papers, research reports, conference papers | Cites only sources it has checked (never invented), matches the strength of a claim to the evidence, units and uncertainty, limits |
+| Plain explanation | Manuals, guides, training material | What the reader will be able to do first, short sentences and plain words, one action per numbered step, common snags in advance |
+
+1. Open the chooser with **Choose a style…** under **Writing style** in the settings (**Ctrl+,**). On the left are the four included styles, **Claude Code default** (no style), **My writing styles** (output styles in your personal folder `~/.claude/output-styles` that are not Lectern's) and **Make a new style** — Claude Code default and My writing styles appear only when the AI tool is Claude Code. On the right you see what the style is for, what changes, **samples** (the start of what Claude Code actually wrote for the same request with no style and with that style — written in Korean), whether it is installed, and the style that applies in this folder now. **View source** shows the whole style file. **Use this style** takes you back to the settings with the chosen style. **Claude Code default in this folder** under Claude Code default switches where it is on to "Turn off in …" (only when a folder is open); choosing a style afterwards switches it back to "Turn on".
+2. With a folder where you write reports open (the buttons carry the open folder's name in place of "this folder"), choose where it is on under **Writing style** in the settings (**Ctrl+,**) — **Turn on in this folder** (the default), **Turn on in all folders** or **Turn off in this folder**. **Files that change** below shows, with full paths, the chosen style's file (in `~/.claude/output-styles/`) and the settings file that gets the value, and also the style that applies in this folder now.
+3. Press the terminal button and Enter. Claude says how things stand and asks whether to install the style file (if it is missing or different) and turn it on. If you say yes it installs it and writes just the one value `"outputStyle"` in that settings file. Both files are inside a `.claude` folder, so Claude Code asks once more before writing — allow it if it matches what Files that change showed.
+4. If the style file was newly installed, quit Claude Code (`/exit`) and start it again.
+5. Do not turn it on in folders where you write code: all four of Lectern's writing styles drop the development instructions (stay in scope, check after changing) — your own writing style does unless its settings at the top have `keep-coding-instructions: true`. Choosing **Turn on in all folders** shows this warning. If you turned it on in all folders anyway, open a folder where you write code and send **Turn off in this folder**, or pick the default with `/output-style` in Claude Code (a folder's value comes before the all-folders value).
+6. After updating Lectern, if Files that change shows 'Change — Different from Lectern's', install again with the same request.
+
+One style applies in a folder. You can turn on different styles in different folders — Research writing in a reports folder, Business report in a folder of approval papers: the style files sit side by side in your personal folder and only the value that turns one on differs per folder. **My writing styles** are only turned on (they are already in your personal folder). The copy and terminal buttons of **Make a new style** put in a request for Claude to build a style from the closest of the four, show the draft, ask and save it in your personal folder — add what you write at the end. After saving, open the settings window again and it appears under My writing styles; restart Claude Code for it to use it.
+
+With Research writing (the other three share the developer and AI habits and the reread):
 
 - **It writes to the kind of document.** Narrative in paragraphs (the first sentence is the claim); bullet points with the conclusion in the top item and the evidence under it. Bullet points are not treated as bad writing. Add "as bullet points" or "as narrative" to the request and it writes that way.
 - **It drops developer habits.** No file paths, code formatting, bold-label lists, arrows or task-report phrasing in the body; sources go by document name in a closing sources section.
@@ -1098,7 +1110,7 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 
 ## Settings
 
-The gear button in the toolbar (Ctrl+,) opens Settings. These settings apply to all of Lectern — they are not kept per folder. Open separate windows and slide windows follow within a second or two, and so do edits you save to the settings file (a view setting such as text size changed only in a separate window stays in that window, and follows when another window changes that setting). Things that belong to a folder or a document — a md document style (that document's header), notes, work cards, the last place you read — stay with that folder or document. Click a section on the left (General, View, Editing, Print and export, Terminal, AI tool, Work, Advanced) and the right side moves to it; as you scroll, the current section is highlighted. Next time Settings opens at the section you chose last. Choices are one-line buttons (the chosen one's description shows below), and on/off settings are switches at the right end. Changes apply at once; there is no save button. **View settings source** (under 'Advanced', and **View source** on each AI item) shows files as they are without changing them — Lectern settings, the writing guide summary, the style note, Claude Code settings (personal and this folder), writing styles (installed and included in Lectern) and skills (SKILL.md and the files in that folder). The **faint // lines without numbers** between the source lines are Lectern's explanations and are not in the file — what each key means, its default and where it is changed (which Settings section, 'Recorded by Lectern', 'this file only'). Values with the wrong form and keys Lectern does not use are pointed out too. Claude Code's personal settings may hold secret values, so take care when sharing your screen.
+The gear button in the toolbar (Ctrl+,) opens Settings. These settings apply to all of Lectern — they are not kept per folder. Open separate windows and slide windows follow within a second or two, and so do edits you save to the settings file (a view setting such as text size changed only in a separate window stays in that window, and follows when another window changes that setting). Things that belong to a folder or a document — a md document style (that document's header), notes, work cards, the last place you read — stay with that folder or document. Click a section on the left (General, View, Editing, Print and export, Terminal, AI tool, Work, Advanced) and the right side moves to it; as you scroll, the current section is highlighted. Next time Settings opens at the section you chose last. Choices are one-line buttons (the chosen one's description shows below), and on/off settings are switches at the right end. Changes apply at once; there is no save button.
 
 **What you hand to the AI tool**, at the bottom of **AI tool** (the writing guide summary, skills, writing style, my style), are the AI tool's files, not Lectern settings. Choose where each goes (the default is **All folders (personal)** — your personal folder, which applies in every folder on this PC; for the writing style, where it is on) and **Files that change** below shows the full paths and what happens (create, change, unchanged, write one value). To show how things stand, Lectern only reads a few fixed files in your personal folder (`~/.claude` and the like) and the open folder — from a settings file, only the `outputStyle` value. The files are written by the AI tool that gets the request, after it tells you how things stand and asks. When writing in your personal folder (`~/.claude`) or a folder's `.claude`, Claude Code asks once more — allow it if it matches what Files that change showed.
 
@@ -1107,29 +1119,31 @@ You can also open a section straight from where you use it — right-click the t
 | Setting | What it does |
 |---|---|
 | Language | Auto (Windows display language), 한국어 or English. Changing it reloads the window |
-| Group styles | Group the style list by use, by mood or by brightness |
 | Resume where I left off | Opening a folder returns to the last document and position |
 | Expand top-level folders | Expand the first level of folders in the tree when a folder opens |
+| Group styles | Group the style list by use, by mood or by brightness |
+| My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Render math | Render `$…$`, `$$…$$` and math code blocks as equations |
 | Show line breaks inside paragraphs | Lines you break with Enter in the source break on screen too (like Shift+Enter in Word). When off, they run on as in standard Markdown |
+| Show web images | Load https images in documents. When off, they show as links |
 | vi keys | Move and edit documents with letter keys (see 'vi keys' above). Off by default |
 | Full editor keys | Default (Esc closes) or vi (like vim — `:w`, `:q`). Default by default |
-| Show web images | Load https images in documents. When off, they show as links |
-| AI tool | Claude Code (default), Codex, Antigravity, OpenCode or Several — names on screen and requests follow it (see 'Using Codex, Antigravity or OpenCode') |
-| Teach Claude Code about Lectern | Choose where it goes (All folders (personal) or Only this folder), then copy, or paste into the terminal, a request to read the writing guide and write its rules there; open the samples. The name follows the AI tool |
-| PowerPoint and Word skills | Choose where they go (All folders (personal) or Only this folder), then copy, or paste into the terminal, a request to install only the missing and different ones (see 'Asking Claude') |
-| Writing style | Choose where it is on (Turn on in this folder, Turn on in all folders, Turn off in this folder), then copy, or paste into the terminal, a request to install the Claude Code output style for writing and turn it on (see 'Report writing' above). For Codex, Antigravity and OpenCode the request adds it to the personal instruction file or that project's AGENTS.md |
-| My style | Copy, or paste into the terminal, a request to make your style note (one in your personal folder) from writing you wrote yourself — add the samples as `@paths` at the end (see 'Report writing' above) |
 | Print and PDF font | Body font of 'Save as PDF…' and 'Print…' — serif (default) or sans-serif (see 'Print, PDF, html and Word') |
-| My styles | Open style folder, Copy request for Claude Code (see 'My styles' above) |
 | Page layouts | Open layouts folder, Copy request for Claude Code (see your own layouts under 'Print, PDF, html and Word') |
-| Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
-| Work alerts | Work alerts inside the window while Lectern is running. On by default |
 | Terminal position | Auto (below the document when the window is taller than wide), Right or Below |
 | Match terminal colors to style | When off, the terminal is always dark |
 | Terminal text size | 10–24 (default 14), with the − · + · Default size buttons or a number |
+| AI tool | Claude Code (default), Codex, Antigravity, OpenCode or Several — names on screen and requests follow it (see 'Using Codex, Antigravity or OpenCode') |
+| Teach Claude Code about Lectern | Choose where it goes (All folders (personal) or Only this folder), then copy, or paste into the terminal, a request to read the writing guide and write its rules there; open the samples. The name follows the AI tool |
+| PowerPoint and Word skills | Choose where they go (All folders (personal) or Only this folder), then copy, or paste into the terminal, a request to install only the missing and different ones (see 'Asking Claude') |
+| Writing style | **Choose a style…** (Research writing, Business report, Academic writing, Plain explanation, Claude Code default, My writing styles, Make a new style — with samples), then choose where it is on (Turn on in this folder, Turn on in all folders, Turn off in this folder), then copy, or paste into the terminal, a request to install the Claude Code output style for writing and turn it on (see 'Report writing' above). For Codex, Antigravity and OpenCode the request adds it to the personal instruction file or that project's AGENTS.md |
+| My style | Copy, or paste into the terminal, a request to make your style note (one in your personal folder) from writing you wrote yourself — add the samples as `@paths` at the end (see 'Report writing' above) |
+| Work management | Choose or clear the common folder, remove folders from the work folder list (see 'Work management' above) |
+| Work alerts | Work alerts inside the window while Lectern is running. On by default |
 
 Settings that are not in the window are edited with **Open settings file** in your editor (`%APPDATA%\Lectern\config.json`). Changes apply when you save; settings that affect the tree take effect when you press F5.
+
+**View settings source** (under 'Advanced', and **View source** on each AI item) shows files as they are without changing them — Lectern settings, the writing guide summary, the style note, Claude Code settings (personal and this folder), writing styles (installed and included in Lectern) and skills (SKILL.md and the files in that folder). The **faint // lines without numbers** between the source lines are Lectern's explanations and are not in the file — what each key means, its default and where it is changed (which Settings section, 'Recorded by Lectern', 'this file only'). Values with the wrong form and keys Lectern does not use are pointed out too. Claude Code's personal settings may hold secret values, so take care when sharing your screen.
 
 | Key | What it does |
 |---|---|
