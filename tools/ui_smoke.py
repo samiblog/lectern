@@ -1007,7 +1007,7 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)
             page.keyboard.press('Control+y')
             redo_line = file_line(edit_doc, 9, '- 다')
-            redo_told = toast_has('다시 했습니다')
+            redo_told = not page.evaluate("document.querySelector('#lec-toast').textContent.includes('다시 했습니다')")   # 화면 안의 다시 하기는 알리지 않는다 (D156)
             page.wait_for_timeout(300)
             page.keyboard.press('Control+z')
             file_line(edit_doc, 7, '- 항목 하나')
@@ -3090,7 +3090,7 @@ def run(headed: bool) -> None:
             inserted = page.locator('.lec-pane.active .lec-editor').count() == 0
             page.wait_for_timeout(500)
             page.keyboard.press('Control+z')
-            asked = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('되돌렸습니다')", 5000)
+            asked = wait_until(page, "!document.querySelector('#lec-view').textContent.includes('담은 곳')", 5000)   # 되돌아온 것은 화면으로 본다 — 알림은 화면 밖일 때만 (D156)
             page.wait_for_timeout(300)
             check(not_open and readme_text.startswith(readme_before.rstrip('\n') + '\n\n<!-- 담은 곳: caps.md 3~7행 -->') and '![가](img/a.svg)' in readme_text
                   and inserted and asked and (tables / 'README.md').read_text(encoding='utf-8') == readme_before,

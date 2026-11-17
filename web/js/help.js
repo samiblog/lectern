@@ -11,7 +11,7 @@ import { esc, html, raw, setHtml } from './html.js';
 import { $, $$, findAnchor } from './util.js';
 import { LANG, t } from './i18n.js';
 
-/** [묶음, [[키, 하는 일]]]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다 */
+/** [묶음, [[키, 하는 일]], 탭]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다. 탭은 KEY_TABS 의 id (D157) */
 export const SHORTCUTS = [
   [t('열기·찾기'), [
     ['Ctrl+P', t('문서·코드 빠르게 열기 (이름·제목·경로로)')],
@@ -21,13 +21,13 @@ export const SHORTCUTS = [
     ['Ctrl+N', t('새 문서 만들기 — 경로를 정하면 바로 만들어 새 문서 탭에서 편집')],
     ['Ctrl+G', t('줄로 가기 — 문서·코드 화면과 편집 모드')],
     ['F2', t('사이드바에서 고른 파일의 이름 바꾸기 (같은 폴더 안에서)')],
-  ]],
+  ], 'open'],
   [t('프로젝트 탭'), [
     ['Ctrl+1~8', t('그 순번의 탭')],
     ['Ctrl+9', t('마지막 탭')],
     ['Alt+PageDown / Alt+PageUp', t('다음 / 이전 프로젝트 탭')],
     ['Ctrl+Shift+W', t('프로젝트 탭 닫기 (탭을 마우스 가운데 버튼으로 눌러도)')],
-  ]],
+  ], 'open'],
   [t('문서 탭'), [
     [t('누르기'), t('사이드바 목록의 문서를 새 문서 탭에서 열기 — 이미 열려 있으면 그 탭으로')],
     [t('Ctrl+누르기 / 가운데 버튼'), t('보던 문서를 두고 뒤에서 새 문서 탭 — 트리·목록·링크·검색·모아 보기')],
@@ -39,7 +39,7 @@ export const SHORTCUTS = [
     ['Alt+1~8', t('그 순번의 문서 탭')],
     ['Alt+9', t('마지막 문서 탭')],
     ['Ctrl+W', t('문서 탭 닫기 (Ctrl+F4, 탭을 마우스 가운데 버튼으로 눌러도)')],
-  ]],
+  ], 'open'],
   [t('화면'), [
     ['Alt+← / Alt+→', t('뒤로 / 앞으로 — 같은 문서 안에서 뛴 자리도 (마우스의 뒤로·앞으로 버튼도)')],
     ['Ctrl+B', t('사이드바 보이기·숨기기')],
@@ -55,16 +55,28 @@ export const SHORTCUTS = [
     [t('Ctrl+휠'), t('앱 화면 전체 확대·축소 (문서 글자만은 툴바의 − +)')],
     ['Shift+F10', t('초점이 있는 곳이나 현재 줄의 우클릭 메뉴')],
     ['Esc', t('팝업·메뉴·찾기·사용설명서 닫기, 그다음 하이라이트 끄기, 고른 줄 풀기')],
-  ]],
-  [t('현재 줄·고른 줄 (문서·코드 화면)'), [
+  ], 'open'],
+  [t('찾기 막대'), [
+    ['Enter / Shift+Enter', t('다음 / 이전 결과')],
+    ['Esc', t('찾기 닫기')],
+  ], 'open'],
+  [t('사이드바 \'코드\'·\'자료\' 목록'), [
+    ['↑ / ↓', t('위 / 아래 항목')],
+    ['→ / ←', t('폴더 펼치기 / 접기')],
+    ['Enter', t('열기 (코드는 읽기 화면으로)')],
+    [t('글자'), t('그 글자로 시작하는 항목으로 (같은 글자를 거듭 치면 다음 항목)')],
+  ], 'open'],
+  [t('도움말·설정'), [
+    ['F1', t('사용설명서 열기·닫기')],
+    ['Shift+F1', t('예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제')],
+    ['Ctrl+/', t('단축키 표 열기·닫기')],
+    ['Ctrl+,', t('설정 창')],
+  ], 'open'],
+  [t('현재 줄·고르기·복사'), [
     ['↑ / ↓', t('현재 줄을 위 / 아래 줄로 — 화면이 따라감 (장 하이라이트 중에는 앞 장 / 다음 장)')],
     ['Shift+↑ / Shift+↓', t('현재 줄부터 여러 줄 고르기 — 끝 줄을 옮겨 넓히거나 줄이기 (한 줄로 줄면 현재 줄)')],
     [t('Shift+누르기 / Shift+끌기'), t('현재 줄부터 그 줄까지 고르기 — 고른 줄이 있으면 거기까지 넓히기')],
     ['Shift+Enter', t('하이라이트 켜기·끄기 — 현재 줄이나 고른 줄만 또렷하게 (켠 동안에도 고른 줄의 키가 들음)')],
-    ['Ctrl+H', t('찾아 바꾸기 (md 문서)')],
-    ['F2', t('현재 줄을 한 줄 편집 (여러 줄을 골랐으면 Esc 로 풀고)')],
-    ['Ctrl+Enter / Ctrl+Shift+Enter', t('현재 줄의 아래 / 위에 새 줄')],
-    ['/', t('현재 줄 아래에 넣기 창 — 표·강조글·그림 같은 구성 요소 (md 문서. vi 키를 켰으면 Ctrl+Shift+/)')],
     [t('두 번 누르기'), t('그 낱말을 고르기 — 한 줄 편집 칸은 열지 않음 (편집은 F2)')],
     ['→ / ←', t('현재 줄의 첫 / 마지막 낱말 고르기 — 고른 채면 오른쪽 / 왼쪽 낱말로')],
     [t('Shift+→ / Shift+← (고른 채)'), t('낱말 단위로 넓히고 줄이기 — 고르지 않았으면 터미널로 보내기 / 위치 복사')],
@@ -72,11 +84,16 @@ export const SHORTCUTS = [
     ['F8 / Shift+F8', t('다음 / 이전 형광펜으로 — 그 칠한 글을 고른다')],
     [t('B / I / S / M / F (고른 채)'), t('고른 글이나 고른 줄(줄의 글 통째)에 굵게 / 기울임 / 취소선 / 형광펜 / 글자색 — 다시 누르면 풀고, 형광펜·글자색은 거듭 누르면 다음 색. 고른 줄·고른 글에서만 (현재 줄에서는 듣지 않음)')],
     ['Ctrl+B / Ctrl+I / Ctrl+Shift+X / Ctrl+Shift+H / Ctrl+Shift+C', t('고른 글·고른 줄에 같은 서식 — 굵게 / 기울임 / 취소선 / 형광펜 / 글자색 (고른 것이 없으면 Ctrl+B 는 사이드바)')],
-    ['Shift+→', t('고른 줄(없으면 현재 줄)을 맨 앞 터미널(Claude Code 같은 AI 도구)에 \'@경로 a~b행\' 으로, 초점도 터미널로 (Enter 는 누르지 않음)')],
-    ['Ctrl+Shift+→', t('위치를 맨 앞 터미널에 넣고 초점은 문서에 둠 (여러 곳을 이어서 넣을 때 — 낱말을 고른 채여도 보냄)')],
-    ['Shift+1~5 / Ctrl+Shift+1~5', t('그 번호의 터미널에 넣기 — 초점은 터미널로 / 문서에 (터미널이 여럿일 때)')],
     ['Shift+←', t('고른 줄의 위치(@경로 a~b행) 복사')],
     ['Ctrl+C', t('고른 줄의 원문 복사 (고른 글이 없을 때)')],
+    ['PageUp / PageDown', t('앞 장 / 다음 장 (장 하이라이트 중)')],
+  ], 'lines'],
+  [t('쓰기·넣기·바꾸기 (md 문서)'), [
+    ['Ctrl+H', t('찾아 바꾸기 (md 문서)')],
+    ['F2', t('현재 줄을 한 줄 편집 (여러 줄을 골랐으면 Esc 로 풀고)')],
+    ['Ctrl+Enter / Ctrl+Shift+Enter', t('현재 줄의 아래 / 위에 새 줄')],
+    ['/', t('현재 줄 아래에 넣기 창 — 표·강조글·그림 같은 구성 요소 (md 문서. vi 키를 켰으면 Ctrl+Shift+/)')],
+    ['.', t('현재 줄·고른 줄의 바꾸기 창 — 제목·목록·강조글로, 목록 전체를, 표·코드로 (md 문서)')],
     [t('아래의 바꾸는 키'), t('여러 줄을 골랐으면 한 번에, 현재 줄 하나면 두 번 — 처음은 그 줄을 잡기만 하고 한 번 더 누르면 바꿈 (Esc 로 그만두기)')],
     ['Alt+↑ / Alt+↓', t('고른 줄을 위 / 아래로 옮기기 — 목록은 하위 항목과 함께')],
     ['1~6 / 0 · P', t('고른 줄을 제목 1~6 / 문단으로 — 같은 키를 다시 누르면 문단 (한글 입력 상태에서도. vi 키를 켜면 고른 줄의 숫자는 횟수 — H 나 Ctrl+Alt+1~6)')],
@@ -88,10 +105,9 @@ export const SHORTCUTS = [
     ['Tab / Shift+Tab', t('고른 줄의 레벨 — 목록 항목을 한 단계 안 / 밖으로 (제목은 바꾸지 않음. 현재 줄 하나면 Alt+Shift+←·→ 를 두 번)')],
     ['Delete', t('고른 줄 지우기')],
     ['Ctrl+X', t('고른 줄의 원문을 복사하고 지우기 (고른 글이 없을 때)')],
-    ['PageUp / PageDown', t('앞 장 / 다음 장 (장 하이라이트 중)')],
     ['Ctrl+Z', t('한 줄 편집으로 저장한 줄을 고치기 전으로 (거듭 누르면 그 앞 것도)')],
     ['Ctrl+Y', t('되돌린 것을 다시 (거듭 누르면 그 뒤 것도)')],
-  ]],
+  ], 'change'],
   [t('한 줄 편집 (F2)'), [
     ['Enter / Ctrl+S', t('저장 — 원문 파일에 바로')],
     ['Esc', t('그만두기')],
@@ -115,7 +131,29 @@ export const SHORTCUTS = [
     ['Ctrl+Alt+F', t('주 달기 — 주 표시 위면 그 주를 고친다')],
     ['Ctrl+;', t('날짜 넣기 — 달력에서 고른 날을 커서 자리에 (YYYY-MM-DD)')],
     [t('앱 키'), t('F1 · Ctrl+/ · Ctrl+W · Ctrl+Tab · Alt+1~9 · Ctrl+P 같은 앱 키는 칸을 저장하고 닫은 뒤 그 일을 한다')],
-  ]],
+  ], 'cell'],
+  [t('터미널'), [
+    ['Ctrl+`', t('오른쪽 터미널 열기·닫기 (` 는 숫자 1 왼쪽 키, 닫아도 셸은 계속 돎)')],
+    ['F6 / Shift+F6', t('문서 ↔ 터미널로 초점 옮기기 (터미널 안에서도, 닫혀 있으면 열면서)')],
+    ['Ctrl+Shift+`', t('터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)')],
+    ['Ctrl+C', t('고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)')],
+    ['Ctrl+V', t('붙여 넣기')],
+  ], 'term'],
+  [t('터미널로 보내기'), [
+    ['Shift+→', t('고른 줄(없으면 현재 줄)을 맨 앞 터미널(Claude Code 같은 AI 도구)에 \'@경로 a~b행\' 으로, 초점도 터미널로 (Enter 는 누르지 않음)')],
+    ['Ctrl+Shift+→', t('위치를 맨 앞 터미널에 넣고 초점은 문서에 둠 (여러 곳을 이어서 넣을 때 — 낱말을 고른 채여도 보냄)')],
+    ['Shift+1~5 / Ctrl+Shift+1~5', t('그 번호의 터미널에 넣기 — 초점은 터미널로 / 문서에 (터미널이 여럿일 때)')],
+  ], 'term'],
+  [t('편집 모드'), [
+    ['Ctrl+E', t('보고 있는 문서·코드를 편집 모드로 열기·닫기')],
+    ['Ctrl+S', t('저장 (편집 모드 안)')],
+    ['Ctrl+F / Ctrl+H', t('찾기 / 바꾸기 (편집 모드 안)')],
+    ['F3 / Shift+F3', t('다음 / 이전 찾기 (편집 모드 안)')],
+    ['Ctrl+;', t('날짜 넣기 — 달력에서 고른 날을 커서 자리에 (편집 모드 안)')],
+    ['Ctrl+Shift+K / Ctrl+Shift+D', t('줄 지우기 / 줄 복제 (편집 모드 안 — 칸 안과 같음)')],
+    ['Esc', t('편집 닫기 (저장하지 않은 것이 있으면 물음)')],
+    [':w / :q / :wq', t('vi 방식일 때: 저장 / 닫기 / 저장하고 닫기 — 설정의 전체 편집 방식, Esc 는 Normal 모드로')],
+  ], 'more'],
   [t('Lectern 슬라이드 (marp: true)'), [
     ['Ctrl+Shift+> / Ctrl+Shift+<', t('이 구성 요소의 글자 크기 키우기·줄이기 (슬라이드)')],
     ['Ctrl+M', t('템플릿을 골라 이 장 뒤에 새 장 (Lectern 슬라이드)')],
@@ -127,34 +165,7 @@ export const SHORTCUTS = [
     ['N', t('발표자 노트 보이기·감추기 (발표 중)')],
     ['F', t('전체 화면 켜기·끄기 (발표 중)')],
     ['Esc', t('발표 끝내기')],
-  ]],
-  [t('찾기 막대'), [
-    ['Enter / Shift+Enter', t('다음 / 이전 결과')],
-    ['Esc', t('찾기 닫기')],
-  ]],
-  [t('사이드바 \'코드\'·\'자료\' 목록'), [
-    ['↑ / ↓', t('위 / 아래 항목')],
-    ['→ / ←', t('폴더 펼치기 / 접기')],
-    ['Enter', t('열기 (코드는 읽기 화면으로)')],
-    [t('글자'), t('그 글자로 시작하는 항목으로 (같은 글자를 거듭 치면 다음 항목)')],
-  ]],
-  [t('편집 모드'), [
-    ['Ctrl+E', t('보고 있는 문서·코드를 편집 모드로 열기·닫기')],
-    ['Ctrl+S', t('저장 (편집 모드 안)')],
-    ['Ctrl+F / Ctrl+H', t('찾기 / 바꾸기 (편집 모드 안)')],
-    ['F3 / Shift+F3', t('다음 / 이전 찾기 (편집 모드 안)')],
-    ['Ctrl+;', t('날짜 넣기 — 달력에서 고른 날을 커서 자리에 (편집 모드 안)')],
-    ['Ctrl+Shift+K / Ctrl+Shift+D', t('줄 지우기 / 줄 복제 (편집 모드 안 — 칸 안과 같음)')],
-    ['Esc', t('편집 닫기 (저장하지 않은 것이 있으면 물음)')],
-    [':w / :q / :wq', t('vi 방식일 때: 저장 / 닫기 / 저장하고 닫기 — 설정의 전체 편집 방식, Esc 는 Normal 모드로')],
-  ]],
-  [t('터미널'), [
-    ['Ctrl+`', t('오른쪽 터미널 열기·닫기 (` 는 숫자 1 왼쪽 키, 닫아도 셸은 계속 돎)')],
-    ['F6 / Shift+F6', t('문서 ↔ 터미널로 초점 옮기기 (터미널 안에서도, 닫혀 있으면 열면서)')],
-    ['Ctrl+Shift+`', t('터미널 모음 열기·닫기 (모음 안에서 Ctrl+Tab 은 다음 칸)')],
-    ['Ctrl+C', t('고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)')],
-    ['Ctrl+V', t('붙여 넣기')],
-  ]],
+  ], 'more'],
   [t('vi 키 (설정에서 켤 때)'), [
     ['j / k', t('아래 / 위 줄 (앞에 숫자를 치면 그만큼 — 3j)')],
     ['gg / G', t('첫 줄 / 끝 줄 (숫자 다음 G 는 그 줄)')],
@@ -172,13 +183,50 @@ export const SHORTCUTS = [
     ['>> / <<', t('줄 레벨 안으로 / 밖으로 — 제목은 그 줄만 (하위 절까지는 Alt+Shift+←·→)')],
     ['u', t('되돌리기 (다시 하기는 Ctrl+Y)')],
     ['Esc', t('칸에서: 저장하고 나오기')],
+  ], 'vi'],
+];
+
+/**
+ * 단축키 표의 첫 탭 — 처음 익힐 스무 가지 (D157). 예제 가이드 15 의 '먼저 익힐 스무 가지'와 같은 키다 (설명은 짧게).
+ * 키는 모두 SHORTCUTS 에도 있다 — 여기는 고른 것의 요약이다
+ */
+export const FIRST_KEYS = [
+  [t('읽고 고르기'), [
+    ['Ctrl+P', t('문서 열기 — 이름·제목·경로로')],
+    ['Ctrl+Tab / Ctrl+W', t('다음 문서 탭 / 문서 탭 닫기')],
+    ['Alt+← / Alt+→', t('뒤로 / 앞으로')],
+    ['↑ / ↓', t('현재 줄을 위 / 아래로')],
+    ['Ctrl+F / Ctrl+G', t('찾기 / 줄로 가기')],
+    ['Shift+↑ / Shift+↓', t('여러 줄 고르기')],
+    ['Shift+Enter', t('하이라이트 — 현재 줄이나 고른 줄만 또렷하게')],
+    ['Shift+→', t('위치를 터미널의 AI 도구로 — @경로 a~b행')],
+    ['Shift+← / Ctrl+C', t('위치 복사 / 원문 복사')],
+    ['Ctrl+` / F6', t('터미널 열기·닫기 / 문서와 터미널 오가기')],
   ]],
-  [t('도움말·설정'), [
-    ['F1', t('사용설명서 열기·닫기')],
-    ['Shift+F1', t('예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제')],
-    ['Ctrl+/', t('단축키 표 열기·닫기')],
-    ['Ctrl+,', t('설정 창')],
+  [t('쓰고 고치기'), [
+    ['F2', t('한 줄 편집 — 칸에서 Enter 는 저장, Esc 는 그만두기')],
+    ['Ctrl+Enter / Ctrl+Shift+Enter', t('아래 / 위에 새 줄')],
+    ['/', t('넣기 창 — 표·강조글·그림 같은 구성 요소')],
+    ['.', t('바꾸기 창 — 제목·목록·표·코드로')],
+    ['Alt+↑ / Alt+↓', t('줄 옮기기 — 현재 줄이면 두 번')],
+    ['Delete', t('줄 지우기 — 현재 줄이면 두 번')],
+    ['Ctrl+Z / Ctrl+Y', t('되돌리기 / 다시')],
+    ['B / M', t('굵게 / 형광펜 — 글이나 줄을 고른 채')],
+    ['Esc', t('닫기 · 풀기 · 그만두기')],
+    ['Ctrl+/ / F1', t('단축키 표 / 사용설명서')],
   ]],
+];
+
+/** 단축키 표의 탭 (D157) — 첫 탭은 FIRST_KEYS, 나머지는 SHORTCUTS 의 묶음을 탭 id 로 모은다 */
+const KEY_TABS = [
+  ['first', t('자주 쓰는 것')],
+  ['open', t('열기·화면')],
+  ['lines', t('고르기·복사')],
+  ['change', t('쓰기·바꾸기')],
+  ['cell', t('한 줄 편집')],
+  ['term', t('터미널')],
+  ['more', t('편집 모드·슬라이드')],
+  ['vi', t('vi 키')],
 ];
 
 // 백틱은 문자 참조로 — 설명서(Markdown) 표 안에서 코드 표시로 읽히지 않게
@@ -188,7 +236,8 @@ const keysHtml = (keys) => keys.split(' / ').map((combo) => `<span class="combo"
 
 /** 설명서의 '단축키' 장에 넣을 Markdown (묶음마다 표 하나) */
 function shortcutsMarkdown() {
-  return SHORTCUTS.map(([group, rows]) => `### ${group}\n\n| ${t('키')} | ${t('하는 일')} |\n|---|---|\n`
+  const first = FIRST_KEYS.map(([group, rows]) => [`${t('자주 쓰는 것')} — ${group}`, rows]);   // 처음 익힐 스무 가지부터 (D157)
+  return [...first, ...SHORTCUTS].map(([group, rows]) => `### ${group}\n\n| ${t('키')} | ${t('하는 일')} |\n|---|---|\n`
     + rows.map(([keys, what]) => `| ${keysHtml(keys)} | ${esc(what).replace(/`/g, '&#96;')} |`).join('\n')).join('\n\n');   // 백틱은 Markdown 이 코드로 읽지 않게
 }
 
@@ -211,10 +260,15 @@ function samplePath(href) {
   return path.startsWith('samples/') && path.length > 'samples/'.length ? path.slice('samples/'.length).split('#')[0] : null;
 }
 
+let keyTab = 'first';   // 단축키 표의 지금 탭 (D157) — 열 때마다 첫 탭
+
 export function openShortcuts() {
   $('#lec-keys-samples').hidden = !S.samples;
+  keyTab = 'first';
+  $('#lec-keys-find').value = '';
+  drawKeys();
   keysBox().hidden = false;
-  $('#lec-keys-close').focus();
+  $('#lec-keys-find').focus();
 }
 
 export function closeShortcuts() {
@@ -225,9 +279,47 @@ export function closeShortcuts() {
 
 export const toggleShortcuts = () => (closeShortcuts() || openShortcuts());
 
+const groupHtml = (group, rows, tab) => html`<section class="keys-group" data-tab="${tab}"><h3>${group}</h3>
+    <table>${rows.map(([keys, what]) => html`<tr data-find="${`${keys} ${what}`.toLowerCase()}"><th scope="row">${raw(keysHtml(keys))}</th><td>${what}</td></tr>`)}</table></section>`;
+
+/** 탭 단추와 모든 묶음을 한 번 그린다 — 보이는 것은 drawKeys 가 고른다 (탭·찾기) */
 function renderShortcuts() {
-  setHtml($('#lec-keys-list'), SHORTCUTS.map(([group, rows]) => html`<section class="keys-group"><h3>${group}</h3>
-    <table>${rows.map(([keys, what]) => html`<tr><th scope="row">${raw(keysHtml(keys))}</th><td>${what}</td></tr>`)}</table></section>`));
+  setHtml($('#lec-keys-tabs'), KEY_TABS.map(([id, name]) => html`<button type="button" role="tab" data-tab="${id}">${name}</button>`));
+  setHtml($('#lec-keys-list'), [...FIRST_KEYS.map(([group, rows]) => groupHtml(group, rows, 'first')), ...SHORTCUTS.map(([group, rows, tab]) => groupHtml(group, rows, tab)),
+    html`<p class="keys-none" hidden>${t('맞는 단축키가 없습니다 — 다른 말로 찾거나 F1 사용설명서의 \'단축키\' 장을 보세요')}</p>`]);
+}
+
+/**
+ * 지금 탭의 묶음만 보인다 (D157). 찾기 칸에 글이 있으면 탭과 관계없이 모든 묶음에서 그 글이 든 줄만 — 첫 탭의 요약은 겹치므로 뺀다
+ */
+function drawKeys() {
+  const q = $('#lec-keys-find').value.trim().toLowerCase();
+  for (const b of $$('#lec-keys-tabs button')) {
+    const on = !q && b.dataset.tab === keyTab;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-selected', String(on));
+    b.tabIndex = on || (q && b.dataset.tab === 'first') ? 0 : -1;
+  }
+  let shown = 0;
+  for (const sec of $$('#lec-keys-list .keys-group')) {
+    let rows = 0;
+    for (const tr of sec.querySelectorAll('tr')) {
+      tr.hidden = !!q && !tr.dataset.find.includes(q);
+      if (!tr.hidden) rows += 1;
+    }
+    sec.hidden = q ? sec.dataset.tab === 'first' || !rows : sec.dataset.tab !== keyTab;
+    if (!sec.hidden) shown += 1;
+  }
+  $('#lec-keys-list .keys-none').hidden = shown > 0;
+  $('.keys-scroll').scrollTop = 0;
+}
+
+/** 탭을 고른다 — dir 이 있으면 옆 탭으로 (←→·Ctrl+Tab) */
+function keysTab(id, dir = 0) {
+  const ids = KEY_TABS.map(([x]) => x);
+  keyTab = dir ? ids[(ids.indexOf(keyTab) + dir + ids.length) % ids.length] : id;
+  $('#lec-keys-find').value = '';
+  drawKeys();
 }
 
 // ---- 사용설명서 -----------------------------------------------------------------
@@ -303,6 +395,23 @@ export function initHelp() {
   $('#lec-help-ver').textContent = document.querySelector('meta[name="lec-version"]')?.content || '';
   $('#lec-btn-help').addEventListener('click', toggleShortcuts);
   $('#lec-keys-close').addEventListener('click', closeShortcuts);
+  $('#lec-keys-tabs').addEventListener('click', (e) => {   // 단축키 표의 탭 (D157)
+    const b = e.target.closest('button[data-tab]');
+    if (b) keysTab(b.dataset.tab);
+  });
+  $('#lec-keys-find').addEventListener('input', drawKeys);
+  keysBox().addEventListener('keydown', (e) => {   // ←→ 는 탭 단추에서, Ctrl+Tab·Ctrl+PageDown 은 어디서나 옆 탭으로
+    const onTab = !!e.target.closest?.('#lec-keys-tabs');
+    const mod = e.ctrlKey || e.metaKey;
+    let dir = 0;
+    if (onTab && !mod && (e.key === 'ArrowRight' || e.key === 'ArrowLeft')) dir = e.key === 'ArrowRight' ? 1 : -1;
+    else if (mod && !e.altKey && (e.key === 'Tab' || e.key === 'PageDown' || e.key === 'PageUp')) dir = e.key === 'PageUp' || (e.key === 'Tab' && e.shiftKey) ? -1 : 1;
+    if (!dir) return;
+    e.preventDefault();
+    e.stopPropagation();
+    keysTab('', dir);
+    if (onTab) $(`#lec-keys-tabs button[data-tab="${keyTab}"]`)?.focus();
+  });
   $('#lec-keys-manual').addEventListener('click', openManual);
   keysBox().addEventListener('click', (e) => { if (e.target === keysBox()) closeShortcuts(); });   // 바깥을 누르면 닫기
   $('#lec-help-close').addEventListener('click', closeManual);

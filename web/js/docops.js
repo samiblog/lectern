@@ -4,7 +4,8 @@
 // - 표시는 사람이 고치지 않는다: setKind 가 줄의 표시를 떼고 새 표시를 단다.
 // - 제목 줄은 절의 손잡이다: 수준 바꾸기(shiftHeadings)는 하위 절까지, 옮기기(moveSection)·지우기(sectionSpan)는 본문까지 함께.
 
-import { quoteOf, itemOf, isBlank, fencesOf, fenceAt, frontEnd, blocksOf, blockAt, tableIn, deckOf, bodyEnd, notesStart, itemSpan, indentLines, indentItem, outdentItem } from './lineops.js';
+import { quoteOf, itemOf, isBlank, fencesOf, fenceAt, frontEnd, blocksOf, blockAt, tableIn, deckOf, bodyEnd, notesStart, itemSpan, indentLines, indentItem, outdentItem,
+  listNear, renumberFrom, renumberAt, siblingsOf } from './lineops.js';
 import { wholeOf, stripFormat, wrapWhole, nextValue, spansOf, SIMPLE } from './inlinefmt.js';
 
 const HEADING = /^ {0,3}(#{1,6})(?:[ \t]+(.*?))?(?:[ \t]+#+)?[ \t]*$/;
@@ -44,53 +45,157 @@ const padded = (before, body, after) => [
 ];
 
 /**
- * 줄 a~b 를 kind 로 바꾼다: 'h1'~'h6', 'para', 'bullet', 'number', 'task', 'quote'. {lines, line, a, b} — 바뀐 범위의 줄 번호.
- * bare: 제목의 번호를 떼는 함수 (없으면 글 그대로). 코드 블록·표·구분선은 바꾸지 않는다
+ * 줄 a~b 를 kind 로 바꾼다: 'h1'~'h6', 'para', 'bullet', 'number', 'task', 'quote'. {lines, line, a, b, renumbered} — 바뀐 범위의 줄 번호.
+ * bare: 제목의 번호를 떼는 함수 (없으면 글 그대로). 코드 블록·표·구분선은 바꾸지 않는다.
+ * 이웃 (D155): 고른 줄만 바꾸고, 이웃은 뜻이 깨질 때만 따라 고친다 —
+ * - 강조글·인용 안의 줄은 안에서 바꾼다 (머리 줄 [!NOTE] 은 두고, 사이는 '>' 로). 인용 글을 문단으로 바꾸면 인용 밖으로 (Q 를 다시 누른 것과 같다)
+ * - 목록으로 바꾸는 줄의 바로 위·아래가 같은 종류의 목록이면 거기에 붙는다 — 그 목록의 표시와 번호, 빈 줄로 띄운 목록이면 빈 줄 하나
+ * - 번호 목록에서 줄이 빠지면 뒤 항목의 번호를 앞 항목에 잇는다 (renumbered: 고른 줄 밖에서 번호가 바뀐 항목 수)
  */
 export function setKind(lines, a, b, kind, { bare = (s) => s } = {}) {
   const fences = fencesOf(lines);
   const blocks = blocksOf(lines);
+  if (a <= b && BOX_HEAD.test(lines[a - 1])) a += 1;   // 강조글의 머리 줄은 두고 본문만
   const texts = [];
-  const leads = [];   // 목록 항목이었던 줄의 들여쓰기 (D152 — 목록끼리 바꿀 때 지킨다)
+  const leads = [];   // 줄의 들여쓰기 — 목록 항목, 항목 안의 글 줄 (D152 — 목록끼리 바꿀 때 지킨다)
+  const quotes = [];
+  const kinds = [];
+  const items = [];   // 고른 줄 가운데 목록 항목 {n, it}
+  let firstText = 0;   // 고른 줄의 첫·끝 글 줄 — 앞뒤의 빈 줄을 함께 골랐어도 이웃과의 빈 줄을 바로 센다
+  let lastText = 0;
   for (let n = a; n <= b; n++) {
     const s = lines[n - 1];
     if (isBlank(s)) continue;
+    if (BOX_HEAD.test(s)) return { error: 'box-head' };
     const blk = blockAt(blocks, n);
     if (fenceAt(fences, n) || blk?.kind === 'front' || blk?.kind === 'wall') return { error: 'kind' };
     if (tableIn(lines, blk)) return { error: 'table-kind' };
     const text = bareText(s);
     if (!text) continue;
-    texts.push(headLevel(s) ? bare(text) : text);
-    leads.push(itemOf(s)?.lead ?? '');
+    const it = itemOf(s);
+    texts.push(headLevel(s.slice(quoteOf(s).length)) ? bare(text) : text);
+    leads.push(it?.lead ?? (itemSpan(lines, n) ? /^[ \t]*/.exec(s.slice(quoteOf(s).length))[0] : ''));   // 항목 안의 글 줄(이어진 문단)도 그 들여쓰기
+    quotes.push(quoteOf(s));
+    kinds.push(kindOfLine(s));
+    if (it) items.push({ n, it });
+    firstText ||= n;
+    lastText = n;
   }
-  if (!texts.length) return { error: 'kind' };
+  if (!texts.length) return { error: a > b ? 'box-head' : 'kind' };
   const level = /^h([1-6])$/.exec(kind)?.[1];
-  const quoted = quoteOf(lines[a - 1]);
-  const prev = itemOf(lines[a - 2] ?? '');
-  const start = prev?.ordered && kind === 'number' && prev.lead === leads[0] ? prev.num + 1 : 1;
+  const list = ['bullet', 'number', 'task'].includes(kind);
+  if (!level && !list && kind !== 'para' && kind !== 'quote') return { error: 'kind' };
+  const quoted = quotes[0];
+  if (quotes.some((x) => x !== quoted)) return { error: 'quote-mix' };   // 인용·강조글 안과 밖을 함께 — 한쪽으로 끌려 들어간다
+  const inBox = !!quoted && !!boxAt(lines, a);
+  const plain = kinds.every((k) => k === 'quote');   // 인용의 글 줄뿐 (목록·제목이 아닌)
+  const inside = !!quoted && (list || inBox || kind !== 'para' || !plain);   // 인용 안에서 바꾼다 — 인용 글을 문단으로 바꾸는 것만 밖으로 (Q 를 다시 누른 것)
+  const q = inside || list ? quoted : '';
+  const sep = q.trimEnd();   // 블록 사이의 빈 줄 — 인용 안이면 '>'
+  const outQuote = !!quoted && !q;   // 인용 밖으로 뺀다 — 이웃의 '>' 빈 줄은 보통 빈 줄로
+  const widthOf = (lead) => itemOf(`${quoted}${lead}- x`)?.width ?? 0;
+  const width = widthOf(leads[0]);
+  // 이웃 목록 (D155): 같은 종류면 붙인다. 번호는 '번호 목록', 표시(-·*)는 글머리·할 일
+  const fits = (x) => !!x && (kind === 'number' ? x.it.ordered : !x.it.ordered);
+  const last = itemOf(lines[b - 1] ?? '');
+  const own = last ? itemSpan(lines, b) : null;
+  const kidsEnd = own && own[0] === b && own[1] > b ? own[1] : b;   // 마지막 줄이 하위가 있는 항목이면 그 하위의 끝 — 아래 이웃은 그 뒤에서 찾는다
+  const nearEnd = kidsEnd > b ? kidsEnd : lastText;   // 이웃은 글 줄에서 찾는다 — 함께 고른 빈 줄은 인용 깊이가 없다
+  const up = list && fits(listNear(lines, firstText, -1, width)) ? listNear(lines, firstText, -1, width) : null;
+  const near = list ? listNear(lines, nearEnd, 1, width) : null;
+  const sameMark = (x, y) => (x.ordered ? x.delim === y.delim : x.marker === y.marker);   // 표시가 다르면 Markdown 에서 다른 목록이다
+  const down = fits(near) && (!up || sameMark(up.it, near.it)) ? near : null;
+  const like = up?.it ?? down?.it;
+  const flatOf = (x) => {   // 모두 같은 번호로 쓴 번호 목록이면 그 번호
+    if (!x?.it.ordered) return 0;
+    const ns = siblingsOf(lines, x.n).map((y) => itemOf(lines[y - 1]).num);
+    return ns.length > 1 && ns.every((v) => v === ns[0]) ? ns[0] : 0;
+  };
   let body;
-  if (level) body = texts.flatMap((s, i) => [...(i ? [''] : []), `${'#'.repeat(Number(level))} ${s}`]);
-  else if (kind === 'para') body = texts.flatMap((s, i) => [...(i ? [''] : []), s]);
-  else if (kind === 'quote') body = texts.flatMap((s, i) => [...(i ? ['>'] : []), `> ${s}`]);
+  // 하위 항목은 부모 항목 안의 글로 남는다 — 들여쓰기는 고른 첫 줄보다 깊지 않게 (부모와 함께 바꾼 하위 줄은 부모의 수준으로)
+  const keep = (i) => (outQuote ? '' : leads.slice(0, i + 1).reduce((x, y) => (y.length < x.length ? y : x)));   // 그 줄까지 가장 얕은 줄의 들여쓰기
+  if (level) body = texts.flatMap((t, i) => [...(i ? [sep] : []), `${q}${keep(i)}${'#'.repeat(Number(level))} ${t}`]);
+  else if (kind === 'para' || (kind === 'quote' && inside)) body = texts.flatMap((t, i) => [...(i ? [sep] : []), `${q}${keep(i)}${t}`]);
+  else if (kind === 'quote') body = texts.flatMap((t, i) => [...(i ? ['>'] : []), `> ${t}`]);
   else {
-    const mark = (i) => ({ bullet: '- ', number: `${start + i}. `, task: '- [ ] ' }[kind]);
-    if (!mark(0)) return { error: 'kind' };
-    body = texts.map((s, i) => `${quoted}${leads[i]}${mark(i)}${s}`);
+    const dot = like?.ordered ? like.delim : '.';
+    const dash = like && !like.ordered ? like.marker : '-';
+    // 번호는 수준(들여쓰기)마다 센다 (D155): 처음 번호는 위의 같은 수준 번호 항목의 다음(같은 번호로 쓴 목록이면 그 번호), 없으면
+    // 아래에 붙는 같은 번호 목록의 번호, 고른 줄이 번호 항목이었으면 그 번호, 아니면 1. 바깥 항목이 나오면 안쪽은 1 부터 다시
+    const firstOf = new Map();
+    for (const lead of new Set(leads)) {
+      const prev = listNear(lines, firstText, -1, widthOf(lead));
+      const below = listNear(lines, nearEnd, 1, widthOf(lead));
+      const was = items.find((x) => x.it.lead === lead && x.it.ordered);
+      firstOf.set(lead, prev?.it.ordered ? { n: flatOf(prev) || prev.it.num + 1, flat: !!flatOf(prev) }
+        : flatOf(below) ? { n: flatOf(below), flat: true } : { n: was?.it.num ?? 1, flat: false });
+    }
+    const counts = new Map();
+    const used = new Set();
+    const nums = leads.map((lead) => {
+      for (const k of [...counts.keys()]) if (k.length > lead.length) counts.delete(k);
+      const f = firstOf.get(lead);
+      const n = counts.has(lead) ? (f.flat ? f.n : counts.get(lead) + 1) : used.has(lead) ? 1 : f.n;
+      counts.set(lead, n);
+      used.add(lead);
+      return n;
+    });
+    const mark = (i) => ({ bullet: `${dash} `, number: `${nums[i]}${dot} `, task: `${dash} [ ] ` }[kind]);
+    body = texts.map((t, i) => `${q}${leads[i]}${mark(i)}${t}`);
   }
   // 하위가 있는 항목을 목록 밖(제목·문단·인용)으로 바꾸면 하위 항목을 그 항목이 있던 수준으로 당긴다 — 네 칸 들여쓴 하위가 코드 블록이 되지 않게 (D152)
   let source = lines;
-  const last = itemOf(lines[b - 1] ?? '');
-  const own = last ? itemSpan(lines, b) : null;
-  if (own && own[0] === b && own[1] > b && !['bullet', 'number', 'task'].includes(kind)) source = indentLines(lines, b + 1, own[1], last.width - last.content);
-  const before = source.slice(0, a - 1);
-  const after = source.slice(b);
-  const list = !level && kind !== 'para' && kind !== 'quote';
-  const near = (s) => list && !!s && !!itemOf(s);   // 같은 목록이면 빈 줄 없이 잇는다
-  const next = near(before.at(-1)) || near(after[0])
-    ? [...before, ...body, ...after]
-    : padded(before, body, after);
-  const line = next.indexOf(body[0], Math.max(0, a - 1)) + 1;
-  return { lines: next, line, a: line, b: line + body.length - 1 };
+  if (own && own[0] === b && own[1] > b && !list) source = indentLines(lines, b + 1, own[1], last.width - last.content);
+  // 붙는 목록 사이의 빈 줄은 그 목록이 쓰던 대로 — 항목이 하나뿐이면 지금 있는 대로
+  const upEnd = up ? Math.min(up.end, a - 1) : 0;   // 고른 줄이 위 항목의 이어진 줄이었으면 거기까지
+  const gapUp = up && lines.slice(upEnd, firstText - 1).some(isBlank);
+  const gapDown = down && lines.slice(nearEnd, down.n - 1).some(isBlank);
+  // 위아래 두 목록 사이에 끼우면 한 목록이 된다 — 띄움을 하나로: 어느 한쪽이라도 띄운 목록이면 띄운다 (Markdown 은 빈 줄이 하나라도 있으면 목록 전체를 띄운다), 둘 다 모르면 있던 빈 줄
+  const known = up && down ? [up.loose, down.loose].filter((x) => x !== null) : [];
+  const joined = up && down ? (known.length ? known.some(Boolean) : gapUp || gapDown) : null;
+  const looseUp = up && (joined ?? up.loose ?? gapUp);
+  const looseDown = down && (joined ?? down.loose ?? gapDown);
+  let head = up ? [...source.slice(0, upEnd), ...(looseUp ? [sep] : [])] : source.slice(0, a - 1);
+  const kids = source.slice(b, kidsEnd);   // 마지막 항목의 하위 — 목록끼리 바꾸면 그 항목에 붙은 채
+  let tail = down ? [...kids, ...(looseDown ? [sep] : []), ...source.slice(down.n - 1)] : source.slice(b);
+  let cut = 0;   // tail 앞에서 걷은 줄 수
+  if (outQuote) {   // 인용 가운데 줄을 빼면 그 앞뒤의 '>' 빈 줄은 인용을 닫는 빈 줄로
+    while (head.length && isBlank(head.at(-1)) && quoteOf(head.at(-1))) head = head.slice(0, -1);
+    while (tail.length && isBlank(tail[0]) && quoteOf(tail[0])) {
+      tail = tail.slice(1);
+      cut += 1;
+    }
+  }
+  const depthText = (x) => quoteOf(x).replace(/\s/g, '');
+  const close = (x) => list && !!x && !!itemOf(x) && depthText(x) === depthText(quoted);   // 바로 붙은 같은 깊이의 목록 줄 — 빈 줄 없이 잇는다
+  const gapBefore = !up && head.length > 0 && !isBlank(head.at(-1)) && !BOX_HEAD.test(head.at(-1)) && !close(head.at(-1));
+  const gapAfter = !down && tail.length > 0 && !isBlank(tail[0]) && !close(tail[0]);
+  const gapLine = (x) => (depthText(x) === depthText(q) ? sep : '');   // 깊이가 다른 이웃(인용 밖)과는 보통 빈 줄
+  let next = [...head, ...(gapBefore ? [gapLine(head.at(-1))] : []), ...body, ...(gapAfter ? [gapLine(tail[0])] : []), ...tail];
+  const line = head.length + (gapBefore ? 1 : 0) + 1;
+  const endLine = line + body.length - 1;
+  // 번호 (D155): 번호 목록이 이어지면 수준마다 다시 매기고, 번호 목록에서 줄이 빠졌으면 뒤 항목을 앞 항목에 잇는다 (모두 같은 번호로 쓴 목록은 그대로)
+  const before = next;
+  if (kind === 'number') {
+    for (const lead of new Set(leads)) next = renumberAt(next, line + leads.indexOf(lead));
+  } else {
+    const front = head.length + (gapBefore ? 1 : 0) + body.length + (gapAfter ? 1 : 0);   // tail 앞의 줄 수
+    const moved = (n) => (down ? (n <= kidsEnd ? front + n - b : front + kids.length + (looseDown ? 1 : 0) + n - down.n + 1) : front + n - b - cut);   // 원래 줄 n(b 뒤)의 새 자리
+    const done = new Set();
+    for (const { n, it } of items) {   // 수준마다 처음 고른 번호 항목의 목록
+      if (!it.ordered || done.has(it.width)) continue;
+      done.add(it.width);
+      const sib = siblingsOf(lines, n);
+      const nums = sib.map((x) => itemOf(lines[x - 1]).num);
+      if (nums.length > 1 && nums.every((x) => x === nums[0])) continue;
+      const prev = sib.filter((x) => x < n).at(-1);
+      const rest = sib.find((x) => x > b);
+      const at = rest ? moved(rest) : 0;
+      if (rest && itemOf(next[at - 1] ?? '')?.ordered) next = renumberFrom(next, at, prev ? itemOf(lines[prev - 1]).num + 1 : it.num).lines;
+    }
+  }
+  const renumbered = next === before ? 0 : next.filter((x, i) => x !== before[i] && (i + 1 < line || i + 1 > endLine)).length;
+  return { lines: next, line, a: line, b: endLine, renumbered };
 }
 
 /** 줄의 종류: 'h1'~'h6' · 'task' · 'number' · 'bullet' · 'quote' · 'para'. 빈 줄은 '' */
@@ -506,6 +611,78 @@ export function alignColumn(lines, n, col, align) {
 export function tableSpan(lines, n) {
   const table = tableAt(lines, n);
   return table ? [table.head, table.last] : null;
+}
+
+// ---- 덩어리 바꾸기 (D155) -----------------------------------------------------------
+
+/** 목록 항목의 글을 표의 칸으로: 탭 → ' — ' → 첫 ': ' 차례로 나눈다 */
+function cellsOfItem(text) {
+  if (text.includes('\t')) return text.split('\t');
+  if (text.includes(' — ')) return text.split(' — ');
+  const at = text.indexOf(': ');
+  return at > 0 ? [text.slice(0, at), text.slice(at + 2)] : [text];
+}
+
+/**
+ * 줄 n 이 든 목록(같은 수준의 항목들)을 표로 — 항목마다 한 행, 칸은 cellsOfItem. heads: 머리행의 이름 [첫 열, 둘째 열, (n) => 셋째부터].
+ * 하위 항목·이어진 줄이 있는 목록은 바꾸지 않는다 ('nested-list'). {lines, line(표의 첫 줄)} 또는 {error}
+ */
+export function listToTable(lines, n, heads) {
+  const sib = siblingsOf(lines, n);
+  if (!sib.length) return { error: 'not-list' };
+  const span = itemSpan(lines, sib.at(-1));
+  if (sib.some((i, k) => itemSpan(lines, i)[1] !== i || (k && lines.slice(sib[k - 1], i - 1).some((x) => !isBlank(x))))) return { error: 'nested-list' };
+  const quote = quoteOf(lines[sib[0] - 1]);
+  const rows = sib.map((i) => cellsOfItem(itemOf(lines[i - 1]).text.trim()).map((c) => c.trim()));
+  const cols = Math.max(...rows.map((r) => r.length));
+  const head = Array.from({ length: cols }, (_, i) => (i === 0 ? heads[0] : i === 1 ? heads[1] : heads[2](i + 1)));
+  const table = tableFromRows([head, ...rows]).map((x) => `${quote}${x}`);
+  return { lines: padded(lines.slice(0, sib[0] - 1), table, lines.slice(span[1])), line: sib[0] };
+}
+
+/**
+ * 줄 n 이 든 표를 목록으로 — 본문 행마다 한 항목, 빈 칸을 뺀 칸은 ' — ' 로 잇는다 (머리행은 뺀다).
+ * caption: 표의 캡션 줄도 지운다 (부른 쪽이 묻는다). {lines, line} 또는 {error}
+ */
+export function tableToList(lines, n, { caption = 0 } = {}) {
+  const table = tableAt(lines, n);
+  if (!table) return { error: 'not-table' };
+  if (table.first > table.last) return { error: 'empty-table' };
+  const quote = quoteOf(lines[table.head - 1]);
+  const items = [];
+  for (let i = table.first; i <= table.last; i++) {
+    const text = rowCells(lines[i - 1]).cells.map((c) => c.trim()).filter(Boolean).join(' — ');
+    if (text) items.push(`${quote}- ${text}`);
+  }
+  if (!items.length) return { error: 'empty-table' };
+  let from = table.head;
+  if (caption) {
+    from = caption;
+    while (from > 1 && isBlank(lines[from - 2])) from -= 1;
+  }
+  const before = lines.slice(0, from - 1);
+  return { lines: padded(before, items, lines.slice(table.last)), line: before.length + (before.length && !isBlank(before.at(-1)) ? 2 : 1) };
+}
+
+/** 줄 a~b 를 코드 블록으로 감싼다 — 글은 표시까지 그대로. 인용 안의 줄은 인용 안에서 {lines, line(여는 줄)} */
+export function wrapCode(lines, a, b) {
+  const fences = fencesOf(lines);
+  for (let n = a; n <= b; n++) if (fenceAt(fences, n)) return { error: 'in-code' };
+  while (a < b && isBlank(lines[a - 1])) a += 1;
+  while (b > a && isBlank(lines[b - 1])) b -= 1;
+  const quote = quoteOf(lines[a - 1]);
+  const body = [`${quote}\`\`\``, ...lines.slice(a - 1, b), `${quote}\`\`\``];
+  const before = lines.slice(0, a - 1);
+  return { lines: padded(before, body, lines.slice(b)), line: before.length + (before.length && !isBlank(before.at(-1)) ? 2 : 1) };
+}
+
+/** 줄 n 이 든 코드 블록의 울타리(```)를 떼어 보통 글로 {lines, line(첫 글 줄)} */
+export function unwrapCode(lines, n) {
+  const f = fenceAt(fencesOf(lines), n);
+  if (!f) return { error: 'not-code' };
+  const inner = lines.slice(f.a, f.closed ? f.b - 1 : f.b);
+  const before = lines.slice(0, f.a - 1);
+  return { lines: padded(before, inner.length ? inner : [''], lines.slice(f.b)), line: before.length + (before.length && !isBlank(before.at(-1)) ? 2 : 1) };
 }
 
 // ---- 강조글 -------------------------------------------------------------------------

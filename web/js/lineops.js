@@ -293,6 +293,76 @@ export function renumberAt(lines, n) {
   return next;
 }
 
+/** 줄 n 이 든 목록에서 같은 수준의 항목들 [항목 줄…] — 첫 항목부터 (D155). 목록 밖이면 [] */
+export function siblingsOf(lines, n) {
+  const own = ownerItem(lines, n);
+  if (!own) return [];
+  let first = own;
+  for (let p = prevSibling(lines, first); p; p = prevSibling(lines, first)) first = p;
+  const out = [];
+  for (let i = first; i; i = nextSibling(lines, i)) out.push(i);
+  return out;
+}
+
+/**
+ * 줄 n 이 든 번호 목록을 start 부터 다시 매긴다 {lines, count(번호가 바뀐 항목 수)} (D155 — 줄을 목록 밖으로 바꾼 뒤 뒤 항목을 앞 항목에 잇는다).
+ * 모두 같은 번호로 쓴 목록(1. 1. 1.)·번호 목록이 아니면 그대로
+ */
+export function renumberFrom(lines, n, start) {
+  if (!itemOf(lines[n - 1] ?? '')?.ordered) return { lines, count: 0 };
+  const sib = siblingsOf(lines, n);
+  const nums = sib.map((i) => itemOf(lines[i - 1]).num);
+  if (nums.length > 1 && nums.every((x) => x === nums[0])) return { lines, count: 0 };
+  const next = lines.slice();
+  let count = 0;
+  sib.forEach((i, k) => {
+    const it = itemOf(next[i - 1]);
+    if (it.num === start + k) return;
+    remark(next, i, `${start + k}${it.delim}`);
+    count += 1;
+  });
+  return { lines: next, count };
+}
+
+/**
+ * 줄 n 의 위(dir<0)·아래(dir>0)에 이어진 목록의 항목 — 빈 줄은 건너뛰고, 같은 인용 깊이에서 폭이 width 인 것 (D155 — 바꾼 줄을 이웃 목록에 붙일 때).
+ * 위쪽은 그 줄을 품은 항목을 width 까지 거슬러 올라간다. {n(항목 줄), it, end(그 항목의 끝 줄), loose(빈 줄로 띄운 목록 — 항목이 하나뿐이면 null)} 또는 null
+ */
+export function listNear(lines, n, dir, width = 0) {
+  const depth = depthOf(lines[n - 1] ?? '');
+  let i = n + dir;
+  while (i >= 1 && i <= lines.length && isBlank(lines[i - 1]) && depthOf(lines[i - 1]) === depth) i += dir;
+  if (i < 1 || i > lines.length || depthOf(lines[i - 1]) !== depth) return null;
+  let own = dir < 0 ? ownerItem(lines, i) : itemOf(lines[i - 1]) ? i : 0;
+  while (dir < 0 && own && itemOf(lines[own - 1]).width > width) own = parentItem(lines, own);   // 아래쪽은 거슬러 오르지 않는다 — n 자신의 하위일 수 있다
+  if (!own) return null;
+  const it = itemOf(lines[own - 1]);
+  if (it.width !== width) return null;
+  const sib = siblingsOf(lines, own);
+  const loose = sib.length > 1 ? sib.some((x, k) => k > 0 && lines.slice(itemEnd(lines, sib[k - 1]), x - 1).some(isBlank)) : null;
+  return { n: own, it, end: itemEnd(lines, own), loose };
+}
+
+/**
+ * 줄 n 이 든 목록의 같은 수준 항목을 모두 kind 로 — 'bullet'·'number'·'task' (D155 — 바꾸기 창의 '이 목록 전체를'). 하위 항목은 그대로 따라 옮긴다.
+ * 번호는 첫 항목의 번호부터(번호 목록이 아니었으면 1), 할 일의 체크는 할 일끼리면 지킨다. {lines, line, a, b} 또는 {error: 'not-list'}
+ */
+export function relist(lines, n, kind) {
+  const sib = siblingsOf(lines, n);
+  if (!sib.length) return { error: 'not-list' };
+  const next = lines.slice();
+  const first = itemOf(lines[sib[0] - 1]);
+  const start = first.ordered ? first.num : 1;
+  sib.forEach((i, k) => {
+    const it = itemOf(next[i - 1]);
+    remark(next, i, kind === 'number' ? `${start + k}${it.ordered ? it.delim : '.'}` : it.ordered ? '-' : it.marker);
+    const x = itemOf(next[i - 1]);
+    const task = kind === 'task' ? x.task || '[ ] ' : '';
+    next[i - 1] = `${x.quote}${x.lead}${x.marker}${x.gap || ' '}${task}${x.text}`;
+  });
+  return { lines: next, line: n, a: sib[0], b: itemEnd(next, sib.at(-1)) };
+}
+
 // ---- 범위 바꾸기로 ----------------------------------------------------------------
 
 /** 두 줄 배열의 다른 곳 {start, before, after} — replaceLines 로 그대로. before 는 한 줄 이상, 빈 줄뿐이면 앞의 글 줄까지 (밀린 줄을 찾을 수 있게) */
@@ -357,6 +427,15 @@ export function planNew(lines, n, below, { code = false, parts = null, split = f
   }
   const a = blk?.a ?? n;
   if (CALLOUT.test(bodyOf(lines[a - 1]).trim())) return { ...para, at: a, pre: [], post: [sep] };   // 강조글의 [!NOTE] 줄은 맨 앞에 남는다
+  if (!quote && !split) {   // 위에 넣는 줄은 위 블록의 양식을 따른다 (D155) — 문단·제목 바로 위가 목록·인용이면 그 끝에 잇는다 (from: 화면에서 붙일 줄)
+    let p = a - 1;
+    while (p >= 1 && isBlank(lines[p - 1])) p -= 1;
+    const above = p >= 1 ? blockAt(blocks, p) : null;
+    if (above?.kind === 'text' && !tableIn(lines, above) && (ownerItem(lines, p) || quoteOf(lines[p - 1]))) {
+      const up = planNew(lines, p, true);
+      if (!up.error) return { ...up, from: p };
+    }
+  }
   const before = lines[a - 2];
   return { ...para, at: a - 1, pre: before != null && !isBlank(before) ? [sep] : [], post: [sep] };
 }

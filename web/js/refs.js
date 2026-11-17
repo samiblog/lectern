@@ -130,6 +130,33 @@ export function refTargets(lines, slug) {
   return out.sort((a, b) => a.line - b.line);
 }
 
+/**
+ * 없어진 제목을 가리키는 링크 수 (D155 — 제목을 문단으로 바꾸거나 지웠을 때 알린다). slug 는 refTargets 와 같다.
+ * old 에 있던 절의 id 가 next 에 없으면, next 에서 그 id 로 가는 '](#id)' 링크를 센다 (코드 블록 안은 뺀다)
+ */
+export function lostHeadLinks(old, next, slug) {
+  const heads = (lines) => headsOf(lines).map((h) => lines[h.n - 1]).join('\n');
+  if (heads(old) === heads(next)) return 0;
+  const ids = (lines) => new Set(refTargets(lines, slug).filter((x) => x.kind === 'section').map((x) => /\(#([^)]+)\)$/.exec(x.text)?.[1]));
+  const after = ids(next);
+  const gone = new Set([...ids(old)].filter((id) => id && !after.has(id)));
+  if (!gone.size) return 0;
+  const fences = fencesOf(next);
+  const plain = (id) => {
+    try {
+      return decodeURIComponent(id);
+    } catch {
+      return id;
+    }
+  };
+  let count = 0;
+  next.forEach((s, i) => {
+    if (fenceAt(fences, i + 1)) return;
+    for (const m of s.matchAll(/\]\(#([^)\s]+)\)/g)) if (gone.has(m[1]) || gone.has(plain(m[1]))) count += 1;
+  });
+  return count;
+}
+
 // ---- 문서 안의 목차·쪽 나눔 ---------------------------------------------------------------
 
 /** @type {[RegExp, string][]} */

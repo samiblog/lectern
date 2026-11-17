@@ -59,6 +59,7 @@ let revealLine = null; // 다음 'reveal' 에서 현재 위치로 삼을 원문 
 let pickedText = null;  // 고른 줄의 원문 {a: 첫 줄, lines} — 다시 그린 뒤 그 글을 따라간다 (followPick)
 let dimmed = false;     // 고른 줄의 라이트를 켰는지 (D108·D118) — 켜 있어도 고른 줄의 일은 그대로 한다 (D139)
 let held = null;        // 현재 줄을 잡은 키(e.code) — 누르고 있어 되풀이되는 그 키는 버린다 (한 번 눌러 바뀌지 않게, D139)
+let armNoted = false;   // '한 번 더 누르면 바꿉니다' 를 알렸는지 — 한 번 실행에 처음 한 번만 (D156)
 
 const PAD = 10;   // 하이라이트 띠의 위·아래 여유 (px)
 const view = () => $('#lec-view');
@@ -825,6 +826,13 @@ export function putKey() {
   return true;
 }
 
+/** 현재 줄·고른 줄의 '.' (D155): 바꾸기 창을 연다 (lineedit.js 의 'line-change-win'). md 문서에서만 — 받았으면 true */
+export function changeWinKey() {
+  if (!isMdDoc() || (!linesOn() && !lit())) return false;
+  emit('line-change-win');
+  return true;
+}
+
 /** 현재 줄을 잡은 키를 누르고 있어 되풀이되는지 (main.js — 줄을 바꾸는 처리기들 앞에서). 한 번 길게 눌러 바뀌지 않게 (D139) */
 export function armHeld(e) {
   if (e.repeat) return held === e.code;
@@ -963,7 +971,8 @@ export function spotKey(e) {
   if (!lit() && linesOn() && changeKey(e)) {   // 한 줄은 두 번 — 처음은 그 줄을 잡기만 한다 (D139)
     if (!e.repeat && armHere()) {
       held = e.code;
-      toast(t('한 번 더 누르면 이 줄을 바꿉니다 — Esc 로 그만둡니다'));
+      if (!armNoted) toast(t('한 번 더 누르면 이 줄을 바꿉니다 — Esc 로 그만둡니다'));   // 알림은 한 번 실행에 처음 한 번만 — 상태줄에 늘 보인다 (D156)
+      armNoted = true;
     }
     return true;
   }
@@ -1006,6 +1015,7 @@ export function spotKey(e) {
   }
   if (k === 'F2') return editHere();
   if (k === '/') return putKey();   // 현재 줄 아래에 넣기 창 (D139 — vi 키를 켰으면 / 는 찾기라 여기 오지 않는다)
+  if (k === '.') return changeWinKey();   // 현재 줄·고른 줄의 바꾸기 창 (D155)
   if (k === 'Delete' && ranged()) {   // 줄 지우기 (lineedit.js, D83)
     emit('line-delete', {});
     return true;

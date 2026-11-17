@@ -1008,6 +1008,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-put-list.board ul li.sel { background: var(--ui-active-bg); }
 #lec-put-list.board kbd { margin-left: auto; font-size: 10.5px; }
 #lec-put-list kbd { margin-left: auto; color: var(--ui-faint); font: inherit; font-size: 11.5px; }
+/* 바꾸기 창 (D155): 지금 종류, 바꿀 수 없는 것(흐리게 — 누르면 까닭), 맨 앞 열의 이 줄에 맞는 것 */
+#lec-put-list li.off { opacity: .45; }
+#lec-put-list li.cur .t { font-weight: 650; }
+#lec-put-list .now { flex: none; padding: 0 5px; border-radius: 4px; background: var(--ui-active-bg); color: var(--ui-muted); font-size: 10.5px; }
+#lec-put-list.board > li.fit > .head { color: var(--ui-accent); }
+#lec-put-list.board ul li .t { flex: 1; min-width: 0; max-width: none; overflow: visible; white-space: normal; word-break: keep-all; line-height: 1.3; }   /* 판의 이름은 자르지 않고 줄을 바꾼다 ('이 목록 전체를 …' 둘이 같아 보이지 않게) */
 .delete-actions { display: flex; justify-content: flex-end; gap: 8px; padding: 12px 16px; }   /* 문서 삭제 (deletedoc.js, D104) */
 .delete-actions button { height: 32px; padding: 0 14px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-text); font: inherit; }
 .delete-actions button.danger { border-color: var(--ui-danger); color: var(--ui-danger); font-weight: 600; }
@@ -1213,14 +1219,23 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-chart-series span { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 #lec-chart-series small { flex: none; margin-left: auto; color: var(--ui-muted); }
 #lec-chart-plot { flex: 1; min-width: 0; border-radius: 6px; overflow: hidden; }
-.keys-scroll { max-height: 72vh; overflow: auto; padding-right: 4px; }
+/* 단축키 표의 탭과 찾기 칸 (D157) */
+.keys-head { display: flex; align-items: center; gap: 12px; }
+.keys-head h2 { flex: none; }
+.keys-find { flex: 1; min-width: 0; max-width: 320px; margin-left: auto; height: 30px; padding: 0 10px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: inherit; font: inherit; font-size: 13px; }
+.keys-tabs { display: flex; flex-wrap: wrap; gap: 2px; margin: 8px 0 10px; border-bottom: 1px solid var(--ui-border); }
+.keys-tabs button { padding: 6px 10px; border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px; background: none; color: var(--ui-muted); font: inherit; font-size: 13px; cursor: pointer; }
+.keys-tabs button:hover { color: var(--ui-fg); }
+.keys-tabs button.on { color: var(--ui-fg); border-bottom-color: var(--ui-accent); font-weight: 600; }
+.keys-none { margin: 8px 0; color: var(--ui-muted); font-size: 13px; }
+.keys-scroll { max-height: 66vh; overflow: auto; padding-right: 4px; }
 .keys-list { columns: 2 360px; column-gap: 28px; }
 .keys-group { break-inside: avoid; margin: 0 0 14px; }
 .keys-group h3 { margin: 0 0 4px; font-size: 12.5px; color: var(--ui-muted); }
 .keys-group table { width: 100%; border-collapse: collapse; font-size: 13px; }
-.keys-group th { width: 140px; padding: 4px 12px 4px 0; text-align: left; font-weight: 400; vertical-align: top; color: var(--ui-faint); line-height: 1.9; }
+.keys-group th { width: 176px; padding: 4px 12px 4px 0; text-align: left; font-weight: 400; vertical-align: top; color: var(--ui-faint); line-height: 1.9; }
 .combo { white-space: nowrap; }
-.keys-group td { padding: 4px 0; line-height: 1.45; vertical-align: top; }
+.keys-group td { padding: 4px 0; line-height: 1.45; vertical-align: top; word-break: keep-all; }
 .keys-group tr + tr > * { border-top: 1px solid var(--ui-border); }
 .keys-group kbd { color: var(--ui-fg); }
 

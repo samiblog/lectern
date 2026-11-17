@@ -8,9 +8,11 @@ const { itemOf, itemSpan } = lo;
 const problems = [];
 let runs = 0;
 let seed = 20261116;
-const rnd = (n) => {
-  seed = (seed * 1103515245 + 12345) & 0x7fffffff;
-  return seed % n;
+const rnd = (n) => {   // mulberry32 — 아래 비트만 쓰는 선형 합동법은 고르지 않았다 (0.88.0 에서 바꿈)
+  seed = (seed + 0x6d2b79f5) | 0;
+  let x = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+  x = (x + Math.imul(x ^ (x >>> 7), 61 | x)) ^ x;
+  return Math.floor((((x ^ (x >>> 14)) >>> 0) / 4294967296) * n);
 };
 const pick = (list) => list[rnd(list.length)];
 

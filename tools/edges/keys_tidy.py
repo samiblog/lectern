@@ -127,7 +127,7 @@ try:
         reset('레벨.md')
         go(26)
         twice('2')
-        expect(page, '하위가 있는 10. 항목을 제목으로 — 하위가 코드 블록이 되지 않음', lambda: '## 열\n\n- 열의 하위\n11. 열하나' in read('레벨.md'), lambda: read('레벨.md')[-60:])
+        expect(page, '하위가 있는 10. 항목을 제목으로 — 하위가 코드 블록이 되지 않음', lambda: '## 열\n\n- 열의 하위\n10. 열하나' in read('레벨.md'), lambda: read('레벨.md')[-60:])
         reset('레벨.md')
         go(9)
         page.keyboard.press('Shift+Enter')

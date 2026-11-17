@@ -46,6 +46,12 @@ export const voicePrompt = (refs = '') => (refs
  */
 export const memoPrompt = (ref) => t("Lectern 작성 안내({guide})의 '업무 카드' 절을 읽고, {ref} 의 '기획 메모' 절을 이 업무 카드의 할 일·일정·결정·현재 상태에 반영해 줘. 메모 글은 그대로 두고, 날짜가 분명하지 않으면 묻고, 반영한 것은 기록 절에 한 줄 남겨 줘.", { guide: S.writingGuide, ref });
 
+/**
+ * 바꿔 쓰기 요청 (D155): ref 는 '@경로 12~18행'. 글을 다시 써야 하는 바꾸기(문단 셋을 표로, 표를 글로 풀어)는 규칙으로 할 수 없어 AI 에게 맡긴다 —
+ * 바꿀 모양은 사람이 이어서 적고 Enter 를 누른다 (요청 글은 Enter 없이 — D51). 바꾸기 창의 '이 줄에 맞는 것'
+ */
+export const rewritePrompt = (ref) => t('Lectern 작성 안내({guide})를 따라 {ref} 를 다른 구성 요소로 바꿔 써 줘. 내용과 숫자는 그대로 두고 모양만 바꾸고, 고치기 전에 바꾼 모양을 먼저 보여 줘. 바꿀 모양: ', { guide: S.writingGuide, ref });
+
 /** 하던 대화를 잇는 법 — 멈춘 프로그램을 다시 시작한 뒤의 안내 (terminal.js) */
 export function aiResume() {
   const one = aiInfo();

@@ -74,7 +74,7 @@ try:
         page.locator('#lec-view p', has_text='첫 문단').click()
         page.keyboard.press('Escape')
         page.keyboard.press('l')
-        expect(page, '현재 줄에서 처음 누르면 잡기만 하고 알린다', lambda: '한 번 더 누르면' in (page.text_content('#lec-toast') or ''), lambda: page.text_content('#lec-toast'))
+        expect(page, '현재 줄에서 처음 누르면 잡기만 한다 — 상태줄에 바꾸기 (알림은 처음 한 번만 — D156)', lambda: '바꾸기' in (page.evaluate(PICKED) or ''), lambda: page.evaluate(PICKED))
         check('파일은 그대로', read(doc) == DOC, read(doc))
         check("상태줄에 '현재 줄 … 바꾸기'", '현재 줄' in (page.evaluate(PICKED) or '') and '바꾸기' in (page.evaluate(PICKED) or ''), page.evaluate(PICKED))
         page.keyboard.press('Escape')
@@ -153,7 +153,7 @@ try:
         page.locator('#lec-menu button, #lec-menu li', has_text='고른 줄 바꾸기').first.click()
         page.wait_for_selector('#lec-put:not([hidden])')
         hints = page.evaluate("Object.fromEntries([...document.querySelectorAll('#lec-put li[role=option]')].map((li) => [li.querySelector('.t')?.textContent, li.querySelector('kbd')?.textContent || '']))")
-        check('창의 항목 옆에 한 글자 키', hints.get('목록') == 'L' and hints.get('할 일') == 'T' and hints.get('제목 2') == '2' and hints.get('강조글 — 참고') == 'C', hints)
+        check('창의 항목 옆에 한 글자 키', hints.get('목록') == 'L' and hints.get('할 일') == 'T' and hints.get('제목 2') == '2' and hints.get('참고') == 'C', hints)   # 바꾸기 창도 판 — 묶음 이름을 뺀 이름 (D155)
         page.keyboard.press('Escape')
 
         print('[화살표 — 끝을 지나친 ↓ 와 다시 ↑]')

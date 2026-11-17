@@ -1,10 +1,10 @@
-// 넣기 창 (D109): 구성 요소를 고르는 작은 창. 빈 줄의 `/`, 칸의 Ctrl+Shift+/, 우클릭 '여기에 넣기…'·'이 줄 바꾸기…'.
+// 넣기 창 (D109): 구성 요소를 고르는 작은 창. 빈 줄의 `/`, 칸의 Ctrl+Shift+/, 우클릭 '여기에 넣기…'·'이 줄 바꾸기…'(그 줄의 `.` — D155).
 // 줄 옆에 뜨고 찾기 칸에 초점을 둔다 — 한글은 조합 중이라 키로 옮길 수 없다 (D101). 표시를 외우지 않아도 넣게 한다.
 // 고르는 일만 한다: 고른 것을 돌려주면 lineedit.js 가 넣는다. 파일을 고르는 단계(그림·첨부·링크)와 글을 묻는 단계(주·표 크기)도 이 창이 맡는다.
 
 import { S } from './store.js';
 import { getJSON, saveConfig } from './api.js';
-import { $ } from './util.js';
+import { $, toast } from './util.js';
 import { html, setHtml } from './html.js';
 import { t, LANG } from './i18n.js';
 
@@ -12,7 +12,7 @@ const box = () => $('#lec-put');
 const find = () => $('#lec-put-find');
 const list = () => $('#lec-put-list');
 
-let waiting = null;   // {resolve, items, sel, free, board, cols} — free: 찾기 칸의 글을 그대로 돌려줄 수 있다, board: 넣기의 판 (D154)
+let waiting = null;   // {resolve, items, sel, free, board, cols, first, current, off} — free: 찾기 칸의 글을 그대로 돌려줄 수 있다, board: 넣기의 판 (D154), first·current·off: 바꾸기 창 (D155)
 const RECENT = 5;   // 판 맨 앞의 '최근' (D154 — 설정 recent_puts 에 이름만)
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';   // i18n-ok (초성)
 /** 한글 낱자의 첫소리만: '쪽 나눔' → 'ㅉ ㄴㄴ' (D154 — 초성으로 거르기) */
@@ -109,15 +109,19 @@ const boardOn = () => !!waiting?.board && !find().value.trim() && innerWidth >= 
  * waiting.shown 은 열 차례로 이은 목록이고(최근은 겹쳐 들어간다), waiting.cols 는 열마다 [첫 자리, 개수]
  */
 function drawBoard() {
-  const { items } = waiting;
-  const recent = (S.config?.recent_puts || []).map((id) => items.find((x) => x.id === id)).filter(Boolean).slice(0, RECENT);
-  const cols = recent.length ? [{ name: t('최근'), items: recent }] : [];
+  const { items, first } = waiting;
+  const recent = first ? [] : (S.config?.recent_puts || []).map((id) => items.find((x) => x.id === id)).filter(Boolean).slice(0, RECENT);
+  // 맨 앞 열: 넣기는 최근 넣은 것, 바꾸기는 이 줄에 맞는 것 (D155)
+  const lead = first?.items.length ? { name: first.name, items: first.items, cls: 'fit' } : recent.length ? { name: t('최근'), items: recent, cls: 'recent' } : null;
+  const cols = lead ? [lead] : [];
   for (const x of items) {
-    const col = cols.find((c, i) => (recent.length ? i > 0 : true) && c.name === x.group);
+    if (first?.items.includes(x)) continue;
+    const col = cols.find((c, i) => (lead ? i > 0 : true) && c.name === x.group);
     if (col) col.items.push(x);
-    else cols.push({ name: x.group, items: [x] });
+    else cols.push({ name: x.group, items: [x], cls: '' });
   }
   waiting.shown = cols.flatMap((c) => c.items);
+  startAt(lead ? lead.items.length : 0);
   let at = 0;
   waiting.cols = cols.map((c) => {
     const span = [at, c.items.length];
@@ -128,11 +132,24 @@ function drawBoard() {
   box().classList.add('board');
   list().classList.add('board');
   list().style.setProperty('--cols', String(cols.length));
-  setHtml(list(), cols.map((c, ci) => html`<li class="col${ci === 0 && recent.length ? ' recent' : ''}"><span class="head">${c.name}</span><ul>${c.items.map((x, k) => {
+  setHtml(list(), cols.map((c, ci) => html`<li class="col${ci === 0 && lead ? ` ${lead.cls}` : ''}"><span class="head">${c.name}</span><ul>${c.items.map((x, k) => {
     const i = waiting.cols[ci][0] + k;
-    return html`<li role="option" data-i="${i}" class="${i === waiting.sel ? 'sel' : ''}" aria-selected="${i === waiting.sel}"><span class="t" title="${x.name}">${x.name.startsWith(`${x.group} — `) ? x.name.slice(x.group.length + 3) : x.name}</span>${x.hint ? html`<kbd>${x.hint}</kbd>` : ''}</li>`;   // 판에서는 묶음 이름을 빼고 ('강조글 — 참고' → '참고')
+    return html`<li role="option" data-i="${i}" class="${rowClass(x, i)}" aria-selected="${i === waiting.sel}" title="${waiting.off[x.id] || x.name}"><span class="t">${x.name.startsWith(`${x.group} — `) ? x.name.slice(x.group.length + 3) : x.name}</span>${nowTag(x)}${x.hint ? html`<kbd>${x.hint}</kbd>` : ''}</li>`;   // 판에서는 묶음 이름을 빼고 ('강조글 — 참고' → '참고')
   })}</ul></li>`));
   list().querySelector('li.sel')?.scrollIntoView({ block: 'nearest' });
+}
+
+/** 줄의 꾸밈 — 골라짐, 지금 종류(cur), 바꿀 수 없음(off) (D155) */
+const rowClass = (x, i) => [i === waiting.sel ? 'sel' : '', x.id && x.id === waiting.current ? 'cur' : '', waiting.off[x.id] ? 'off' : ''].filter(Boolean).join(' ');
+/** 지금 종류의 표시 (D155 — 바꾸기 창) */
+const nowTag = (x) => (x.id && x.id === waiting.current ? html`<span class="now">${t('지금')}</span>` : '');
+
+/** 처음 그릴 때 지금 종류에서 시작한다 (D155) — 맨 앞 열(skip 개)에 겹쳐 든 것은 건너뛴다 */
+function startAt(skip) {
+  if (!waiting.current || waiting.started) return;
+  waiting.started = true;
+  const i = waiting.shown.findIndex((x, k) => k >= skip && x.id === waiting.current);
+  if (i >= 0) waiting.sel = i;
 }
 
 /** 판에서 ←→↑↓ (D154): ↑↓ 는 열 안에서, ←→ 는 옆 열의 같은 줄로 */
@@ -161,13 +178,14 @@ function draw() {
   const { items } = waiting;
   const shown = (q ? items.filter((x) => matches(x, q)) : items);
   waiting.shown = shown;
+  if (!q) startAt(0);
   waiting.sel = Math.min(waiting.sel, Math.max(0, shown.length - 1));
   let group = null;
   setHtml(list(), shown.length ? shown.flatMap((x, i) => {
     const head = x.group && x.group !== group ? html`<li class="head">${x.group}</li>` : '';
     group = x.group ?? group;
-    return [head, html`<li role="option" data-i="${i}" class="${i === waiting.sel ? 'sel' : ''}" aria-selected="${i === waiting.sel}">
-      <span class="t">${x.name}</span>${x.sub ? html`<span class="p">${x.sub}</span>` : ''}${x.hint ? html`<kbd>${x.hint}</kbd>` : ''}
+    return [head, html`<li role="option" data-i="${i}" class="${rowClass(x, i)}" aria-selected="${i === waiting.sel}" title="${waiting.off[x.id] || ''}">
+      <span class="t">${x.name}</span>${nowTag(x)}${x.sub ? html`<span class="p">${x.sub}</span>` : ''}${x.hint ? html`<kbd>${x.hint}</kbd>` : ''}
     </li>`];
   }) : html`<li class="none">${waiting.free ? t('Enter 를 누르면 쓴 글을 씁니다') : t('맞는 것이 없습니다')}</li>`);
   list().querySelector('li.sel')?.scrollIntoView({ block: 'nearest' });
@@ -188,12 +206,13 @@ function place(at) {
 /**
  * 고르는 창을 띄운다. 고른 것(또는 free 면 쓴 글 {text}), 그만두면 null.
  * items: [{id, name, group?, sub?, hint?, words?}], title, at: 옆에 놓을 곳, value: 찾기 칸의 처음 글, free: 쓴 글도 받는다,
- * board: 넣기의 판 — 묶음을 열로, 맨 앞에 최근 넣은 것 (D154)
+ * board: 넣기의 판 — 묶음을 열로, 맨 앞에 최근 넣은 것 (D154).
+ * 바꾸기 창 (D155): first {name, items} — 맨 앞 열(최근 대신), current — 지금 종류의 id(거기서 시작), off {id: 까닭} — 고를 수 없는 것 (흐리게, 누르면 까닭)
  */
-export function pick({ items, title, at = null, value = '', free = false, placeholder = '', board = false }) {
+export function pick({ items, title, at = null, value = '', free = false, placeholder = '', board = false, first = null, current = '', off = null }) {
   return new Promise((resolve) => {
     waiting?.resolve(null);
-    waiting = { resolve, items, sel: 0, free, shown: items, board, cols: [] };
+    waiting = { resolve, items, sel: 0, free, shown: items, board, cols: [], first, current, off: off || {}, started: false };
     $('#lec-put-title').textContent = title;
     find().value = value;
     find().placeholder = placeholder || (board ? t('이름·초성으로 거르기 — ㅍ 표, ㅉㄴ 쪽 나눔') : t('이름으로 거르기'));
@@ -219,9 +238,13 @@ function choose() {
   const text = find().value.trim();
   const w = waiting;
   if (!item && !(w.free && text)) return;
+  if (item?.id && w.off[item.id]) {   // 바꿀 수 없는 것 — 까닭을 알리고 창은 그대로 (D155)
+    toast(w.off[item.id]);
+    return;
+  }
   box().hidden = true;
   waiting = null;
-  if (w.board && item?.id) saveConfig({ recent_puts: [item.id, ...(S.config?.recent_puts || []).filter((x) => x !== item.id)].slice(0, RECENT) });   // 최근 넣은 것 (D154)
+  if (w.board && !w.first && item?.id) saveConfig({ recent_puts: [item.id, ...(S.config?.recent_puts || []).filter((x) => x !== item.id)].slice(0, RECENT) });   // 최근 넣은 것 (D154)
   w.resolve(item ?? { text });
 }
 

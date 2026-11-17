@@ -616,7 +616,9 @@
 </div>
 <div id="lec-keys" class="overlay" hidden>
   <div class="dialog-box keys-box" role="dialog" aria-labelledby="lec-keys-title">
-    <h2 id="lec-keys-title">단축키</h2>
+    <div class="keys-head"><h2 id="lec-keys-title">단축키</h2><input type="search" id="lec-keys-find" class="keys-find" placeholder="키나 하는 일로 찾기 — 예: 표, Ctrl+K" aria-label="단축키 찾기" autocomplete="off" spellcheck="false"></div>
+    <!-- 탭 (help.js 의 KEY_TABS — D157): 첫 탭은 처음 익힐 스무 가지 -->
+    <div id="lec-keys-tabs" class="keys-tabs" role="tablist" aria-label="단축키 묶음"></div>
     <div class="keys-scroll"><div id="lec-keys-list" class="keys-list"><!-- help.js 의 SHORTCUTS 로 채운다 --></div></div>
     <div class="dialog-foot">
       <button type="button" id="lec-keys-manual" class="text-btn">사용설명서 열기<kbd>F1</kbd></button><button type="button" id="lec-keys-samples" class="text-btn" title="사용법과 Lectern 슬라이드 예제가 든 예제 프로젝트를 탭으로 엽니다" hidden>예제 열기<kbd>Shift F1</kbd></button>
