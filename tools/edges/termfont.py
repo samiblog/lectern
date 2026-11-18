@@ -30,6 +30,8 @@ try:
         cols14 = page.evaluate(COLS)
 
         print('[설정 창]')
+        until(page, "!!document.activeElement?.closest('#lec-term')", 5000)   # 셸이 뜨면 터미널이 초점을 가져간다 — 그 뒤에
+        page.locator('#lec-content').focus()   # 터미널이 초점을 가져가면 Ctrl+, 는 셸의 것이다 (터미널 안의 키는 셸 것 — 흔들리던 까닭)
         page.keyboard.press('Control+,')
         page.wait_for_selector('#lec-settings:not([hidden])')
         check('숫자 칸에 지금 크기', page.input_value('#lec-termfont') == '14', page.input_value('#lec-termfont'))

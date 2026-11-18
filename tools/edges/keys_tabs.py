@@ -46,7 +46,7 @@ try:
         check('첫 탭 — 읽고 고르기 열과 쓰고 고치기 열', heads == ['읽고 고르기', '쓰고 고치기'], heads)
         check('— 스무 가지', rows() == 20, rows())
         k = keys()
-        check('— Ctrl+P · F2 · / · . · Ctrl+Z · Ctrl+/ 가 있다', {'Ctrl+P', 'F2', '/', '.', 'Ctrl+Z/Ctrl+Y', 'Ctrl+//F1'} <= set(k), k)
+        check('— Ctrl+P · Enter/F2 · / · . · Ctrl+Z · Ctrl+/ 가 있다', {'Ctrl+P', 'Enter/F2', '/', '.', 'Ctrl+Z/Ctrl+Y', 'Ctrl+//F1'} <= set(k), k)   # 0.92.1 — Enter 도 한 줄 편집 (D166)
         check('찾기 칸에 초점', page.evaluate('document.activeElement?.id') == 'lec-keys-find')
         box = page.locator('#lec-keys .keys-box').bounding_box()
         check('한 화면에 — 표가 창 높이 안', box['y'] >= 0 and box['y'] + box['height'] <= 860, box)
