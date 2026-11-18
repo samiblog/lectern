@@ -13,7 +13,7 @@
 // - 표 영역 (D86): 제목 줄·여러 줄 머리행·표 여럿인 시트는 tabledata.js 의 findRegions 로 나눠 가장 큰 표를 보이고, 막대 위의 단추로 다른 표·시트 전체를 고른다.
 //   깔끔한 시트(plain)는 단추가 없고 전과 같다. 머리행 줄 수와 고른 표는 이번 실행 동안 기억한다 (st.root). 고른 표마다 거르기·정렬이 따로다 (st.mem).
 
-import { S } from './store.js';
+import { S, emit } from './store.js';
 import { saveConfig } from './api.js';
 import { addHtml, html, setHtml } from './html.js';
 import { basename, toast, copyText } from './util.js';
@@ -416,6 +416,9 @@ function update(view) {
     th.dataset.sort = on ? (mem.sort.dir > 0 ? 'asc' : 'desc') : '';
     th.setAttribute('aria-sort', on ? (mem.sort.dir > 0 ? 'ascending' : 'descending') : 'none');
   }
+  // 행을 새로 그렸다 — 현재 줄이 줄 단위를 다시 재게 (spotlight.js). 정렬·거르기는 표의 높이가 같을 수 있어 크기 변화로는 모른다:
+  // 정렬한 표에서 행을 누르면 옛 차례의 행이 현재 줄이 되어 F2·Enter 가 다른 줄을 열었다 (시나리오 시험 scen_094 에서 찾음)
+  emit('rows-redrawn', view);
 }
 
 /** 머리·거르기 칸까지 새로 (처음, '첫 줄은 머리행'을 바꿀 때) */
@@ -475,7 +478,7 @@ export function renderRows(view, rows, lines, key, { letter = null, titleOf = nu
     <span class="csv-count"></span><span class="csv-summary"></span>${note ? html`<span class="csv-note">${note}</span>` : ''}
     <span class="csv-note csv-blocked" hidden>${t('같은 시점이 여러 행이라 계산하지 못했습니다 — 품목 등으로 먼저 거르세요')}</span>
     <button type="button" class="text-btn csv-chart">${t('차트로 보기')}</button>
-    <button type="button" class="text-btn csv-stats-btn" aria-pressed="${view.csv.stats}">${t('통계')}</button>
+    <label class="csv-stats-toggle" title="${t('모든 열의 통계 줄(개수·합계·평균 등) — 끄면 모든 CSV·엑셀 표에서 감춥니다')}"><input type="checkbox"${view.csv.stats ? html` checked` : ''}> ${t('통계')}</label>
     <label class="csv-headrow"><input type="checkbox"> ${t('첫 줄은 머리행')}</label>
     <button type="button" class="text-btn csv-clear" hidden>${t('거르기 지우기')}</button>
     <button type="button" class="text-btn csv-copy-shown" title="${t('거른 행과 계산 열까지 — 엑셀에 붙이면 칸이 나뉩니다')}">${t('보이는 표 복사')}</button>
@@ -504,6 +507,15 @@ export function initCsv(root) {
     timer = setTimeout(() => update(view), 120);
   });
   root.addEventListener('change', (e) => {
+    const stats = e.target.closest('.csv-stats-toggle input');   // 통계 줄 — 모든 열을 한꺼번에 (D172)
+    if (stats) {
+      const view = stats.closest('.csv-view');
+      if (!view?.csv) return;
+      view.csv.stats = stats.checked;
+      saveConfig({ csv_stats: view.csv.stats });
+      update(view);
+      return;
+    }
     const box = e.target.closest('.csv-headrow input');
     const view = box?.closest('.csv-view');
     if (!view?.csv) return;
@@ -526,11 +538,6 @@ export function initCsv(root) {
       const col = +th.dataset.col;
       const cur = view.csv.mem.sort;
       view.csv.mem.sort = cur?.col !== col ? { col, dir: 1 } : cur.dir > 0 ? { col, dir: -1 } : null;   // 오름 → 내림 → 원래 순서
-      update(view);
-    } else if (e.target.closest('.csv-stats-btn')) {
-      view.csv.stats = !view.csv.stats;
-      e.target.closest('.csv-stats-btn').setAttribute('aria-pressed', String(view.csv.stats));
-      saveConfig({ csv_stats: view.csv.stats });
       update(view);
     } else if (e.target.closest('.csv-clear')) {
       view.csv.mem.filters = view.csv.mem.filters.map(() => '');

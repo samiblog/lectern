@@ -52,7 +52,7 @@
 | linefind.js | 밀린 줄 찾기 (D76, DOM 없음) — `locateLines`: 그 자리, 아니면 앞뒤 300줄 안에서 같은 줄들이 하나뿐일 때 그 자리 |
 | linenums.js | 줄 번호 (D80) — 툴바 `#lec-btn-lines`·Alt+L(설정 line_numbers), 칸마다 스크롤 상자에 덮개 `.lec-gutter`, `collectUnits` 의 단위마다 원문 줄 번호, md 문서만 |
 | docwidth.js | 툴바의 문서 폭 [좁게][폭 100%][넓게] (D68 — 설정 doc_width, CSS 변수 --md-wide 를 md 본문 max-width 에 곱함, '가득' = 칸 폭) |
-| tablefit.js | 표 첫 열 넓히기 (D68) — 첫 열 때문에 높은 행이 있는 md 표의 첫 열 폭을 재어 정함 (`fitTables(view)` — doc.js 가 바꿔 끼운 뒤, 표 상자의 ResizeObserver·text-size 로 다시) |
+| tablefit.js | 표 열 너비 — 모든 열 맞추기(D173 — 열마다 가장 긴 낱말 폭부터, 후보 다섯: 표가 가장 낮아지게·열 평균 비례·그 제곱근·두 낱말 폭, table-layout: fixed)와 첫 열 넓히기(D68)를 그려 보고 나은 것 (10% 넘게 높은 것은 빼고, 옆 스크롤은 마지막 수단) (`fitTables(view)` — doc.js 가 바꿔 끼운 뒤, 표 상자의 ResizeObserver·text-size 로 다시, 단계마다 모든 표를 한꺼번에) |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼과 F7·Shift+F7 (D170) |
 | search.js | 사이드바 '검색' 탭 — 맨 위에 이름이 맞는 파일(문서·코드·자료), 그 아래 문서·코드 본문 검색 (서버는 lectern/search.py) |
 | parts.js | 사이드바 '모아 보기' 탭 (캡션이 있으면 캡션이 이름, 우클릭은 Claude용 위치·원문 복사 — D61. 차트는 보일 때 그린 작은 그림, 할 일·링크·출처는 종류 아래 단추로 거르기, '문서 정보' 보기 — D62) — '문서 속 요소' / '파일 종류'(묶음마다 형식별 파일, 그림은 작은 그림 — D50). 문서 속 요소는 범위(프로젝트·폴더)의 문서를 화면 밖에서 그려 목차와 같은 규칙(`toc.js` 의 `readParts`)으로 구성 요소를 세고, 종류마다 문서별 목록(그림은 작은 그림 격자), 누르면 그 자리로 |

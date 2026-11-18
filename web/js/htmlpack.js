@@ -61,12 +61,12 @@ export const styleText = (texts) => texts.join('\n').replace(/<\/(style)/gi, '<\
  * 화면의 한 부분을 파일에 담을 복제로.
  * @param {HTMLElement} node 화면의 요소 (바꾸지 않는다)
  * @param {{ drop: string, dropAttrs: Set<string>, marks: string[], keepAnchors?: boolean, images: Map<string, string>,
- *   found: { external: number, missing: number, media: number }, dropClass?: (name: string) => boolean }} opt
- *   drop 은 뗄 요소의 선택자, dropAttrs 는 지울 속성, marks 는 지울 class, dropClass 는 그 밖에 지울 class 의 판정.
+ *   found: { external: number, missing: number, media: number }, dropClass?: (name: string) => boolean, dropVars?: string[] }} opt
+ *   drop 은 뗄 요소의 선택자, dropAttrs 는 지울 속성, marks 는 지울 class, dropClass 는 그 밖에 지울 class 의 판정, dropVars 는 style 에서 지울 CSS 변수.
  *   images 는 같은 그림을 한 번만 읽게 나눠 쓰는 표, found 는 알릴 것(인터넷 그림·못 읽은 그림·동영상)을 센다
  */
 export async function packClone(node, opt) {
-  const { drop, dropAttrs, marks, keepAnchors = false, images, found, dropClass = () => false } = opt;
+  const { drop, dropAttrs, marks, keepAnchors = false, images, found, dropClass = () => false, dropVars = [] } = opt;
   const clone = /** @type {HTMLElement} */ (node.cloneNode(true));
   const canvases = $$('canvas', node);
   $$('canvas', clone).forEach((c, i) => {   // 복제한 canvas 는 비어 있다 — 그림으로
@@ -86,6 +86,10 @@ export async function packClone(node, opt) {
   for (const el of [clone, ...$$('*', clone)]) {
     el.classList.remove(...marks, ...[...el.classList].filter(dropClass));
     if (!el.classList.length) el.removeAttribute('class');
+    if (dropVars.length && el.hasAttribute('style')) {
+      for (const v of dropVars) el.style.removeProperty(v);
+      if (!el.getAttribute('style')?.trim()) el.removeAttribute('style');
+    }
     for (const at of [...el.attributes]) {
       const name = at.name.toLowerCase();
       const js = /^(href|xlink:href|src|action|formaction)$/.test(name) && /^\s*javascript:/i.test(at.value);

@@ -1393,6 +1393,14 @@ export function initSpotlight() {
     paint();
   };
   on('rendered', (pane) => { if (pane === S.pane) rebuild(); });
+  on('rows-redrawn', (el) => {   // csv 표의 정렬·거르기 (csvview.js) — 높이가 같아도 행의 차례가 바뀐다
+    if (el !== view()) return;
+    gen += 1;
+    requestAnimationFrame(() => {
+      place();
+      drawHere();
+    });
+  });
   on('pane', () => {
     endDrag();
     active = false;

@@ -36,6 +36,7 @@ function fillControls() {
   for (const radio of $$('#lec-settings input[name="terminal_position"]')) radio.checked = radio.value === (S.config.terminal_position || 'auto');
   for (const radio of $$('#lec-settings input[name="editor_keys"]')) radio.checked = radio.value === (S.config.editor_keys === 'vim' ? 'vim' : 'default');
   for (const radio of $$('#lec-settings input[name="print_font"]')) radio.checked = radio.value === (S.config.print_font === 'sans' ? 'sans' : 'serif');
+  for (const radio of $$('#lec-settings input[name="table_align"]')) radio.checked = radio.value === (S.config.table_align === 'report' ? 'report' : 'auto');
   for (const radio of $$('#lec-settings input[name="ai_tool"]')) radio.checked = radio.value === aiTool();
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
 }
@@ -118,7 +119,7 @@ on('config-follow', (keys) => {
     else location.reload();
     return;
   }
-  if (keys.has('math') || keys.has('md_breaks')) emit('refresh-view');
+  if (keys.has('math') || keys.has('md_breaks') || keys.has('table_align')) emit('refresh-view');
   if (keys.has('vi_keys')) emit('vi-keys');
   if (keys.has('editor_keys')) emit('editor-keys');
   if (keys.has('print_font')) emit('print-font');
@@ -236,6 +237,11 @@ async function onChange(e) {
     refreshAiSetup();   // 도구마다 자리가 다르다 (D159)
     emit('ai-tool');
     await saving;
+    return;
+  }
+  if (e.target.name === 'table_align') {   // 표 칸 맞춤 (D174 — doc.js 가 그릴 때 표에 단다) — 문서를 다시 그린다
+    await saveConfig({ table_align: e.target.value });
+    emit('refresh-view');
     return;
   }
   if (e.target.name === 'print_font') {   // 인쇄·PDF 글꼴 (D131 — printdoc.js, print.css)

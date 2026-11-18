@@ -53,7 +53,12 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 - Put only values in cells and units in the header: `| Price (USD/t) |`.
 - Columns that read as numbers are right-aligned automatically. Cells that read as numbers: `1,234`, `-3.5%`, `+3.2%p`, `$105`, `1.2x`, `30bp`, and `-` for empty.
 - Long tables keep their header row stuck to the top, so there is no need to split them.
-- Keep the first column (item, category) short — Lectern widens it when it wraps onto more lines than the others, but a short label reads best. Put explanations in the columns to the right.
+- **The writer shapes the table.** Lectern fits the column widths (each column first gets room for its longest word, and the rest goes to the columns with long text). Still, with too many columns or too much text in one cell, cells grow tall, and as a last resort the table scrolls sideways and can no longer be read at a glance:
+  - **About six columns at most.** If more than seven columns hold text, split the table (by topic or period), swap rows and columns, or move the less important columns into a list below the table. Columns holding only numbers are narrow, so more of them are fine (about ten).
+  - **One or two lines per cell (about 60 characters).** Move explanations longer than two or three sentences out of the table — into a list or paragraph below it — and keep only the gist in the table. Have at most one long-text column, at the far right.
+  - **Keep the cells in a row about the same length.** One very long cell makes the whole row tall.
+  - Keep the first column (item, category) a short label.
+- **Use alignment marks only when needed.** Without marks (`:---`, `:---:`, `---:`) Lectern aligns the cells — number columns to the right, and if the reader picks 'Report style' in the settings, the header row and short columns to the center. A marked column overrides the reader's choice, so mark only columns that must look that way (for example, centering a column of ○ and × only).
 - **Captions**: a line `Table 1. Title` (or a whole-bold line) directly above a table becomes its name in the contents and in Elements. For pictures put `Figure 1. Title` directly below; for diagrams and charts, directly above. `<Table 3>`, `[Figure 2]` and `Table 3-1.` work too (and the Korean 표·그림 forms).
 
 ### To-dos, sources and document info
@@ -201,7 +206,7 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 
 ### Data (CSV and text)
 
-- Keep tabular data as CSV — clicked in Lectern it shows as a table (filter, sort and stats per column), and charts can read it with `data.url`. **Make the first row the header** (column names), put only values in cells and units in the header (`price (USD/t)`). Save as UTF-8 (Excel's CP949 is readable too, but only UTF-8 can be edited).
+- Keep tabular data as CSV — clicked in Lectern it shows as a table (filter, sort and stats per column), and charts can read it with `data.url`. **Make the first row the header** (column names), put only values in cells and units in the header (`price (USD/t)`). Save as UTF-8 (Excel's CP949 can be read and edited too, but UTF-8 is better for sharing with other programs).
 - To point at data from a document, use a link (`[monthly prices](../data/월별-가격.csv)`) or a path such as `data/월별-가격.csv:5` — clicking goes to that row of the table.
 
 ## Work card — WORK.md
@@ -293,7 +298,7 @@ This task in one line.
 - Writing before formatting: decide the reader and the purpose first, write to the kind of document (narrative or bullet-point), and reread as the reader when done. No file paths or code formatting in the body; keep sources for facts you bring in.
 - Detailed formatting is in the Lectern writing guide `<full path of this guide>` — read the section when writing tables, charts, boxes, slides or work cards.
 - Write Markdown. One `# Title` first, then a one- or two-sentence summary paragraph. Don't skip heading levels (## → ###).
-- Only numbers in table cells, units in the header. Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer with `[Table 1](#table-1)`.
+- Only values in table cells, units in the header. About six columns and one or two lines per cell (long explanations go outside the table); alignment marks (`:---:`) only when needed. Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer with `[Table 1](#table-1)`.
 - Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
 - Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. HTML reports run no scripts.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.

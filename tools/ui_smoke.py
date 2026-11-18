@@ -2933,14 +2933,14 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-menu:not([hidden])')
             row_hint = page.locator('#lec-menu .menu-row', has_text='이 줄 복사').locator('button').first.get_attribute('title')
             page.keyboard.press('Escape')
-            page.click('.csv-stats-btn')
+            page.click('.csv-stats-toggle input')
             stats_off = not csv_state()['statsShown'] and page.evaluate("fetch('/api/config').then(r => r.json()).then(c => c.csv_stats)") is False
-            page.click('.csv-stats-btn')
+            page.click('.csv-stats-toggle input')
             page.click('.csv-headrow input')   # 첫 줄은 머리행 끄기 → A·B·C·D, 13행
             c3 = csv_state()
             page.click('.csv-headrow input')
             check(row_hint == '2025-10,구리,"10,240",' and stats_off and csv_state()['statsShown'] and c3['head'][:2] == ['A', 'B'] and c3['count'] == '13행',
-                  f"표 행의 우클릭 '이 줄 복사'는 원문 줄, '통계' 버튼(설정에 저장), '첫 줄은 머리행' 끄면 A·B… ({row_hint!r}, {stats_off}, {c3['head']}, {c3['count']})")
+                  f"표 행의 우클릭 '이 줄 복사'는 원문 줄, '통계' 체크 칸(설정에 저장), '첫 줄은 머리행' 끄면 A·B… ({row_hint!r}, {stats_off}, {c3['head']}, {c3['count']})")
             enc = {}
             for path in ('data/excel.csv', 'data/memo.txt', 'data/uni.txt'):
                 page.locator(f'#lec-others-list .row[data-path="{path}"]').click(modifiers=['Alt'])
@@ -3188,7 +3188,7 @@ def run(headed: bool) -> None:
               const lines = (c) => { const r = document.createRange(); r.selectNodeContents(c); return Math.round(r.getBoundingClientRect().height / lh); };
               // 첫 열 때문에 높은 행 (첫 칸이 3줄 이상이고 다른 칸들보다 많음), 머리행 첫 칸의 줄 수
               const tall = [...t.rows].slice(1).filter(r => lines(r.cells[0]) >= 3 && lines(r.cells[0]) > Math.max(...[...r.cells].slice(1).map(lines))).length;
-              return [t.classList.contains('lec-wide1'), tall, lines(t.rows[0].cells[0])]; })''')
+              return [t.classList.contains('lec-wide1') ? 'wide1' : t.classList.contains('lec-fit') ? 'fit' : '', tall, lines(t.rows[0].cells[0])]; })''')
             fit = tables_state()
             width = lambda: page.evaluate("[parseFloat(getComputedStyle(document.querySelector('#lec-view')).maxWidth), document.querySelector('#lec-width-reset').textContent]")
             w0 = width()
@@ -3204,10 +3204,10 @@ def run(headed: bool) -> None:
             w2 = width()
             page.click('#lec-width-reset')
             w3 = width()
-            check(fit[0][:2] == [True, 0] and fit[1] == [False, 0, 1]
+            check(fit[0][0] in ('wide1', 'fit') and fit[0][1] == 0 and fit[1][1:] == [0, 1]
                   and w0[1] == '폭 100%' and abs(w1[0] - w0[0] * 1.15) < 1 and w1[1] == '폭 115%' and stored == 1.15
                   and full[1] == '폭 가득' and full[2] and abs(w2[0] - w0[0] * 0.9) < 1 and w2[1] == '폭 90%' and w3 == w0,
-                  f"문서 폭: 넓게(115%·설정에 저장)·'가득'은 칸 폭 전체·좁게·누르면 100%, 첫 열 때문에 높은 행이 있는 표만 첫 열을 넓혀 없앰, 머리행 '이름'은 끊지 않음 ({fit}, {w0} → {w1} → {full[1:]} → {w2})")
+                  f"문서 폭: 넓게(115%·설정에 저장)·'가득'은 칸 폭 전체·좁게·누르면 100%, 첫 열 때문에 높은 행이 있는 표는 첫 열 넓히기(D68)나 모든 열 맞추기(D173)로 없앰, 머리행 '이름'은 끊지 않음 ({fit}, {w0} → {w1} → {full[1:]} → {w2})")
 
             tab_el(1).locator('.tab-close').click()   # 시험 표 탭을 닫고 점검 프로젝트로
             n_tabs(1)

@@ -80,6 +80,7 @@ DEFAULTS: dict[str, Any] = {
     'terminal_follow_style': True,  # 터미널 색을 문서 스타일에 맞춤 (끄면 늘 어둡게 — 설정 창)
     'terminal_font_size': 14,  # 터미널 글자 크기(px) 10~24 (D130 — 설정 창. 0.72 까지는 13 고정)
     'csv_stats': True,       # CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60)
+    'table_align': 'auto',   # md 문서 표의 칸 맞춤: auto(글 왼쪽·숫자 오른쪽·위) | report(보고서식 — 머리행·짧은 열 가운데, 세로 가운데) (D174 — 설정 창)
     'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
     'work_home': None,       # 업무 관리의 공통 폴더 (D124 — 공통 WORK.md 와 정리 문서. 설정 창·업무 현황에서 고른다, 서버가 기록)
     'work_folders': [],      # WORK.md 가 있는 폴더들 (D124 — 열거나 '폴더 더하기'로 더한다. 경로만, 서버가 기록)
@@ -108,7 +109,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
                          'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)

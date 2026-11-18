@@ -603,7 +603,7 @@ export function moveColumn(lines, n, col, dir) {
 export function alignColumn(lines, n, col, align) {
   const table = tableAt(lines, n);
   if (!table) return { error: 'not-table' };
-  const mark = { left: ' :--- ', center: ' :---: ', right: ' ---: ' }[align];
+  const mark = { left: ' :--- ', center: ' :---: ', right: ' ---: ', auto: ' --- ' }[align];   // auto: 표시를 지운다 (D174 — Lectern 이 맞춘다)
   return { lines: eachRow(lines, table, (cells, sep) => (sep ? cells.map((c, i) => (i === col ? mark : c)) : cells)), line: n, cell: col };
 }
 

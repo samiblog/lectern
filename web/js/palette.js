@@ -25,6 +25,8 @@ let selected = 0;
 let asNewTab = false;   // 문서 탭 줄의 + 로 열었다 — 고르면 새 문서 탭에서 (D64)
 /** @type {() => {group: string, name: string, keys: string, run: () => void}[]} */
 let commandsOf = () => [];   // 명령 찾기의 목록 (commands.js)
+/** @type {HTMLElement | null} */
+let returnTo = null;   // 열기 전 초점 — 닫을 때 고른 일이 초점을 옮기지 않았으면 그리로 (closePalette)
 
 /** 명령 찾기의 목록을 준다 (main.js 가 commands.js 의 것을) */
 export function setCommands(fn) {
@@ -119,6 +121,7 @@ function renderList(none = '') {
 function choose(i, e) {
   const f = items[i];
   if (!f) return;
+  if (!f.cmd) returnTo = null;   // 문서를 열면(다른 칸·탭일 수 있다) 앞 초점으로 돌리지 않는다 — 본문이 받는다
   closePalette();
   if (f.cmd) f.run();
   else if (f.goto) emit('go-line', { line: f.goto });
@@ -129,6 +132,8 @@ function choose(i, e) {
 /** newTab: 폴더 개요에서도 새 문서 탭에서 (문서 탭 줄의 +·Ctrl+T — D64). query: 처음 글 (Ctrl+G 의 ':', Ctrl+Shift+P 의 '>') */
 export function openPalette({ newTab = false, query = '' } = {}) {
   asNewTab = newTab;
+  const at = /** @type {HTMLElement | null} */ (document.activeElement);
+  if (!box().contains(at)) returnTo = at && at !== document.body ? at : null;
   box().hidden = false;
   input().placeholder = newTab ? t('새 탭에 열 문서·코드 — 이름, 제목, 경로') : t('문서·코드 이름, 제목, 경로 — > 로 시작하면 명령, : 는 줄 번호');
   input().value = query;
@@ -145,6 +150,13 @@ export function closePalette() {
   // 감춘 칸에 초점이 남으면 다음 키를 그 칸이 받는다 — 명령 찾기에서 고른 바로 뒤의 Esc 가 PDF·인쇄 창을 닫지 못했고, Enter 를 거듭 누르면 같은 명령을
   // 또 했다 (실제 창 시험에서 찾음). 초점을 빼면 본문(body)이 받아 앱 키가 듣는다 — 고른 일이 초점을 옮기면 그리로
   if (box().contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
+  // 열기 전에 초점이 있던 곳(편집기·문서·목록)으로 돌려준다 — 고른 일이 초점을 옮기지 않았거나 그만뒀을 때만 (Esc, '열린 문서 모두 닫기'를 묻고
+  // 그만둠 등 — 전에는 본문에 남아 이어 친 키가 편집기에 가지 않았다, 0.93·0.94 함께 쓰는 시나리오에서 찾음). 다음 차례에 — 고른 일이 먼저 한다
+  const back = returnTo;
+  returnTo = null;
+  setTimeout(() => {
+    if (back?.isConnected && document.activeElement === document.body && back.checkVisibility() && box().hidden) back.focus({ preventScroll: true });
+  }, 0);
   return true;
 }
 

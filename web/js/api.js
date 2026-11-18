@@ -88,7 +88,7 @@ export async function saveConfig(patch) {
 // 사이드바·목차·터미널의 폭과 보임, 검색·최근 변경의 단추, 사이드바의 펼친 묶음처럼 창마다의 화면 상태는 따르지 않는다.
 const FOLLOW = ['language', 'theme', 'slide_theme', 'theme_groups', 'pptx_style', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'side_sort',
   'toc_hidden_parts', 'math', 'md_breaks', 'external_images', 'vi_keys', 'editor_keys', 'restore_last', 'expand_first_level', 'terminal_position',
-  'terminal_follow_style', 'terminal_font_size', 'csv_stats', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers',
+  'terminal_follow_style', 'terminal_font_size', 'csv_stats', 'table_align', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers',
   'ai_tool', 'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style', 'recent_md_styles', 'recent_templates', 'recent_puts', 'recent_chars'];
 let served = null;   // 이 창이 마지막으로 받은 서버의 설정
 

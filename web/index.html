@@ -508,6 +508,11 @@
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
+    <div class="opt-choice" role="radiogroup" aria-labelledby="lec-talign-title"><!-- 표 칸 맞춤 (D174 — doc.js) -->
+      <span class="opt-head"><b id="lec-talign-title">표 칸 맞춤</b><small>md 문서의 표에서 칸의 글을 맞추는 방식입니다. 원문에 맞춤 표시(:---:)가 있는 열은 그 표시를 따릅니다 — 표를 우클릭해 열마다 바꿀 수 있습니다</small></span>
+      <label><input type="radio" name="table_align" value="auto"><span>기본<small>글은 왼쪽, 숫자는 오른쪽, 칸의 위에 맞춤</small></span></label>
+      <label><input type="radio" name="table_align" value="report"><span>보고서식<small>머리행과 짧은 열은 가운데, 숫자는 오른쪽, 긴 글은 왼쪽, 칸의 세로 가운데 — 한글 보고서의 표처럼</small></span></label>
+    </div>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="md_breaks"><span><b>문단 안의 줄바꿈 보이기</b><small>원문에서 Enter 로 바꾼 줄이 화면에서도 바뀝니다 (Word 의 Shift+Enter 처럼). 끄면 표준 Markdown 처럼 이어서 보입니다.</small></span></label>
     <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>

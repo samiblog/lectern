@@ -22,7 +22,9 @@ def test_read_source_gives_lf_text_and_remembers_newline_and_bom(tmp_path):
 
 
 @pytest.mark.parametrize('name, data, status', [
-    ('a.csv', b'a,b\n', 400),             # 문서·코드가 아님
+    ('a.log', b'a,b\n', 400),             # 문서·코드·csv·tsv·txt 가 아님 (log 는 덧붙이는 파일이라 보기만 — D171)
+    ('a.xlsx', b'PK\x03\x04', 400),        # 엑셀은 값만 읽은 표라 보기만 (D77)
+    ('a.csv', b'a,\xff\xff\n', 400),     # UTF-8·UTF-16·CP949 어느 것으로도 읽히지 않음
     ('a.md', b'\xb0\xa1\xb3\xaa', 400),   # cp949 — UTF-8 이 아님
     ('a.py', b'x\x00y', 400),             # 글 파일이 아님
 ])
@@ -158,9 +160,9 @@ def test_save_refuses_non_utf8_target_and_wrong_kind(tmp_path):
     with pytest.raises(EditError):
         save_source(p, 'x', None, force=True)
     assert p.read_bytes() == b'\xb0\xa1'
-    write(tmp_path / 'a.txt', 'x')
+    write(tmp_path / 'a.log', 'x')
     with pytest.raises(EditError):
-        save_source(tmp_path / 'a.txt', 'y', None, force=True)
+        save_source(tmp_path / 'a.log', 'y', None, force=True)
 
 
 def test_save_keeps_file_attributes_and_refuses_read_only_and_missing(tmp_path):
@@ -324,3 +326,54 @@ def test_prg_keeps_its_windows_encoding(tmp_path):
     md.write_bytes(b'plain\n')
     save_source(md, '구리\n', read_source(md)['hash'])
     assert md.read_bytes() == '구리\n'.encode()
+
+
+@pytest.mark.parametrize('name, data, enc, label', [
+    ('a.csv', '이름,값\r\n구리,9400\r\n'.encode('cp949'), 'cp949', 'CP949'),          # 한국어 엑셀이 저장한 CSV
+    ('a.txt', b'\xff\xfe' + '이름\t값\r\n구리\t9400\r\n'.encode('utf-16-le'), 'utf-16-le', 'UTF-16'),   # 엑셀의 '유니코드 텍스트'
+    ('a.tsv', b'\xfe\xff' + '이름\t값\n'.encode('utf-16-be'), 'utf-16-be', 'UTF-16'),
+    ('a.csv', b'\xef\xbb\xbf' + '이름,값\n'.encode('utf-8'), 'utf-8', 'UTF-8'),       # BOM 이 든 UTF-8 (엑셀의 'CSV UTF-8')
+    ('a.csv', b'name,value\n', 'utf-8', 'UTF-8'),
+])
+def test_data_files_keep_their_encoding(tmp_path, name, data, enc, label):
+    # D171: 자료 파일(csv·tsv·txt)은 보기와 같은 차례로 인코딩을 알아보고 그 인코딩·BOM·줄바꿈 그대로 저장한다
+    p = tmp_path / name
+    p.write_bytes(data)
+    src = read_source(p)
+    assert src['encoding'] == label and '\r' not in src['text']
+    newline = '\r\n' if b'\r\x00\n' in data or b'\x00\r\x00\n' in data or b'\r\n' in data else '\n'
+    assert src['newline'] == newline
+    body = src['text'] + '니켈 16500\n'
+    save_source(p, body, src['hash'])
+    out = p.read_bytes()
+    want = body.replace('\n', newline)
+    if enc == 'utf-16-le':
+        assert out == b'\xff\xfe' + want.encode('utf-16-le')
+    elif enc == 'utf-16-be':
+        assert out == b'\xfe\xff' + want.encode('utf-16-be')
+    elif enc == 'cp949':
+        assert out == want.encode('cp949')
+    else:
+        assert out == (b'\xef\xbb\xbf' if data.startswith(b'\xef\xbb\xbf') else b'') + want.encode('utf-8')
+    assert read_source(p)['text'] == body   # 다시 읽어도 같은 글
+
+
+def test_cp949_file_refuses_characters_it_cannot_hold(tmp_path):
+    # CP949 에 없는 글자(이모지·일부 기호)는 ? 로 바꾸지 않고 저장하지 않는다 — 그 글자를 알린다
+    p = tmp_path / 'a.csv'
+    p.write_bytes('이름,값\n'.encode('cp949'))
+    src = read_source(p)
+    with pytest.raises(EditError) as err:
+        save_source(p, src['text'] + '구리 😀,9400\n', src['hash'])
+    assert err.value.status == 400 and '😀' in err.value.message
+    assert p.read_bytes() == '이름,값\n'.encode('cp949') and not _leftovers(tmp_path)
+    save_source(p, src['text'] + '구리 ㈜ ①,9400\n', src['hash'])   # 확장 완성형·특수 문자는 CP949 에 있다
+    assert p.read_bytes().decode('cp949').endswith('구리 ㈜ ①,9400\n')
+
+
+def test_code_and_documents_stay_utf8_only(tmp_path):
+    # 문서·코드는 지금처럼 UTF-8 만 (D54) — 자료 파일만 다른 인코딩을 고친다
+    for name in ('a.md', 'a.py'):
+        (tmp_path / name).write_bytes('가'.encode('cp949'))
+        with pytest.raises(EditError):
+            read_source(tmp_path / name)

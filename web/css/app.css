@@ -809,6 +809,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .ed-title { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 650; }
 .ed-state { flex: 1; min-width: 0; color: var(--ui-muted); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .lec-editor.dirty .ed-state { color: var(--ui-accent); font-weight: 600; }
+/* 자료 파일 편집 (D171): 원래 인코딩 표시, 탭 글자를 → 로 보인다 (TSV 의 열 — 빈칸과 헷갈리지 않게) */
+.ed-enc { flex: none; padding: 0 5px; border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-muted); font-size: 11px; }
+.lec-editor.show-tabs .cm-tab { position: relative; }
+.lec-editor.show-tabs .cm-tab::before { content: '→'; position: absolute; left: 1px; color: var(--ui-faint); }
 /* 넣은 조각 (D63 — basket.js): 저장할 때까지 옅은 바탕 */
 .lec-editor .ed-inserted { background: color-mix(in srgb, var(--ui-fresh, #ffd34d) 24%, transparent); }
 .ed-head .primary { height: 26px; padding: 0 14px; }

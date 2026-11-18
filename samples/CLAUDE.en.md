@@ -19,7 +19,7 @@ People read and edit in place this project's documents with **Lectern** (an Inte
 ## Writing
 
 - Do not skip heading levels (`##` → `###`). The contents panel, section folding and section focus follow them.
-- Put only numbers in table cells and units in the header (`Price (USD/t)`). Number columns are right-aligned automatically.
+- Put only values in table cells and units in the header (`Price (USD/t)`). Number columns are right-aligned automatically. About six columns and one or two lines per cell — long explanations go in a list or paragraph outside the table.
 - Use callouts for emphasis: `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]`, `> [!CAUTION]`.
 - Put a side topic read apart from the main text in a box: between a `<!-- box -->` line and a `<!-- /box -->` line, with `**Box 1. Title**` as the first line. No headings (`#`) inside.
 - When the person says 'summarize the conversation into a box right after `@path line 12`': insert exactly one box after that line. Do not transcribe the conversation — keep the conclusions, reasons and open questions, and change no other line.

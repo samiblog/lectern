@@ -94,8 +94,7 @@
 .csv-view .csv-calc-x { margin-left: 6px; padding: 0 3px; border: 0; background: none; color: var(--md-muted); font: inherit; cursor: pointer; }
 .csv-view .csv-calc-x:hover { color: var(--md-link); }
 .csv-view .csv-bar .text-btn { height: 26px; padding: 0 10px; font-family: inherit; font-size: inherit; }
-.csv-view .csv-stats-btn[aria-pressed="true"] { border-color: var(--md-link); color: var(--md-link); }
-.csv-view .csv-headrow { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
+.csv-view :is(.csv-headrow, .csv-stats-toggle) { display: inline-flex; align-items: center; gap: 4px; cursor: pointer; }
 .csv-view .csv-table { border-collapse: separate; border-spacing: 0; margin: 0 0 28px; font-size: calc(13px * var(--md-scale, 1)); }
 .csv-view .csv-table thead { position: sticky; top: var(--csv-top, 0px); z-index: 3; }
 .csv-view .csv-table thead th { position: static; }
@@ -296,13 +295,28 @@
 }
 .md-body tbody tr:nth-child(even) { background: var(--md-stripe); }
 .md-body tbody tr:last-child > * { border-bottom: 0; }
-.md-body th.num, .md-body td.num { text-align: right; white-space: nowrap; }
+.md-body th.num, .md-body td.num { text-align: right; }
+.md-body td.num { white-space: nowrap; }   /* 숫자는 끊지 않는다 — 머리 칸('첫째 달 (USD/t)')은 띄어쓰기에서 감긴다 (D173 — 감기지 않는 머리 칸 넷에 표가 넘쳤다) */
+/* 보고서식 칸 맞춤 (D174 — 설정 '표 칸 맞춤', doc.js): 머리행과 짧은 열(short)은 가운데, 칸은 세로 가운데. 숫자 열은 오른쪽 그대로.
+   원문의 맞춤 표시(:---:)는 칸의 style 이라 이것보다 앞선다. 인쇄·PDF·html 로 저장에도 그대로 간다 (표의 class) */
+.md-body table.lec-report :is(th, td) { vertical-align: middle; }
+.md-body table.lec-report th, .md-body table.lec-report td.short { text-align: center; }
 /* 머리행·첫 열은 낱말 가운데서 끊지 않는다 — 본문의 overflow-wrap: anywhere 는 칸의 최소 폭을 한 글자로 만들어 좁은 첫 열의
    '이름'이 '이/름'으로 끊겼다. 띄어쓰기에서는 그대로 감긴다. 그 때문에 표가 옆으로 넘치면 tablefit.js 가 이 class 를 뗀다 (D68) */
 .md-body table.lec-words th, .md-body table.lec-words td:first-child { overflow-wrap: break-word; }
 /* 첫 열이 여러 줄로 감겨 행이 높으면 넓힌다 (tablefit.js, D68 — 폭은 화면에서 재어 정한다) */
 .md-body table.lec-wide1 > * > tr > :first-child { min-width: var(--lec-col1); }
 .md-body table.lec-wide1 .lec-pin { min-width: var(--lec-pin); }   /* 넓힐 폭을 가장 넓은 열에서만 가져오게 나머지 열은 그 폭 그대로 */
+/* 모든 열 맞추기 (tablefit.js, D173): 열 폭은 화면에서 재어 정한다 — 첫 행 칸의 --lec-w, 표 폭 --lec-tw. 화면에서만 (인쇄·PDF 는 쪽 폭에 브라우저대로).
+   열이 너무 많으면 표가 상자보다 넓어 옆으로 스크롤한다. 칸의 글이 열보다 긴 낱말이면 그 낱말만 끊는다 */
+@media screen {
+  .md-body table.lec-fit { table-layout: fixed; width: var(--lec-tw); }
+  .md-body table.lec-fit > * > tr:first-child > * { width: var(--lec-w); }
+  .md-body table.lec-fit :is(th, td) { overflow-wrap: break-word; }
+}
+/* 재는 동안만 (tablefit.js): 낱말을 끊지 않는 가장 좁은 폭 (열마다 가장 긴 낱말) */
+.md-body table.lec-measure-min { width: min-content; table-layout: auto; }
+.md-body table.lec-measure-min :is(th, td) { overflow-wrap: normal; word-break: keep-all; }
 /* 표의 [복사]·차트의 [표]·[복사] (D136 — tablecopy.js·chartdata.js). 마우스를 올리면 보인다 — 인쇄에는 없다 */
 .md-body .table-wrap { position: relative; }
 .md-body .table-copy, .md-body .lec-chart-tools button {

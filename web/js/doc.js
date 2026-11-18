@@ -354,23 +354,31 @@ function decorateAlerts(root) {
   }
 }
 
-function markNumericColumns(table) {
+/** 짧은 열: 칸의 글이 모두 이만큼(글자) 안 — 보고서식 맞춤(D174)이면 가운데 */
+const SHORT_CELL = 10;
+
+/** 열마다 숫자 열(num — 오른쪽)과 짧은 열(short — 보고서식이면 가운데, D174)을 단다. 맞춤 표시(:---:)가 있는 칸은 그대로 */
+function markColumns(table) {
   const rows = $$(':scope > tbody > tr', table);
   if (!rows.length) return;
   const cols = Math.max(...rows.map((r) => r.cells.length));
   for (let c = 0; c < cols; c++) {
     let filled = 0;
     let numeric = 0;
+    let long = false;
     for (const r of rows) {
       const text = r.cells[c]?.textContent.trim();
       if (!text) continue;
       filled += 1;
       if (NUM_CELL.test(text)) numeric += 1;
+      if ([...text].length > SHORT_CELL) long = true;
     }
-    if (!filled || numeric / filled < 0.7) continue;
-    for (const r of $$(':scope > thead > tr, :scope > tbody > tr', table)) {
+    if (!filled) continue;
+    const kind = numeric / filled >= 0.7 ? 'num' : long ? '' : 'short';
+    if (!kind) continue;
+    for (const r of $$(kind === 'num' ? ':scope > thead > tr, :scope > tbody > tr' : ':scope > tbody > tr', table)) {
       const cell = r.cells[c];
-      if (cell && !cell.style.textAlign) cell.classList.add('num');
+      if (cell && !cell.style.textAlign) cell.classList.add(kind);
     }
   }
 }
@@ -384,7 +392,8 @@ function decorateTables(root, copy = false) {
     wrap.className = 'table-wrap';
     table.replaceWith(wrap);
     wrap.append(table);
-    markNumericColumns(table);
+    markColumns(table);
+    if (!deck && S.config?.table_align === 'report') table.classList.add('lec-report');   // 보고서식 맞춤 (D174 — 설정 '표 칸 맞춤')
     if (copy && !deck) addTableCopy(wrap);
   }
 }

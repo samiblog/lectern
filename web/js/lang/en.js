@@ -267,7 +267,6 @@ export default {
 "차트로 볼 숫자가 없습니다": "No numbers to chart",
 "차트": ["Chart", "Charts"],
 "축은 둘까지입니다 — 다른 단위의 계열을 먼저 끄세요": "Two axes at most — turn off a series in another unit first",
-"자료 파일은 볼 수만 있습니다 — 고치려면 기본 앱으로 여세요": "Data files are view-only — open them in their default app to change them",
 "합계 행 {n}개는 뺐습니다": ["{n} total row was left out", "{n} total rows were left out"],
 "계열이 많아 {n}개는 싣지 않았습니다": ["Too many series — {n} was left out", "Too many series — {n} were left out"],
 "전기 대비 %": "% vs previous period",
@@ -2129,5 +2128,16 @@ export default {
 "폴더 목록 펼치기 (문서·코드·자료를 폴더 구조 그대로 한 트리에)": "Open the Folders list (documents, code and other files in one tree, as the folders are)",
 "폴더 열기 — 새 프로젝트 탭으로": "Open a folder — in a new project tab",
 "폴더 펼치기 / 접기 — 펼친 폴더에서 → 는 첫 항목, 접힌 것에서 ← 는 위 폴더": "Expand / collapse a folder — → on an open folder goes to its first item, ← on a closed one goes to the parent folder",
-"프로젝트 탭 닫기": "Close project tab"
+"프로젝트 탭 닫기": "Close project tab",
+"로그 파일은 보기만 합니다 — 프로그램이 덧붙이는 파일이라 고치는 사이에 바뀌기 쉽습니다. 고치려면 외부 편집기로 여세요": "Log files are view only — programs keep appending to them, so they change while you edit. To edit one, open it in an external editor",
+"모든 열의 통계 줄(개수·합계·평균 등) — 끄면 모든 CSV·엑셀 표에서 감춥니다": "The stats row for every column (count, sum, mean and more) — turn it off to hide it in every CSV and Excel table",
+"이 인코딩 그대로 저장합니다 — 엑셀에서 연 그대로입니다. CP949 에 없는 글자(이모지 등)는 저장하지 않고 알립니다": "Saved in this encoding — just as Excel opened it. Characters CP949 can't hold (such as emoji) are not saved; Lectern names them",
+"자료 파일은 편집 모드(Ctrl+E)에서 고칩니다 — F2·Enter 도 그 줄에서 편집 모드를 엽니다": "Data files are edited in edit mode (Ctrl+E) — F2 and Enter also open edit mode at that line",
+"이 열 맞춤 표시 지우기": "Clear this column's alignment mark",
+"Lectern 이 맞춥니다 — 숫자는 오른쪽, 보고서식이면 짧은 열은 가운데 (설정 창의 표 칸 맞춤)": "Lectern aligns it — numbers to the right, and short columns centered in Report style (Table cell alignment in the settings)",
+"표 칸 맞춤": "Table cell alignment",
+"md 문서의 표에서 칸의 글을 맞추는 방식입니다. 원문에 맞춤 표시(:---:)가 있는 열은 그 표시를 따릅니다 — 표를 우클릭해 열마다 바꿀 수 있습니다": "How text is aligned in the cells of md document tables. Columns with an alignment mark (:---:) in the source follow the mark — right-click a table to change it per column",
+"글은 왼쪽, 숫자는 오른쪽, 칸의 위에 맞춤": "Text left, numbers right, top of the cell",
+"보고서식": "Report style",
+"머리행과 짧은 열은 가운데, 숫자는 오른쪽, 긴 글은 왼쪽, 칸의 세로 가운데 — 한글 보고서의 표처럼": "Header row and short columns centered, numbers right, long text left, vertically centered — like tables in Korean reports"
 };

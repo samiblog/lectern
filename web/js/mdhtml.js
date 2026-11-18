@@ -24,10 +24,14 @@ const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues'
   'data-chart', 'data-act', 'data-path', 'data-tex', 'data-notex', 'data-doc-path', 'contenteditable', 'spellcheck', 'tabindex']);
 /** 지울 class — 접기·바뀐 곳·고른 곳 같은 화면의 상태 (접은 절·박스글은 이것을 떼면 펴진다) */
 const MARKS = ['lec-fold', 'lec-folded', 'lec-fold-hidden', 'lec-textbox-folded', 'lec-changed', 'lec-picked', 'lec-target',
-  'lec-cell-over', 'lec-cell-bad', 'lec-lit', 'lec-armed'];
+  'lec-cell-over', 'lec-cell-bad', 'lec-lit', 'lec-armed',
+  'lec-fit'];   // 표의 열 폭(D173)은 앱 칸의 폭으로 잰 것 — 받은 쪽에서는 브라우저대로
+
+/** 지울 CSS 변수 — 모든 열 맞추기(D173)의 열 폭·표 폭 (lec-fit 과 같이 앱 칸의 폭으로 잰 것) */
+const DROP_VARS = ['--lec-w', '--lec-tw'];
 
 /** 화면이 그린 문서를 담을 때 걸러 낼 것 — 지면 틀(layout.js)도 같은 것으로 */
-export const MD_PACK = { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS };
+export const MD_PACK = { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS, dropVars: DROP_VARS };
 
 /** 이 파일만의 CSS: 바탕과 가운데 단 — 화면에서는 앱의 문서 칸이 하던 일 */
 const FRAME_CSS = `
@@ -53,7 +57,7 @@ export async function buildMdHtml(pane, path, { printCss }) {
   const view = pane.view;
   const images = new Map();
   const found = { external: 0, missing: 0, media: 0 };
-  const article = await packClone(view, { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS, keepAnchors: true, images, found });
+  const article = await packClone(view, { ...MD_PACK, keepAnchors: true, images, found });
   const external = S.config?.external_images !== false;
   if (!external) {
     for (const img of article.querySelectorAll('img[src^="http"]')) img.removeAttribute('src');

@@ -37,6 +37,9 @@ export function isCode(name) {
 
 // 코드 화면에서 보는 자료 (D60): csv·tsv 는 표, txt·log 는 글자 그대로. '자료' 목록에 남고, 누르면 코드처럼 Lectern 에서 본다
 export const DATA_VIEW_EXT = new Set(['csv', 'tsv', 'txt', 'log']);
+// 편집 모드로 고치는 자료 파일 (D171 — 원래 인코딩 그대로 저장한다). log 는 덧붙이는 파일이라 보기만. 서버는 editing.DATA_EDIT_EXT
+export const DATA_EDIT_EXT = new Set(['csv', 'tsv', 'txt']);
+export const isDataEditable = (name) => name.lastIndexOf('.') > 0 && DATA_EDIT_EXT.has(name.slice(name.lastIndexOf('.') + 1).toLowerCase());
 
 // Windows 인코딩(CP949)으로 쓰는 코드 (D85): EViews 프로그램 — 코드 화면이 자료 파일처럼 UTF-8 이 아니어도 읽는다. 서버는 docinfo.WINDOWS_TEXT_EXT
 export const WINDOWS_TEXT_EXT = new Set(['prg']);

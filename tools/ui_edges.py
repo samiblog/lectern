@@ -19,25 +19,27 @@ from pathlib import Path
 import close_windows
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick', 'focus_tabs', 'enter_chars', 'tab_trap', 'tab_fuzz', 'sidekeys', 'scen_093']
+SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick', 'focus_tabs', 'enter_chars', 'tab_trap', 'tab_fuzz', 'sidekeys', 'scen_093', 'dataedit', 'scen_094', 'scen_093_094', 'tablewidth', 'tablealign', 'scen_tables']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(aisetup|stylepick)\.js|lectern/aistatus\.py|web/help/(writing-styles\.json|new-style.*|business-report.*|academic-writing.*|plain-explainer.*)', ['aiscope', 'aitool', 'stylepick']),
     (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile', 'aiscope', 'focus_tabs']),
     (r'web/js/(charpick|datepick)\.js|web/data/chars\.json', ['enter_chars']),
-    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['tab_trap', 'tab_fuzz', 'enter_chars', 'docedit', 'slideedit', 'structure', 'lines', 'refresh', 'sample_lines', 'slides', 'textbox', 'pickkeys', 'termstack', 'inlinefmt', 'wordpick']),
-    (r'web/js/(line\w+|spotlight|vikeys|editor|docops|docmenu|wordpick|main|others|tree)\.js', ['keys_tidy', 'scen_levels', 'change_kinds', 'scen_088', 'view_keys']),
+    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['tab_trap', 'tab_fuzz', 'enter_chars', 'docedit', 'slideedit', 'structure', 'lines', 'refresh', 'sample_lines', 'slides', 'textbox', 'pickkeys', 'termstack', 'inlinefmt', 'wordpick', 'tablealign']),
+    (r'web/js/(line\w+|spotlight|vikeys|editor|docops|docmenu|wordpick|main|others|tree)\.js', ['keys_tidy', 'scen_levels', 'change_kinds', 'scen_088', 'view_keys', 'tablealign']),
     (r'web/js/(inlinefmt|wordpick)\.js', ['inlinefmt', 'wordpick', 'docedit', 'pickkeys', 'reading', 'sidekinds']),
-    (r'web/js/(slide\w+|present|theme|csssafe)\.js|web/themes/.*', ['slides', 'slidecheck', 'deckguard', 'sample_decks', 'reading', 'textbox', 'impress', 'impress_scenarios', 'printpdf']),
+    (r'web/js/(slide\w+|present|theme|csssafe)\.js|web/themes/.*', ['slides', 'slidecheck', 'deckguard', 'sample_decks', 'reading', 'textbox', 'impress', 'impress_scenarios', 'printpdf', 'tablewidth', 'tablealign', 'scen_tables']),
     (r'web/js/impress\w+\.js|lectern/htmlexport\.py|web/vendor/impress/.*', ['impress', 'impress_scenarios']),
     (r'samples/slides/.*|web/help/slides.*', ['sample_decks']),
     (r'web/js/project\.js|lectern/(scanner|docinfo|titlecache|state)\.py', ['fastopen', 'refresh', 'reading', 'sidebar', 'focus_tabs']),
     (r'web/js/(sideorder|tree|others)\.js|lectern/marks\.py', ['sidebar', 'sidekinds']),
-    (r'web/js/(tree|others|palette|commands|diffmark|fold|main|help)\.js|lectern/config\.py|web/index\.html', ['sidekeys', 'scen_093']),
+    (r'web/js/(tree|others|palette|commands|diffmark|fold|main|help)\.js|lectern/config\.py|web/index\.html', ['sidekeys', 'scen_093', 'scen_093_094']),
     (r'web/js/(work|workdata|workalert|workview|datepick)\.js|lectern/work\.py|web/templates/work.*', ['work', 'work_scenarios', 'work_more', 'work_tree', 'work_tree_more', 'work_gantt', 'scen_gantt', 'scen_day']),
-    (r'web/js/(refs|vikeys|editor|settings|help)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'textbox', 'docedit', 'reading', 'termfont', 'printpdf', 'aitool', 'aiscope']),
-    (r'web/js/(markdown|doc|fold)\.js', ['textbox', 'reading', 'docedit', 'hostile']),
-    (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile', 'chartdata']),
+    (r'web/js/(refs|vikeys|editor|settings|help)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'textbox', 'docedit', 'reading', 'termfont', 'printpdf', 'aitool', 'aiscope', 'tablealign']),
+    (r'web/js/(markdown|doc|fold)\.js', ['textbox', 'reading', 'docedit', 'hostile', 'tablewidth', 'tablealign', 'scen_tables']),
+    (r'web/js/(tablefit|mdhtml|doc|tablecopy)\.js|web/themes/base\.css', ['tablewidth', 'tablealign', 'scen_tables', 'reading', 'chartdata', 'exporthtml', 'printpdf']),
+    (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile', 'chartdata', 'dataedit', 'scen_094']),
+    (r'web/js/(editor|icons|lineedit|spotlight)\.js|lectern/editing\.py', ['dataedit', 'scen_094', 'docedit', 'data_wide']),
     (r'web/js/(chartdata|chartops|tablecopy)\.js', ['chartdata']),
     (r'web/js/(htmldoc|nav|find|toc)\.js', ['frames', 'reading', 'hostile', 'refresh', 'textbox', 'focus_tabs']),
     (r'web/js/solo\.js|lectern/(windows|native)\.py', ['solo', 'solo_cases']),

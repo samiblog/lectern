@@ -42,9 +42,15 @@ class EditError(Exception):
         self.message = message
 
 
+# 편집 모드로 고치는 자료 파일 (D171): 보기와 같은 차례로 인코딩을 알아보고 그 인코딩 그대로 저장한다 (엑셀이 저장한 CSV 는 대개 CP949).
+# log 는 프로그램이 덧붙이는 파일이라 보기만, 엑셀은 값만 읽은 표라 보기만 (D77). 화면은 icons.js 의 DATA_EDIT_EXT
+DATA_EDIT_EXT = frozenset({'.csv', '.tsv', '.txt'})
+UTF16_BOMS = {'utf-16-le': b'\xff\xfe', 'utf-16-be': b'\xfe\xff'}
+
+
 def can_edit(name: str) -> bool:
-    """편집 모드로 고칠 수 있는 종류 — 문서(md·html)와 코드"""
-    return bool(doc_kind(name)) or is_code(name)
+    """편집 모드로 고칠 수 있는 종류 — 문서(md·html)와 코드, 자료 파일 csv·tsv·txt (D171)"""
+    return bool(doc_kind(name)) or is_code(name) or Path(name).suffix.lower() in DATA_EDIT_EXT
 
 
 def _protect(path: Path) -> None:
@@ -82,21 +88,67 @@ def _check(path: Path) -> os.stat_result:
     if not present(path):
         raise EditError(404, t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다'))
     if not present_file(path) or not can_edit(path.name):
-        raise EditError(400, t('문서와 코드 파일만 편집할 수 있습니다'))
+        raise EditError(400, t('문서·코드와 csv·tsv·txt 파일만 편집할 수 있습니다'))
     st = steady(path.stat)
     if st.st_size > MAX_EDIT_BYTES:
         raise EditError(413, t('{n}MB 가 넘는 파일은 편집할 수 없습니다', n=MAX_EDIT_BYTES // (1024 * 1024)))
     return st
 
 
-def _decode(data: bytes) -> str:
+def _encoding(path: Path, data: bytes) -> str:
+    """편집할 글의 인코딩. 문서·코드는 UTF-8 만. 자료 파일(csv·tsv·txt — D171)은 보기(codeview.js 의 decode)와 같은 차례로
+    UTF-16(BOM) → UTF-8 → CP949 — 엑셀이 '유니코드 텍스트'로 저장하면 UTF-16, CSV 로 저장하면 대개 CP949 다"""
+    if path.suffix.lower() not in DATA_EDIT_EXT:
+        return 'utf-8'
+    for enc, mark in UTF16_BOMS.items():
+        if data.startswith(mark):
+            return enc
+    try:
+        (data[len(BOM):] if data.startswith(BOM) else data).decode('utf-8')
+        return 'utf-8'
+    except UnicodeDecodeError:
+        return 'cp949'
+
+
+def _decode(data: bytes, enc: str = 'utf-8') -> str:
+    if enc in UTF16_BOMS:
+        try:
+            text = data[2:].decode(enc)
+        except UnicodeDecodeError as exc:
+            raise EditError(400, t('글자가 깨진 UTF-16 파일이라 편집할 수 없습니다')) from exc
+        if '\x00' in text:
+            raise EditError(400, t('글 파일이 아니라서 편집할 수 없습니다'))
+        return text
     body = data[len(BOM):] if data.startswith(BOM) else data
     if b'\x00' in body:
         raise EditError(400, t('글 파일이 아니라서 편집할 수 없습니다'))
     try:
-        return body.decode('utf-8')
+        return body.decode(enc)
     except UnicodeDecodeError as exc:
+        if enc == 'cp949':
+            raise EditError(400, t('UTF-8·UTF-16·CP949 어느 것으로도 읽히지 않는 파일이라 편집할 수 없습니다')) from exc
         raise EditError(400, t('UTF-8 이 아닌 파일은 편집할 수 없습니다 (Lectern 은 UTF-8 글만 고칩니다)')) from exc
+
+
+def _encode(body: str, enc: str, current: bytes) -> bytes:
+    """고친 글을 그 파일의 인코딩으로. CP949 에 없는 글자는 저장하지 않고 그 글자를 알린다 (? 로 바꾸면 글이 조용히 망가진다)"""
+    if enc in UTF16_BOMS:
+        return UTF16_BOMS[enc] + body.encode(enc, errors='replace')
+    if enc == 'cp949':
+        try:
+            return body.encode('cp949')
+        except UnicodeEncodeError:
+            bad = []
+            for c in body:
+                if c not in bad:
+                    try:
+                        c.encode('cp949')
+                    except UnicodeEncodeError:
+                        bad.append(c)
+            raise EditError(400, t('이 파일은 CP949(엑셀이 저장한 한국어 CSV 등)라 {chars} 를 저장할 수 없습니다 — 그 글자를 빼고 저장하세요',
+                                   chars=' '.join(bad[:8]) + (' …' if len(bad) > 8 else ''))) from None
+    # 짝 없는 대리 문자(깨진 붙여 넣기 등)는 ? 로 — UTF-8 로 쓸 수 없다
+    return (BOM if current.startswith(BOM) else b'') + body.encode('utf-8', errors='replace')
 
 
 def _digest(data: bytes) -> str:
@@ -125,18 +177,21 @@ def _read_whole(path: Path) -> bytes:
     return data
 
 
-def _newline(data: bytes) -> bytes:
-    """그 파일의 줄바꿈 — 섞여 있으면 많은 쪽 (Claude Code 가 LF 로 쓴 파일에 PowerShell 이 CRLF 줄을 더한 경우 등)"""
-    crlf = data.count(b'\r\n')
-    return b'\r\n' if crlf > data.count(b'\n') - crlf else b'\n'
+def _newline(text: str) -> str:
+    """그 파일의 줄바꿈 — 섞여 있으면 많은 쪽 (Claude Code 가 LF 로 쓴 파일에 PowerShell 이 CRLF 줄을 더한 경우 등).
+    읽은 글로 센다 — UTF-16 은 바이트로 세면 줄바꿈이 \r\0\n\0 이라 맞지 않는다"""
+    crlf = text.count('\r\n')
+    return '\r\n' if crlf > text.count('\n') - crlf else '\n'
 
 
 def read_source(path: Path) -> dict[str, Any]:
-    """편집할 원문: {text(LF), newline, bom, hash(원문 바이트의 SHA-256), size}"""
+    """편집할 원문: {text(LF), newline, bom, encoding(UTF-8·UTF-16·CP949 — D171), hash(원문 바이트의 SHA-256), size}"""
     _check(path)
     data = _read_whole(path)
-    text = _decode(data)
-    return {'text': text.replace('\r\n', '\n'), 'newline': _newline(data).decode(), 'bom': data.startswith(BOM),
+    enc = _encoding(path, data)
+    text = _decode(data, enc)
+    return {'text': text.replace('\r\n', '\n'), 'newline': _newline(text), 'bom': data.startswith(BOM),
+            'encoding': {'utf-8': 'UTF-8', 'cp949': 'CP949'}.get(enc, 'UTF-16'),
             'hash': _digest(data), 'size': len(data)}
 
 
@@ -212,18 +267,17 @@ def save_source(path: Path, text: str, expect: Any, force: bool = False) -> dict
     current = _read_whole(path)
     if not force and _digest(current) != expect:
         raise EditError(409, t('편집하는 동안 다른 곳에서 이 파일이 바뀌었습니다'))
-    _decode(current)   # 그사이 UTF-8 이 아닌 파일로 바뀌었으면 덮어쓰지 않는다
+    enc = _encoding(path, current)
+    old = _decode(current, enc)   # 그사이 읽을 수 없는 파일로 바뀌었으면 덮어쓰지 않는다
     if not os.access(path, os.W_OK):
         raise EditError(403, t('읽기 전용 파일이라 저장하지 않았습니다 — 파일 속성에서 읽기 전용을 끄면 저장할 수 있습니다'))
     body = text.replace('\r\n', '\n').replace('\r', '\n')
     # 글이 모두 ASCII 면 UTF-8 로도 읽히지만 한글을 넣으면 파일이 UTF-8 이 되어 EViews 에서 깨진다 (D85)
     if path.suffix.lower() in WINDOWS_TEXT_EXT and current.isascii() and not body.isascii():
         raise EditError(400, t('EViews 파일은 Windows 인코딩이라 한글을 넣어 저장하지 않았습니다 — 저장하면 UTF-8 로 바뀌어 EViews 에서 글자가 깨집니다'))
-    newline = _newline(current)
-    if newline == b'\r\n':
+    if _newline(old) == '\r\n':
         body = body.replace('\n', '\r\n')
-    # 짝 없는 대리 문자(깨진 붙여 넣기 등)는 ? 로 — UTF-8 로 쓸 수 없다
-    data = (BOM if current.startswith(BOM) else b'') + body.encode('utf-8', errors='replace')
+    data = _encode(body, enc, current)   # 그 파일의 인코딩·BOM 그대로 (D171)
     if len(data) > MAX_EDIT_BYTES:
         raise EditError(413, t('{n}MB 가 넘는 파일은 편집할 수 없습니다', n=MAX_EDIT_BYTES // (1024 * 1024)))
     token = secrets.token_hex(4)

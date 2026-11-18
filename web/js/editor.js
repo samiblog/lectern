@@ -26,7 +26,7 @@ import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
 import { html, setHtml } from './html.js';
 import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
-import { isCode } from './icons.js';
+import { isCode, isDataEditable } from './icons.js';
 import { t } from './i18n.js';
 import { pickDate } from './datepick.js';
 import { pickChar } from './charpick.js';
@@ -133,8 +133,12 @@ function editorKeys(pane) {
     'Ctrl-G': 'jumpToLine',   // VS Code·Word 와 같게 (D91 — 다음 찾기는 F3)
     F3: 'findNext',
     'Shift-F3': 'findPrev',
-    // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다
-    Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
+    // Tab 은 칸 들이기 (탭 글자 대신 빈칸). 고른 줄이 있으면 그 줄들을 한 단계 들인다. 자료 파일(csv·tsv·txt — D171)은 탭 글자 그대로 (TSV 의 열)
+    Tab: (cm) => {
+      if (cm.getOption('indentWithTabs')) cm.replaceSelection('\t');
+      else if (cm.somethingSelected()) cm.indentSelection('add');
+      else cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')));
+    },
     'Shift-Tab': (cm) => cm.indentSelection('subtract'),
     'Ctrl-;': (cm) => dateAt(cm),   // 날짜 넣기 (D149 — 달력에서 골라 커서 자리에)
     'Shift-Ctrl-;': (cm) => charAt(cm),   // 특수 문자 넣기 (D165 — 칸 안과 같은 키)
@@ -293,7 +297,8 @@ function setDirty(ed, dirty) {
 /** 편집 버튼들: 탭 막대의 [편집]은 편집 중이면 눌린 모양, 문서·코드 화면이 아니면 누를 수 없음. 상태줄의 '편집'은 편집할 수 있을 때만 */
 function updateButton() {
   const editing = !!S.pane?.editor;
-  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && isCode(S.view.path));   // 코드 화면의 자료(csv·txt·엑셀)는 보기만 (D60·D77)
+  // 코드 화면의 자료: csv·tsv·txt 는 원래 인코딩 그대로 고친다 (D171), log·엑셀은 보기만 (D60·D77)
+  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && (isCode(S.view.path) || isDataEditable(S.view.path)));
   $('#lec-st-edit').hidden = !can || editing || !!S.tab?.readonly;   // 보기만 하는 프로젝트 (D71) — 탭 막대의 [편집]은 눌러서 까닭을 알린다
   const btn = $('#lec-btn-edit');
   btn.setAttribute('aria-pressed', String(editing));
@@ -310,6 +315,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
   if (view.type === 'code' && /\.xls[xm]$/i.test(view.path)) {   // 엑셀 보기 (D77) — 값만 읽은 표라 고칠 원문이 없다
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
+    return;
+  }
+  if (view.type === 'code' && !isCode(view.path) && !isDataEditable(view.path)) {   // log (D171 — 프로그램이 덧붙이는 파일)
+    toast(t('로그 파일은 보기만 합니다 — 프로그램이 덧붙이는 파일이라 고치는 사이에 바뀌기 쉽습니다. 고치려면 외부 편집기로 여세요'));
     return;
   }
   if (pane.editor) {
@@ -347,6 +356,14 @@ function build(pane, path, src, mode, line) {
   box.setAttribute('aria-label', t('편집 — {path}', { path }));
   setHtml(box, [html`<div class="ed-head"><svg class="ed-icon" aria-hidden="true"><use href="#i-edit"/></svg>`, html`<span class="ed-title" title="${path}">${path}</span><span class="ed-state"></span>`, html`<button type="button" class="text-btn ed-find" title="${t('찾기 (Ctrl+F) · 바꾸기 (Ctrl+H) · 줄로 가기 (Alt+G)')}">${t('찾기·바꾸기')}</button>`, html`<button type="button" class="primary ed-save" title="${t('저장 (Ctrl+S)')}">${t('저장')}</button>`, html`<button type="button" class="icon-btn small ed-close" title="${t('편집 닫기 (Esc) — 저장하지 않은 것이 있으면 묻습니다')}"><svg><use href="#i-close"/></svg></button></div>`, html`<div class="ed-body"></div>`]);
   pane.el.append(box);
+  const data = isDataEditable(path);   // 자료 파일 (D171): 탭 글자 그대로·보이게, 인코딩 표시
+  box.classList.toggle('show-tabs', data);
+  if (src.encoding && src.encoding !== 'UTF-8') {
+    box.querySelector('.ed-state').before(Object.assign(document.createElement('span'), {
+      className: 'ed-enc', textContent: src.encoding,
+      title: t('이 인코딩 그대로 저장합니다 — 엑셀에서 연 그대로입니다. CP949 에 없는 글자(이모지 등)는 저장하지 않고 알립니다'),
+    }));
+  }
   const ext = extOf(path);
   const indent = INDENT4.has(ext) ? 4 : 2;
   const prose = pane.current.type === 'doc';
@@ -362,7 +379,7 @@ function build(pane, path, src, mode, line) {
     value: src.text, mode: mode || 'text/plain', lineNumbers: true, lineWrapping: prose, styleActiveLine: true, matchBrackets: !prose,
     // autofocus 는 쓰지 않는다 — CodeMirror 가 처리기를 달기 전에 입력 칸에 초점을 주고 20ms 뒤에야 받은 것으로 치며 칸을 비워,
     // 열자마자 친 글자를 잃는다. 아래 build 끝의 cm.focus() 가 처리기를 단 뒤에 준다
-    indentUnit: indent, tabSize: 4, indentWithTabs: false, spellcheck: false,
+    indentUnit: indent, tabSize: 4, indentWithTabs: data, spellcheck: false,
     keyMap: vimOn() && window.CodeMirror.Vim ? 'vim' : 'default',   // 전체 편집 방식 (D122)
     extraKeys: editorKeys(pane),
   });

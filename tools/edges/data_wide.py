@@ -517,10 +517,18 @@ try:
         page.locator('.csv-headrow input').check()
         settle(200)
         check('첫 줄은 머리행을 켜고 꺼도 오류가 없음', len(errors) == before, errors[before:])
-        check('자료 파일에는 편집 단추가 없음', page.locator('.cv-edit').count() == 0 and page.locator('#lec-st-edit').is_hidden() and page.locator('#lec-btn-edit').is_disabled())
+        check('csv 는 [편집]으로 고친다 (D171 — 원래 인코딩 그대로)', page.locator('#lec-btn-edit').is_enabled())
         page.locator('.csv-rows tr.cv-line').first.locator('td').nth(1).click()
         press('F2')
-        check('자료 파일의 F2 는 까닭을 알림', toast_has('자료 파일은 볼 수만'))
+        try:
+            page.wait_for_selector('.CodeMirror', timeout=15000)
+            opened = True
+        except Exception:   # noqa: BLE001
+            opened = False
+        check('csv 의 F2 는 그 줄에서 편집 모드 (한 줄 편집 칸은 열지 않음)', opened and page.locator('#lec-view .lec-line-edit').count() == 0)
+        if opened:
+            press('Escape')
+            page.wait_for_selector('.CodeMirror', state='detached', timeout=8000)
         data('report.xlsx')
         page.locator('.csv-rows tr.cv-line').nth(1).locator('td').nth(1).click()
         press('Control+Enter')

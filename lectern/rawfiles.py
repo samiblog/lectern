@@ -91,6 +91,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'terminal_follow_style': (N_('터미널 색을 문서 스타일에 맞춤 — 끄면 늘 어둡게'), W_TERM),
     'terminal_font_size': (N_('터미널 글자 크기 (px, 10~24)'), W_TERM),
     'csv_stats': (N_('CSV 표 위의 통계 줄'), W_TABLE),
+    'table_align': (N_('md 문서 표의 칸 맞춤 — auto(글 왼쪽·숫자 오른쪽)·report(보고서식 — 머리행·짧은 열 가운데)'), W_VIEW),
     'projects': (N_('프로젝트마다 마지막 문서·열어 둔 문서 탭·문서별 스크롤 위치 (스무 프로젝트까지)'), W_RECORD),
     'work_home': (N_('업무 관리의 공통 폴더'), W_WORK),
     'work_folders': (N_('WORK.md 가 있는 폴더들 — 업무 현황이 모아 보인다 (경로만)'), W_RECORD),

@@ -27,7 +27,7 @@ import { S, on, emit } from './store.js';
 import { getJSON, postJSON } from './api.js';
 import { lineSlot, editableLines, blockOfLine } from './lineunits.js';
 import { locateLines } from './linefind.js';
-import { isCode } from './icons.js';
+import { isCode, isDataEditable } from './icons.js';
 import {
   diffRange, planNew, planEnd, planBefore, shiftPlan, paraAt, quoteOf, insertLine, splitLine, joinLine, duplicateLine, moveLines, deleteLines,
   blocksOf, blockAt, itemOf, fencesOf, fenceAt, tableIn, renumberAt, relist, listNear, siblingsOf, isBlank,
@@ -87,9 +87,10 @@ const isSheet = (view) => view.dataset.sheet != null && isCodeView(view) && !!vi
 const pathIn = (view) => view.dataset.docPath || view.dataset.codePath;
 /** UTF-8 이 아닌 글로 읽은 코드 화면 (D85 — Windows 인코딩의 prg, CP949 의 txt 등): 보기만 */
 const notUtf8 = (view) => isCodeView(view) && !!view.dataset.encoding;
-/** 코드 화면의 자료 파일 (csv·txt·log — D60): 보기만. 코드 파일만 고친다 */
+/** 코드 화면의 자료 파일 (csv·tsv·txt·log — D60): 한 줄 편집·줄 구조는 하지 않는다 — csv·tsv·txt 는 편집 모드로 (D171 — 원래 인코딩 그대로), log 는 보기만 */
 const dataFile = (view) => isCodeView(view) && !!view.dataset.codePath && !isCode(view.dataset.codePath) && !isMd(view.dataset.codePath);
-const DATA_FILE_NOTE = () => t('자료 파일은 볼 수만 있습니다 — 고치려면 기본 앱으로 여세요');
+const DATA_FILE_NOTE = (view) => (isDataEditable(view.dataset.codePath || '') ? t('자료 파일은 편집 모드(Ctrl+E)에서 고칩니다 — F2·Enter 도 그 줄에서 편집 모드를 엽니다')
+  : t('로그 파일은 보기만 합니다 — 프로그램이 덧붙이는 파일이라 고치는 사이에 바뀌기 쉽습니다. 고치려면 외부 편집기로 여세요'));
 
 /** 칸을 다 그릴 때까지 (오래 걸리면 false) */
 async function settled(pane) {
@@ -256,8 +257,9 @@ async function begin(line, { cell = 0, at = null, offset = null, select: pick_ =
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));   // D77
     return;
   }
-  if (dataFile(view)) {
-    toast(DATA_FILE_NOTE());
+  if (dataFile(view)) {   // csv·tsv·txt: 그 줄에서 편집 모드 (D171 — 표의 행은 한 줄 칸으로 고치지 않는다, 인코딩도 그대로)
+    if (isDataEditable(path || '')) emit('edit', { line: line || pane.here?.line || 0 });   // 표의 행은 한 줄 편집으로 고칠 줄이 없어 line 이 빈다 — 현재 줄
+    else toast(DATA_FILE_NOTE(view));
     return;
   }
   if (notUtf8(view)) {
@@ -1219,7 +1221,7 @@ function litOpen() {
     return false;
   }
   if (dataFile(view)) {
-    toast(DATA_FILE_NOTE());
+    toast(DATA_FILE_NOTE(view));
     return false;
   }
   if (notUtf8(view)) {
@@ -2486,6 +2488,8 @@ export function lineMenuItems(target) {
       { label: t('이 열 왼쪽 맞춤'), action: run((x) => alignColumn(x, line, col, 'left')) },
       { label: t('이 열 가운데 맞춤'), action: run((x) => alignColumn(x, line, col, 'center')) },
       { label: t('이 열 오른쪽 맞춤'), action: run((x) => alignColumn(x, line, col, 'right')) },
+      ...(cell.style.textAlign ? [{ label: t('이 열 맞춤 표시 지우기'), tip: t('Lectern 이 맞춥니다 — 숫자는 오른쪽, 보고서식이면 짧은 열은 가운데 (설정 창의 표 칸 맞춤)'),
+        action: run((x) => alignColumn(x, line, col, 'auto')) }] : []),
       { label: t('이 열 지우기'), action: run((x) => removeColumn(x, line, col)) },
       { label: t('이 표를 차트로'), tip: t('첫 열이 항목, 다음 열들이 값입니다'), action: () => tableToChart(line, cell.closest('table')) },
       { label: t('표 지우기'), action: run((x) => {
