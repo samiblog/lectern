@@ -182,7 +182,9 @@ try:
         check('문단의 Enter — 한 줄 편집 (F2 와 같다)', cell() == 1, cell())
         page.keyboard.press('Enter')
         page.wait_for_timeout(500)
-        check('— 칸의 Enter 는 저장하고 닫기, 바꾼 것이 없으면 파일 그대로', cell() == 0 and src() == DOC, cell())
+        check('— 칸의 Enter 는 저장하고 닫기, 바꾼 것이 없으면 파일 그대로, 현재 줄은 다음 줄 (D168)', cell() == 0 and src() == DOC and here() == line_of('링크 하나: [다른 문서](b.md) 로 간다.'), (cell(), here()))
+        page.keyboard.press('ArrowUp')   # 링크도 제목도 없는 줄로 돌아가서
+        page.wait_for_timeout(250)
         page.keyboard.press('Alt+Enter')
         page.wait_for_timeout(300)
         check('링크도 제목도 없는 줄의 Alt+Enter — 아무 일도', cell() == 0 and src() == DOC)
@@ -249,7 +251,16 @@ try:
         page.keyboard.press('Enter')
         until(page, lambda: '4장 2번째 문단이다. 더' in src(), 6000)
         page.wait_for_timeout(400)
-        check('F2 → Enter — 저장하고 현재 줄은 그 줄, 초점은 문서 칸', here() == line and page.evaluate('document.activeElement?.id') == 'lec-content', (here(), page.evaluate('document.activeElement?.id')))
+        check('F2 → Enter — 저장하고 현재 줄만 다음 줄로 (D168 — 열지는 않는다), 초점은 문서 칸', here() == line + 2 and page.locator('#lec-view .lec-line-edit').count() == 0
+              and page.evaluate('document.activeElement?.id') == 'lec-content', (here(), page.evaluate('document.activeElement?.id')))
+        page.keyboard.press('Enter')
+        page.wait_for_selector('#lec-view .lec-line-edit')
+        page.keyboard.press('Enter')
+        page.wait_for_timeout(500)
+        check('— Enter·Enter 로 다음 줄을 열고 닫으면 또 다음 줄로 (바꾸지 않았으니 파일 그대로)', here() == line + 4 and '4장 3번째 문단이다.' in src(), here())
+        page.keyboard.press('ArrowUp')
+        page.keyboard.press('ArrowUp')
+        page.wait_for_timeout(250)
         page.keyboard.press('ArrowDown')
         page.wait_for_timeout(250)
         check('— 이어서 ↓ 가 그 줄에서', here() == line + 2, here())
@@ -259,7 +270,9 @@ try:
         page.keyboard.press('Enter')
         until(page, lambda: '새 줄 하나' in src(), 6000)
         page.wait_for_timeout(500)
-        check('새 줄의 Enter — 저장하고 닫는다 (다음 새 줄을 열지 않음)', page.locator('#lec-view .lec-line-edit').count() == 0 and here() == line_of('새 줄 하나'), (page.locator('#lec-view .lec-line-edit').count(), here()))
+        check('새 줄의 Enter — 저장하고 닫고 현재 줄은 그 다음 줄 (다음 새 줄을 열지 않음)', page.locator('#lec-view .lec-line-edit').count() == 0 and here() == line_of('새 줄 하나') + 2, (page.locator('#lec-view .lec-line-edit').count(), here()))
+        page.keyboard.press('ArrowUp')   # 방금 쓴 줄로
+        page.wait_for_timeout(250)
         page.keyboard.press('F2')
         page.wait_for_selector('#lec-view .lec-line-edit')
         page.keyboard.press('End')
@@ -272,7 +285,7 @@ try:
         page.keyboard.press('Enter')
         until(page, lambda: '셋째 새 줄' in src(), 6000)
         page.wait_for_timeout(500)
-        check('Shift+Enter 로 이어 쓰고 Enter 로 끝 — 세 줄이 차례로', '새 줄 하나\n\n둘째 새 줄\n\n셋째 새 줄\n' in src() and page.locator('#lec-view .lec-line-edit').count() == 0 and here() == line_of('셋째 새 줄'),
+        check('Shift+Enter 로 이어 쓰고 Enter 로 끝 — 세 줄이 차례로, 현재 줄은 그 다음', '새 줄 하나\n\n둘째 새 줄\n\n셋째 새 줄\n' in src() and page.locator('#lec-view .lec-line-edit').count() == 0 and here() == line_of('셋째 새 줄') + 2,
               (src()[src().find('새 줄 하나') - 2:src().find('새 줄 하나') + 40], here()))
         page.keyboard.press('Shift+Enter')
         page.wait_for_selector('#lec-view .lec-line-edit')

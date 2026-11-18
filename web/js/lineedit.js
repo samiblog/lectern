@@ -52,7 +52,7 @@ import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
-  kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany, lightHere,
+  kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany, lightHere, nextHere,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
@@ -969,6 +969,17 @@ async function saveAndPick() {
   await finish(!empty);
   if (empty || session || S.pane !== s.pane) return;
   if (await settled(s.pane) && S.pane === s.pane && !session) lightHere();
+}
+
+/**
+ * 칸의 Enter (D168 — 사용자 결정): 저장하고 닫은 뒤 현재 줄만 다음 줄로 옮긴다 — 다음 줄을 열지는 않는다 (Enter 를 다시 누르면 연다 — D166).
+ * 마지막 줄이면 그 줄에 둔다. 새 줄도 같다 (방금 쓴 줄의 다음으로). 바꾼 것이 없어도 옮긴다 — Enter·Enter 로 줄을 훑으며 고친다
+ */
+async function saveAndNext() {
+  const s = session;
+  await finish(true);
+  if (session || S.pane !== s.pane) return;
+  if (await settled(s.pane) && S.pane === s.pane && !session) nextHere();
 }
 
 /** Shift+Enter(below)·Ctrl+Shift+Enter: 새 줄. 글 가운데서 Shift+Enter 면 그 자리에서 두 줄로 나눈다 */
@@ -2833,9 +2844,12 @@ function onKey(e) {
   } else if (k === 'Enter' && !mod && !e.altKey && session.fresh && !read(session.places[0]).trim()) {   // 빈 새 줄의 Enter — 넣지 않고 끝낸다
     e.preventDefault();
     finish(false);
-  } else if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
+  } else if (k === 'Enter' && !mod && !e.altKey) {
     e.preventDefault();
-    finish(true);   // 새 줄도 저장하고 닫는다 — 현재 줄은 그 줄 (D158 — 이어 쓰려면 Shift+Enter, D106 의 이어 쓰기를 바꿈)
+    saveAndNext();   // 저장하고 닫은 뒤 현재 줄만 다음 줄로 (D168 — 사용자 결정. 이어 쓰려면 Shift+Enter)
+  } else if (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's')) {
+    e.preventDefault();
+    finish(true);   // 저장하고 닫는다 — 현재 줄은 그 줄 (D158)
   } else if (k === 'Escape') {
     e.preventDefault();
     finish(S.config?.vi_keys === true);   // vi 키(D122)를 켰으면 vi 처럼 저장하고 나온다 — 아니면 그만두기

@@ -38,6 +38,21 @@ export function docPaneOf(tab, target) {
   return tab.panes.find((p) => { const v = viewOf(p); return v?.type === target.type && v.path === target.path; }) || null;
 }
 
+/**
+ * 아직 그리지 않은 탭(되살린 것·뒤에서 연 것 — deferred)을 그린다. 그리는 동안은 '여는 중'(coming)으로 두어 탭 이름이 그 문서로 남는다 —
+ * 비워 두면 그 사이 탭 줄을 다시 그릴 때(고른 탭을 닫아 옆의 되살린 탭이 앞으로 올 때) 그 탭이 '빈 탭'으로 잠깐 보였다 (사용자 보고)
+ */
+export async function drawDeferred(pane) {
+  const target = pane.deferred;
+  pane.deferred = null;
+  pane.coming = target;
+  try {
+    return await navigate(target, { pane, restoreScroll: true });
+  } finally {
+    if (pane.coming === target) pane.coming = null;
+  }
+}
+
 /** 문서 탭을 고른다. 아직 그리지 않은 탭(되살린 것)이면 그리고, 숨은 동안 바뀌었으면 다시 그린다 */
 export async function selectDocTab(pane) {
   const { tab } = pane;
@@ -52,9 +67,7 @@ export async function selectDocTab(pane) {
   }
   render();
   if (pane.deferred) {
-    const target = pane.deferred;
-    pane.deferred = null;
-    await navigate(target, { pane, restoreScroll: true });
+    await drawDeferred(pane);
   } else if (pane.stale) {
     await refreshView(pane);
   }

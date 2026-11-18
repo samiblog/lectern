@@ -15,8 +15,8 @@
 
 import { S, on } from './store.js';
 import { paneOf } from './panes.js';
-import { describe, selectDocTab, tabMenu } from './doctabs.js';
-import { navigate, refreshView } from './nav.js';
+import { describe, selectDocTab, tabMenu, drawDeferred } from './doctabs.js';
+import { refreshView } from './nav.js';
 import { terminalOpen, toggleTerminal } from './terminal.js';
 import { shapeOf } from './gather.js';
 import { showMenu } from './ui.js';
@@ -76,9 +76,7 @@ function renderHead(pane) {
 function drawPending(tab) {
   for (const pane of tab.panes) {
     if (pane.deferred) {
-      const target = pane.deferred;
-      pane.deferred = null;
-      navigate(target, { pane, restoreScroll: true });
+      drawDeferred(pane);
     } else if (pane.stale && pane.current) {
       refreshView(pane);
     }

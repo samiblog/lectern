@@ -368,6 +368,16 @@ function moveHere(step, repeat = false) {
 /** 현재 줄을 한 줄 옮긴다 — 한 줄 편집이 끝난 뒤 넘어가는 사이에 누른 ↑·↓ 가 남았을 때 (lineedit.js, D128). 끝에서 새 줄은 열지 않는다 */
 export const stepHere = (dir) => moveHere(dir, true);
 
+/** 칸의 Enter 뒤 (lineedit.js, D168): 현재 줄만 다음 줄로 — 그 줄을 열지는 않는다. 마지막 줄이면 그대로. 그 줄이 보이게 */
+export function nextHere() {
+  if (!linesOn()) return false;
+  const us = units();
+  const i = hereIndex(us);
+  if (i < 0 || i >= us.length - 1) return false;
+  setHere(us[i + 1].a, { scroll: true });
+  return true;
+}
+
 /** 고른 줄의 한 글자 키 (D128 — Lectern 모바일과 같게): 자판 자리(e.code)로 읽어 한글 입력 상태에서도 듣는다. 누르고 있는 키는 듣지 않는다 */
 const KIND_CODES = {
   Digit0: 'para', Numpad0: 'para', KeyP: 'para', KeyH: 'heading', KeyL: 'bullet', Minus: 'bullet', NumpadSubtract: 'bullet',
@@ -626,24 +636,26 @@ function openHere(e) {
 }
 
 /**
- * Tab·Shift+Tab (D158 — 현재 줄 하나일 때. 여러 줄을 골랐으면 레벨 — D152): 현재 줄 안이나 그 뒤(앞)의 다음(앞) 링크로 초점을 옮기고 그 줄을 현재 줄로.
- * 더 없으면 브라우저의 Tab 그대로 — 초점이 문서 밖으로 나갈 수 있게
+ * Tab·Shift+Tab (D158·D167 — 현재 줄 하나일 때. 여러 줄을 골랐으면 레벨 — D152): 현재 줄 안이나 그 뒤(앞)의 다음(앞) 링크로 초점을 옮기고 그 줄을 현재 줄로.
+ * 마지막 링크 다음은 첫 링크로 (거꾸로도) — 초점이 문서 밖(터미널·사이드바)으로 나가지 않는다 (D167 — 사용자 요청. 문서 밖은 F6).
+ * 링크가 없으면 false — main.js 의 trapTab 이 칸 안의 단추(코드 화면 머리줄 등)를 돈다. 다뤘으면 true
  */
 function tabLink(dir) {
   if (!linesOn()) return false;
   const links = [...view().querySelectorAll('a[href]')].filter((a) => a.offsetParent && !a.closest('.lec-unfold'));
-  if (!links.length) return false;
+  if (!links.length) return false;   // 링크가 없다 — 칸 안의 단추를 돈다 (main.js 의 trapTab — 그래도 문서 밖으로는 나가지 않는다, D167)
   const us = units();
   const act = document.activeElement;
-  let j;
+  let j = -1;
   if (links.includes(act)) j = links.indexOf(act) + dir;
   else {
     const i = hereIndex(us);
-    if (i < 0) return false;
-    const r = rangeOfUnit(us[i]);
-    j = dir > 0 ? links.findIndex((a) => r.comparePoint(a, 0) >= 0) : links.findLastIndex((a) => r.comparePoint(a, 0) <= 0);
+    if (i >= 0) {
+      const r = rangeOfUnit(us[i]);
+      j = dir > 0 ? links.findIndex((a) => r.comparePoint(a, 0) >= 0) : links.findLastIndex((a) => r.comparePoint(a, 0) <= 0);
+    }
   }
-  if (j < 0 || j >= links.length) return false;
+  if (j < 0 || j >= links.length) j = dir > 0 ? 0 : links.length - 1;   // 끝에서는 반대쪽 끝으로 — 문서 밖으로 나가지 않는다 (D167)
   const a = links[j];
   a.focus({ preventScroll: true });
   const k = us.findIndex((u) => rangeOfUnit(u).intersectsNode(a));
@@ -894,7 +906,7 @@ function updateStatus() {
   if (edit && painted === view()) {
     el.hidden = false;
     el.textContent = `${t('한 줄 편집')} ${rangeText([edit.line, edit.line])}`;
-    el.title = t('Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄');
+    el.title = t('Enter 저장하고 다음 줄로 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄을 이어서');
     return;
   }
   const r = lit() && painted === view() ? litLines() : null;

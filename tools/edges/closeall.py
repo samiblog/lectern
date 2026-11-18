@@ -149,6 +149,31 @@ try:
         page.click('#lec-tablist .lec-tab >> nth=0')
         page.wait_for_timeout(1000)
         check('첫 프로젝트는 폴더 개요 하나', tabs(page) == [''], tabs(page))
+
+        print('[되살린 탭 옆의 고른 탭을 닫으면 — 그 사이 빈 탭이 끼지 않는다 (사용자 보고)]')
+        for n in NAMES:
+            page.evaluate(OPEN, [f'docs/{n}.md', 'doc'])
+            page.wait_for_timeout(250)
+        page.click('#lec-doctab-list .doc-tab >> nth=2')
+        page.wait_for_timeout(1800)   # 문서 탭 목록 저장 (position.js)
+        page.reload()
+        page.wait_for_selector('#lec-doctab-list .doc-tab', timeout=20000)
+        page.click('#lec-tablist .lec-tab >> nth=0')
+        until(page, lambda: len(tabs(page)) >= 5, 6000)
+        page.wait_for_timeout(800)
+        deferred = page.evaluate("import('/static/js/store.js').then(({ S }) => S.tab.panes.filter((p) => p.deferred).length)")
+        names = []
+        for _ in range(3):
+            page.evaluate("""() => { window.__names = []; const list = document.querySelector('#lec-doctab-list');
+              const snap = () => window.__names.push(...[...list.querySelectorAll('.doc-tab .name')].map((e) => e.textContent));
+              window.__mo?.disconnect(); window.__mo = new MutationObserver(snap); window.__mo.observe(list, { childList: true, subtree: true, characterData: true }); }""")
+            page.hover('#lec-doctab-list .doc-tab.active')
+            page.click('#lec-doctab-list .doc-tab.active .tab-close')
+            page.wait_for_timeout(700)
+            names += page.evaluate('window.__names')
+        check('되살린 탭이 있었다 (고를 때 그리는 탭)', deferred >= 3, deferred)
+        check('고른 탭을 세 번 닫는 동안 탭 줄에 빈 탭이 한 번도 없다', names and '빈 탭' not in names, sorted(set(names)))
+        check('— 옆의 되살린 탭이 그려져 고른 탭이 된다', len(tabs(page)) >= 2 and page.locator('#lec-view h1').first.inner_text().startswith('문서'), tabs(page))
 except Exception:
     traceback.print_exc()
     fails.append('예외')

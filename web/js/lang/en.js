@@ -1632,7 +1632,6 @@ export default {
 "스타일 설명서의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 모양을 이어서 적습니다": "A request giving the location of the style guide and the folder to save in — paste it into {cli} and add the look you want",
 "요청 글을 복사했습니다 — {cli} 에 붙여 넣고 원하는 모양을 이어서 적으세요": "Request copied — paste it into {cli} and add the look you want",
 "{cli} 프롬프트에 붙여 넣기": "For pasting into the {cli} prompt",
-"Enter 저장 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄": "Enter save · Esc cancel · ↑ ↓ save and edit the line above or below",
 "Shift+→ {ai} 로 보내기 · Shift+← 위치 복사 · Ctrl+C 원문 복사 · Esc 해제": "Shift+→ send to {ai} · Shift+← copy location · Ctrl+C copy source · Esc clear",
 "{ai}로 보내기": "Send to {ai}",
 "{ai} 에 박스글 요청": "Ask {ai} for a box",
@@ -1880,7 +1879,6 @@ export default {
   "위치를 터미널의 AI 도구로 — @경로 a~b행": "Send the location to the AI tool in the terminal — @path lines a–b",
   "위치 복사 / 원문 복사": "Copy the location / copy the source",
   "터미널 열기·닫기 / 문서 → 터미널 → 사이드바 차례로 옮기기": "Open or close the terminal / move focus document → terminal → sidebar",
-  "한 줄 편집 — 칸에서 Enter 는 저장, Esc 는 그만두기": "Line edit — in the cell Enter saves, Esc cancels",
   "넣기 창 — 표·강조글·그림 같은 구성 요소": "Insert box — tables, callouts, figures and more",
   "바꾸기 창 — 제목·목록·표·코드로": "Change window — to a heading, list, table or code",
   "줄 옮기기 — 현재 줄이면 두 번": "Move lines — twice on the current line",
@@ -1910,7 +1908,6 @@ export default {
   "다음 / 이전 찾은 곳 — 찾기 막대를 닫은 뒤에도 (문서에서)": "Next / previous match — even after the find bar is closed (in documents)",
   "문서의 모든 줄 고르기 (화면은 그대로)": "Pick every line of the document (the view stays put)",
   "앞 / 뒤 제목으로 — 절 단위로 훑기": "Previous / next heading — skim section by section",
-  "저장하고 닫기 — 원문 파일에 바로, 현재 줄은 그 줄 (새 줄도)": "Save and close — straight to the source file, the current line stays there (new lines too)",
   "절 제목 / 절 끝까지 고르기 — 거듭 누르면 앞 / 뒤 절까지": "Pick to the section heading / section end — press again for the previous / next section",
   "한 화면 위 / 아래 — 현재 줄은 화면에서 같은 높이 (Shift+Space / Space 도. 장 하이라이트 중에는 앞 장 / 다음 장)": "One screen up / down — the current line keeps its height on screen (Shift+Space / Space too; previous / next section while section focus is on)",
   "한 화면만큼 고르기": "Pick one screen more",
@@ -2081,7 +2078,11 @@ export default {
   "특수 문자 넣기 — 문장 부호·화살표·단위·원 숫자 같은 문자를 커서 자리에": "Insert a special character — punctuation, arrows, units, circled numbers and so on at the cursor",
   "특수 문자 넣기 — 커서 자리에 (편집 모드 안 — 칸 안과 같음)": "Insert a special character at the cursor (in edit mode — the same as in the box)",
   "줄 선택 — 현재 줄이나 고른 줄만 또렷하게": "Select lines — only the current line or the selected lines stay sharp",
-  "현재 줄을 한 줄 편집 — F2 와 같다 (칸에서 Enter 는 저장하고 닫기)": "Edit the current line — the same as F2 (Enter in the box saves and closes)",
   "제목 줄이면 그 절 접기·펴기, 링크가 있는 줄이면 그 링크 열기 (여럿이면 고르는 메뉴) — Tab 으로 간 링크·단추도": "Fold or unfold the section on a heading line, open the link on a line with a link (a menu if there are several) — also a link or button reached with Tab",
-  "현재 줄 뒤 / 앞의 링크로 — Alt+Enter 로 연다 (여러 줄을 골랐으면 레벨)": "To the next / previous link after / before the current line — Alt+Enter opens it (the level if several lines are selected)"
+  "현재 줄 뒤 / 앞의 링크로 — Alt+Enter 로 연다, 끝에서는 처음으로 돌고 문서 밖으로 나가지 않음 (여러 줄을 골랐으면 레벨, 문서를 떠나는 것은 F6)": "To the next / previous link after / before the current line \u2014 Alt+Enter opens it; it wraps at the ends and never leaves the document (the level if several lines are selected; F6 leaves the document)",
+  "현재 줄을 한 줄 편집 — F2 와 같다 (칸에서 Enter 는 저장하고 닫고 다음 줄로)": "Edit the current line — the same as F2 (Enter in the box saves, closes and moves to the next line)",
+  "저장하고 닫기 — 원문 파일에 바로, 현재 줄은 다음 줄로 (열지는 않음, 마지막 줄이면 그대로 — 새 줄도)": "Save and close — straight into the source file; the current line moves to the next line (without opening it; it stays on the last line — new lines too)",
+  "저장하고 닫기 — 현재 줄은 그 줄": "Save and close — the current line stays on that line",
+  "한 줄 편집 — 칸에서 Enter 는 저장하고 다음 줄로, Esc 는 그만두기": "Line edit — in the box Enter saves and moves to the next line, Esc cancels",
+  "Enter 저장하고 다음 줄로 · Esc 그만두기 · ↑·↓ 저장하고 위·아래 줄을 이어서": "Enter save and go to the next line · Esc cancel · ↑ ↓ save and continue on the line above or below"
 };

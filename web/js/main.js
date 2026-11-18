@@ -219,6 +219,46 @@ const inTerminal = (e) => !!e.target.closest?.('#lec-term');
 const mainOnlyKey = (e, mod, key) => (e.altKey && !mod && !e.shiftKey && (e.code === 'KeyM' || e.code === 'KeyW' || e.code === 'KeyS' || e.key === 'PageDown' || e.key === 'PageUp'))
   || (mod && !e.altKey && (e.code === 'Backquote' || e.key === ',' || key === 'o'));
 
+const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), summary, iframe, [tabindex]:not([tabindex="-1"])';
+/** root 안에서 Tab 으로 갈 수 있는 것 (보이는 것만) */
+const focusables = (root) => [...root.querySelectorAll(FOCUSABLE)].filter((el) => el.checkVisibility());
+
+/**
+ * Tab·Shift+Tab 이 문서 칸 밖(터미널·사이드바·툴바)으로 나가지 않게 (D167 — 사용자 요청): 초점이 지금 칸 안에 있으면 그 칸 안의 누를 수 있는 것을 돌고
+ * 끝에서는 처음으로. html 문서(iframe)면 그 안에서 — 끝에서만 처음으로 돌리고 나머지는 브라우저대로. 칸을 떠나는 것은 F6.
+ * md 문서·코드 화면의 링크는 spotlight.tabLink 가 먼저 돈다 (현재 줄도 옮긴다). 다뤘으면 true
+ */
+function trapTab(e) {
+  const box = S.pane?.scroller;
+  const act = document.activeElement;
+  if (!box || !(act === document.body || act === box || box.contains(act))) return false;
+  const dir = e.shiftKey ? -1 : 1;
+  if (act?.tagName === 'IFRAME') {
+    const doc = /** @type {HTMLIFrameElement} */ (act).contentDocument;
+    const items = doc?.body ? focusables(doc.body) : [];
+    if (!items.length) return true;
+    const i = items.indexOf(/** @type {Element} */ (doc.activeElement));
+    if (i >= 0 && i + dir >= 0 && i + dir < items.length) return false;   // 그 안에서 다음으로 — 브라우저대로
+    /** @type {HTMLElement} */ (items[dir > 0 ? 0 : items.length - 1]).focus();   // 끝(또는 아직 그 안에 초점이 없음)이면 반대쪽 끝으로
+    return true;
+  }
+  const items = focusables(box);
+  if (!items.length) return true;   // 누를 것이 없다 — 초점은 그대로
+  const i = items.indexOf(/** @type {Element} */ (act));
+  const next = i < 0 ? (dir > 0 ? 0 : items.length - 1) : (i + dir + items.length) % items.length;
+  /** @type {HTMLElement} */ (items[next]).focus();
+  return true;
+}
+
+/**
+ * 문서 칸 안의 입력 칸인지 — 찾기 막대의 찾는 말·바꿀 글, csv 의 거르기 칸 (D167: 그 칸의 Tab·Shift+Tab 도 칸 안에서 돈다 — 그대로 두면 브라우저가
+ * 바로 앞의 문서 탭 줄로 보냈다, 무작위 시험이 찾음). 한 줄 편집 칸(contenteditable)과 전체 편집기(CodeMirror 의 textarea)는 Tab 이 그 칸의 것이라 뺀다
+ */
+const paneField = (e) => {
+  const el = /** @type {Element} */ (e.target);
+  return !!el?.matches?.('input, select, textarea') && !el.closest('.lec-editor') && !!S.pane?.scroller?.contains(el);
+};
+
 /** Shift+F10·메뉴 키: 초점이 있는 행, 없으면 현재 줄에서 우클릭한 것처럼 */
 function menuHere() {
   const row = document.activeElement?.closest?.('.row, [role="tab"], .sr-hit, .sr-name, .pt-item, .bk-item');
@@ -407,7 +447,9 @@ function bindKeys() {
       e.preventDefault();   // 장 하이라이트 (spotlight.js, D91)
     } else if (((e.key === 'F10' && e.shiftKey && !mod && !e.altKey) || e.key === 'ContextMenu') && !typing(e) && menuHere()) {
       e.preventDefault();   // 초점이 있는 곳이나 현재 줄의 우클릭 메뉴 (D91)
-    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Ctrl+Enter 하이라이트, Shift+Enter 새 줄, Shift+↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
+    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Ctrl+Enter 하이라이트, Shift+Enter 새 줄, Shift+↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장, Tab 은 링크를 돈다 (D167)
+      e.preventDefault();
+    } else if (e.key === 'Tab' && !mod && !e.altKey && (!typing(e) || paneField(e)) && !overlayOpen() && trapTab(e)) {   // 문서 칸 밖으로 나가지 않게 — 폴더 개요·html 문서·찾기 막대 (D167)
       e.preventDefault();
     } else if (e.key === 'Escape') {
       if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
