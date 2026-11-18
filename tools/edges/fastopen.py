@@ -29,6 +29,7 @@ SLOW_FULL = """() => { const real = window.fetch; window.__trees = [];
     return r; }; }"""
 FILES = "import('/static/js/store.js').then(({ S }) => [S.files.length, S.files.filter((f) => f.title).length, S.files.filter((f) => f.deck).length])"
 TABS = "() => document.querySelectorAll('#lec-doctab-list .doc-tab').length"
+OPEN_ALREADY = "(p) => document.querySelector('#lec-view')?.dataset.docPath === p"   # 이미 탭이 있던 문서 — 탭 수는 그대로
 OPEN = "(p) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: p, newTab: true, force: true }))"
 
 
@@ -94,12 +95,11 @@ try:
         paths = [f'doc-{i:02d}.md' if i < 5 else f'폴더{i % 4}/doc-{i:02d}.md' for i in range(2, N)]
         page.locator('#lec-tree .row.file').first.click()
         page.wait_for_selector('#lec-view h1')
-        opened = page.evaluate(TABS)
         for path in paths[:41]:
+            before = page.evaluate(TABS)
             page.evaluate(OPEN, path)
-            if opened < 40:
-                opened += 1
-                until(page, lambda: page.evaluate(TABS) == opened, 5000)
+            if before < 40:   # 연 뒤 탭이 늘 때까지 — 기대 수를 따로 세면 처음 누른 문서가 목록에 들어 있을 때 하나씩 어긋나 매번 5초를 기다렸다
+                until(page, lambda: page.evaluate(TABS) > before or page.evaluate(OPEN_ALREADY, path), 5000)
             else:
                 page.wait_for_timeout(300)
         check('문서 탭은 40개까지 열린다', page.evaluate(TABS) == 40, page.evaluate(TABS))

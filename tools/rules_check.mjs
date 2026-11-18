@@ -95,6 +95,10 @@ const notes = await load('web/js/notesdata.js');
   say('표 읽기 표 점검', r.fails, r.n);
 }
 {
+  const r = cases('tools/edges/tablefit_cases.js', await load('web/js/tablefitplan.js'));
+  say('표 열 너비 임의의 표 (D173)', r.fails, r.n);
+}
+{
   const r = cases('tools/edges/html_cases.js', safe);
   say('자동 이스케이프 표 점검', r.fails, r.n);
 }

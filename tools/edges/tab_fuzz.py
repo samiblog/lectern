@@ -1,8 +1,10 @@
 """Tab 이 문서 밖으로 나가지 않는다 — 무작위 시험 (D167, 2026-11-18 사용자 요청 '다른 각도에서'): 터미널을 연 채 여러 문서(링크·표·각주·접힌 절·코드 블록이 든 md,
 링크 없는 md, Lectern 슬라이드, 입력 칸이 든 html, 누를 것 없는 html, csv, 코드, 폴더 개요)를 무작위로 열고, 아무 곳이나 누르고, 접기·찾기 막대·칸 열고 닫기·
 모두 펼치기를 섞어 가며 Tab·Shift+Tab 을 거듭 누른다. 문서 안에서 누른 Tab 뒤의 초점이 한 번이라도 문서 칸 밖(터미널·사이드바·툴바·탭 줄·상태줄·바닥)이면 실패.
-    python tab_fuzz.py [씨앗 …]   (기본 씨앗 셋, 씨앗마다 걸음 120)"""
+    python tab_fuzz.py [씨앗 …]   (씨앗마다 걸음 120. 기본은 씨앗 하나 — 전체 실행이 2분 반을 쓰지 않게.
+                                 `all` 이나 LECTERN_TEST_FUZZ=all 이면 씨앗 셋 — ui_edges --changed 가 초점·Tab 코드를 고쳤을 때 그렇게 돌린다)"""
 import json
+import os
 import random
 import sys
 import tempfile
@@ -13,7 +15,8 @@ from playwright.sync_api import sync_playwright
 
 from harness import check, fails, report, serve, stop, until
 
-SEEDS = [int(x) for x in sys.argv[1:] if x.isdigit()] or [11, 23, 47]
+ALL_SEEDS = [11, 23, 47]
+SEEDS = [int(x) for x in sys.argv[1:] if x.isdigit()] or (ALL_SEEDS if 'all' in sys.argv[1:] or os.environ.get('LECTERN_TEST_FUZZ') == 'all' else ALL_SEEDS[:1])
 STEPS = 120
 
 base = Path(tempfile.mkdtemp(prefix='lec-tabfuzz-'))

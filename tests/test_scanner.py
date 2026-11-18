@@ -79,6 +79,32 @@ def test_scan_skips_junctions(project, tmp_path):
             os.rmdir(j)   # 정션만 지운다 (대상 폴더는 그대로)
 
 
+@pytest.mark.skipif(sys.platform != 'win32', reason='숨김·시스템 속성은 Windows 전용')
+def test_scan_skips_windows_hidden_and_system_attributes(project):
+    """이름이 . 으로 시작하지 않아도 Windows 숨김·시스템 속성이면 트리·자료 목록·경로 검사에서 빠진다 (손 점검표 1번을 옮김 — 2026-11-19)"""
+    import ctypes
+    set_attrs = ctypes.windll.kernel32.SetFileAttributesW
+    hidden_doc = project / 'docs' / '숨긴-문서.md'
+    hidden_doc.write_text('# 숨김 속성\n', encoding='utf-8')
+    system_dir = project / '시스템폴더'
+    system_dir.mkdir()
+    (system_dir / '안.md').write_text('# 시스템 폴더 안\n', encoding='utf-8')
+    hidden_data = project / '숨긴-자료.csv'
+    hidden_data.write_text('a,b\n1,2\n', encoding='utf-8')
+    assert set_attrs(str(hidden_doc), 0x2) and set_attrs(str(system_dir), 0x4) and set_attrs(str(hidden_data), 0x2)
+    try:
+        found = paths(scan(project))
+        assert 'docs/2-b.md' in found
+        assert 'docs/숨긴-문서.md' not in found and not any(p.startswith('시스템폴더/') for p in found)
+        others = paths(scan_others(project)[0])
+        assert '숨긴-자료.csv' not in others
+        assert resolve_inside(project, 'docs/숨긴-문서.md') is None
+        assert resolve_inside(project, '시스템폴더/안.md') is None
+    finally:
+        for p in (hidden_doc, system_dir, hidden_data):
+            set_attrs(str(p), 0x80)   # 보통 파일로 돌려놓아 tmp 정리가 막히지 않게
+
+
 def test_natural_key():
     assert sorted(['10장', '2장', '1장'], key=natural_key) == ['1장', '2장', '10장']
 

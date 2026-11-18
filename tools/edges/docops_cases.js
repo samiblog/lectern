@@ -141,6 +141,9 @@ eq(m.removeColumn(L('| a |\n| --- |\n| 1 |\n'), 3, 0), { error: 'last-column' },
 eq(tb(m.moveColumn, 3, 0, 1), L('| b | a |\n| --- | --- |\n| 2 | 1 |\n| 4 | 3 |\n'), '열 옮기기');
 eq(tb(m.moveColumn, 3, 1, 1), { error: 'edge' }, '끝 열');
 eq(tb(m.alignColumn, 3, 1, 'right'), L('| a | b |\n| --- | ---: |\n| 1 | 2 |\n| 3 | 4 |\n'), '오른쪽 정렬');
+eq(m.alignColumn(L('| a | b |\n| :---: | ---: |\n| 1 | 2 |\n'), 3, 1, 'auto').lines, L('| a | b |\n| :---: | --- |\n| 1 | 2 |\n'),
+  '맞춤 표시 지우기 (D174) — 그 열의 표시만, 다른 열의 표시는 그대로');
+eq(m.alignColumn(L('| a | b |\n| --- | --- |\n| 1 | 2 |\n'), 1, 0, 'auto').lines, L('| a | b |\n| --- | --- |\n| 1 | 2 |\n'), '표시가 없는 열을 지워도 그대로');
 eq(m.tableSpan(L(`글\n\n${T}`), 5), [3, 6], '표의 범위');
 eq(m.addRow(L('| a \\| x | b |\n| --- | --- |\n| 1 | 2 |\n'), 3, true).lines[3], '|  |  |', '칸 글의 | 는 칸이 아니다');
 eq(m.addColumn(L('> | a |\n> | --- |\n> | 1 |\n'), 3, 0, true).lines, L('> | a |  |\n> | --- | --- |\n> | 1 |  |\n'), '박스 안의 표');

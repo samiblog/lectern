@@ -10,7 +10,7 @@ UI(web/)를 고친 뒤 실행해서 깨진 곳이 없는지 본다. 화면 캡�
     python tools/ui_smoke.py             # 점검 + 캡처
     python tools/ui_smoke.py --headed    # 브라우저 창을 띄워서 보기
 
-samples/ 를 임시 폴더에 복사해서 쓰므로 원본은 바뀌지 않는다. 실패하면 종료 코드 1.
+점검용 프로젝트 tests/fixture/ 를 임시 폴더에 복사해서 쓰므로 원본은 바뀌지 않는다. 실패하면 종료 코드 1.
 """
 from __future__ import annotations
 

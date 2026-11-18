@@ -5,15 +5,20 @@ tools/edges/ 의 묶음마다 임시 프로젝트·설정으로 서버를 따로
     python tools/ui_edges.py              :: 모두
     python tools/ui_edges.py structure    :: 이름이 맞는 것만
     python tools/ui_edges.py --changed    :: 고친 파일에 닿는 것만 (master 와 다른 파일, 커밋 전 것도)
+    python tools/ui_edges.py -j 4         :: 4개씩 동시에 (묶음마다 서버·임시 폴더가 따로라 부딪히지 않는다 — 40분 → 10분쯤)
 
-실패한 묶음은 한 번 다시 돌린다. 종료 코드: 0 모두 통과, 1 두 번 모두 실패한 묶음이 있음, 3 흔들린 묶음만 있음 (다시 돌리니 통과).
+동시에 돌리면 묶음의 출력은 그 묶음이 끝날 때 한 덩어리로 찍는다. 지난 실행의 묶음별 시간(ui-shots/edges/times.json)으로 긴 묶음부터 넣는다.
+--changed 로 돌리면 무작위 시험(tab_fuzz)은 씨앗을 모두 쓴다 (LECTERN_TEST_FUZZ=all — 전체 실행에서는 씨앗 하나).
+실패한 묶음은 한 번 다시 돌린다 (동시에 돌렸어도 다시 돌릴 때는 하나씩). 종료 코드: 0 모두 통과, 1 두 번 모두 실패한 묶음이 있음, 3 흔들린 묶음만 있음 (다시 돌리니 통과).
 실패하면 그때의 화면이 ui-shots/edges/ 에 남는다 (harness.py). 느린 PC·CI 에서는 LECTERN_TEST_SLOW=2 로 대기 시간을 늘린다.
 """
+import json
 import os
 import re
 import subprocess
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import close_windows
@@ -37,7 +42,20 @@ AREAS = [
     (r'web/js/(work|workdata|workalert|workview|datepick)\.js|lectern/work\.py|web/templates/work.*', ['work', 'work_scenarios', 'work_more', 'work_tree', 'work_tree_more', 'work_gantt', 'scen_gantt', 'scen_day']),
     (r'web/js/(refs|vikeys|editor|settings|help)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'textbox', 'docedit', 'reading', 'termfont', 'printpdf', 'aitool', 'aiscope', 'tablealign']),
     (r'web/js/(markdown|doc|fold)\.js', ['textbox', 'reading', 'docedit', 'hostile', 'tablewidth', 'tablealign', 'scen_tables']),
-    (r'web/js/(tablefit|mdhtml|doc|tablecopy)\.js|web/themes/base\.css', ['tablewidth', 'tablealign', 'scen_tables', 'reading', 'chartdata', 'exporthtml', 'printpdf']),
+    # 2026-11-19 조사 — 표에 없어 기본 묶음만 돌던 모듈 (그 모듈을 실제로 쓰는 묶음으로)
+    (r'web/js/(notes|notesdata)\.js', ['notes', 'variety', 'hostile']),
+    (r'web/js/editsync\.js', ['docedit', 'refresh', 'combos']),
+    (r'web/js/rawview\.js', ['aiscope']),
+    (r'web/js/rename\.js', ['docedit', 'hostile', 'combos']),
+    (r'web/js/(docwidth|textsize)\.js', ['tablewidth', 'scen_tables', 'combos', 'variety']),
+    (r'web/js/(parts|snippet)\.js', ['reading', 'hostile', 'aitool', 'input']),
+    (r'web/js/overview\.js', ['reading', 'hostile', 'work_tree_more']),
+    (r'web/js/outline\.js', ['data', 'frames', 'reading', 'focus_tabs']),
+    (r'web/js/(pathlink|position)\.js', ['reading', 'hostile', 'lines']),
+    (r'web/js/recent\.js', ['sidebar', 'sidekinds', 'hostile', 'combos']),
+    (r'web/js/(resize|status|bootguard|mermaid)\.js', ['reading', 'combos', 'variety', 'slides']),
+    (r'web/js/(api|store|util|html|i18n)\.js', ['reading', 'combos', 'hostile', 'docedit', 'structure', 'refresh', 'variety', 'keys_tabs']),
+    (r'web/js/(tablefit|tablefitplan|mdhtml|doc|tablecopy)\.js|web/themes/base\.css', ['tablewidth', 'tablealign', 'scen_tables', 'reading', 'chartdata', 'exporthtml', 'printpdf']),
     (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile', 'chartdata', 'dataedit', 'scen_094']),
     (r'web/js/(editor|icons|lineedit|spotlight)\.js|lectern/editing\.py', ['dataedit', 'scen_094', 'docedit', 'data_wide']),
     (r'web/js/(chartdata|chartops|tablecopy)\.js', ['chartdata']),
@@ -70,16 +88,17 @@ def changed_files() -> list[str]:
 
 
 def suites_for(files: list[str]) -> list[str]:
+    """고친 파일에 닿는 묶음 — 파일이 걸리는 줄을 모두 합친다 (처음 맞는 줄에서 멈추면 doc.js 처럼 두 줄에 걸리는 파일의 뒤 줄이 빠졌다)"""
     want: set[str] = set()
     for f in files:
+        hit = False
         for pattern, names in AREAS:
             m = re.fullmatch(pattern, f)
             if m:
+                hit = True
                 want |= {m.group(1)} if names is None and m.group(1) in SUITES else set(names or [])
-                break
-        else:
-            if f.startswith(('web/', 'lectern/')):
-                want |= set(AREA_OTHER)
+        if not hit and f.startswith(('web/', 'lectern/')):
+            want |= set(AREA_OTHER)
     return [s for s in SUITES if s in want]
 
 
@@ -91,21 +110,58 @@ def main() -> int:
         close_windows.close_new(before)
 
 
+TIMES = ROOT / 'ui-shots' / 'edges' / 'times.json'   # 지난 실행의 묶음별 시간 (동시에 돌릴 때 긴 묶음부터)
+
+
+def jobs_of(args: list[str]) -> tuple[int, list[str]]:
+    """-j N (-jN) 을 떼어 낸다"""
+    jobs, rest, i = 1, [], 0
+    while i < len(args):
+        a = args[i]
+        if a == '-j' and i + 1 < len(args) and args[i + 1].isdigit():
+            jobs, i = int(args[i + 1]), i + 2
+            continue
+        if re.fullmatch(r'-j\d+', a):
+            jobs = int(a[2:])
+        else:
+            rest.append(a)
+        i += 1
+    return max(1, jobs), rest
+
+
 def run_suites(args: list[str]) -> int:
-    want = suites_for(changed_files()) if args == ['--changed'] else args or SUITES
+    jobs, args = jobs_of(args)
+    changed = args == ['--changed']
+    want = suites_for(changed_files()) if changed else args or SUITES
     unknown = [a for a in want if a not in SUITES]
     if unknown:   # 목록에 없는 이름은 돌지 않는다 — 말없이 '모두 통과'로 끝나지 않게
         print(f'모르는 묶음: {unknown} — tools/ui_edges.py 의 SUITES 에 더하세요', flush=True)
         return 1
-    if args == ['--changed']:
+    if changed:
         print('고친 파일에 닿는 묶음:', want or '없음', flush=True)
+        os.environ.setdefault('LECTERN_TEST_FUZZ', 'all')   # 고친 곳을 볼 때는 무작위 시험을 넓게
+    names = [n for n in SUITES if n in want]
+    try:
+        times = json.loads(TIMES.read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        times = {}
+    if jobs > 1:
+        names.sort(key=lambda n: -times.get(n, 60))   # 긴 묶음부터 — 끝이 고르게
+        print(f'{len(names)}묶음을 {jobs}개씩 동시에', flush=True)
+        with ThreadPoolExecutor(jobs) as ex:
+            first = list(ex.map(lambda n: (n, run_suite(n, quiet=True, times=times)), names))
+    else:
+        first = [(n, run_suite(n, times=times)) for n in names]
+    try:
+        TIMES.parent.mkdir(parents=True, exist_ok=True)
+        TIMES.write_text(json.dumps(times, ensure_ascii=False, indent=1), encoding='utf-8')
+    except OSError:
+        pass
     failed, flaky = [], []
-    for name in SUITES:
-        if name not in want:
+    for name, ok in first:
+        if ok:
             continue
-        if run_suite(name):
-            continue
-        # 실패하면 한 번 다시 돌려 '가끔 실패'를 가른다 — 통과로 치지는 않고 따로 알린다 (흔들린 점검은 고칠 것이다)
+        # 실패하면 한 번 다시 돌려 '가끔 실패'를 가른다 — 통과로 치지는 않고 따로 알린다 (흔들린 점검은 고칠 것이다). 다시 돌릴 때는 하나씩
         print(f'--- {name}: 다시 돌립니다', flush=True)
         (flaky if run_suite(name) else failed).append(name)
     if flaky:
@@ -119,11 +175,22 @@ def run_suites(args: list[str]) -> int:
 FLAKY = 3   # 종료 코드: 흔들린 점검만 있다 (실패는 1)
 
 
-def run_suite(name: str) -> bool:
-    print(f'\n=== {name} ===', flush=True)
+def run_suite(name: str, quiet: bool = False, times: dict | None = None) -> bool:
+    """묶음 하나. quiet 이면 출력을 모았다가 끝날 때 한 덩어리로 (동시에 돌릴 때 섞이지 않게)"""
+    if not quiet:
+        print(f'\n=== {name} ===', flush=True)
     started = time.time()
-    code = subprocess.run([sys.executable, str(ROOT / 'tools' / 'edges' / f'{name}.py')], cwd=ROOT).returncode
-    print(f'--- {name}: {"통과" if code == 0 else "실패"} ({time.time() - started:.0f}초)', flush=True)
+    cmd = [sys.executable, str(ROOT / 'tools' / 'edges' / f'{name}.py')]
+    if quiet:
+        r = subprocess.run(cmd, cwd=ROOT, capture_output=True, text=True, encoding='utf-8', errors='replace')
+        code = r.returncode
+        sys.stdout.write(f'\n=== {name} ===\n{r.stdout}{r.stderr}')
+    else:
+        code = subprocess.run(cmd, cwd=ROOT).returncode
+    took = time.time() - started
+    if times is not None and code == 0:
+        times[name] = round(took)
+    print(f'--- {name}: {"통과" if code == 0 else "실패"} ({took:.0f}초)', flush=True)
     return code == 0
 
 

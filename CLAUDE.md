@@ -26,13 +26,13 @@ python app.py --browser samples    :: 개발용: http://127.0.0.1:8765 를 일�
 python app.py --debug samples      :: 창 + 개발자 도구 (F12, 기본 Ctrl+F 등도 켜짐). --browser 와 함께 떠 있는 창에 넘기지 않고 따로 뜬다
 python -m pytest -q                :: 단위 테스트 (Windows가 아니어도 돎)
 python tools/ui_smoke.py           :: 화면 회귀 점검 (playwright 필요, 캡처는 ui-shots/)
-python tools/ui_edges.py           :: 가장자리 점검 (tools/edges/, 이름을 주면 그 묶음만, --changed 면 고친 파일에 닿는 것만)
+python tools/ui_edges.py -j 4      :: 가장자리 점검 (tools/edges/ — 4개씩 동시에, 이름을 주면 그 묶음만, --changed 면 고친 파일에 닿는 것만)
 node tools/rules_check.mjs         :: 규칙 시험만 (브라우저 없이 1초 — pytest 에도 들어 있다)
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
-변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py` 전체를 돌린다 (약 25분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다). master 에 올리면 GitHub Actions 가 pytest 를 돌린다 (`.github/workflows/tests.yml` — 화면 점검은 거기서 손으로 돌릴 때만). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
-Windows 고유 동작(숨김 속성, 정션, 폴더 대화상자, 편집기 열기, WebView2)은 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
+변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py -j 4` 전체를 돌린다 (가장자리 점검 10분쯤·ui_smoke 3분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다. 시험의 짜임과 시간은 D175). master 에 올리면 GitHub Actions 가 pytest 를 돌린다 (`.github/workflows/tests.yml` — 화면 점검은 거기서 손으로 돌릴 때만). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
+Windows 고유 동작 가운데 숨김·시스템 속성, 정션, `\\서버` 경로는 pytest 가 Windows 에서 본다. 폴더 대화상자, 편집기 열기, WebView2 는 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
 
 ## 폴더 구조
 

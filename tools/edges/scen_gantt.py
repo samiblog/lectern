@@ -155,8 +155,10 @@ try:
         page.wait_for_selector(f'{F} .wk-mode', timeout=10000)
         check('폴더 개요는 목록에서 시작 (보기는 칸마다 따로)', page.locator(f'{F} button[data-wk-mode="list"]').get_attribute('aria-pressed') == 'true')
         page.locator(f'{F} button[data-wk-mode="gantt"]').click()
-        settle(300)
-        check("'이 폴더의 업무'의 간트 — 그 묶음과 하위 둘", page.locator(f'{F} .wk-g-row:not(.wk-g-head)').count() == 3 and page.locator(grow(F, '해를 넘기는 묶음') + ' .wk-g-bar.group').count() == 1)
+        # 그릴 때까지 기다린다 — 고정 300ms 뒤에 보던 것이 4개씩 함께 돌릴 때 한 번 흔들렸다 (2026-11-19, D175)
+        expect(page, "'이 폴더의 업무'의 간트 — 그 묶음과 하위 둘", lambda: page.locator(f'{F} .wk-g-row:not(.wk-g-head)').count() == 3
+               and page.locator(grow(F, '해를 넘기는 묶음') + ' .wk-g-bar.group').count() == 1,
+               lambda: page.locator(f'{F} .wk-g-row:not(.wk-g-head)').count())
         page.evaluate(OPEN, {'type': 'doc', 'path': '해넘김/WORK.md'})
         U = '.wk-under'
         page.wait_for_selector(f'{U} .wk-mode', timeout=10000)
