@@ -16,9 +16,9 @@
 | doc.js | 문서 렌더링 후처리 (링크·이미지·표·코드·콜아웃·frontmatter) |
 | markdown.js | markdown-it 설정, 수식 규칙, mermaid 코드 블록 |
 | overview.js | 폴더 개요 화면 |
-| tree.js | 사이드바 탭 바꾸기·트리·필터·우클릭 메뉴 |
+| tree.js | 사이드바 탭 바꾸기·트리·필터·우클릭 메뉴, 트리의 키(↑↓·→←·글자 — 코드·자료 목록과 같게, D169) |
 | recent.js | 사이드바 '최근 변경' 탭 — '문서'·'코드'·'자료' 버튼, 문서(트리)와 코드·자료(GET /api/others/recent)를 섞어 최근 것부터 (D50) |
-| others.js | 사이드바 파일 탭의 묶음 — 종류별 보기는 위에서부터 '문서'(트리)·'코드'·'자료' 세 묶음(접기·분리선)과 코드·자료의 탐색기 같은 목록 (GET /api/others 를 화면이 나눔), 폴더 보기는 문서·파일·코드를 합친 한 트리. 다른 탭의 파일 행 동작(`bindFileRows`)·파일 메뉴도 여기 |
+| others.js | 사이드바 파일 탭의 네 묶음 — 위에서부터 '문서'(트리)·'코드'·'자료'·'폴더'(한 번에 하나만 펼침)와 코드·자료·폴더의 탐색기 같은 목록 (GET /api/others 를 화면이 나눔, '폴더'는 문서·파일·코드를 합친 한 트리 — D169). Ctrl+Shift+E 의 `focusFiles`, 다른 탭의 파일 행 동작(`bindFileRows`)·파일 메뉴도 여기 |
 | icons.js | 사이드바 목록의 파일 종류 아이콘 (확장자 → 종류, md·html 은 문서) |
 | terminal.js | 오른쪽 터미널 — xterm.js(처음 열 때 불러옴), 탭마다 터미널 여러 개(`tab.terms`·고른 것 `tab.term` — 머리줄의 터미널 탭·+·×, 5개까지, D69 — 오른쪽에 둘 이상이면 위아래로 쌓은 칸 `term.pane`·경계·`tab.termWeights`, D137), 번호로 보내기(`pasteToTerminal` 의 `n` — Shift+숫자·메뉴의 숫자+누르기), 긴 폴링으로 출력·키 입력 보내기, 패널 열기·닫기·폭, 탭을 닫기 전에 묻기 |
 | spread.js | 모두 펼치기 (D73) — 문서 탭 줄 오른쪽 끝 ▦, `html.spread-on` 이면 `#lec-main` 이 격자·`#lec-panes` 는 display: contents 라 선택된 탭의 칸(`.sp-cell`)이 그대로 격자의 칸, 자리는 `layoutOf`(터미널은 오른쪽 아래 한 칸 — 오른쪽 패널 `#lec-term` 그대로), 칸 머리(`.sp-head`), 칸을 누르면 `selectDocTab`, 펼치면서 연 터미널만 끝낼 때 감춤 |
@@ -40,8 +40,9 @@
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
 | help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |
 | watch.js | 1초 폴링으로 변경 반영 (모든 탭을 한 번에, 숨은 탭은 고를 때 다시 그림) |
-| toc.js / find.js / palette.js | 목차(제목 아래에 표·그림 등 구성 요소, 종류 버튼) / 문서 안 찾기 / Ctrl+P (문서·코드 — 문서 탭 줄의 + 로 열면 새 탭에서, 맨 위에 '새 문서 만들기…') |
-| fold.js | 제목을 눌러 절 접기·펴기 |
+| toc.js / find.js / palette.js | 목차(제목 아래에 표·그림 등 구성 요소, 종류 버튼) / 문서 안 찾기 / Ctrl+P (문서·코드 — 문서 탭 줄의 + 로 열면 새 탭에서, 맨 위에 '새 문서 만들기…', ':' 줄로 가기, '>' 명령 찾기 — D170) |
+| commands.js | 명령 찾기(Ctrl+Shift+P — D170)의 목록: 이름·묶음·단축키·할 일. 여러 모듈의 동작을 모으므로 main.js 만 부르고 `palette.setCommands` 로 넘긴다 |
+| fold.js | 제목을 눌러 절 접기·펴기, Ctrl+Shift+[ ] 현재 절, Ctrl+Alt+[ ] 모두 (D170) |
 | wordpick.js | 읽는 화면에서 글을 고르고 서식 (D142) — 낱말 옮기기·넓히기(→·←·Shift+→·←·Home·End, 현재 줄의 → 는 첫 낱말), 고른 글의 서식 키(B·I·S·M·F, Ctrl+B 등 — 저장은 lineedit.formatShown), F2 로 같은 글을 고른 칸, 우클릭의 서식 상자(`wordMenu` — main.js 가 docmenu.js 에 잇는다) |
 | spotlight.js | 현재 위치와 하이라이트 (D74·D75) — 현재 위치(`pane.here` 원문 줄, 삼각형 `.lec-here`, 누르기·↑·↓·스크롤 따라오기·'reveal'), 고른 줄(`anchor`·`focus` 원문 줄 — Insert·Ctrl+L·Shift+Enter, Shift+누르기·끌기·↑·↓), 고른 줄의 라이트인 줄 하이라이트(`dimmed` — D118), 장 하이라이트(한 장만 그대로, ↑·↓·PageUp·PageDown 으로 앞뒤 장). 그 밖은 칸에 겹친 덮개(`.lec-spot`)가 회색으로 덮는다. 키는 `spotKey`(main.js 의 keydown — Shift+→ `sendLit`·Shift+← `copyLitRef`·Ctrl+C `copyLitSource`), 상태줄 `#lec-st-lit`. `litAt(y)` 로 우클릭 메뉴가 하이라이트한 곳의 선택 상자를 띄운다 (docmenu.js 의 `litMenu` — 코드 화면도) |
 | lineedit.js | 한 줄 편집 (D76) — 'line-edit' 이벤트·본문 두 번 누르기(`onDoubleClick`)로 시작, 할 일 체크 칸(`onTaskClick`), `lineSlot` 의 Range 내용을 떼고 `.lec-line-edit` 칸을 넣음, 앞뒤 표시 잠금(`splitText`·`splitCode`·`splitRow`), 저장(`replaceLines` — 원문을 새로 받아 그 범위만, 밀렸으면 `locateLines`), ↑↓ 이어서, 되돌리기·다시 하기(`undoLineEdit`·`redoLineEdit` — main.js 의 Ctrl+Z·Ctrl+Y, 기록은 파일마다). 편집 중에는 `pane.lineEdit` (nav.refreshView 가 다시 그리기를 미룸) |
@@ -52,7 +53,7 @@
 | linenums.js | 줄 번호 (D80) — 툴바 `#lec-btn-lines`·Alt+L(설정 line_numbers), 칸마다 스크롤 상자에 덮개 `.lec-gutter`, `collectUnits` 의 단위마다 원문 줄 번호, md 문서만 |
 | docwidth.js | 툴바의 문서 폭 [좁게][폭 100%][넓게] (D68 — 설정 doc_width, CSS 변수 --md-wide 를 md 본문 max-width 에 곱함, '가득' = 칸 폭) |
 | tablefit.js | 표 첫 열 넓히기 (D68) — 첫 열 때문에 높은 행이 있는 md 표의 첫 열 폭을 재어 정함 (`fitTables(view)` — doc.js 가 바꿔 끼운 뒤, 표 상자의 ResizeObserver·text-size 로 다시) |
-| diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼 |
+| diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼과 F7·Shift+F7 (D170) |
 | search.js | 사이드바 '검색' 탭 — 맨 위에 이름이 맞는 파일(문서·코드·자료), 그 아래 문서·코드 본문 검색 (서버는 lectern/search.py) |
 | parts.js | 사이드바 '모아 보기' 탭 (캡션이 있으면 캡션이 이름, 우클릭은 Claude용 위치·원문 복사 — D61. 차트는 보일 때 그린 작은 그림, 할 일·링크·출처는 종류 아래 단추로 거르기, '문서 정보' 보기 — D62) — '문서 속 요소' / '파일 종류'(묶음마다 형식별 파일, 그림은 작은 그림 — D50). 문서 속 요소는 범위(프로젝트·폴더)의 문서를 화면 밖에서 그려 목차와 같은 규칙(`toc.js` 의 `readParts`)으로 구성 요소를 세고, 종류마다 문서별 목록(그림은 작은 그림 격자), 누르면 그 자리로 |
 | settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 탭마다 마지막 문서·스크롤 위치 기록 |

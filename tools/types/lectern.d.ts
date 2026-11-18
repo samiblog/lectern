@@ -81,7 +81,7 @@ declare global {
     tocRoot: HTMLElement | null;
     status: { path?: string; info?: string };
     source: { path: string; lines: string[] } | null;
-    marks: { list: any[]; next: number };
+    marks: { all: any[]; sigs: string[]; idx: number[]; count: number; list: any[]; at: number; pos: number };
 
     coming?: any;
     codeStamp?: any;

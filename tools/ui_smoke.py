@@ -1728,56 +1728,58 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             # 한 번에 한 묶음 (D143): 머리줄을 누르면 그 묶음만 펼치고 남은 높이를 모두 — 나머지는 머리줄만. 설정에 남는다
             page.click('#lec-docs-head')
-            secs = lambda: page.evaluate("['#lec-docs', '#lec-code', '#lec-others'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')")
-            docs_first = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow')") and secs() == ['open', 'closed', 'closed']
+            secs = lambda: page.evaluate("['#lec-docs', '#lec-code', '#lec-others', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')")
+            docs_first = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow')") and secs() == ['open', 'closed', 'closed', 'closed']
             tree_h = page.locator('#lec-tree').bounding_box()['height']
             page.click('#lec-others-head')
-            others_only = wait_until(page, "document.querySelector('#lec-others').classList.contains('grow')") and secs() == ['closed', 'closed', 'open']
+            others_only = wait_until(page, "document.querySelector('#lec-others').classList.contains('grow')") and secs() == ['closed', 'closed', 'open', 'closed']
             others_h = page.locator('#lec-others-list').bounding_box()['height']
             tree_gone = page.evaluate("getComputedStyle(document.querySelector('#lec-tree')).display") == 'none'
             saved_open = config_is('files_open', 'others')
             page.click('#lec-others-head')
-            still = secs() == ['closed', 'closed', 'open']
+            still = secs() == ['closed', 'closed', 'open', 'closed']
             page.click('#lec-docs-head')
             back = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow')") and config_is('files_open', 'docs')
             check(docs_first and others_only and others_h > 250 and tree_gone and saved_open and still and back and page.locator('.side-split').count() == 0,
                   f"한 번에 한 묶음: 머리줄을 누르면 그 묶음만 펼치고 남은 높이를 모두 (문서 {tree_h:.0f} · 자료 {others_h:.0f}), 펼친 것을 다시 눌러도 그대로, 설정에 저장, 분리선 없음")
             shot('05-others')
-            print('[폴더 보기]')
-            page.click('#lec-btn-view')
-            wait_until(page, "document.querySelector('#lec-files').classList.contains('folder-view')")
-            wait_until(page, f"!!document.querySelector('{olist} .row')")
-            hidden = page.evaluate("['#lec-docs', '#lec-others-head', '#lec-code'].map(s => getComputedStyle(document.querySelector(s)).display)")
-            active_row = lambda: page.evaluate(f"document.querySelector('{olist} .row.active')?.dataset.path ?? null")
+            print('[폴더 묶음 (D169)]')
+            flist = '#lec-folder-list'
+            frow = lambda path: page.locator(f'{flist} .row[data-path="{path}"]')
+            page.click('#lec-folder-head')
+            wait_until(page, "document.querySelector('#lec-folder').classList.contains('grow')")
+            wait_until(page, f"!!document.querySelector('{flist} .row')")
+            hidden = page.evaluate("['#lec-tree', '#lec-code-list', '#lec-others-list'].map(s => getComputedStyle(document.querySelector(s)).display)")
+            active_row = lambda: page.evaluate(f"document.querySelector('{flist} .row.active')?.dataset.path ?? null")
             revealed = active_row()
-            research = orow('research')
+            research = frow('research')
             if research.get_attribute('aria-expanded') != 'true':
                 research.locator('[data-toggle]').click()
-            mixed = [orow('research/images').count(), orow('research/구리-시장-동향.md').count(),
-                     icon_of(f'{olist} .row[data-path="research/구리-시장-동향.md"]')]
+            mixed = [frow('research/images').count(), frow('research/구리-시장-동향.md').count(),
+                     icon_of(f'{flist} .row[data-path="research/구리-시장-동향.md"]')]
             check(hidden == ['none'] * 3 and revealed == 'docs/01-기능-점검.md' and mixed == [1, 1, '#i-md']
-                  and page.is_visible('#lec-btn-view.on') and config_is('files_view', 'folder'),
-                  f"'폴더' 버튼: 문서 트리를 감추고 한 트리에 문서와 파일을 폴더 구조 그대로, 지금 보는 문서까지 펼침, 설정에 저장 ({hidden}, {revealed}, {mixed})")
-            orow('research/구리-시장-동향.md').click(modifiers=['Alt'])
+                  and page.locator('#lec-btn-view').count() == 0 and config_is('files_open', 'folder'),
+                  f"'폴더' 묶음: 다른 묶음은 접고 한 트리에 문서와 파일을 폴더 구조 그대로, 지금 보는 문서까지 펼침, 설정에 저장 ({hidden}, {revealed}, {mixed})")
+            frow('research/구리-시장-동향.md').click(modifiers=['Alt'])
             doc_open = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'research/구리-시장-동향.md'")
             now_active = active_row()
-            orow('data').locator('[data-toggle]').click(modifiers=['Alt'])
-            page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')
-            body = opens(orow('data/표.csv').dblclick)
-            doc_menu = menu(orow('research/구리-시장-동향.md'))
+            frow('data').locator('[data-toggle]').click(modifiers=['Alt'])
+            page.wait_for_selector(f'{flist} .row[data-path="data/표.csv"]')
+            body = opens(frow('data/표.csv').dblclick)
+            doc_menu = menu(frow('research/구리-시장-동향.md'))
             page.keyboard.press('Escape')
-            dir_menu = menu(orow('docs'))
+            dir_menu = menu(frow('docs'))
             page.locator('#lec-menu button', has_text='폴더 개요 보기').click()
             overview = wait_until(page, "document.querySelector('#lec-view .ov-head h1')?.textContent === 'docs'")
             check(doc_open and now_active == 'research/구리-시장-동향.md' and body['path'] == 'data/표.csv'
                   and '@research/구리-시장-동향.md 복사' in doc_menu and '외부 편집기로 열기' in doc_menu and '폴더 개요 보기' in dir_menu and overview,
-                  '폴더 보기: 문서는 한 번 눌러 뷰어에서(강조), 파일은 두 번 눌러 열기, 문서·폴더 우클릭 메뉴(폴더 개요 보기)')
+                  "'폴더' 묶음: 문서는 한 번 눌러 뷰어에서(강조), 파일은 두 번 눌러 열기, 문서·폴더 우클릭 메뉴(폴더 개요 보기)")
             shot('05-folder-view')
-            page.click('#lec-btn-view')
-            back_kind = wait_until(page, "!document.querySelector('#lec-files').classList.contains('folder-view')")
+            page.click('#lec-docs-head')
+            back_kind = wait_until(page, "document.querySelector('#lec-docs').classList.contains('grow')")
             check(back_kind and page.is_visible('#lec-tree') and page.is_visible('#lec-others-head') and olabels()[0] == 'data' and page.is_visible('#lec-code-head')
-                  and config_is('files_view', 'kind'),
-                  "다시 누르면 종류별 보기 ('문서'·'코드'·'자료' 묶음)")
+                  and not page.is_visible(flist) and config_is('files_open', 'docs'),
+                  "'문서' 머리줄을 누르면 문서 트리로 ('폴더' 목록은 접힘)")
 
             print('[코드·자료의 최근 변경·검색·파일 종류]')
             page.locator('.side-tabs button[data-tab="recent"]').click()

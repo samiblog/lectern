@@ -58,7 +58,7 @@ export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" tit
 function fileRow(f, depth, extra = null) {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
-  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="0">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
+  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="-1">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
 }
 
 /** opts: {allOpen — 폴더를 모두 펼쳐 보임(S.open 은 그대로), after(f, depth) — 문서 행 아래에 붙일 줄} */
@@ -73,7 +73,7 @@ function nodesHtml(nodes, depth, opts = null) {
     const open = !!opts?.allOpen || S.open.has(n.path);
     const cls = ['row', 'dir'];
     if (n.path === activeDir()) cls.push('active');
-    markup.push([html`<div class="${cls.join(' ')}" data-dir="${n.path}" style="--d:${depth}" title="${n.path}" tabindex="0">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>`, html`${!open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`]);
+    markup.push([html`<div class="${cls.join(' ')}" data-dir="${n.path}" style="--d:${depth}" title="${n.path}" tabindex="-1">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>`, html`${!open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : ''}</div>`]);
     if (open) markup.push(nodesHtml(n.children, depth + 1, opts));
   }
   return markup;
@@ -209,6 +209,15 @@ function renderTree() {
     setHtml(box, nodes.length ? nodesHtml(nodes, 0) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
+  rove();   // Tab 으로 들어올 행 (거르기·화살표 누르기처럼 render 를 거치지 않고 다시 그려도)
+}
+
+/** Tab 으로 트리에 들어올 행 하나 (D169 — 나머지는 ↑·↓ 로): row, 없으면 지금 보는 문서·폴더, 그것도 없으면 첫 행 */
+function rove(row = null) {
+  const box = $('#lec-tree');
+  const pick = row || box.querySelector('.row.active') || box.querySelector('.row');
+  for (const r of $$('.row[tabindex="0"]', box)) if (r !== pick) r.tabIndex = -1;
+  if (pick) pick.tabIndex = 0;
 }
 
 function renderCount() {
@@ -219,6 +228,8 @@ function renderCount() {
 
 function render() {
   keepFocus($('#lec-tree'), renderTree);
+  const at = document.activeElement;
+  rove(at?.matches?.('#lec-tree .row') ? at : null);   // 다시 그린 뒤에도 초점이 있던 행이 Tab 의 자리
   renderCount();
   $('#lec-btn-titles').classList.toggle('on', showTitles());
   $('#lec-btn-sort').classList.toggle('on', sortWay() !== 'name');
@@ -448,6 +459,77 @@ function onContextMenu(e) {
   else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 
+// 글자를 치면 그 글자로 시작하는 다음 행으로 (탐색기처럼 — others.js 와 같게). 잠깐 사이에 이어 치면 이어진 글자로
+let typed = '';
+let typedAt = 0;
+
+/** 행의 위 행: 문서·폴더는 상위 폴더, 형광펜·할 일 줄은 그 문서 */
+function parentRow(box, row) {
+  if (row.dataset.itemDoc != null) return box.querySelector(`.row[data-doc="${CSS.escape(row.dataset.itemDoc)}"]`);
+  const up = dirname(row.dataset.doc ?? row.dataset.dir ?? '');
+  return up ? box.querySelector(`.row[data-dir="${CSS.escape(up)}"]`) : null;
+}
+
+/**
+ * 문서 트리의 키 (D169 — '코드'·'자료'·'폴더' 목록과 같게): ↑·↓·Home·End 로 옮기고, → 는 폴더 펼치기(펼쳐 있으면 첫 항목), ← 는 접기·위 폴더,
+ * 글자는 그 글자로 시작하는 행. Enter 는 누르기와 같고(문서 열기·폴더 개요), F2 는 이름 바꾸기
+ */
+function onTreeKey(e) {
+  const box = /** @type {HTMLElement} */ (e.currentTarget);
+  const cur = /** @type {HTMLElement} */ (e.target).closest?.('.row');
+  if (!cur) return;
+  if (e.key === 'Enter') {
+    clickFromKey(e);
+    return;
+  }
+  if (e.key === 'F2') {   // 이름 바꾸기 (D66)
+    if (cur.dataset.doc != null) {
+      e.preventDefault();
+      emit('rename', { path: cur.dataset.doc });
+    }
+    return;
+  }
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  const rows = $$('.row', box);
+  const i = rows.indexOf(cur);
+  const go = (row) => {
+    if (!row) return;
+    rove(row);
+    row.focus({ preventScroll: true });
+    row.scrollIntoView({ block: 'nearest' });
+  };
+  const dir = cur.dataset.dir;
+  const shut = dir != null && !cur.querySelector('.caret')?.classList.contains('open');
+  const folds = dir != null && !currentKind().content;   // 형광펜·할 일 묶음은 폴더가 늘 펼쳐 있다 — 옮기기만
+  const setOpen = (open) => {
+    if (open) S.open.add(dir);
+    else S.open.delete(dir);
+    render();   // 초점은 그 폴더 행에 남는다 (keepFocus)
+  };
+  if (e.key === 'ArrowDown') go(rows[Math.min(rows.length - 1, i + 1)]);
+  else if (e.key === 'ArrowUp') go(rows[Math.max(0, i - 1)]);
+  else if (e.key === 'Home') go(rows[0]);
+  else if (e.key === 'End') go(rows[rows.length - 1]);
+  else if (e.key === 'ArrowRight' && dir != null) {
+    if (folds && shut) setOpen(true);
+    else go(rows[i + 1]);
+  } else if (e.key === 'ArrowLeft') {
+    if (folds && !shut) setOpen(false);
+    else go(parentRow(box, cur));   // 거른 목록에서는 위 폴더가 보이지 않아 그대로
+  } else if (e.key.length === 1 && e.key !== ' ' && !e.isComposing) {
+    const now = Date.now();
+    typed = now - typedAt > 800 ? e.key.toLowerCase() : typed + e.key.toLowerCase();
+    typedAt = now;
+    const same = [...typed].every((c) => c === typed[0]);   // 같은 글자를 거듭 치면 그 글자로 시작하는 다음 행
+    const want = same ? typed[0] : typed;
+    const from = same ? i + 1 : i;
+    const order = [...rows.slice(from), ...rows.slice(0, from)];
+    go(order.find((r) => (r.querySelector('.label')?.textContent || '').toLowerCase().startsWith(want)));
+  } else return;
+  e.preventDefault();
+  e.stopPropagation();   // 현재 줄의 ↑·↓ 등 앱 단축키로 가지 않게
+}
+
 export function focusFilter() {
   switchPanel('files');
   $('#lec-filter').focus();
@@ -459,13 +541,8 @@ export function initTree() {
   tree.addEventListener('click', onRowClick);
   middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
   tree.addEventListener('contextmenu', onContextMenu);
-  tree.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && e.target.classList.contains('row')) clickFromKey(e);
-    else if (e.key === 'F2' && e.target.dataset?.doc != null) {   // 이름 바꾸기 (D66)
-      e.preventDefault();
-      emit('rename', { path: e.target.dataset.doc });
-    }
-  });
+  tree.addEventListener('keydown', onTreeKey);
+  tree.addEventListener('focusin', (e) => { if (e.target.matches?.('.row')) rove(e.target); });   // 누른 행이 Tab 의 자리
   const filter = $('#lec-filter');
   filter.addEventListener('input', renderTree);
   filter.addEventListener('keydown', (e) => {

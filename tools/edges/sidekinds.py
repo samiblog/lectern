@@ -32,7 +32,7 @@ KINDS = "() => [...document.querySelectorAll('#lec-docs .kind-head')].map((b) =>
 OPEN_KIND = "() => document.querySelector('#lec-docs .kind-head.open')?.dataset.kind ?? null"
 TREE_DOCS = "() => [...document.querySelectorAll('#lec-tree .row.file')].map((r) => r.dataset.doc)"
 ITEMS = "() => [...document.querySelectorAll('#lec-tree .row.item')].map((r) => r.dataset.itemDoc + '#' + r.dataset.line + ':' + r.querySelector('.label').textContent)"
-SECS = "() => ['#lec-docs', '#lec-code', '#lec-others'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
+SECS = "() => ['#lec-docs', '#lec-code', '#lec-others', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
 
 
 def text(path):
@@ -69,23 +69,23 @@ try:
         toast = lambda: page.text_content('#lec-toast') or ''
 
         print('[한 번에 한 묶음]')
-        check('처음은 문서만 펼쳐져 있다', page.evaluate(SECS) == ['open', 'closed', 'closed'], page.evaluate(SECS))
+        check('처음은 문서만 펼쳐져 있다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         tree_h = page.locator('#lec-tree').bounding_box()['height']
         check('펼친 문서 목록이 남은 높이를 쓴다', tree_h > 400, tree_h)
         check('접힌 머리줄에도 개수', until(page, lambda: page.inner_text('#lec-code-count') == '1' and page.inner_text('#lec-others-count') == '1'),
               [page.inner_text('#lec-code-count'), page.inner_text('#lec-others-count')])
         page.click('#lec-code-head')
-        check('코드를 누르면 코드만 펼친다', page.evaluate(SECS) == ['closed', 'open', 'closed'], page.evaluate(SECS))
+        check('코드를 누르면 코드만 펼친다', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed'], page.evaluate(SECS))
         check('코드 목록이 보인다', until(page, lambda: page.locator('#lec-code-list .row').count() > 0))
         check('설정에 남는다', until(page, lambda: saved().get('files_open') == 'code'), saved().get('files_open'))
         page.click('#lec-code-head')
-        check('펼친 것을 다시 눌러도 그대로', page.evaluate(SECS) == ['closed', 'open', 'closed'], page.evaluate(SECS))
+        check('펼친 것을 다시 눌러도 그대로', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed'], page.evaluate(SECS))
         page.fill('#lec-filter', 'calc')
         check('거르는 중이면 접힌 머리줄에 맞는 수', until(page, lambda: page.inner_text('#lec-docs-count') == '0' and page.inner_text('#lec-others-count') == '0' and page.inner_text('#lec-code-count') == '1'),
               [page.inner_text('#lec-docs-count'), page.inner_text('#lec-code-count'), page.inner_text('#lec-others-count')])
         page.fill('#lec-filter', '')
         page.click('#lec-docs-head')
-        check('문서로 돌아온다', page.evaluate(SECS) == ['open', 'closed', 'closed'], page.evaluate(SECS))
+        check('문서로 돌아온다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
 
         print('[문서의 하위 묶음]')
         until(page, lambda: page.locator('#lec-docs .kind-head').count() > 0)

@@ -25,7 +25,7 @@ MAX_DOC_TABS = 40     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67·
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 MAX_WORK_FOLDERS = 1000   # 업무 폴더 목록에 기억하는 폴더 수 (D124 — WORK.md 가 있는 폴더, D149 — 하위 폴더의 것도 들어 200 → 1000)
 
-CONFIG_VERSION = 2   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
+CONFIG_VERSION = 3   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
 TERM_FONT = (10, 24)   # 터미널 글자 크기(px)의 범위 (D130 — 화면 terminal.js 의 TERM_FONT 와 같게)
 
 DEFAULTS: dict[str, Any] = {
@@ -52,8 +52,7 @@ DEFAULTS: dict[str, Any] = {
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'toc_width': None,       # 목차 폭(px, 160~560). None 이면 기본 폭 — 경계를 끌어 바꾸고 두 번 누르면 기본 (D47)
     'side_sort': 'name',     # 사이드바 목록의 차례: name | time | type (D97 — 폴더가 먼저)
-    'files_view': 'kind',    # 사이드바 파일 탭을 보는 방법: kind(종류별 — 문서 트리 위, 파일 목록 아래) | folder(폴더 구조 그대로 한 트리)
-    'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others (D143 — 한 번에 하나만 펼친다)
+    'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder (D143 — 한 번에 하나만 펼친다, folder 는 폴더 구조 그대로 — D169)
     'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·work·marks·tasks (D143)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
@@ -100,13 +99,13 @@ DEFAULTS: dict[str, Any] = {
 
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
 AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
-FILES_OPEN = ('docs', 'code', 'others')   # 설정 files_open (D143 — 화면은 others.js)
+FILES_OPEN = ('docs', 'code', 'others', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'files_open', 'docs_kind',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
@@ -168,12 +167,16 @@ def value_ok(key: str, value: Any) -> bool:
     return isinstance(value, type(default))
 
 
-def _upgrade(data: dict[str, Any]) -> None:
-    """옛 판(version)의 설정을 지금 판으로 바꾼다. 파일에는 다음에 설정을 저장할 때 쓰인다 (그 전까지는 읽을 때마다 같은 값으로 바꾼다)."""
+def _upgrade(data: dict[str, Any], loaded: dict[str, Any] | None = None) -> None:
+    """옛 판(version)의 설정을 지금 판으로 바꾼다. 파일에는 다음에 설정을 저장할 때 쓰인다 (그 전까지는 읽을 때마다 같은 값으로 바꾼다).
+    loaded: 파일에서 읽은 그대로 (없어진 키를 옮길 때)"""
     if data['version'] < 2:
         # v0.7.1: 트리는 파일 이름이 기본이 됐다 (사용자 요청 — 마우스를 올리면 제목). 앱은 저장할 때 기본값도 함께 적으므로
         # 옛 파일의 show_titles: true 는 사용자가 고른 것인지 알 수 없다. 한 번 파일 이름으로 돌린다
         data['show_titles'] = False
+    if data['version'] < 3 and (loaded or {}).get('files_view') == 'folder':
+        # v0.93.0 (D169): '폴더' 버튼(files_view)은 사이드바의 넷째 묶음 '폴더'가 됐다 — 폴더 보기로 쓰던 사람은 그 묶음을 펼친 채로
+        data['files_open'] = 'folder'
     data['version'] = max(data['version'], CONFIG_VERSION)
 
 
@@ -232,7 +235,7 @@ class Config:
                 data[key] = value
             else:
                 wrong.append(t('{key} 는 {expected}', lang, key=key, expected=_expected(key, lang)))
-        _upgrade(data)
+        _upgrade(data, loaded)
         if wrong:
             # 맞는 값은 쓰고 틀린 값만 기본값으로. 파일을 고칠 때까지 저장하지 않는다 (손으로 쓴 값을 덮어쓰지 않게, D21)
             return data, t('설정 파일의 값 형식이 틀려 그 값은 기본값으로 실행합니다 ({wrong}). 파일을 고칠 때까지 설정은 저장하지 않습니다: {path}',

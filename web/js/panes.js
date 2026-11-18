@@ -32,7 +32,7 @@ function makePane(el, tab) {
     tocRoot: null,                            // 목차를 만들 곳 (toc.js)
     status: { path: '', info: '' },           // 상태줄 (status.js)
     source: null,                             // 우클릭 메뉴가 쓰는 원문 {path, lines} (docmenu.js)
-    marks: { list: [], next: 0 },             // 자동 새로고침으로 바뀐 곳 (diffmark.js)
+    marks: { all: [], sigs: [], idx: [], count: 0, list: [], at: -1, pos: -1 },   // 이 문서를 연 뒤 바뀐 곳 (diffmark.js — F7, D170)
   };
 }
 

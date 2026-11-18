@@ -6,7 +6,7 @@ import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
 import { initToc, updateTocVisibility } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
-import { initFold, foldHere } from './fold.js';
+import { initFold, foldHere, foldAllHere } from './fold.js';
 import { wordKey, clearPick, wordMenu } from './wordpick.js';
 import { initSpotlight, spotKey, escSpotlight, docKeyTarget, overlayOpen, spotButton, herePoint, armHeld, putKey } from './spotlight.js';
 import { initViKeys, viKey } from './vikeys.js';
@@ -19,14 +19,14 @@ import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
 import { initDocMenu, useWordMenu } from './docmenu.js';
-import { initChangeMarks } from './diffmark.js';
+import { initChangeMarks, stepChange } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
 import { initParts } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
 import { initRecent, refreshRecent } from './recent.js';
-import { initOthers, refreshOthers } from './others.js';
+import { initOthers, refreshOthers, focusFiles } from './others.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
 import { initPanes, paneShown } from './panes.js';
 import { initNav, back, forward, refreshView } from './nav.js';
@@ -68,6 +68,7 @@ import { initSpread, spreadOn, leaveSpread } from './spread.js';
 import { loadTree } from './project.js';
 import { initWork, openBoard, openEventDialog } from './work.js';
 import { initWorkAlert } from './workalert.js';
+import { initCommands } from './commands.js';
 import { forgetFailedImages } from './doc.js';
 import { html, setHtml } from './html.js';
 import { $, basename, toast, noteCopy } from './util.js';
@@ -152,6 +153,13 @@ async function manualRefresh() {
 }
 
 // ---- 초점 ---------------------------------------------------------------------
+
+/** Ctrl+Shift+E (D169): 사이드바 '파일' 탭의 펼친 묶음으로 — 감췄으면(Ctrl+B·모두 펼치기) 먼저 보인다. 다시 누르면 다음 묶음 (others.js) */
+async function filesKey() {
+  if (spreadOn()) leaveSpread();
+  if (S.config.sidebar_visible === false) await toggleSidebar();
+  await focusFiles();
+}
 
 /** 보던 문서로 초점을 — 편집 중이면 편집기, 한 줄 편집 중이면 그 칸의 그 자리 */
 function focusDoc() {
@@ -335,6 +343,11 @@ function bindKeys() {
       e.preventDefault();
       return;
     }
+    if (mod && e.shiftKey && !e.altKey && key === 'e') {   // 사이드바 '파일' 탭의 목록으로 (D169) — 편집 상자·한 줄 편집 칸에서도
+      e.preventDefault();
+      filesKey();
+      return;
+    }
     if (mod && !e.shiftKey && !e.altKey && key === 'e') {   // 편집 모드 열고 닫기 (D54)
       e.preventDefault();
       toggleEditor();
@@ -348,6 +361,9 @@ function bindKeys() {
     } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95)
       e.preventDefault();
       moveToWindow();
+    } else if (mod && e.shiftKey && !e.altKey && key === 'p') {   // 명령 찾기 (D170 — 빠른 열기의 '>')
+      e.preventDefault();
+      openPalette({ query: '>' });
     } else if (mod && !e.shiftKey && key === 'p') {
       e.preventDefault();
       openPalette();
@@ -437,6 +453,13 @@ function bindKeys() {
       e.preventDefault();   // 줄 번호 (linenums.js, D80)
     } else if (mod && e.shiftKey && !e.altKey && (e.code === 'BracketLeft' || e.code === 'BracketRight') && !typing(e) && !overlayOpen() && foldHere(e.code === 'BracketLeft')) {
       e.preventDefault();   // 현재 줄이 든 절 접기·펴기 (fold.js, D120)
+    } else if (mod && e.altKey && !e.shiftKey && (e.code === 'BracketLeft' || e.code === 'BracketRight') && !typing(e) && !overlayOpen() && foldAllHere(e.code === 'BracketLeft')) {
+      e.preventDefault();   // 모두 접기·펴기 (fold.js, D170 — vi 의 zM·zR)
+    } else if (e.key === 'F7' && !mod && !e.altKey && !typing(e) && !overlayOpen() && stepChange(e.shiftKey ? -1 : 1)) {
+      e.preventDefault();   // 다음·이전 바뀐 곳 (diffmark.js, D170 — Edge 의 F7 캐럿 브라우징 대신)
+    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyO' && !typing(e)) {
+      e.preventDefault();   // 목차 보이기·숨기기 (D170 — 탭 막대의 [목차])
+      toggleToc();
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyW' && !typing(e)) {
       e.preventDefault();   // 업무 현황 (work.js, D124)
       openBoard();
@@ -552,6 +575,7 @@ async function boot() {
   initSpread();
   initWork();
   initWorkAlert();
+  initCommands({ toggleSidebar, toggleToc, refresh: manualRefresh, focusFiles: filesKey });   // 명령 찾기 (D170)
   bindToolbar();
   bindKeys();
   applyLayout();

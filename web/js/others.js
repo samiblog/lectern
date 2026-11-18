@@ -1,12 +1,14 @@
-// 사이드바 '파일' 탭 (D36, D37, D42, D48). 보는 방법 두 가지 (거르기 칸 옆 '폴더' 버튼, 설정 files_view):
-// - 종류별(kind, 기본): 위에서부터 세 묶음 — '문서'(문서 트리, tree.js), '코드'(소스·스크립트·웹·설정 — icons.js 의 코드 종류),
-//   '자료'(문서도 코드도 아닌 파일 — 목록 이름은 files). 코드와 자료는 같은 모양의 탐색기 같은 목록이다. 한 번에 한 묶음만 펼치고(D143 — 설정 files_open,
-//   프로젝트 탭마다 tab.side.filesOpen) 그것이 남은 높이를 모두 갖는다. 접힌 머리줄에도 개수(거르는 중이면 맞는 수)가 보인다.
-// - 폴더(folder): 묶음 머리줄·문서 트리·코드 목록·분리선을 감추고 '자료' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 함께 보인다.
-//   문서 행은 문서 트리처럼 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조 — 두 번 누르면 새 문서 탭, D67), 파일 행은 탐색기처럼.
+// 사이드바 '파일' 탭 (D36, D37, D42, D48, D169). 위에서부터 네 묶음:
+// - '문서'(문서 트리, tree.js), '코드'(소스·스크립트·웹·설정 — icons.js 의 코드 종류), '자료'(문서도 코드도 아닌 파일 — 목록 이름은 files)는 종류로 나눈 것,
+//   '폴더'(목록 이름 folder — D169)는 문서·파일·코드를 폴더 구조 그대로 한 트리에 (전에는 거르기 칸 옆 '폴더' 버튼이 세 묶음 대신 보이던 것 — D37).
+//   코드·자료·폴더는 같은 모양의 탐색기 같은 목록이다. 한 번에 한 묶음만 펼치고(D143 — 설정 files_open, 프로젝트 탭마다 tab.side.filesOpen)
+//   그것이 남은 높이를 모두 갖는다. 접힌 머리줄에도 개수(거르는 중이면 맞는 수)가 보인다 — '폴더'는 위 셋을 더한 수라 보이지 않는다.
+//   Ctrl+Shift+E 는 펼친 묶음으로 초점, 그 안에서 다시 누르면 다음 묶음 (focusFiles — D169).
+// - '폴더'의 문서 행은 문서 트리처럼 누르면 뷰어에서 열고(제목·바뀜 점·지금 보는 문서 강조 — 두 번 누르면 새 문서 탭, D67), 파일 행은 탐색기처럼.
+//   펼쳐 있을 때만 그린다 (문서 트리 전체와 합치는 일이라).
 //
 // - 문서가 아닌 파일은 서버가 문서 트리와 따로 훑는다 (GET /api/others). 목록이 보일 때만 읽고, 파일이 생기거나 지워지면
-//   (watch.js 의 'others') 다시 읽는다. 받은 트리를 화면이 파일·코드로 나눈다. 폴더 보기는 이것과 탭의 문서 트리(S.tree)를 합친다.
+//   (watch.js 의 'others') 다시 읽는다. 받은 트리를 화면이 파일·코드로 나눈다. '폴더'는 이것과 탭의 문서 트리(S.tree)를 합친다.
 //   탭마다 받은 목록, 목록마다 펼친 폴더·고른 행·스크롤 위치를 남긴다 (tab.others).
 // - 탐색기처럼: 누르면 고르고, 두 번 누르거나 Enter 면 연다 — 안전한 형식(PDF·오피스·그림·csv 등)은 기본 앱, 코드·글은 편집기,
 //   실행·설치 파일과 압축 등은 탐색기에서 선택만 한다 (POST /api/open-external → osutil.open_path — 실행하지 않는다). 폴더는 펼치고 접는다.
@@ -14,16 +16,16 @@
 //   탐색기에서 보기·경로 복사. 보기 전용이라 이름 바꾸기·지우기·옮기기는 없다.
 // - 코드(목록의 코드, 폴더 보기의 코드 파일)는 한 번 누르거나 Enter 면 본문에 읽기 전용으로 (codeview.js, D43), 두 번 누르면 편집기로.
 //   보고 있는 코드는 목록에서 상위 폴더를 펴고 강조한다.
-// - 사이드바 거르기(#lec-filter)는 이 목록들에도 적용된다: 거른 파일(폴더 보기는 문서도)을 평평하게 보인다.
+// - 사이드바 거르기(#lec-filter)는 이 목록들에도 적용된다: 거른 파일('폴더'는 문서도)을 평평하게 보인다.
 // - 다른 사이드바 탭(최근 변경·검색의 이름·모아 보기의 파일 종류, D50)에 나온 파일 행도 여기 규칙을 따른다 (bindFileRows):
 //   문서·코드는 한 번 누르면 열고, 자료는 두 번 누르거나 Enter, 우클릭은 이 목록과 같은 메뉴.
-// - 제외 폴더(dist·build·node_modules 등, D49)는 '자료'(폴더 보기는 합친 트리)에 흐린 접힌 폴더로 나온다. 서버가 안을 훑지 않으므로
+// - 제외 폴더(dist·build·node_modules 등, D49)는 '자료'와 '폴더'에 흐린 접힌 폴더로 나온다. 서버가 안을 훑지 않으므로
 //   펼칠 때 한 단계씩 받아(GET /api/others/dir) 붙이고(tab.others.lazy), 접으면 버린다 — 다시 펼치면 새로 읽는다.
 //   안의 파일은 종류를 나누지 않고 모두 '자료'에 두고, 개수·거르기에는 넣지 않는다.
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, renameItem, hasChangedInside, shellWord, workCardItem } from './tree.js';
+import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -35,24 +37,26 @@ import { sideOrder } from './sideorder.js';
 const MAX_FILTER_RESULTS = 300;
 const OPEN_HINT = { default: t('기본 앱으로'), editor: t('편집기로'), reveal: t('탐색기에서 선택만 (실행하지 않음)') };
 
-// 목록 둘: 자료(files — 폴더 보기에서는 문서·파일·코드를 합친 트리)와 코드
+// 목록 셋: 자료(files), 코드, 폴더(folder — 문서·파일·코드를 합친 트리, D169)
 const LISTS = {
   files: { el: '#lec-others-list', none: t('문서나 코드가 아닌 파일이 없습니다'), noHit: t('일치하는 자료가 없습니다'), section: 'others' },
   code: { el: '#lec-code-list', none: t('코드 파일이 없습니다'), noHit: t('일치하는 코드가 없습니다'), section: 'code' },
+  folder: { el: '#lec-folder-list', none: t('문서나 파일이 없습니다'), noHit: t('일치하는 문서나 파일이 없습니다'), section: 'folder' },
 };
-// 묶음 셋 (위에서부터 — index.html 의 순서와 같게). 한 번에 하나만 펼친다 (D143)
-const SECTIONS = [{ name: 'docs', el: '#lec-docs' }, { name: 'code', el: '#lec-code' }, { name: 'others', el: '#lec-others' }];
+// 묶음 넷 (위에서부터 — index.html 의 순서와 같게). 한 번에 하나만 펼친다 (D143). list: 그 묶음의 목록 (문서는 tree.js 의 #lec-tree)
+const SECTIONS = [{ name: 'docs', el: '#lec-docs', list: '#lec-tree' }, { name: 'code', el: '#lec-code', list: '#lec-code-list' },
+  { name: 'others', el: '#lec-others', list: '#lec-others-list' }, { name: 'folder', el: '#lec-folder', list: '#lec-folder-list' }];
 
 const listEl = (k) => $(LISTS[k].el);
 const keyOf = (el) => el?.closest?.('[data-list]')?.dataset.list || 'files';
 const state = () => S.tab?.others || null;
-const folderView = () => S.config.files_view === 'folder';
-/** 펼친 묶음 — docs·code·others (프로젝트 탭마다, 처음은 마지막에 고른 것) */
+/** 펼친 묶음 — docs·code·others·folder (프로젝트 탭마다, 처음은 마지막에 고른 것) */
 export function openSection() {
   const v = S.tab?.side?.filesOpen ?? S.config.files_open;
   return SECTIONS.some((s) => s.name === v) ? v : 'docs';
 }
 const filesShown = () => !!S.tab && !$('#lec-files').hidden;
+const folderShown = () => openSection() === 'folder';
 export const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
 
 /** 경로 → 노드 (부모 경로를 parent 로 단다 — ← 로 부모에 갈 때). 아직 읽지 않은 제외 폴더는 children 이 null */
@@ -110,7 +114,7 @@ function build(o) {
 
 const byName = (a, b) => natCompare(a.name, b.name);
 
-/** 폴더 보기: 문서 트리와 문서 외 파일 트리를 폴더마다 합친다. 문서 노드에는 doc: true. 폴더 먼저, 자연 정렬 */
+/** '폴더' 묶음: 문서 트리와 문서 외 파일 트리를 폴더마다 합친다. 문서 노드에는 doc: true. 폴더 먼저, 자연 정렬 */
 function merge(docs = [], others = []) {
   const dirs = new Map();
   const files = [];
@@ -133,11 +137,18 @@ function merge(docs = [], others = []) {
   return [...merged.sort(byName), ...files.sort(byName)];
 }
 
+/** '폴더' 묶음의 트리를 지금의 문서 트리와 받은 파일로 다시 합친다 (처음 볼 때는 문서 트리에서 펼쳐 둔 폴더대로) */
+function buildAll(o) {
+  o.folderOpen ??= new Set(S.open);
+  o.all = merge(S.tree, o.tree);
+  o.allIndex = indexOf(o.all);
+}
+
 // ---- 그리기 -------------------------------------------------------------------
 
 /** 목록 k 의 지금 모양: {tree, index(경로 → 노드), open(펼친 폴더), sel(고른 행을 기억하는 이름)} */
 function view(o, k) {
-  if (k === 'files' && folderView()) return { tree: o.all || [], index: o.allIndex || new Map(), open: o.folderOpen || new Set(), sel: 'folder' };
+  if (k === 'folder') return { tree: o.all || [], index: o.allIndex || new Map(), open: o.folderOpen || new Set(), sel: 'folder' };
   return { tree: o.trees?.[k] || [], index: o.index?.[k] || new Map(), open: o.open[k], sel: k };
 }
 
@@ -149,7 +160,7 @@ function rowAttrs(o, v, path, depth, extra = '') {
 const subHtml = (sub) => (sub ? html`<span class="sub">${sub}</span>` : '');
 
 function fileRow(o, v, f, depth, sub = '') {
-  if (f.doc) {   // 폴더 보기의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조
+  if (f.doc) {   // '폴더' 묶음의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조
     const active = S.view?.type === 'doc' && S.view.path === f.path ? ' active' : '';
     return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
   }
@@ -199,7 +210,7 @@ function kindHtml(o, k, v, terms) {
   return v.tree.length ? nodesHtml(o, v, v.tree, 0) : html`<p class="side-empty">${LISTS[k].none}</p>`;
 }
 
-/** 폴더 보기: 맨 위 프로젝트 행(누르면 개요) + 문서와 파일을 합친 트리 */
+/** '폴더' 묶음: 문서와 파일을 합친 트리 */
 function folderHtml(o, v, terms) {
   if (terms) {
     const docs = S.files.filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
@@ -229,16 +240,12 @@ function renderHead() {
 function renderList(k) {
   const o = state();
   const box = listEl(k);
-  const folder = k === 'files' && folderView();
+  const folder = k === 'folder';
   if (!o || (folder ? !S.tab.treeLoaded : !o.data)) {   // 탭이 없거나 아직 읽는 중
     setHtml(box, o?.error && !folder ? html`<p class="side-empty">${o.error}</p>` : '');
     return;
   }
-  if (folder) {
-    o.folderOpen ??= new Set(S.open);   // 처음 폴더 보기로 볼 때 문서 트리에서 펼쳐 둔 폴더대로
-    o.all = merge(S.tree, o.tree);
-    o.allIndex = indexOf(o.all);
-  }
+  if (folder) buildAll(o);
   const v = view(o, k);
   const query = $('#lec-filter').value.trim().toLowerCase();
   const terms = query ? query.split(/\s+/) : null;
@@ -252,23 +259,25 @@ function renderList(k) {
 function render() {
   renderHead();
   renderList('files');
-  if (!folderView()) renderList('code');
+  renderList('code');
+  if (folderShown()) renderList('folder');   // 문서 트리 전체와 합치므로 펼쳐 있을 때만
 }
 
 /**
  * 지금 보는 것이 목록에서 보이게: 상위 폴더를 펴고 그 행까지 스크롤 (문서 트리의 revealCurrent 처럼).
- * 폴더 보기는 문서·폴더·코드, 종류별 보기는 코드 화면일 때 '코드' 목록에서
+ * '폴더' 묶음을 펼쳤으면 문서·폴더·코드, 아니면 코드 화면일 때 '코드' 목록에서
  */
 function revealCurrent() {
   const o = state();
   if (!o || !S.view) return;
+  const folder = folderShown();
   const code = S.view.type === 'code';
-  if (!folderView() && !code) {
+  if (!folder && !code) {
     render();   // 지금 보는 코드 강조를 지운다
     return;
   }
-  const k = folderView() ? 'files' : 'code';
-  if (folderView()) o.folderOpen ??= new Set(S.open);
+  const k = folder ? 'folder' : 'code';
+  if (folder) o.folderOpen ??= new Set(S.open);
   const set = view(o, k).open;
   const parts = S.view.path ? S.view.path.split('/') : [];
   const upto = S.view.type === 'overview' ? parts.length : parts.length - 1;
@@ -300,7 +309,7 @@ function load(tab, { fresh = false } = {}) {
       build(o);
       o.counts = { files: [...filesIn(o.trees.files)].length, code: [...filesIn(o.trees.code)].length };
       o.error = null;
-      for (const k of Object.keys(LISTS)) for (const p of [...o.open[k]]) if (!stillThere(o.index[k], p)) o.open[k].delete(p);
+      for (const k of ['files', 'code']) for (const p of [...o.open[k]]) if (!stillThere(o.index[k], p)) o.open[k].delete(p);
     } catch (e) {
       if (S.tabs.includes(tab)) o.error = t('파일 목록을 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: e.message });
     } finally {
@@ -342,9 +351,11 @@ function forgetDir(o, path) {
 function setAllOpen(mode) {
   const o = state();
   if (!o) return;
-  if (folderView()) o.folderOpen ??= new Set(S.open);
   for (const k of Object.keys(LISTS)) {
-    if (k === 'code' && folderView()) continue;
+    if (k === 'folder') {
+      if (!S.tab?.treeLoaded) continue;
+      buildAll(o);   // 아직 펼쳐 보지 않았어도 — 펼치면 이대로
+    }
     const v = view(o, k);
     if (mode !== 'all') {
       for (const p of [...v.open]) if (v.index.get(p)?.excluded) forgetDir(o, p);
@@ -480,7 +491,7 @@ function menuItems(k, n) {
   const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
   /** @type {MenuItem[]} */
   const items = [{ label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: 'Enter', action: () => toggle(k, n.path) }];
-  if (folderView() && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
+  if (k === 'folder' && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
   if (!n.excluded) items.push(newDocItem(n.path), newFolderItem(n.path), ...(S.tab && !S.tab.readonly ? [workCardItem(n.path)] : []));   // 업무 카드 (D152 — 문서가 없는 폴더는 문서 트리에 없다)   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
   /** @type {MenuItem[]} */
   const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
@@ -588,10 +599,6 @@ function onKey(e) {
 // ---- 묶음·분리선·보기 -----------------------------------------------------------
 
 function applyLayout() {
-  const folder = folderView();
-  $('#lec-files').classList.toggle('folder-view', folder);
-  $('#lec-btn-view').classList.toggle('on', folder);
-  listEl('files').setAttribute('aria-label', folder ? t('문서와 파일 (폴더 구조)') : t('자료'));
   const cur = openSection();   // 한 번에 하나 — 그것이 남은 높이를 모두 갖는다 (D143)
   for (const s of SECTIONS) {
     const sec = $(s.el);
@@ -604,26 +611,54 @@ function applyLayout() {
   }
 }
 
+/** 묶음 하나를 펼치고 나머지는 접는다 (D143) — 머리줄 누르기·Ctrl+Shift+E */
+function openSectionNamed(name) {
+  if (openSection() === name) return;
+  if (S.tab) S.tab.side.filesOpen = name;
+  saveConfig({ files_open: name });
+  applyLayout();
+  if (state() && S.view) revealCurrent();   // 그리면서 지금 보는 것까지 펼친다 ('폴더'·코드 화면의 '코드')
+  else render();
+  ensure();
+  emit('files-open', name);
+}
+
 function bindLayout() {
   for (const s of SECTIONS) {   // 머리줄을 누르면 그 묶음을 펼치고 나머지는 접는다 — 펼친 것을 누르면 그대로 (D143)
-    $(s.el).querySelector('.side-head').addEventListener('click', () => {
-      if (openSection() === s.name) return;
-      if (S.tab) S.tab.side.filesOpen = s.name;
-      saveConfig({ files_open: s.name });
-      applyLayout();
-      render();
-      ensure();
-      emit('files-open', s.name);
-    });
+    $(s.el).querySelector('.side-head').addEventListener('click', () => openSectionNamed(s.name));
   }
-  // 종류별 ↔ 폴더 구조
-  $('#lec-btn-view').addEventListener('click', async () => {
-    await saveConfig({ files_view: folderView() ? 'kind' : 'folder' });
-    applyLayout();
-    if (folderView()) revealCurrent();
-    else render();
-    ensure();
-  });
+}
+
+/** 묶음 안에서 초점을 줄 곳: 고른 행·지금 보는 것·Tab 이 들어갈 행·첫 행, 행이 없으면 머리줄 */
+function sectionTarget(s) {
+  const list = $(s.list);
+  return list?.querySelector('.row.selected, .row.active') || list?.querySelector('.row[tabindex="0"]') || list?.querySelector('.row')
+    || $(s.el).querySelector('.side-head');
+}
+
+/**
+ * Ctrl+Shift+E (D169): 사이드바 '파일' 탭의 펼친 묶음으로 초점. 초점이 이미 그 묶음의 목록 안에 있으면 다음 묶음을 펼치고 그리로
+ * (머리줄을 마우스로 누른 뒤처럼 머리줄에 있으면 그 목록으로 — 시나리오 시험에서 찾음)
+ * (문서 → 코드 → 자료 → 폴더 → 문서). 다른 사이드바 탭이면 '파일' 탭으로 (감춘 사이드바는 main.js 가 먼저 보인다)
+ */
+export async function focusFiles() {
+  if (!S.tab) return;
+  const wasShown = filesShown();
+  if (!wasShown) switchPanel('files', { focus: false });
+  let i = SECTIONS.findIndex((s) => s.name === openSection());
+  if (wasShown && $(SECTIONS[i].list).contains(document.activeElement)) {   // 목록 안일 때만 — 머리줄을 누른 뒤면 그 목록으로 들어간다
+    i = (i + 1) % SECTIONS.length;
+    openSectionNamed(SECTIONS[i].name);
+  }
+  const s = SECTIONS[i];
+  if (s.name !== 'docs' && !state()?.data) {   // 코드·자료·폴더의 목록을 아직 받는 중 — 받은 뒤에 행으로
+    $(s.el).querySelector('.side-head').focus();
+    await loadOthers(S.tab);
+    if (openSection() !== s.name || !$(s.el).contains(document.activeElement)) return;   // 그사이 다른 곳으로 갔다
+  }
+  const el = sectionTarget(s);
+  el?.focus({ preventScroll: true });
+  el?.scrollIntoView({ block: 'nearest' });
 }
 
 function bindList(k) {
@@ -637,10 +672,10 @@ function bindList(k) {
       return;
     }
     select(k, path);
-    // 폴더 보기의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
+    // '폴더' 묶음의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
     if (repeatClick(e)) return;
-    if (k === 'files' && folderView() && n?.doc) activate(k, path, openHow(e));   // D91
+    if (k === 'folder' && n?.doc) activate(k, path, openHow(e));   // D91
     else if (isViewFile(n)) emit('open', { type: 'code', path, ...openHow(e) });
   });
   middleClickOpens(box, '.row');
@@ -648,7 +683,7 @@ function bindList(k) {
     const row = e.target.closest('.row');
     if (!row || e.target.closest('[data-toggle]')) return;
     const { path } = row.dataset;
-    if (k === 'files' && folderView() && view(state(), k).index.get(path)?.doc) return;   // 한 번 누를 때 이미 열었다
+    if (k === 'folder' && view(state(), k).index.get(path)?.doc) return;   // 한 번 누를 때 이미 열었다
     activate(k, path);
   });
   box.addEventListener('contextmenu', (e) => {
@@ -674,10 +709,10 @@ export function initOthers() {
   });
   on('panel', ensure);   // 사이드바 '파일' 탭으로 돌아오면
   on('others', (tab) => { if (tab === S.tab) ensure(); });
-  // 문서 개수, 그리고 폴더 보기는 문서 트리도 그린다: 트리·바뀜 점·지금 보는 문서가 바뀌면 다시
-  on('tree', () => { if (folderView()) render(); else renderHead(); });
-  on('changed', () => { if (folderView()) render(); });
-  on('titles', () => { if (folderView()) render(); });
+  // 문서 개수, 그리고 '폴더' 묶음은 문서 트리도 그린다: 트리·바뀜 점·지금 보는 문서가 바뀌면 다시
+  on('tree', () => { if (folderShown()) render(); else renderHead(); });
+  on('changed', () => { if (folderShown()) render(); });
+  on('titles', () => { if (folderShown()) render(); });
   on('side-sort', render);   // 목록의 차례 (D97)
   on('side-open', setAllOpen);   // 폴더 모두 펼치기·접기 (D125 — tree.js 의 '펼침')
   on('view', revealCurrent);

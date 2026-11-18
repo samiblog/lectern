@@ -62,11 +62,11 @@ function makeTab(p) {
     recent: { files: null, key: '', stale: true, loading: null, again: false, error: null },
     // 사이드바 '코드'·'자료' 목록 (others.js): 받은 문서 외 파일(data), 펼쳐서 읽은 제외 폴더의 안(lazy: 경로 → {nodes…}, 읽는 중 loadingDirs)을
     // 붙인 트리(tree), 파일·코드로 나눈 트리(trees·index·counts), 다시 읽을지(stale),
-    // 목록마다 펼친 폴더(open, 폴더 보기 folderOpen), 폴더 보기에서 문서와 합친 트리(all·allIndex), 고른 행(selected), 스크롤 위치
+    // 목록마다 펼친 폴더(open, '폴더' 묶음은 folderOpen), '폴더' 묶음의 문서와 합친 트리(all·allIndex — D169), 고른 행(selected), 스크롤 위치
     others: {
       data: null, tree: null, lazy: new Map(), loadingDirs: new Set(), trees: null, index: null, counts: null, error: null, stale: true, loading: null,
       open: { files: new Set(), code: new Set() }, folderOpen: null, all: null, allIndex: null,
-      selected: { files: null, code: null, folder: null }, scroll: { files: 0, code: 0 },
+      selected: { files: null, code: null, folder: null }, scroll: { files: 0, code: 0, folder: 0 },
     },
   };
   tab.pane = createPane(tab);   // 고른 문서 탭의 칸 (doctabs.js — D64)

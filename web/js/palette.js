@@ -1,7 +1,8 @@
 // 빠른 열기 (Ctrl+P): 이름·제목·경로 일부로 문서와 코드를 찾아 연다 (D44). 맞는 문서 먼저, 그다음 코드 — 코드는 코드 화면으로.
 // 입력 전에는 최근 수정한 문서. 코드 목록은 사이드바 '코드' 목록과 같은 것 (others.js — 아직 받지 않았으면 받아 온다).
 // 고르면 새 문서 탭에서 (D91), Ctrl+Enter·Ctrl+누르기·가운데 버튼은 뒤에서, Alt+Enter·Alt+누르기는 지금 탭. 문서 탭 줄의 + 로 열면 폴더 개요에서도 새 탭에.
-// ':숫자' 는 지금 문서·코드의 그 줄로 (Ctrl+G).
+// ':숫자' 는 지금 문서·코드의 그 줄로 (Ctrl+G). '>' 로 시작하면 명령 찾기 (Ctrl+Shift+P — D170): 이름을 쳐서 고르고 옆에 단축키.
+// 명령 목록은 main.js 가 setCommands 로 준다 (commands.js — 이 모듈이 여러 모듈을 부르면 import 순환이 생긴다).
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
@@ -22,6 +23,13 @@ function* codeFiles(nodes = []) {
 let items = [];
 let selected = 0;
 let asNewTab = false;   // 문서 탭 줄의 + 로 열었다 — 고르면 새 문서 탭에서 (D64)
+/** @type {() => {group: string, name: string, keys: string, run: () => void}[]} */
+let commandsOf = () => [];   // 명령 찾기의 목록 (commands.js)
+
+/** 명령 찾기의 목록을 준다 (main.js 가 commands.js 의 것을) */
+export function setCommands(fn) {
+  commandsOf = fn;
+}
 
 const box = () => $('#lec-palette');
 const input = () => $('#lec-palette-input');
@@ -36,7 +44,25 @@ function score(f, terms, query) {
   return s;
 }
 
+/** 명령 찾기: 이름·묶음·키에 든 낱말로 거르고, 이름이 그 말로 시작하는 것을 앞에 */
+function commandItems(query) {
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const all = commandsOf().map((c) => ({ ...c, cmd: true, hay: `${c.name} ${c.group} ${c.keys}`.toLowerCase() }));
+  if (!terms.length) return all;
+  return all.filter((c) => terms.every((w) => c.hay.includes(w)))
+    .map((c, i) => ({ c, s: (c.name.toLowerCase().startsWith(terms[0]) ? 2 : 0) + (c.keys.toLowerCase() === query.toLowerCase() ? 3 : 0), i }))
+    .sort((a, b) => b.s - a.s || a.i - b.i)
+    .map((x) => x.c);
+}
+
 function update() {
+  const command = /^\s*>(.*)$/.exec(input().value);
+  if (command) {   // 명령 찾기 (Ctrl+Shift+P — D170)
+    items = commandItems(command[1].trim());
+    selected = 0;
+    renderList(t('일치하는 명령이 없습니다'));
+    return;
+  }
   const go = /^:(\d*)$/.exec(input().value.trim());
   if (go) {   // 줄로 가기 (Ctrl+G)
     items = go[1] ? [{ goto: Number(go[1]), name: '', path: '' }] : [];
@@ -74,6 +100,12 @@ function renderList(none = '') {
     setHtml(ul, html`<li class="empty">${none || (S.root ? t('일치하는 문서나 코드가 없습니다') : t('먼저 폴더를 여세요'))}</li>`);
     return;
   }
+  if (items[0].cmd) {   // 명령: 이름, 오른쪽에 단축키, 아래에 묶음
+    setHtml(ul, items.map((c, i) => html`<li role="option" data-i="${i}" class="cmd${i === selected ? ' sel' : ''}" aria-selected="${i === selected}">
+      <span class="t">${c.name}</span><span class="when">${c.keys}</span><span class="p">${c.group}</span></li>`));
+    ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
+    return;
+  }
   if (items[0].goto) {
     setHtml(ul, html`<li role="option" data-i="0" class="sel" aria-selected="true"><span class="t">${t('{n}행으로 가기', { n: items[0].goto })}</span></li>`);
     return;
@@ -88,16 +120,17 @@ function choose(i, e) {
   const f = items[i];
   if (!f) return;
   closePalette();
-  if (f.goto) emit('go-line', { line: f.goto });
+  if (f.cmd) f.run();
+  else if (f.goto) emit('go-line', { line: f.goto });
   else if (f.newDoc) emit('new-doc', {});   // 새로 만들기 (D65)
   else emit('open', { type: f.code ? 'code' : 'doc', path: f.path, ...openHow(e), force: asNewTab });
 }
 
-/** newTab: 폴더 개요에서도 새 문서 탭에서 (문서 탭 줄의 +·Ctrl+T — D64). query: 처음 글 (Ctrl+G 의 ':') */
+/** newTab: 폴더 개요에서도 새 문서 탭에서 (문서 탭 줄의 +·Ctrl+T — D64). query: 처음 글 (Ctrl+G 의 ':', Ctrl+Shift+P 의 '>') */
 export function openPalette({ newTab = false, query = '' } = {}) {
   asNewTab = newTab;
   box().hidden = false;
-  input().placeholder = newTab ? t('새 탭에 열 문서·코드 — 이름, 제목, 경로') : t('문서·코드 이름, 제목, 경로');
+  input().placeholder = newTab ? t('새 탭에 열 문서·코드 — 이름, 제목, 경로') : t('문서·코드 이름, 제목, 경로 — > 로 시작하면 명령, : 는 줄 번호');
   input().value = query;
   update();
   input().focus();
@@ -109,12 +142,16 @@ export function openPalette({ newTab = false, query = '' } = {}) {
 export function closePalette() {
   if (box().hidden) return false;
   box().hidden = true;
+  // 감춘 칸에 초점이 남으면 다음 키를 그 칸이 받는다 — 명령 찾기에서 고른 바로 뒤의 Esc 가 PDF·인쇄 창을 닫지 못했고, Enter 를 거듭 누르면 같은 명령을
+  // 또 했다 (실제 창 시험에서 찾음). 초점을 빼면 본문(body)이 받아 앱 키가 듣는다 — 고른 일이 초점을 옮기면 그리로
+  if (box().contains(document.activeElement)) /** @type {HTMLElement} */ (document.activeElement).blur();
   return true;
 }
 
 export function initPalette() {
   input().addEventListener('input', update);
   input().addEventListener('keydown', (e) => {
+    if (box().hidden) return;   // 닫은 뒤의 키는 앱의 것
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
       e.preventDefault();
       if (!items.length) return;

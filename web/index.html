@@ -160,12 +160,11 @@
         <input id="lec-filter" type="search" placeholder="이름·제목으로 거르기" spellcheck="false" autocomplete="off">
         <button id="lec-btn-titles" class="icon-btn small toggle" title="파일 이름 대신 문서 제목으로 보기 (끄면 파일 이름, 마우스를 올리면 제목)">제목</button>
         <button id="lec-btn-sort" class="icon-btn small toggle" title="목록의 차례 — 이름순·시간순·형식순 (폴더가 먼저)">차례</button>
-        <button id="lec-btn-expand" class="icon-btn small" title="폴더 모두 펼치기·접기 — 문서·코드·자료 목록" aria-label="폴더 모두 펼치기·접기 — 문서·코드·자료 목록"><svg><use href="#i-expand"/></svg></button>
-        <button id="lec-btn-view" class="icon-btn small toggle" title="폴더 구조 그대로 보기 — 문서와 파일을 한 트리에 (끄면 종류별: 문서·코드·자료 묶음)">폴더</button>
+        <button id="lec-btn-expand" class="icon-btn small" title="폴더 모두 펼치기·접기 — 문서·코드·자료·폴더 목록" aria-label="폴더 모두 펼치기·접기 — 문서·코드·자료·폴더 목록"><svg><use href="#i-expand"/></svg></button>
       </div>
-      <!-- 문서 트리와 '코드'·'자료' 목록 (others.js, D48·D143): 종류별 보기에서는 한 번에 한 묶음만 펼치고 그것이 남은 높이를 모두 갖는다 (머리줄을 누르면 그 묶음으로).
-           '문서' 안의 하위 묶음(전체·문서·슬라이드·HTML·업무·형광펜·할 일 — tree.js)도 한 번에 하나만, 펼친 것 아래에 트리가 온다.
-           폴더 보기에서는 문서 트리·코드 목록·분리선·머리줄을 감추고 '자료' 목록(#lec-others-list)에 문서와 파일을 폴더 구조 그대로 함께 보인다 -->
+      <!-- 문서 트리와 '코드'·'자료'·'폴더' 목록 (others.js, D48·D143·D169): 한 번에 한 묶음만 펼치고 그것이 남은 높이를 모두 갖는다 (머리줄을 누르면 그 묶음으로,
+           Ctrl+Shift+E 는 펼친 묶음으로 초점 — 그 안에서 다시 누르면 다음 묶음). '폴더'는 문서·코드·자료를 폴더 구조 그대로 한 트리에.
+           '문서' 안의 하위 묶음(전체·문서·슬라이드·HTML·업무·형광펜·할 일 — tree.js)도 한 번에 하나만, 펼친 것 아래에 트리가 온다 -->
       <div id="lec-files">
         <section id="lec-docs" class="side-sec" aria-label="문서">
           <button type="button" id="lec-docs-head" class="side-head" aria-expanded="true" title="문서 목록 펼치기 (Markdown·HTML 문서)">
@@ -184,6 +183,11 @@
           <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="자료 목록 펼치기 (문서도 코드도 아닌 파일 — PDF·오피스·그림·데이터 등)">
             <span class="caret open" aria-hidden="true"></span><span>자료</span><span id="lec-others-count" class="n"></span></button>
           <div id="lec-others-list" class="side-list explorer" role="tree" aria-label="자료" data-list="files"></div>
+        </section>
+        <section id="lec-folder" class="side-sec" aria-label="폴더">
+          <button type="button" id="lec-folder-head" class="side-head" aria-expanded="false" title="폴더 목록 펼치기 (문서·코드·자료를 폴더 구조 그대로 한 트리에)">
+            <span class="caret" aria-hidden="true"></span><span>폴더</span></button>
+          <div id="lec-folder-list" class="side-list explorer" role="tree" aria-label="문서와 파일 (폴더 구조)" data-list="folder"></div>
         </section>
       </div>
       <!-- 최근 변경 (recent.js, D50): 보일 것 버튼과 최근에 고친 문서·코드·자료 -->

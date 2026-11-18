@@ -49,7 +49,7 @@ Sample — [guide 01, first look](../../samples/guide/01-처음-둘러보기.md)
 
 Keep up to 40 documents of a project open as tabs and switch between them. They appear in the document tab row just above the document.
 
-- **Clicking a document in the sidebar opens it in a new document tab**, and the document you were reading stays open — the tree, the Code and Other files lists, folder view, Recent, search results, Elements and Open document (Ctrl+P) all work this way. If the current tab shows a folder overview, it opens there.
+- **Clicking a document in the sidebar opens it in a new document tab**, and the document you were reading stays open — the tree, the Code, Other files and Folders lists, Recent, search results, Elements and Open document (Ctrl+P) all work this way. If the current tab shows a folder overview, it opens there.
 - **Ctrl+click** or **middle-click** opens a new document tab behind the current one (as in a browser — the tab is drawn when you click it). **Alt+click** opens in the current tab. In quick open, Enter, Ctrl+Enter and Alt+Enter do the same.
 - Links and paths in a document open in the current tab (Alt+← comes back). Use Ctrl+click, the middle button or **Open in new tab** in the right-click menu for a new document tab.
 - Clicking a document that is already open in another tab goes to that tab (a document is not opened twice).
@@ -90,17 +90,19 @@ You can move a document into its own window and read side by side. With two moni
 
 ## Sidebar
 
-### Files — documents, code and other files
+### Files — documents, code, other files and folders
 
-The **Files** tab is split into three groups.
+The **Files** tab is split into four groups. The first three sort files by kind; the last, **Folders**, shows everything in one tree that follows the real folder structure.
 
 | Group | What it holds | Clicking |
 |---|---|---|
 | Documents | Markdown and HTML documents (a folder tree) | Click once to open in the main area |
 | Code | Source (py, js, ts…), scripts (ps1, bat, EViews prg), web (css) and config (json, yaml, toml) | Click once for the code view, double-click for the editor |
 | Other files | Anything that is neither a document nor code — PDF, Office, images, data, archives, programs and so on | Double-click to open in the default app (programs and archives are never run; they are only selected in Explorer) |
+| Folders | Documents, code and other files together, as the folders are | Documents open with one click, code and other files as above; right-click a folder for its overview |
 
-- **Only one group is open at a time.** Click a group header ('Documents 10', 'Code 3', 'Other files 4') to open it; the others shrink to their headers and the open group takes all the remaining height. Closed headers still show counts, and while you type in the filter box they show how many match. Each project tab remembers which group was open.
+- **Only one group is open at a time.** Click a group header ('Documents 10', 'Code 3', 'Other files 4', 'Folders') to open it; the others shrink to their headers and the open group takes all the remaining height. Closed headers still show counts, and while you type in the filter box they show how many match (Folders has no count — it is the other three together). Each project tab remembers which group was open.
+- **Ctrl+Shift+E** moves the focus to the open group (to the row of the document you are viewing — showing the sidebar if it was hidden). Press it again inside the group to open the next group and go there (Documents → Code → Other files → Folders → Documents).
 - **Sub-groups inside Documents**: when Documents is open, its sub-groups are stacked under it, indented. Only one opens at a time, and the tree appears right below the open one. Kinds with no documents, or the same as All, are hidden (Highlights and To-dos show whenever there are md documents, even at 0).
 
   | Sub-group | Shows |
@@ -116,10 +118,9 @@ The **Files** tab is split into three groups.
   Highlights and To-dos read the documents' text, so they take a moment the first time you open them (afterwards only changed documents are read again). Their counts appear then. Code blocks are skipped. Click a line to go to that place in the document; right-click it to add a note or remove it (see 'Highlighting to come back later' below).
 - The box at the top filters by name or title. Turn on **Titles** to show document titles instead of file names (when off, file names are shown and the title appears on hover).
 - **Sort** picks the list order: by name, time or type. Folders always come first, then files. By time puts the newest on top, and a folder follows its newest file. By type goes by file extension.
-- Turn on **Folders** to see everything in one tree that follows the real folder structure, instead of three groups.
-- The **↕** button (expand or collapse all folders) does **Expand all folders**, **Collapse all folders** or **Expand first-level folders only** for the folders in the document, code and file lists at once. Excluded (dimmed) folders stay closed, because opening one reads what is inside.
+- The **↕** button (expand or collapse all folders) does **Expand all folders**, **Collapse all folders** or **Expand first-level folders only** for the folders in the Documents, Code, Other files and Folders lists at once. Excluded (dimmed) folders stay closed, because opening one reads what is inside.
 - Documents that changed since you last looked get an amber dot.
-- The 'Code' and 'Other files' lists work like Explorer: arrow keys (→ expand, ← collapse) and Enter, and typing a letter jumps to the item starting with it.
+- All four lists work like Explorer from the keyboard: **↑ ↓** item above or below, **Home End** first or last, **→** expand a folder (or go to its first item if it is open), **←** collapse (or go to the parent folder if it is closed), **Enter** open, and typing a letter jumps to the item starting with it. Tab stops once per list; move inside it with the arrows.
 - **Excluded folders** such as `node_modules`, `dist`, `build`, `venv` and `__pycache__` appear dimmed and collapsed in 'Other files'. They can hold a great many files, so their contents are read when you expand them, and everything inside is listed there whatever its type (code still opens in the code view with one click). Changes inside are not followed automatically — collapse and expand the folder again, or press F5, to read it afresh. They are not counted in the group header or matched by the filter.
 - Right-click menu: `Copy @path` (for pasting into a Claude Code prompt), Copy full path, Open in external editor, Show in Explorer, **Rename…**. Right-click a folder to collect the elements in just that folder.
 - **Renaming**: right-click a file in the document tree, Code or Other files list (or in Recent and search results) and choose **Rename…**, or select its row and press **F2**. The current name is selected up to the extension — type the new name and press Enter (Esc leaves it as is). Only the name changes; the file stays in its folder.
@@ -140,6 +141,7 @@ The **Files** tab is split into three groups.
 - The **Documents**, **Code** and **Other files** buttons under the search box choose where to search. **Matching file names** (titles too, for documents) come first, then text results — documents first, followed by a 'Code' group. Other files (PDF, Excel and so on) are searched by name only.
 - Click a result line (or press Enter in the search box for the first one) to go to that line of the document (or code) with the search text marked. That line becomes the current line and keyboard focus moves to the document, so you can press **/** (insert below), **F2** (line edit) or **F3** (next match) right away. To change the search, press **Ctrl+Shift+F** to go back to the search box.
 - To open something by name or title, **Quick open** (Ctrl+P) in the toolbar is faster. Matching documents come first, then code.
+- **Find a command (Ctrl+Shift+P)**: opens the Quick open box with `>` already typed. Type the name of what you want to do (print, fold all, contents …) and the matching commands appear with their shortcuts on the right — press Enter to run one. Actions without a key (Print & PDF, Spread all, Close all open documents, View settings source and more) are found here too; for the ones you use often, learn the key shown beside them. Typing `>` in the Ctrl+P box does the same.
 
 ### Elements
 
@@ -201,13 +203,13 @@ Samples — [guide 04, writing documents](../../samples/guide/04-문서-쓰는-�
 - Click an entry in the contents on the right to jump to that heading; the place you are reading is marked.
 - Under each heading, the section's tables, figures, boxes, callouts, diagrams, code and math are listed like 'Table 1 · Price comparison · 6 × 4'. Click one to jump to it.
 - The buttons at the top of the contents, such as 'Tables 2' or 'Code 5', hide that type from the contents; click again to show it.
-- The **Contents** button at the right end of the tab bar shows or hides the contents.
+- The **Contents** button at the right end of the tab bar, or **Alt+O**, shows or hides the contents.
 - Drag the border between the document and the contents to resize the contents. Double-click it to reset.
 - **Moving sections**: in an md document you can edit, drag a heading in the contents onto another heading to move that section — with its body and subsections — in front of it. Drop on the lower half of the last heading to move it to the end. Levels stay the same; Ctrl+Z undoes it.
 
 ### Folding sections
 
-Click the arrow in the margin left of a heading to fold its section, and click it again to unfold (the arrow shows when the mouse is over the heading). From the keyboard, **Ctrl+Shift+[** folds the section with the current line and **Ctrl+Shift+]** unfolds it — if it is already folded, Ctrl+Shift+[ folds the outer section, and if it is open, Ctrl+Shift+] unfolds the folded sections inside. Clicking the heading text does not fold; it makes that line the current line. Right-click the text for Fold all at this level and Fold all / Unfold all. Folded sections are unfolded again when Lectern restarts.
+Click the arrow in the margin left of a heading to fold its section, and click it again to unfold (the arrow shows when the mouse is over the heading). From the keyboard, **Ctrl+Shift+[** folds the section with the current line and **Ctrl+Shift+]** unfolds it — if it is already folded, Ctrl+Shift+[ folds the outer section, and if it is open, Ctrl+Shift+] unfolds the folded sections inside. Clicking the heading text does not fold; it makes that line the current line. Right-click the text for Fold all at this level and Fold all / Unfold all. **Ctrl+Alt+[** and **Ctrl+Alt+]** also fold and unfold everything — after folding all, the current line goes to the heading of its section. Folded sections are unfolded again when Lectern restarts.
 
 ### Text size and style
 
@@ -252,7 +254,7 @@ HTML reports written by Claude appear in the tree marked `HTML`. Their own style
 ### Auto refresh
 
 - While Claude writes a document, changes appear within a second and your reading position stays where it was.
-- Changed paragraphs and tables are highlighted briefly. If the changes are off screen, the **changes** button in the status bar takes you through them.
+- Changed paragraphs and tables are highlighted briefly. If the changes are off screen, the **changes** button in the status bar takes you through them. **F7** and **Shift+F7** go to the next and previous change — even when they are all on screen and there is no button — and the current line moves to that block too, so you can press F2 to edit it or Shift+→ to send it right away.
 - If the text is unchanged, the screen is not redrawn, so your selection stays. While you drag to select text, the refresh waits until you release the mouse.
 - When the text really changes, the screen is redrawn and the selection is cleared.
 - If a change was missed, press F5 to reload.

@@ -81,11 +81,11 @@ def run():
         page.keyboard.press('Escape')
 
         pick('시간순')
-        page.locator('#lec-btn-view').click()
+        page.locator('#lec-folder-head').click()
         page.wait_for_timeout(500)
-        folder = lst('#lec-others-list')
-        check('폴더 보기도 폴더 먼저, 새것이 위로', folder[:2] == ['나폴더', '가폴더'] and folder[2] in ('z.css',) and folder.index('가.md') < folder.index('다.md') < folder.index('a.txt'), folder)
-        page.locator('#lec-btn-view').click()
+        folder = lst('#lec-folder-list')
+        check("'폴더' 묶음도 폴더 먼저, 새것이 위로", folder[:2] == ['나폴더', '가폴더'] and folder[2] in ('z.css',) and folder.index('가.md') < folder.index('다.md') < folder.index('a.txt'), folder)
+        page.locator('#lec-docs-head').click()
         page.wait_for_timeout(300)
 
         saved = json.loads((config / 'config.json').read_text(encoding='utf-8'))

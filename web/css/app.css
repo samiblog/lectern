@@ -506,8 +506,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 /* 목록 안의 안내 줄 (제외 폴더를 읽는 중 등, others.js) — 그 깊이 행의 아이콘 자리에 맞춘다 */
 .side-note { color: var(--ui-faint); font-size: 12px; margin: 0; padding: 3px 8px 3px calc(26px + var(--d, 0) * 14px); }
 
-/* 종류별 보기: '문서'·'코드'·'자료' 세 묶음 (others.js, D143). 한 번에 하나만 펼치고(.grow) 그것이 남은 높이를 모두 갖는다 — 나머지는 머리줄만(.closed).
-   폴더 보기(.folder-view): 묶음 머리줄·문서 트리·코드 목록을 감추고 '자료' 목록 하나에 문서·파일·코드를 폴더 구조 그대로 */
+/* 사이드바 '파일' 탭의 네 묶음 '문서'·'코드'·'자료'·'폴더' (others.js, D143·D169). 한 번에 하나만 펼치고(.grow) 그것이 남은 높이를 모두 갖는다 — 나머지는 머리줄만(.closed).
+   '폴더'는 문서·파일·코드를 폴더 구조 그대로 한 트리에 */
 #lec-files { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .side-sec { min-height: 0; display: flex; flex-direction: column; }
 .side-sec + .side-sec { border-top: 1px solid var(--ui-border); }
@@ -515,10 +515,6 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .side-sec.closed { flex: none; }
 .side-sec.closed > .side-list, .side-sec.closed > .doc-kinds { display: none; }
 .explorer { padding-bottom: 12px; }
-#lec-files.folder-view > #lec-docs, #lec-files.folder-view > #lec-code,
-#lec-files.folder-view #lec-others-head { display: none; }
-#lec-files.folder-view #lec-others { flex: 1 1 auto; max-height: none; border-top: 0; }
-#lec-files.folder-view #lec-others-list { display: block; }
 /* '문서' 묶음의 하위 묶음 (D143 — tree.js): 한 단 들여 쌓고 한 번에 하나만 — 펼친 것 바로 아래에 트리(#lec-tree 는 위아래 칸 사이) */
 .doc-kinds { flex: none; display: flex; flex-direction: column; }
 .doc-kinds:empty { display: none; }
@@ -554,7 +550,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .explorer .row:focus { outline: none; }
 .explorer .row.selected { background: var(--ui-hover); }
 .explorer:focus-within .row.selected { background: var(--ui-active-bg); color: var(--ui-active-fg); }
-.explorer .row.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }   /* 폴더 보기: 지금 보는 문서·폴더 */
+.explorer .row.active { background: var(--ui-active-bg); color: var(--ui-active-fg); }   /* 지금 보는 코드, '폴더' 묶음의 지금 보는 문서·폴더 */
 .explorer .row.dir .label { font-weight: 500; }
 /* 파일 종류 아이콘 (icons.js): 문서 트리·최근 변경·파일 목록. 문서(md·html)는 강조색 */
 .side-list .ficon {

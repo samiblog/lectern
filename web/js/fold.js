@@ -118,6 +118,21 @@ export function foldAll(folded) {
 }
 
 /**
+ * Ctrl+Alt+[ · ] (D170): 접을 수 있는 제목을 모두 접고 편다 — 여백 우클릭의 '모두 접기'·vi 키의 zM·zR 과 같다.
+ * 모두 접으면 현재 줄은 그 줄이 든 맨 바깥 절의 제목으로 ('reveal' — spotlight.js). md 문서가 아니거나 접을 제목이 없으면 false
+ */
+export function foldAllHere(folded) {
+  const root = view();
+  if (!root?.classList.contains('md-body') || !root.querySelector(':scope > .lec-fold')) return false;
+  let top = folded ? blockOfLine(root, S.pane?.here?.line || 0) : null;
+  while (top && top.parentElement !== root) top = top.parentElement;
+  foldAll(folded);
+  const outer = top ? sectionsOf(top).at(-1) : null;
+  if (outer && outer !== top) emit('reveal', outer);
+  return true;
+}
+
+/**
  * el 이 접힌 절 안에 있으면 그 절들을 편다. 목차·앵커 링크·찾기가 숨은 곳으로 갈 때 먼저 부른다.
  * (숨은 요소는 display:none 이라 위치가 0이어서 스크롤할 수 없다)
  */

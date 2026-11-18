@@ -744,11 +744,11 @@ try:
         page.locator('#lec-menu button', has_text='프로젝트 개요').click()
         page.wait_for_selector('#lec-view .ov-head h1')
         check('메뉴로도 개요', True)
-        page.click('#lec-btn-view')
-        page.wait_for_function("document.querySelector('#lec-files').classList.contains('folder-view')")
+        page.click('#lec-folder-head')
+        page.wait_for_function("document.querySelector('#lec-folder').classList.contains('grow')")
         settle(300)
-        check('폴더 보기에도 프로젝트 이름 줄이 없음', page.locator('#lec-files .row.root').count() == 0 and page.locator('#lec-files .row.dir[data-path="sub"]').count() == 1)
-        page.click('#lec-btn-view')
+        check("'폴더' 묶음에도 프로젝트 이름 줄이 없음", page.locator('#lec-files .row.root').count() == 0 and page.locator('#lec-folder-list .row.dir[data-path="sub"]').count() == 1)
+        page.click('#lec-docs-head')
         settle(200)
 
         real = [e for e in errors if 'addressunreachable' not in e]

@@ -1,15 +1,20 @@
 // 바뀐 부분 강조: 자동 새로고침으로 같은 문서를 다시 그릴 때, 이전과 달라진 최상위 블록(문단·표·목록 등)에
 // 잠깐 배경색을 주고, 바뀐 곳이 화면 밖이면 상태줄에 '바뀐 곳 N곳' 버튼을 띄운다 (누르면 차례로 이동).
+// F7·Shift+F7 은 바뀐 곳 다음·이전으로 — 모두 화면 안이라 버튼이 없어도 (D170, 현재 줄도 그 블록으로 — fold.js 의 'reveal').
 //
 // 처음 열 때와 내용이 같은 다시 그리기(스타일 변경 등)는 강조하지 않는다.
 // 판정은 블록의 '서명'(태그 + 글자 + 그림 주소, 다이어그램은 원문)이 이전 화면에 있었는지로 한다.
 // 지워진 블록은 표시할 곳이 없어 알리지 않는다.
 // html 문서(iframe)는 구조가 문서마다 달라, 최상위 자식 대신 문단·목록 항목·표의 행 같은 작은 블록을 비교한다.
-// 바뀐 블록은 칸(탭)마다 따로 기억하고(pane.marks — list: 바뀐 블록, next: 버튼이 다음에 갈 순번), 버튼은 선택된 탭의 것을 보인다.
+// 바뀐 블록은 칸(탭)마다 따로 기억하고(pane.marks — all: 바뀐 블록, sigs·idx: 그 서명과 문서 안 차례, count: 그때의 블록 수,
+// list: 버튼에 셀 것(이번에 바뀐 곳이 화면 밖이면 all), at: 마지막에 간 순번, pos: 그 블록의 문서 안 차례), 버튼은 선택된 탭의 것을 보인다.
+// 같은 문서를 다시 그리면 앞서 바뀐 곳 중 그대로인 블록도 남긴다 — 이 문서를 연 뒤 바뀐 곳 (D170: AI 가 고친 세 곳을 F7 로 보다가
+// 한 곳을 F2 로 고쳐 다시 그려도 나머지 두 곳으로 간다, 다음 F7 은 고친 자리 다음부터). 글이 바뀌어 서명으로 못 찾은 것은 블록 수가 그대로면
+// 같은 자리의 블록으로 잇는다 (내가 F2 로 고친 그 곳 — Shift+F7 로 돌아온다). 문서를 새로 열면 비운다.
 
 import { S, on } from './store.js';
 import { unfoldTo } from './fold.js';
-import { $, screenRect } from './util.js';
+import { $, screenRect, toast } from './util.js';
 import { t } from './i18n.js';
 
 const FLASH_MS = 4000;
@@ -82,28 +87,69 @@ export function markChanges(root, before, pane) {
     }
     flashBlock(...marked);
   }
-  if (!marked.some((el) => outOfView(el, pane))) marked = [];
-  pane.marks = { list: marked, next: 0 };
+  let all = marked;
+  let at = -1;
+  const prev = before ? pane.marks : null;
+  if (prev?.sigs?.length) {   // 앞서 바뀐 곳 중 그대로인 블록 (서명마다 그 수만큼)
+    const blocks = blocksOf(root);
+    const want = new Map();
+    for (const s of prev.sigs) want.set(s, (want.get(s) || 0) + 1);
+    const keep = new Set(marked);
+    for (const el of blocks) {
+      if (keep.has(el)) continue;
+      const s = signature(el);
+      if (want.get(s)) {
+        want.set(s, want.get(s) - 1);
+        keep.add(el);
+      }
+    }
+    if (blocks.length === prev.count) {   // 서명으로 못 찾은 것(그 사이 글이 바뀜) — 블록 수가 그대로면 같은 자리
+      prev.sigs.forEach((s, i) => {
+        if (want.get(s) > 0 && blocks[prev.idx[i]]) {
+          want.set(s, want.get(s) - 1);
+          keep.add(blocks[prev.idx[i]]);
+        }
+      });
+    }
+    all = blocks.filter((el) => keep.has(el));   // 문서 차례
+    if (prev.pos >= 0) all.forEach((el, i) => { if (blocks.indexOf(el) <= prev.pos) at = i; });   // 마지막에 간 자리(또는 그 앞)부터 잇는다
+  }
+  const blocks = all.length ? blocksOf(root) : [];
+  pane.marks = { all, sigs: all.map(signature), idx: all.map((el) => blocks.indexOf(el)), count: blocks.length,
+    list: marked.some((el) => outOfView(el, pane)) ? all : [], at, pos: prev?.pos ?? -1 };
   if (pane === S.pane) renderButton();
 }
 
 /** 칸(pane)의 바뀐 곳을 지운다 (문서 없음·폴더 개요) */
 export function clearChanges(pane) {
-  pane.marks = { list: [], next: 0 };
+  pane.marks = { all: [], sigs: [], idx: [], count: 0, list: [], at: -1, pos: -1 };
   if (pane === S.pane) renderButton();
 }
 
-function goNext() {
-  const m = S.pane.marks;
-  if (!m.list.length) return;
-  const el = m.list[m.next % m.list.length];
-  m.next += 1;
+/**
+ * 바뀐 곳 다음(dir 1)·이전(-1)으로 — 상태줄 버튼과 F7·Shift+F7 (D170). 끝에서는 처음으로 돈다.
+ * 바뀐 곳이 없으면 알린다. 다뤘으면 true (문서·코드 화면이 아니면 false)
+ */
+export function stepChange(dir = 1) {
+  const pane = S.pane;
+  if (!pane || (S.view?.type !== 'doc' && S.view?.type !== 'code')) return false;
+  const m = pane.marks;
+  m.all = m.all.filter((el) => el.isConnected);
+  const n = m.all.length;
+  if (!n) {
+    toast(t('바뀐 곳이 없습니다 — 이 문서가 밖에서 고쳐져 자동으로 다시 그려지면 F7 로 바뀐 곳을 차례로 갑니다'));
+    return true;
+  }
+  m.at = dir > 0 ? (m.at + 1) % n : (m.at <= 0 ? n - 1 : m.at - 1);
+  const el = m.all[m.at];
+  m.pos = blocksOf(el.ownerDocument === document ? el.parentElement : el.ownerDocument.body).indexOf(el);   // 다시 그린 뒤에도 이 자리 다음부터
   unfoldTo(el);
   el.scrollIntoView({ block: 'center' });
   flashBlock(el);
+  return true;
 }
 
 export function initChangeMarks() {
-  $('#lec-st-changes').addEventListener('click', goNext);
+  $('#lec-st-changes').addEventListener('click', () => stepChange(1));
   on('pane', renderButton);
 }
