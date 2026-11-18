@@ -463,11 +463,12 @@ On the current line, press **/** (or the **Insert** button at the right end of t
 
 ### Special characters
 
-Insert characters you cannot type directly: the middle dot (·), dashes (— –), corner brackets (「」), the reference mark (※), arrows (→ ⇒), shapes (○ ● ★ ✓), math (± × ≤ ≈), units and currency (℃ ㎡ ㎏ ₩ €), circled and Roman numerals (① ㉠ Ⅰ), super- and subscripts (² ₂) and Greek letters (α Σ).
+Insert characters you cannot type directly: the middle dot (·), dashes (— –), corner brackets (「」), the reference mark (※), arrows (→ ⇒), shapes (○ ● □ ■ ★), math (± × ≤ ≈), units and currency (℃ ㎡ ㎏ ₩ €), circled and Roman numerals (① ㉠ Ⅰ), super- and subscripts (² ₂) and Greek letters (α Σ).
 
 - **Where**: **Ctrl+Shift+;** in a line-editing cell or in edit mode (next to Ctrl+; for a date) — it inserts at the cursor. **Special character…** in the cell's right-click menu does the same. In the reading view, **Ctrl+Shift+;** or **Special character** in the insert box (`/`) opens the current line's cell and inserts at its end (no new line is added below).
 - **Choosing**: characters come in groups; the top row is the twelve you inserted most recently. Filter by name — 'arrow', 'circled', 'Celsius' (Korean names work too). Move with **← ↑ ↓ →** and the name shows on the bottom line; **Enter** inserts and **Esc** cancels. You can click as well. The names are in the language of the screen and the filter looks at both.
-- The cell stays open so you can keep writing. Characters that Markdown reads as marks (`*` `_` `|` `#` and so on) are not in the list — an inserted character never becomes formatting.
+- The cell stays open so you can keep writing.
+- **Only characters that keep the document sound**: characters Markdown reads as marks (`*` `_` `|` `#` and so on) are left out so an inserted character never becomes formatting. So are characters that look like a list or a task but are not (• ☐ ☑) and the minus sign (−), which a table does not read as a number — write lists with `-`, tasks with `- [ ]` and negatives with `-`. Characters missing from Malgun Gothic or Batang (✓ ✗ ⑯–⑳ ⁵–⁹ ☀ ✉ and so on) are left out too — they could look different on another PC, in PDF or in Word, or turn into emoji.
 
 ### Editing alongside Claude
 

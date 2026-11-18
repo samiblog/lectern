@@ -22,7 +22,6 @@
       ["〔", "여는 거북 등 괄호", "left tortoise shell bracket"],
       ["〕", "닫는 거북 등 괄호", "right tortoise shell bracket"],
       ["※", "참고표", "reference mark"],
-      ["•", "글머리 점", "bullet"],
       ["§", "절 기호", "section sign"],
       ["¶", "단락 기호", "pilcrow"],
       ["†", "칼표", "dagger"],
@@ -45,11 +44,7 @@
       ["↙", "왼쪽 아래 화살표", "south west arrow"],
       ["↖", "왼쪽 위 화살표", "north west arrow"],
       ["⇒", "오른쪽 겹화살표 (따라서)", "right double arrow (implies)"],
-      ["⇐", "왼쪽 겹화살표", "left double arrow"],
-      ["⇔", "좌우 겹화살표 (같다)", "left right double arrow (iff)"],
-      ["➔", "굵은 오른쪽 화살표", "heavy right arrow"],
-      ["↻", "시계 방향 화살표", "clockwise arrow"],
-      ["↺", "시계 반대 방향 화살표", "anticlockwise arrow"]
+      ["⇔", "좌우 겹화살표 (같다)", "left right double arrow (iff)"]
     ]},
     {"id": "shape", "ko": "도형", "en": "Shapes", "chars": [
       ["○", "빈 원", "white circle"],
@@ -72,22 +67,13 @@
       ["☆", "빈 별", "white star"],
       ["★", "검은 별", "black star"],
       ["♡", "빈 하트", "white heart"],
-      ["♥", "검은 하트", "black heart"],
-      ["✓", "체크", "check mark"],
-      ["✔", "굵은 체크", "heavy check mark"],
-      ["✗", "가위표", "ballot x"],
-      ["✘", "굵은 가위표", "heavy ballot x"],
-      ["☐", "빈 체크 상자", "ballot box"],
-      ["☑", "체크한 상자", "ballot box with check"],
-      ["☒", "가위표 상자", "ballot box with x"]
+      ["♥", "검은 하트", "black heart"]
     ]},
     {"id": "math", "ko": "수학", "en": "Math", "chars": [
       ["±", "플러스마이너스", "plus minus"],
       ["×", "곱하기", "multiplication"],
       ["÷", "나누기", "division"],
-      ["−", "빼기 (마이너스)", "minus sign"],
       ["≠", "같지 않다", "not equal"],
-      ["≈", "거의 같다", "almost equal"],
       ["≒", "근삿값", "approximately equal"],
       ["≡", "합동", "identical to"],
       ["≤", "작거나 같다", "less or equal"],
@@ -100,11 +86,9 @@
       ["∏", "곱 (파이)", "product"],
       ["∫", "적분", "integral"],
       ["∂", "편미분", "partial"],
-      ["∆", "증분 (델타)", "increment (delta)"],
       ["∇", "나블라", "nabla"],
       ["∝", "비례", "proportional to"],
       ["∈", "원소", "element of"],
-      ["∉", "원소 아님", "not element of"],
       ["⊂", "부분집합", "subset"],
       ["⊃", "포함", "superset"],
       ["∪", "합집합", "union"],
@@ -144,8 +128,7 @@
       ["€", "유로", "euro"],
       ["¥", "엔·위안", "yen yuan"],
       ["£", "파운드", "pound"],
-      ["¢", "센트", "cent"],
-      ["₹", "루피", "rupee"]
+      ["¢", "센트", "cent"]
     ]},
     {"id": "number", "ko": "번호", "en": "Numbers", "chars": [
       ["①", "원 숫자 1", "circled 1"],
@@ -163,11 +146,6 @@
       ["⑬", "원 숫자 13", "circled 13"],
       ["⑭", "원 숫자 14", "circled 14"],
       ["⑮", "원 숫자 15", "circled 15"],
-      ["⑯", "원 숫자 16", "circled 16"],
-      ["⑰", "원 숫자 17", "circled 17"],
-      ["⑱", "원 숫자 18", "circled 18"],
-      ["⑲", "원 숫자 19", "circled 19"],
-      ["⑳", "원 숫자 20", "circled 20"],
       ["⑴", "괄호 숫자 1", "parenthesized 1"],
       ["⑵", "괄호 숫자 2", "parenthesized 2"],
       ["⑶", "괄호 숫자 3", "parenthesized 3"],
@@ -228,31 +206,15 @@
       ["ⅹ", "작은 로마 숫자 10", "small Roman numeral 10"]
     ]},
     {"id": "script", "ko": "첨자", "en": "Super- and subscripts", "chars": [
-      ["⁰", "위 첨자 0", "superscript 0"],
       ["¹", "위 첨자 1", "superscript 1"],
       ["²", "위 첨자 2", "superscript 2"],
       ["³", "위 첨자 3", "superscript 3"],
       ["⁴", "위 첨자 4", "superscript 4"],
-      ["⁵", "위 첨자 5", "superscript 5"],
-      ["⁶", "위 첨자 6", "superscript 6"],
-      ["⁷", "위 첨자 7", "superscript 7"],
-      ["⁸", "위 첨자 8", "superscript 8"],
-      ["⁹", "위 첨자 9", "superscript 9"],
-      ["⁺", "위 첨자 +", "superscript plus"],
-      ["⁻", "위 첨자 −", "superscript minus"],
       ["ⁿ", "위 첨자 n", "superscript n"],
-      ["₀", "아래 첨자 0", "subscript 0"],
       ["₁", "아래 첨자 1", "subscript 1"],
       ["₂", "아래 첨자 2", "subscript 2"],
       ["₃", "아래 첨자 3", "subscript 3"],
-      ["₄", "아래 첨자 4", "subscript 4"],
-      ["₅", "아래 첨자 5", "subscript 5"],
-      ["₆", "아래 첨자 6", "subscript 6"],
-      ["₇", "아래 첨자 7", "subscript 7"],
-      ["₈", "아래 첨자 8", "subscript 8"],
-      ["₉", "아래 첨자 9", "subscript 9"],
-      ["₊", "아래 첨자 +", "subscript plus"],
-      ["₋", "아래 첨자 −", "subscript minus"]
+      ["₄", "아래 첨자 4", "subscript 4"]
     ]},
     {"id": "greek", "ko": "그리스 문자", "en": "Greek", "chars": [
       ["α", "그리스 소문자 알파", "Greek small alpha"],
@@ -288,13 +250,9 @@
       ["®", "등록 상표", "registered"],
       ["™", "상표", "trademark"],
       ["☎", "전화", "telephone"],
-      ["✉", "편지", "envelope"],
       ["☞", "오른쪽 가리킴", "pointing right"],
       ["☜", "왼쪽 가리킴", "pointing left"],
-      ["♪", "음표", "note"],
-      ["☀", "해", "sun"],
-      ["☁", "구름", "cloud"],
-      ["☂", "우산", "umbrella"]
+      ["♪", "음표", "note"]
     ]}
   ]
 }

@@ -89,7 +89,7 @@ web/
   help/review.md        다듬기 점검 안내 (D148 — 문서 여백 우클릭 '다듬기 점검 요청'의 요청 글이 경로를 준다. 표를 먼저, 고친 것은 사람이 고른 뒤). 영어판은 .en.md
   help/voice.md         내 문체 노트 안내 (D148 — 문서 우클릭 '내 문체 견본으로 보내기'·설정 창 '내 문체'의 요청 글이 경로를 준다. 지킬 것·참고할 것·따라 하지 않을 것). 영어판은 .en.md
   js/lang/en.js         영어 사전 (한국어 문구 → 영어, JSON)
-  data/chars.json       특수 문자 창의 목록 (D165 — charpick.js. 묶음마다 [글자, 한국어 이름, 영어 이름], Markdown 표시로 읽히는 ASCII 는 넣지 않는다 — tests/test_chars.py)
+  data/chars.json       특수 문자 창의 목록 (D165 — charpick.js. 묶음마다 [글자, 한국어 이름, 영어 이름], Markdown 표시로 읽히는 ASCII·목록과 할 일을 흉내 내는 글자·맑은 고딕과 바탕에 없는 글자는 넣지 않는다 — 문서의 안정성이 먼저, tests/test_chars.py)
   vendor/               외부 라이브러리 (tools/update_vendor.py 로만 갱신, 직접 수정 금지)
 samples/                사람·AI 용 예제 프로젝트 (D57 — 설치 파일에 들어가고 '예제 열기'로 연다. 점검용 함정은 넣지 않는다. slides/ 는 Lectern 슬라이드 예제의 입구 — 기초, 상황별 모범 예제 10개와 만드는 과정, 복잡한 배치. 시험에서 나온 문서는 tests/corpus/slides — D96)
 skills/                 AI 도구의 스킬 (D98 — pptx-to-lectern, lectern-to-pptx, lectern-to-docx(D146 — lectern_md.py·figure_png.py 는 pptx 스킬의 것과 같은 파일. templates/ 는 지면 틀과 짝인 Word 양식 18가지와 index.json — D147, tools/make_docx_templates.py 가 짓고, 자리는 scripts/template_fill.py 가 채운다). SKILL.md 형식이라 Claude Code·Codex·Antigravity·OpenCode 가 함께 쓴다 — D138. 설치 파일에 들어가고 앱은 경로만 준다. 설치는 사용자가 시킬 때 Claude 가 물은 뒤 한다. 스크립트는 표준 라이브러리, PowerPoint·Pillow 는 있으면 쓴다. 설치 폴더의 lectern-skill.exe 로 돌아 Python 없이 된다 — D99)
