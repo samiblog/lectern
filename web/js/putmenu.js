@@ -15,8 +15,8 @@ const list = () => $('#lec-put-list');
 let waiting = null;   // {resolve, items, sel, free, board, cols, first, current, off} — free: 찾기 칸의 글을 그대로 돌려줄 수 있다, board: 넣기의 판 (D154), first·current·off: 바꾸기 창 (D155)
 const RECENT = 5;   // 판 맨 앞의 '최근' (D154 — 설정 recent_puts 에 이름만)
 const CHO = 'ㄱㄲㄴㄷㄸㄹㅁㅂㅃㅅㅆㅇㅈㅉㅊㅋㅌㅍㅎ';   // i18n-ok (초성)
-/** 한글 낱자의 첫소리만: '쪽 나눔' → 'ㅉ ㄴㄴ' (D154 — 초성으로 거르기) */
-const initials = (s) => [...s].map((c) => {
+/** 한글 낱자의 첫소리만: '쪽 나눔' → 'ㅉ ㄴㄴ' (D154 — 초성으로 거르기. 특수 문자 창도 — charpick.js) */
+export const initials = (s) => [...s].map((c) => {
   const n = c.charCodeAt(0) - 0xac00;
   return n >= 0 && n < 11172 ? CHO[Math.floor(n / 588)] : c;
 }).join('');
@@ -82,6 +82,7 @@ const SPEAKER = () => ({ id: 'speaker', group: t('주·참조'), name: t('발표
 /** 글 속에 넣는 것 (D149 — 날짜는 달력에서 골라 커서 자리에) */
 const INLINE_ITEMS = () => [
   { id: 'date', group: t('글'), name: t('날짜'), hint: 'Ctrl+;', words: 'date today calendar 오늘 달력 기한 마감' },   // i18n-ok (찾는 말)
+  { id: 'chars', group: t('글'), name: t('특수 문자'), hint: 'Ctrl+Shift+;', words: 'special character symbol 기호 특수기호 화살 단위 원숫자 동그라미 → · ※ ①' },   // i18n-ok (찾는 말 — D165. '화살표'는 넣지 않는다 — 표를 찾는 '표'에 먼저 걸린다)
 ];
 
 /** 넣을 수 있는 것 */

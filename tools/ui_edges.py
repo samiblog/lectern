@@ -19,31 +19,32 @@ from pathlib import Path
 import close_windows
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick']
+SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick', 'focus_tabs', 'enter_chars']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(aisetup|stylepick)\.js|lectern/aistatus\.py|web/help/(writing-styles\.json|new-style.*|business-report.*|academic-writing.*|plain-explainer.*)', ['aiscope', 'aitool', 'stylepick']),
-    (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile', 'aiscope']),
-    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['docedit', 'slideedit', 'structure', 'lines', 'refresh', 'sample_lines', 'slides', 'textbox', 'pickkeys', 'termstack', 'inlinefmt', 'wordpick']),
+    (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile', 'aiscope', 'focus_tabs']),
+    (r'web/js/(charpick|datepick)\.js|web/data/chars\.json', ['enter_chars']),
+    (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['enter_chars', 'docedit', 'slideedit', 'structure', 'lines', 'refresh', 'sample_lines', 'slides', 'textbox', 'pickkeys', 'termstack', 'inlinefmt', 'wordpick']),
     (r'web/js/(line\w+|spotlight|vikeys|editor|docops|docmenu|wordpick|main|others|tree)\.js', ['keys_tidy', 'scen_levels', 'change_kinds', 'scen_088', 'view_keys']),
     (r'web/js/(inlinefmt|wordpick)\.js', ['inlinefmt', 'wordpick', 'docedit', 'pickkeys', 'reading', 'sidekinds']),
     (r'web/js/(slide\w+|present|theme|csssafe)\.js|web/themes/.*', ['slides', 'slidecheck', 'deckguard', 'sample_decks', 'reading', 'textbox', 'impress', 'impress_scenarios', 'printpdf']),
     (r'web/js/impress\w+\.js|lectern/htmlexport\.py|web/vendor/impress/.*', ['impress', 'impress_scenarios']),
     (r'samples/slides/.*|web/help/slides.*', ['sample_decks']),
-    (r'web/js/project\.js|lectern/(scanner|docinfo|titlecache|state)\.py', ['fastopen', 'refresh', 'reading', 'sidebar']),
+    (r'web/js/project\.js|lectern/(scanner|docinfo|titlecache|state)\.py', ['fastopen', 'refresh', 'reading', 'sidebar', 'focus_tabs']),
     (r'web/js/(sideorder|tree|others)\.js|lectern/marks\.py', ['sidebar', 'sidekinds']),
     (r'web/js/(work|workdata|workalert|workview|datepick)\.js|lectern/work\.py|web/templates/work.*', ['work', 'work_scenarios', 'work_more', 'work_tree', 'work_tree_more', 'work_gantt', 'scen_gantt', 'scen_day']),
     (r'web/js/(refs|vikeys|editor|settings|help)\.js|web/vendor/codemirror/keymap/.*', ['refs_vi', 'textbox', 'docedit', 'reading', 'termfont', 'printpdf', 'aitool', 'aiscope']),
     (r'web/js/(markdown|doc|fold)\.js', ['textbox', 'reading', 'docedit', 'hostile']),
     (r'web/js/(csvview|tabledata|quickchart|codeview|charts)\.js|lectern/sheet\.py', ['data', 'data_wide', 'hostile', 'chartdata']),
     (r'web/js/(chartdata|chartops|tablecopy)\.js', ['chartdata']),
-    (r'web/js/(htmldoc|nav|find|toc)\.js', ['frames', 'reading', 'hostile', 'refresh', 'textbox']),
+    (r'web/js/(htmldoc|nav|find|toc)\.js', ['frames', 'reading', 'hostile', 'refresh', 'textbox', 'focus_tabs']),
     (r'web/js/solo\.js|lectern/(windows|native)\.py', ['solo', 'solo_cases']),
     (r'web/js/(headstyle|mdstyle)\.js', ['mdstyle', 'docedit']),
     (r'web/js/(deletedoc|newdialog|newdoc|docops|putmenu|lineblock|chartops)\.js|lectern/trash\.py', ['docedit', 'slideedit', 'textbox', 'pickkeys']),
     (r'web/js/(slidegallery|pptxdialog)\.js|web/templates/.*|lectern/(slidetemplates|pptxexport)\.py|skills/lectern-to-pptx/.*', ['templates']),
     (r'samples/.*', ['sample_lines']),
-    (r'web/js/(tabs|doctabs|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure', 'hostile', 'solo', 'solo_cases', 'termfont', 'closeall', 'termstack', 'aitool', 'fastopen']),
+    (r'web/js/(tabs|doctabs|tabdrag|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure', 'hostile', 'solo', 'solo_cases', 'termfont', 'closeall', 'termstack', 'aitool', 'fastopen', 'focus_tabs', 'reading', 'frames']),
     (r'web/js/ui\.js|lectern/terminal\.py', ['termstack', 'aitool']),
     (r'web/js/help\.js|web/index\.html|web/help/manual', ['keys_tabs']),
     (r'web/js/(putmenu|settings|theme|vikeys|printdoc|work|main)\.js|web/index\.html|lectern/config\.py', ['put_settings', 'scen_put', 'change_kinds', 'aiscope']),
@@ -89,6 +90,10 @@ def main() -> int:
 
 def run_suites(args: list[str]) -> int:
     want = suites_for(changed_files()) if args == ['--changed'] else args or SUITES
+    unknown = [a for a in want if a not in SUITES]
+    if unknown:   # 목록에 없는 이름은 돌지 않는다 — 말없이 '모두 통과'로 끝나지 않게
+        print(f'모르는 묶음: {unknown} — tools/ui_edges.py 의 SUITES 에 더하세요', flush=True)
+        return 1
     if args == ['--changed']:
         print('고친 파일에 닿는 묶음:', want or '없음', flush=True)
     failed, flaky = [], []

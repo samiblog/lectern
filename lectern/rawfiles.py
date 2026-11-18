@@ -52,6 +52,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'recent_md_styles': (N_('최근 쓴 md 문서 스타일 (최신순)'), W_RECORD),
     'recent_templates': (N_('슬라이드 갤러리에서 최근 쓴 템플릿 (묶음과 이름)'), W_RECORD),
     'recent_puts': (N_('넣기 창에서 최근 넣은 것 (다섯까지)'), W_RECORD),
+    'recent_chars': (N_('특수 문자 창에서 최근 넣은 문자 (열둘까지)'), W_RECORD),
     'settings_section': (N_('설정 창에서 마지막에 고른 분류 — 다음에 그 분류로 연다'), W_RECORD),
     'font_scale': (N_('문서 글자 크기 배율 (0.8~2, 1 이 100%)'), W_TOOLBAR),
     'doc_width': (N_('md 문서 본문의 폭 배율 (0.8~2, 10 이면 칸 가득)'), W_TOOLBAR),

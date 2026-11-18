@@ -1,5 +1,5 @@
 // vi 키 (D122): 설정 'vi 키'(vi_keys, 기본 꺼짐)를 켜면 읽는 화면(md 문서·코드 화면·Lectern 슬라이드)에서 글자 키로 움직이고 고친다.
-// 있는 기능을 부르는 번역표다 — 글자 키를 같은 일을 하는 기존 키(↓·Delete·Ctrl+Enter…)로 바꿔 다시 보내거나 있는 함수를 부른다.
+// 있는 기능을 부르는 번역표다 — 글자 키를 같은 일을 하는 기존 키(↓·Delete·Shift+Enter…)로 바꿔 다시 보내거나 있는 함수를 부른다.
 // 새로 만든 편집은 p·P(담아 둔 줄 넣기)와 J(고른 줄 합치기)뿐이다 (lineedit.js). > < 는 고른 줄의 레벨을 그 줄만 (D152 — 제목의 하위 절까지는 Alt+Shift).
 //
 // - 현재 줄 = Normal, 고른 줄 = Visual Line(V — 한 줄이면 잡은 현재 줄, spotlight.armHere), 칸 = Insert. 하이라이트를 켠 줄도 고른 줄이다 (D139).
@@ -153,7 +153,7 @@ const NORMAL = {
   I: (e) => edit(e, true),
   a: (e) => edit(e, false),
   A: (e) => edit(e, false),
-  o: (e) => press(e, 'Enter', { ctrl: true }),
+  o: (e) => press(e, 'Enter', { shift: true }),   // 아래에 새 줄 (D164 — Shift+Enter)
   O: (e) => press(e, 'Enter', { ctrl: true, shift: true }),
   V: () => armHere(),
   v: () => armHere(),

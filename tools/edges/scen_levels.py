@@ -113,7 +113,7 @@ try:
         back('섞인.md', '목록 둘과 문단')
         reset('섞인.md')
         go(17)
-        page.keyboard.press('Shift+Enter')
+        page.keyboard.press('Control+Enter')
         page.keyboard.press('Tab')
         expect(page, '인용 속 목록 — 인용 표시 뒤에서 들여쓴다', lambda: lines('섞인.md')[16] == '>   - 인용 나', lambda: lines('섞인.md')[15:17])
         back('섞인.md', '인용 속 목록')

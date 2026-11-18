@@ -44,7 +44,7 @@ import { initPosition } from './position.js';
 import { initResize } from './resize.js';
 import { initPathLinks } from './pathlink.js';
 import { initWatch, startWatch } from './watch.js';
-import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, focusTerminal } from './terminal.js';
+import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, hopTerminals, focusedTerminal, hopToTerminal } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert } from './basket.js';
 import { initNewDialog, askNewDocument, closeNewDocument } from './newdialog.js';
@@ -160,18 +160,43 @@ function focusDoc() {
   else if (!focusLineEdit()) pane?.scroller.focus({ preventScroll: true });
 }
 
+let sideFocus = null;   // 사이드바 안에서 마지막에 초점이 있던 곳 (F6 이 돌아갈 곳 — D162)
+
+/** 사이드바가 보이는지 — Ctrl+B 로 감췄거나 모두 펼치기·독립창이 감췄으면 F6 이 건너뛴다 */
+const sidebarShown = () => { const el = $('#lec-sidebar'); return !!el && el.offsetWidth > 0 && el.checkVisibility(); };
+
+/** 사이드바로 초점을: 마지막에 있던 곳, 없으면 보이는 목록의 고른 행(열린 문서)·첫 행, 그것도 없으면 처음 누를 수 있는 것 */
+function focusSidebar() {
+  const side = $('#lec-sidebar');
+  const shown = (el) => !!el?.isConnected && side.contains(el) && el.checkVisibility();
+  const el = [sideFocus, ...side.querySelectorAll('.row.active, .row.selected'), ...side.querySelectorAll('[tabindex="0"], input, button')].find(shown);
+  if (!el) return;
+  el.focus({ preventScroll: true });
+  if (el !== sideFocus) el.scrollIntoView({ block: 'nearest' });
+}
+
 /**
- * F6·Shift+F6 (D79): 문서 ↔ 터미널. 터미널·사이드바에 초점이 있으면 문서로, 그 밖은 터미널로 — 목차·툴바는 누른 뒤 초점이 남은 것이라
- * 읽는 중이다 (문서로 보내면 첫 F6 이 아무 일도 안 한 것처럼 보인다). 지금은 두 곳뿐이라 거꾸로도 같다
+ * F6·Shift+F6 (D79·D162): 문서 → 터미널 1 → 2 → 3 … → 사이드바 → 문서 차례로 한 곳씩 (Shift+F6 은 거꾸로).
+ * 터미널은 그 프로젝트의 것 모두를 번호 차례로 — 패널이 닫혀 있으면 한 곳으로 보아 열면서 1번으로 (terminal.js 의 hopTerminals).
+ * 독립창·보기만 하는 프로젝트는 터미널을, 감춘 사이드바는 건너뛴다. 목차·툴바·상태줄·메모는 누른 뒤 초점이 남은 것이라
+ * 문서로 본다 (D79 — 다음으로 보내야 첫 F6 이 아무 일도 안 한 것처럼 보이지 않는다)
  */
-function hopFocus() {
+function hopFocus(dir = 1) {
   if (gatherOn()) {
     leaveToDoc().then(focusDoc);
     return;
   }
   if (overlayOpen()) return;
-  if (document.activeElement?.closest('#lec-term, #lec-sidebar')) focusDoc();
-  else focusTerminal();
+  const stops = [{ kind: 'doc', term: null, go: focusDoc }, ...hopTerminals().map((term) => ({ kind: 'term', term, go: () => hopToTerminal(term) }))];
+  if (sidebarShown()) stops.push({ kind: 'side', term: null, go: focusSidebar });
+  const el = document.activeElement;
+  let at = 0;
+  if (el?.closest?.('#lec-sidebar')) at = stops.findIndex((x) => x.kind === 'side');
+  else if (el?.closest?.('#lec-term')) {
+    const term = focusedTerminal();
+    at = Math.max(stops.findIndex((x) => x.kind === 'term' && (!term || x.term === term)), 0);
+  }
+  stops[(Math.max(at, 0) + dir + stops.length) % stops.length].go();
 }
 
 // ---- 연결 ---------------------------------------------------------------------
@@ -207,6 +232,7 @@ function menuHere() {
 
 function bindKeys() {
   document.addEventListener('copy', noteCopy);   // 고른 글을 복사하면 알림 (D151)
+  $('#lec-sidebar')?.addEventListener('focusin', (e) => { sideFocus = e.target; });   // F6 이 사이드바로 돌아갈 곳 (D162)
   $('#lec-btn-put')?.addEventListener('click', () => {   // 탭 막대의 [넣기] (D154) — 현재 줄 아래에 넣기 창, / 와 같다
     if (!putKey()) toast(t('넣기는 md 문서에서 씁니다 — 문서를 열고 넣을 자리의 줄을 누른 뒤 [넣기]나 / 를 누릅니다'));
   });
@@ -223,7 +249,7 @@ function bindKeys() {
     }
     if (e.key === 'F6' && !mod && !e.altKey) {   // 문서 ↔ 터미널 — 터미널·편집기·한 줄 편집 안에서도 (terminal.js 의 keyFor, lineedit.js 의 onKey)
       e.preventDefault();
-      hopFocus();
+      hopFocus(e.shiftKey ? -1 : 1);
       return;
     }
     if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyM') {   // 메모 열고 닫기 — 터미널·편집기 안에서도 (terminal.js 의 keyFor, D92)
@@ -381,7 +407,7 @@ function bindKeys() {
       e.preventDefault();   // 장 하이라이트 (spotlight.js, D91)
     } else if (((e.key === 'F10' && e.shiftKey && !mod && !e.altKey) || e.key === 'ContextMenu') && !typing(e) && menuHere()) {
       e.preventDefault();   // 초점이 있는 곳이나 현재 줄의 우클릭 메뉴 (D91)
-    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Shift+Enter·↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
+    } else if (!typing(e) && spotKey(e)) {   // 현재 위치·하이라이트 (spotlight.js, D75): ↑·↓, Ctrl+Enter 하이라이트, Shift+Enter 새 줄, Shift+↑·↓·→·←, Ctrl+C, F2, 장 하이라이트 중 앞뒤 장
       e.preventDefault();
     } else if (e.key === 'Escape') {
       if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()

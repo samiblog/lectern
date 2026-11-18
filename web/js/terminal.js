@@ -791,6 +791,38 @@ export function focusTerminal() {
   else toggleTerminal(true);
 }
 
+const byNumber = (tab) => [...termsOf(tab)].sort((a, b) => a.n - b.n);
+
+/**
+ * F6 의 차례에 드는 터미널 (main.js, D162): 이 탭의 터미널 모두 — 번호 차례 (쌓았든 탭이든). 패널이 닫혀 있거나 아직 없으면 [null] —
+ * 한 곳으로 보아 열면서 1번으로. 독립창·보기만 하는 프로젝트(D71)·터미널 모음 중이면 [] (건너뛴다)
+ */
+export function hopTerminals(tab = S.tab) {
+  if (solo || !tab || tab.readonly || gathered()) return [];
+  const terms = open ? byNumber(tab) : [];
+  return terms.length ? terms : [null];
+}
+
+/** 초점이 있는 터미널 — 그 칸 안 (머리줄 포함). 없으면 null */
+export function focusedTerminal(tab = S.tab) {
+  const el = document.activeElement;
+  return termsOf(tab).find((x) => x.pane?.contains(el) || x.box?.contains(el)) || null;
+}
+
+/** F6 (D162): 그 터미널로 초점을 — 고른 터미널이 된다. null 이면 패널을 열면서 가장 작은 번호(없으면 1번을 만들어)로 */
+export function hopToTerminal(term) {
+  const tab = S.tab;
+  if (!tab) return;
+  if (term) {
+    selectTerminal(tab, term);
+    return;
+  }
+  const first = byNumber(tab)[0];
+  if (first) tab.term = first;
+  if (open) showCurrent({ focus: true });
+  else toggleTerminal(true);
+}
+
 /** 탭을 닫기 전에: 그 탭의 셸들에서 프로그램이 돌고 있으면 묻는다. 닫아도 되면 true */
 export async function confirmCloseTerminal(tab) {
   const busy = [];

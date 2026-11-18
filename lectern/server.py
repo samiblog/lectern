@@ -270,6 +270,17 @@ def create_app(state: AppState) -> Flask:
         state.close_tab(pid)
         return jsonify(state.info())
 
+    @app.post('/api/tab-move')
+    def api_tab_move() -> Any:
+        """프로젝트 탭을 끌어 옮긴다 (D163): p 를 to 번째(0부터)로. /api/state 와 같은 것을 돌려준다 — 화면은 그 차례로 맞춘다."""
+        data = body()
+        to = data.get('to')
+        if not isinstance(to, int) or isinstance(to, bool):
+            abort(400)
+        project = project_of(data.get('p'))
+        state.move_tab(project.id, to)
+        return jsonify(state.info())
+
     @app.post('/api/activate')
     def api_activate() -> Any:
         """선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작)."""

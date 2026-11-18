@@ -180,7 +180,7 @@ try:
         page.keyboard.press('m')
         page.wait_for_timeout(400)
         check('아무것도 고르지 않은 현재 줄의 M 은 듣지 않는다 (D142)', read() == DOC and toast() == '', toast())
-        page.keyboard.press('Shift+Enter')   # 그 줄의 하이라이트 — 고른 줄이다
+        page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 — 고른 줄이다
         page.keyboard.press('m')
         check('고른 줄의 M: 줄 전체에 형광펜 — 목록 표시는 그대로', until(page, lambda: '- <mark>항목 하나</mark>\n' in read()), read())
         page.keyboard.press('m')

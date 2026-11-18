@@ -1,4 +1,4 @@
-// 한 줄 편집 (D76): 현재 줄·한 줄 하이라이트에서 F2, 한 줄 하이라이트에서 Shift+Enter(spotlight.js 가 'line-edit' 을 보낸다), 본문 두 번 누르기(누른 자리에 커서)
+// 한 줄 편집 (D76): 현재 줄·한 줄 하이라이트에서 F2(spotlight.js 가 'line-edit' 을 보낸다), 본문 두 번 누르기(누른 자리에 커서)
 // — 그 줄을 화면의 그 자리에서 고친다. F2·두 번 누르기는 하이라이트를 만들지 않는다 (끝낸 뒤 회색이 남지 않게).
 //
 // - 그 줄이 보이는 자리(lineunits.js 의 lineSlot — 블록의 글, 나눠 쓴 문단의 그 줄, 코드 블록·코드 화면의 그 줄, 표의 칸)의 내용을 떼어 두고
@@ -14,7 +14,7 @@
 //   한글 조합 중의 Enter·화살표는 조합의 것이다 (isComposing).
 // - 본문의 할 일 체크박스를 누르면 원문의 [ ] ↔ [x] 를 바꿔 저장한다 (같은 저장 길, 같은 되돌리기).
 // - 저장은 replaceLines 하나로 — 범위(시작 줄, 원래 줄들, 새 줄들)를 바꾼다. 줄 추가·옮기기처럼 여러 줄을 바꾸는 편집도 이 길로.
-// - 줄 구조 (D83 — 계산은 lineops.js): Ctrl+Enter·Ctrl+Shift+Enter 로 아래·위에 새 줄 (글 가운데서 Ctrl+Enter 면 그 자리에서 나눔), 줄 맨 앞의 Backspace 로 윗줄과 합침,
+// - 줄 구조 (D83 — 계산은 lineops.js): Shift+Enter·Ctrl+Shift+Enter 로 아래·위에 새 줄 (글 가운데서 Shift+Enter 면 그 자리에서 나눔 — D164, 칸의 Ctrl+Enter 는 저장하고 그 줄 선택), 줄 맨 앞의 Backspace 로 윗줄과 합침,
 //   목록의 Tab·Shift+Tab 으로 레벨 이동, Alt+↑·↓ 로 옮기기, Ctrl+Shift+K 지우기, Ctrl+Shift+D 복제. 하이라이트한 줄도 Alt+↑·↓ (moveLit)·Delete·Ctrl+X (deleteLit).
 //   새 줄은 글을 쓸 때까지 화면에만 있다 (session.fresh — 그 자리에 빈 <li>·<p>·코드 줄을 넣고, 글 없이 끝내면 걷는다 — 파일은 그대로다).
 //   이미 고친 글은 먼저 저장하고 구조를 바꾼다 (되돌리기는 두 걸음). 되지 않는 것은 칸을 그대로 두고 알린다.
@@ -44,6 +44,7 @@ import {
 import { listToTable, tableToList, wrapCode, unwrapCode } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
 import { pickDate } from './datepick.js';
+import { pickChar } from './charpick.js';
 import { renumberCaptions, refTargets, referencesIn, citeOf, citedCount, tocLine, captionAt, PAGE_BREAK, lostHeadLinks } from './refs.js';
 import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './chartops.js';
@@ -51,7 +52,7 @@ import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
 import {
   currentUnits, sourceLines, followLine, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
-  kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany,
+  kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany, lightHere,
 } from './spotlight.js';
 import { refreshView } from './nav.js';
 import { $, toast, copyText, rangeText, lineRef, blockedReadOnly, isMd } from './util.js';
@@ -452,7 +453,7 @@ async function beginNew(base, below, { end = false, after = false, around = fals
 }
 
 /**
- * 칸 없이 새 줄을 연다 (D117): Ctrl+Enter·Ctrl+Shift+Enter. 현재 줄(잡은 줄·한 줄의 하이라이트도)의 위·아래에 열고 고르기를 푼다 — 여러 줄을
+ * 칸 없이 새 줄을 연다 (D117): Shift+Enter·Ctrl+Shift+Enter (D164). 현재 줄(잡은 줄·한 줄의 하이라이트도)의 위·아래에 열고 고르기를 푼다 — 여러 줄을
  * 골랐으면 spotlight.js 가 보내지 않는다 (D139).
  * 표의 행은 새 행을, 차트·수식은 그 블록의 앞뒤 문단을 연다
  */
@@ -885,7 +886,7 @@ function whyNot(error) {
   switch (error) {
     case 'edge': return t('더 옮길 곳이 없습니다');
     case 'mixed': return t('수준이 다른 항목은 함께 옮기지 못합니다 — 한 항목씩 옮깁니다');
-    case 'table': return t('표의 행은 복제하지 않습니다 — Ctrl+Enter 로 새 행을 더합니다');
+    case 'table': return t('표의 행은 복제하지 않습니다 — Shift+Enter 로 새 행을 더합니다');
     case 'not-table': return t('표 안에서 누르세요');
     case 'last-column': return t('하나뿐인 열은 지우지 않습니다 — 표를 지우세요');
     case 'not-box': return t('강조글 안에서 누르세요');
@@ -958,7 +959,19 @@ async function restructure(op, { quiet = false } = {}) {
   });
 }
 
-/** Ctrl+Enter(below)·Ctrl+Shift+Enter: 새 줄. 글 가운데서 Ctrl+Enter 면 그 자리에서 두 줄로 나눈다 */
+/**
+ * 칸의 Ctrl+Enter (D164): 저장하고 닫은 뒤 그 줄을 선택(하이라이트)한다 — 읽는 화면의 Ctrl+Enter 와 같은 '줄 선택'.
+ * 빈 새 줄이면 넣지 않고 닫기만 한다 (선택할 줄이 없다)
+ */
+async function saveAndPick() {
+  const s = session;
+  const empty = !!s.fresh && !read(s.places[0]).trim();
+  await finish(!empty);
+  if (empty || session || S.pane !== s.pane) return;
+  if (await settled(s.pane) && S.pane === s.pane && !session) lightHere();
+}
+
+/** Shift+Enter(below)·Ctrl+Shift+Enter: 새 줄. 글 가운데서 Shift+Enter 면 그 자리에서 두 줄로 나눈다 */
 async function addLine(below) {
   const s = session;
   if (s.kind === 'table') {   // 표의 새 행 (D109)
@@ -1714,6 +1727,7 @@ async function putItem(s, id) {
   else if (id === 'speaker') await speakerNote(s);
   else if (id === 'link') await linkHere();
   else if (id === 'date') await dateHere();
+  else if (id === 'chars') await charFromPut(s);
   else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
   else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
@@ -1800,6 +1814,47 @@ async function dateHere() {
   backTo(s, keep);
   if (!day || session !== s) return;
   document.execCommand('insertText', false, day);
+}
+
+/** Ctrl+Shift+;: 특수 문자 넣기 (D165 — charpick.js). 고른 문자를 커서 자리에 (고른 글이 있으면 그 자리를 바꾼다) */
+async function charHere() {
+  const s = session;
+  if (!s) return;
+  const span = s.places[s.cell].span;
+  const keep = keepCaret();
+  const c = await pickChar({ at: span, title: t('특수 문자 넣기') });
+  backTo(s, keep);
+  if (!c || session !== s) return;
+  document.execCommand('insertText', false, c);
+}
+
+let putFrom = null;   // 읽는 화면의 / 로 연 넣기 창이면 그 현재 줄 (putBelow) — '특수 문자' 는 아래 새 줄이 아니라 그 줄 끝에 넣는다 (D165)
+
+/**
+ * 넣기 창의 '특수 문자' (D165): 칸 안에서 열었으면 커서 자리에. 읽는 화면에서 열었으면(아래에 연 빈 새 줄) 그 새 줄은 넣지 않고
+ * 현재 줄의 칸을 열어 그 끝에 — 문자는 글 속에 넣는 것이다
+ */
+async function charFromPut(s) {
+  const from = putFrom;
+  if (from != null && s.fresh && !read(s.places[0]).trim()) {
+    await finish(false);
+    if (session) return;
+    await begin(from);
+    if (!session) return;
+  }
+  await charHere();
+}
+
+/** 읽는 화면의 Ctrl+Shift+; (spotlight.js 의 'line-chars', D165): 현재 줄의 칸을 열고 그 끝에 특수 문자를 */
+async function charsAtLine() {
+  const pane = S.pane;
+  if (!pane?.view || session || pane.lineEditHold || pane.unfold) return;
+  if (pane.tab && blockedReadOnly(pane.tab)) return;
+  const line = pane.here?.line;
+  if (!line || !linesEditable() || !pathIn(pane.view) || !textOn(pane.view)) return;
+  stopSpotlight();
+  await begin(line);
+  if (session) await charHere();
 }
 
 /** Ctrl+K: 링크 — 프로젝트의 파일을 고르거나 주소를 쓴다. 고른 글이 있으면 그 글에 건다 */
@@ -1979,6 +2034,7 @@ function onCellMenu(e) {
     '-',
     ...(s.kind === 'text' ? [{ label: t('링크…'), hint: 'Ctrl+K', action: () => { backTo(s, keep); linkHere(); } },
       { label: t('주…'), hint: 'Ctrl+Alt+F', action: () => { backTo(s, keep); noteHere(); } }] : []),
+    { label: t('특수 문자…'), hint: 'Ctrl+Shift+;', tip: t('문장 부호·화살표·단위·원 숫자 같은 문자를 커서 자리에'), action: () => { backTo(s, keep); charHere(); } },
     { label: t('서식 풀기'), tip: t('고른 곳의 굵게·색·형광펜 같은 서식을 모두'), action: run('clear') },
   ], () => {
     cellMenuOpen = false;
@@ -2082,8 +2138,14 @@ function menuOp(op, after = null) {
 
 /** 메뉴의 '여기에 넣기…'·'이 줄 바꾸기…' 를 칸 없이 쓸 때: 그 줄 아래에 새 줄을 열고 고른다 */
 async function putBelow(line, target) {
-  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table, pre`), after: true });   // 표·코드 블록의 줄이면 그 블록 아래에 — 행·코드 줄을 더하는 것은 Ctrl+Enter (D158 — 문서 끝에서도 같다)
-  if (session) await openPut();
+  await beginNew(line, true, { end: !!target.closest?.(`${ATOMIC}, img, table, pre`), after: true });   // 표·코드 블록의 줄이면 그 블록 아래에 — 행·코드 줄을 더하는 것은 Shift+Enter (D158·D164 — 문서 끝에서도 같다)
+  if (!session) return;
+  putFrom = line;
+  try {
+    await openPut();
+  } finally {
+    putFrom = null;
+  }
 }
 
 /** 현재 줄의 '/'·Ctrl+Shift+/ (D139 — spotlight.js 의 putKey): 그 줄 아래에 새 줄을 열고 넣기 창을 연다. 우클릭 '여기에 넣기…' 와 같다 */
@@ -2404,7 +2466,7 @@ export function lineMenuItems(target) {
   if (cell) {
     const col = cell.cellIndex;
     const run = (op) => () => menuOp(op);
-    items.push({ label: t('아래에 행 더하기'), hint: 'Ctrl+Enter', action: run((x) => addRow(x, line, true)) },
+    items.push({ label: t('아래에 행 더하기'), hint: 'Shift+Enter', action: run((x) => addRow(x, line, true)) },
       { label: t('위에 행 더하기'), action: run((x) => addRow(x, line, false)) },
       { label: t('오른쪽에 열 더하기'), action: run((x) => addColumn(x, line, col, true)) },
       { label: t('왼쪽에 열 더하기'), action: run((x) => addColumn(x, line, col, false)) },
@@ -2730,9 +2792,13 @@ function onKey(e) {
   } else if (mod && !e.altKey && !e.shiftKey && e.code === 'Semicolon') {   // 날짜 넣기 (D149)
     e.preventDefault();
     dateHere();
+  } else if (mod && !e.altKey && e.shiftKey && e.code === 'Semicolon') {   // 특수 문자 넣기 (D165)
+    e.preventDefault();
+    charHere();
   } else if (k === 'Enter' && mod && !e.altKey) {
     e.preventDefault();
-    addLine(!e.shiftKey);
+    if (e.shiftKey) addLine(false);   // 위에 새 줄
+    else saveAndPick();   // 저장하고 그 줄 선택 — 읽는 화면의 Ctrl+Enter 와 같은 '줄 선택' (D164 — 전에는 Shift+Enter 와 같은 '아래에 새 줄')
   } else if (mod && e.shiftKey && !e.altKey && (e.code === 'Period' || e.code === 'Comma') && session.pane.view.classList.contains('lec-deck')) {
     e.preventDefault();   // 글자 크기 (D96): 고친 글을 저장하고 크기를 바꾼다
     finish(true).then(() => emit('slide-text-size', { dir: e.code === 'Period' ? 1 : -1 }));
@@ -2760,7 +2826,7 @@ function onKey(e) {
     }
     e.preventDefault();
     joinUp();
-  } else if (k === 'Enter' && e.shiftKey && !mod && !e.altKey) {   // 저장하고 아래에 새 줄 (D158 — Ctrl+Enter 와 같다, 글 가운데면 두 줄로)
+  } else if (k === 'Enter' && e.shiftKey && !mod && !e.altKey) {   // 저장하고 아래에 새 줄 (D158 — 글 가운데면 두 줄로. 읽는 화면의 Shift+Enter 와 같은 키 — D164)
     e.preventDefault();
     if (session.fresh && !read(session.places[0]).trim()) return;   // 빈 새 줄 — 쓴 것이 없다
     addLine(true);
@@ -2769,7 +2835,7 @@ function onKey(e) {
     finish(false);
   } else if ((k === 'Enter' && !mod && !e.altKey) || (mod && !e.altKey && (e.code === 'KeyS' || k.toLowerCase() === 's'))) {
     e.preventDefault();
-    finish(true);   // 새 줄도 저장하고 닫는다 — 현재 줄은 그 줄 (D158 — 이어 쓰려면 Shift+Enter·Ctrl+Enter, D106 의 이어 쓰기를 바꿈)
+    finish(true);   // 새 줄도 저장하고 닫는다 — 현재 줄은 그 줄 (D158 — 이어 쓰려면 Shift+Enter, D106 의 이어 쓰기를 바꿈)
   } else if (k === 'Escape') {
     e.preventDefault();
     finish(S.config?.vi_keys === true);   // vi 키(D122)를 켰으면 vi 처럼 저장하고 나온다 — 아니면 그만두기
@@ -2984,6 +3050,7 @@ export function initLineEdit() {
   on('line-add', ({ below }) => addHere(below));
   on('line-change-win', () => changeHere());   // 현재 줄·고른 줄의 '.' — 바꾸기 창 (spotlight.js, D155)   // 칸 없이 새 줄 (spotlight.js, D117)
   on('line-put', () => { turn = turn.then(putHere); });
+  on('line-chars', () => { turn = turn.then(charsAtLine); });   // 현재 줄의 Ctrl+Shift+; — 특수 문자 (spotlight.js, D165)
   on('clear-marks', (op) => { turn = turn.then(() => clearMarksNow(op)); });   // 형광펜 지우기 (tree.js — D143)   // 현재 줄의 / — 아래에 넣기 창 (spotlight.js, D139)
   on('line-delete', ({ cut = false }) => { turn = turn.then(() => deleteLit(cut)); });
   on('section-move', (op) => { turn = turn.then(() => moveSectionNow(op)); });   // 목차에서 절 끌기 (toc.js, D121)

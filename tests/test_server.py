@@ -258,6 +258,25 @@ def test_tabs_open_activate_close(client, state, project, other, pid):
     assert client.get('/api/state').get_json()['active'] is None
 
 
+def test_tab_move(client, state, project, other, tmp_path, pid):
+    # 끌어 옮긴 프로젝트 탭 (D163): 차례가 바뀌고 다음 실행의 탭 목록·고른 탭 순번도 그 차례로. 끝을 넘는 자리는 끝으로
+    write(tmp_path / 'third' / 'x.md')
+    b = client.post('/api/open', json={'path': str(other)}).get_json()['opened']
+    c = client.post('/api/open', json={'path': str(tmp_path / 'third')}).get_json()['opened']
+    client.post('/api/activate', json={'p': c})
+    seq = state.tabs_seq
+    r = client.post('/api/tab-move', json={'p': c, 'to': 0}).get_json()
+    assert [x['id'] for x in r['projects']] == [c, pid, b] and r['active'] == c and r['tabs_seq'] == seq + 1
+    cfg = client.get('/api/config').get_json()
+    assert cfg['tabs'] == [str(tmp_path / 'third'), str(project), str(other)] and cfg['active_tab'] == 0
+    r = client.post('/api/tab-move', json={'p': c, 'to': 99}).get_json()
+    assert [x['id'] for x in r['projects']] == [pid, b, c] and client.get('/api/config').get_json()['active_tab'] == 2
+    assert client.post('/api/tab-move', json={'p': c, 'to': 2}).get_json()['tabs_seq'] == r['tabs_seq']   # 제자리면 그대로
+    assert client.post('/api/tab-move', json={'p': 'nope', 'to': 0}).status_code == 404
+    assert client.post('/api/tab-move', json={'p': c, 'to': '1'}).status_code == 400
+    assert client.post('/api/tab-move', json={'p': c, 'to': True}).status_code == 400
+
+
 def test_too_many_tabs(client, tmp_path, monkeypatch):
     monkeypatch.setattr(state_module, 'MAX_TABS', 2)
     write(tmp_path / 'b' / 'x.md')
@@ -392,7 +411,7 @@ def test_open_config(client, state, monkeypatch):
     assert r['action'] == 'editor' and calls == [state.config.path] and state.config.path.exists()
 
 
-@pytest.mark.parametrize('route', ['/api/open-config', '/api/open', '/api/close', '/api/activate', '/api/config',
+@pytest.mark.parametrize('route', ['/api/open-config', '/api/open', '/api/close', '/api/activate', '/api/tab-move', '/api/config',
                                    '/api/position', '/api/open-external', '/api/reveal', '/api/exists'])
 def test_post_requires_json(client, monkeypatch, pid, route):
     # 브라우저 모드(토큰 없음)에서 다른 사이트의 폼이 사전 확인(preflight) 없이 POST 하지 못하게 — JSON 본문만 받는다

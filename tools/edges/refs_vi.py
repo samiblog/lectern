@@ -62,7 +62,7 @@ try:
         def new_line_after(selector):
             page.locator(selector).first.click()
             page.wait_for_timeout(200)
-            page.keyboard.press('Control+Enter')
+            page.keyboard.press('Shift+Enter')
             page.wait_for_timeout(400)
 
         open_doc('보고.md')

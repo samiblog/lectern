@@ -166,7 +166,7 @@ try:
             page.keyboard.press('ArrowDown')
             page.wait_for_timeout(60)
         expect(page, '끝까지 ↓: 마지막 줄에서 멈추고 새 줄은 열지 않는다', lambda: page.evaluate(CELL) is None and page.evaluate(HERE) == 23, lambda: (page.evaluate(CELL), page.evaluate(HERE)))
-        check('— 줄을 더하는 키를 알린다', 'Ctrl+Enter' in (page.text_content('#lec-toast') or ''), page.text_content('#lec-toast'))
+        check('— 줄을 더하는 키를 알린다', 'Shift+Enter' in (page.text_content('#lec-toast') or ''), page.text_content('#lec-toast'))
         page.keyboard.press('ArrowUp')
         page.wait_for_timeout(60)
         for _ in range(11):

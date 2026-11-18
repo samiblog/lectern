@@ -12,6 +12,7 @@ import { openTarget } from './doctabs.js';
 import { switchPanel } from './tree.js';
 import { findText, pickMatchAt } from './find.js';
 import { unfoldTo } from './fold.js';
+import { followLine, revealAt } from './spotlight.js';
 import { flashBlock } from './diffmark.js';
 import { blockOfLine } from './lineunits.js';
 import { fileIcon, isCode } from './icons.js';
@@ -165,10 +166,21 @@ async function run(again = false) {
 function goToLine(line) {
   const best = blockOfLine($('#lec-view'), line);
   if (!best) return null;
+  revealAt(line);   // 현재 줄은 블록의 첫 줄이 아니라 찾은 줄 (여러 줄 목록·표 안)
   unfoldTo(best);
   best.scrollIntoView({ block: 'center' });
+  followLine(line);   // 바로 — 'reveal' 은 두 화면 뒤에 현재 줄을 옮기므로, 곧바로 누른 / 가 앞 줄에서 열렸다 (D162)
   flashBlock(best);
   return best;
+}
+
+/**
+ * 줄로 간 결과에서 (D162): 초점을 그 문서로 — 현재 줄이 그 줄이라 / · . · F2 · ↑↓ · F3 가 바로 듣는다 (F6 을 누른 것처럼).
+ * 검색 칸에 남으면 / 가 검색어에 글자로 들어갔다. 검색어를 고치려면 Ctrl+Shift+F
+ */
+function focusHit() {
+  const pane = S.pane;
+  if (pane && !pane.editor && document.activeElement?.closest?.('#lec-sidebar')) pane.scroller.focus({ preventScroll: true });
 }
 
 /**
@@ -184,6 +196,8 @@ async function openHit(path, line, code = false, how = {}) {
     findText(query);
     const row = line ? $(`#lec-view .cv-line[data-line="${line}"]`) : null;
     if (row) pickMatchAt(row);
+    if (row) followLine(line);
+    focusHit();
     return;
   }
   const here = S.view?.type === 'doc' && S.view.path === path;
@@ -200,6 +214,7 @@ async function openHit(path, line, code = false, how = {}) {
     const block = line ? goToLine(line) : null;
     if (block) pickMatchAt(block);   // 찾기 막대의 '지금 결과'도 그 줄의 것으로 (↓ 가 거기서 이어지게)
   }
+  focusHit();
 }
 
 /** 프로젝트 탭을 바꾸면: 앞 탭의 검색어·결과를 그 탭에 남기고, 새 탭의 것을 되살린다 */

@@ -178,6 +178,7 @@ flowchart LR
 | `POST /api/window-gone` | `{w}` | 독립창이 닫힌다 — 다른 창의 보낼 곳에서 뺀다 (D95) |
 | `POST /api/close` | `{p}` | 탭을 닫는다 (그 폴더의 감시를 멈춤, 그 프로젝트의 독립창도 닫음). 이미 닫혔으면 그대로. 독립창의 저장하지 않은 편집을 두기로 하면 409. `/api/state` 와 같은 형식 |
 | `POST /api/activate` | `{p}` | 선택된 탭을 알린다 (다음 실행에 되살리고, 폴더 대화상자가 그 폴더에서 시작). `{ok:true}` |
+| `POST /api/tab-move` | `{p, to}` | 프로젝트 탭을 끌어 옮긴다 (D163) — `to` 번째(0부터, 넘치면 끝)로. 다음 실행의 탭 목록도 그 차례. `/api/state` 와 같은 것 (`to` 가 정수가 아니면 400) |
 | `GET /api/tree?p=<id>&fresh=1&quick=1` | | `{root, tree, pending}` (스캔 결과 — `quick=1` 은 파일을 열지 않고 기억한 제목만으로, `pending` 은 제목을 아직 모르는 문서 수: 화면이 이름으로 먼저 그리고 보통 트리를 뒤에서 받는다, D140. 파일 노드의 `kind` 는 `markdown`·`html`). 변경 기록(`tree_seq` — 문서 외 파일의 내용 수정(touch)은 세지 않는다, D50)이 그대로면 마지막 스캔을 다시 쓴다. `fresh=1`(F5)은 새로 훑는다 |
 | `GET /api/others?p=<id>&fresh=1` | | 문서 외 파일의 트리 `{tree, count, truncated, limit}` — 파일 노드 `{type:'file', name, path, mtime, size, open}` (`open`: `default`·`editor`·`reveal`, 두 번 누르면 열리는 방법). 문서(md·트리에 보이는 html)는 빼고, 숨김·링크 규칙은 트리와 같고, 제외 폴더는 안을 훑지 않은 접힌 노드 `{type:'dir', children: null, excluded: true}` 로만 (D49 — 파일 수에 넣지 않음). 5000개(`MAX_OTHER_FILES`)에서 멈추고 `truncated`. 파일이 생기거나 지워지지 않았으면(`others_seq`) 마지막 스캔을 다시 쓴다 |
 | `GET /api/others/dir?p=<id>&path=<경로>` | | 제외 폴더 안의 한 단계 `{path, nodes, truncated, limit}` — '자료' 목록에서 펼칠 때 (D49). 숨김·링크는 빼고 종류는 나누지 않으며, 하위 폴더는 다시 `children: null`, 모든 노드에 `excluded: true`. 5000개(`MAX_DIR_ENTRIES`)에서 멈추고 `truncated`. 제외 폴더 안이 아니면 400, 숨김·밖·폴더가 아니면 404 |

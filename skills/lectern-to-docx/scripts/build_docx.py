@@ -7,7 +7,7 @@
   쪽 크기·여백·글꼴은 양식의 것. 필요한 스타일이 양식에 없으면 Lectern 의 기본 정의를 더한다. 스타일은 이름으로 찾는다
   (Word 의 기본 스타일은 언어와 상관없이 파일 안에 'heading 1' 같은 영어 이름이다). 양식 옆의 '이름.styles.json' 이 이름을 바꿔 준다.
 - 양식이 없으면 Lectern 의 기본 보고서 양식 (PDF 의 보고서 양식과 같은 모양 — A4, 명조 본문, 2쪽부터 머리에 제목, 바닥 가운데 쪽 번호).
-- 쪽은 Word 가 나눈다. 넘어갈 때의 규칙만 심는다: 제목·캡션은 다음 단락과 함께, 표의 머리행은 쪽마다, 행은 쪽에서 나누지 않음,
+- 쪽은 Word 가 나눈다. 넘어갈 때의 규칙만 심는다: 절 제목·캡션은 다음 단락과 함께(문서 제목·부제는 첫 쪽 맨 위라 걸지 않는다), 표의 머리행은 쪽마다, 행은 쪽에서 나누지 않음,
   외톨이 줄 막기, 쪽 나눔 줄은 쪽 나누기.
 - 차트·Mermaid·Graphviz·블록 수식은 figure_png(Edge — Lectern 에 든 라이브러리)로 그린 PNG. 그리지 못하면 원문을 코드로 넣고 알린다.
 - 결과 보고(마지막 줄): {"docx": 경로, "figures": 그림 수, "notes": [알릴 것]}
@@ -253,8 +253,9 @@ def default_styles(lang, theme=None):
         '<w:docDefaults><w:rPrDefault><w:rPr>' + body + f'<w:sz w:val="{th["body_size"]}"/><w:szCs w:val="{th["body_size"]}"/><w:lang w:val="{"en-US" if lang == "en" else "ko-KR"}" w:eastAsia="ko-KR"/></w:rPr></w:rPrDefault>'
         f'<w:pPrDefault><w:pPr><w:widowControl/><w:spacing w:after="{th["after"]}" w:line="{th["line"]}" w:lineRule="auto"/><w:jc w:val="{th["jc"]}"/></w:pPr></w:pPrDefault></w:docDefaults>',
         f'<w:style w:type="paragraph" w:default="1" w:styleId="Normal"><w:name w:val="Normal"/><w:qFormat/><w:pPr><w:widowControl/>{indent}</w:pPr></w:style>',
-        para('Title', 'Title', f'<w:keepNext/><w:spacing w:before="240" w:after="120"/><w:ind w:firstLine="0"/><w:jc w:val="{th["title_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["title_color"]}"/><w:sz w:val="{th["title_size"]}"/><w:szCs w:val="{th["title_size"]}"/>'),
-        para('Subtitle', 'Subtitle', f'<w:keepNext/><w:spacing w:after="360"/><w:ind w:firstLine="0"/><w:jc w:val="{th["subtitle_jc"]}"/>', f'{head}<w:color w:val="{th["subtitle_color"]}"/><w:sz w:val="{th["subtitle_size"]}"/><w:szCs w:val="{th["subtitle_size"]}"/>'),
+        # 제목·부제에는 '다음 단락과 함께'를 걸지 않는다 — 첫 쪽 맨 위라 쓸모가 없고, '단락 기호'를 보이는 Word 에서 왼쪽에 ▪ 표시가 붙는다 (2026-11-18 사용자 결정)
+        para('Title', 'Title', f'<w:spacing w:before="240" w:after="120"/><w:ind w:firstLine="0"/><w:jc w:val="{th["title_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["title_color"]}"/><w:sz w:val="{th["title_size"]}"/><w:szCs w:val="{th["title_size"]}"/>'),
+        para('Subtitle', 'Subtitle', f'<w:spacing w:after="360"/><w:ind w:firstLine="0"/><w:jc w:val="{th["subtitle_jc"]}"/>', f'{head}<w:color w:val="{th["subtitle_color"]}"/><w:sz w:val="{th["subtitle_size"]}"/><w:szCs w:val="{th["subtitle_size"]}"/>'),
         *heads,
         para('Caption', 'caption', f'<w:keepNext/><w:spacing w:before="120" w:after="80"/><w:ind w:firstLine="0"/><w:jc w:val="{th["caption_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["caption_color"]}"/><w:sz w:val="19"/><w:szCs w:val="19"/>'),
         para('Source', 'Source', '<w:spacing w:before="40" w:after="200"/><w:ind w:firstLine="0"/><w:jc w:val="left"/>', f'{head}<w:color w:val="555555"/><w:sz w:val="16"/><w:szCs w:val="16"/>'),
@@ -734,6 +735,9 @@ class Builder:
             lvl = min(it['lvl'], 8)
             for deeper in [k for k in num_ids if k > lvl]:   # 윗 단계 항목이 나오면 그 아래 번호 목록은 끝 — 다음은 새 목록 (앱과 같다)
                 del num_ids[deeper]
+            if it.get('task') and not it['ordered']:   # 할 일: 체크 칸(☐·☑)만 — 글머리는 붙이지 않는다 (앱 화면과 같게, 2026-11-18 양식 18가지 점검). 들여쓰기는 그 단계의 글머리 목록과 같다
+                out.append(self.para(self.runs(self.inline_runs(it['runs'])), self.sid['list'], f'<w:ind w:left="{360 + 360 * lvl}" w:hanging="300"/>'))
+                continue
             if it['ordered']:
                 if lvl not in num_ids:
                     num_ids[lvl] = self.new_list(lvl, it.get('start') or 1)

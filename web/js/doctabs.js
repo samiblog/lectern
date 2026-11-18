@@ -23,6 +23,7 @@ import { openPalette } from './palette.js';
 import { showMenu } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
+import { dragTabs } from './tabdrag.js';
 import { $, basename, toast, middleClickOpens, findAnchor } from './util.js';
 import { t } from './i18n.js';
 
@@ -382,6 +383,17 @@ function closeOthers(keep) {
   for (const p of keep.tab.panes.filter((x) => x !== keep)) closeDocTab(p);
 }
 
+/** 끌어 옮긴 문서 탭 (D163 — tabdrag.js): 탭 차례만 바꾼다 — 고른 탭은 그대로. 다음 실행에도 그 차례로 (position.js), Alt+1~9 도 */
+function moveDocTab(from, to) {
+  const tab = S.tab;
+  const pane = tab?.panes[from];
+  if (!pane) return;
+  tab.panes.splice(from, 1);
+  tab.panes.splice(to, 0, pane);
+  render();
+  emit('doctabs', tab);
+}
+
 /** Alt+1~8: 그 순번의 문서 탭, Alt+9: 마지막 문서 탭 (프로젝트 탭의 Ctrl+1~9 처럼). 없으면 false */
 export function docTabAt(n) {
   const panes = S.tab?.panes || [];
@@ -526,6 +538,7 @@ export function initDocTabs() {
   });
   if (solo) addEventListener('pagehide', () => native.tellGone(solo.id));
   const list = $('#lec-doctab-list');
+  dragTabs(list, '.doc-tab', moveDocTab);   // 끌어 옮기기 (D163 — 마우스로만)
   list.addEventListener('click', (e) => {
     const pane = paneAt(e.target);
     if (!pane) return;

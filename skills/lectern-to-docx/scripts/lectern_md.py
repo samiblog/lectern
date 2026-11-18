@@ -254,7 +254,7 @@ def read_blocks(lines):
                         prefix = '☑ ' if check[1].lower() == 'x' else '☐ '
                         body = check[2]
                     ordered = lm[2][0].isdigit()
-                    items.append({'lvl': len(lm[1].expandtabs(2)) // 2, 'ordered': ordered, 'start': int(lm[2][:-1]) if ordered else None, 'runs': inline(prefix + body)})
+                    items.append({'lvl': len(lm[1].expandtabs(2)) // 2, 'ordered': ordered, 'start': int(lm[2][:-1]) if ordered else None, 'runs': inline(prefix + body), 'task': bool(check)})
                     i += 1
                     continue
                 if lines[i].strip() and lines[i].startswith((' ', '\t')) and items:

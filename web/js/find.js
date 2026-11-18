@@ -119,23 +119,54 @@ export function findStep(dir) {
   if (!input().value.trim()) return false;
   if (bar().hidden) {
     bar().hidden = false;
+    syncReplace();
     search(true);
   }
   if (ranges.length) go(current + dir);
   return true;
 }
 
-/** Ctrl+H: 찾아 바꾸기 — md 문서에서 (D109). 편집할 수 없는 화면이면 false */
-export function openReplace() {
+/** 지금 찾는 곳에서 바꿀 수 있는지 — 고칠 수 있는 md 문서 (D109. 사용설명서·코드 화면·html·보기만 하는 폴더는 찾기만) */
+function canReplace() {
   const view = S.pane?.view;
-  if (!view?.dataset.docPath || !isMd(view.dataset.docPath) || S.tab?.readonly) return false;
+  return !target && !!view?.dataset.docPath && isMd(view.dataset.docPath) && !S.tab?.readonly;
+}
+
+/** 찾기 막대의 '바꾸기' 단추와 바꿀 글 줄을 지금 화면에 맞춘다 (D162 — 바꿀 수 없는 화면이면 단추를 감추고 줄을 닫는다) */
+function syncReplace() {
+  const can = canReplace();
+  const btn = $('#lec-find-rep');
+  if (!can) $('#lec-replace').hidden = true;
+  btn.hidden = !can;
+  btn.setAttribute('aria-pressed', String(!$('#lec-replace').hidden));
+}
+
+/** Ctrl+H: 찾아 바꾸기 — md 문서에서 (D109). 편집할 수 없는 화면이면 false. toReplace: 찾는 말이 있으면 바꿀 글 칸에 초점 (찾기 막대의 '바꾸기' — D162) */
+export function openReplace({ toReplace = false } = {}) {
+  if (!canReplace()) return false;
   $('#lec-replace').hidden = false;
   openFind();
+  if (toReplace && input().value) {
+    $('#lec-replace-input').focus();
+    $('#lec-replace-input').select();
+  }
   return true;
+}
+
+/** 찾기 막대의 '바꾸기' 단추 (D162): 바꿀 글 줄을 열고 닫는다 — 닫으면 찾는 말 칸으로 */
+function toggleReplace() {
+  if (!$('#lec-replace').hidden) {
+    $('#lec-replace').hidden = true;
+    syncReplace();
+    input().focus();
+    return;
+  }
+  openReplace({ toReplace: true });
 }
 
 export function openFind() {
   bar().hidden = false;
+  syncReplace();
   input().focus();
   input().select();
   if (input().value) search();
@@ -144,6 +175,7 @@ export function openFind() {
 /** 검색어를 넣고 찾기 막대를 연다 (전체 검색 결과로 갈 때). scroll 이 거짓이면 부른 쪽이 위치를 정한다 */
 export function findText(query, { scroll = false } = {}) {
   bar().hidden = false;
+  syncReplace();
   input().value = query;
   search(!scroll);
 }
@@ -180,6 +212,9 @@ export function initFind() {
     if (e.key === 'Enter') {
       e.preventDefault();
       go(current + (e.shiftKey ? -1 : 1));
+    } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key.toLowerCase() === 'h') {   // 찾는 말 칸에서도 Ctrl+H 가 바꾸기 (D162)
+      e.preventDefault();
+      if (canReplace()) toggleReplace();
     } else if (e.key === 'Escape') {
       e.preventDefault();
       e.stopPropagation();
@@ -189,6 +224,7 @@ export function initFind() {
   $('#lec-find-next').addEventListener('click', () => go(current + 1));
   $('#lec-find-prev').addEventListener('click', () => go(current - 1));
   $('#lec-find-close').addEventListener('click', closeFind);
+  $('#lec-find-rep').addEventListener('click', toggleReplace);
   const replace = (all) => emit('replace', { find: input().value, to: $('#lec-replace-input').value, all });
   $('#lec-replace-one').addEventListener('click', () => replace(false));
   $('#lec-replace-all').addEventListener('click', () => replace(true));
@@ -203,6 +239,14 @@ export function initFind() {
     }
   });
   // 문서가 다시 그려지면(자동 새로고침 포함) 같은 검색어로 다시 표시. 다른 탭을 고르면 그 탭의 문서에서 (찾기 막대도 그 칸으로 옮겨 간다)
-  on('rendered', (pane) => { if (pane === S.pane && !bar().hidden) search(true); });
-  on('pane', () => { if (!bar().hidden) search(true); });
+  on('rendered', (pane) => {
+    if (pane !== S.pane || bar().hidden) return;
+    syncReplace();
+    search(true);
+  });
+  on('pane', () => {
+    if (bar().hidden) return;
+    syncReplace();
+    search(true);
+  });
 }

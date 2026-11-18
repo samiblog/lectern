@@ -94,7 +94,7 @@ def lit_menu(page):
     """고른 줄의 우클릭 메뉴 글자들"""
     page.keyboard.press('Escape')
     page.locator('#lec-view p').nth(0).click()
-    page.keyboard.press('Shift+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)
+    page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)
     box = page.locator('#lec-view p').nth(0).bounding_box()
     page.mouse.click(box['x'] + 20, box['y'] + box['height'] / 2, button='right')
     page.wait_for_selector('#lec-menu:not([hidden])')

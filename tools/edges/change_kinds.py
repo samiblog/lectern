@@ -175,7 +175,7 @@ try:
         page.keyboard.press('End')
         page.keyboard.type(' 덧붙임')
         clear_toast()
-        page.keyboard.press('Control+Enter')   # 저장하고 아래 새 줄
+        page.keyboard.press('Shift+Enter')   # 저장하고 아래 새 줄
         until(page, lambda: '끝 문단이다. 덧붙임' in src(), 6000)
         page.wait_for_timeout(400)
         page.keyboard.type('새 문단')
@@ -207,7 +207,7 @@ try:
         expect(page, '캡션 위 — 위 블록(강조글) 안에', lambda: '> 참고 둘째 줄\n>\n> 강조글 끝에\n\n표 1. 가격' in src(), lambda: src()[150:260])
         reset()
         go(line_of('## 끝'))
-        write_new('Control+Enter', '제목 아래 본문')
+        write_new('Shift+Enter', '제목 아래 본문')
         expect(page, '제목 아래 — 문단', lambda: '## 끝\n\n제목 아래 본문\n\n끝 문단이다.' in src(), lambda: src()[-80:])
         reset()
         go(line_of('목록 뒤 문단.'))

@@ -523,7 +523,7 @@ try:
         check('자료 파일의 F2 는 까닭을 알림', toast_has('자료 파일은 볼 수만'))
         data('report.xlsx')
         page.locator('.csv-rows tr.cv-line').nth(1).locator('td').nth(1).click()
-        press('Shift+Enter')
+        press('Control+Enter')
         settle(150)
         press('Shift+ArrowLeft')
         ref = toast_has('@report.xlsx')

@@ -235,7 +235,7 @@ try:
 
         print('[흐린 곳의 체크 칸]')
         page.locator('#lec-view h1').click()
-        page.keyboard.press('Shift+Enter')   # 그 줄의 하이라이트 (D139 — 고른 줄은 흐린 곳이 없다)
+        page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 (D139 — 고른 줄은 흐린 곳이 없다)
         settle(150)
         hl = lit()
         page.locator('#lec-view .task-list-item-checkbox').first.click()
@@ -243,7 +243,7 @@ try:
         check('줄 하이라이트 밖의 칸은 저장하지 않고 하이라이트만 끔 (한 줄이라 현재 줄로)', hl == '하이라이트 1행 · 1줄' and src(edge, 12) == '- [ ] 보통 할 일' and lit() is None, (hl, src(edge, 12), lit()))
         page.keyboard.press('Escape')
         page.locator('#lec-view li', has_text='큰 X').click(position={'x': 90, 'y': 8})
-        page.keyboard.press('Shift+Enter')
+        page.keyboard.press('Control+Enter')
         settle(200)
         hl = lit()
         page.locator('#lec-view li', has_text='큰 X').locator('input').click()
@@ -418,19 +418,20 @@ try:
         check('찾기 칸에서 F6 은 터미널로', wait(IN_TERM, 15000))
         rows = "[...document.querySelectorAll('#lec-term .term-box:not([hidden]) .xterm-rows > div')].map((r) => r.textContent).join('')"
         wait(f"{rows}.includes('PS ')", 20000)
-        page.keyboard.press('F6')
-        check('돌아오면 문서로', wait(IN_DOC, 3000))
+        page.keyboard.press('Shift+F6')
+        check('Shift+F6 — 터미널 1 에서 문서로', wait(IN_DOC, 3000))
         page.keyboard.press('Escape')
         page.click('#lec-term-new')
         wait("document.querySelectorAll('#lec-term-tabs .term-tab').length === 2", 8000)
         wait(IN_TERM, 8000)
         settle(800)
-        page.keyboard.press('F6')
-        wait(IN_DOC, 3000)
-        page.keyboard.press('F6')
-        wait(IN_TERM, 3000)
-        two = page.evaluate("import('/static/js/store.js').then((m) => m.S.tab.term.n)")
-        check('터미널이 여럿이면 고른(마지막에 쓰던) 터미널로', two == 1, two)
+        TERM_N = "import('/static/js/store.js').then((m) => document.activeElement?.closest('#lec-term') ? m.S.tab.term.n : (document.activeElement?.closest('#lec-sidebar') ? 'side' : (document.activeElement?.id === 'lec-content' ? 'doc' : '?')))"
+        hops = []
+        for key in ['F6', 'F6', 'F6', 'F6', 'Shift+F6', 'Shift+F6', 'Shift+F6']:
+            page.keyboard.press(key)
+            settle(250)
+            hops.append(page.evaluate(TERM_N))
+        check('F6 한 바퀴 — 2번 → 사이드바 → 문서 → 1번 → 2번, Shift+F6 은 거꾸로 (D162)', hops == ['side', 'doc', 0, 1, 0, 'doc', 'side'], hops)
         page.locator('#lec-term-body .term-pane[data-n="1"] .term-pane-head').hover()   # 오른쪽이면 위아래로 쌓인다 (D137) — 칸 머리줄의 ×
         page.locator('#lec-term-body .term-pane[data-n="1"] .term-pane-head [data-close]').click()
         wait("document.querySelectorAll('#lec-term-tabs .term-tab').length === 1", 8000)

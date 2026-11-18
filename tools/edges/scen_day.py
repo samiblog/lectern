@@ -75,7 +75,7 @@ try:
         page.evaluate(HOOK)
         open_doc('이슈/WORK.md')
         page.locator('#lec-view h2', has_text='기획 메모').click()
-        page.keyboard.press('Control+Enter')
+        page.keyboard.press('Shift+Enter')
         page.wait_for_selector('#lec-view .lec-line-edit')
         page.keyboard.type(f'- [ ] 메모 속 할 일 ({d(2)})')
         page.keyboard.press('Shift+Enter')   # 저장하고 아래에 새 줄 (D158)

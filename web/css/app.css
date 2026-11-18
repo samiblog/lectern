@@ -191,6 +191,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .gather-on .lec-tab.active .ficon { color: var(--ui-faint); }
 .gather-on .lec-tab.active:not(:hover) .tab-close:not(:focus-visible) { visibility: hidden; }
 #lec-btn-open svg { width: 16px; height: 16px; }
+/* 탭 끌어 옮기기 (tabdrag.js, D163): 끄는 탭은 흐리게, 놓일 자리에 세로 막대 (줄이 스크롤해도 잘리지 않게 화면에 고정) */
+.lec-tab.dragging, .doc-tab.dragging { opacity: .5; }
+.lec-tab-dragging, .lec-tab-dragging * { cursor: grabbing !important; }
+.lec-tab-drop { position: fixed; z-index: 60; width: 3px; border-radius: 2px; background: var(--ui-accent); pointer-events: none; }
 
 /* ---- 본문 영역 ------------------------------------------------------------- */
 #lec-main { display: flex; min-height: 0; position: relative; --doctabs-h: 33px; }
@@ -852,7 +856,8 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   box-shadow: 0 6px 20px rgb(15 25 40 / .14);
 }
 #lec-findbar #lec-replace { top: 48px; }   /* 찾기 줄 아래 (Ctrl+H, D109) */
-#lec-replace button { width: auto; padding: 0 8px; font-size: 12.5px; }
+#lec-replace button, #lec-find-rep { width: auto; padding: 0 8px; font-size: 12.5px; }
+#lec-find-rep[aria-pressed="true"] { color: var(--ui-accent); background: var(--ui-active-bg); }   /* 바꿀 글 줄이 열려 있음 (D162) */
 #lec-findbar input { width: 220px; height: 28px; border: 0; padding: 0 8px; background: none; outline: none; }
 @container (max-width: 520px) { #lec-findbar .fb { right: 8px; } #lec-findbar input { width: 130px; } }
 #lec-find-count { min-width: 52px; text-align: right; color: var(--ui-muted); font-size: 12px; padding-right: 4px; font-variant-numeric: tabular-nums; }
@@ -1581,6 +1586,26 @@ button.primary:hover { filter: brightness(1.08); }
 .dp-quick { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ui-border); }
 .dp-quick button { padding: 2px 8px; border: 1px solid var(--ui-border); border-radius: 999px; font-size: 12px; color: var(--ui-muted); cursor: pointer; }
 .dp-quick button:hover { border-color: var(--ui-accent); color: var(--ui-fg); }
+
+/* 특수 문자 (charpick.js, D165): 묶음마다 칸, 맨 위는 최근 넣은 것. 아래 줄에 고른 문자의 이름 */
+.charpick { position: fixed; z-index: 120; width: min(452px, calc(100vw - 16px)); padding: 10px; border: 1px solid var(--ui-border); border-radius: 10px; background: var(--ui-panel); color: var(--ui-fg); box-shadow: 0 8px 28px rgba(0, 0, 0, .18); font: 13px/1.4 var(--ui-font); }
+.charpick[hidden] { display: none; }
+.cp-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.cp-head b { flex: none; font-size: 13.5px; }
+.cp-head input { flex: 1; min-width: 0; height: 28px; padding: 0 8px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: inherit; font: inherit; outline: none; }
+.cp-head input:focus { border-color: var(--ui-accent); }
+.cp-body { max-height: min(340px, 60vh); overflow-y: auto; padding-right: 2px; }
+.cp-group + .cp-group { margin-top: 6px; }
+.cp-name { margin: 0 0 3px; color: var(--ui-muted); font-size: 11.5px; font-weight: 600; }
+.cp-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(32px, 1fr)); gap: 2px; }
+.cp-grid button { height: 32px; border: 0; border-radius: 6px; background: none; color: inherit; font-size: 17px; line-height: 1; cursor: pointer; font-family: "Segoe UI Symbol", "Malgun Gothic", var(--ui-font); }
+.cp-grid button:hover { background: var(--ui-hover); }
+.cp-grid button.sel { outline: 2px solid var(--ui-accent); outline-offset: -2px; background: var(--ui-active-bg); }
+.cp-group.recent .cp-grid button { color: var(--ui-accent); }
+.cp-none { margin: 12px 4px; color: var(--ui-muted); }
+.cp-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ui-border); color: var(--ui-muted); font-size: 12px; }
+#lec-chars-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-fg); }
+.cp-keys { flex: none; }
 
 /* 알림 칸 (work.js·workalert.js, D124): 닫을 때까지 남는다 — 창 오른쪽 아래 */
 #lec-work-notes { position: fixed; right: 16px; bottom: 34px; z-index: 90; display: flex; flex-direction: column; gap: 8px; width: min(360px, 90vw); pointer-events: none; }

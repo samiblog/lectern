@@ -255,6 +255,7 @@ EN: dict[str, str] = {
     '내 문체 노트 — 글을 쓰거나 다듬을 때 Claude Code 가 참고한다 (모든 프로젝트)': 'Style note — Claude Code refers to it when writing or polishing (every project)',
     '내보내기 창': 'the export window',
     '넣기 창에서 최근 넣은 것 (다섯까지)': 'Recently inserted in the insert window (up to five)',
+    '특수 문자 창에서 최근 넣은 문자 (열둘까지)': 'Characters recently inserted from the special characters window (up to twelve)',
     '늘 깊이 생각하기': 'Always think deeply',
     '대화 기록을 남겨 두는 날 수': 'Days to keep conversation history',
     '더한 플러그인 마켓플레이스': 'Added plugin marketplaces',

@@ -47,7 +47,7 @@ def lit_menu(page, keep=False):
     """첫 문단을 하이라이트하고 우클릭한 메뉴 (D139 — 고른 줄의 선택 상자)"""
     page.keyboard.press('Escape')
     page.locator('#lec-view p').nth(0).click()
-    page.keyboard.press('Shift+Enter')
+    page.keyboard.press('Control+Enter')
     box = page.locator('#lec-view p').nth(0).bounding_box()
     page.mouse.click(box['x'] + 20, box['y'] + box['height'] / 2, button='right')
     page.wait_for_selector('#lec-menu:not([hidden])')

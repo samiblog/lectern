@@ -99,7 +99,7 @@ function valuesPanel(pane, data, kind) {
     const c = +el.dataset.c;
     const mod = e.ctrlKey || e.metaKey;
     e.stopPropagation();
-    if (e.key === 'Enter' && mod) {
+    if (e.key === 'Enter' && e.shiftKey && !mod) {   // 아래에 행 — 칸의 Shift+Enter 와 같은 키 (D164 — 전에는 Ctrl+Enter)
       e.preventDefault();
       const rows = rowsNow();
       rows.splice(r + 1, 0, data.fields.map(() => ''));

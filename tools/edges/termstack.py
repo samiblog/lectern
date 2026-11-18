@@ -211,7 +211,7 @@ try:
         expect(page, '그냥 누르면 1번(맨 앞)', lambda: '셋째 문단입니다.' in text_of(page, 0))
         # 고른 줄의 'Claude로 보내기' (메뉴 항목이 곧바로 보내는 글도 숫자를 따른다)
         doc_focus(page, 2)
-        page.keyboard.press('Shift+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)
+        page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)
         box = page.locator('#lec-view p').nth(2).bounding_box()
         page.mouse.click(box['x'] + 20, box['y'] + box['height'] / 2, button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')

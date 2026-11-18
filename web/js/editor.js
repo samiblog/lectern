@@ -29,6 +29,7 @@ import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
 import { isCode } from './icons.js';
 import { t } from './i18n.js';
 import { pickDate } from './datepick.js';
+import { pickChar } from './charpick.js';
 import { aiCli } from './aitool.js';
 
 const LIB = '/static/vendor/codemirror';
@@ -136,6 +137,7 @@ function editorKeys(pane) {
     Tab: (cm) => (cm.somethingSelected() ? cm.indentSelection('add') : cm.replaceSelection(' '.repeat(cm.getOption('indentUnit')))),
     'Shift-Tab': (cm) => cm.indentSelection('subtract'),
     'Ctrl-;': (cm) => dateAt(cm),   // 날짜 넣기 (D149 — 달력에서 골라 커서 자리에)
+    'Shift-Ctrl-;': (cm) => charAt(cm),   // 특수 문자 넣기 (D165 — 칸 안과 같은 키)
     // 줄 지우기·복제는 칸 안과 같은 키 (D152). 편집기 라이브러리의 Ctrl+D(줄 지우기)는 끈다 — Lectern 슬라이드의 Ctrl+D 는 장 복제다
     'Ctrl-D': () => {},
     'Shift-Ctrl-K': 'deleteLine',
@@ -161,6 +163,14 @@ async function dateAt(cm) {
   const day = await pickDate({ at: { x: at.left, y: at.bottom }, title: t('날짜 넣기') });
   cm.focus();
   if (day) cm.replaceSelection(day);
+}
+
+/** Ctrl+Shift+;: 특수 문자 창에서 고른 문자를 커서 자리에 (D165 — charpick.js) */
+async function charAt(cm) {
+  const at = cm.cursorCoords(true, 'window');
+  const c = await pickChar({ at: { x: at.left, y: at.bottom }, title: t('특수 문자 넣기') });
+  cm.focus();
+  if (c) cm.replaceSelection(c);
 }
 
 /** 설정의 전체 편집 방식을 바꾸면 열린 편집기에도 (settings.js 의 'editor-keys') */

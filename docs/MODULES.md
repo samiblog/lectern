@@ -7,10 +7,11 @@
 | bootguard.js | 시작 스크립트를 못 받으면 다시 불러옴 (D81 — 일반 스크립트, `data-boot` 를 단 것이 대상, 세 번 뒤 `#lec-boot-fail`) |
 | main.js | 초기화, 툴바, 단축키 (발표 중이면 키를 모두 present.js 로) |
 | store.js | 상태 `S` 와 이벤트 버스 (`on`/`emit`). 이벤트 목록이 파일 머리에 있음. `S.root`·`S.tree` 등은 선택된 탭의 값 |
-| tabs.js | 프로젝트 탭 — 탭 막대, 폴더 열기(새 탭)·닫기·고르기, 처음 고를 때 트리·마지막 문서, 서버의 탭 목록에 맞추기, 시작 화면 |
+| tabs.js | 프로젝트 탭 — 탭 막대, 폴더 열기(새 탭)·닫기·고르기·끌어 옮기기(`moveTab` → `/api/tab-move`, D163), 처음 고를 때 트리·마지막 문서, 서버의 탭 목록에 맞추기, 시작 화면 |
 | panes.js | 문서 칸 — 문서 탭마다 하나를 겹쳐 두고 선택된 칸만 보임, 선택된 칸에 id 옮겨 달기 |
 | solo.js | 독립창 (D95) — 주소의 `?solo=` 를 읽어 `solo` 로 알린다. 다른 모듈이 모두 읽으므로 아무것도 불러오지 않는다 |
-| doctabs.js | 문서 탭 (D64·D67) — 문서 탭 줄과 오른쪽 끝 열린 문서 탭 목록(`listMenu`), 'open' 이벤트를 받아 여는 곳 정하기(`openTarget` — 열린 탭으로·새 탭·지금 탭, 두 번 누르기는 `openTwice` — 지금 탭에서 연 것을 새 탭으로), 새 탭(`openInNewTab` — 20개가 차면 가장 오래 안 본 탭), 닫기, Alt+1~8·Alt+9, 다음 실행에 되살리기(`restoreDocTabs`·`openDocs`) |
+| doctabs.js | 문서 탭 (D64·D67) — 문서 탭 줄과 오른쪽 끝 열린 문서 탭 목록(`listMenu`), 'open' 이벤트를 받아 여는 곳 정하기(`openTarget` — 열린 탭으로·새 탭·지금 탭, 두 번 누르기는 `openTwice` — 지금 탭에서 연 것을 새 탭으로), 새 탭(`openInNewTab` — 20개가 차면 가장 오래 안 본 탭), 닫기, 끌어 옮기기(`moveDocTab` — D163), Alt+1~8·Alt+9, 다음 실행에 되살리기(`restoreDocTabs`·`openDocs`) |
+| tabdrag.js | 탭 끌어 옮기기 (D163) — 프로젝트 탭 막대·문서 탭 줄에서 같은 줄 안으로 (`dragTabs` — 6px 움직여야 끌기, 놓일 자리 막대, 줄 끝 스크롤, Esc 그만두기, 끈 뒤의 click 버림). 마우스로만 |
 | nav.js | 화면 이동, 뒤로/앞으로 (D78 — 같은 문서 안에서 뛴 자리도: `noteJump`·`keepPlace`·`showPlace`), 다시 그리기 (칸마다), 탭을 처음 열 때 마지막 문서·위치 |
 | doc.js | 문서 렌더링 후처리 (링크·이미지·표·코드·콜아웃·frontmatter) |
 | markdown.js | markdown-it 설정, 수식 규칙, mermaid 코드 블록 |
@@ -34,6 +35,7 @@
 | workdata.js | 업무 관리의 글 (D124, DOM 없음) — WORK.md 읽기(`readWork` — 머리 설정 status·priority·due, 제목, 할 일과 끝의 기한, 일정 줄), 오늘 기준 계산(`attention`·`dueTodos`·`dayEvents`·`eventsToRemind`·`quietToday`), 일정 줄(`eventLine`)과 넣을 자리(`insertEvent`). 업무 나무(D149 — `linkTree` 부모 잇기·하위에서 상태 셈, `treeWhy` 어긋남, 칸반의 칸 `LANES`)와 줄 하나 고치기(`setMeta`·`setTodo`·`insertTodo`) |
 | workview.js | 업무 나무와 칸반 (D149) — 나무 표(펼치기·접기, 끝난 하위 접기, 할 일 펼치기)와 칸반(끝 업무를 상태 다섯 칸에, 끌어 놓아 상태 바꾸기). 상위에서 고치기 — 상태·마감·우선·할 일 체크·기한·할 일 더하기를 그 업무의 WORK.md 한 줄로(`editRow` — GET·POST /api/work/card, 그사이 바뀌었으면 다시 그림). 업무를 여는 함수는 work.js 가 넘긴다 (`initWorkView` — 순환을 피하려고) |
 | datepick.js | 달력 입력 (D149) — 날짜 하나를 고르는 작은 달력(`pickDate` — 키보드, 빠른 단추, 점 찍을 날). 업무 카드·일정 더하기의 날짜 칸, 업무 나무의 마감·기한, 한 줄 편집·전체 편집의 Ctrl+; 와 넣기 창의 '날짜' |
+| charpick.js | 특수 문자 넣기 (D165) — 묶음마다 칸으로 보이고 하나를 고른다 (`pickChar` — 목록은 web/data/chars.json, 맨 위는 최근 넣은 것 `recent_chars`, 이름·초성으로 거르기, ←↑↓→·Enter·Esc). 넣는 것은 부른 쪽 (칸·편집 모드·넣기 창) |
 | html.js | 자동 이스케이프 (D89, DOM 없음) — `html` 태그의 값은 글로 들어간다. 화면에 넣는 길은 `setHtml`·`addHtml`, 이미 안전한 HTML 은 `raw`, 결과는 `Safe`. 조각은 배열로 잇는다 |
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
 | help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |

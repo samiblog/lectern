@@ -41,6 +41,7 @@ DEFAULTS: dict[str, Any] = {
     'recent_md_styles': [],  # 최근 쓴 md 문서 스타일 (최신순 — D103)
     'recent_templates': [],  # 갤러리의 최근 쓴 템플릿 ('묶음\t이름', 최신순 — D101)
     'recent_puts': [],       # 넣기 창의 최근 넣은 것 (구성 요소의 이름, 최신순 다섯 — D154)
+    'recent_chars': [],      # 특수 문자 창에서 최근 넣은 문자 (최신순 열둘 — D165)
     'settings_section': 'general',   # 설정 창에서 마지막에 고른 분류 (D154)
     'font_scale': 1.0,       # 문서 글자 크기 배율 (툴바의 − 100% + 버튼, 0.8~2)
     'doc_width': 1.0,        # md 문서 본문의 폭 배율 (툴바의 문서 폭 버튼, 0.8~2, 10 = 가득 — D68)
@@ -104,7 +105,7 @@ DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
-CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_view', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',

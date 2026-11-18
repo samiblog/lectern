@@ -65,7 +65,7 @@ try:
             settle(200)
             if '찾지 못했습니다' in (page.text_content('#lec-toast') or ''):
                 bad.append(text)
-        check(f'사례 표의 링크 {count}개가 모두 그 절로 간다', count == 20 and not bad, [count, bad])   # 0.88.0 에 '목록 전체를 번호 목록·표로' 줄을 더함
+        check(f'사례 표의 링크 {count}개가 모두 그 절로 간다', count == 21 and not bad, [count, bad])   # 0.88.0 에 '목록 전체를 번호 목록·표로', 0.92.0 에 '특수 문자' 줄을 더함
         page.evaluate("document.querySelector('#lec-content').scrollTop = 0")
 
         # 1. 오타: 두 번 눌러 그 자리에서
@@ -126,7 +126,7 @@ try:
         # 6. 새 줄과 번호
         settle()
         opened(page.locator('#lec-view li', has_text='자료 수집'))
-        page.keyboard.press('Control+Enter')
+        page.keyboard.press('Shift+Enter')
         page.wait_for_selector('li.lec-new-line', timeout=3000)
         page.keyboard.type('자료 점검')
         page.keyboard.press('Enter')
@@ -138,13 +138,13 @@ try:
         page.keyboard.press('Home')
         for _ in range('구리 가격은 수요 둔화로 하락했으나 '.__len__()):
             page.keyboard.press('ArrowRight')
-        page.keyboard.press('Control+Enter')
+        page.keyboard.press('Shift+Enter')
         ok = until(lambda: '하락했으나' in read() and any(x.startswith('공급 차질이 이어지며') for x in read().split('\n')))
         settle(500)
         if page.locator(cell).count():
             page.keyboard.press('Escape')
         settle()
-        check('사례 7: Ctrl+Enter 로 나눈다', ok, [x for x in read().split('\n') if '이어지며' in x])
+        check('사례 7: Shift+Enter 로 나눈다', ok, [x for x in read().split('\n') if '이어지며' in x])
         opened(page.locator('#lec-view p', has_text='공급 차질이 이어지며'))
         page.keyboard.press('Home')
         page.keyboard.press('Backspace')

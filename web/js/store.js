@@ -43,7 +43,7 @@
 //   term-paste       글(text)을 선택된 탭의 터미널에 붙여 넣음 — 우클릭 메뉴의 터미널 버튼 (ui → terminal, D51). {text, n} 이면 n 번 터미널에 (D137)
 //   term-target      메뉴의 숫자+누르기: 곧바로 오는 보내기 한 번을 그 번호(0 부터)의 터미널로, null 이면 지움 (ui → terminal, D137)
 //   term-paste-stay  term-paste 와 같고 초점은 문서에 둠 — Ctrl+Shift+→ (spotlight → terminal, D79·D97)
-//   line-edit        F2·한 줄 하이라이트에서 Shift+Enter — 그 단위(unit)를 한 줄 편집 (spotlight → lineedit, D76)
+//   line-edit        F2 — 그 단위(unit)를 한 줄 편집 (spotlight → lineedit, D76)
 //   jump             같은 문서 안에서 뛰기 직전 — 뒤로 기록에 남김 (toc·doc·find·parts·search → nav, D78)
 //   go-line          Ctrl+G 의 줄로 가기 {line} (palette·notes → search, D91)
 //   new-note         새 메모로 보내기 {title?, body, path?, line?, end?} (docmenu·parts·basket → notes, D92)

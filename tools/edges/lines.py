@@ -86,7 +86,7 @@ try:
         page.evaluate("document.querySelector('#lec-content').scrollTop = 0")
         settle()
         page.locator('#lec-view p', has_text='첫 문단').click()
-        page.keyboard.press('Shift+Enter')
+        page.keyboard.press('Control+Enter')
         settle()
         hit = page.evaluate(f"""(() => {{ const g = document.querySelector('{GUTTER}').getBoundingClientRect(); const e = document.elementFromPoint(g.left + 2, g.top + 3);
           return e?.closest('.lec-gutter') ? 'gutter' : e?.tagName; }})()""")

@@ -24,6 +24,7 @@ import { gatherOn } from './gather.js';
 import { manualOpen } from './help.js';
 import { solo } from './solo.js';
 import { html, setHtml } from './html.js';
+import { dragTabs } from './tabdrag.js';
 import { $, basename, toast, copyText } from './util.js';
 import { t } from './i18n.js';
 
@@ -272,6 +273,25 @@ export async function closeTab(tab) {
   if (target !== S.tab || !target) await selectTab(target);
 }
 
+/**
+ * 끌어 옮긴 프로젝트 탭 (D163 — tabdrag.js): 화면을 먼저 그 차례로 그리고 서버에 알린다 (다음 실행·Ctrl+1~9 도 그 차례).
+ * 서버가 받지 못하면 서버의 차례로 되돌린다
+ */
+async function moveTab(from, to) {
+  const tab = S.tabs[from];
+  if (!tab || solo) return;
+  S.tabs.splice(from, 1);
+  S.tabs.splice(to, 0, tab);
+  renderTabs();
+  emit('tabs');   // 터미널 모음의 칸도 탭 차례로 (gather.js)
+  try {
+    syncTabs(await postJSON('/api/tab-move', { p: tab.id, to }));
+  } catch (e) {
+    toast(t('탭을 옮기지 못했습니다: {error}', { error: e.message }), 'error');
+    await resyncTabs();
+  }
+}
+
 async function closeOthers(keep) {
   await selectTab(keep);
   for (const tab of S.tabs.filter((tb) => tb !== keep)) await closeTab(tab);
@@ -385,6 +405,7 @@ function recentMenu(e) {
 export function initTabs() {
   on('open-sample', (path) => openSamples(path));   // Shift+F1·설명서의 예제 링크·버튼 (help.js — D123)
   const list = $('#lec-tablist');
+  if (!solo) dragTabs(list, '.lec-tab', moveTab);   // 끌어 옮기기 (D163 — 마우스로만). 독립창은 프로젝트 탭이 하나다
   // 고른 탭을 또 누르면 프로젝트 개요. 사용설명서·터미널 모음이 덮고 있었으면 그것만 닫는다 — 누르는 때 보아 둔다 (click 전에 닫힌다)
   let covered = false;
   const coveredNow = () => manualOpen() || gatherOn();

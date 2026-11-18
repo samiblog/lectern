@@ -211,8 +211,8 @@ try:
         reset()
         page.locator('#lec-view > p').last.click()
         page.wait_for_timeout(200)
-        page.keyboard.press('Control+Enter')   # 문서 끝에서도 중간과 같은 키 (D158)
-        check('마지막 줄의 Ctrl+Enter 로 새 줄', until(lambda: cells() == ['']), cells())
+        page.keyboard.press('Shift+Enter')   # 문서 끝에서도 중간과 같은 키 (D158)
+        check('마지막 줄의 Shift+Enter 로 새 줄', until(lambda: cells() == ['']), cells())
         page.keyboard.press('/')
         page.wait_for_selector('#lec-put:not([hidden])', timeout=3000)
         page.keyboard.type('박스글')
@@ -284,7 +284,7 @@ try:
         print('[번호]')
         reset(f'# 편집\n\n가 문단\n\n[박스 1](#박스-1) 을 보라.\n\n{OPEN}\n**박스 1. 먼저 있던 것**\n\n글\n{CLOSE}\n')
         until(lambda: len(boxes()) == 1)
-        labels = picked_menu(['Shift+Enter'])   # 현재 줄 하나의 하이라이트 — 우클릭은 선택 상자 (D139)
+        labels = picked_menu(['Control+Enter'])   # 현재 줄 하나의 하이라이트 — 우클릭은 선택 상자 (D139)
         if any('박스글로 묶기' in x for x in labels):
             want = f'# 편집\n\n{OPEN}\n**박스 1. 제목**\n\n가 문단\n{CLOSE}\n\n[박스 2](#박스-2) 을 보라.\n\n{OPEN}\n**박스 2. 먼저 있던 것**\n\n글\n{CLOSE}\n'
             check('앞에 박스글이 생기면 번호와 참조 링크가 밀린다', until(lambda: src() == want), src())

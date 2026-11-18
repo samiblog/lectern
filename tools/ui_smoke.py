@@ -596,7 +596,7 @@ def run(headed: bool) -> None:
             fold_click('표')   # 접은 채 다른 문서로 갔다가 돌아와도 유지되는지는 아래 찾기에서 본다
             shot('02-doc-folded')
 
-            print('[현재 위치와 줄 하이라이트]')   # D75 — 원문 줄 단위: 현재 위치(삼각형)·↑·↓, Shift+Enter·Shift+↑·↓·Shift+누르기·끌기, Shift+←·Ctrl+C, 상태줄
+            print('[현재 위치와 줄 하이라이트]')   # D75 — 원문 줄 단위: 현재 위치(삼각형)·↑·↓, Ctrl+Enter·Shift+↑·↓·Shift+누르기·끌기, Shift+←·Ctrl+C, 상태줄
             lines_src = LINES_DOC.split('\n')
             (work / 'docs' / '97-줄.md').write_text(LINES_DOC, encoding='utf-8')
             page.click('.side-tabs button[data-tab="files"]')
@@ -625,13 +625,13 @@ def run(headed: bool) -> None:
             source = page.evaluate('navigator.clipboard.readText()').replace('\r\n', '\n')
             page.keyboard.press('ArrowDown')   # 줄 하이라이트를 풀고 끝 줄(8행) 다음 줄로
             released = page.evaluate(lit_status)
-            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('Control+Enter')
             moved = page.evaluate(lit_status)
             check(here_on and unit_list == '1-1 3-3 5-5 6-6 8-8 9-9 11-11 12-12 13-13 15-16 18-19 20-20 21-21 24-24 25-25 26-26 29-29 31-31'
                   and s1 is None and steps == ['고른 줄 3~5행 · 3줄', '고른 줄 3~6행 · 4줄', '고른 줄 3~8행 · 6줄', '고른 줄 3~6행 · 4줄']
                   and ref == '@docs/97-줄.md 3~6행' and source == '\n'.join(lines_src[2:6]) and released is None and moved == '하이라이트 8행 · 1줄',
                   f"원문 줄 단위 ({unit_list}), 누른 줄에서 Shift+↓·↑ 로 넓히고 줄이기 ({s1}, {steps}), Shift+← 위치·Ctrl+C 원문 복사 ({ref!r}), "
-                  f"↓ 는 고른 줄을 풀고 다음 줄로, Shift+Enter 는 그 줄의 하이라이트 ({released}, {moved})")
+                  f"↓ 는 고른 줄을 풀고 다음 줄로, Ctrl+Enter 는 그 줄의 하이라이트 ({released}, {moved})")
             page.keyboard.press('Escape')
             page.evaluate("document.querySelector('#lec-view .code-block').scrollIntoView({ block: 'center' })")
             row34 = page.locator('#lec-view tr', has_text='3').last.bounding_box()
@@ -689,7 +689,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-줄.md"]', state='detached', timeout=10000)
 
-            print('[한 줄 편집]')   # D76 — 한 줄 하이라이트에서 Shift+Enter: 그 자리의 글 칸(스타일 그대로, 표시는 잠금), Enter 저장·Esc·↑↓·Tab, Ctrl+Z
+            print('[한 줄 편집]')   # D76 — F2: 그 자리의 글 칸(스타일 그대로, 표시는 잠금), Enter 저장·Esc·↑↓·Tab, Ctrl+Z
             edit_doc = work / 'docs' / '97-편집.md'
             edit_doc.write_text(EDIT_DOC, encoding='utf-8')
             page.wait_for_selector('#lec-tree .row.file[data-doc="docs/97-편집.md"]', timeout=10000)
@@ -1985,7 +1985,7 @@ def run(headed: bool) -> None:
             copied = choose('위치 복사')
             check(found_code and '외부 편집기로 이 줄 열기' in items and '코드 전체 복사' in items and copied == '@code/example.py 3행',
                   f"코드 화면에서도 Ctrl+F 찾기, 줄 우클릭 메뉴 — Claude용 위치 ({copied!r})")
-            # 코드 화면의 현재 위치·줄 하이라이트 (D75): 줄을 누르고 Shift+Enter·Shift+↓, Shift+← 는 위치 복사, 우클릭은 선택 상자(담기 없이)
+            # 코드 화면의 현재 위치·줄 하이라이트 (D75): 줄을 누르고 Ctrl+Enter·Shift+↓, Shift+← 는 위치 복사, 우클릭은 선택 상자(담기 없이)
             page.locator('#lec-view .cv-line[data-line="5"]').click()
             page.keyboard.press('Shift+ArrowDown')
             page.keyboard.press('Shift+ArrowDown')
@@ -2001,7 +2001,7 @@ def run(headed: bool) -> None:
             code_off = page.evaluate(lit_status)
             check(code_lit == '고른 줄 5~7행 · 3줄' and code_ref == '@code/example.py 5~7행' and code_here
                   and code_menu.startswith('고른 줄 · 5~7행') and '이 줄의 메뉴…' in code_menu and '담기' not in code_menu and code_off is None,
-                  f"코드 화면의 현재 위치·줄 하이라이트: 줄 누르기·Shift+Enter·Shift+↓, Shift+← 위치 복사, 우클릭은 선택 상자(담기 없이), Esc 로 풂 "
+                  f"코드 화면의 현재 위치·줄 하이라이트: 줄 누르기·Ctrl+Enter·Shift+↓, Shift+← 위치 복사, 우클릭은 선택 상자(담기 없이), Esc 로 풂 "
                   f"({code_lit}, {code_ref!r}, {code_menu[:30]!r})")
             page.click('#lec-docs-head')   # 사이드바는 한 묶음씩 (D143)
             page.locator('#lec-tree .row.file[data-doc="docs/01-기능-점검.md"]').click(modifiers=['Alt'])
@@ -2748,8 +2748,8 @@ def run(headed: bool) -> None:
             page.locator('#lec-content').focus()
             page.evaluate("document.querySelector('#lec-toast').textContent = ''")
             page.keyboard.press('F6')
-            ro_f6 = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('보기만 합니다')", 3000)
-            check(ro_f6 and page.evaluate("document.querySelector('#lec-term').hidden"), f"보기만 하는 프로젝트의 F6 은 터미널을 열지 않고 까닭을 알림 ({ro_f6})")
+            ro_f6 = wait_until(page, "!!document.activeElement?.closest('#lec-sidebar')", 3000)
+            check(ro_f6 and page.evaluate("document.querySelector('#lec-term').hidden"), f"보기만 하는 프로젝트의 F6 은 터미널을 건너뛰고 사이드바로 (D162 — {ro_f6})")
             page.locator('#lec-tree .row.file[data-doc="guide/07-차트.md"]').click(modifiers=['Alt'])
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
@@ -2974,7 +2974,7 @@ def run(headed: bool) -> None:
             wait_until(page, "document.querySelector('#lec-view .xl-sheet[aria-pressed=\"true\"]')?.textContent === '메모'", 5000)
             x2 = xl()
             page.locator('#lec-view tr.cv-line').first.click()
-            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('Control+Enter')
             page.keyboard.press('F2')   # 한 줄 편집은 하지 않는다 — 보기만
             told = wait_until(page, "document.querySelector('#lec-toast').textContent.includes('엑셀 보기는 보기만')", 3000)
             page.keyboard.press('Escape')
@@ -3453,7 +3453,7 @@ def run(headed: bool) -> None:
                   f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
             # Shift+→ (D75·D97): 하이라이트한 곳의 위치를 맨 앞 터미널에 Enter 없이 — 초점도 터미널로
             page.locator('#lec-view h1').first.click()
-            page.keyboard.press('Shift+Enter')
+            page.keyboard.press('Control+Enter')
             h1_at = page.locator('#lec-view h1').first.get_attribute('data-lines').split('-')[0]
             page.keyboard.press('Shift+ArrowRight')
             sent = term_has(f'@{doc_path} {h1_at}행 ')
@@ -3500,7 +3500,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('ArrowRight')
             page.keyboard.press('F6')
             f6_kept = [wait_until(page, in_term_js, 3000), page.locator('#lec-view .lec-line-edit').count()]
-            page.keyboard.press('F6')
+            page.keyboard.press('Shift+F6')   # 터미널 1 → 문서 (F6 은 사이드바로 — D162)
             back_cell = wait_until(page, "document.activeElement?.classList.contains('lec-line-edit')", 3000)
             caret_at = page.evaluate("getSelection().focusOffset")
             page.keyboard.press('Escape')
@@ -3508,7 +3508,7 @@ def run(headed: bool) -> None:
             page.wait_for_selector('.lec-editor .CodeMirror')
             page.keyboard.press('F6')
             editor_out = wait_until(page, in_term_js, 3000)
-            page.keyboard.press('F6')
+            page.keyboard.press('Shift+F6')
             editor_back = wait_until(page, "!!document.activeElement?.closest('.lec-editor')", 3000)
             page.keyboard.press('Control+e')
             wait_until(page, "!document.querySelector('.lec-editor')", 5000)

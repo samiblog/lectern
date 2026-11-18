@@ -273,6 +273,22 @@ class AppState:
         self._tell_active()
         return True
 
+    def move_tab(self, pid: str, to: int) -> bool:
+        """탭을 차례의 to 번째(0부터, 끝을 넘으면 끝)로 옮긴다 — 화면에서 끌어 옮길 때 (D163). 다음 실행에도 그 차례로 되살린다."""
+        with self._lock:
+            if pid not in self.projects:
+                return False
+            items = list(self.projects.items())
+            i = next(k for k, (key, _) in enumerate(items) if key == pid)
+            to = max(0, min(to, len(items) - 1))
+            if to == i:
+                return True
+            items.insert(to, items.pop(i))
+            self.projects = dict(items)
+            self.tabs_seq += 1
+        self.remember_tabs()
+        return True
+
     def activate(self, pid: str) -> bool:
         if pid not in self.projects:
             return False
