@@ -588,11 +588,11 @@ function rangeOfUnit(u) {
 const linksIn = (u) => [...(u.el.querySelectorAll?.('a[href]') ?? [])].filter((a) => a.offsetParent && rangeOfUnit(u).intersectsNode(a));
 
 /**
- * Enter (D158): 현재 줄이 제목이면 그 절을 접고 펴고, 링크가 있는 줄이면 그 링크를 연다 (여럿이면 고르는 메뉴). 편집은 열지 않는다 —
- * 읽다가 누른 Enter 로 칸이 열리지 않게 (D142 와 같은 까닭). 초점이 링크·단추에 있으면 그것을 누르게 둔다
+ * 현재 줄의 열기 (D158 의 Enter → D166 부터 Alt+Enter — openHere 가 부른다): 현재 줄이 제목이면 그 절을 접고 펴고, 링크가 있는 줄이면 그 링크를 연다
+ * (여럿이면 고르는 메뉴). Enter 는 이제 한 줄 편집이다 (D166 — 사용자 결정)
  */
 function enterHere(e) {
-  if (!linesOn() || ranged() || e.target?.closest?.('a[href], button, summary, input')) return false;
+  if (!linesOn() || ranged() || e.target?.closest?.('a[href], button, summary, input')) return false;   // 이 줄에서 연다 — 초점이 있는 링크·단추는 openHere 가
   const us = units();
   const i = hereIndex(us);
   if (i < 0) return false;
@@ -610,6 +610,19 @@ function enterHere(e) {
   const r = rangeOfUnit(u).getBoundingClientRect();
   import('./ui.js').then(({ showMenu }) => showMenu(r.left, r.bottom + 4, links.map((a) => ({ label: a.textContent.trim() || a.getAttribute('href'), action: () => a.click() }))));
   return true;
+}
+
+/**
+ * Alt+Enter (D166 — D158 의 Enter 를 옮김): 초점이 문서 안의 링크·단추에 있으면 그것을 누르고, 아니면 현재 줄에서 — 제목이면 절 접기·펴기,
+ * 링크가 하나면 그 링크, 여럿이면 고르는 메뉴. 다뤘으면 true
+ */
+function openHere(e) {
+  const el = e.target?.closest?.('a[href], button, summary');
+  if (el && view()?.contains(el)) {
+    el.click();
+    return true;
+  }
+  return enterHere(e);
 }
 
 /**
@@ -1134,6 +1147,7 @@ export function spotKey(e) {
     }
     return true;
   }
+  if (e.altKey && !e.ctrlKey && !e.shiftKey && e.key === 'Enter') return openHere(e);   // 제목 접기·펴기, 그 줄의 링크 열기, 초점이 있는 링크·단추 (D166 — 전에는 Enter)
   if (e.altKey) return false;
   const k = e.key;
   if (e.ctrlKey) {
@@ -1197,7 +1211,7 @@ export function spotKey(e) {
     return true;
   }
   if (k === 'F2') return editHere();
-  if (k === 'Enter') return enterHere(e);   // 제목이면 접기·펴기, 링크가 있는 줄이면 그 링크 (D158)
+  if (k === 'Enter') return editHere();   // 현재 줄을 한 줄 편집 — F2 와 같다 (D166 — 사용자 결정: 편집이 먼저. 제목 접기·링크 열기는 Alt+Enter)
   if (k === 'Tab' && !ranged()) return tabLink(1);   // 다음 링크 (D158)
   if ((k === 'Home' || k === 'End') && linesOn() && !lightOn() && !S.pane?.lineEditHold) return jumpTo(k === 'Home' ? 0 : -1, { jump: true });   // 첫 줄·끝 줄 (D158)
   if (k === ' ' && linesOn() && !lightOn() && !e.target?.closest?.('a[href], button, summary')) return pageHere(1);   // Space — 한 화면 아래 (D158)

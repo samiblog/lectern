@@ -1912,10 +1912,8 @@ export default {
   "앞 / 뒤 제목으로 — 절 단위로 훑기": "Previous / next heading — skim section by section",
   "저장하고 닫기 — 원문 파일에 바로, 현재 줄은 그 줄 (새 줄도)": "Save and close — straight to the source file, the current line stays there (new lines too)",
   "절 제목 / 절 끝까지 고르기 — 거듭 누르면 앞 / 뒤 절까지": "Pick to the section heading / section end — press again for the previous / next section",
-  "제목 줄이면 그 절 접기·펴기, 링크가 있는 줄이면 그 링크 열기 (여럿이면 고르는 메뉴)": "On a heading, fold or unfold its section; on a line with a link, open it (a menu if there are several)",
   "한 화면 위 / 아래 — 현재 줄은 화면에서 같은 높이 (Shift+Space / Space 도. 장 하이라이트 중에는 앞 장 / 다음 장)": "One screen up / down — the current line keeps its height on screen (Shift+Space / Space too; previous / next section while section focus is on)",
   "한 화면만큼 고르기": "Pick one screen more",
-  "현재 줄 뒤 / 앞의 링크로 — Enter 로 연다 (여러 줄을 골랐으면 레벨)": "To the next / previous link from the current line — Enter opens it (level when several lines are picked)",
   "현재 줄부터 문서 처음 / 끝까지 고르기": "Pick from the current line to the start / end of the document",
   "현재 줄을 문서의 첫 줄 / 끝 줄로 (Ctrl+Home / Ctrl+End 도) — 고른 낱말이 있으면 그 줄의 첫 / 마지막 낱말": "Current line to the first / last line of the document (Ctrl+Home / Ctrl+End too) — with words selected, the first / last word of the line",
   "마지막 줄입니다 — 아래에 새 줄은 Shift+Enter": "This is the last line — Shift+Enter adds a line below",
@@ -2082,5 +2080,8 @@ export default {
   "저장하고 그 줄 선택 (하이라이트) — 읽는 화면의 Ctrl+Enter 와 같음": "Save and select that line (highlight) — the same as Ctrl+Enter in reading",
   "특수 문자 넣기 — 문장 부호·화살표·단위·원 숫자 같은 문자를 커서 자리에": "Insert a special character — punctuation, arrows, units, circled numbers and so on at the cursor",
   "특수 문자 넣기 — 커서 자리에 (편집 모드 안 — 칸 안과 같음)": "Insert a special character at the cursor (in edit mode — the same as in the box)",
-  "줄 선택 — 현재 줄이나 고른 줄만 또렷하게": "Select lines — only the current line or the selected lines stay sharp"
+  "줄 선택 — 현재 줄이나 고른 줄만 또렷하게": "Select lines — only the current line or the selected lines stay sharp",
+  "현재 줄을 한 줄 편집 — F2 와 같다 (칸에서 Enter 는 저장하고 닫기)": "Edit the current line — the same as F2 (Enter in the box saves and closes)",
+  "제목 줄이면 그 절 접기·펴기, 링크가 있는 줄이면 그 링크 열기 (여럿이면 고르는 메뉴) — Tab 으로 간 링크·단추도": "Fold or unfold the section on a heading line, open the link on a line with a link (a menu if there are several) — also a link or button reached with Tab",
+  "현재 줄 뒤 / 앞의 링크로 — Alt+Enter 로 연다 (여러 줄을 골랐으면 레벨)": "To the next / previous link after / before the current line — Alt+Enter opens it (the level if several lines are selected)"
 };

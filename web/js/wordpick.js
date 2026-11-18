@@ -218,7 +218,7 @@ export function wordKey(e) {
   const v = view();
   if (!isDoc(v)) return false;
   if (k === 'F8') return stepMark(e.shiftKey ? -1 : 1);   // 다음·이전 형광펜 (D143)
-  if (k === 'F2') {
+  if (k === 'F2' || (k === 'Enter' && !e.shiftKey && !e.altKey)) {   // Enter 도 F2 와 같다 (D166 — 읽는 화면의 Enter 는 편집)
     const p = shownPick();
     if (!p || p.cross || p.seg !== p.endSeg) return false;
     editShown({ line: p.line, seg: p.seg, shown: p.ranges[p.seg].toString(), va: p.va, vb: p.vb });
