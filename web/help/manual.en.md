@@ -628,11 +628,12 @@ When the templates are not enough, build the cells yourself.
 
 ### Viewing and presenting
 
-- Clicking Lectern slides opens a separate slide window. If it is already open, it comes to the front. The terminal is the main window's.
-- The slide window has its own style, **Presentation** by default. This style is how the slides look on screen. It does not change the pptx style.
+- Clicking Lectern slides opens them in the document area of the current window, like md documents. The slide tools — presenting, check, structure view, Convert to pptx, Convert to html — stay in the status bar.
+- To view them in a separate window, right-click them in the left list and choose **Open in new window**, or choose **Move to new window** (Ctrl+Shift+N) on their document tab. That opens a slide window (if one is already open, it comes to the front). The terminal is the main window's.
+- The slide window has its own style, **Presentation** by default. In the current window the slides use the main window's style. Changing the screen style does not change the pptx style.
 - **Present** in the status bar (Shift+F5) or ▶ on a slide shows one slide at a time across the window. Use → ← Space PageDown PageUp, click or the wheel; **N** shows speaker notes, **F** full screen, **Esc** ends.
 - **View as document** in the status bar opens the cells and reads on like an ordinary document.
-- In the slide window, right-click the margin and choose **Save as PDF…** for a PDF with one slide per slide-sized page in the screen's colors (hidden slides and speaker notes are left out). **Print…** also prints one slide per page.
+- In Lectern slides, right-click the margin and choose **Save as PDF…** for a PDF with one slide per slide-sized page in the screen's colors (hidden slides and speaker notes are left out). **Print…** also prints one slide per page.
 
 ### Convert to pptx
 
@@ -653,7 +654,7 @@ Press **Convert to pptx** in the status bar and pick a pptx style. A pptx file a
 Press **Convert to html** in the status bar. An impress.js presentation html file appears next to the document. The reader opens it in a browser to present it. The slides sit on one canvas and the view moves between them.
 
 - **Arrangement:** **Grid** starts a new row at each cover or section slide (`lead` slides) and wraps after 4 slides. You can also pick **One row**. The map in the window shows each slide number in its place. `impress: line` in the front matter makes that the first choice.
-- **Placing a slide yourself:** Write `<!-- impress: x=0 y=2400 rotate=90 scale=2 -->` on a slide to place it there. Only the axes you write change. The slide window does not change. **Ask Claude to arrange** puts a request into the terminal to place the slides along the story (Enter is not pressed).
+- **Placing a slide yourself:** Write `<!-- impress: x=0 y=2400 rotate=90 scale=2 -->` on a slide to place it there. Only the axes you write change. The screen does not change. **Ask Claude to arrange** puts a request into the terminal to place the slides along the story (Enter is not pressed).
 - **Overview:** When on, a last slide shows all slides on one screen.
 - **Presenting:** → ← Space, PageDown and PageUp move; **Home** and **End** go to the first and last slide. **P** opens the presenter console (notes, next slide, clock) in a new window.
 - **One file:** Images, styles, math fonts and impress.js all go inside the file. It opens without the internet and asks nothing from anywhere, so you can mail or message it. Only internet images stay as addresses, loaded by the reader's browser.

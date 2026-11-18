@@ -168,11 +168,9 @@ const holdsDoc = (pane) => {
  */
 export async function openTarget(target) {
   const tab = S.tab;
-  if (tab && !solo && target.type === 'doc' && native.has('open_window') && (target.deck || tab.fileMap.get(target.path)?.deck)) {
-    // Lectern 슬라이드는 슬라이드 창에서 (D96 — 이미 열려 있으면 서버가 그 창을 앞으로 가져온다). 이 칸에는 열리지 않았으니 false — 부르는 쪽이 이 칸에서 이어서 하지 않게
-    await openWindow(tab, target.deckLine ? { ...target, line: target.deckLine } : target);
-    return false;
-  }
+  // Lectern 슬라이드도 md 문서처럼 지금 창에서 연다 (D176 — 0.94 까지는 늘 슬라이드 창이었다). 슬라이드 창은 사람이 고를 때만:
+  // 왼쪽 목록·링크의 우클릭 '새 창에서 열기', 문서 탭의 '새 창으로 옮기기'(Ctrl+Shift+N). 검색·담기·메모가 준 장의 줄(deckLine)로 간다
+  if (target.deckLine && !target.line && target.type === 'doc' && (target.deck || tab?.fileMap.get(target.path)?.deck)) target = { ...target, line: target.deckLine };
   if (tab && (target.type === 'doc' || target.type === 'code')) {
     const open = docPaneOf(tab, target);
     if (open && target.behind) return true;   // 이미 열려 있다 — 보던 문서를 그대로

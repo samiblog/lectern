@@ -1,6 +1,6 @@
 # Lectern slides guide (for AI)
 
-When the user asks for slides, write one `.md` file by this guide. People view it in Lectern's slide window and edit the text in the cells one line at a time.
+When the user asks for slides, write one `.md` file by this guide. People view it as slides in Lectern (in the document area or a separate slide window) and edit the text in the cells one line at a time.
 
 It starts from Marp but is Lectern's own format. Other apps show the cells as plain text. Do not make presentations in HTML.
 
@@ -258,7 +258,7 @@ Image syntax:
 | `<!-- _paginate: false -->` | No page number on this slide |
 | `<!-- eyebrow: Market summary -->` | Small label above the title |
 | `<!-- hidden: true -->` | Hidden slide: left out of the presentation and PDF, and hidden in an exported pptx |
-| `<!-- impress: x=0 y=2400 rotate=90 -->` | This slide's place when converting to html (section 13). The slide window does not change |
+| `<!-- impress: x=0 y=2400 rotate=90 -->` | This slide's place when converting to html (section 13). The screen does not change |
 
 A leading `_` means this slide only. `class` and `backgroundColor` without `_` carry over. `layout`, `grid`, `text`, `eyebrow`, `hidden` and `impress` are always this slide only.
 
@@ -335,7 +335,7 @@ If the skills are not installed yet, ask the user first. If they agree, copy bot
 
 ## 13. Convert to html
 
-**Convert to html** in the status bar is done by the app. It makes one impress.js presentation html file from the slides the slide window drew. impress.js places slides on one canvas and the camera moves between them. Do not write the html yourself. When the user asks you to arrange the slides, write only each slide's **place** in the md.
+**Convert to html** in the status bar is done by the app. It makes one impress.js presentation html file from the slides the screen drew. impress.js places slides on one canvas and the camera moves between them. Do not write the html yourself. When the user asks you to arrange the slides, write only each slide's **place** in the md.
 
 - Slides without a place follow a rule. The grid (default) starts a new row at each `lead` slide and wraps after 4 slides. With `impress: line` in the front matter they form one row.
 - A slide's place is a comment on that slide: `<!-- impress: x=0 y=2400 rotate=90 scale=2 -->`. The words are `x` `y` `z` `rotate` `rotate-x` `rotate-y` `scale`, and the values are numbers only. Only the axes you write change; the others follow the rule.
@@ -343,4 +343,4 @@ If the skills are not installed yet, ask the user first. If they agree, copy bot
 - Show the story with places. Keep the slides of one section in a row and start a new row for the next section. Give a summary slide a large `scale` so it covers its section. Use `rotate` once or twice, between sections. Avoid 3D turns (`rotate-x`, `rotate-y`); they are hard to read.
 - The app adds the overview at the end. Do not write it.
 - Do not use `class="step"`, `notes` or `substep` in HTML slides. impress reads them as slides and notes, so they are removed in the file.
-- The status bar check reports places it cannot read. The slide window does not change, so when you are done tell the user to press Convert to html again.
+- The status bar check reports places it cannot read. The screen does not change, so when you are done tell the user to press Convert to html again.

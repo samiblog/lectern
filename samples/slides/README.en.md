@@ -15,7 +15,7 @@ Start here.
 
 | Order | Document | What it teaches |
 |---|---|---|
-| 1 | [First look](기초/01-처음-보기.md) | The slide window, presenting, front matter |
+| 1 | [First look](기초/01-처음-보기.md) | Viewing slides, presenting, front matter |
 | 2 | [Cells and layouts](기초/02-칸과-배치.md) | Cells, layouts, Structure |
 | 3 | [Making slides from templates](기초/03-템플릿으로-만들기.md) | Picking templates slide by slide, then converting to pptx |
 | 4 | [Key practice](기초/04-키-연습장.md) | Lines, text size and slides by keyboard |
@@ -25,7 +25,7 @@ Start here.
 
 ## 2. Model decks by situation
 
-Pick the one that fits. View the finished deck in the slide window, then follow its process document from the start.
+Pick the one that fits. Open the finished deck, then follow its process document from the start.
 
 | Situation | Finished deck | Process | What it teaches |
 |---|---|---|---|

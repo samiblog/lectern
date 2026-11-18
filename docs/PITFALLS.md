@@ -61,7 +61,7 @@
 - `'rendered'` 는 렌더러(doc.js·overview.js)가 다 그린 직후에 오고, `nav.js` 가 `pane.current` 를 새 화면으로 바꾸는 것은 그 뒤다 — 같은 칸에서 문서를 바꿔 열면 듣는 쪽이 본 `pane.current` 는 앞 화면이다. 그린 화면의 경로가 필요하면 한 박자 뒤(`setTimeout`)에 보거나 `view.dataset.docPath`(md 문서만)를 본다 (D149 — 업무 나무의 '하위 업무' 칸이 이것으로 앞 문서를 보고 그리지 않았다).
 
 - 문서를 여는 길마다 어디에 열지가 다르다 (D91): 사이드바 목록·빠른 열기는 `util.openHow`(누르기 = 새 문서 탭), 본문의 링크는 `util.linkHow`(누르기 = 지금 탭). 새 여는 길을 만들면 둘 중 하나를 고르고 두 번 누르기의 둘째를 `repeatClick` 으로 거른다. Enter 로 여는 곳은 `clickFromKey` 로 Ctrl·Alt 를 넘긴다. `behind` 로 연 탭은 고르지 않으므로 이어서 그 문서 안으로 가는 코드(찾기·줄로 가기)는 돌리지 않는다. 화면 점검에서 옛 흐름(지금 탭)을 쓰려면 `click(modifiers=['Alt'])`.
-- Lectern 슬라이드는 창 모드에서 슬라이드 창으로 연다 (`doctabs.openTarget`, D96) — 판정은 `tab.fileMap` 의 `deck` 이니 막 만든 문서는 `target.deck` 을 넘긴다. 슬라이드 창의 스타일 키는 `theme.js` 의 `themeKey()`.
+- Lectern 슬라이드도 md 문서처럼 지금 창의 칸에 연다 (D176 — 0.94 까지는 창 모드에서 늘 슬라이드 창). 슬라이드 창은 '새 창에서 열기'·'새 창으로 옮기기'(`open-window` → `doctabs.openWindow` 의 deck 판정은 `tab.fileMap` 의 `deck` 이니 막 만든 문서는 `target.deck` 을 넘긴다). 검색·담기·메모가 넘기는 장의 줄은 `deckLine` — `openTarget` 이 `line` 으로 바꾼다. 슬라이드 창의 스타일 키는 `theme.js` 의 `themeKey()`.
 - 독립창(D95)은 메인 창과 같은 화면이다 (`solo.js`). 서버의 탭 목록·문서 탭 기록·설정은 메인 창의 것이니, 그것을 바꾸는 새 코드는 `solo` 를 보고 건너뛴다 (`saveConfig`·`rememberPosition`·`closeTab` 이 그렇게 한다). 메인 창에만 있는 것을 여는 새 키는 `main.js` 의 `mainOnlyKey`, 버튼은 `app.css` 의 `.lec-solo` 에 더한다. 숨은 창은 `document.hidden` 이라 감시가 돌지 않는다 — 숨은 동안 해야 하는 일은 서버 쪽 `windows.py` 가 한다.
 - 문서의 요소에 달린 속성은 문서가 원시 HTML 로 심을 수 있다. `data-lec-*` 를 읽어 무엇을 여는 코드는 값을 믿지 말고, 앱이 정한 값은 요소 밖에 둔다 (`util.linkTargets` — 링크의 대상).
 - 메뉴 항목은 `ui.menuGroups` 의 차례로 넣는다 (D91). `hint` 는 단축키만, 설명은 `tip`.
