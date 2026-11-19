@@ -18,8 +18,10 @@ export const LAYOUTS = {
   stack: ['t / a / b', '1fr', 'auto 1fr 1fr'],
 };
 
+// 영어판이 쓰는 낱말 — 안쪽 이름과 같고, 강조글만 'callout' (박스글 Box 와 헷갈리지 않게. 예전 영어판이 쓴 'box' 도 읽는다)
+export const TEXT_WORDS_EN = { title: 'title', sub: 'sub', body: 'body', table: 'table', box: 'callout', code: 'code' };
 // '박스글' 은 강조글의 옛 이름이다 (D126) — 전에 쓴 슬라이드의 크기 줄을 그대로 읽는다
-const KINDS = { ...Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]])), 박스글: 'box' };   // i18n-ok (문서의 문법)
+const KINDS = { ...Object.fromEntries(Object.entries(TEXT_WORDS).flatMap(([kind, word]) => [[kind, kind], [word, kind]])), callout: 'box', 박스글: 'box' };   // i18n-ok (문서의 문법)
 const SIZE = /^\d{1,3}(?:\.\d)?$/;
 // 격자·열·행 값 (style 속성에 들어간다). 13열 간트처럼 큰 격자도 쓴다 — 길이는 그것을 막지 않을 만큼만
 export const SAFE_AREA = /^[\p{L}\p{N}_\s/.-]{1,4000}$/u;

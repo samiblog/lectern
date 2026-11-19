@@ -75,7 +75,7 @@ The upper part, **Lectern settings**, belongs to Lectern; the lower part, **What
 | Teach Claude Code about Lectern | Where it goes (All folders (personal) · Only the ○○ folder) → copy a request to read the writing guide and write up its rules · ▣ · **Open samples** | [Sending and requests](7.2-sending-and-requests.en.md) |
 | PowerPoint and Word skills | Where they go → a request to install only the ones that are missing or different | [Skills](7.3-skills.en.md) |
 | Writing style | **Choose a style…** → where it is on (Turn on in ○○ · Turn on in all folders · Turn off in ○○) → a request to install it and turn it on. Codex · Antigravity · OpenCode get it as a 'Writing' section in the personal instruction file or that folder's AGENTS.md | [Writing styles and polish](7.4-writing-styles-and-polish.en.md) |
-| My style | A request to make your style note (one in your personal folder) from writing you wrote yourself — add the samples as `@paths` at the end | [Writing styles and polish](7.4-writing-styles-and-polish.en.md) |
+| My voice | A request to make your voice note (one in your personal folder) from writing you wrote yourself — add the samples as `@paths` at the end | [Writing styles and polish](7.4-writing-styles-and-polish.en.md) |
 
 | What you hand to the AI tool | What happens |
 |---|---|
@@ -107,7 +107,7 @@ Write backslashes in paths twice (`\\`). If the file has a syntax error, Lectern
 
 ## View settings source
 
-**View settings source** under Advanced, and **View source** on each 'AI tool' item, show files as they are without changing them — Lectern settings, the writing guide summary, the style note, Claude Code settings (personal · this folder), writing styles (installed and included in Lectern) and skills (SKILL.md and the files in its folder).
+**View settings source** under Advanced, and **View source** on each 'AI tool' item, show files as they are without changing them — Lectern settings, the writing guide summary, the voice note, Claude Code settings (personal · this folder), writing styles (installed and included in Lectern) and skills (SKILL.md and the files in its folder).
 
 | What you see | Meaning |
 |---|---|
@@ -130,7 +130,7 @@ Settings are kept in `%APPDATA%\Lectern`. They stay when you uninstall Lectern, 
 | `templates` | My template sets for Lectern slides | **Open templates folder** in the template gallery — opens in a Lectern tab |
 | `pptx-styles` | pptx styles | **Open library folder** in the 'Convert to pptx' window |
 | `layouts` | My page layouts | Print and export **Open layouts folder** |
-| `docx-styles` | My Word templates | **Open templates folder** in the export window |
+| `docx-styles` | My Word templates | **Open Word templates folder** in the export window |
 
 ## Related
 

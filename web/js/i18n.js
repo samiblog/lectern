@@ -3,6 +3,7 @@
 //
 // 문구는 한국어 문장을 그대로 열쇠로 쓴다: t('문서 열기') → 영어면 사전(lang/en.js)의 말, 한국어면 그대로.
 // 값을 끼울 자리는 {이름}: t('문서 {n}개', { n }). 사전의 값이 [하나, 여럿] 이면 n 이 1 이 아닐 때 뒤의 것 (영어 복수형 — n 이 없으면 앞의 것).
+// 같은 한국어가 영어로 두 뜻이면 사전에 [보통, 다른 뜻] 을 두고 다른 뜻을 쓰는 곳에서 { alt: true } — 단추 '발표' Present · 스타일 '발표' Presentation.
 // 새 문구는 t() 로 감싸고 lang/en.js 에 영어를 넣는다 — tests/test_i18n.py 가 감싸지 않은 한국어·빠진 영어·안 쓰는 영어를 잡는다.
 
 import EN from './lang/en.js';
@@ -15,7 +16,7 @@ const SLOT = /\{(\w+)\}/g;
 export function t(ko, values) {
   let text = dict?.[ko] ?? ko;
   // 값 n 이 없으면 하나. n 은 '1,234' 처럼 자리 쉼표를 넣은 글이어도 된다
-  if (Array.isArray(text)) text = values && 'n' in values && Number(String(values.n).replace(/,/g, '')) !== 1 ? text[1] : text[0];
+  if (Array.isArray(text)) text = values && (values.alt || ('n' in values && Number(String(values.n).replace(/,/g, '')) !== 1)) ? text[1] : text[0];
   return values ? text.replace(SLOT, (m, k) => (k in values ? String(values[k]) : m)) : text;
 }
 

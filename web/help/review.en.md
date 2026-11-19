@@ -7,7 +7,7 @@ Read writing that a person wrote or edited, find wording that is wrong or hard t
 1. Read the whole document. Check the folder's CLAUDE.md or AGENTS.md for tone, notation and quoting rules and for the kind of document (narrative, bullet-point, official letter, review comments and so on). If you were given a line range, check only those lines and read around them only for meaning.
 2. Sort what you find into the groups below and show a table. **Do not change the file at this step.**
 3. Apply what the person picks ("errors only", "1, 3 and 7", "everything but preferences"). Change only the picked spots and not one other character. Say how many spots you changed.
-4. If the same habit came up more than twice, mention it in a line or two at the end under "Came up often". It is there to help next time, not to scold. If the person keeps a style note, ask whether to add the habit to its "Do not copy" list.
+4. If the same habit came up more than twice, mention it in a line or two at the end under "Came up often". It is there to help next time, not to scold. If the person keeps a voice note, ask whether to add the habit to its "Do not copy" list.
 
 If the request already says to apply ("just fix it"), show the table briefly, then fix errors and hard-to-read spots only and leave preferences and to-check items in the table.
 

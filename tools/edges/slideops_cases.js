@@ -35,6 +35,10 @@ eq(setTextSize(L(D), 4, 8, '표', 14), L('---\nmarp: true\n---\n\n<!-- text: 표
 const T = '## 가\n\n<!-- text: 표 14, 제목 28 -->\n';
 eq(setTextSize(L(T), 1, 3, '표', 13), L('## 가\n\n<!-- text: 제목 28, 표 13 -->\n'), '있으면 그 낱말만');
 eq(setTextSize(L(T), 1, 3, 'table', 12), L('## 가\n\n<!-- text: 제목 28, table 12 -->\n'), '다른 말의 같은 낱말');
+// 영어판의 강조글 낱말은 callout — 예전 영어판의 box 와 한국어 강조글·박스글을 같은 것으로 읽고 바꾼다
+eq(textSizes('callout 15'), { box: 15 }, '영어 강조글 callout');
+eq(textSizes('box 15, 박스글 16'), { box: 16 }, '예전 box·박스글도 강조글');
+eq(setTextSize(L('<!-- text: box 16, 표 14 -->\n'), 1, 1, 'callout', 17), L('<!-- text: 표 14, callout 17 -->\n'), '예전 box 를 callout 으로 바꿈');
 eq(setCellSize(L('::: b card\n글\n:::'), 1, 16), L('::: b card 16\n글\n:::'), '칸 크기 더하기');
 eq(setCellSize(L('::: b card 16\n글\n:::'), 1, 15), L('::: b card 15\n글\n:::'), '칸 크기 고치기');
 eq(setCellSize(L('::: b at 10 20 30 40 16\n:::'), 1, 15), L('::: b at 10 20 30 40 15\n:::'), '자리의 수는 그대로');

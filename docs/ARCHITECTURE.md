@@ -546,7 +546,7 @@ sequenceDiagram
 
 ### 화면 언어 (i18n.js, lectern/i18n.py — D46)
 - 서버가 설정 `language` 로 언어를 정해(`i18n.language()` — auto 는 `system_language()`) `index.html` 의 `<html lang="{{LANG}}">` 에 넣는다. `i18n.js` 의 `LANG` 은 그 값이다 (페이지마다 고정 — 언어를 바꾸면 다시 불러온다).
-- 문구는 한국어 문장이 열쇠: `t(ko, values)` → 영어면 `lang/en.js` 의 값, 아니면 그대로. `{이름}` 자리에 값을 끼우고, 값이 `[하나, 여럿]` 이면 `values.n` 으로 고른다. `boot()` 가 맨 먼저 `translatePage()` 로 index.html 의 글자 마디와 `title`·`placeholder`·`aria-label` 을 바꾼다 (`translate="no"` 안은 그대로).
+- 문구는 한국어 문장이 열쇠: `t(ko, values)` → 영어면 `lang/en.js` 의 값, 아니면 그대로. `{이름}` 자리에 값을 끼우고, 값이 `[하나, 여럿]` 이면 `values.n` 으로 고른다. 같은 한국어가 영어로 두 뜻이면 `[보통, 다른 뜻]` 을 두고 다른 뜻을 쓰는 곳만 `{ alt: true }` (D183 — 단추 '발표' Present · 스타일 '발표' Presentation, 분류 'AI 도구' AI tool · 문장 속 your AI tool, 사이드바 묶음 '폴더' Folders · 만들기 창의 종류 Folder). `boot()` 가 맨 먼저 `translatePage()` 로 index.html 의 글자 마디와 `title`·`placeholder`·`aria-label` 을 바꾼다 (`translate="no"` 안은 그대로).
 - 서버 문구는 `lectern/i18n.py` 의 `t(ko, lang=None, **values)` 와 `EN`. `AppState` 가 `use_setting()` 으로 설정을 읽는 함수를 건다. 설정 파일 오류처럼 설정을 읽기 전의 문구는 `lang` 을 넘긴다.
 - 날짜: `util.timeAgo` 가 `t('{n}분 전', { n })`·`t('{m}월 {d}일', { m, d, mon })`(영어는 달 이름 `mon`). 구성 요소 이름은 `PARTS[k].name`(하나 — '표 3')과 `.many`(여럿 — 머리 버튼·문장 속).
 - 사용설명서는 `LANG` 에 따라 `help/manual/index.json`·`index.en.json` 의 문서들 (D182).

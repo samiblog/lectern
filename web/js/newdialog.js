@@ -414,6 +414,7 @@ export function initNewDialog() {
     title().focus();
   });
   list().addEventListener('dblclick', (e) => { if (e.target.closest('li[data-i]')) submit(); });
+  $('#lec-newdoc-dir').textContent = t('폴더', { alt: true });   // 영어는 종류 단추에서 하나 'Folder' (사이드바 묶음·개요는 'Folders')
   for (const b of $$('#lec-newdoc .mdstyle-kinds button')) b.addEventListener('click', () => { if (asked) setKind(b.dataset.kind); });
   $('#lec-newdoc-go').addEventListener('click', submit);
   $('#lec-newdoc-no').addEventListener('click', closeNewDocument);

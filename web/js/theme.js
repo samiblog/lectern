@@ -26,7 +26,7 @@ const THEMES = {
   default: light(t('기본'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#e8eff7', '#2b5c8a', '#1b3a5c', '#f1f4f8', '#fbfcfd', '#5f6b78', '#1f2933')),
   report: light(t('보고서'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#e6edf5', '#17304f', '#17304f', '#f3f6f9', '#fafbfc', '#5d6670', '#22262b')),
   office: light(t('사내 문서'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#dae3f3', '#2f5597', '#1f3864', '#f2f6fc', '#ffffff', '#595959', '#262626')),
-  deck: light(t('발표'), 'work', 'color', 'light', mermaidColors(false, '#ffffff', '#f3ede2', '#c2410c', '#17293d', '#ece7dc', '#fbf9f4', '#5c6773', '#1f2933')),
+  deck: light(t('발표', { alt: true }), 'work', 'color', 'light', mermaidColors(false, '#ffffff', '#f3ede2', '#c2410c', '#17293d', '#ece7dc', '#fbf9f4', '#5c6773', '#1f2933')),
   consulting: light(t('컨설팅'), 'work', 'color', 'light', mermaidColors(false, '#ffffff', '#e3f3f5', '#13a3b2', '#0b2545', '#eef2f7', '#ffffff', '#556270', '#1d2733')),
   notion: light(t('노션풍'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#f1f1ef', '#9b9a97', '#37352f', '#f7f6f3', '#ffffff', '#787774', '#37352f')),
   contrast: light(t('고대비'), 'work', 'clean', 'light', mermaidColors(false, '#ffffff', '#ffffff', '#000000', '#000000', '#dfe6f2', '#ffffff', '#000000', '#000000')),

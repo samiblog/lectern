@@ -181,7 +181,7 @@ try:
         check('영어 요청 글과 영어 안내', len(got) == 1 and got[0].startswith("Read Lectern's polish check guide") and 'review.en.md' in got[0], got)
         page.locator('#lec-view h1').click()   # 붙여 넣은 터미널에서 문서로 (Ctrl+, 는 터미널이 받는다)
         open_settings(page)
-        check('My style', page.evaluate("() => document.querySelector('#lec-voice-title').textContent") == 'My style')
+        check('My voice', page.evaluate("() => document.querySelector('#lec-voice-title').textContent") == 'My voice')
         b.close()
 except Exception:
     traceback.print_exc()

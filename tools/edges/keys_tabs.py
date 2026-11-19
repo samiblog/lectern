@@ -127,6 +127,20 @@ try:
         lit = page.inner_text('#lec-st-lit')
         check("영어 상태줄 — 'line' 이 겹치지 않는다", here == 'Current line 3' and lit == 'Current line 3 · change', (here, lit))
         page.keyboard.press('Escape')
+
+        print('[영어 화면 글 — 같은 한국어의 두 뜻 (2026-11-20)]')
+        names = page.evaluate('''() => ({
+          titles: document.querySelector('#lec-btn-titles').textContent.trim(),
+          folder: document.querySelector('#lec-newdoc-dir').textContent.trim(),
+          aiNav: document.querySelector('#lec-settings .set-nav [data-set="ai"]')?.textContent.trim(),
+          aiHead: document.querySelector('#lec-set-ai').textContent.trim(),
+          present: document.querySelector('#lec-st-present').textContent.trim() })''')
+        check("사이드바 'Titles' 단추는 여럿, 만들기 창의 종류 단추는 'Folder' 하나", names['titles'] == 'Titles' and names['folder'] == 'Folder', names)
+        check("설정 창 분류는 'AI tool' (문장 속의 'your AI tool' 이 아니라)", names['aiNav'] == 'AI tool' and names['aiHead'] == 'AI tool', names)
+        deck = page.evaluate("() => document.querySelector('#lec-theme option[value=\"deck\"]')?.textContent")
+        check("발표 단추는 'Present', 슬라이드의 기본 스타일 이름은 'Presentation'", names['present'] == 'Present' and deck == 'Presentation', (names['present'], deck))
+        caption = page.evaluate("() => import('/static/js/i18n.js').then((m) => `${m.t('표')} 1. ${m.t('제목')}`)")
+        check("넣는 캡션의 자리 글은 'Title' 하나", caption.endswith('1. Title'), caption)
         check('화면 스크립트 오류 없음', not errors, errors[:3])
         browser.close()
 except Exception:

@@ -29,7 +29,7 @@ export const aiInfo = () => AI_TOOLS[aiTool()] ?? null;
 export const aiName = () => aiInfo()?.name ?? 'AI';
 
 /** 프로그램 이름: 'Claude Code'·'Codex'·'Antigravity'·'OpenCode', 여럿이면 'AI 도구' */
-export const aiCli = () => aiInfo()?.cli ?? t('AI 도구');
+export const aiCli = () => aiInfo()?.cli ?? t('AI 도구', { alt: true });   // 영어는 문장 속 꼴 'your AI tool' — 설정 창 분류 이름은 보통 꼴 'AI tool'
 
 /**
  * 다듬기 점검 요청 (D148): ref 는 '@경로' 또는 '@경로 12~30행'. 순서·등급·건드리지 않을 것은 안내(web/help/review.md)가 정한다 —

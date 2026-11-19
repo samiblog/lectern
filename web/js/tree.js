@@ -587,6 +587,7 @@ export function initTree() {
       filter.dispatchEvent(new Event('input'));   // 트리와 문서 외 파일(others.js)을 함께 다시 그린다
     }
   });
+  $('#lec-btn-titles').textContent = t('제목', { n: 2 });   // 영어는 여럿 'Titles' — 캡션·제목 칸의 '제목'은 하나 'Title'
   $('#lec-btn-titles').addEventListener('click', async () => {
     await saveConfig({ show_titles: !showTitles() });
     render();

@@ -1,4 +1,4 @@
-# My style note — a guide for AI (Lectern)
+# My voice note — a guide for AI (Lectern)
 
 Take writing the person wrote themselves as samples and sum up how they write in a short note. The note is used when you write or polish this person's writing. The aim is not imitation. Keep the conventions the reader expects of this person or organisation, keep their good habits, and do not copy the habits that make writing hard to read. Lectern's document right-click item "Send as a style sample" or the "My style" row in the settings window sends a request with the path of this guide and the samples.
 
@@ -38,13 +38,13 @@ Rules for the note:
 Keep the note once in the person's personal folder, so that every folder and every writing style reads the same note (D159).
 
 - **Claude Code**: one file in the personal rules folder, `~/.claude/rules/my-voice.md` (read in every project). If, as in earlier versions, the writing style file (`~/.claude/output-styles/research-writing.en.md` or `research-writing.md`) ends with a `## My style` section, ask whether to move that section into this file — if so, remove it from the style file. After saving, tell them to restart Claude Code.
-- **Codex, Antigravity, OpenCode**: add it as a `## My style` section to the personal instruction file the tool reads in every project (Codex `~/.codex/AGENTS.md`, Antigravity `~/.gemini/AGENTS.md`, OpenCode `~/.config/opencode/AGENTS.md`). If, as in earlier versions, it sits under the "Writing" section of the project's AGENTS.md, ask whether to move it.
+- **Codex, Antigravity, OpenCode**: add it as a `## My voice` section to the personal instruction file the tool reads in every project (Codex `~/.codex/AGENTS.md`, Antigravity `~/.gemini/AGENTS.md`, OpenCode `~/.config/opencode/AGENTS.md`). If, as in earlier versions, it sits under the "Writing" section of the project's AGENTS.md, ask whether to move it.
 - Rules that differ by folder (a different template for each institution, a different register) belong in that folder's CLAUDE.md or AGENTS.md, not in the note. Folder rules come before the note.
 
 ## Shape of the note
 
 ```markdown
-## My style
+## My voice
 
 Summed up from 4 pieces this person wrote (2 narrative reports, 2 bullet-point reports). When writing, follow "Keep", use "Lean towards" only when the kind of document and the reader match, and never use "Do not copy".
 

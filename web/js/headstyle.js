@@ -81,7 +81,7 @@ export function headings(lines) {
 }
 
 // 번호를 달지 않는 절 (맨 바깥 수준만): 앞뒤에 붙는 것들. 논문·보고서에서 번호 없이 쓴다 (D107)
-const NO_NUMBER = /^(?:참고\s*문헌|부록|붙임|별첨|첨부|요약|초록|목차|감사의\s*글|references|bibliography|appendix|abstract|summary|acknowledge?ments)(?:\s|$)/i;   // i18n-ok (절 이름)
+const NO_NUMBER = /^(?:참고\s*문헌|부록|붙임|별첨|첨부|요약|초록|목차|감사의\s*글|references|bibliography|appendix|attachments?|abstract|summary|acknowledge?ments)(?:\s|$)/i;   // i18n-ok (절 이름)
 const counted = (h) => !(h.depth === 1 && NO_NUMBER.test(h.text));
 
 /** 지금 문서의 머리글 모양 id. 번호가 달린 머리글이 열에 여섯이 넘으면 그 모양이다. 똑같이 맞으면 문서 방식 kind 의 모양을 먼저 본다 */

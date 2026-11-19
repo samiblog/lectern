@@ -36,7 +36,7 @@ The terminal runs any program, so you can start `codex` (OpenAI Codex CLI), `agy
 | Project skills folder | `.claude/skills` | `.agents/skills` | `.agents/skills` | `.agents/skills` |
 | Lectern summary (all folders) | `~/.claude/rules/lectern.md` | A section of `~/.codex/AGENTS.md` | A section of `~/.gemini/AGENTS.md` | A section of `~/.config/opencode/AGENTS.md` |
 | Writing style | Output style (choose where it is on) | A 'Writing' section in the personal instruction file or `AGENTS.md` | Same | Same |
-| My style note | `~/.claude/rules/my-voice.md` | A 'My style' section in the personal instruction file | Same | Same |
+| My voice note | `~/.claude/rules/my-voice.md` | A 'My voice' section in the personal instruction file | Same | Same |
 | Continue a conversation | `claude --continue` | `codex resume --last` | `agy --continue` | `opencode --continue` |
 
 | Case | What happens |

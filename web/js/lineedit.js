@@ -33,7 +33,7 @@ import {
   blocksOf, blockAt, itemOf, fencesOf, fenceAt, tableIn, renumberAt, relist, listNear, siblingsOf, isBlank,
 } from './lineops.js';
 import {
-  TEXT_WORDS, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
+  TEXT_WORDS, TEXT_WORDS_EN, setTextSize, setCellSize, duplicateSlide, moveSlide, deleteSlide, setLayout, templateLines, addTemplate, applyTemplate, setFrontKey,
   cellAt, setCellLook, swapCell, clearCell, splitCell, noteOf, setNote as setSlideNote, setImageWidth, imageWidth,
 } from './slideops.js';
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
@@ -1421,7 +1421,7 @@ async function resizeHere(dir) {
   const size = Math.max(8, shown + dir);
   const [a, b] = wrap.dataset.lines.split('-').map(Number);
   const src = sourceLines();
-  const next = own ? setCellSize(src, parseInt(cell.dataset.lines, 10), size) : setTextSize(src, a, b, LANG === 'en' ? kind : TEXT_WORDS[kind], size);
+  const next = own ? setCellSize(src, parseInt(cell.dataset.lines, 10), size) : setTextSize(src, a, b, (LANG === 'en' ? TEXT_WORDS_EN : TEXT_WORDS)[kind], size);
   const shift = await commit(pane, pathIn(view), src, next);
   if (shift == null) return;
   if (S.pane === pane) followLine(line + (sourceLines().length - src.length));

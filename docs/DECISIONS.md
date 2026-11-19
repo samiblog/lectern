@@ -1872,3 +1872,14 @@
 - **시험**: `tests/test_manual.py` — 차례와 파일이 맞고 번호가 트리를 이룬다, 제목·요약 줄, 하위 문서 자리 표시는 하위 문서가 있는 장 문서에만, 링크는 차례의 문서와 그 절로(앵커까지), 예제 링크 없음, 흐름도 노드 글은 큰따옴표, 영어판은 같은 트리이고 한글이 남지 않는다. 화면 점검은 `ui_smoke`(트리·문서·절로 가기·영어판의 단축키 문서)와 `helpwindow`·`refwindows`·`keys_tabs`·`refs_vi`.
 - **쓴 방법**: 견본 다섯(1·2·2.3·4·4.1)을 사용자가 보고 고른 뒤, 옛 설명서의 절과 코드(SHORTCUTS 가 키의 정답)를 근거로 나머지를 썼다. 옛 글과 코드가 다르면 코드를 따랐다 (예: Alt+H 의 '장이 없는 화면에서는' 이 D164 뒤에도 Shift+Enter 로 남아 있던 SHORTCUTS 의 글을 Ctrl+Enter 로 고침).
 - **`docs/VISION.md`**: 단계가 아니라 바탕 — 처음 쓰는 사람이 무엇을 어느 키로 하는지 표에서 바로 찾는다.
+
+## D183. 영어 화면 글 여덟 가지
+
+- **결정 (사용자, 2026-11-20 — 사용설명서 영어판(D182)을 옮기다 찾은 것을 모아 알리자 '수정하세요')**: 한국어 화면은 그대로 두고 영어 화면 글만 고쳤다.
+- **같은 한국어의 두 뜻**: 문구는 한국어 문장이 열쇠라 같은 한국어는 영어가 하나뿐이었다. `t()` 에 `{ alt: true }` 를 더해 사전 값 `[보통, 다른 뜻]` 의 뒤의 것을 고른다 — 상태줄 단추 '발표' Present · 슬라이드 창의 기본 스타일 '발표' Presentation, 설정 창 분류 'AI 도구' AI tool · 요청 글 속 '{cli}' your AI tool (도구를 여럿 골랐을 때), 사이드바 묶음·폴더 개요의 '폴더' Folders · 만들기 창의 종류 단추 Folder. '제목'은 진짜 복수라 `{ n: 2 }` — 사이드바 단추만 Titles, 넣는 캡션(`Table 1. Title`)·부록 제목·새로 만들기 창의 제목 칸·메모와 업무 카드의 제목은 Title (전에는 `Table 1. Titles` 가 들어갔다).
+- **제목 번호**: 영어판이 넣는 첨부 절 `## Attachments` 에 제목 번호가 붙었다 — 번호를 매기지 않는 절(`headstyle.NO_NUMBER`)에 `attachments` 를 더했다.
+- **겹치던 이름**: Word 의 '내 양식'·'양식 폴더 열기' 가 슬라이드 템플릿의 'My templates'·'Open templates folder' 와 같아 My Word templates·Open Word templates folder 로. '내 문체'(My style)가 '내 스타일'(My styles)과 한 글자 차이라 My voice·voice note 로 (노트 파일 이름 `my-voice.md`·안내 `voice.en.md` 와 같게). Codex·Antigravity·OpenCode 의 개인 지시 파일에 넣는 절도 `## My voice` — 예전 판이 글쓰기 스타일 파일 끝에 붙인 `## My style` 절은 그 이름 그대로 알아본다 (`aistatus.VOICE_HEADS`). 글쓰기 스타일 네 파일 속 'style note' 는 그대로 — 고치면 설치한 스타일이 '다름'으로 보인다.
+- **슬라이드 글자 크기 줄**: 영어판이 강조글을 `<!-- text: box 16 -->` 로 써서 박스글(Box)과 헷갈렸다 — 영어판은 `callout` 으로 쓰고 (`slideops.TEXT_WORDS_EN`), 예전의 `box` 도 강조글로 읽는다. 앱(`slideops.KINDS`)과 두 스킬의 `lectern_md.py` 가 함께 받는다.
+- **인쇄 글꼴**: 내보내기 창의 영어 작은 글이 한글 글꼴만 말했다 — 영어 화면의 인쇄는 Cambria·Calibri 가 먼저라 그 이름을 적었다 (설정 창 영어 설명과 같게).
+- **시험**: 가장자리 점검 `keys_tabs` 의 영어 화면(Titles·Folder·AI tool·Present·Presentation·`Table 1. Title`), `slideops_cases.js`(callout·예전 box·박스글이 한 종류, box 를 callout 으로 바꿈), `writingreq`(My voice).
+- **`docs/VISION.md`**: 단계가 아니라 바탕 — 영어로 쓰는 사람도 같은 말을 같은 이름으로 본다.

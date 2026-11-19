@@ -157,7 +157,7 @@ Change only what you need.
 | One slide | `<!-- text: table 12 -->` |
 | One cell | A number in the cell head (`::: b card 14`) |
 
-The kinds are `title` `sub` `body` `table` `box` `code`. A cell size also sets the tables and callouts in that cell.
+The kinds are `title` `sub` `body` `table` `callout` `code` (older slides may say `box` for callouts — it still works). A cell size also sets the tables and callouts in that cell.
 
 **Do not go below 12pt for tables or 14pt for body text.** When something overflows, cut text or split the slide rather than only shrinking it. For a document that is read rather than shown, write `reading: true` in the front matter; the limits are then 10pt and 12pt. Anything below the limit shows up in Check.
 
