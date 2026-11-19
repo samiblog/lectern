@@ -691,6 +691,12 @@ function bindSplits() {
     const term = e.button === 1 && termOfHead(e.target);
     if (term) closeTerminal(term);
   });
+  body.addEventListener('contextmenu', (e) => {   // 쌓은 칸의 머리줄 우클릭 — 탭 줄이 없을 때도 그 터미널의 화면 다시 붙기 (D178)
+    const term = termOfHead(e.target);
+    if (!term) return;
+    e.preventDefault();
+    import('./ui.js').then(({ showMenu }) => showMenu(e.clientX, e.clientY, [reattachItem(term), { label: t('터미널 설정…'), action: () => emit('open-settings', 'term') }]));
+  });
 }
 
 /** 보낸 칸을 잠깐 표시한다 (쌓았을 때 — 어느 터미널에 들어갔는지) */
