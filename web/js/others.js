@@ -25,7 +25,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
+import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -492,7 +492,8 @@ function menuItems(k, n) {
   /** @type {MenuItem[]} */
   const items = [{ label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: 'Enter', action: () => toggle(k, n.path) }];
   if (k === 'folder' && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
-  if (!n.excluded) items.push(newDocItem(n.path), newFolderItem(n.path), ...(S.tab && !S.tab.readonly ? [workCardItem(n.path)] : []));   // 업무 카드 (D152 — 문서가 없는 폴더는 문서 트리에 없다)   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
+  if (!n.excluded) items.push(...(k === 'code' ? [newFileItem(n.path, 'code')] : k === 'files' ? [newFileItem(n.path, 'data')] : []),   // 그 목록의 파일 (D177)
+    newDocItem(n.path), newFolderItem(n.path), ...(S.tab && !S.tab.readonly ? [workCardItem(n.path)] : []));   // 업무 카드 (D152 — 문서가 없는 폴더는 문서 트리에 없다)   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
   /** @type {MenuItem[]} */
   const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
@@ -627,6 +628,19 @@ function bindLayout() {
   for (const s of SECTIONS) {   // 머리줄을 누르면 그 묶음을 펼치고 나머지는 접는다 — 펼친 것을 누르면 그대로 (D143)
     $(s.el).querySelector('.side-head').addEventListener('click', () => openSectionNamed(s.name));
   }
+  // 묶음의 만들기 (D177 — '문서'의 것은 newdialog.js): 그 묶음에서 만드는 것만, 위치는 목록에서 고른 폴더(파일이면 그 폴더)
+  for (const [name, k] of [['code', 'code'], ['others', 'files'], ['folder', 'folder']]) {
+    $(`#lec-${name}-new`).addEventListener('click', () => emit('new-doc', { dir: chosenDir(k), section: name }));
+  }
+}
+
+/** 목록에서 고른 행의 폴더 — 폴더면 그것, 파일이면 그 폴더. 고른 것이 없거나 제외 폴더 안이면 프로젝트 맨 위 */
+function chosenDir(k) {
+  const o = state();
+  const v = o && view(o, k);
+  const n = v?.index.get(o.selected[v.sel] ?? '');
+  if (!n || n.excluded) return '';
+  return n.type === 'dir' ? n.path : dirname(n.path);
 }
 
 /** 묶음 안에서 초점을 줄 곳: 고른 행·지금 보는 것·Tab 이 들어갈 행·첫 행, 행이 없으면 머리줄 */

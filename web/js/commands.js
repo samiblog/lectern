@@ -45,6 +45,9 @@ function list(local) {
       [t('문서·코드 열기 — 이름·제목·경로로'), 'Ctrl+P', () => openPalette()],
       [t('폴더 열기 — 새 프로젝트 탭으로'), 'Ctrl+O', chooseAndOpen, true],
       [t('새 문서 만들기…'), 'Ctrl+N', () => askNewDocument()],
+      [t('새 코드 파일 만들기…'), '', () => askNewDocument(null, { kind: 'code' })],   // 만들기 창의 종류만 바꿔 연다 (D177)
+      [t('새 자료 파일 만들기…'), '', () => askNewDocument(null, { kind: 'data' })],
+      [t('새 폴더 만들기…'), '', () => askNewDocument(null, { kind: 'folder' })],
       [t('닫은 문서 탭 다시 열기'), 'Ctrl+Shift+T', reopenDocTab],
       [t('지금 문서를 새 창으로 옮기기'), 'Ctrl+Shift+N', () => moveToWindow()],
       [t('문서 탭 닫기'), 'Ctrl+W', closeDocTabKey],

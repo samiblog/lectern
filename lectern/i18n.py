@@ -133,6 +133,9 @@ EN: dict[str, str] = {
     '폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다': 'There is no such folder — a new document is only created in a folder that already exists.',
     '같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요': 'A file with that name already exists — choose another name.',
     '새 문서를 만들지 못했습니다: {error}': 'Could not create the new document: {error}',
+    '만들 수 있는 것은 코드 파일(.py·.js·.json 등)과 자료 파일(.csv·.tsv·.txt)입니다 — 이름 끝에 확장자를 쓰세요':
+        'You can create code files (.py, .js, .json and so on) and data files (.csv, .tsv, .txt) — end the name with an extension',
+    '파일을 만들지 못했습니다: {error}': 'Could not create the file: {error}',
     # editing.py — 이름 바꾸기 (D66)
     '파일 경로가 올바르지 않습니다': 'The file path is not valid.',
     '제외 폴더({name}) 안의 파일은 이름을 바꾸지 않습니다': 'Files inside an excluded folder ({name}) are not renamed.',

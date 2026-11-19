@@ -169,7 +169,7 @@
         <section id="lec-docs" class="side-sec" aria-label="문서">
           <button type="button" id="lec-docs-head" class="side-head" aria-expanded="true" title="문서 목록 펼치기 (Markdown·HTML 문서)">
             <span class="caret open" aria-hidden="true"></span><span>문서</span><span id="lec-docs-count" class="n"></span></button>
-          <button type="button" id="lec-docs-new" class="side-new" title="새 문서 만들기 (Ctrl+N)">만들기</button>
+          <button type="button" id="lec-docs-new" class="side-new" title="새 문서·슬라이드·폴더 만들기 (Ctrl+N)">만들기</button>
           <div id="lec-doc-kinds-top" class="doc-kinds"></div>
           <nav id="lec-tree" class="side-list" aria-label="문서"></nav>
           <div id="lec-doc-kinds-bottom" class="doc-kinds"></div>
@@ -177,16 +177,19 @@
         <section id="lec-code" class="side-sec" aria-label="코드">
           <button type="button" id="lec-code-head" class="side-head" aria-expanded="true" title="코드 목록 펼치기 (소스·스크립트·웹·설정 파일)">
             <span class="caret open" aria-hidden="true"></span><span>코드</span><span id="lec-code-count" class="n"></span></button>
+          <button type="button" id="lec-code-new" class="side-new" title="새 코드 파일·폴더 만들기">만들기</button>
           <div id="lec-code-list" class="side-list explorer" role="tree" aria-label="코드" data-list="code"></div>
         </section>
         <section id="lec-others" class="side-sec" aria-label="자료">
           <button type="button" id="lec-others-head" class="side-head" aria-expanded="true" title="자료 목록 펼치기 (문서도 코드도 아닌 파일 — PDF·오피스·그림·데이터 등)">
             <span class="caret open" aria-hidden="true"></span><span>자료</span><span id="lec-others-count" class="n"></span></button>
+          <button type="button" id="lec-others-new" class="side-new" title="새 자료 파일(CSV·TSV·텍스트)·폴더 만들기">만들기</button>
           <div id="lec-others-list" class="side-list explorer" role="tree" aria-label="자료" data-list="files"></div>
         </section>
         <section id="lec-folder" class="side-sec" aria-label="폴더">
           <button type="button" id="lec-folder-head" class="side-head" aria-expanded="false" title="폴더 목록 펼치기 (문서·코드·자료를 폴더 구조 그대로 한 트리에)">
             <span class="caret" aria-hidden="true"></span><span>폴더</span></button>
+          <button type="button" id="lec-folder-new" class="side-new" title="새 문서·슬라이드·코드 파일·자료 파일·폴더 만들기">만들기</button>
           <div id="lec-folder-list" class="side-list explorer" role="tree" aria-label="문서와 파일 (폴더 구조)" data-list="folder"></div>
         </section>
       </div>
@@ -379,16 +382,18 @@
 <div id="lec-newdoc" class="overlay" hidden>
   <div class="palette-box insert-box mdstyle-box" role="dialog" aria-labelledby="lec-newdoc-head">
     <div class="gallery-head"><span id="lec-newdoc-head">새 문서 만들기</span></div>
-    <div class="newdoc-title"><label for="lec-newdoc-title">제목</label><input id="lec-newdoc-title" type="text" spellcheck="false" autocomplete="off"></div>
+    <div class="newdoc-title"><label for="lec-newdoc-title" id="lec-newdoc-title-label">제목</label><input id="lec-newdoc-title" type="text" spellcheck="false" autocomplete="off"></div>
     <div class="newdoc-title"><label for="lec-newdoc-folder">위치</label><select id="lec-newdoc-folder"></select><button id="lec-newdoc-mkdir" type="button" title="고른 위치 안에 폴더를 만듭니다">새 폴더…</button></div>
+    <div class="newdoc-title" id="lec-newdoc-header-row" hidden><label for="lec-newdoc-header">머리행</label><input id="lec-newdoc-header" type="text" spellcheck="false" autocomplete="off" placeholder="열 이름을 쉼표로 — 예: 날짜, 품목, 금액 (선택)"></div>
     <p id="lec-newdoc-msg" class="insert-msg bad" role="alert" hidden></p>
-    <div class="mdstyle-kinds"><span>종류</span><button id="lec-newdoc-md" type="button">md 문서</button><button id="lec-newdoc-deck" type="button">Lectern 슬라이드</button></div>
+    <div class="mdstyle-kinds"><span>종류</span><button id="lec-newdoc-md" type="button" data-kind="md">md 문서</button><button id="lec-newdoc-deck" type="button" data-kind="deck">Lectern 슬라이드</button><button id="lec-newdoc-code" type="button" data-kind="code">코드 파일</button><button id="lec-newdoc-data" type="button" data-kind="data">자료 파일</button><button id="lec-newdoc-dir" type="button" data-kind="folder">폴더</button></div>
     <div id="lec-newdoc-styles" class="mdstyle-body">
       <ul id="lec-newdoc-list" role="listbox" aria-label="스타일"></ul>
       <ul id="lec-newdoc-preview" aria-label="미리보기"></ul>
     </div>
     <p id="lec-newdoc-note" class="insert-msg" hidden>만들기를 누르면 첫 장의 템플릿을 고릅니다.</p>
-    <div class="gallery-foot"><span class="gallery-keys">↑·↓ 스타일 · Enter 만들기 · Esc 그만두기</span><button id="lec-newdoc-go" type="button" class="primary">만들기</button><button id="lec-newdoc-no" type="button">그만두기</button></div>
+    <p id="lec-newdoc-hint" class="insert-msg" hidden></p>
+    <div class="gallery-foot"><span class="gallery-keys" id="lec-newdoc-keys">↑·↓ 스타일 · Enter 만들기 · Esc 그만두기</span><button id="lec-newdoc-go" type="button" class="primary">만들기</button><button id="lec-newdoc-no" type="button">그만두기</button></div>
   </div>
 </div>
 <!-- 넣기 창 (putmenu.js, D109): 구성 요소·파일을 고르거나 글을 묻는 작은 창. 줄 옆에 뜬다 -->

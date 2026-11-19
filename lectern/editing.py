@@ -1,9 +1,10 @@
 """편집 모드 (D54): 문서·코드 파일의 원문을 주고, 고친 것을 저장한다 (GET /api/source, POST /api/save).
 
-보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드 파일만.
-새로 만드는 것은 새 Markdown 문서 하나뿐이다 (D63·D65 — create_source: 사용자의 '새로 만들기'·'새 문서로 보내기'에서 경로를 정할 때,
-프로젝트 안의 이미 있는 폴더에, 같은 이름이 있으면 만들지 않는다). 파일 이름 바꾸기는 사이드바에서 고른 파일 하나를 같은 폴더 안에서만
-(D66 — rename_file). 문서 삭제는 휴지통으로만 (D104 — delete_doc). 옮기기·폴더 만들기는 없다. UTF-8 글 파일만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
+보기 전용(원칙 1)의 예외 — 사용자가 편집 모드에서 저장할 때만 그 파일 하나에 쓴다. 이미 있는 문서(md·html)·코드·자료(csv·tsv·txt — D171) 파일만.
+새로 만드는 것은 사용자가 '만들기'에서 경로를 정할 때의 새 Markdown 문서 하나 (D63·D65 — create_source: '새로 만들기'·'새 문서로 보내기'),
+이름을 정한 빈 코드·자료 파일 하나 (D177 — create_file: CSV 는 BOM 과 머리행만), 폴더 하나 (D114 — make_folder)뿐이다 — 프로젝트 안의
+이미 있는 폴더에, 같은 이름이 있으면 만들지 않는다. 파일 이름 바꾸기는 사이드바에서 고른 파일 하나를 같은 폴더 안에서만
+(D66 — rename_file). 문서 삭제는 휴지통으로만 (D104 — delete_doc). 옮기기는 없다. 문서·코드는 UTF-8 글만 고친다 (D1 — 다른 인코딩을 고치면 글자가 깨진다).
 - 원문의 줄바꿈(CRLF/LF)과 BOM 은 저장할 때 그 파일의 것을 되살린다 (편집기는 LF 로만 다룬다). 섞여 있으면 많은 쪽으로.
 - 그사이 다른 곳(Claude Code 등)이 고쳤으면 덮어쓰지 않는다 — 원문을 줄 때의 내용(SHA-256)과 지금 파일의 내용을 맞춰 보고
   다르면 409. 수정 시각·크기만으로는 같은 순간에 같은 크기로 바뀐 것을 놓친다. 화면이 물어서 덮어쓰기로 하면 force.
@@ -30,6 +31,7 @@ from .scanner import doc_kind, is_code, resolve_inside
 MAX_EDIT_BYTES = 2 * 1024 * 1024
 MAX_IMAGE_BYTES = 20 * 1024 * 1024
 BOM = b'\xef\xbb\xbf'
+CRLF = '\r\n'
 # Windows 가 파일 이름에 받지 않는 글자와 이름 (새 문서 — D63, 이름 바꾸기 — D66)
 BAD_NAME_CHARS = frozenset('<>:"/\\|?*') | frozenset(chr(c) for c in range(32))
 RESERVED_NAMES = frozenset({'con', 'prn', 'aux', 'nul', *(f'com{i}' for i in range(1, 10)), *(f'lpt{i}' for i in range(1, 10))})
@@ -339,16 +341,77 @@ def new_doc_path(root: Path, rel: str, exclude: frozenset[str]) -> Path:
     if (doc_kind(name) != 'markdown' or not stem.strip() or name.startswith('.') or name[-1] in ' .'
             or any(c in BAD_NAME_CHARS for c in name) or stem.lower() in RESERVED_NAMES):
         raise EditError(400, t('새 문서는 .md 로 끝나는 이름이어야 합니다 — 점으로 시작하거나 : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다'))
-    folders = parts[:-1]
+    return _place(root, parts[:-1], exclude) / name
+
+
+def _place(root: Path, folders: list[str], exclude: frozenset[str]) -> Path:
+    """새 파일을 둘 폴더 — 프로젝트 안의 이미 있는 폴더만. 제외 폴더 안과 정션·링크를 거쳐 다른 곳으로 가는 폴더(트리에 없는 폴더)는 안 된다"""
     excluded = next((f for f in folders if f.lower() in exclude), None)
     if excluded:
         raise EditError(400, t('제외 폴더({name}) 안에는 만들지 않습니다 — 트리에 보이지 않습니다', name=excluded))
     folder = resolve_inside(root, '/'.join(folders)) if folders else root
-    # 정션·링크를 거쳐 다른 곳으로 가는 폴더도 막는다 (트리에 없는 폴더)
     if folder is None or not folder.is_dir() or os.path.normcase(folder) != os.path.normcase(os.path.join(root, *folders)):
         raise EditError(404, t('폴더가 없습니다 — 새 문서는 이미 있는 폴더에만 만듭니다'))
     _protect(folder)
-    return folder / name
+    return folder
+
+
+# 새로 만드는 코드·자료 파일 (D177 — 사용자가 이름을 정한 빈 파일 하나). 코드는 scanner.CODE_EXT 에서 문서로 보는 html·htm,
+# 빈 파일로는 열리지 않는 ipynb, 도구가 만드는 lock 을 뺀 것. 자료는 편집 모드로 고치는 csv·tsv·txt (D171)
+NEW_CODE_SKIP = frozenset({'html', 'htm', 'ipynb', 'lock'})
+
+
+def new_file_kind(name: str) -> str | None:
+    """새로 만들 수 있는 파일이면 'code'·'data', 아니면 None"""
+    ext = os.path.splitext(name)[1].lower()
+    if ext in DATA_EDIT_EXT:
+        return 'data'
+    return 'code' if is_code(name) and ext[1:] not in NEW_CODE_SKIP else None
+
+
+def new_file_path(root: Path, rel: str, exclude: frozenset[str]) -> Path:
+    """새 코드·자료 파일을 만들 자리 (D177). rel: 프로젝트 기준 경로 ('분석/정리.py'). 이미 있는 폴더에, 확장자는 new_file_kind 가 받는 것만.
+    숨김·제외 폴더 안과 Windows 가 받지 않는 이름은 안 된다. 안 되면 EditError"""
+    parts = rel.replace('\\', '/').strip('/').split('/')
+    name = parts[-1]
+    if any(p in ('', '.', '..') for p in parts):
+        raise EditError(400, t('파일 경로가 올바르지 않습니다'))
+    stem = os.path.splitext(name)[0]
+    if (not stem.strip() or name.startswith('.') or name[-1] in ' .' or any(c in BAD_NAME_CHARS for c in name)
+            or stem.lower() in RESERVED_NAMES):
+        raise EditError(400, t('쓸 수 없는 이름입니다 — 점으로 시작하거나 끝나는 이름, / \\ : * ? " < > | 같은 글자가 든 이름은 쓸 수 없습니다'))
+    if not new_file_kind(name):
+        raise EditError(400, t('만들 수 있는 것은 코드 파일(.py·.js·.json 등)과 자료 파일(.csv·.tsv·.txt)입니다 — 이름 끝에 확장자를 쓰세요'))
+    return _place(root, parts[:-1], exclude) / name
+
+
+def new_file_bytes(name: str, header: list[str] | None = None) -> bytes:
+    """새 파일의 처음 내용 (D177). 코드·텍스트는 빈 파일. CSV 는 UTF-8 BOM 을 붙인다 — 한국어 엑셀이 바로 열어도 한글이 깨지지 않게
+    (그 뒤 편집 모드가 BOM 을 그대로 둔다 — D171). 머리행(header — 열 이름들)이 있으면 CSV·TSV 의 첫 줄로, 줄 끝은 CRLF (엑셀과 같게)"""
+    ext = os.path.splitext(name)[1].lower()
+    cols = [' '.join(str(c).split()) for c in (header or [])]
+    cols = cols if any(cols) else []
+    if ext == '.csv':
+        line = ','.join(f'"{c.replace(chr(34), chr(34) * 2)}"' if any(x in c for x in ',"') else c for c in cols)
+        return BOM + ((line + CRLF).encode('utf-8') if cols else b'')
+    if ext == '.tsv' and cols:
+        return ('\t'.join(cols) + CRLF).encode('utf-8')
+    return b''
+
+
+def create_file(path: Path, data: bytes) -> dict[str, Any]:
+    """새 파일(path — new_file_path 가 정한 자리)을 만들어 data 를 쓴다. 같은 이름이 있으면 409 — 덮어쓰지 않는다. {hash, size}"""
+    _protect(path)
+    try:
+        with open(path, 'xb') as fh:   # 있으면 실패 (대소문자만 다른 이름도 — Windows)
+            fh.write(data)
+            fh.flush()
+            os.fsync(fh.fileno())
+    except FileExistsError as exc:
+        raise EditError(409, t('같은 이름의 파일이 있습니다 — 다른 이름으로 만드세요')) from exc
+    except OSError as exc:
+        raise EditError(500, t('파일을 만들지 못했습니다: {error}', error=exc.strerror or str(exc))) from exc
+    return {'hash': _digest(data), 'size': len(data)}
 
 
 def create_source(path: Path, text: str) -> dict[str, Any]:

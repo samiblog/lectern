@@ -831,6 +831,22 @@ def create_app(state: AppState) -> Flask:
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
 
+    @app.post('/api/new-file')
+    def api_new_file() -> Any:
+        """{p, path, header?} — 새 코드·자료 파일 하나를 만든다 (D177 — 사용자가 '만들기'에서 이름을 정할 때만). 코드·텍스트는 빈 파일,
+        CSV 는 UTF-8 BOM 과 머리행(header — 열 이름들, 있으면), TSV 는 머리행. 같은 이름이 있으면 409. {path(프로젝트 기준, 폴더는 실제 이름), kind}"""
+        data = body()
+        rel, header = data.get('path'), data.get('header') or []
+        if not isinstance(rel, str) or not isinstance(header, list) or not all(isinstance(c, str) for c in header) or len(header) > 500:
+            abort(400)
+        project = project_of(data.get('p'))
+        try:
+            target = editing.new_file_path(project.root, rel, project.exclude)
+            editing.create_file(target, editing.new_file_bytes(target.name, header))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        return jsonify(path=target.relative_to(project.root).as_posix(), kind=editing.new_file_kind(target.name))
+
     @app.post('/api/paste-image')
     def api_paste_image() -> Any:
         """{p, doc, data(base64)} — 붙여 넣은 그림 한 장을 문서 옆 폴더에 새 파일로 (D111). {path(프로젝트 기준)}"""

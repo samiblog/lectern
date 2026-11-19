@@ -387,6 +387,9 @@ const deleteItem = (path) => ({ label: t('문서 삭제…'), tip: t('휴지통�
 export const newDocItem = (dir) => ({ label: t('새 문서 만들기…'), hint: 'Ctrl+N', action: () => emit('new-doc', { dir }) });
 /** 우클릭의 새 폴더 (D114): 이 폴더 안에 — 빈 폴더는 트리에 나오지 않아 만든 뒤 그 폴더의 새 문서 창을 연다 */
 export const newFolderItem = (dir) => ({ label: t('새 폴더 만들기…'), action: () => emit('new-folder', { dir }) });
+/** 우클릭의 새 코드·자료 파일 (D177): 이 폴더에 — 이름을 묻고 빈 파일을 만들어 편집 모드로 연다 ('코드'·'자료' 목록의 폴더) */
+export const newFileItem = (dir, kind) => ({ label: kind === 'code' ? t('새 코드 파일 만들기…') : t('새 자료 파일 만들기…'),
+  action: () => emit('new-doc', { dir, section: kind === 'code' ? 'code' : 'others', kind }) });
 
 /** 문서를 Lectern 슬라이드로 바꿔 달라는 요청 글 (한 줄 — D96). 원본은 그대로 두고 같은 폴더에 만든다 (상대 경로가 살아 있게) */
 function slideRequest(path) {

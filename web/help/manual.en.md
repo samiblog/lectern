@@ -364,10 +364,15 @@ Sample — [guide 02, reading](../../samples/guide/02-읽기-기능.md) (in Kore
 
 ### New document
 
-- To start: **Create** in the **Documents** header of the sidebar, **Ctrl+N**, **+** in the document tab row, or right-click a document, folder or empty space in the tree and choose **New document…**. It starts in that folder; Ctrl+N and **Create** start in the folder of the document or overview you are viewing.
+- To start: **Create** in the header of a group on the sidebar's Files tab (shown only on the open group), **Ctrl+N**, **+** in the document tab row, or right-click a document, folder or empty space in the tree and choose **New document…**. It starts in that folder. Ctrl+N and **Create** in **Documents** start in the folder of the document or overview you are viewing; **Create** in **Code**, **Other files** and **Folders** starts in the folder chosen in that list (the file's folder if a file is chosen, the top of the project if nothing is).
+- The **kinds** depend on where you opened it: **Create** in **Documents** offers md document, Lectern slides and folder; **Code** offers code file and folder; **Other files** offers data file and folder; **Create** in **Folders** and Ctrl+N offer all five. **New code file…** and **New data file…** in the right-click menu of a folder in the Code and Other files lists, and the commands of the same name in the command finder (Ctrl+Shift+P), work too.
 - The **title** becomes the file name and starts as 'New document'. The most recent **style** is selected; change it with ↑ ↓. Choose **Lectern slides** to pick a template for the first slide.
 - In **Location**, choose the top of the project or another folder, including empty ones. **New folder…** creates a folder inside the chosen location and selects it. **New folder…** in the right-click menus of the tree and project tab does the same. Empty folders do not show in the tree, so the new document box opens right away.
 - It starts with one `# Title` line, and a cell opens under the title in a new tab so you can write right away. A numbered style adds two sample headings with the first one selected, so typing changes the text and keeps the number.
+- For a **code file**, type the **name** with its extension (`tidy.py`, `settings.json`). The starting extension is the most common one in the project, and it is added if you leave the extension out. The types you can create are those in the sidebar's Code list (except html and ipynb). An empty file is created and opened in edit mode in a new tab. Lectern only creates it — it never runs it.
+- A **data file** is `.csv`, `.tsv` or `.txt`. For CSV and TSV, column names typed in **Header rows** separated by commas (e.g. `Date, Item, Amount`) become the first line; leave it empty for an empty file. CSV files get a UTF-8 BOM so Korean Excel opens them without garbled text, and saving in edit mode keeps it. The file opens in edit mode in a new tab.
+- For a **folder**, type just the name. Empty folders do not show in the lists, so the box stays open with the new folder as the location for you to choose what to create inside it. Press Esc to stop.
+- Switching the kind keeps the name you typed and changes only the extension (`analysis notes` → code file `analysis notes.js`).
 - It is created only if the name is free. If not, the reason is shown — change the title. Esc closes the box.
 - The file stays even if you close it before writing. If you do not need it, right-click it in the tree and choose **Delete document…**.
 
@@ -525,7 +530,7 @@ For what line editing does not cover — reworking many places at once or editin
 - **Ctrl+S** saves. The file's original line endings (CRLF/LF — the more common one if they are mixed), BOM and file attributes are kept. Read-only files are not saved. After saving, the document underneath is redrawn with your changes; close the editor with Esc (or ✕, Ctrl+E) to see it.
 - If another program such as Claude Code changed the same file while you were editing, Lectern asks before overwriting it. Cancel to keep editing without saving.
 - With unsaved edits, Lectern asks before closing the editor, going to another document, or closing the tab or window.
-- Only UTF-8 text files up to 2 MB can be edited. The only file Lectern creates is a new Markdown document (see New document above), and files are renamed from the sidebar (see Files above). It does not edit other files (PDF, Excel and so on).
+- Only UTF-8 text files up to 2 MB can be edited. The only files Lectern creates are new documents, empty code and data files and folders (see New document above), and files are renamed from the sidebar (see Files above). It does not edit other files (PDF, Excel and so on).
 - Choose **vi** under **Full editor keys** in Settings to use the editor like vim. Esc goes to Normal mode instead of closing the editor; `:w` saves, `:q` closes, `:wq` and `:x` save and close. Ctrl+E and ✕ also close it. The default is **Default**, and it is set separately from the vi keys for reading (below). Normal-mode keys may type characters while Korean input is on, so switch to English there.
 
 ### vi keys
@@ -1192,7 +1197,7 @@ Sample — [15 Keyboard shortcuts, step by step](../../samples/guide/15-단축�
 
 ## Good to know
 
-- Lectern never changes files on its own; files change only when you choose — line editing, line structure, format keys and checkboxes (saved as you press), saving in the full editor, the work tree, kanban and Add event, new documents and folders, renaming and deleting (to the Recycle Bin), pasted pictures, notes and exports (PDF, html, Word, pptx). Apart from that it writes only settings and remembered titles in its settings folder (`%APPDATA%\Lectern`). The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
+- Lectern never changes files on its own; files change only when you choose — line editing, line structure, format keys and checkboxes (saved as you press), saving in the full editor, the work tree, kanban and Add event, new documents, files and folders, renaming and deleting (to the Recycle Bin), pasted pictures, notes and exports (PDF, html, Word, pptx). Apart from that it writes only settings and remembered titles in its settings folder (`%APPDATA%\Lectern`). The right-hand terminal, however, is an ordinary PowerShell, so commands typed there run as usual.
 - The terminal needs Windows 10 (1809) or later. A shell's history is gone once Lectern closes.
 - Document titles in the tree are read from the beginning of each document. If a document starts with a very long frontmatter, its file name is shown instead.
 - Web images that cannot be loaded (blocked on a company network, or taking more than 15 seconds) turn into links.
