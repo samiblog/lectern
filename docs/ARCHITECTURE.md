@@ -169,7 +169,7 @@ flowchart LR
 | 메서드·경로 | 요청 | 응답 / 설명 |
 |---|---|---|
 | `GET /` | | `index.html` (`{{MODE}}`, `{{VERSION}}`, `{{TERM}}`(터미널 비밀값), `{{LANG}}`(화면 언어 — `<html lang>`, D46) 치환) + CSP 헤더 |
-| `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual.md`·영어판 `help/manual.en.md` 포함 — 토큰 없이) |
+| `GET /static/<경로>` | | `web/` 정적 파일 (사용설명서 `help/manual/` 의 차례 `index.json`·`index.en.json` 과 문서들 포함 — 토큰 없이) |
 | `GET /api/state` | | `{projects:[{id, root, name, seq, watch, position}], active, tabs_seq, max_tabs, mode, sep, version, config_error, notices:[{id, text}], samples, writing_guide, slides_guide, skills_dir, writing_style, writing_styles, style_guide, review_guide, voice_guide}`. `projects` 는 열린 탭(왼쪽부터), `active` 는 선택된 탭 id (없으면 `null`). `position` 은 그 폴더의 `{doc, scroll}` (마지막 문서와 위치). `watch` 는 `watchdog`·`polling`·`none`. `config_error` 는 설정 파일을 읽지 못한 이유 (없으면 `null`). `notices` 는 화면이 처음 보는 id 만 한 번 보일 알림 (최근 5개). `samples` 는 예제 프로젝트 폴더(`paths.samples_dir()` — 없으면 `null`), `writing_guide` 는 화면 언어에 맞는 AI 용 작성 안내 파일 (D57), `writing_style` 은 글쓰기 스타일(D132 — 리서치 글쓰기), `writing_styles` 는 Lectern 에 든 스타일 넷 `[{id, file, path, name, description}]`(D161 — `aistatus.lectern_styles`, 화면 언어의 판), `style_guide` 는 새 스타일 만들기 안내, `review_guide`·`voice_guide` 는 다듬기 점검·내 문체 안내 (D148 — 문서 우클릭과 설정 창의 요청 글이 이 경로를 준다) |
 | `POST /api/open` | `{path}` | 폴더를 탭으로 연다 (이미 열려 있으면 그 탭). 연 탭이 선택된다. `/api/state` 와 같은 형식 + `opened`(그 탭 id). 폴더가 아니거나 탭이 10개면 400 |
 | `POST /api/window-send` | `{to, type, path, top}` | 문서를 다른 창으로 보낸다 (D95 — to 는 창 id, 메인 창은 빈 값). 그 창이 없으면 `ok: false`. type `sample` 은 사용설명서 창의 예제 링크 — 메인 창에만, 받은 창이 예제 프로젝트를 열고 그 문서로 (D181) |
@@ -549,11 +549,11 @@ sequenceDiagram
 - 문구는 한국어 문장이 열쇠: `t(ko, values)` → 영어면 `lang/en.js` 의 값, 아니면 그대로. `{이름}` 자리에 값을 끼우고, 값이 `[하나, 여럿]` 이면 `values.n` 으로 고른다. `boot()` 가 맨 먼저 `translatePage()` 로 index.html 의 글자 마디와 `title`·`placeholder`·`aria-label` 을 바꾼다 (`translate="no"` 안은 그대로).
 - 서버 문구는 `lectern/i18n.py` 의 `t(ko, lang=None, **values)` 와 `EN`. `AppState` 가 `use_setting()` 으로 설정을 읽는 함수를 건다. 설정 파일 오류처럼 설정을 읽기 전의 문구는 `lang` 을 넘긴다.
 - 날짜: `util.timeAgo` 가 `t('{n}분 전', { n })`·`t('{m}월 {d}일', { m, d, mon })`(영어는 달 이름 `mon`). 구성 요소 이름은 `PARTS[k].name`(하나 — '표 3')과 `.many`(여럿 — 머리 버튼·문장 속).
-- 사용설명서는 `LANG` 에 따라 `help/manual.md`·`help/manual.en.md`.
+- 사용설명서는 `LANG` 에 따라 `help/manual/index.json`·`index.en.json` 의 문서들 (D182).
 - `tests/test_i18n.py` 가 JS(문자열·템플릿을 읽는 간단한 읽개)·index.html·Python(ast)의 한국어가 `t()`·`N_()` 로 감싸였는지와 사전의 빠진·안 쓰는 항목을 본다.
 
 ### 사용설명서와 단축키 표 (help.js)
-- 설명서(F1, D45): `#lec-help` 가 `#lec-main` 위를 덮는다 (z-index 31 — 터미널 모음 30 위). 처음 열 때 `GET /static/help/manual.md` 를 받아 `<!-- 단축키 표 -->` 자리에 `SHORTCUTS` 로 만든 표를 넣고, `renderMarkdown`(수식 없이) → DOMPurify → `decorateBlocks`(강조글·표·코드 블록)로 `#lec-help-view.md-body` 에 그린다. 왼쪽 `#lec-help-toc` 는 h2·h3 (스크롤에 맞춰 `.active`). 링크는 `#…` 만 설명서 안에서 따라가고 나머지는 막는다.
+- 설명서(F1, D45): `#lec-help` 가 `#lec-main` 위를 덮는다 (z-index 31 — 터미널 모음 30 위). 처음 열 때 차례 `GET /static/help/manual/index.json`(영어는 `index.en.json`)과 그 문서들을 모두 받는다 (D182 — 파일 이름 앞 번호가 트리의 자리). 문서 하나를 그릴 때 `<!-- 단축키 표 -->` 자리에 `SHORTCUTS` 로 만든 표, `<!-- 하위 문서 -->` 자리에 하위 문서 표(번호·제목·요약 줄)를 넣고, `renderMarkdown`(수식 없이) → DOMPurify → `decorateBlocks`(강조글·표·코드 블록) → `renderMermaid` 로 `#lec-help-view.md-body` 에 그린다 (위에 경로, 아래에 이전·다음). 왼쪽 `#lec-help-toc` 는 문서 트리(`li.doc`, 지금 문서 `.current`)와 지금 문서의 h2(`li.sec`, 스크롤에 맞춰 `.active`), 위의 `#lec-help-find` 는 모든 문서의 본문으로 트리를 거른다. 링크는 `#…` 와 다른 설명서 문서(`파일.md#절`)만 설명서 안에서 따라가고, 예제(`../../samples/…`)는 예제 탭·가이드 창으로, 나머지는 막는다.
 - 열면 `setFindTarget({root, scroller})` 로 찾기(Ctrl+F)의 대상과 찾기 막대를 설명서로 옮기고, 닫으면 `setFindTarget(null)` 로 선택된 칸에 되돌린다. 초점은 `#lec-help-scroll` 에 둔다 (화살표·PageDown 으로 넘기게).
 - 닫히는 때: F1·Esc·✕, `view` 이벤트(문서·개요·코드를 열거나 다른 탭을 고름), 탭 막대의 프로젝트 탭·목차·터미널 버튼과 터미널 모음 버튼(잡기 단계에서), `` Ctrl+` ``.
 - 단축키 표: `#lec-keys` 팝업 (툴바 `#lec-btn-help`, Ctrl+/). `SHORTCUTS`(`[묶음, [[키, 하는 일]]]`, 키는 `+` 로 잇고 다른 키는 ` / `)로 만든다. '사용설명서 열기'는 표를 닫고 설명서를 연다. 시작 화면(폴더를 열기 전)에도 '사용설명서' 버튼이 있다.

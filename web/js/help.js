@@ -1,8 +1,8 @@
 // 사용설명서(F1)와 단축키 표(툴바 '?' 버튼, Ctrl+/) — D45.
 // 설명서는 web/help/manual/ 의 문서들(트리 — D182)을 처음 열 때 받아 문서처럼 그린다 (지금 문서 스타일·글자 크기). 터미널 모음처럼 사이드바와
 // 문서 화면 위를 덮고, 왼쪽에 문서 트리와 지금 문서의 절, Ctrl+F 는 지금 문서 안에서 찾는다. 다른 화면으로 가면(문서 열기·프로젝트 탭·터미널) 닫힌다.
-// 단축키 표와 설명서의 '단축키' 장은 같은 SHORTCUTS 로 만든다 — 단축키를 더하면 여기에 넣는다.
-// 사용설명서 창 (D181): 머리줄('사용설명서')·장 목록을 우클릭해 '새 창에서 열기'(설명서를 보는 중의 Ctrl+Shift+N 도) — 문서의 새 창과 같은 독립창(D95)이
+// 단축키 표와 설명서의 '단축키' 문서(10.1)는 같은 SHORTCUTS 로 만든다 — 단축키를 더하면 여기에 넣는다.
+// 사용설명서 창 (D181): 머리줄('사용설명서')·문서 트리를 우클릭해 '새 창에서 열기'(설명서를 보는 중의 Ctrl+Shift+N 도) — 문서의 새 창과 같은 독립창(D95)이
 // 폴더 개요 위에 설명서를 덮고 연다 (읽던 곳에서). 그 창에서 F1·Esc·✕ 는 창을 닫는다. 예제 링크는 메인 창에 맡긴다 (예제 프로젝트는 메인 창의 탭).
 
 import { S, on, emit } from './store.js';
@@ -63,7 +63,7 @@ export const SHORTCUTS = [
     ['F7 / Shift+F7', t('다음 / 이전 바뀐 곳 — 밖에서 고쳐져 자동으로 다시 그려진 블록 (상태줄의 \'바뀐 곳 N곳\'과 같음, 현재 줄도 그리로)')],
     ['Alt+O', t('목차 보이기·숨기기 (탭 막대의 [목차])')],
     ['Alt+L', t('Markdown 문서의 줄 번호 보이기·감추기')],
-    ['Alt+H', t('장 하이라이트 켜기·끄기 — 고른 줄이 있으면 그 줄의 하이라이트, 장이 없는 문서·코드 화면에서는 Shift+Enter 와 같음')],
+    ['Alt+H', t('장 하이라이트 켜기·끄기 — 고른 줄이 있으면 그 줄의 하이라이트, 장이 없는 문서·코드 화면에서는 Ctrl+Enter 와 같음')],
     ['Ctrl+Shift+[ / Ctrl+Shift+]', t('현재 줄이 든 절 접기 / 펴기 (md 문서 — 제목 왼쪽의 화살표를 눌러도)')],
     ['Ctrl+Alt+[ / Ctrl+Alt+]', t('모두 접기 / 모두 펴기 (md 문서 — 여백 우클릭 메뉴와 같음, 현재 줄은 그 절의 제목으로)')],
     ['Alt+M', t('이 프로젝트의 메모 열기·닫기')],
@@ -372,7 +372,7 @@ const MANUAL_DIR = '/static/help/manual/';
 let loaded = null;    // 설명서를 받는 중·받은 것 (Promise) — 처음 열 때 한 번
 let docs = [];        // [{file, num, depth, parent, title, summary, text}] — 차례대로
 let cur = null;       // 지금 문서
-let heads = [];       // 지금 문서의 절 (h2 — 문서가 하나뿐이면 h3 도)
+let heads = [];       // 지금 문서의 절 (h2)
 let query = '';       // 찾기 칸 (작은 글자)
 
 export const manualOpen = () => !helpBox().hidden;
@@ -388,25 +388,19 @@ function docOf(file, title, text) {
   };
 }
 
+/** 차례(index.json)의 문서를 모두 받는다 — 영어판은 같은 폴더의 index.en.json 과 '….en.md' (D182). 없는 문서는 text null */
 async function loadDocs() {
-  if (LANG !== 'en') {   // 영어판은 아직 한 파일 (D182 — 한국어를 확정한 뒤 같은 판에 옮긴다)
-    const r = await fetch(`${MANUAL_DIR}index.json`);
-    if (r.ok) {
-      const index = await r.json();
-      return Promise.all(index.docs.map(async ({ file, title }) => {
-        const res = await fetch(MANUAL_DIR + encodeURIComponent(file)).catch(() => null);
-        return docOf(file, title, res?.ok ? await res.text() : null);
-      }));
-    }
-  }
-  const r = await fetch(LANG === 'en' ? '/static/help/manual.en.md' : '/static/help/manual.md');   // 영어판 (D46)
+  const r = await fetch(`${MANUAL_DIR}${LANG === 'en' ? 'index.en.json' : 'index.json'}`);
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  return [docOf('', t('사용설명서'), await r.text())];
+  const index = await r.json();
+  return Promise.all(index.docs.map(async ({ file, title }) => {
+    const res = await fetch(MANUAL_DIR + encodeURIComponent(file)).catch(() => null);
+    return docOf(file, title, res?.ok ? await res.text() : null);
+  }));
 }
 
 const label = (d) => (d.num ? `${d.num} ${d.title}` : d.title);
 const docAt = (file) => docs.find((d) => d.file === file) || null;
-const many = () => docs.length > 1;
 
 /** 하위 문서 표 (자리 표시 '<!-- 하위 문서 -->' 에) — 번호·제목·요약 */
 function childrenMarkdown(d) {
@@ -450,7 +444,7 @@ async function showDoc(d, { anchor = '' } = {}) {
     a.title = t('예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)');
   }
   decorateBlocks(view());
-  heads = $$(many() ? 'h2' : 'h2, h3', view());
+  heads = $$('h2', view());   // 차례에는 지금 문서의 절(h2)만
   drawToc();
   const at = anchor && findAnchor(view(), anchor);
   if (at) scrollToHead(at);

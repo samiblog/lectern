@@ -326,11 +326,12 @@ try:
         check('Shift+F1 로 예제 프로젝트의 첫 문서', 'Lectern 예제' in (page.text_content('#lec-view h1') or ''), page.text_content('#lec-view h1'))
         page.keyboard.press('F1')
         page.wait_for_selector('#lec-help:not([hidden])', timeout=5000)
-        page.wait_for_function("() => document.querySelectorAll('#lec-help-view a.sample-link').length > 10", timeout=8000)
+        page.wait_for_selector('#lec-help-toc a[data-doc]', timeout=8000)
         check('설명서에 예제 열기 버튼', page.locator('#lec-help-samples').is_visible())
-        links = page.evaluate("[...document.querySelectorAll('#lec-help-view a.sample-link')].map((a) => a.getAttribute('href'))")
-        check('설명서의 장마다 예제 링크 (저장소 기준 상대경로)', len(links) >= 12 and all(x.startswith('../../samples/') for x in links), links[:4])
-        page.locator('#lec-help-view a.sample-link[href*="08-"]').first.click()
+        # 지금 설명서에는 예제 링크가 없다 (예제를 새로 짜는 중 — D182). 저장소 기준 상대경로의 예제 링크 하나를 넣어 길만 본다
+        page.evaluate("""() => { const a = document.createElement('a'); a.href = '../../samples/guide/08-한-줄-편집.md'; a.id = 'probe-sample';
+          a.textContent = '예제'; document.querySelector('#lec-help-view').prepend(a); document.querySelector('#lec-help-scroll').scrollTop = 0; }""")
+        page.locator('#probe-sample').click()
         page.wait_for_function("() => (document.querySelector('#lec-st-path')?.textContent || '').includes('08-')", timeout=10000)
         check('예제 링크를 누르면 설명서를 닫고 그 문서로', page.locator('#lec-help').is_hidden() and path_has('guide/08-'), page.text_content('#lec-st-path'))
         page.keyboard.press('F1')

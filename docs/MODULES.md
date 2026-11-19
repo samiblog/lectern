@@ -38,7 +38,7 @@
 | charpick.js | 특수 문자 넣기 (D165) — 묶음마다 칸으로 보이고 하나를 고른다 (`pickChar` — 목록은 web/data/chars.json, 맨 위는 최근 넣은 것 `recent_chars`, 이름·초성으로 거르기, ←↑↓→·Enter·Esc). 넣는 것은 부른 쪽 (칸·편집 모드·넣기 창) |
 | html.js | 자동 이스케이프 (D89, DOM 없음) — `html` 태그의 값은 글로 들어간다. 화면에 넣는 길은 `setHtml`·`addHtml`, 이미 안전한 HTML 은 `raw`, 결과는 `Safe`. 조각은 배열로 잇는다 |
 | i18n.js | 화면 언어 (D46) — `t('한국어 문구', {값})` 와 index.html 글자 바꾸기(`translatePage`). 언어는 서버가 `<html lang>` 으로 준다 |
-| help.js | 사용설명서(F1 — web/help/manual.md 를 사이드바·문서 위를 덮는 읽기 화면으로, 왼쪽 차례, Ctrl+F 는 설명서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |
+| help.js | 사용설명서(F1 — web/help/manual/ 의 문서 트리(D182)를 사이드바·문서 위를 덮는 읽기 화면이나 사용설명서 창으로, 왼쪽 문서 트리·찾기 칸, Ctrl+F 는 지금 문서 안)와 단축키 표(툴바 '?', Ctrl+/). 단축키 목록 `SHORTCUTS` |
 | watch.js | 1초 폴링으로 변경 반영 (모든 탭을 한 번에, 숨은 탭은 고를 때 다시 그림) |
 | toc.js / find.js / palette.js | 목차(제목 아래에 표·그림 등 구성 요소, 종류 버튼) / 문서 안 찾기 / Ctrl+P (문서·코드 — 문서 탭 줄의 + 로 열면 새 탭에서, 맨 위에 '새 문서 만들기…', ':' 줄로 가기, '>' 명령 찾기 — D170) |
 | commands.js | 명령 찾기(Ctrl+Shift+P — D170)의 목록: 이름·묶음·단축키·할 일. 여러 모듈의 동작을 모으므로 main.js 만 부르고 `palette.setCommands` 로 넘긴다 |

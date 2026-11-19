@@ -145,7 +145,7 @@ export function applyAiNames() {
   const tip = (id, value) => $(id)?.setAttribute('title', value);
   text('#lec-aiguide-title', t('{cli} 에 Lectern 알려 주기', { cli }));
   text('#lec-aiguide-desc', t('Lectern 에서 잘 보이는 문서를 쓰는 규칙을 적은 작성 안내가 있습니다. 요청 글을 {cli} 에 붙이면 안내를 읽고 고른 곳에 규칙을 정리합니다 — 모든 폴더면 개인 폴더에, 한 폴더면 그 폴더의 {file} 에 그 폴더의 읽는 사람·목적을', { cli, file: ruleFile() }));
-  text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서 'Lectern 슬라이드' 장의 'Claude 에게 시키기'와 예제 가이드 13 에 있습니다", { cli }));
+  text('#lec-skills-desc', t("pptx 와 Lectern 슬라이드를 오가는 스킬 둘과 md 문서를 Word 로 만드는 스킬 하나가 들어 있습니다 (Claude Code·Codex·Antigravity·OpenCode 가 함께 쓰는 SKILL.md 형식). 요청 글을 {cli} 에 붙이면 설치할지 먼저 묻습니다. 쓰는 말은 사용설명서의 '스킬' 문서와 예제 가이드 13 에 있습니다", { cli }));
   text('#lec-wstyle-desc', claude
     ? t("Claude Code 가 개발자가 아니라 그 글을 쓰는 실무자처럼 쓰게 하는 출력 스타일이 넷 들어 있습니다 — 리서치 글쓰기·업무 보고·학술 글·쉬운 설명. 모두 개발자·AI 글버릇을 빼고 다 쓴 뒤 다시 읽어 고칩니다. '스타일 고르기…'에서 견본을 보고 고르고, 고른 스타일의 파일을 개인 폴더에 두고 켜는 곳을 고릅니다. 요청 글을 Claude Code 에 붙이면 지금 상태를 알리고 물은 뒤 설치하고 켭니다")
     : t("개발자가 아니라 그 글을 쓰는 실무자처럼 쓰게 하는 글쓰기 규칙이 넷 들어 있습니다 — 리서치 글쓰기·업무 보고·학술 글·쉬운 설명. '스타일 고르기…'에서 견본을 보고 고르고, 요청 글을 {cli} 에 붙이면 고른 곳(개인 지시 파일이나 그 폴더의 AGENTS.md)에 넣을지 먼저 묻습니다 (Claude Code 는 출력 스타일로 설치합니다)", { cli }));

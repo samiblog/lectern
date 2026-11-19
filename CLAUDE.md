@@ -79,7 +79,7 @@ web/
   themes/               문서 본문 스타일: base.css + 스타일마다 <id>.css (목록은 theme.js 의 THEMES). print.css 는 인쇄·PDF 의 보고서 양식 (D131 — 화면 스타일과 상관없이)
   templates/            기본 템플릿 묶음 (ko·en — D101), WORK.md 의 기본 틀 (work*.md — D124)
   layouts/              지면 틀 18가지 (D145 — html 하나가 틀 하나, _base.css 는 모든 틀의 바탕)
-  help/manual.md        사용설명서 (F1 — help.js 가 그린다). 영어판은 manual.en.md
+  help/manual/          사용설명서 (F1 — help.js 가 그린다, D182). 문서 50개의 트리 — 차례는 index.json(영어판 index.en.json 과 ….en.md), 이름 앞 번호가 트리의 자리. 문서마다 '# 제목'·'> 요약' 한 줄·표 중심·갈림길만 흐름도
   help/styles.md        내 스타일을 만드는 AI 용 설명서 (D53 — 설정 창의 요청 글이 이 파일의 경로를 준다). 영어판은 styles.en.md
   help/slides.md        Lectern 슬라이드를 쓰는 AI 용 작성 안내 (D96 — 문법·배치·분량 기준. 영어판은 slides.en.md)
   help/writing.md       Lectern 에서 잘 보이는 문서를 쓰는 AI 용 작성 안내 (D57 — 설정 창 'Claude Code 에 Lectern 알려 주기'의 요청 글이 경로를 준다. 이름과 지시 파일(CLAUDE.md·AGENTS.md)은 설정 '쓰는 AI 도구'를 따른다 — D138, `aitool.js`). 영어판은 writing.en.md
@@ -136,7 +136,7 @@ JS 모듈이 하는 일은 `docs/MODULES.md` 의 표에 있다.
 고칠 문서는 이것뿐이다. 그 밖의 문서는 그 내용이 틀려졌을 때만 고친다.
 
 - 설계 판단이 있으면 `docs/DECISIONS.md` 에 한 항목.
-- 사용자가 보는 것이 바뀌면 `web/help/manual.md`·`manual.en.md`. 새 문구는 `web/js/lang/en.js` (시험이 잡는다).
+- 사용자가 보는 것이 바뀌면 `web/help/manual/` 의 그 문서와 영어판(`….en.md`). 새 문구는 `web/js/lang/en.js` (시험이 잡는다).
 - API 가 바뀌면 `docs/ARCHITECTURE.md` 의 API 표. 새 JS 모듈이면 `docs/MODULES.md` 의 한 행 (시험이 잡는다).
 - 판을 낼 때만: `lectern/__init__.py` 의 버전, 이 파일의 현재 버전, `docs/HISTORY.md` 맨 위에 한 줄.
 - 새 기능은 `docs/VISION.md` 의 어느 단계·구간을 돕는지 DECISIONS 항목에 적는다.

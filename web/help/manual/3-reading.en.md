@@ -1,0 +1,111 @@
+# Reading
+
+> Pick a document in the folder overview, then read the body as you pick lines, find, fold, mark and collect.
+
+| What you want to do | Document in this chapter |
+|---|---|
+| Moving the reading position, picking lines and copying | [Current line and picking](3.1-current-line-and-picking.en.md) |
+| Finding in a document · across the project · changes | [Find and search](3.2-find-and-search.en.md) |
+| Folding sections and seeing one section clearly | [Folding and focus](3.3-folding-and-focus.en.md) |
+| Opening links · paths · files | [Links and opening files](3.4-links-and-opening-files.en.md) |
+| Marking places to come back to · notes · collecting pieces | [Highlights, notes and clip](3.5-highlights-notes-clip.en.md) |
+| Viewing code · CSV · Excel, tables as charts | [Code and data files](3.6-code-and-data-files.en.md) |
+| The project's tables · images · to-dos · links in one place | [Elements](3.7-elements.en.md) |
+
+## Folder overview
+
+This is the first screen when you open a folder.
+
+| What | How |
+|---|---|
+| What it shows | Recently changed documents · subfolders · each document's title · summary · modified time |
+| That folder's overview | Click the folder name in the sidebar tree (or **Enter** on a folder in the 'Documents' list) |
+| The project's overview | Click the project tab that is already selected once more |
+| Elements of just that folder | **Elements** in the overview — [Elements](3.7-elements.en.md) |
+| Filtering the tree | **Ctrl+F** in the overview |
+| Work board | At the top of the common folder's overview — [Work management](8-work-management.en.md) |
+
+## What the body shows
+
+| Element | Source | On screen |
+|---|---|---|
+| Table | Markdown table | Number columns on the right, the header row stays at the top as you scroll — see 'Tables' below |
+| Code block | Code block with a language name | Language colors · **Copy** at the top right |
+| Callout | A callout such as `> [!NOTE]` | In the kind's color, without a title line |
+| Box | `<!-- box -->` ~ `<!-- /box -->` | A box with a border and a title band — see 'Boxes' below |
+| Math | `$…$` · `$$…$$` · math · latex code blocks | As math. Dollar amounts such as `$105` stay as they are |
+| Diagram | mermaid code block | As a picture |
+| Chart | `vega-lite` · `echarts` · `plotly` · `dot` code block | As a picture — see 'Charts' below |
+| Footnotes · checklists | `[^1]` · `- [ ]` | Footnotes · checkboxes |
+| Image | `![description](path)` | Click to enlarge |
+| File path | `src/app.py:42` | A link if the file really exists — [Links and opening files](3.4-links-and-opening-files.en.md) |
+| Line breaks inside a paragraph | Enter in the source · two spaces at the end of a line · `<br>` | The line breaks on screen too (like Shift+Enter in Word — outline-style writing shows as written) |
+
+To join the lines as standard Markdown does, turn off **Show line breaks inside paragraphs** in the 'View' part of Settings.
+
+## Tables
+
+| What you want to do | How | Result |
+|---|---|---|
+| Copying a table | Hover and click **Copy** at the top right · right-click **Copy table** | Splits into cells in Excel, pastes as a table in Word and mail |
+| Choosing cell alignment | **Table cell alignment** in the 'View' part of Settings | **Default**: text left · numbers right · top of the cell. **Report style**: the header row and short columns (every cell ten characters or fewer — categories · statuses · ○×) centered, numbers right, long text left, vertically centered in the cell |
+| Setting one column differently | Right-click a cell: **Align column left** · **Align column center** · **Align column right** | Writes `:---` · `:---:` · `---:` in the source's separator row — this comes before the setting |
+| Clearing a column's alignment mark | Right-click in that column: **Clear this column's alignment mark** | Follows the setting again |
+| Viewing as a chart | Right-click **View as chart** | [Viewing a table as a chart](3.6-code-and-data-files.en.md#viewing-a-table-as-a-chart) |
+
+The alignment setting changes only the look; the file stays the same. It carries over to printing, PDF and Save as html too.
+
+## Boxes
+
+A box is a text box read apart from the main text. In a report, use it for a side topic that the main flow touches only lightly.
+
+| What you want to do | Source · how | Result |
+|---|---|---|
+| Making a box | Text · tables · images between a `<!-- box -->` line and a `<!-- /box -->` line | A box with a border and a title band. Other viewers don't show the two lines, so it reads as ordinary text there |
+| Adding a title | Write the first line as a single line | In the title band |
+| Numbering | `Box 1. Title` | Numbered like tables and images — refer to it with `[Box 1](#box-1)` |
+| Folding and unfolding | The arrow at the right of the title band | A folded box still prints in full |
+| If you leave out the closing line | — | It ends before the next heading |
+| What doesn't go inside | Headings (`#`) · other boxes | — |
+
+The `> [!NOTE]` kind that used to be called a box is now a callout.
+
+## Charts
+
+| Code block language | What |
+|---|---|
+| `vega-lite` | Data charts |
+| `echarts` | Many kinds of chart, such as donuts and candlesticks |
+| `plotly` | Analysis charts such as box plots and sunbursts — the output of Python's `fig.to_json()` too |
+| `dot` · `graphviz` | Structure and dependency graphs |
+
+Colors follow the document style. Settings are JSON and functions can't be used. Write the data in the document or point to a CSV or JSON file in the project with a relative path (internet addresses are not read). There is no movement such as showing values on hover, and Plotly map charts are not drawn because they need map data from the internet.
+
+## Chart data
+
+| What you want to do | How | Result |
+|---|---|---|
+| Enlarging | Click the chart | Larger |
+| Copying as an image | Right-click **Copy image** | PNG |
+| Seeing the data drawn | Hover and click **Table** (click again to close) | A table below the chart. Over 30 rows, the first, the last and evenly spaced rows, 30 in all — **Show all** opens up to 5,000 rows |
+| Copying the data | Hover and click **Copy** | All the data — Excel (split into cells) · Word (a table) |
+| Bringing CSV data into the document | **Put data into the document** | Reads the CSV and writes the values into the chart's source — the document alone then shows the chart and table on other PCs (**Ctrl+Z** undoes it) |
+
+The table is read from the chart's source — if the chart filters or combines the values as it draws (transform, aggregate), the table shows the values before that. A chart whose data is in a CSV file names the file instead of showing a table. Charts in Lectern slides and Graphviz have no buttons, and the buttons and tables don't appear in print or PDF.
+
+## HTML documents
+
+HTML reports made by AI tools (Claude Code and others) are viewed as documents too.
+
+| Situation | Behavior |
+|---|---|
+| Tree | Shown with an `HTML` mark |
+| The document's style | Shown as it is |
+| Scripts · internet CSS | Blocked — charts drawn by scripts don't appear |
+| html in app source folders (`src` · `public` · `web` and so on) | Not treated as documents |
+| Editing | Only in the full editor — [Choosing how to edit](4.1-choosing-how-to-edit.en.md) |
+| Clip | Not available — there are no source lines |
+
+## Documents in this chapter
+
+<!-- 하위 문서 -->

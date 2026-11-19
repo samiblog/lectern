@@ -213,7 +213,7 @@ try:
         win.keyboard.press('Escape')
         win.keyboard.press('F1')
         win.wait_for_selector('#lec-help-view h1, #lec-help-view h2', timeout=4000)
-        check('사용설명서에 독립창', '독립창' in win.text_content('#lec-help-view'))
+        check('사용설명서에 따로 창 문서', '따로 창' in win.text_content('#lec-help-toc'))
         win.keyboard.press('Escape')
         win.close()
 

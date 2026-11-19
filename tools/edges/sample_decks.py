@@ -55,7 +55,7 @@ def run():
             check(f'{doc.name} 가 {deck.stem} 을 잇는다', f'{deck.stem}.md' in text and f'{deck.stem}-과정.md' in text)
     for name in ('README.md', 'README.en.md'):
         check(f'예제 프로젝트의 {name} 가 목록을 잇는다', 'slides/README' in (proj / name).read_text(encoding='utf-8'))
-    for doc in ('web/help/manual.md', 'web/help/manual.en.md', 'web/help/slides.md', 'web/help/slides.en.md'):
+    for doc in ('web/help/slides.md', 'web/help/slides.en.md'):   # 사용설명서는 예제로 링크하지 않는다 (D182 — 예제를 새로 짜는 중)
         check(f'{doc} 가 예제를 말한다', 'slides/README.md' in (ROOT / doc).read_text(encoding='utf-8'))
     with sync_playwright() as p:
         b = p.chromium.launch()

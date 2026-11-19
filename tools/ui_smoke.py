@@ -3848,23 +3848,31 @@ def run(headed: bool) -> None:
                   f"툴바 '?' 버튼·Ctrl+/ 로 단축키 표, Esc·Ctrl+/ 로 닫힘 ({len(groups)}묶음, {len(caps)}줄)")
             page.click('#lec-btn-help')
             page.click('#lec-keys-manual')
-            page.wait_for_selector('#lec-help-toc a')
-            info = page.evaluate('''() => ({ toc: [...document.querySelectorAll('#lec-help-toc a')].map(a => a.textContent),
-              keys: !document.querySelector('#lec-keys').hidden, kbd: document.querySelectorAll('#lec-help-view table kbd').length,
-              alert: !!document.querySelector('#lec-help-view .alert'), ver: document.querySelector('#lec-help-ver').textContent,
+            page.wait_for_selector('#lec-help-toc li.doc a')
+            info = page.evaluate('''() => ({ toc: [...document.querySelectorAll('#lec-help-toc li.doc a')].map(a => a.textContent),
+              todo: document.querySelectorAll('#lec-help-toc li.doc.todo').length,
+              keys: !document.querySelector('#lec-keys').hidden, path: !!document.querySelector('#lec-help-view .help-path'),
+              ver: document.querySelector('#lec-help-ver').textContent,
               focus: document.activeElement.id, covers: (() => { const h = document.querySelector('#lec-help').getBoundingClientRect(),
                 s = document.querySelector('#lec-sidebar').getBoundingClientRect(); return h.left <= s.left && h.width > s.width * 2; })() })''')
             shot('07c-manual')
-            check(manual.is_visible() and not info['keys'] and len(info['toc']) >= 20 and {'단축키', '터미널', '코드 읽기'} <= set(info['toc'])
-                  and info['kbd'] >= 40 and info['alert'] and info['ver'] and info['focus'] == 'lec-help-scroll' and info['covers'],
-                  f"단축키 표의 '사용설명서 열기' → 사이드바·문서 위를 덮는 설명서, 차례·강조글·단축키 장 ({len(info['toc'])}개, kbd {info['kbd']})")
-            page.locator('#lec-help-toc a', has_text='터미널 모음').click()
-            jumped = wait_until(page, '''(() => { const h = [...document.querySelectorAll('#lec-help-view h3')].find(h => h.textContent === '터미널 모음');
+            check(manual.is_visible() and not info['keys'] and len(info['toc']) >= 40 and not info['todo']
+                  and {'10.1 단축키', '7.1 터미널', '3.6 코드와 자료 보기'} <= set(info['toc'])
+                  and info['ver'] and info['focus'] == 'lec-help-scroll' and info['covers'],
+                  f"단축키 표의 '사용설명서 열기' → 사이드바·문서 위를 덮는 설명서, 문서 트리 ({len(info['toc'])}문서, 쓰는 중 {info['todo']})")
+            page.locator('#lec-help-toc li.doc a', has_text='10.1 단축키').click()
+            kbd = wait_until(page, "document.querySelectorAll('#lec-help-view table kbd').length >= 40")
+            here = page.evaluate("[document.querySelector('#lec-help-view .help-path .here')?.textContent, document.querySelector('#lec-help-toc li.doc.current a')?.textContent]")
+            check(kbd and here == ['10.1 단축키', '10.1 단축키'], f'설명서 트리에서 문서를 누르면 그 문서, 경로와 트리에 표시, 단축키 문서에 단축키 표 ({here})')
+            page.locator('#lec-help-toc li.doc a', has_text='7.1 터미널').click()
+            page.wait_for_selector('#lec-help-toc li.sec a', state='attached')
+            page.locator('#lec-help-toc li.sec a', has_text='터미널 모음').click()
+            jumped = wait_until(page, '''(() => { const h = [...document.querySelectorAll('#lec-help-view h2')].find(h => h.textContent === '터미널 모음');
               const t = h.getBoundingClientRect().top - document.querySelector('#lec-help-scroll').getBoundingClientRect().top; return t >= 0 && t < 40; })()''')
-            active = wait_until(page, "document.querySelector('#lec-help-toc a.active')?.textContent === '터미널 모음'")
-            check(jumped and active, '설명서 차례를 누르면 그 장으로, 읽는 곳이 차례에 표시됨')
+            active = wait_until(page, "document.querySelector('#lec-help-toc li.sec a.active')?.textContent === '터미널 모음'")
+            check(jumped and active, '설명서 트리의 절을 누르면 그 절로, 읽는 곳이 트리에 표시됨')
             page.keyboard.press('Control+f')
-            page.keyboard.type('위치 복사')
+            page.keyboard.type('터미널 모음')   # 지금 문서(7.1 터미널) 안에서
             found = wait_until(page, "/^1\\/\\d+$/.test(document.querySelector('#lec-find-count').textContent)")
             where = page.evaluate("document.querySelector('#lec-findbar').parentElement.id")
             page.keyboard.press('Escape')   # 찾기를 닫고
@@ -4080,10 +4088,14 @@ def run_english(headed: bool) -> None:
             scan('단축키 표')
             page.keyboard.press('Escape')
             page.keyboard.press('F1')
-            page.wait_for_selector('#lec-help-toc a')
+            page.wait_for_selector('#lec-help-toc li.doc a')
+            wait_until(page, "!!document.querySelector('#lec-help-view h1')")
+            scan('사용설명서')
+            page.locator('#lec-help-toc li.doc a[data-doc^="10.1-"]').click()   # 영어판 문서 트리 (D182) — 단축키 문서
+            wait_until(page, "document.querySelectorAll('#lec-help-view table kbd').length >= 40")
             guide = page.evaluate("[document.querySelector('#lec-help-view h1').textContent, document.querySelectorAll('#lec-help-view table kbd').length]")
             shot('en-04-guide')
-            scan('사용설명서')
+            scan('사용설명서 — 단축키')
             page.keyboard.press('Escape')
             page.click('#lec-btn-gather')
             page.wait_for_selector('#lec-gather .g-tile')
@@ -4100,7 +4112,7 @@ def run_english(headed: bool) -> None:
             leftover = {k: v for k, v in found.items() if v}
             check(not leftover, '영어 화면에 남은 한글 없음 — 개요·문서·우클릭·찾기·빠른 열기·검색·모아 보기·코드·설정·단축키·설명서·터미널 모음'
                   + (f': {leftover}' if leftover else ''))
-            check(lang_radio == 'en' and guide[0] == 'Lectern User Guide' and guide[1] >= 40
+            check(lang_radio == 'en' and guide[0] == 'Shortcuts' and guide[1] >= 40
                   and code[0] == 'Open in external editor' and code[1].startswith('Python · 6 lines'),
                   f'설정 창에 English 가 골라져 있고, 영어 사용설명서(단축키 표 포함)·코드 화면 ({lang_radio}, {guide}, {code})')
             check(all(x <= 0 for v in widths.values() for x in v), f'영어 글자로도 툴바·탭 막대·사이드바 탭이 넘치지 않음 (720·1060px: {widths})')

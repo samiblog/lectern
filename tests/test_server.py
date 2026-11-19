@@ -156,12 +156,18 @@ def test_fixed_types_win_over_windows_registry(state, pid, monkeypatch):
 
 
 def test_manual_is_served(state):
-    # 사용설명서(F1, D45)는 앱 UI 처럼 /static 에서 — 창 모드에서도 토큰 없이 (help.js 의 fetch 는 X-Token 을 붙이지 않는다)
+    # 사용설명서(F1, D45)는 앱 UI 처럼 /static 에서 — 창 모드에서도 토큰 없이 (help.js 의 fetch 는 X-Token 을 붙이지 않는다).
+    # 문서 트리(D182): 차례 index.json 과 한글 이름의 문서들
     state.token = 'secret'
-    r = create_app(state).test_client().get('/static/help/manual.md')
+    c = create_app(state).test_client()
+    r = c.get('/static/help/manual/index.json')
+    assert r.status_code == 200
+    keys = next(d['file'] for d in r.get_json()['docs'] if d['file'].startswith('10.1-'))
+    r = c.get('/static/help/manual/' + quote(keys))
     text = r.get_data(as_text=True)
-    assert r.status_code == 200 and text.startswith('# Lectern 사용설명서')
+    assert r.status_code == 200 and text.startswith('# 단축키')
     assert '<!-- 단축키 표 -->' in text   # help.js 가 이 자리에 단축키 표(SHORTCUTS)를 넣는다
+    assert c.get('/static/help/manual/index.en.json').status_code == 200
 
 
 def test_token_required_when_set(state, pid):

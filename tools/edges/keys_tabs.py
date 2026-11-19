@@ -96,13 +96,14 @@ try:
         page.keyboard.press('Control+/')
         expect(page, '찾기 칸에서 Ctrl+/ — 닫힘', lambda: page.locator('#lec-keys').is_hidden())
 
-        print('[사용설명서의 단축키 장]')
+        print('[사용설명서의 단축키 문서]')
         page.keyboard.press('F1')
-        page.wait_for_selector('#lec-help:not([hidden])')
+        page.wait_for_selector('#lec-help:not([hidden]) #lec-help-toc a[data-doc]')
+        page.click('#lec-help-toc li.doc a[data-doc^="10.1-"]')   # 설명서는 문서 트리 (D182) — 단축키는 10.1
         page.wait_for_function("() => document.querySelectorAll('#lec-help-view h3').length > 10", timeout=15000)
         h3 = page.evaluate("[...document.querySelectorAll('#lec-help-view h3')].map((h) => h.textContent)")
         at = next((i for i, h in enumerate(h3) if h.startswith('자주 쓰는 것')), -1)
-        check('설명서의 단축키 장은 자주 쓰는 것부터, 그다음 모든 묶음', at >= 0 and h3[at + 1].startswith('자주 쓰는 것') and h3[at + 2] == '열기·찾기', h3[max(0, at):at + 4])
+        check('설명서의 단축키 문서는 자주 쓰는 것부터, 그다음 모든 묶음', at >= 0 and h3[at + 1].startswith('자주 쓰는 것') and h3[at + 2] == '열기·찾기', h3[max(0, at):at + 4])
         page.keyboard.press('F1')
 
         print('[영어 화면]')

@@ -90,9 +90,11 @@ try:
             page.keyboard.press('F1')
         help_win = info.value
         help_win.wait_for_selector('#lec-help-toc a', timeout=20000)
-        link = help_win.locator('#lec-help-view a.sample-link').nth(1)
+        # 지금 설명서에는 예제 링크가 없다 (예제를 새로 짜는 중 — D182). 예제로 가는 링크 하나를 넣어 길만 본다
+        help_win.evaluate("""() => { const a = document.createElement('a'); a.href = '../../samples/guide/08-한-줄-편집.md'; a.id = 'probe-sample';
+          a.textContent = '예제'; document.querySelector('#lec-help-view').prepend(a); document.querySelector('#lec-help-scroll').scrollTop = 0; }""")
+        link = help_win.locator('#probe-sample')
         href = link.get_attribute('href') or ''
-        link.scroll_into_view_if_needed()
         with ctx.expect_page(timeout=20000) as info:
             link.click()
         guide2 = info.value
