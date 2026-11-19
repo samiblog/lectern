@@ -16,7 +16,7 @@ import { followLine, revealAt } from './spotlight.js';
 import { flashBlock } from './diffmark.js';
 import { blockOfLine } from './lineunits.js';
 import { fileIcon, isCode } from './icons.js';
-import { labelOf } from './tree.js';
+import { labelOf, telling, tellHtml } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { html, setHtml } from './html.js';
 import { $, debounce, dirname, basename, isHtml, keepFocus, middleClickOpens, openHow, repeatClick, toast, clickFromKey } from './util.js';
@@ -105,13 +105,16 @@ function render(d, names = null) {
     if (docs) markup.push(html`<p class="sr-group">${t('문서 본문')}</p>`);
   }
   let codeHead = false;
+  // 문서 머리는 사이드바의 '제목' 설정대로 — 파일 이름이나 제목, 같은 제목이면 파일 이름을 흐리게 (D179)
+  const asFile = (r) => ({ name: basename(r.path), title: r.title || '', path: r.path });
+  const tell = telling(d.results.filter((r) => r.kind !== 'code').map(asFile), { folders: true });
   for (const r of d.results) {
     const isCode = r.kind === 'code';
     if (isCode && !codeHead && (docs || names?.files.length)) markup.push(html`<p class="sr-group">${t('코드')}</p>`);   // 문서 결과 아래에 '코드' 묶음
     codeHead ||= isCode;
-    const name = r.title || basename(r.path);
+    const name = isCode ? basename(r.path) : labelOf(asFile(r));
     const kind = isCode ? html` data-kind="code"` : '';
-    markup.push([html`<div class="sr-doc" data-doc="${r.path}"${kind} title="${r.path}">${isCode ? fileIcon(name) : ''}`, html`<span class="label">${highlight(name, d.query)}</span>${dirname(r.path) ? html`<span class="sub">${dirname(r.path)}</span>` : ''}</div>`]);
+    markup.push([html`<div class="sr-doc" data-doc="${r.path}"${kind} title="${r.path}">${isCode ? fileIcon(name) : ''}`, html`<span class="label">${highlight(name, d.query)}${isCode ? '' : tellHtml(tell(asFile(r)))}</span>${dirname(r.path) ? html`<span class="sub">${dirname(r.path)}</span>` : ''}</div>`]);
     markup.push(r.hits.map((h) => [html`<div class="sr-hit" data-doc="${r.path}"${kind} data-line="${h.line}" tabindex="0">`, html`<span class="ln">${h.line}</span><span class="tx">${highlight(h.text, d.query)}</span></div>`]));
     if (r.more) markup.push(html`<div class="sr-more">${isCode ? t('이 파일에 더 있습니다') : t('이 문서에 더 있습니다')}</div>`);
   }

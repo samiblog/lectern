@@ -32,6 +32,31 @@ let panel = 'files';   // 사이드바 탭: files | recent | search | parts
 // 폴더 보기(others.js)의 문서 행도 같은 글을 쓴다
 const showTitles = () => S.config.show_titles === true;
 export const labelOf = (f) => (showTitles() ? (f.title || f.name) : f.name);
+/**
+ * 같은 글 가르기 (D179): 한 목록에서 labelOf 가 같은 문서가 둘 이상이면 흐리게 덧붙일 말 — 같은 파일 이름이면 폴더, 같은 제목이면 파일 이름
+ * (파일 이름까지 같으면 경로). folders: 그 목록이 폴더를 이미 보이면(트리의 형제·옆에 폴더를 적는 목록) true — 그때는 폴더를 덧붙이지 않는다.
+ * 문서가 아닌 것(코드·자료 — title 이 없다)도 넣어도 된다. @returns {(f: {name: string, path: string, title?: string}) => string}
+ */
+export function telling(files, { folders = false } = {}) {
+  const count = new Map();
+  const add = (k) => count.set(k, (count.get(k) || 0) + 1);
+  for (const f of files) {
+    const label = labelOf(f).toLowerCase();
+    add(label);
+    add(`${label}\n${f.name.toLowerCase()}`);
+  }
+  return (f) => {
+    const label = labelOf(f);
+    if ((count.get(label.toLowerCase()) || 0) < 2) return '';
+    if (showTitles() && f.title && label === f.title) {   // 같은 제목 — 파일 이름으로, 그것도 같으면 경로로 (폴더를 보이는 목록이면 폴더가 가른다)
+      if ((count.get(`${label.toLowerCase()}\n${f.name.toLowerCase()}`) || 0) > 1) return folders ? '' : f.path;
+      return f.name;
+    }
+    return folders ? '' : (f.path.includes('/') ? f.path.slice(0, f.path.lastIndexOf('/')) : t('프로젝트 맨 위'));
+  };
+}
+/** 가르는 말을 붙인 글 조각 — 목록의 .label 안에 (흐리게) */
+export const tellHtml = (extra) => (extra ? html`<span class="tell">${extra}</span>` : '');
 /** 마우스를 올리면 보일 글: 목록에 보이지 않는 쪽을 앞에 (파일 이름을 보이면 문서 제목), 그다음 경로 */
 export const tipOf = (f) => {
   if (!f.title) return f.path;
@@ -55,18 +80,19 @@ export function hasChangedInside(dirPath) {
 /** html 문서 표시 (md 와 구분) — 폴더 개요에서. 사이드바 목록은 아이콘으로 구분한다 (icons.js) */
 export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" title="${t('HTML 문서')}">HTML</span>` : '');
 
-function fileRow(f, depth, extra = null) {
+function fileRow(f, depth, extra = null, tell = '') {
   const cls = ['row', 'file'];
   if (f.path === activeDoc()) cls.push('active');
-  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="-1">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
+  return [html`<div class="${cls.join(' ')}" data-doc="${f.path}" style="--d:${depth}" title="${tipOf(f)}" tabindex="-1">`, html`<span class="caret-space"></span>${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}${tellHtml(tell)}</span>${extra}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
 }
 
 /** opts: {allOpen — 폴더를 모두 펼쳐 보임(S.open 은 그대로), after(f, depth) — 문서 행 아래에 붙일 줄} */
 function nodesHtml(nodes, depth, opts = null) {
   const markup = [];
+  const tell = telling(nodes.filter((n) => n.type === 'file'), { folders: true });   // 같은 폴더의 같은 제목 (D179)
   for (const n of sideOrder(nodes)) {
     if (n.type === 'file') {
-      markup.push(fileRow(n, depth));
+      markup.push(fileRow(n, depth, null, tell(n)));
       if (opts?.after) markup.push(opts.after(n, depth + 1));
       continue;
     }
@@ -164,14 +190,16 @@ function contentHtml(kind, got, terms) {
   const itemsOf = (f) => got.get(f.path)?.[kind] ?? [];
   const empty = kind === 'marks' ? t('칠한 곳이 없습니다 — 글을 고르고 M 을 누르면 형광펜') : t('열린 할 일이 없습니다');
   if (terms) {
-    const rows = [];
+    const found = [];
     for (const f of S.files) {
       const items = itemsOf(f);
       if (!items.length) continue;
       const named = terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w));
       const hits = named ? items : items.filter((it) => terms.every((w) => it.text.toLowerCase().includes(w)));
-      if (hits.length) rows.push(fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''), itemRows(kind, f, hits, 1));
+      if (hits.length) found.push([f, hits]);
     }
+    const tell = telling(found.map(([f]) => f), { folders: true });   // 옆에 폴더를 적는다 — 같은 제목에만 파일 이름 (D179)
+    const rows = found.map(([f, hits]) => [fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : '', tell(f)), itemRows(kind, f, hits, 1)]);
     return rows.length ? rows : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`;
   }
   const nodes = pickDocs(S.tree, (f) => itemsOf(f).length > 0);
@@ -200,8 +228,10 @@ function renderTree() {
       const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
       return terms.every((w) => hay.includes(w));
     });
-    setHtml(box, hits.length
-      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''))
+    const shown = hits.slice(0, MAX_FILTER_RESULTS);
+    const tell = telling(shown, { folders: true });
+    setHtml(box, shown.length
+      ? shown.map((f) => fileRow(f, 0, dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : '', tell(f)))
       : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`);
   } else {
     // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)

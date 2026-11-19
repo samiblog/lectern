@@ -5,7 +5,7 @@
 
 import { S, on } from './store.js';
 import { getJSON, saveConfig } from './api.js';
-import { labelOf, tipOf } from './tree.js';
+import { labelOf, tipOf, telling, tellHtml } from './tree.js';
 import { bindFileRows, fileTip } from './others.js';
 import { fileIcon } from './icons.js';
 import { html, setHtml } from './html.js';
@@ -45,10 +45,11 @@ function render() {
   if (!KINDS.some(([, key]) => want(key))) markup = html`<p class="side-empty">${t('보일 것(문서·코드·자료)을 고르세요')}</p>`;
   else if (!top.length) markup = r?.loading ? '' : html`<p class="side-empty">${t('고친 파일이 없습니다')}</p>`;
   else {
+    const tell = telling(top.filter((f) => f.kind), { folders: true });   // 옆에 폴더를 적는다 — 같은 제목에만 파일 이름 (D179)
     markup = top.map((f) => {
       const doc = !!f.kind;
       const cls = `row recent${f.path === current() ? ' active' : ''}`;
-      return [html`<div class="${cls}" data-file="${f.path}" title="${doc ? tipOf(f) : fileTip(f)}" tabindex="0">`, html`<span class="when">${timeAgo(f.mtime)}</span><span class="label">${fileIcon(f.name, f.kind, f.deck)}${doc ? labelOf(f) : f.name}</span>`, html`${doc && S.changed.has(f.path) ? html`<span class="dot"></span>` : ''}`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+      return [html`<div class="${cls}" data-file="${f.path}" title="${doc ? tipOf(f) : fileTip(f)}" tabindex="0">`, html`<span class="when">${timeAgo(f.mtime)}</span><span class="label">${fileIcon(f.name, f.kind, f.deck)}${doc ? labelOf(f) : f.name}${doc ? tellHtml(tell(f)) : ''}</span>`, html`${doc && S.changed.has(f.path) ? html`<span class="dot"></span>` : ''}`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
     });
   }
   if (r?.error && filesKey()) markup = [markup, html`<p class="side-empty">${t('코드·자료를 읽지 못했습니다 ({error}). F5 를 누르면 다시 읽습니다.', { error: r.error })}</p>`];

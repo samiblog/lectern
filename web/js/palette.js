@@ -6,6 +6,7 @@
 
 import { S, emit } from './store.js';
 import { loadOthers } from './others.js';
+import { labelOf } from './tree.js';
 import { fileIcon } from './icons.js';
 import { html, setHtml } from './html.js';
 import { $, timeAgo, middleClickOpens, openHow } from './util.js';
@@ -113,7 +114,7 @@ function renderList(none = '') {
     return;
   }
   setHtml(ul, items.map((f, i) => html`<li role="option" data-i="${i}" class="${i === selected ? 'sel' : ''}${f.code ? ' code' : ''}${f.newDoc ? ' new-doc' : ''}" aria-selected="${i === selected}">
-      <span class="t">${f.newDoc ? html`<svg class="ficon doc" aria-hidden="true"><use href="#i-plus"/></svg>` : fileIcon(f.name, f.code ? undefined : f.kind)}${f.title || f.name}</span><span class="when">${f.newDoc ? '' : timeAgo(f.mtime)}</span>
+      <span class="t">${f.newDoc ? html`<svg class="ficon doc" aria-hidden="true"><use href="#i-plus"/></svg>` : fileIcon(f.name, f.code ? undefined : f.kind)}${f.newDoc ? f.title : f.code ? f.name : labelOf(f)}</span><span class="when">${f.newDoc ? '' : timeAgo(f.mtime)}</span>
       <span class="p">${f.path}</span></li>`));
   ul.querySelector('.sel')?.scrollIntoView({ block: 'nearest' });
 }

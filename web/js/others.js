@@ -25,7 +25,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
+import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -159,10 +159,10 @@ function rowAttrs(o, v, path, depth, extra = '') {
 
 const subHtml = (sub) => (sub ? html`<span class="sub">${sub}</span>` : '');
 
-function fileRow(o, v, f, depth, sub = '') {
-  if (f.doc) {   // '폴더' 묶음의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조
+function fileRow(o, v, f, depth, sub = '', tell = '') {
+  if (f.doc) {   // '폴더' 묶음의 문서: 문서 트리와 같은 글·바뀜 점, 지금 보는 문서 강조. 같은 제목이면 파일 이름을 흐리게 (D179)
     const active = S.view?.type === 'doc' && S.view.path === f.path ? ' active' : '';
-    return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
+    return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}${tellHtml(tell)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
   return [html`<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${fileTip(f)}"><span class="caret-space"></span>${fileIcon(f.name)}`, html`<span class="label">${f.name}</span>${subHtml(sub)}</div>`];
@@ -173,9 +173,10 @@ const noteHtml = (depth, text) => html`<p class="side-note" style="--d:${depth}"
 
 function nodesHtml(o, v, nodes, depth, inside = false) {
   const markup = [];
+  const tell = telling(nodes.filter((n) => n.doc), { folders: true });   // 같은 폴더의 같은 제목 (D179)
   for (const n of sideOrder(nodes)) {
     if (n.type === 'file') {
-      markup.push(fileRow(o, v, n, depth));
+      markup.push(fileRow(o, v, n, depth, '', n.doc ? tell(n) : ''));
       continue;
     }
     const open = v.open.has(n.path);
@@ -216,8 +217,10 @@ function folderHtml(o, v, terms) {
     const docs = S.files.filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
     const files = [...filesIn(o.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     const hits = [...docs.map((f) => ({ ...f, doc: true })), ...files];
-    return hits.length
-      ? hits.slice(0, MAX_FILTER_RESULTS).map((f) => fileRow(o, v, f, 0, dirname(f.path)))
+    const shown = hits.slice(0, MAX_FILTER_RESULTS);
+    const tell = telling(shown.filter((f) => f.doc), { folders: true });
+    return shown.length
+      ? shown.map((f) => fileRow(o, v, f, 0, dirname(f.path), f.doc ? tell(f) : ''))
       : html`<p class="side-empty">${t('일치하는 문서나 파일이 없습니다')}</p>`;
   }
   return o.all.length ? nodesHtml(o, v, o.all, 0) : html`<p class="side-empty">${t('문서나 파일이 없습니다')}</p>`;

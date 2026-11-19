@@ -19,7 +19,7 @@ import { S, on, emit } from './store.js';
 import { getText, postJSON } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { openTarget } from './doctabs.js';
-import { switchPanel, labelOf, tipOf, pathMenuItems } from './tree.js';
+import { switchPanel, labelOf, tipOf, telling, tellHtml, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, partExtent, PARTS } from './toc.js';
@@ -287,6 +287,7 @@ function render() {
   let shown = 0;
   let docs = 0;
   const markup = [];
+  const tell = telling(groups.map((g) => g.file), { folders: true });   // 문서 머리는 '제목' 설정대로, 같은 제목이면 파일 이름을 흐리게 (D179)
   for (const { file, items } of groups) {
     const title = file.title || basename(file.path);
     let mine = items.filter((it) => it.kind === state.kind && subTest(it)
@@ -314,7 +315,7 @@ function render() {
     if (shown >= MAX_SHOWN) break;   // 같은 그림의 '+N곳'은 여기까지 읽은 문서로 센다
     shown += mine.length;
     docs += 1;
-    const head = [html`<div class="pt-doc" tabindex="0" data-doc="${file.path}" title="${file.path}">`, html`<span class="label">${title}</span>${dirname(file.path) ? html`<span class="sub">${dirname(file.path)}</span>` : ''}</div>`];
+    const head = [html`<div class="pt-doc" tabindex="0" data-doc="${file.path}" title="${file.path}">`, html`<span class="label">${labelOf(file)}${tellHtml(tell(file))}</span>${dirname(file.path) ? html`<span class="sub">${dirname(file.path)}</span>` : ''}</div>`];
     markup.push({ head, file, mine, body });
   }
   listed = markup.flatMap(({ file, mine }) => mine.map((item) => ({ file, item })));
@@ -390,7 +391,8 @@ function renderMeta(tab) {
   const dates = values.length && values.every((v) => DATE_LIKE.test(v));
   const numbers = values.length && values.every((v) => /^-?\d+(\.\d+)?$/.test(v));
   values.sort(dates ? (a, b) => natCompare(b, a) : numbers ? (a, b) => a - b : (a, b) => byValue.get(b).length - byValue.get(a).length || natCompare(a, b));
-  const row = (f) => [html`<div class="pt-doc pt-mdoc" tabindex="0" data-doc="${f.path}" title="${f.path}">`, html`<span class="label">${f.title || basename(f.path)}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
+  const tell = telling(docs.map((d) => d.file), { folders: true });
+  const row = (f) => [html`<div class="pt-doc pt-mdoc" tabindex="0" data-doc="${f.path}" title="${f.path}">`, html`<span class="label">${labelOf(f)}${tellHtml(tell(f))}</span>${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`];
   const group = (label, files, cls = '') => html`<div class="pt-val${cls}"><span class="label">${label}</span><span class="n">${files.length}</span></div>${files.map(row)}`;
   keepFocus(list, () => {
     setHtml(list, [values.map((v) => group(v, byValue.get(v))), (none.length ? group(t('값 없음'), none, ' none') : '')]);
@@ -456,11 +458,12 @@ function renderFiles(tab) {
   const matched = files.length;
   files = files.slice(0, MAX_SHOWN);
   fileRows = new Map(files.map((f) => [f.path, f]));
+  const tellFiles = telling(files.filter((f) => f.kind), { folders: true });   // 같은 제목의 문서 (D179)
   const current = S.view?.type === 'doc' || S.view?.type === 'code' ? S.view.path : null;
   const [group, typeKey] = (state.ftype || '').split(':');
   const markup = group === 'others' && PICTURE_EXT.has(typeKey)
     ? html`<div class="pt-grid">${files.map((f) => [html`<div class="ft-thumb" tabindex="0" data-file="${f.path}" title="${fileTip(f)}">`, html`<div class="pt-pic" data-file-src="${f.path}"></div><span class="pt-cap">${f.name}</span></div>`])}</div>`
-    : files.map((f) => [html`<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${f.path}"`, html` title="${f.kind ? tipOf(f) : fileTip(f)}">${fileIcon(f.name, f.kind, f.deck)}<span class="label">${f.kind ? labelOf(f) : f.name}</span>`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`]);
+    : files.map((f) => [html`<div class="row ft-row${f.path === current ? ' active' : ''}" tabindex="0" data-file="${f.path}"`, html` title="${f.kind ? tipOf(f) : fileTip(f)}">${fileIcon(f.name, f.kind, f.deck)}<span class="label">${f.kind ? labelOf(f) : f.name}${f.kind ? tellHtml(tellFiles(f)) : ''}</span>`, html`${dirname(f.path) ? html`<span class="sub">${dirname(f.path)}</span>` : ''}</div>`]);
   keepFocus(list, () => { setHtml(list, markup); });
   watchThumbs(tab);
   const total = chips.get(state.ftype)?.n || 0;
@@ -787,5 +790,5 @@ export function initParts() {
   on('tab', onTab);
   on('tree', () => { if (panelShown()) refresh(); });   // 문서가 바뀌면 (트리를 새로 받으면) 바뀐 문서만 다시 읽는다
   on('others', (tab) => { if (tab === S.tab && panelShown() && state.mode === 'files') refresh(); });   // 파일이 생기거나 지워짐
-  on('titles', () => { if (panelShown() && state.mode === 'files') render(); });
+  on('titles', () => { if (panelShown()) render(); });   // 문서 머리·행의 글이 '제목' 설정을 따른다 (D179)
 }

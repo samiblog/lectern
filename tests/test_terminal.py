@@ -107,7 +107,9 @@ def test_session_runs_in_project_folder_with_korean(tmp_path, monkeypatch):
     cwd = tmp_path / '한글 폴더'
     cwd.mkdir()
     monkeypatch.setenv('LECTERN_LEAK_TEST', 'leaked')   # 앱이 실행 중에 바꾼 환경 값은 셸로 새지 않는다 (_START_ENV)
-    s = Session('p1', str(cwd), None, 100, 30)
+    # 폭은 넉넉히 — 프롬프트(임시 폴더 경로)가 폭을 넘으면 콘솔이 줄을 접어 출력에 경로가 이어 나오지 않는다
+    # (pytest 임시 폴더 번호가 pytest-1000 을 넘자 100칸에서 접혀 실패했다)
+    s = Session('p1', str(cwd), None, 300, 30)
     try:
         assert read_until(s, '>')
         s.write('Write-Output ("lec" + "term" + "한글"); (Get-Location).Path; "[" + $env:LECTERN_LEAK_TEST + "]"\r')

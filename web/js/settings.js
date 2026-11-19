@@ -292,7 +292,48 @@ async function openConfigFile() {
   }
 }
 
+// ---- 요청 글의 ▣ (D180) --------------------------------------------------------------
+// 요청 글을 터미널에 붙여 넣는다 (D51 — Enter 없이). 받는 터미널은 마지막에 쓴 것(탭의 고른 터미널 — 누르거나 초점이 간 것)이고,
+// 숫자 키(1~5)를 누른 채 누르면 그 번호의 터미널 (D137 — 메뉴의 숫자+누르기와 같게). 고른 AI 도구가 1번이 아닌 터미널에 떠 있어도 그리로 간다.
+// 글을 쓰는 칸에 초점이 있으면 숫자는 그 칸의 글이다.
+
+let heldTerm = null;
+const TERM_BUTTONS = '#lec-settings button[id$="-term"]';
+
+function setHeldTerm(n) {
+  heldTerm = n;
+  for (const b of $$(TERM_BUTTONS)) {
+    b.classList.toggle('term-held', n != null);
+    if (n != null) b.dataset.held = String(n + 1);
+    else delete b.dataset.held;
+  }
+}
+
+const typing = (el) => !!el?.closest?.('input, textarea, select, [contenteditable="true"], [contenteditable="plaintext-only"]');
+const digitOf = (e) => (/^(?:Digit|Numpad)[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 1 : null);
+
+/** ▣ 단추 하나: make() 가 지은 요청 글을 받는 터미널에. 누를 때의 번호를 먼저 잡는다 (글을 짓는 사이에 키를 뗄 수 있다) */
+function termButton(sel, make) {
+  $(sel).addEventListener('click', async () => {
+    const n = heldTerm ?? S.tab?.term?.n ?? null;
+    const text = await make();
+    closeSettings();
+    emit('term-paste', n == null ? text : { text, n });
+  });
+}
+
+function bindHeldTerm() {
+  document.addEventListener('keydown', (e) => {
+    if ($('#lec-settings').hidden || e.ctrlKey || e.altKey || e.metaKey || digitOf(e) == null || typing(e.target)) return;
+    e.preventDefault();
+    if (!e.repeat) setHeldTerm(digitOf(e));
+  }, true);
+  document.addEventListener('keyup', (e) => { if (heldTerm != null && digitOf(e) === heldTerm) setHeldTerm(null); }, true);
+  window.addEventListener('blur', () => setHeldTerm(null));
+}
+
 export function initSettings() {
+  bindHeldTerm();   // ▣ 에 숫자 키 (D180)
   $('#lec-settings .set-nav')?.addEventListener('click', (e) => {   // 분류 (D154)
     const b = e.target.closest('button[data-set]');
     if (!b) return;
@@ -317,49 +358,30 @@ export function initSettings() {
   $('#lec-layouts-prompt').addEventListener('click', async () => {
     toast(await copyText(await layoutPrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-layouts-term').addEventListener('click', async () => {
-    const text = await layoutPrompt();
-    closeSettings();
-    emit('term-paste', text);   // 터미널에 붙여 넣기 (D51 — Enter 없이)
-  });
+  termButton('#lec-layouts-term', layoutPrompt);
   $('#lec-termfont-down').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) - 1));
   $('#lec-termfont-up').addEventListener('click', () => setTermFont(Number($('#lec-termfont').value) + 1));
   $('#lec-termfont-reset').addEventListener('click', () => setTermFont(TERM_FONT_BASE));
   $('#lec-mystyles-prompt').addEventListener('click', async () => {
     toast(await copyText(stylePrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 원하는 모양을 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-mystyles-term').addEventListener('click', () => {
-    closeSettings();
-    emit('term-paste', stylePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
-  });
+  termButton('#lec-mystyles-term', stylePrompt);
   $('#lec-aiguide-prompt').addEventListener('click', async () => {
     toast(await copyText(guidePrompt()) ? t('요청 글을 복사했습니다 — 작업할 프로젝트의 {cli} 에 붙여 넣으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-aiguide-term').addEventListener('click', () => {
-    closeSettings();
-    emit('term-paste', guidePrompt());   // 지금 탭의 터미널에 붙여 넣기 (D51 — Enter 없이)
-  });
+  termButton('#lec-aiguide-term', guidePrompt);
   $('#lec-skills-prompt').addEventListener('click', async () => {
     toast(await copyText(skillsPrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-skills-term').addEventListener('click', () => {
-    closeSettings();
-    emit('term-paste', skillsPrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
-  });
+  termButton('#lec-skills-term', skillsPrompt);
   $('#lec-wstyle-prompt').addEventListener('click', async () => {
     toast(await copyText(writingStylePrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-wstyle-term').addEventListener('click', () => {
-    closeSettings();
-    emit('term-paste', writingStylePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이)
-  });
+  termButton('#lec-wstyle-term', writingStylePrompt);
   $('#lec-voice-prompt').addEventListener('click', async () => {
     toast(await copyText(voicePrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 견본을 @경로로 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
-  $('#lec-voice-term').addEventListener('click', () => {
-    closeSettings();
-    emit('term-paste', voicePrompt());   // 터미널에 붙여 넣기 (D51 — Enter 없이). 견본은 사람이 이어서 적는다
-  });
+  termButton('#lec-voice-term', voicePrompt);   // 견본은 사람이 이어서 적는다
   $('#lec-aiguide-samples').addEventListener('click', () => {
     closeSettings();
     openSamples();

@@ -584,6 +584,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .row.dir .label { font-weight: 600; }
 .row.excluded > .label, .row.excluded > .ficon { opacity: .6; }   /* 제외 폴더와 그 안 ('자료' 목록, D49) */
 .row .sub { color: var(--ui-faint); font-size: 12px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+/* 같은 글 가르기 (D179 — tree.telling): 같은 이름이면 폴더, 같은 제목이면 파일 이름을 글 뒤에 흐리게 */
+.label > .tell, .doc-tab .name > .tell { margin-left: 6px; color: var(--ui-faint); font-size: .9em; font-weight: 400; }
+.label > .tell::before, .doc-tab .name > .tell::before { content: '· '; }
 .row.active .sub { color: inherit; opacity: .7; }
 .caret, .caret-space { width: 18px; height: 18px; flex: none; }
 .caret { display: grid; place-items: center; color: var(--ui-faint); border-radius: 4px; }
@@ -1071,6 +1074,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 :root[data-ui="dark"] #lec-menu.term-held::before { color: #0f1a26; }
 #lec-menu.term-held .menu-term { color: var(--ui-accent); }
+/* 설정 창의 ▣ — 숫자 키를 누른 채면 그 번호 (D180) */
+#lec-settings button.term-held { position: relative; color: var(--ui-accent); box-shadow: inset 0 0 0 1.5px var(--ui-accent); }
+#lec-settings button.term-held::after { content: attr(data-held); position: absolute; top: -6px; right: -6px; min-width: 14px; height: 14px; padding: 0 3px; border-radius: 7px; background: var(--ui-accent); color: #fff; font: 600 10px/14px var(--ui-font, sans-serif); text-align: center; }
 /* 아이콘이 있는 항목 (열린 문서 탭 목록 — doctabs.js, D67): 한 줄에 아이콘·이름·흐린 경로, 고른 탭은 강조색 */
 .menu button.with-icon { flex-direction: row; align-items: center; gap: 7px; }
 .menu button.with-icon > span { flex: 0 1 auto; min-width: 0; max-width: 62%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
