@@ -1,6 +1,6 @@
 // 사용설명서(F1)와 단축키 표(툴바 '?' 버튼, Ctrl+/) — D45.
-// 설명서는 web/help/manual.md 를 처음 열 때 받아 문서처럼 그린다 (지금 문서 스타일·글자 크기). 터미널 모음처럼 사이드바와 문서 화면 위를
-// 덮고, 왼쪽에 장 목록(읽는 곳 표시), Ctrl+F 는 설명서 안에서 찾는다. 다른 화면으로 가면(문서 열기·프로젝트 탭·터미널) 닫힌다.
+// 설명서는 web/help/manual/ 의 문서들(트리 — D182)을 처음 열 때 받아 문서처럼 그린다 (지금 문서 스타일·글자 크기). 터미널 모음처럼 사이드바와
+// 문서 화면 위를 덮고, 왼쪽에 문서 트리와 지금 문서의 절, Ctrl+F 는 지금 문서 안에서 찾는다. 다른 화면으로 가면(문서 열기·프로젝트 탭·터미널) 닫힌다.
 // 단축키 표와 설명서의 '단축키' 장은 같은 SHORTCUTS 로 만든다 — 단축키를 더하면 여기에 넣는다.
 // 사용설명서 창 (D181): 머리줄('사용설명서')·장 목록을 우클릭해 '새 창에서 열기'(설명서를 보는 중의 Ctrl+Shift+N 도) — 문서의 새 창과 같은 독립창(D95)이
 // 폴더 개요 위에 설명서를 덮고 연다 (읽던 곳에서). 그 창에서 F1·Esc·✕ 는 창을 닫는다. 예제 링크는 메인 창에 맡긴다 (예제 프로젝트는 메인 창의 탭).
@@ -8,7 +8,8 @@
 import { S, on, emit } from './store.js';
 import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
-import { setFindTarget } from './find.js';
+import { setFindTarget, findText } from './find.js';
+import { renderMermaid } from './mermaid.js';
 import { esc, html, raw, setHtml } from './html.js';
 import { $, $$, findAnchor, toast } from './util.js';
 import { LANG, t } from './i18n.js';
@@ -360,30 +361,118 @@ function keysTab(id, dir = 0) {
 }
 
 // ---- 사용설명서 -----------------------------------------------------------------
+// 여러 문서의 트리 (web/help/manual/ — index.json 이 차례, 파일 이름 앞의 번호가 트리: '2.3-문서-탭.md' 는 '2 화면' 아래).
+// 문서마다 '# 제목' 과 '> 요약' 한 줄. 왼쪽은 문서 트리와 지금 문서의 절, 본문 위는 경로, 아래는 이전·다음. 흐름도(mermaid)를 그린다.
+// 차례가 없으면(영어판 — 옮기기 전) 한 파일을 문서 하나짜리 트리로 보인다. 왼쪽 위 찾기 칸은 모든 문서의 제목·글에서 거른다.
 
 const helpBox = () => $('#lec-help');
 const scroller = () => $('#lec-help-scroll');
 const view = () => $('#lec-help-view');
-let loaded = null;    // 설명서를 받아 그리는 중·그린 것 (Promise) — 처음 열 때 한 번
-let heads = [];       // 장 목록의 제목 (h2·h3)
+const MANUAL_DIR = '/static/help/manual/';
+let loaded = null;    // 설명서를 받는 중·받은 것 (Promise) — 처음 열 때 한 번
+let docs = [];        // [{file, num, depth, parent, title, summary, text}] — 차례대로
+let cur = null;       // 지금 문서
+let heads = [];       // 지금 문서의 절 (h2 — 문서가 하나뿐이면 h3 도)
+let query = '';       // 찾기 칸 (작은 글자)
 
 export const manualOpen = () => !helpBox().hidden;
 
-async function loadManual() {
+/** 파일 이름의 번호로 트리의 자리를 정한다 — '4.1-고치는-길-고르기.md' 는 번호 4.1, 깊이 1, 위는 4 */
+function docOf(file, title, text) {
+  const num = /^(\d+(?:\.\d+)*)-/.exec(file)?.[1] || '';
+  return {
+    file, num, title, text,
+    depth: num ? num.split('.').length - 1 : 0,
+    parent: num.includes('.') ? num.slice(0, num.lastIndexOf('.')) : '',
+    summary: text ? (/^>\s*(.+)$/m.exec(text)?.[1] || '') : '',
+  };
+}
+
+async function loadDocs() {
+  if (LANG !== 'en') {   // 영어판은 아직 한 파일 (D182 — 한국어를 확정한 뒤 같은 판에 옮긴다)
+    const r = await fetch(`${MANUAL_DIR}index.json`);
+    if (r.ok) {
+      const index = await r.json();
+      return Promise.all(index.docs.map(async ({ file, title }) => {
+        const res = await fetch(MANUAL_DIR + encodeURIComponent(file)).catch(() => null);
+        return docOf(file, title, res?.ok ? await res.text() : null);
+      }));
+    }
+  }
   const r = await fetch(LANG === 'en' ? '/static/help/manual.en.md' : '/static/help/manual.md');   // 영어판 (D46)
   if (!r.ok) throw new Error(`HTTP ${r.status}`);
-  const text = (await r.text()).replace('<!-- 단축키 표 -->', shortcutsMarkdown());   // i18n-ok (두 설명서에 같은 자리 표시)
-  const { html: markup } = renderMarkdown(text, { math: false });
-  setHtml(view(), raw(window.DOMPurify.sanitize(markup)));
+  return [docOf('', t('사용설명서'), await r.text())];
+}
+
+const label = (d) => (d.num ? `${d.num} ${d.title}` : d.title);
+const docAt = (file) => docs.find((d) => d.file === file) || null;
+const many = () => docs.length > 1;
+
+/** 하위 문서 표 (자리 표시 '<!-- 하위 문서 -->' 에) — 번호·제목·요약 */
+function childrenMarkdown(d) {
+  const kids = d.num ? docs.filter((x) => x.parent === d.num) : [];
+  if (!kids.length) return '';
+  const cell = (s) => String(s).replace(/\|/g, '\\|');
+  return `| ${t('문서')} | ${t('무엇')} |\n|---|---|\n${kids.map((k) => `| [${cell(label(k))}](${encodeURI(k.file)}) | ${cell(k.summary || '—')} |`).join('\n')}`;
+}
+
+/** 맨 위 경로 — 사용설명서 › 4 쓰기 › 4.1 고치는 길 고르기 */
+function pathHtml(d) {
+  if (!d.num) return '';
+  const chain = [];
+  for (let n = d.parent; n; n = n.includes('.') ? n.slice(0, n.lastIndexOf('.')) : '') {
+    const p = docs.find((x) => x.num === n);
+    if (p) chain.unshift(p);
+  }
+  return html`<nav class="help-path" aria-label="${t('경로')}"><span>${t('사용설명서')}</span>${chain.map((p) => html` › <a href="#" data-doc="${p.file}">${label(p)}</a>`)} › <span class="here">${label(d)}</span></nav>`;
+}
+
+/** 맨 아래 이전·다음 */
+function footHtml(d) {
+  const i = docs.indexOf(d);
+  const prev = docs[i - 1];
+  const next = docs[i + 1];
+  if (!prev && !next) return '';
+  return html`<nav class="help-foot" aria-label="${t('이전·다음 문서')}">${prev ? html`<a href="#" data-doc="${prev.file}" class="prev">← ${label(prev)}</a>` : html`<span></span>`}${next ? html`<a href="#" data-doc="${next.file}" class="next">${label(next)} →</a>` : ''}</nav>`;
+}
+
+/** 문서 하나를 그린다. anchor: 그 절로 (없으면 맨 위) */
+async function showDoc(d, { anchor = '' } = {}) {
+  cur = d;
+  const body = (d.text ?? `# ${d.title}\n\n> ${t('이 문서는 아직 쓰는 중입니다.')}\n`)
+    .replace('<!-- 단축키 표 -->', shortcutsMarkdown())   // i18n-ok (두 설명서에 같은 자리 표시)
+    .replace('<!-- 하위 문서 -->', childrenMarkdown(d));   // i18n-ok (자리 표시)
+  const { html: markup } = renderMarkdown(body, { math: false });
+  setHtml(view(), [pathHtml(d), raw(window.DOMPurify.sanitize(markup)), footHtml(d)]);
   for (const a of $$('a[href]', view())) {   // 예제로 가는 링크 (예제 프로젝트의 그 문서를 연다)
     if (!samplePath(a.getAttribute('href'))) continue;
     a.classList.add('sample-link');
     a.title = t('예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)');
   }
   decorateBlocks(view());
-  heads = $$('h2, h3', view());
-  setHtml($('#lec-help-toc'), heads.map((h, i) => [html`<li class="${h.tagName === 'H3' ? 'sub' : ''}">`, html`<a href="#" data-i="${i}">${h.textContent}</a></li>`]));
+  heads = $$(many() ? 'h2' : 'h2, h3', view());
+  drawToc();
+  const at = anchor && findAnchor(view(), anchor);
+  if (at) scrollToHead(at);
+  else scroller().scrollTop = 0;
   markCurrent();
+  await renderMermaid(view());   // 흐름도 — 그린 뒤 높이가 바뀌니 절로 다시
+  if (at && cur === d) scrollToHead(at);
+}
+
+/** 왼쪽 차례 — 문서 트리, 지금 문서 아래에 그 절. 찾는 중이면 맞는 문서만 */
+function drawToc() {
+  const terms = query.split(/\s+/).filter(Boolean);
+  const hit = (d) => terms.every((w) => `${label(d)}\n${d.text || ''}`.toLowerCase().includes(w));
+  const shown = terms.length ? docs.filter(hit) : docs;
+  const items = [];
+  for (const d of shown) {
+    items.push(html`<li class="doc d${terms.length ? 0 : d.depth}${d.text == null ? ' todo' : ''}${d === cur ? ' current' : ''}"><a href="#" data-doc="${d.file}">${label(d)}</a></li>`);
+    if (d !== cur || terms.length) continue;
+    heads.forEach((h, i) => items.push(html`<li class="sec d${d.depth}${h.tagName === 'H3' ? ' sub' : ''}"><a href="#" data-doc="${d.file}" data-h="${i}">${h.textContent}</a></li>`));
+  }
+  if (!shown.length) items.push(html`<li class="none">${t('맞는 문서가 없습니다')}</li>`);
+  setHtml($('#lec-help-toc'), items);
 }
 
 /** 제목으로 (위에 조금 띄워서) */
@@ -392,40 +481,47 @@ function scrollToHead(h) {
   box.scrollTop += h.getBoundingClientRect().top - box.getBoundingClientRect().top - 16;
 }
 
-/** 지금 읽는 장의 차례 (0부터) */
+/** 지금 읽는 절의 차례 (0부터, 없으면 -1) */
 function currentHead() {
   const top = scroller().getBoundingClientRect().top + 80;
-  let cur = 0;
-  heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= top) cur = i; });
-  return cur;
+  let at = -1;
+  heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= top) at = i; });
+  return at;
 }
 
-/** 장 목록에 지금 읽는 곳 표시 */
+/** 차례에 지금 읽는 절 표시 */
 function markCurrent() {
-  const cur = currentHead();
-  for (const a of $$('#lec-help-toc a')) {
-    const on = Number(a.dataset.i) === cur;
+  const at = currentHead();
+  for (const a of $$('#lec-help-toc a[data-h]')) {
+    const on = Number(a.dataset.h) === at;
     a.classList.toggle('active', on);
     if (on) a.scrollIntoView({ block: 'nearest' });
   }
 }
 
-/** hash: 설명서 안의 읽을 장 (제목 앵커 '#…' — 사용설명서 창이 읽던 장에서 연다. 창 폭이 달라 스크롤 위치로는 같은 곳이 아니다) */
+/** '#파일.md#절' · '#절' → {file, anchor} — 사용설명서 창에 넘기는 읽을 곳 */
+function parseHash(hash) {
+  const s = String(hash || '').replace(/^#/, '');
+  const m = /^([^#]*\.md)(?:#(.*))?$/.exec(s);
+  return m ? { file: m[1], anchor: m[2] ? `#${m[2]}` : '' } : { file: '', anchor: s ? `#${s}` : '' };
+}
+
+/** hash: 읽을 곳 ('#파일.md#절' — 사용설명서 창이 읽던 곳에서 연다. 창 폭이 달라 스크롤 위치로는 같은 곳이 아니다) */
 export async function openManual({ hash = '' } = {}) {
   $('#lec-help-samples').hidden = !S.samples;
   closeShortcuts();
   helpBox().hidden = false;
   setFindTarget({ root: view(), scroller: scroller() });   // Ctrl+F 는 설명서 안에서
   scroller().focus({ preventScroll: true });               // 화살표·PageDown 으로 설명서를 넘기게
-  loaded ??= loadManual().catch((e) => {
+  loaded ??= loadDocs().then((list) => { docs = list; }).catch((e) => {
     loaded = null;   // 다음에 다시 시도
     setHtml(view(), html`<p>${t('사용설명서를 읽지 못했습니다 ({error}). Lectern 을 다시 설치하면 고쳐집니다.', { error: e.message })}</p>`);
   });
   await loaded;
-  const at = hash && findAnchor(view(), hash);
-  if (at) {
-    scrollToHead(at);
-    markCurrent();
+  if (docs.length) {
+    const { file, anchor } = parseHash(hash);
+    const d = (file && docAt(file)) || cur || docs[0];
+    if (d !== cur || anchor || !view().childElementCount) await showDoc(d, { anchor });
   }
   if (helpWindow) native.setTitle(`${t('사용설명서')} - Lectern`);
 }
@@ -453,18 +549,18 @@ export async function showManual() {
 }
 
 /**
- * 사용설명서를 새 창에서 연다 (D181) — 문서의 새 창과 같은 독립창이라 지금 프로젝트에 속한다 (그 프로젝트를 고를 때 보이고, 탭을 닫으면 함께 닫힌다).
- * head: 열 장의 차례 (없으면 지금 읽는 장). 열리면 이 창의 설명서는 걷는다
+ * 사용설명서를 새 창에서 연다 (D181) — 문서의 새 창과 같은 독립창이라 지금 프로젝트에 속한다.
+ * at: {file, anchor} — 열 곳 (없으면 지금 읽는 문서와 절). 열리면 이 창의 설명서는 걷는다
  */
-export async function manualToWindow(head = null, { quiet = false } = {}) {
+export async function manualToWindow(at = null, { quiet = false } = {}) {
   if (helpWindow) return false;   // 이미 사용설명서 창
   if (!S.tab) {
     if (!quiet) toast(t('새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요'));
     return false;
   }
-  const i = head ?? (manualOpen() && heads.length ? currentHead() : -1);
-  const id = heads[i]?.id;
-  const done = await native.openWindow(soloQuery(S.tab.id, { type: 'doc', path: '', help: true, ...(id ? { hash: `#${id}` } : {}) }));
+  const where = at || (manualOpen() && cur ? { file: cur.file, anchor: heads[currentHead()]?.id ? `#${heads[currentHead()].id}` : '' } : null);
+  const hash = where ? `#${where.file}${where.anchor || ''}` : '';
+  const done = await native.openWindow(soloQuery(S.tab.id, { type: 'doc', path: '', help: true, ...(hash && hash !== '#' ? { hash } : {}) }));
   if (!done) {
     if (!quiet) toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
     return false;
@@ -473,13 +569,21 @@ export async function manualToWindow(head = null, { quiet = false } = {}) {
   return true;
 }
 
-/** 머리줄·장 목록의 우클릭 메뉴 — head: 그 장에서 열 때의 장 차례 */
-function helpMenu(e, head = null) {
+/** 머리줄·차례의 우클릭 메뉴 — at: 그 문서·절에서 열 때 */
+function helpMenu(e, at = null) {
   e.preventDefault();
   showMenu(e.clientX, e.clientY, helpWindow
     ? [{ label: t('사용설명서 창 닫기'), hint: 'F1', action: () => closeManual({ user: true }) }]
-    : [{ label: t('새 창에서 열기'), hint: 'Ctrl+Shift+N', tip: t('설명서를 옆에 두고 문서를 봅니다'), action: () => manualToWindow(head) },
+    : [{ label: t('새 창에서 열기'), hint: 'Ctrl+Shift+N', tip: t('설명서를 옆에 두고 문서를 봅니다'), action: () => manualToWindow(at) },
       { label: t('사용설명서 닫기'), hint: 'F1', action: () => closeManual({ user: true }) }]);
+}
+
+/** 차례·경로·이전·다음의 문서 링크 (data-doc), 본문의 다른 설명서 문서 링크 ('2.3-문서-탭.md#절') */
+function goDoc(file, anchor = '') {
+  const d = docAt(file);
+  if (!d) return false;
+  showDoc(d, { anchor }).then(() => { if (query) findText(query, { scroll: true }); });   // 찾는 중이면 그 말을 문서에서 짚는다
+  return true;
 }
 
 /** 예제로 가는 길 — 사용설명서 창이면 메인 창에 맡긴다 (예제 프로젝트는 메인 창의 탭이다) */
@@ -537,28 +641,57 @@ export function initHelp() {
   keysBox().addEventListener('click', (e) => { if (e.target === keysBox()) closeShortcuts(); });   // 바깥을 누르면 닫기
   $('#lec-help-close').addEventListener('click', () => closeManual({ user: true }));
   $('#lec-help .help-title').addEventListener('contextmenu', (e) => helpMenu(e));   // 설명서의 '탭' — 새 창에서 열기 (D181)
-  $('#lec-help-toc').addEventListener('contextmenu', (e) => {   // 장을 우클릭하면 그 장에서
-    const a = e.target.closest('a[data-i]');
-    helpMenu(e, a ? Number(a.dataset.i) : null);
+  $('#lec-help-toc').addEventListener('contextmenu', (e) => {   // 문서·절을 우클릭하면 그곳에서
+    const a = e.target.closest('a[data-doc]');
+    const h = a?.dataset.h != null ? heads[Number(a.dataset.h)] : null;
+    helpMenu(e, a ? { file: a.dataset.doc, anchor: h?.id ? `#${h.id}` : '' } : null);
   });
   $('#lec-help-keys').addEventListener('click', openShortcuts);
   $('#lec-help-toc').addEventListener('click', (e) => {
-    const a = e.target.closest('a[data-i]');
+    const a = e.target.closest('a[data-doc]');
     if (!a) return;
     e.preventDefault();
-    scrollToHead(heads[Number(a.dataset.i)]);
+    if (a.dataset.h != null && cur?.file === a.dataset.doc) scrollToHead(heads[Number(a.dataset.h)]);
+    else goDoc(a.dataset.doc);
   });
-  // 설명서 속 링크: 설명서 안의 제목(#…)과 예제 문서(../../samples/…)만 — 다른 주소로 가면 앱 창이 떠난다
+  $('#lec-help-find').addEventListener('input', (e) => {   // 모든 문서에서 거르기 — 제목과 글
+    query = e.target.value.trim().toLowerCase();
+    drawToc();
+  });
+  $('#lec-help-find').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.isComposing) {   // 맞는 첫 문서를 열고 그 말을 짚는다
+      e.preventDefault();
+      const first = $('#lec-help-toc a[data-doc]');
+      if (first) goDoc(first.dataset.doc);
+    } else if (e.key === 'Escape' && e.target.value) {
+      e.preventDefault();
+      e.stopPropagation();
+      e.target.value = '';
+      query = '';
+      drawToc();
+    }
+  });
+  // 설명서 속 링크: 설명서 문서(경로·이전·다음·'2.3-문서-탭.md#절'), 안의 제목(#…)과 예제 문서(../../samples/…)만 — 다른 주소로 가면 앱 창이 떠난다
   view().addEventListener('click', (e) => {
-    const a = e.target.closest('a[href]');
+    const a = e.target.closest('a[data-doc], a[href]');
     if (!a) return;
     e.preventDefault();
+    if (a.dataset.doc != null) {
+      goDoc(a.dataset.doc);
+      return;
+    }
     const href = a.getAttribute('href');
     const sample = samplePath(href);
     if (sample) {
       toSample(sample);
       return;
     }
+    let path = href;
+    try {
+      path = decodeURIComponent(href);
+    } catch { /* 그대로 */ }
+    const doc = /^(?:\.\/)?([^/#]+\.md)(#.*)?$/.exec(path);
+    if (doc && goDoc(doc[1], doc[2] || '')) return;
     const target = href.startsWith('#') && findAnchor(view(), href);
     if (target) scrollToHead(target);
   });

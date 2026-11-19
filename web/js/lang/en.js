@@ -2172,5 +2172,11 @@ export default {
 "설명서를 옆에 두고 문서를 봅니다": "Keep the guide beside your documents",
 "새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요": "A new window belongs to a project — open a folder first",
 "메인 창에서 예제를 엽니다": "Opening the example in the main window",
-"사용설명서·예제 가이드 창은 보기만 합니다 — 고치려면 메인 창에서 여세요": "The user guide and example guide windows are view-only — open the file in the main window to change it"
+"사용설명서·예제 가이드 창은 보기만 합니다 — 고치려면 메인 창에서 여세요": "The user guide and example guide windows are view-only — open the file in the main window to change it",
+"설명서에서 찾기": "Search the guide",
+"설명서의 모든 문서에서 찾기": "Search all documents of the guide",
+"이전·다음 문서": "Previous and next document",
+"이 문서는 아직 쓰는 중입니다.": "This document is still being written.",
+"무엇": "What",
+"경로": "Path"
 };
