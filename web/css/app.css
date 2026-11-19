@@ -285,16 +285,28 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .resizing iframe { pointer-events: none; }
 @media (max-width: 1080px) { #lec-toc, #lec-toc-resizer { display: none; } }
 /* 좁은 창: 툴바가 한 줄에 들어가게 문서 열기 칸부터 줄인다 */
-@media (max-width: 1240px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
+@media (max-width: 1300px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
+@media (max-width: 1240px) {   /* '스타일' 글자 — 고르기 칸이 스타일 이름을 보인다 */
+  .pick-label { display: none; }
+  .theme-pick select { border-radius: 6px 0 0 6px; }
+}
 @media (max-width: 1060px) { .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; padding: 0 8px; } .theme-pick select { max-width: 130px; } }
-/* 아주 좁은 창: '스타일'·'하이라이트' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명) */
-@media (max-width: 860px) {
-  .pick-label, #lec-btn-spot span, .size-label, .icon-btn.labeled .lb, .tabbar-btn span { display: none; }
-  .tabbar-btn { padding: 0 9px; }
+/* 툴바의 묶음은 내용보다 좁아지지 않는다 — 줄어들면 사이드바·뒤로·앞으로 단추가 옆 단추 밑으로 깔렸다 (창 폭 900~1100px) */
+#lec-toolbar > .tb-group { flex-shrink: 0; }
+/* 좁은 창: 툴바가 한 줄에 들어가게 '스타일'·'하이라이트'·'업무'·'터미널 모음' 이름과 글자 크기 숫자는 빼고 아이콘만 (마우스를 올리면 설명).
+   툴바만 — 탭 막대의 이름은 아래 아주 좁은 창에서 뺀다 */
+@media (max-width: 1220px) {
+  #lec-btn-spot span, #lec-toolbar .size-label, .icon-btn.labeled .lb { display: none; }
   .spot-pick .icon-btn:first-child { width: 32px; padding: 0; justify-content: center; }
   .text-size .step:first-child { border-radius: 6px 0 0 6px; }
   .text-size .step:last-child { border-left: 0; }
-  .theme-pick select { border-radius: 6px 0 0 6px; max-width: 120px; }
+}
+/* 아주 좁은 창: 탭 막대의 이름도 빼고 아이콘만 */
+@media (max-width: 860px) {
+  .pick-label, #lec-btn-spot span, .size-label, .icon-btn.labeled .lb, .tabbar-btn span { display: none; }
+  .tabbar-btn { padding: 0 9px; }
+  #lec-toolbar { gap: 4px; padding: 0 6px; }   /* 묶음 사이도 좁게 — 720px 에서도 한 줄에 */
+  .theme-pick select { max-width: 120px; }
 }
 @media (max-width: 760px) { #lec-sidebar { width: 240px; } .search-btn span, .search-btn kbd { display: none; } .search-btn { min-width: 0; } }
 

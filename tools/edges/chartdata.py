@@ -181,7 +181,17 @@ try:
         page.emulate_media(media='print')
         shown = page.evaluate("() => [...document.querySelectorAll('#lec-view .lec-chart-tools, #lec-view .lec-chart-data, #lec-view .table-copy')].filter((x) => getComputedStyle(x).display !== 'none').length")
         check('단추·펼친 표·표의 복사가 인쇄에 없다', shown == 0, shown)
+        pad = page.evaluate("() => getComputedStyle(document.querySelector('#lec-view pre.lec-chart.chart-ok')).paddingTop")
+        check('— 인쇄에는 단추 줄도 비우지 않는다', pad == '6px', pad)
         page.emulate_media(media='screen')
+
+        print('[좁은 칸 — 단추가 차트 제목을 가리지 않는다]')
+        page.set_viewport_size({'width': 820, 'height': 900})
+        GAP = """() => { const pre = document.querySelector('#lec-view pre.lec-chart.chart-ok'); const tools = pre.querySelector('.lec-chart-tools').getBoundingClientRect();
+          const svg = pre.querySelector('svg, canvas').getBoundingClientRect(); return [Math.round(tools.bottom), Math.round(svg.top), getComputedStyle(pre).paddingTop]; }"""
+        expect(page, '좁으면 단추가 차트 위의 비운 줄에 (차트 그림과 겹치지 않음)', lambda: page.evaluate(GAP)[0] <= page.evaluate(GAP)[1] + 1, lambda: page.evaluate(GAP))
+        page.set_viewport_size({'width': 1300, 'height': 900})
+        expect(page, '넓으면 줄을 비우지 않는다 (지금처럼 겹쳐 띄움)', lambda: page.evaluate(GAP)[2] == '6px', lambda: page.evaluate(GAP))
 
         print('[표의 [복사]]')
         wrap = page.locator('#lec-view .table-wrap').last

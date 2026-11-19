@@ -332,6 +332,14 @@
 .md-body .lec-chart-tools { position: absolute; top: 4px; right: 0; display: flex; gap: 6px; opacity: 0; }
 .md-body pre.lec-chart:hover > .lec-chart-tools, .md-body .lec-chart-tools:focus-within, .md-body .lec-chart-tools:has([aria-pressed="true"]) { opacity: 1; }
 .md-body .lec-chart-tools button[aria-pressed="true"] { color: var(--md-fg); border-color: var(--md-muted); }
+/* 좁은 칸에서는 [표]·[복사] 를 차트 위의 한 줄에 — 차트가 칸을 채우면 가운데 놓인 제목의 끝을 가렸다 (넓으면 제목 옆 빈 곳에 겹쳐 띄운다).
+   화면에서만 — 인쇄에는 단추가 없으니 그 줄도 비우지 않는다 */
+@media screen {
+  @container (max-width: 760px) {
+    .md-body pre.lec-chart.chart-ok { padding-top: 30px; }
+    .md-body .lec-chart-tools { top: 2px; }
+  }
+}
 .md-body .lec-chart-data {
   margin-top: 8px; text-align: left; white-space: normal; cursor: auto;
   font: calc(13px * var(--md-scale, 1))/1.5 var(--md-font);

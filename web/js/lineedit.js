@@ -226,6 +226,23 @@ function sourceOffset(shown, body) {
 }
 
 /** 화면 자리 at(Range)이 든 칸의 차례와 그 칸의 글에서의 자리 {cell, offset} — 칸 밖이면 null */
+/**
+ * 떼어 낸 줄 조각 끝의 줄바꿈 <br> (과 그 뒤 빈 글자) — 이어 쓴 줄(설정 md_breaks)은 줄 범위가 원문 줄 자리(\n)로 나뉘어 끝의 <br> 까지 든다.
+ * 칸 뒤에 남겨 둘 조각으로 떼어 돌려준다. 그만두면 frag 가 칸 자리로 돌아가 이 <br> 앞에 붙으니 원래 모양 그대로다. 없으면 null
+ */
+function trailingBreak(frag) {
+  let n = frag.lastChild;
+  const after = [];
+  while (n && n.nodeType === Node.TEXT_NODE && !n.textContent.trim()) {
+    after.unshift(n);
+    n = n.previousSibling;
+  }
+  if (n?.nodeName !== 'BR') return null;
+  const out = document.createDocumentFragment();
+  out.append(n, ...after);
+  return out;
+}
+
 function caretIn(ranges, bodies, at) {
   const i = ranges.findIndex((r) => r.isPointInRange(at.startContainer, at.startOffset));
   if (i < 0) return null;
@@ -316,6 +333,8 @@ async function begin(line, { cell = 0, at = null, offset = null, select: pick_ =
     span.dataset.i = String(i);
     const frag = range.extractContents();
     range.insertNode(span);
+    const br = trailingBreak(frag);   // 이어 쓴 줄의 끝 <br> 은 칸 뒤에 남긴다 — 함께 빠지면 다음 줄이 칸 옆으로 올라붙었다
+    if (br) span.after(br);
     places.push({ span, frag, nbsp: bodies[i].includes(' ') });
   }
   releasePick();
