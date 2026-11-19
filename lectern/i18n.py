@@ -278,6 +278,8 @@ EN: dict[str, str] = {
     '사이드바': 'sidebar',
     "사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder(폴더 구조 그대로)": "Group open in the sidebar's 'Files' tab — docs, code, others or folder (the folder tree as it is)",
     '사이드바 목록에 파일 이름 대신 문서 제목': 'Document titles instead of file names in sidebar lists',
+    '사용설명서·예제 가이드를 따로 창에서 — auto(앱 창은 따로 창, 브라우저 개발 모드는 덮어서)·on·off (D181)':
+        'User guide and example guide in their own windows — auto (own windows in the app, covering the window in browser dev mode), on or off (D181)',
     '사이드바 목록의 차례 — name(이름)·time(시간)·type(형식). 폴더가 먼저': 'Order of sidebar lists — name, time or type. Folders first',
     '사이드바 보이기 (Ctrl+B)': 'Show the sidebar (Ctrl+B)',
     '사이드바 폭 (px) — null 이면 기본 폭': 'Sidebar width (px) — null for the default width',

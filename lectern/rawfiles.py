@@ -59,6 +59,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'line_numbers': (N_('md 문서 왼쪽 여백의 원문 줄 번호 (Alt+L)'), W_TOOLBAR),
     'theme_groups': (N_('스타일 목록을 묶는 방식 — use(용도별)·mood(분위기별)·tone(밝기별)'), W_VIEW),
     'show_titles': (N_('사이드바 목록에 파일 이름 대신 문서 제목'), W_SIDEBAR),
+    'ref_windows': (N_('사용설명서·예제 가이드를 따로 창에서 — auto(앱 창은 따로 창, 브라우저 개발 모드는 덮어서)·on·off (D181)'), W_FILE),
     'sidebar_visible': (N_('사이드바 보이기 (Ctrl+B)'), W_TOOLBAR),
     'sidebar_width': (N_('사이드바 폭 (px) — null 이면 기본 폭'), W_SIDEBAR),
     'toc_width': (N_('목차 폭 (px) — null 이면 기본 폭'), W_TOC),

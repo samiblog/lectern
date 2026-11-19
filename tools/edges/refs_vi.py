@@ -341,7 +341,7 @@ try:
         page.keyboard.press('Control+/')
         page.wait_for_selector('#lec-keys:not([hidden])', timeout=5000)
         page.locator('#lec-keys-tabs button[data-tab="open"]').click()   # Shift+F1 은 '열기·화면' 탭 (D157)
-        check('단축키 표에 Shift+F1 과 예제 열기 버튼', 'Shift' in page.inner_text('#lec-keys-list') and '예제 프로젝트 열기' in page.inner_text('#lec-keys-list') and page.locator('#lec-keys-samples').is_visible())
+        check('단축키 표에 Shift+F1 과 예제 열기 버튼', 'Shift' in page.inner_text('#lec-keys-list') and '예제 가이드' in page.inner_text('#lec-keys-list') and page.locator('#lec-keys-samples').is_visible())
         page.keyboard.press('Escape')
         page.wait_for_timeout(200)
 
