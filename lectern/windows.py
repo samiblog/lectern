@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 MAX_WINDOWS = 8
 WINDOW_ID = re.compile(r'[0-9a-f]{8,32}')
-START_KEYS = ('type', 'path', 'top', 'hash', 'line', 'deck', 'help')   # 주소에 실어 보내는 첫 화면 (solo.js — help: 사용설명서 창, D181)
+START_KEYS = ('type', 'path', 'top', 'hash', 'line', 'deck', 'help', 'guide')   # 주소에 실어 보내는 첫 화면 (solo.js — help: 사용설명서 창, guide: 예제 가이드 창, D181)
 MAIN = ''   # 메인 창의 창 id
 
 
@@ -94,6 +94,7 @@ class Solo:
     visible: bool = True
     deck: str = ''   # 슬라이드 창이면 그 Lectern 슬라이드의 경로 (D96)
     minimized: bool = False
+    kind: str = ''   # 보기 창 (D181): 'help' 사용설명서 창·'guide' 예제 가이드 창 — 하나씩만, 다른 프로젝트를 골라도 숨지 않는다
 
 
 class SoloWindows:
@@ -130,6 +131,20 @@ class SoloWindows:
         if self._state.get(pid) is None or not WINDOW_ID.fullmatch(wid):
             return False
         deck = fields.get('path', [''])[0] if fields.get('deck', [''])[0] == '1' else ''
+        kind = 'help' if fields.get('help', [''])[0] == '1' else 'guide' if fields.get('guide', [''])[0] == '1' else ''
+        if kind:   # 보기 창은 하나씩 (D181) — 이미 있으면 그 창이 받아 보이고 앞으로 (설명서 창은 어느 프로젝트의 것이든, 가이드 창은 그 프로젝트의 것)
+            with self._lock:
+                same = next((s for s in self._solos.values() if s.kind == kind and (kind == 'help' or s.project == pid)), None)
+            if same is not None:
+                if kind == 'help':
+                    self._state.board.send(same.id, {'type': 'help', 'hash': fields.get('hash', [''])[0]})
+                else:
+                    self._state.board.send(same.id, {'type': fields.get('type', ['doc'])[0] if fields.get('type', [''])[0] in ('doc', 'code') else 'doc',
+                                                     'path': fields.get('path', [''])[0]})
+                if self._state.on_send:
+                    self._state.on_send(same.id)
+                self.front(same.id)
+                return True
         board = self._state.board
         held = board.holder(pid, deck) if deck and 'fresh' not in fields else None
         with self._lock:
@@ -139,7 +154,7 @@ class SoloWindows:
             if same is None:
                 if len(self._solos) >= MAX_WINDOWS or wid in self._solos:
                     return False
-                solo = self._solos[wid] = Solo(wid, pid, deck=deck)
+                solo = self._solos[wid] = Solo(wid, pid, deck=deck, kind=kind)
         if same is not None:   # 이 발표의 슬라이드 창이 이미 있다 — 그 문서를 보이고 창을 앞으로
             jump = {k: fields[k][0] for k in ('hash', 'line') if k in fields}
             board.send(same.id, {'type': 'doc', 'path': deck, **({'line': int(jump['line'])} if jump.get('line', '').isdigit() else {}), **({'hash': jump['hash']} if 'hash' in jump else {})})
@@ -189,7 +204,7 @@ class SoloWindows:
         active = self._state.active
         shown = False
         for solo in self._of():
-            want = solo.project == active
+            want = solo.project == active or bool(solo.kind)   # 보기 창(사용설명서·예제 가이드 — D181)은 늘 보인다
             if want == solo.visible or solo.window is None:
                 continue
             try:

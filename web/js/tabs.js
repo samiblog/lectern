@@ -21,8 +21,8 @@ import { confirmCloseTerminal, disposeTerminal } from './terminal.js';
 import { confirmCloseEditor, disposeEditor } from './editor.js';
 import { restoreDocTabs, selectDocTab, closeAllDocs, closeAllItem, canCloseAll } from './doctabs.js';
 import { gatherOn } from './gather.js';
-import { manualOpen } from './help.js';
-import { solo } from './solo.js';
+import { manualOpen, refWindows } from './help.js';
+import { solo, soloQuery } from './solo.js';
 import { html, setHtml } from './html.js';
 import { dragTabs } from './tabdrag.js';
 import { $, basename, toast, copyText } from './util.js';
@@ -51,7 +51,7 @@ const samePath = (a, b) => a.replace(/\\/g, '/').toLowerCase() === b.replace(/\\
 function makeTab(p) {
   const tab = {
     id: p.id, root: p.root, name: p.name, watch: p.watch, seq: p.seq,
-    readonly: !!p.readonly,   // 보기만 (D71 — Lectern 프로그램 폴더 안: 예제 등) — 터미널·편집·새 문서·이름 바꾸기 없음
+    readonly: !!p.readonly || !!solo?.ref,   // 보기만 (D71 — Lectern 프로그램 폴더 안: 예제 등, D181 — 사용설명서·예제 가이드 창) — 터미널·편집·새 문서·이름 바꾸기 없음
     position: p.position,   // 열 때 서버가 알려 준 마지막 문서와 스크롤 위치 (처음 고를 때 쓴다)
     tree: [], files: [], fileMap: new Map(), dirs: new Set(), changed: new Set(), open: new Set(), lastSync: null,
     treeLoaded: false,      // 트리를 받았는지 (project.js)
@@ -231,12 +231,47 @@ export async function openSamples(path = null) {
     toast(t('예제 폴더가 없습니다. Lectern 을 다시 설치하면 생깁니다'), 'error');
     return false;
   }
+  if (solo) {   // 독립창 — 예제 프로젝트는 메인 창의 탭이다. 메인 창에 맡긴다 (D181)
+    try {
+      await postJSON('/api/window-send', { to: '', type: 'sample', path: typeof path === 'string' ? path : '' });
+      return true;
+    } catch (e) {
+      toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
+      return false;
+    }
+  }
+  if (refWindows() && await openGuide(path)) return true;
   const ok = await openFolder(S.samples);
   if (!ok) return ok;
   if (typeof path === 'string' && S.fileMap.has(path)) await navigate({ type: 'doc', path });
   else if (typeof path === 'string' && path) toast(t('예제에 그 문서가 없습니다: {path}', { path }), 'error');
   else if (S.view?.type === 'overview' && !S.view.path && S.fileMap.has('README.md')) await navigate({ type: 'doc', path: 'README.md' });
   return ok;
+}
+
+/**
+ * 예제 가이드 창 (D181): 예제 프로젝트의 문서를 따로 창(보기만)에서 연다 — 메인 창은 보던 프로젝트 그대로 (예제 탭은 뒤에 열어 둔다 — 그 창의 프로젝트).
+ * 가이드 창이 이미 있으면 그 창이 새 문서 탭으로 받는다 (서버 windows.py). 창을 열지 못하면 false — 지금처럼 메인 창의 예제 탭으로
+ */
+async function openGuide(path) {
+  const prev = S.tab;
+  let tab = S.tabs.find((tb) => samePath(tb.root, S.samples));
+  if (!tab) {
+    if (S.tabs.length >= maxTabs) return false;
+    let info;
+    try {
+      info = await postJSON('/api/open', { path: S.samples });
+    } catch {
+      return false;
+    }
+    syncTabs(info);
+    tab = S.tabs.find((tb) => tb.id === info.opened);
+    if (!tab) return false;
+    if (prev) postJSON('/api/activate', { p: prev.id }).catch(() => {});   // 서버가 고른 탭도 보던 프로젝트로 (예제 탭은 뒤에)
+    else await selectTab(tab, { tell: false });   // 열린 프로젝트가 없었다 — 메인 창은 예제 탭
+  }
+  const doc = typeof path === 'string' && path ? path : 'README.md';
+  return native.openWindow(soloQuery(tab.id, { type: 'doc', path: doc, guide: true }));
 }
 
 export async function chooseAndOpen() {

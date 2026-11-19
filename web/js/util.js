@@ -133,6 +133,10 @@ let toastTimer = 0;
  */
 export function blockedReadOnly(tab) {
   if (!tab?.readonly) return false;
+  if (new URLSearchParams(location.search).get('help') === '1' || new URLSearchParams(location.search).get('guide') === '1') {   // 보기 창 (D181 — solo.ref)
+    toast(t('사용설명서·예제 가이드 창은 보기만 합니다 — 고치려면 메인 창에서 여세요'), 'error', 5000);
+    return true;
+  }
   toast(t('이 프로젝트는 Lectern 프로그램 폴더 안에 있어 보기만 합니다 — 고치거나 터미널을 쓰려면 폴더를 다른 곳에 복사해 여세요'), 'error', 6000);
   return true;
 }

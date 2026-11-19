@@ -365,3 +365,29 @@ def test_user_guide_window_hands_sample_links_to_the_main_window(tmp_path):
         assert c.post('/api/window-send', json={**sample, 'path': 3}).status_code == 400
     finally:
         state.close()
+
+
+def test_user_guide_window_is_one_and_stays_shown(setup):
+    """사용설명서 창 (D181): 하나만 — 또 열면 떠 있는 창이 그 장을 받고 앞으로. 다른 프로젝트를 골라도 숨지 않는다"""
+    state, solos, first, second, made, *_ = setup
+    assert solos.open(query(first.id, 'aaaaaaaa', type='doc', path='', help='1'))
+    state.board.seen('aaaaaaaa', first.id, '사용설명서')   # 창이 떠서 변경 확인을 시작했다 (그 전에는 받을 수 없다)
+    assert solos.open(query(second.id, 'bbbbbbbb', type='doc', path='', help='1', hash='%23term'))   # 다른 프로젝트에서 또 — 새 창 없이
+    assert list(made) == ['aaaaaaaa']
+    assert state.board.take('aaaaaaaa') == [{'type': 'help', 'hash': '#term'}]
+    state.activate(second.id)
+    solos.apply()
+    assert 'hide' not in made['aaaaaaaa'].calls   # 숨기지 않았다
+
+
+def test_guide_window_is_one_per_project_and_receives_documents(setup):
+    """예제 가이드 창 (D181): 그 프로젝트에 하나 — 또 열면 그 창이 새 문서 탭으로 받는다. 숨지 않는다"""
+    state, solos, first, second, made, *_ = setup
+    assert solos.open(query(first.id, 'cccccccc', type='doc', path='README.md', guide='1'))
+    state.board.seen('cccccccc', first.id, 'README.md')
+    assert solos.open(query(first.id, 'dddddddd', type='doc', path='guide/02.md', guide='1'))
+    assert list(made) == ['cccccccc'] and state.board.take('cccccccc') == [{'type': 'doc', 'path': 'guide/02.md'}]
+    assert solos.open(query(first.id, 'eeeeeeee', type='doc', path='b.md'))   # 보통 독립창은 따로
+    state.activate(second.id)
+    solos.apply()
+    assert 'hide' not in made['cccccccc'].calls and made['eeeeeeee'].calls == ['hide']

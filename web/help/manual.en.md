@@ -9,7 +9,9 @@ Lectern is a workspace for Markdown-centered research with AI. You read, review 
 > [!TIP]
 > Press F1 to open and close this guide (Esc also closes it). Click an entry in the contents on the left to jump to it, and press Ctrl+F to search the guide. For just the keyboard shortcuts, click the **?** button in the toolbar or press Ctrl+/.
 >
-> To keep the guide open beside your documents, right-click the **User guide** header at the top left and choose **Open in new window** (or press **Ctrl+Shift+N** while reading the guide, or use **Open the user guide in a new window** in the command finder). Right-click a chapter in the contents to open the window at that chapter. Like a document's new window, it belongs to the current project: it hides when you pick another project tab and comes back with it. In that window F1, Esc and ✕ close the window, and example links open in the main window's example tab.
+> This guide opens in its own window (the user guide window), so you can keep it beside your documents. There is only one: pressing F1 again brings it to the front. It stays visible when you pick another project tab and closes with the project tab it was opened from. It is view-only. In that window F1, Esc and ✕ close it. With no project open it covers the main window instead; then right-click the **User guide** header at the top left or a chapter in the contents and choose **Open in new window**.
+>
+> Example links in the guide and **Shift+F1** open the example project's documents in the **example guide window**. The main window stays on your project and the example tab opens in the background. There is only one example guide window — other examples open as new document tabs in it — and it is view-only (to try changes, copy the example folder elsewhere and open the copy).
 
 ## Getting started
 

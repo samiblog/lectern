@@ -515,7 +515,7 @@ async function boot() {
   if (solo) {   // 독립창 (D95): 문서가 기본, 사이드바는 Ctrl+B 로
     document.documentElement.classList.add('lec-solo');
     if (solo.deck) document.documentElement.classList.add('lec-slide-window');   // 슬라이드 창 (D96): 스타일을 따로 고른다
-    S.config.sidebar_visible = false;
+    S.config.sidebar_visible = !!solo.guide;   // 예제 가이드 창(D181)은 예제를 둘러보게 트리를 보인다
   }
   await loadUserStyles();   // 내 스타일 (D53) — 고른 스타일이 내 것이면 목록이 있어야 입힐 수 있다
   initTheme();

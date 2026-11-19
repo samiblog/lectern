@@ -47,6 +47,7 @@ DEFAULTS: dict[str, Any] = {
     'doc_width': 1.0,        # md 문서 본문의 폭 배율 (툴바의 문서 폭 버튼, 0.8~2, 10 = 가득 — D68)
     'line_numbers': False,   # md 문서 왼쪽 여백의 원문 줄 번호 (툴바 버튼·Alt+L — D80)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
+    'ref_windows': 'auto',   # 사용설명서·예제 가이드를 따로 창에서 (D181): auto(앱 창에서는 따로 창, 브라우저 개발 모드는 덮는 보기)·on·off
     'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
@@ -151,6 +152,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('folder', 'all', 'off')
     if key == 'ai_style':
         return isinstance(value, str) and (value in AI_STYLES or (value.startswith('mine:') and value.endswith('.md') and '/' not in value and '\\' not in value))
+    if key == 'ref_windows':
+        return value in ('auto', 'on', 'off')
     if key == 'settings_section':
         return value in ('general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more')
     if key == 'terminal_font_size':

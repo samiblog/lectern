@@ -213,7 +213,7 @@ export default {
 "고른 글 복사 (고른 글이 없으면 실행 중인 명령 멈춤)": "Copy the selection (with nothing selected, stops the running command)",
 "붙여 넣기": "Paste",
 "도움말·설정": "Help & settings",
-"사용설명서 열기·닫기": "Open/close the user guide",
+"사용설명서 — 따로 창에서 (그 창에서 F1 은 닫기)": "User guide — in its own window (F1 there closes it)",
 "단축키 표 열기·닫기": "Open/close keyboard shortcuts",
 "설정 창": "Settings",
 "키": "Keys",
@@ -1393,7 +1393,7 @@ export default {
 "vi 방식": "vi",
 "vim 처럼 — Esc 는 Normal 모드로, :w 저장, :q 닫기": "Like vim — Esc goes to Normal mode, :w saves, :q closes",
 "사용법과 Lectern 슬라이드 예제가 든 예제 프로젝트를 탭으로 엽니다": "Open the sample project with the usage guide and Lectern slide samples in a tab",
-"예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제": "Open the sample project — the usage guide and Lectern slide samples",
+"예제 가이드 — 사용법(guide)과 Lectern 슬라이드 예제를 따로 창에서": "Example guide — the how-to (guide) and Lectern slides examples in their own window",
 "예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)": "Opens in the sample project (Shift+F1 opens its first page)",
 "예제에 그 문서가 없습니다: {path}": "That document is not in the samples: {path}",
 "Enter 넣기 · Esc 그만두기": "Enter inserts · Esc cancels",
@@ -2171,5 +2171,6 @@ export default {
 "사용설명서 창 닫기": "Close the user guide window",
 "설명서를 옆에 두고 문서를 봅니다": "Keep the guide beside your documents",
 "새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요": "A new window belongs to a project — open a folder first",
-"메인 창에서 예제를 엽니다": "Opening the example in the main window"
+"메인 창에서 예제를 엽니다": "Opening the example in the main window",
+"사용설명서·예제 가이드 창은 보기만 합니다 — 고치려면 메인 창에서 여세요": "The user guide and example guide windows are view-only — open the file in the main window to change it"
 };

@@ -19,6 +19,15 @@ import { showMenu } from './ui.js';
 /** 이 창이 사용설명서 창인지 (D181) */
 export const helpWindow = !!solo?.help;
 
+/**
+ * 사용설명서·예제 가이드를 따로 창에서 여는지 (D181 — 기본). 설정 ref_windows: auto(앱 창에서는 따로 창, 브라우저 개발 모드에서는 덮는 보기 —
+ * 팝업을 막는 브라우저가 있고 점검이 덮는 보기를 본다)·on·off
+ */
+export function refWindows() {
+  const v = S.config?.ref_windows;
+  return v === 'on' || (v !== 'off' && native.has('open_window'));
+}
+
 /** [묶음, [[키, 하는 일]], 탭]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다. 탭은 KEY_TABS 의 id (D157) */
 export const SHORTCUTS = [
   [t('열기·찾기'), [
@@ -83,8 +92,8 @@ export const SHORTCUTS = [
     ['F2', t('사이드바에서 고른 파일의 이름 바꾸기 (같은 폴더 안에서)')],
   ], 'open'],
   [t('도움말·설정'), [
-    ['F1', t('사용설명서 열기·닫기')],
-    ['Shift+F1', t('예제 프로젝트 열기 — 사용법(guide)과 Lectern 슬라이드 예제')],
+    ['F1', t('사용설명서 — 따로 창에서 (그 창에서 F1 은 닫기)')],
+    ['Shift+F1', t('예제 가이드 — 사용법(guide)과 Lectern 슬라이드 예제를 따로 창에서')],
     ['Ctrl+/', t('단축키 표 열기·닫기')],
     ['Ctrl+,', t('설정 창')],
   ], 'open'],
@@ -434,23 +443,30 @@ export function closeManual(opts = null) {
   return true;
 }
 
-export const toggleManual = () => (closeManual({ user: true }) || openManual());
+export const toggleManual = () => (closeManual({ user: true }) || showManual());
+
+/** 사용설명서를 보인다 (F1·명령 찾기·단축키 표의 설명서) — 따로 창이 기본 (D181). 프로젝트가 없거나(창은 프로젝트에 속한다) 창을 열지 못하면 이 창에 덮어서 */
+export async function showManual() {
+  if (!helpWindow && refWindows() && S.tab && await manualToWindow(null, { quiet: true })) return true;
+  await openManual();
+  return true;
+}
 
 /**
  * 사용설명서를 새 창에서 연다 (D181) — 문서의 새 창과 같은 독립창이라 지금 프로젝트에 속한다 (그 프로젝트를 고를 때 보이고, 탭을 닫으면 함께 닫힌다).
  * head: 열 장의 차례 (없으면 지금 읽는 장). 열리면 이 창의 설명서는 걷는다
  */
-export async function manualToWindow(head = null) {
+export async function manualToWindow(head = null, { quiet = false } = {}) {
   if (helpWindow) return false;   // 이미 사용설명서 창
   if (!S.tab) {
-    toast(t('새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요'));
+    if (!quiet) toast(t('새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요'));
     return false;
   }
   const i = head ?? (manualOpen() && heads.length ? currentHead() : -1);
   const id = heads[i]?.id;
   const done = await native.openWindow(soloQuery(S.tab.id, { type: 'doc', path: '', help: true, ...(id ? { hash: `#${id}` } : {}) }));
   if (!done) {
-    toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
+    if (!quiet) toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
     return false;
   }
   closeManual();
@@ -487,6 +503,7 @@ export function initHelp() {
   if (helpWindow) {   // 사용설명서 창 (D181): 첫 화면을 그린 뒤 설명서를 연다 — 화면이 바뀌면 설명서가 걷히니(main.js) 그 뒤에
     document.documentElement.classList.add('lec-help-window');
     let first = true;
+    on('help-jump', (hash) => openManual({ hash }));   // 떠 있는 사용설명서 창에서 또 열면 그 장으로 (windows.py)
     on('view', () => {
       if (!first || S.view?.type !== 'overview') return;   // 탭을 고를 때의 빈 화면이 아니라 첫 화면(폴더 개요)이 그려진 뒤
       first = false;
@@ -513,7 +530,10 @@ export function initHelp() {
     keysTab('', dir);
     if (onTab) $(`#lec-keys-tabs button[data-tab="${keyTab}"]`)?.focus();
   });
-  $('#lec-keys-manual').addEventListener('click', openManual);
+  $('#lec-keys-manual').addEventListener('click', () => {   // 단축키 표의 '사용설명서' — F1 과 같이 (따로 창이 기본)
+    closeShortcuts();
+    showManual();
+  });
   keysBox().addEventListener('click', (e) => { if (e.target === keysBox()) closeShortcuts(); });   // 바깥을 누르면 닫기
   $('#lec-help-close').addEventListener('click', () => closeManual({ user: true }));
   $('#lec-help .help-title').addEventListener('contextmenu', (e) => helpMenu(e));   // 설명서의 '탭' — 새 창에서 열기 (D181)
