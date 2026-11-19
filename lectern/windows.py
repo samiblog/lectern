@@ -20,7 +20,7 @@ if TYPE_CHECKING:
 
 MAX_WINDOWS = 8
 WINDOW_ID = re.compile(r'[0-9a-f]{8,32}')
-START_KEYS = ('type', 'path', 'top', 'hash', 'line', 'deck')   # 주소에 실어 보내는 첫 화면 (solo.js)
+START_KEYS = ('type', 'path', 'top', 'hash', 'line', 'deck', 'help')   # 주소에 실어 보내는 첫 화면 (solo.js — help: 사용설명서 창, D181)
 MAIN = ''   # 메인 창의 창 id
 
 

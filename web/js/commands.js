@@ -24,7 +24,7 @@ import { toggleGather } from './gather.js';
 import { toggleEditor } from './editor.js';
 import { printButton } from './printdoc.js';
 import { startPresent } from './present.js';
-import { toggleManual, toggleShortcuts } from './help.js';
+import { toggleManual, toggleShortcuts, manualToWindow } from './help.js';
 import { openSettings } from './settings.js';
 import { openRaw } from './rawview.js';
 import { solo } from './solo.js';
@@ -93,6 +93,7 @@ function list(local) {
     ]],
     [t('도움말·설정'), [
       [t('사용설명서'), 'F1', toggleManual],
+      [t('사용설명서를 새 창에서 열기'), '', () => manualToWindow(), true],   // D181 — 설명서를 보는 중이면 읽던 장, 아니면 맨 앞
       [t('단축키 표'), 'Ctrl+/', toggleShortcuts],
       [t('설정'), 'Ctrl+,', () => openSettings(), true],
       [t('설정 원문 보기'), '', () => openRaw(), true],

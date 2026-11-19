@@ -133,7 +133,7 @@ function loadTab(tab) {
       await loadTree({ tab });
       if (S.config.expand_first_level !== false) for (const n of tab.tree) if (n.type === 'dir') tab.open.add(n.path);
       const restore = !solo && S.config.restore_last !== false;
-      if (solo) {
+      if (solo && !solo.help) {   // 사용설명서 창(D181)은 폴더 개요 위에 설명서를 덮는다 (help.js)
         await navigate(solo.start, { pane, scrollTop: solo.top || undefined });
         if (solo.start.line && solo.start.type === 'doc') emit('go-line', { line: solo.start.line });   // 문서 화면은 navigate 의 line 을 듣지 않는다
       }

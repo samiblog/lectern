@@ -38,7 +38,7 @@ import { initRaw, closeRaw } from './rawview.js';
 import { initStylePick, closeStylePick } from './stylepick.js';
 import { initPrint, closePrint } from './printdoc.js';
 import {
-  initHelp, toggleManual, closeManual, manualOpen, toggleShortcuts, closeShortcuts,
+  initHelp, toggleManual, closeManual, manualOpen, manualToWindow, toggleShortcuts, closeShortcuts,
 } from './help.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
@@ -358,9 +358,10 @@ function bindKeys() {
     } else if (mod && !e.shiftKey && !e.altKey && key === 'n') {   // 새로 만들기 (D65)
       e.preventDefault();
       askNewDocument();
-    } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95)
+    } else if (mod && e.shiftKey && !e.altKey && key === 'n') {   // 지금 문서를 새 창으로 (D95) — 사용설명서를 보는 중이면 설명서를 (D181)
       e.preventDefault();
-      moveToWindow();
+      if (manualOpen()) manualToWindow();
+      else moveToWindow();
     } else if (mod && e.shiftKey && !e.altKey && key === 'p') {   // 명령 찾기 (D170 — 빠른 열기의 '>')
       e.preventDefault();
       openPalette({ query: '>' });
@@ -475,7 +476,7 @@ function bindKeys() {
     } else if (e.key === 'Tab' && !mod && !e.altKey && (!typing(e) || paneField(e)) && !overlayOpen() && trapTab(e)) {   // 문서 칸 밖으로 나가지 않게 — 폴더 개요·html 문서·찾기 막대 (D167)
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual()
+      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual({ user: true })
         || clearPick() || escSpotlight()) e.preventDefault();
     }
   });

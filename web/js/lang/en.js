@@ -2166,5 +2166,10 @@ export default {
 "{n}번 터미널 화면 다시 붙기": "Reattach terminal {n} view",
 "셸과 그 안의 프로그램은 그대로 두고 화면만 새로": "Keeps the shell and its programs; renews only the view",
 "터미널 화면 다시 붙기 — 셸과 그 안의 프로그램은 그대로": "Reattach the terminal view — the shell and its programs stay as they are",
-"다시 붙을 터미널이 없습니다 — 먼저 터미널을 여세요": "No terminal to reattach — open a terminal first"
+"다시 붙을 터미널이 없습니다 — 먼저 터미널을 여세요": "No terminal to reattach — open a terminal first",
+"사용설명서를 새 창에서 열기": "Open the user guide in a new window",
+"사용설명서 창 닫기": "Close the user guide window",
+"설명서를 옆에 두고 문서를 봅니다": "Keep the guide beside your documents",
+"새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요": "A new window belongs to a project — open a folder first",
+"메인 창에서 예제를 엽니다": "Opening the example in the main window"
 };

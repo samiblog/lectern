@@ -407,10 +407,11 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/window-send')
     def api_window_send() -> Any:
-        """{to, type, path, top} — 문서를 다른 창으로 보낸다 (D95). to: 창 id, 메인 창은 빈 값. 그 창이 없으면 ok=false"""
+        """{to, type, path, top} — 문서를 다른 창으로 보낸다 (D95). to: 창 id, 메인 창은 빈 값. 그 창이 없으면 ok=false.
+        type 'sample' 은 사용설명서 창의 예제 링크 — 메인 창이 예제 프로젝트를 열고 그 문서로 (D181, 메인 창에만)"""
         data = body()
         to, kind, path = data.get('to'), data.get('type'), data.get('path')
-        if not isinstance(to, str) or kind not in ('doc', 'code') or not isinstance(path, str):
+        if not isinstance(to, str) or kind not in ('doc', 'code', 'sample') or not isinstance(path, str) or (kind == 'sample' and to):
             abort(400)
         top = data.get('top')
         sent = state.board.send(to, {'type': kind, 'path': path, 'top': top if isinstance(top, (int, float)) else 0})

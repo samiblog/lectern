@@ -5,11 +5,12 @@
 
 const q = new URLSearchParams(location.search);
 
-/** 독립창이면 {project, id, deck(슬라이드 창 — D96), start: {type, path}, top}, 메인 창이면 null */
+/** 독립창이면 {project, id, deck(슬라이드 창 — D96), help(사용설명서 창 — D181), start: {type, path}, top}, 메인 창이면 null */
 export const solo = q.get('solo') ? {
   project: q.get('solo'),
   id: q.get('w') || '',
   deck: q.get('deck') === '1',
+  help: q.get('help') === '1',
   start: { type: q.get('type') === 'code' ? 'code' : 'doc', path: q.get('path') || '', hash: q.get('hash') || undefined, line: Number(q.get('line')) || undefined },
   top: Number(q.get('top')) || 0,
 } : null;
@@ -21,6 +22,7 @@ export function soloQuery(project, target, top = 0, deck = false, fresh = false)
   if (target.hash) fields.hash = target.hash;
   if (target.line) fields.line = String(target.line);
   if (deck) fields.deck = '1';
+  if (target.help) fields.help = '1';   // 사용설명서 창 (D181) — 첫 화면은 설명서, hash 는 읽던 장
   if (fresh) fields.fresh = '1';
   return `?${new URLSearchParams(fields)}`;
 }

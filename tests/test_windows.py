@@ -338,3 +338,30 @@ def test_document_route_cannot_carry_terminal_text(tmp_path):
         assert c.get('/api/changes').get_json()['inbox'] == [{'type': 'doc', 'path': 'a.md', 'top': 0}, {'note': {'body': '글', 'line': 3}, 'p': 'p1'}]
     finally:
         state.close()
+
+
+def test_user_guide_window_keeps_its_mark(setup):
+    """사용설명서 창 (D181): 주소의 help 를 다시 만든 주소에도 싣는다 — 창이 첫 화면에 설명서를 덮는다"""
+    _, solos, first, _, made, *_ = setup
+    assert solos.open(query(first.id, type='doc', path='', top='120', help='1'))
+    fields = parse_qs(next(iter(made.values())).query.lstrip('?'), keep_blank_values=True)
+    assert fields['help'] == ['1'] and fields['top'] == ['120'] and fields['solo'] == [first.id]
+
+
+def test_user_guide_window_hands_sample_links_to_the_main_window(tmp_path):
+    """사용설명서 창의 예제 링크 (D181): window-send 의 type 'sample' 은 메인 창에만, 받은 창은 예제 프로젝트를 연다"""
+    (tmp_path / 'a.md').write_text('# 가', encoding='utf-8')
+    state = AppState(Config(tmp_path / 'config.json'), mode='browser')
+    state.open(tmp_path, remember=False)
+    told = []
+    state.on_send = told.append
+    try:
+        c = create_app(state).test_client()
+        sample = {'to': '', 'type': 'sample', 'path': 'guide/01.md'}
+        assert c.post('/api/window-send', json=sample).get_json()['ok'] and told == ['']
+        assert c.get('/api/changes').get_json()['inbox'] == [{'type': 'sample', 'path': 'guide/01.md', 'top': 0}]
+        c.get('/api/changes?w=aaaaaaaa&wp=p1&wt=x')
+        assert c.post('/api/window-send', json={**sample, 'to': 'aaaaaaaa'}).status_code == 400   # 다른 독립창으로는 보내지 않는다
+        assert c.post('/api/window-send', json={**sample, 'path': 3}).status_code == 400
+    finally:
+        state.close()

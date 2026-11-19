@@ -308,6 +308,10 @@ export async function sendToWindow(pane, to) {
 
 /** 다른 창이 보낸 것을 받는다: 문서는 새 문서 탭에서, 터미널로 보낼 글·메모는 고른 프로젝트의 것일 때만 */
 async function receive({ type, path, top, term, n, note, p, stay, hash, line, to }) {
+  if (type === 'sample') {   // 사용설명서 창의 예제 링크 (D181) — 예제 프로젝트를 열고 그 문서로
+    emit('open-sample', path || null);
+    return;
+  }
   if (type === 'renamed') {
     const tab = S.tabs.find((x) => x.id === p);
     if (tab) emit('file-renamed', { tab, path, to });

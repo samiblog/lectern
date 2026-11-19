@@ -2,14 +2,22 @@
 // 설명서는 web/help/manual.md 를 처음 열 때 받아 문서처럼 그린다 (지금 문서 스타일·글자 크기). 터미널 모음처럼 사이드바와 문서 화면 위를
 // 덮고, 왼쪽에 장 목록(읽는 곳 표시), Ctrl+F 는 설명서 안에서 찾는다. 다른 화면으로 가면(문서 열기·프로젝트 탭·터미널) 닫힌다.
 // 단축키 표와 설명서의 '단축키' 장은 같은 SHORTCUTS 로 만든다 — 단축키를 더하면 여기에 넣는다.
+// 사용설명서 창 (D181): 머리줄('사용설명서')·장 목록을 우클릭해 '새 창에서 열기'(설명서를 보는 중의 Ctrl+Shift+N 도) — 문서의 새 창과 같은 독립창(D95)이
+// 폴더 개요 위에 설명서를 덮고 연다 (읽던 곳에서). 그 창에서 F1·Esc·✕ 는 창을 닫는다. 예제 링크는 메인 창에 맡긴다 (예제 프로젝트는 메인 창의 탭).
 
 import { S, on, emit } from './store.js';
 import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
 import { setFindTarget } from './find.js';
 import { esc, html, raw, setHtml } from './html.js';
-import { $, $$, findAnchor } from './util.js';
+import { $, $$, findAnchor, toast } from './util.js';
 import { LANG, t } from './i18n.js';
+import { native, postJSON } from './api.js';
+import { solo, soloQuery } from './solo.js';
+import { showMenu } from './ui.js';
+
+/** 이 창이 사용설명서 창인지 (D181) */
+export const helpWindow = !!solo?.help;
 
 /** [묶음, [[키, 하는 일]], 탭]. 키: 'Ctrl+Shift+F' 처럼 + 로 잇고, 같은 일을 하는 다른 키는 ' / ' 로 나눈다. 탭은 KEY_TABS 의 id (D157) */
 export const SHORTCUTS = [
@@ -375,11 +383,17 @@ function scrollToHead(h) {
   box.scrollTop += h.getBoundingClientRect().top - box.getBoundingClientRect().top - 16;
 }
 
-/** 장 목록에 지금 읽는 곳 표시 */
-function markCurrent() {
+/** 지금 읽는 장의 차례 (0부터) */
+function currentHead() {
   const top = scroller().getBoundingClientRect().top + 80;
   let cur = 0;
   heads.forEach((h, i) => { if (h.getBoundingClientRect().top <= top) cur = i; });
+  return cur;
+}
+
+/** 장 목록에 지금 읽는 곳 표시 */
+function markCurrent() {
+  const cur = currentHead();
   for (const a of $$('#lec-help-toc a')) {
     const on = Number(a.dataset.i) === cur;
     a.classList.toggle('active', on);
@@ -387,7 +401,8 @@ function markCurrent() {
   }
 }
 
-export async function openManual() {
+/** hash: 설명서 안의 읽을 장 (제목 앵커 '#…' — 사용설명서 창이 읽던 장에서 연다. 창 폭이 달라 스크롤 위치로는 같은 곳이 아니다) */
+export async function openManual({ hash = '' } = {}) {
   $('#lec-help-samples').hidden = !S.samples;
   closeShortcuts();
   helpBox().hidden = false;
@@ -398,20 +413,86 @@ export async function openManual() {
     setHtml(view(), html`<p>${t('사용설명서를 읽지 못했습니다 ({error}). Lectern 을 다시 설치하면 고쳐집니다.', { error: e.message })}</p>`);
   });
   await loaded;
+  const at = hash && findAnchor(view(), hash);
+  if (at) {
+    scrollToHead(at);
+    markCurrent();
+  }
+  if (helpWindow) native.setTitle(`${t('사용설명서')} - Lectern`);
 }
 
-export function closeManual() {
+/** user: 사용자가 닫았다 (F1·Esc·✕) — 사용설명서 창이면 창을 닫는다. 다른 화면으로 가서 걷히는 것은 user 가 아니다 */
+export function closeManual(opts = null) {
   if (!manualOpen()) return false;
+  if (helpWindow && opts?.user === true) {   // 이벤트로 불릴 때는 그 값이 들어온다 (on('view', closeManual)) — user 일 때만 창을 닫는다
+    native.closeWindow();
+    return true;
+  }
   helpBox().hidden = true;
   setFindTarget(null);   // 찾기 막대를 문서 화면으로 되돌린다
   $('#lec-content')?.focus({ preventScroll: true });
   return true;
 }
 
-export const toggleManual = () => (closeManual() || openManual());
+export const toggleManual = () => (closeManual({ user: true }) || openManual());
+
+/**
+ * 사용설명서를 새 창에서 연다 (D181) — 문서의 새 창과 같은 독립창이라 지금 프로젝트에 속한다 (그 프로젝트를 고를 때 보이고, 탭을 닫으면 함께 닫힌다).
+ * head: 열 장의 차례 (없으면 지금 읽는 장). 열리면 이 창의 설명서는 걷는다
+ */
+export async function manualToWindow(head = null) {
+  if (helpWindow) return false;   // 이미 사용설명서 창
+  if (!S.tab) {
+    toast(t('새 창은 프로젝트에 속합니다 — 먼저 폴더를 여세요'));
+    return false;
+  }
+  const i = head ?? (manualOpen() && heads.length ? currentHead() : -1);
+  const id = heads[i]?.id;
+  const done = await native.openWindow(soloQuery(S.tab.id, { type: 'doc', path: '', help: true, ...(id ? { hash: `#${id}` } : {}) }));
+  if (!done) {
+    toast(t('새 창을 열지 못했습니다. 안 쓰는 창을 닫고 다시 하세요'), 'error');
+    return false;
+  }
+  closeManual();
+  return true;
+}
+
+/** 머리줄·장 목록의 우클릭 메뉴 — head: 그 장에서 열 때의 장 차례 */
+function helpMenu(e, head = null) {
+  e.preventDefault();
+  showMenu(e.clientX, e.clientY, helpWindow
+    ? [{ label: t('사용설명서 창 닫기'), hint: 'F1', action: () => closeManual({ user: true }) }]
+    : [{ label: t('새 창에서 열기'), hint: 'Ctrl+Shift+N', tip: t('설명서를 옆에 두고 문서를 봅니다'), action: () => manualToWindow(head) },
+      { label: t('사용설명서 닫기'), hint: 'F1', action: () => closeManual({ user: true }) }]);
+}
+
+/** 예제로 가는 길 — 사용설명서 창이면 메인 창에 맡긴다 (예제 프로젝트는 메인 창의 탭이다) */
+async function toSample(path) {
+  if (!helpWindow) {
+    closeManual();
+    closeShortcuts();
+    emit('open-sample', path);   // tabs.js — 예제 프로젝트를 열고 그 문서로
+    return;
+  }
+  try {
+    await postJSON('/api/window-send', { to: '', type: 'sample', path: path || '' });
+    toast(t('메인 창에서 예제를 엽니다'));
+  } catch (e) {
+    toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
+  }
+}
 
 export function initHelp() {
   renderShortcuts();
+  if (helpWindow) {   // 사용설명서 창 (D181): 첫 화면을 그린 뒤 설명서를 연다 — 화면이 바뀌면 설명서가 걷히니(main.js) 그 뒤에
+    document.documentElement.classList.add('lec-help-window');
+    let first = true;
+    on('view', () => {
+      if (!first || S.view?.type !== 'overview') return;   // 탭을 고를 때의 빈 화면이 아니라 첫 화면(폴더 개요)이 그려진 뒤
+      first = false;
+      setTimeout(() => openManual({ hash: solo.start.hash || '' }), 0);
+    });
+  }
   $('#lec-help-ver').textContent = document.querySelector('meta[name="lec-version"]')?.content || '';
   $('#lec-btn-help').addEventListener('click', toggleShortcuts);
   $('#lec-keys-close').addEventListener('click', closeShortcuts);
@@ -434,7 +515,12 @@ export function initHelp() {
   });
   $('#lec-keys-manual').addEventListener('click', openManual);
   keysBox().addEventListener('click', (e) => { if (e.target === keysBox()) closeShortcuts(); });   // 바깥을 누르면 닫기
-  $('#lec-help-close').addEventListener('click', closeManual);
+  $('#lec-help-close').addEventListener('click', () => closeManual({ user: true }));
+  $('#lec-help .help-title').addEventListener('contextmenu', (e) => helpMenu(e));   // 설명서의 '탭' — 새 창에서 열기 (D181)
+  $('#lec-help-toc').addEventListener('contextmenu', (e) => {   // 장을 우클릭하면 그 장에서
+    const a = e.target.closest('a[data-i]');
+    helpMenu(e, a ? Number(a.dataset.i) : null);
+  });
   $('#lec-help-keys').addEventListener('click', openShortcuts);
   $('#lec-help-toc').addEventListener('click', (e) => {
     const a = e.target.closest('a[data-i]');
@@ -450,18 +536,13 @@ export function initHelp() {
     const href = a.getAttribute('href');
     const sample = samplePath(href);
     if (sample) {
-      closeManual();
-      emit('open-sample', sample);   // tabs.js — 예제 프로젝트를 열고 그 문서로
+      toSample(sample);
       return;
     }
     const target = href.startsWith('#') && findAnchor(view(), href);
     if (target) scrollToHead(target);
   });
-  const toSamples = () => {
-    closeManual();
-    closeShortcuts();
-    emit('open-sample', null);
-  };
+  const toSamples = () => toSample(null);
   $('#lec-help-samples').addEventListener('click', toSamples);
   $('#lec-keys-samples').addEventListener('click', toSamples);
   let ticking = false;
