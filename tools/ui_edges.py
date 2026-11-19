@@ -24,13 +24,14 @@ from pathlib import Path
 import close_windows
 
 ROOT = Path(__file__).resolve().parents[1]
-SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick', 'focus_tabs', 'enter_chars', 'tab_trap', 'tab_fuzz', 'sidekeys', 'scen_093', 'dataedit', 'scen_094', 'scen_093_094', 'tablewidth', 'tablealign', 'scen_tables', 'linebreaks', 'toolbar_fit', 'newfiles']
+SUITES = ['deckguard', 'slidecheck', 'templates', 'mdstyle', 'docedit', 'slideedit', 'sample_decks', 'reading', 'frames', 'lines', 'combos', 'structure', 'data', 'data_wide', 'hostile', 'input', 'notes', 'variety', 'refresh', 'solo', 'solo_cases', 'sample_lines', 'slides', 'sidebar', 'refs_vi', 'textbox', 'pickkeys', 'work', 'work_scenarios', 'work_more', 'impress', 'impress_scenarios', 'termfont', 'printpdf', 'closeall', 'chartdata', 'termstack', 'aitool', 'fastopen', 'inlinefmt', 'wordpick', 'sidekinds', 'exporthtml', 'layouts', 'exportdocx', 'export_scenarios', 'export_more', 'writingreq', 'work_tree', 'work_tree_more', 'keys_tidy', 'work_gantt', 'put_settings', 'scen_day', 'scen_levels', 'scen_gantt', 'scen_put', 'change_kinds', 'keys_tabs', 'scen_088', 'view_keys', 'aiscope', 'stylepick', 'focus_tabs', 'enter_chars', 'tab_trap', 'tab_fuzz', 'sidekeys', 'scen_093', 'dataedit', 'scen_094', 'scen_093_094', 'tablewidth', 'tablealign', 'scen_tables', 'linebreaks', 'toolbar_fit', 'newfiles', 'termreattach']
 # 고친 파일 → 돌릴 묶음. 맞는 것이 없는 web/·lectern/ 파일은 AREA_OTHER
 AREAS = [
     (r'web/js/(aisetup|stylepick)\.js|lectern/aistatus\.py|web/help/(writing-styles\.json|new-style.*|business-report.*|academic-writing.*|plain-explainer.*)', ['aiscope', 'aitool', 'stylepick']),
     (r'web/js/(watch|search)\.js', ['refresh', 'reading', 'hostile', 'aiscope', 'focus_tabs']),
     (r'web/css/app\.css|web/index\.html|web/js/lang/en\.js|web/js/(textsize|docwidth|theme|spotlight)\.js', ['toolbar_fit']),
     (r'web/js/(newdialog|newdoc|others|tree|commands)\.js|lectern/editing\.py|lectern/server\.py', ['newfiles']),
+    (r'web/js/(terminal|commands)\.js', ['termreattach']),
     (r'web/js/(charpick|datepick)\.js|web/data/chars\.json', ['enter_chars']),
     (r'web/js/(line\w+|spotlight)\.js|lectern/editing\.py', ['linebreaks', 'tab_trap', 'tab_fuzz', 'enter_chars', 'docedit', 'slideedit', 'structure', 'lines', 'refresh', 'sample_lines', 'slides', 'textbox', 'pickkeys', 'termstack', 'inlinefmt', 'wordpick', 'tablealign']),
     (r'web/js/(line\w+|spotlight|vikeys|editor|docops|docmenu|wordpick|main|others|tree)\.js', ['keys_tidy', 'scen_levels', 'change_kinds', 'scen_088', 'view_keys', 'tablealign']),
@@ -68,7 +69,7 @@ AREAS = [
     (r'web/js/(slidegallery|pptxdialog)\.js|web/templates/.*|lectern/(slidetemplates|pptxexport)\.py|skills/lectern-to-pptx/.*', ['templates']),
     (r'samples/.*', ['sample_lines']),
     (r'web/js/(tabs|doctabs|tabdrag|panes|tree|others|main|terminal|gather|spread)\.js', ['combos', 'structure', 'hostile', 'solo', 'solo_cases', 'termfont', 'closeall', 'termstack', 'aitool', 'fastopen', 'focus_tabs', 'reading', 'frames', 'tab_trap', 'tab_fuzz']),
-    (r'web/js/ui\.js|lectern/terminal\.py', ['termstack', 'aitool']),
+    (r'web/js/ui\.js|lectern/terminal\.py', ['termstack', 'aitool', 'termreattach']),
     (r'web/js/help\.js|web/index\.html|web/help/manual', ['keys_tabs']),
     (r'web/js/(putmenu|settings|theme|vikeys|printdoc|work|main)\.js|web/index\.html|lectern/config\.py', ['put_settings', 'scen_put', 'change_kinds', 'aiscope']),
     (r'web/js/(aitool|basket)\.js|lectern/config\.py|web/index\.html', ['aitool', 'reading', 'combos', 'aiscope']),

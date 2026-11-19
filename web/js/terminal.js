@@ -199,20 +199,11 @@ function create(tab, n = 0, parent = null) {
   box.className = 'term-box';
   box.hidden = !!parent;
   (parent || pane.lastElementChild).append(box);
-  const xterm = new window.Terminal({
-    fontFamily: FONT, fontSize: termFontSize(), lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
-    allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
-    theme: applyColors(), minimumContrastRatio: MIN_CONTRAST,
-  });
-  const fit = new window.FitAddon.FitAddon();
-  xterm.loadAddon(fit);
-  xterm.loadAddon(new window.Unicode11Addon.Unicode11Addon());
-  xterm.unicode.activeVersion = '11';
-  xterm.open(box);
   const term = {
-    tab, n, pane, box, xterm, fit, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '',
+    tab, n, pane, box, xterm: null, fit: null, id: null, next: 0, alive: false, starting: null, pending: '', sending: false, shell: '',
     stuck: [],
   };
+  mount(term);
   paneTerms.set(pane.lastElementChild, term);
   paneSizes.observe(pane.lastElementChild);
   // 쌓은 칸을 누르거나 그 셸에 초점이 가면 그 터미널이 '고른 터미널' (다시 시작·F6·모음이 쓴다)
@@ -223,14 +214,6 @@ function create(tab, n = 0, parent = null) {
     markPanes(tab);
     emit('terms');
   });
-  xterm.onData((data) => {
-    if (term.alive) send(term, data);
-    else if (!term.starting && data === '\r') start(term);   // 끝난 셸: Enter 로 다시 시작
-  });
-  xterm.onResize(({ cols, rows }) => {
-    if (term.alive) postJSON('/api/term/resize', { t: term.id, cols, rows }, TERM_HEADER).catch(() => {});
-  });
-  xterm.attachCustomKeyEventHandler((e) => keyFor(term, e));
   // Ctrl+V (브라우저의 붙여 넣기): xterm 보다 먼저 받아 같은 길로 (pasteText — 여러 줄이 Codex 에서 보내지지 않게)
   box.addEventListener('paste', (e) => {
     const text = e.clipboardData?.getData('text/plain');
@@ -241,13 +224,37 @@ function create(tab, n = 0, parent = null) {
   }, true);
   box.addEventListener('contextmenu', (e) => {
     e.preventDefault();
-    if (xterm.hasSelection()) copySelection(term);
+    if (term.xterm.hasSelection()) copySelection(term);
     else pasteFromClipboard(term);
   });
   tab.terms = [...termsOf(tab), term].sort((a, b) => a.n - b.n);
   tab.term ||= term;
   tab.termWeights = null;   // 더하면 균등 (D137)
   return term;
+}
+
+/** 화면(xterm)을 만들어 term 의 상자에 단다 — 처음 만들 때와 '화면 다시 붙기'. 상자의 이벤트(초점·붙여 넣기·우클릭)는 create 가 한 번 단다 */
+function mount(term) {
+  const xterm = new window.Terminal({
+    fontFamily: FONT, fontSize: termFontSize(), lineHeight: 1.1, cursorBlink: true, scrollback: 5000,
+    allowProposedApi: true,   // unicode11 (한글처럼 두 칸인 글자의 폭)
+    theme: applyColors(), minimumContrastRatio: MIN_CONTRAST,
+  });
+  const fit = new window.FitAddon.FitAddon();
+  xterm.loadAddon(fit);
+  xterm.loadAddon(new window.Unicode11Addon.Unicode11Addon());
+  xterm.unicode.activeVersion = '11';
+  xterm.open(term.box);
+  xterm.onData((data) => {
+    if (term.xterm !== xterm) return;   // 다시 붙기 전의 화면
+    if (term.alive) send(term, data);
+    else if (!term.starting && data === '\r') start(term);   // 끝난 셸: Enter 로 다시 시작
+  });
+  xterm.onResize(({ cols, rows }) => {
+    if (term.alive && term.xterm === xterm) postJSON('/api/term/resize', { t: term.id, cols, rows }, TERM_HEADER).catch(() => {});
+  });
+  xterm.attachCustomKeyEventHandler((e) => keyFor(term, e));
+  Object.assign(term, { xterm, fit });
 }
 
 async function copySelection(term) {
@@ -379,7 +386,8 @@ async function readAll() {
       }
       for (const [id, r] of Object.entries(d.terms || {})) {
         const term = reading.get(id);
-        if (term?.id === id) received(term, r || { data: '', next: term.next, alive: false, exit: null });   // null: 서버에 없는 셸
+        // null: 서버에 없는 셸. 물은 곳(want)이 지금 받을 곳과 다르면 그사이 다시 붙었다 (화면 다시 붙기 — 맨 앞부터 다시 받는다) — 버린다
+        if (term?.id === id && want[id] === term.next) received(term, r || { data: '', next: term.next, alive: false, exit: null });
       }
     }
   } finally {
@@ -420,6 +428,38 @@ export async function restartTerminal(tab = S.tab) {
   term.stuck = [];
   await start(term);
   term.xterm.focus();
+}
+
+/**
+ * 화면 다시 붙기 (2026-11-19): 터미널의 화면(xterm)만 새로 만들어 같은 셸에 다시 붙는다 — 셸과 거기서 도는 프로그램(Claude Code 등)은
+ * 그대로 두고, 서버가 들고 있는 최근 출력(512K 글자 — terminal.MAX_KEEP)을 맨 앞부터 다시 받아 보인다. 화면을 다시 불러올 때(F5 가 아니라
+ * 언어 바꾸기 등) 셸에 다시 붙는 길과 같다. 오래 쓴 화면에서 한글 입력이 이상할 때 화면 쪽 탓인지 가려 보는 데 쓴다.
+ * 끝에 크기를 한 번 흔들어 콘솔이 지금 화면을 통째로 다시 그리게 한다 — 잘린 출력부터 다시 보여도 맨 끝 모습이 맞게.
+ */
+export async function reattachTerminal(term = S.tab?.term) {
+  if (!term || term.starting) return;
+  if (!term.alive) {
+    toast(t('터미널 셸이 끝나 있습니다. 터미널에서 Enter 를 누르면 다시 시작합니다'));
+    return;
+  }
+  if (!term.box.clientWidth && !gathered()) {   // 감춘 터미널 — 보이게 해서 칸 크기로 맞춘다 (숨은 화면은 80×24 라 셸 크기를 흔들면 안 된다)
+    toggleTerminal(true, { focus: false });
+    if (S.tab === term.tab && term.tab.term !== term) selectTerminal(term.tab, term);
+    await new Promise(requestAnimationFrame);
+  }
+  const { id } = term;
+  term.xterm.dispose();
+  mount(term);
+  term.next = 0;   // 서버에 남은 맨 앞부터 (since 가 버린 앞부분이면 남은 맨 앞부터 준다)
+  pump(term, id);   // 기다리던 읽기를 그만두고 다시 건다 — 그 답은 readAll 이 버린다 (물은 곳이 다르다)
+  fitNow(term);
+  if (term.box.clientWidth) {
+    const { cols, rows } = term.xterm;
+    await postJSON('/api/term/resize', { t: id, cols, rows: Math.max(2, rows - 1) }, TERM_HEADER).catch(() => {});
+    await postJSON('/api/term/resize', { t: id, cols, rows }, TERM_HEADER).catch(() => {});
+  }
+  if (term.id === id) term.xterm.focus();
+  toast(t('터미널 화면을 다시 붙였습니다 — 셸과 그 안에서 도는 프로그램은 그대로입니다'));
 }
 
 // ---- 시작하다 멈춘 프로그램 (D58) ----------------------------------------------------
@@ -1033,11 +1073,17 @@ function bindResizer() {
   });
 }
 
+/** 메뉴의 '화면 다시 붙기' — 그 터미널 번호를 함께 보인다 */
+const reattachItem = (term) => ({ label: t('{n}번 터미널 화면 다시 붙기', { n: term.n + 1 }),
+  tip: t('셸과 그 안의 프로그램은 그대로 두고 화면만 새로'), action: () => reattachTerminal(term) });
+
 export function initTerminal() {
   $('#lec-term .term-head')?.addEventListener('contextmenu', (e) => {   // 머리줄 우클릭 — 터미널 설정 (D154)
     if (e.target.closest('#lec-term-tabs')) return;
     e.preventDefault();
-    import('./ui.js').then(({ showMenu }) => showMenu(e.clientX, e.clientY, [{ label: t('터미널 설정…'), action: () => emit('open-settings', 'term') }]));
+    import('./ui.js').then(({ showMenu }) => showMenu(e.clientX, e.clientY, [
+      ...(S.tab?.term ? [reattachItem(S.tab.term)] : []),
+      { label: t('터미널 설정…'), action: () => emit('open-settings', 'term') }]));
   });
   $('#lec-term-close').addEventListener('click', () => toggleTerminal(false));
   $('#lec-term-restart').addEventListener('click', () => restartTerminal());
@@ -1051,6 +1097,12 @@ export function initTerminal() {
     if (!term) return;
     if (e.target.closest('[data-close]')) closeTerminal(term);
     else selectTerminal(S.tab, term);
+  });
+  tabs.addEventListener('contextmenu', (e) => {   // 터미널 탭 우클릭 — 그 터미널의 화면 다시 붙기
+    const term = termAt(e.target);
+    if (!term) return;
+    e.preventDefault();
+    import('./ui.js').then(({ showMenu }) => showMenu(e.clientX, e.clientY, [reattachItem(term), { label: t('터미널 설정…'), action: () => emit('open-settings', 'term') }]));
   });
   tabs.addEventListener('mousedown', (e) => { if (e.button === 1) e.preventDefault(); });
   tabs.addEventListener('auxclick', (e) => {

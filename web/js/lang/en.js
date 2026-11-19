@@ -2161,5 +2161,10 @@ export default {
 "코드 파일의 확장자를 쓰세요 — 예: 정리.py · 도구.js · 설정.json": "Add a code file extension — e.g. tidy.py, tool.js, settings.json",
 "자료 파일은 .csv · .tsv · .txt 로 끝나는 이름이어야 합니다": "A data file name must end in .csv, .tsv or .txt",
 "새 파일을 만들었습니다: {path}": "Created a new file: {path}",
-"폴더를 만들었습니다 — 그 안에 만들 것을 정하세요 (그만두려면 Esc)": "Folder created — choose what to create inside it (Esc to stop)"
+"폴더를 만들었습니다 — 그 안에 만들 것을 정하세요 (그만두려면 Esc)": "Folder created — choose what to create inside it (Esc to stop)",
+"터미널 화면을 다시 붙였습니다 — 셸과 그 안에서 도는 프로그램은 그대로입니다": "Reattached the terminal view — the shell and the programs running in it are unchanged",
+"{n}번 터미널 화면 다시 붙기": "Reattach terminal {n} view",
+"셸과 그 안의 프로그램은 그대로 두고 화면만 새로": "Keeps the shell and its programs; renews only the view",
+"터미널 화면 다시 붙기 — 셸과 그 안의 프로그램은 그대로": "Reattach the terminal view — the shell and its programs stay as they are",
+"다시 붙을 터미널이 없습니다 — 먼저 터미널을 여세요": "No terminal to reattach — open a terminal first"
 };

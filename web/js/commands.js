@@ -19,7 +19,7 @@ import { toggleSpread } from './spread.js';
 import { step as stepText, resetText } from './textsize.js';
 import { toggleNotes } from './notes.js';
 import { openBoard, openEventDialog } from './work.js';
-import { toggleTerminal } from './terminal.js';
+import { toggleTerminal, reattachTerminal } from './terminal.js';
 import { toggleGather } from './gather.js';
 import { toggleEditor } from './editor.js';
 import { printButton } from './printdoc.js';
@@ -89,6 +89,7 @@ function list(local) {
       [t('일정 더하기'), 'Alt+S', () => openEventDialog(), true],
       [t('터미널 열기·닫기'), 'Ctrl+`', () => toggleTerminal(), true],
       [t('터미널 모음 열기·닫기'), 'Ctrl+Shift+`', toggleGather, true],
+      [t('터미널 화면 다시 붙기 — 셸과 그 안의 프로그램은 그대로'), '', or(() => (S.tab?.term?.alive ? reattachTerminal() : false), t('다시 붙을 터미널이 없습니다 — 먼저 터미널을 여세요')), true],
     ]],
     [t('도움말·설정'), [
       [t('사용설명서'), 'F1', toggleManual],
