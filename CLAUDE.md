@@ -27,11 +27,12 @@ python app.py --debug samples      :: 창 + 개발자 도구 (F12, 기본 Ctrl+F
 python -m pytest -q                :: 단위 테스트 (Windows가 아니어도 돎)
 python tools/ui_smoke.py           :: 화면 회귀 점검 (playwright 필요, 캡처는 ui-shots/)
 python tools/ui_edges.py -j 4      :: 가장자리 점검 (tools/edges/ — 4개씩 동시에, 이름을 주면 그 묶음만, --changed 면 고친 파일에 닿는 것만)
+python tools/ui_real.py --exe dist\Lectern\Lectern.exe   :: 실제 창(WebView2) 시험 (tools/real/ — 판마다 real<판>.py, D187)
 node tools/rules_check.mjs         :: 규칙 시험만 (브라우저 없이 1초 — pytest 에도 들어 있다)
 build.bat                          :: 테스트 후 dist\Lectern\Lectern.exe, Inno Setup 이 있으면 dist\Lectern-버전-setup.exe
 ```
 
-변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py -j 4` 전체를 돌린다 (가장자리 점검 10분쯤·ui_smoke 3분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다. 시험의 짜임과 시간은 D175). master 에 올리면 GitHub Actions 가 pytest 를 돌린다 (`.github/workflows/tests.yml` — 화면 점검은 거기서 손으로 돌릴 때만). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
+변경을 마치면 `pytest`(규칙 시험·JS 형 점검 포함, 약 1분)와 `python tools/ui_edges.py --changed`(고친 파일에 닿는 묶음만)를 돌린다. 판을 내기 전에는 `tools/ui_smoke.py` 와 `tools/ui_edges.py -j 4` 전체를 돌리고, 빌드한 뒤 `tools/ui_real.py --exe` 로 빌드본(설치한 뒤 설치본)을 본다 — 그 판의 실제 창 시험은 `tools/real/real<판>.py` 로 더한다 (가장자리 점검 10분쯤·ui_smoke 3분 — 실패한 묶음은 한 번 다시 돌려 '흔들린 점검'으로 따로 알린다. 시험의 짜임과 시간은 D175). master 에 올리면 GitHub Actions 가 pytest 를 돌린다 (`.github/workflows/tests.yml` — 화면 점검은 거기서 손으로 돌릴 때만). 새 화면 점검은 `ui_smoke` 가 아니라 `tools/edges/` 에 더한다.
 Windows 고유 동작 가운데 숨김·시스템 속성, 정션, `\\서버` 경로는 pytest 가 Windows 에서 본다. 폴더 대화상자, 편집기 열기, WebView2 는 자동 테스트가 없으니 `docs/TESTING.md` 의 수동 점검표를 따른다.
 
 ## 폴더 구조
@@ -96,7 +97,7 @@ skills/                 AI 도구의 스킬 (D98 — pptx-to-lectern, lectern-to
 assets/                 앱 아이콘 (lectern.svg → tools/make_icon.py → lectern.ico)
 installer/              lectern.iss — Inno Setup 설치 파일 스크립트 (build.bat 이 씀)
 tests/                  pytest. tests/corpus/ 는 표 읽기의 기준 자료, tests/fixture/ 는 화면 점검(ui_smoke)이 쓰는 점검용 프로젝트 (숨김·제외 케이스 포함 — 파일 이름·문장을 점검이 확인한다)
-tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), make_sample_html.py(예제의 html 발표를 다시 만듦 — html 로 전환을 고치면, D129), make_docx_templates.py(Word 양식 18가지 — 양식을 고치면 이것을 고치고 다시 돌린다, D147), sync_writing_styles.py(글쓰기 스타일의 공통 절을 리서치 글쓰기에서 옮김 — D161), make_style_samples.py(글쓰기 스타일의 견본과 가린 비교 — 실제 Claude Code 로, 스타일을 고치면 다시 돌린다, D161), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
+tools/                  update_vendor.py, ui_smoke.py, ui_edges.py(+ edges/ — 묶음마다 임시 프로젝트로 띄우는 가장자리 점검), ui_real.py(+ real/ — 빌드본·설치본의 실제 창 시험, D187), readme_shots.py(README 화면 그림), quiet_app.py(바깥 프로그램을 부르지 않는 점검용 앱), close_windows.py(점검이 띄운 탐색기·VS Code 창 닫기 — D100), make_sample_html.py(예제의 html 발표를 다시 만듦 — html 로 전환을 고치면, D129), make_docx_templates.py(Word 양식 18가지 — 양식을 고치면 이것을 고치고 다시 돌린다, D147), sync_writing_styles.py(글쓰기 스타일의 공통 절을 리서치 글쓰기에서 옮김 — D161), make_style_samples.py(글쓰기 스타일의 견본과 가린 비교 — 실제 Claude Code 로, 스타일을 고치면 다시 돌린다, D161), rules_check.mjs(규칙 시험), types/(JS 형 — lectern.d.ts, 설정은 맨 위의 tsconfig.json), context_menu.py, make_icon.py, vendor-licenses/(패키지에 없는 라이선스 전문 — Viz.js 와 안에 든 Graphviz·Expat, zrender, d3)
 docs/                   VISION(방향 — 마름모형 리서치 방법), ARCHITECTURE, MODULES, PITFALLS, DECISIONS, ROADMAP, HISTORY, TESTING, MARIMO(걷은 marimo 화면의 원인 기록 — D70), images/(README 화면)
 LICENSE                 MIT (공개 저장소 github.com/samiblog/lectern — 설치 파일은 Releases)
 THIRD-PARTY-NOTICES.md  설치 파일에 든 오픈소스의 라이선스 전문. Python 의존성·web/vendor 를 바꾸면 함께 고친다
