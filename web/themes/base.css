@@ -491,6 +491,13 @@
 .lec-deck .lec-slide :is(table, table p) { font-size: var(--t-table); }
 .lec-deck .lec-slide :is(blockquote, blockquote p, blockquote li) { font-size: var(--t-box); }
 .lec-deck .lec-slide :is(pre code, pre) { font-size: var(--t-code); }
+/* 넘쳐서 글을 줄인 칸·글 (D188, slides.js 의 fitText) — 줄인 --t-* 를 그 요소에 준다. 문단·목록은 장의 글자 크기를 물려받으므로 본문 크기를 다시 읽게.
+   :where 로 무게를 낮춰 소제목·표·코드는 제 규칙(--t-sub 등)을 따른다 */
+.lec-deck .lec-slide :where(.lec-shrunk) { font-size: var(--t-body); }
+/* 바닥 크기에서도 넓은 코드는 줄을 접는다 — 잘려서 안 보이는 것보다 낫다 */
+.lec-deck .lec-slide pre.lec-wrap, .lec-deck .lec-slide pre.lec-wrap code { white-space: pre-wrap; overflow-wrap: anywhere; }
+/* 표의 머리행·첫 열은 글자마다 끊지 않는다 ('항/목') — 넓어져 넘치면 글을 줄이고, 그래도 넓으면 점검에 나온다 */
+.lec-deck .lec-slide table :is(th, td:first-child) { overflow-wrap: break-word; word-break: keep-all; }
 .lec-deck .lec-eyebrow { margin: 0 0 .25em; font: 600 11pt var(--md-mono); letter-spacing: .06em; color: var(--md-link, #2a6fb0); }
 .lec-deck .lec-slide:is(.lec-grid, .lec-free) > .lec-eyebrow { position: absolute; left: 56px; top: 18px; margin: 0; }
 /* 구조 보기 (slidetools.js): 칸 머리 줄·주석 줄의 꼬리표 — 발표·인쇄에는 나오지 않는다 */

@@ -50,7 +50,9 @@ MISTAKES = {
     '열값글': (f'<!-- grid: t t / a b -->\n<!-- cols: 넓게 좁게 -->\n\n## 제목\n\n::: a\n{B}\n:::\n', "cols 값 '넓게 좁게'"),
     '없는그림': (f'## 제목\n\n![그림](images/없는.png)\n\n{B}\n', '그림을 찾을 수 없습니다'),
     '없는배경': (f'![bg](images/없는배경.png)\n\n## 제목\n\n{B}\n', '그림을 찾을 수 없습니다'),
-    '긴코드': (f'## 제목\n\n{FENCE}sh\n{"curl --header value " * 12}\n{FENCE}\n\n{B}\n', '코드가 옆으로'),
+    # 긴 코드는 이제 바닥 크기에서도 넓으면 줄을 접는다 (D188 — slidefit 묶음). 옆으로 잘리는 것은 줄여도 넓은 표
+    '넓은표': ('<!-- layout: three -->\n\n## 제목\n\n::: a\n| ' + ' | '.join(f'머리{i}' for i in range(9)) + ' |\n|' + '--:|' * 9 + '\n| '
+             + ' | '.join('12,345,678' for _ in range(9)) + f' |\n:::\n\n::: b\n{B}\n:::\n\n::: c\n글\n:::\n', '표가 옆으로'),
     '별표남음': (f'## 제목\n\n값이 **8.0%**로 올랐다\n\n{B}\n', '굵게로 읽지 못한 별표'),
     '틀린차트': (f'<!-- layout: two -->\n\n## 제목\n\n::: a\n{FENCE}vega-lite\n{{"mark": "bar",\n{FENCE}\n:::\n\n::: b\n{B}\n:::\n', '그림을 그리지 못했습니다'),
     '틀린다이어그램': (f'## 제목\n\n{FENCE}mermaid\nflowchart TD\n  A --> \n  (((\n{FENCE}\n\n{B}\n', '그림을 그리지 못했습니다'),

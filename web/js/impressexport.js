@@ -30,7 +30,7 @@ const INIT = [
   '});',
 ].join('\n');
 const DROP = 'script, iframe, object, embed, base, meta, link, form, button, video, audio, .lec-tag, .lec-slide-tags, .lec-slide-play';
-const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-src', 'data-source', 'data-lec-href', 'data-lec-open', 'data-impress', 'contenteditable']);
+const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-fitted', 'data-fit-height', 'data-src', 'data-source', 'data-lec-href', 'data-lec-open', 'data-impress', 'contenteditable']);
 // 앱의 표시, 그리고 impress 가 읽는 이름 — 문서의 HTML 에 class="step"·notes·substep 이 있으면 impress 가 장·노트로 잡는다
 const MARKS = ['lec-target', 'lec-changed', 'lec-picked', 'lec-cell-over', 'lec-cell-bad', 'step', 'notes', 'substep', 'active', 'past', 'present', 'future'];
 

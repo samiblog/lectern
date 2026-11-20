@@ -2188,5 +2188,12 @@ export default {
 "이전·다음 문서": "Previous and next document",
 "이 문서는 아직 쓰는 중입니다.": "This document is still being written.",
 "무엇": "What",
-"경로": "Path"
+"경로": "Path",
+"칸 {names} 의 글을 {n}% 로 줄였습니다": "Shrank the text of cell {names} to {n}%",
+"글을 {n}% 로 줄였습니다": "Shrank the text to {n}%",
+"칸 {names} 의 코드 줄을 접었습니다": "Wrapped the code lines of cell {names}",
+"코드 줄을 접었습니다": "Wrapped the code lines",
+"차트 글자가 {n}pt 로 작습니다 (기준 {min}pt)": "The chart text is small at {n}pt (limit {min}pt)",
+"줄인 글 {n}장": "Shrunk text {n}",
+"넘쳐서 글을 줄인 곳": "Text shrunk to fit"
 };

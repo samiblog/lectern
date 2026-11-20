@@ -163,7 +163,7 @@ The kinds are `title` `sub` `body` `table` `callout` `code` (older slides may sa
 
 ## 5. How much fits
 
-Text that overflows is cut, not shrunk. You cannot see the screen, so stay within these limits. If a cell goes over, split the slide.
+When text overflows, Lectern shrinks the text of that cell down to the floor size (14pt body, 12pt tables and code). If it still overflows, it is cut. Shrunk slides look crowded, so stay within these limits. If a cell goes over, split the slide.
 
 A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line holds cell width ÷ 23 Korean characters, or about ÷ 14 Latin characters. These are rough.
 
@@ -192,14 +192,14 @@ A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line
 - For grid, `at` and `cols-2` cells, estimate from the cell size. A grid has 1168 of width and 555 of height below the title. The gap between cells is 18px across and 14px down.
 - A title fits about 30 Korean characters per line, and a subheading fits cell width ÷ 26. Lists lose about 40px of width to the indent.
 - Latin text fits about 1.6 times as much (at 18pt, cell width ÷ 14). A word longer than the cell breaks in the middle.
-- Code lines do not wrap. At 14pt a line holds cell width ÷ 11 characters and is 29px high. Overflow shows in the check, so split the line.
+- Code lines do not wrap. At 14pt a line holds cell width ÷ 11 characters and is 29px high. A long line shrinks to 12pt, and if it is still too long it wraps. Wrapped code is hard to read, so split the line.
 - Table rows include the header row.
 - Cells share the slide height. For a cell with little text or a short table, use `center`.
 - On dark slides (`invert`, `lead`) cells, tables and code follow the slide colors. Only `note` stays a yellow box.
 - `eyebrow` sits in the empty space above the title and does not reduce the cell height.
 - Changing the text size changes these in proportion. At 12pt a table row is 35px.
 - Keep slides short. Short lists beat paragraphs.
-- Charts, diagrams and images shrink to fit the cell. Text does not.
+- On overflow, diagrams and images shrink to fit the cell first, and charts are redrawn for the space left. If it still overflows, text shrinks down to the floor size. Cells in the same row with the same look (two cards, say) shrink to the same size. The slide title does not shrink.
 
 ## 6. Charts and images
 
@@ -209,6 +209,7 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 
 - `vega-lite`: use `"width": "container"` and leave out `height`. Give values with `data.url` or `data.values` in the document.
 - `echarts`: an ECharts option as JSON. Leave out `height` and `width`.
+- A width and height written as numbers in chart settings only set the proportions on a slide. The width follows the cell, and the height is the height left in the cell or that proportion. In an md document they are used as written.
 - `plotly`: `{"data": […], "layout": {…}}` as JSON. No map types.
 - Settings are JSON values only. Functions do not work.
 - In a `vega-lite` `layer`, repeat the axis `scale` and `sort` on every layer. On one layer alone they do not apply. Give the order as an array (`"sort": ["Jan", "Feb"]`).
@@ -216,6 +217,7 @@ Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`.
 - The ECharts legend defaults to the bottom. Move it up with `"legend": {"top": 0}` or keep `grid.bottom` at 56 or more.
 - A donut's `innerRadius` is in px. In a small cell it turns into a thin ring, so keep it near a sixth of the cell height.
 - Inside a cell, `vega-lite` draws axes and legends to fit the cell. Lots of text in the same cell makes the chart shorter.
+- In a narrow cell (under 450px wide) the `vega-lite` and `plotly` legend goes below the chart. A legend position written in the settings is kept. Without a `margin` in the settings, `plotly` keeps the margins small and grows them to fit the axis labels.
 - In `vega-lite`, write the axis number format as `",d"`. A bare `","` gives `1.5e+4`.
 - `center` on a cell also works for charts and diagrams.
 - Chart values cannot be edited line by line; people use Ctrl+E. Put values that change often in a CSV. The CSV view in Lectern is read-only, so edit it in a spreadsheet or ask your AI tool. Press F5 afterwards to redraw the chart.
@@ -279,12 +281,13 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 
 | Message | Fix |
 |---|---|
-| Cell a overflows by 120px | Cut text or split the slide; for a table, reduce the table size on that slide |
+| Cell a overflows by 120px | The text has already shrunk to the floor size. Cut text or split the slide |
 | Cell a overflows sideways by 80px | Use fewer table columns or a wider cell |
 | Cell a overlaps the title | Set the `at` y to 110 or more |
 | Cells a and b overlap | Move the `at` position |
 | Cell a runs off the slide | Keep x+width within 1224 and y+height within 660 |
 | The table is small at 10pt (limit 12pt) | Cut text or split the slide; for a reading document use `reading: true` |
+| The chart text is small at 9pt (limit 12pt) | Remove a small font size from the settings. In a small cell, move the chart to a wider cell or cut the text in the same cell |
 | There is no cell x for this link | Fix the cell name in `links` |
 | Cell z is not in the layout | Use a cell name from the layout |
 | Cell c is empty | Fill it or change the layout |
@@ -307,7 +310,9 @@ Lectern collects overflow and mistakes under 'Check' in the status bar. When the
 | There is text outside the cells | Move it into a cell |
 | There is no layout 'x' | Use a name from the table above |
 
-For `Cell a overflows by 120px (cell height 300px)`, cut four body lines or three table rows.
+For `Cell a overflows by 120px (cell height 300px)`, cut five body lines or four table rows at the floor size. Cut more if the text should show at 18pt.
+
+The 'Text shrunk to fit' part of the Check list (`Shrank the text of cell a·b to 81%`, `Wrapped the code lines of cell b`) is not something to fix, and it is left out of the list sent to the terminal. If the user wants the text at its full size, cut the text of that cell or split the slide.
 
 The sample project has ten model decks and how each was built, in `slides/README.md` (`samples/slides/` in the install folder). In a similar situation, follow how that example uses cells. Twenty complex layouts such as dashboards, Gantt charts and risk matrices are in `slides/복잡한-배치/README.en.md`.
 

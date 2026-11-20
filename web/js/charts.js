@@ -345,22 +345,37 @@ function vegaLogger(vega, problems) {
 
 // 그리는 함수: {svg, fluid} — fluid 면 문서 폭을 따른 것이라 폭이 바뀌면 다시 그린다 (renderCharts)
 
-async function drawVega(kind, src, width, ctx, fit = 0) {
+// Lectern 슬라이드에서 (D188): 그리는 폭의 하한 (좁은 칸에서도 글자를 SLIDE_ZOOM 배로 키울 수 있게), 범례를 아래로 옮기는 폭 (슬라이드 450px)
+const MIN_W = 200;
+const SLIDE_MIN_W = 120;
+const NARROW = 265;
+
+/** 슬라이드에서 숫자로 적은 폭·높이는 비율로만 — 폭은 칸에 맞춘다. 높이/폭 (둘 다 숫자가 아니면 0) */
+const ratioOf = (w, h) => (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0 ? h / w : 0);
+
+async function drawVega(kind, src, width, ctx, fit = 0, slide = false) {
   const spec = parseSpec(src);
   const config = vegaConfig(colors());
   let fluid = false;
   if (spec && typeof spec === 'object') {
     const single = !['facet', 'repeat', 'concat', 'hconcat', 'vconcat'].some((k) => k in spec);
+    if (slide && kind === 'vega-lite' && single && !spec.autosize) {
+      const ratio = ratioOf(spec.width, spec.height);
+      if (Number.isFinite(spec.width)) spec.width = 'container';
+      if (spec.width === 'container' && Number.isFinite(spec.height) && (fit || ratio)) delete spec.height;
+      if (!fit && ratio) fit = Math.round(Math.max(SLIDE_MIN_W, width) * ratio);
+      if (width < NARROW) config.legend = { ...config.legend, orient: 'bottom' };   // 좁은 칸: 오른쪽 범례가 그래프 폭을 먹는다 (설정에 적었으면 그것)
+    }
     // 슬라이드의 칸: 축·범례까지 칸 크기에 맞춰 그린다. 크게 그려 통째로 줄이면 글자까지 작아져 뭉개진다
     if (fit && kind === 'vega-lite' && single && spec.width === 'container' && spec.height == null && !spec.autosize) {
-      spec.width = Math.max(200, width);
+      spec.width = Math.max(slide ? SLIDE_MIN_W : MIN_W, width);
       spec.height = Math.max(80, fit);
       spec.autosize = { type: 'fit', contains: 'padding' };
       fluid = true;
     }
     // 'container' 크기는 문서 폭에 맞춘다 (그릴 틀이 따로 없다). 축·범례 자리를 뺀 그림 폭이다
     if (spec.width === 'container') {
-      spec.width = Math.max(200, width - 110);
+      spec.width = Math.max(slide ? SLIDE_MIN_W : MIN_W, width - 110);
       fluid = true;
     }
     if (spec.height === 'container' || (fit && spec.height == null)) spec.height = fit ? Math.max(80, fit - 50) : 300;
@@ -401,18 +416,24 @@ function dropImages(node, depth = 0) {
   }
 }
 
-async function drawECharts(src, width, fit = 0) {
+async function drawECharts(src, width, fit = 0, slide = false) {
   const option = parseSpec(src);
   if (!option || typeof option !== 'object' || Array.isArray(option)) throw new SpecError(t('설정을 읽지 못했습니다 — JSON 형식을 확인하세요 (블록 {line}행)', { line: 1 }));
-  // 크기: 폭은 문서 폭(설정의 width 가 숫자면 그것), 높이는 설정의 height 아니면 360 — ECharts 에는 없는 키라 여기서만 쓴다
-  const height = Number.isFinite(option.height) ? option.height : fit || 360;
-  const fluid = !Number.isFinite(option.width);
+  // 크기: 폭은 문서 폭(설정의 width 가 숫자면 그것), 높이는 설정의 height 아니면 360 — ECharts 에는 없는 키라 여기서만 쓴다.
+  // 슬라이드에서는 폭은 칸에 맞추고 높이는 남은 높이, 없으면 적은 크기의 비율로 (D188)
+  let height = Number.isFinite(option.height) ? option.height : fit || 360;
+  let fluid = !Number.isFinite(option.width);
+  if (slide) {
+    const ratio = ratioOf(option.width, option.height);
+    height = fit || (ratio ? Math.max(SLIDE_MIN_W, width) * ratio : height);
+    fluid = true;
+  }
   const w = fluid ? width : option.width;
   delete option.height;
   delete option.width;
   dropImages(option);
   const echarts = await LIBS.echarts();
-  const chart = echarts.init(null, echartsTheme(colors()), { renderer: 'svg', ssr: true, width: Math.max(200, w), height: Math.max(120, height) });
+  const chart = echarts.init(null, echartsTheme(colors()), { renderer: 'svg', ssr: true, width: Math.max(slide ? SLIDE_MIN_W : MIN_W, w), height: Math.max(120, height) });
   try {
     chart.setOption({ ...option, animation: false, ...(fit ? { backgroundColor: 'transparent' } : {}) });   // 칸의 바탕이 보이게
     return { svg: chart.renderToSVGString(), fluid };
@@ -424,7 +445,7 @@ async function drawECharts(src, width, fit = 0) {
 // 인터넷의 지도 자료(나라 경계·지도 타일)가 있어야 하는 Plotly 종류 — 받지 않으므로 그리지 않는다
 const PLOTLY_MAPS = /^(scattergeo|choropleth|scattermapbox|choroplethmapbox|densitymapbox|scattermap|choroplethmap|densitymap)$/;
 
-async function drawPlotly(src, width, fit = 0) {
+async function drawPlotly(src, width, fit = 0, slide = false) {
   let fig = parseSpec(src);
   if (Array.isArray(fig)) fig = { data: fig };   // 그래프 목록만 적어도 된다
   if (!fig || typeof fig !== 'object' || !Array.isArray(fig.data)) throw new SpecError(t('Plotly 설정은 data(그래프 목록)와 layout 을 가진 JSON 입니다'));
@@ -435,12 +456,32 @@ async function drawPlotly(src, width, fit = 0) {
   if (Array.isArray(layout.images)) layout.images = layout.images.filter((im) => /^data:/i.test(String(im?.source || '')));
   for (const tr of fig.data) if (tr?.type === 'image' && tr.source && !/^data:/i.test(String(tr.source))) delete tr.source;
   if (!layout.template) layout.template = plotlyTemplate(colors());
-  // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400
-  const fluid = !Number.isFinite(layout.width);
+  // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400.
+  // 슬라이드에서는 폭은 칸에 맞추고 높이는 남은 높이, 없으면 적은 크기의 비율로. 좁은 칸은 범례를 아래로 (설정에 적었으면 그것) (D188)
+  let fluid = !Number.isFinite(layout.width);
+  let h = Number.isFinite(layout.height) ? layout.height : fit || 400;
+  if (slide) {
+    const ratio = ratioOf(layout.width, layout.height);
+    h = fit || (ratio ? Math.max(SLIDE_MIN_W, width) * ratio : h);
+    fluid = true;
+    delete layout.width;
+    delete layout.height;
+    // 기본 여백(좌우 80px)은 웹 쪽의 것이라 칸에서는 그래프가 쪼그라든다 — 좁게 두고 축 글자만큼만 늘게 (설정에 적었으면 그것)
+    if (layout.margin == null) {
+      layout.margin = { l: 10, r: 10, t: layout.title ? 40 : 10, b: 10 };
+      for (const key of new Set(['xaxis', 'yaxis', ...Object.keys(layout).filter((k) => /^[xy]axis\d+$/.test(k))])) {
+        const axis = layout[key] && typeof layout[key] === 'object' ? layout[key] : {};
+        layout[key] = { automargin: true, ...axis };
+      }
+    }
+    const legend = layout.legend && typeof layout.legend === 'object' ? layout.legend : {};
+    if (width < NARROW && legend.orientation == null && legend.x == null && legend.y == null) {
+      layout.legend = { ...legend, orientation: 'h', x: 0, xanchor: 'left', yref: 'container', y: 0, yanchor: 'bottom' };
+    }
+  }
   const w = fluid ? width : layout.width;
-  const h = Number.isFinite(layout.height) ? layout.height : fit || 400;
   const Plotly = await LIBS.plotly();
-  const url = await Plotly.toImage({ data: fig.data, layout }, { format: 'svg', width: Math.max(200, w), height: Math.max(120, h) });
+  const url = await Plotly.toImage({ data: fig.data, layout }, { format: 'svg', width: Math.max(slide ? SLIDE_MIN_W : MIN_W, w), height: Math.max(120, h) });
   return { svg: decodeURIComponent(url.slice(url.indexOf(',') + 1)), fluid };
 }
 
@@ -487,21 +528,24 @@ async function draw(node, ctx) {
   const src = node.dataset.source;
   const width = node.clientWidth || 640;
   // Lectern 슬라이드의 슬라이드(D59)에서는 좁게 그려 키운다 — 차트 글자가 슬라이드 글자와 어울리게 (slides.js 의 SLIDE_ZOOM)
-  const zoom = node.closest('.lec-slide') ? SLIDE_ZOOM : 1;
-  // 높이가 정해진 칸(배치·자리 칸) 안이면 높이를 정하지 않은 차트를 칸의 남은 높이에 맞춘다
+  const slide = !!node.closest('.lec-slide');
+  const zoom = slide ? SLIDE_ZOOM : 1;
+  // 높이가 정해진 칸(배치·자리 칸) 안이면 차트를 칸의 남은 높이에 맞춘다 (남은 것이 없어도 120px — 넘치면 slides.js 가 글을 줄인다).
+  // 장이 넘쳐 slides.js 가 높이를 청했으면(data-fit-height) 그 높이로 — 그림을 줄이면 글자까지 작아진다 (D188)
   const cell = node.closest('.lec-slide.lec-grid > .lec-cell, .lec-cell.lec-at');
   const px = (st, ...keys) => keys.reduce((sum, k) => sum + (parseFloat(st[k]) || 0), 0);
   const used = cell ? [...cell.children].filter((el) => el !== node)
     .reduce((sum, el) => sum + el.offsetHeight + px(getComputedStyle(el), 'marginTop', 'marginBottom'), px(getComputedStyle(cell), 'paddingTop', 'paddingBottom')) : 0;
-  const fit = cell ? Math.max(0, (cell.clientHeight - used - 8) / zoom) : 0;
+  const asked = slide ? Number(node.dataset.fitHeight) || 0 : 0;
+  const fit = asked ? asked / zoom : cell ? Math.max(120, cell.clientHeight - used - 8) / zoom : 0;
   const info = drawn.get(node) || { ctx, seq: 0 };
   const seq = ++info.seq;
   let out;
   try {
-    if (kind === 'echarts') out = await drawECharts(src, width / zoom, fit);
-    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom, fit);
+    if (kind === 'echarts') out = await drawECharts(src, width / zoom, fit, slide);
+    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom, fit, slide);
     else if (kind === 'dot') out = await drawDot(src);
-    else out = await drawVega(kind, src, width / zoom, ctx, fit);
+    else out = await drawVega(kind, src, width / zoom, ctx, fit, slide);
   } catch (e) {
     if (drawn.has(node)) return;
     const why = String(e?.message || e).split('\n')[0];
@@ -543,9 +587,15 @@ async function draw(node, ctx) {
       openLightbox(node.querySelector(':scope > svg').cloneNode(true));
     });
     if (out.fluid) watchWidth(node);
+    // 슬라이드의 넘침 맞춤이 높이를 청하면 다시 그린다 — slides.js 는 이 모듈을 부르지 않는다 (차례가 돈다)
+    node.addEventListener('lec-chart-refit', () => {
+      const it = drawn.get(node);
+      if (it && node.isConnected) draw(node, it.ctx);
+    });
   }
   info.width = width;
   drawn.set(node, info);
+  node.dispatchEvent(new Event('lec-chart-drawn'));
 }
 
 /**

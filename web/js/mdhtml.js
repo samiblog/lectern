@@ -20,7 +20,7 @@ const DROP = [
   '.code-tools', '.table-copy', '.lec-chart-tools', '.lec-chart-data', '.lec-unfold', '.lec-gutter', '.lec-here', '.lec-spot',
   '.lec-textbox-fold', '.front-matter', '.lec-new-line',
 ].join(', ');
-const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-src', 'data-source', 'data-lec-href', 'data-lec-open',
+const DROP_ATTRS = new Set(['data-lines', 'data-key', 'data-warn', 'data-issues', 'data-fitted', 'data-fit-height', 'data-src', 'data-source', 'data-lec-href', 'data-lec-open',
   'data-chart', 'data-act', 'data-path', 'data-tex', 'data-notex', 'data-doc-path', 'contenteditable', 'spellcheck', 'tabindex']);
 /** 지울 class — 접기·바뀐 곳·고른 곳 같은 화면의 상태 (접은 절·박스글은 이것을 떼면 펴진다) */
 const MARKS = ['lec-fold', 'lec-folded', 'lec-fold-hidden', 'lec-textbox-folded', 'lec-changed', 'lec-picked', 'lec-target',

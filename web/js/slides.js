@@ -9,7 +9,8 @@
 //   그림 문법 ![bg](…)(left·right[:N%]·contain·cover·auto·N%·vertical), ![w:300 h:200](…). theme 은 읽지 않는다 — 색·글꼴은 Lectern 스타일.
 // - Lectern 이 더한 것 (D96): 칸 ::: 이름 낱말…  … :::(cellRule), 배치 layout·grid·cols·rows, 글자 크기 text, 작은 머리글 eyebrow, 장별 CSS <style scoped>.
 //   글자 크기는 스타일과 상관없이 pt 로 정해져 있다 (base.css 의 --t-*) — 1280px 슬라이드는 PowerPoint 와이드 화면과 같은 크기다.
-// - 넘치면: 그림·다이어그램·차트를 남은 높이에 맞춰 줄이고(fitSlide), 그래도 넘치면 글은 Marp 처럼 잘리고 틀에 '넘침' 표시.
+// - 넘치면: 그림·다이어그램을 남은 높이에 맞춰 줄이고 차트는 그 높이로 다시 그린다(fitSlide). 그래도 넘치면 글을 바닥 크기까지 줄이고(D188),
+//   그래도 넘치면 글은 잘리고 틀에 '넘침' 표시.
 //   넘침과 잘못 쓴 칸(checkSlide)은 장마다 wrap.dataset.issues 에 모은다 — 상태줄의 '점검'(slidetools.js)이 읽는다.
 // - 상태줄의 '문서로 보기'로 보통 문서처럼, '발표'(Shift+F5)는 present.js. 인쇄하면 한 장에 한 쪽 (base.css 의 @page lec-slide).
 
@@ -446,39 +447,234 @@ function sizeImages(section) {
   }
 }
 
-/** 칸 안의 그림·다이어그램·차트를 남은 높이에 맞춰 줄이고, 그래도 넘치면 그 칸에 표시한다. 넘친 칸들 [{cell, over(px), height(px), wide(옆으로 px)}] */
-function fitCells(section) {
-  const overs = [];
-  for (const cell of $$('.lec-cell', section)) {
-    cell.classList.remove('lec-cell-over');
-    for (const el of $$('.lec-fit', cell)) {
-      el.style.maxHeight = '';
-      el.classList.remove('lec-fit');
+// ---- 넘침 맞춤 (D188) ----------------------------------------------------------------------------------
+// 넘치면 ① 그림·다이어그램을 남은 높이로 줄이고, 차트는 줄이지 않고 그 높이로 다시 그린다 (그림을 줄이면 차트 글자까지 작아진다)
+// ② 그래도 넘치면 글을 바닥 크기까지 줄인다 — PowerPoint 의 '넘치면 글자 줄이기'. 장 제목은 그대로. 바닥에서도 코드가 넓으면 줄을 접는다
+// ③ 그래도 넘치면 잘리고 점검에 남는다. 같은 줄의 같은 꾸밈 칸은 가장 많이 줄인 칸에 맞춘다 (카드마다 글자 크기가 다르지 않게)
+
+const SHRINK = ['sub', 'body', 'box', 'table', 'code'];
+// 바닥 크기(pt) — 점검의 기준(checkSmall)과 같다. 읽는 자료(맨 앞 설정 reading: true)는 낮다
+const FLOORS = { show: { sub: 16, body: 14, box: 14, table: 12, code: 12 }, reading: { sub: 14, body: 12, box: 12, table: 10, code: 10 } };
+const CLIPPED = 'pre:not(.mermaid, .lec-chart, .diagram-error pre), .table-wrap';   // 안에서 옆으로 잘리는 것 (slidelint 의 checkClipped)
+const CELL_STATE = new Set(['lec-cell-over', 'lec-cell-bad', 'lec-shrunk']);
+const shrunk = new WeakMap();   // 글을 줄인 요소 → 줄이기 전의 style 속성
+const refits = new WeakMap();   // 다시 그려 달라고 한 차트 → 횟수
+
+const floorsOf = (section) => FLOORS[section.dataset.reading ? 'reading' : 'show'];
+
+/** 요소가 물려받은 글자 크기(pt) — 본문은 그 요소의 글자 크기, 나머지는 --t-* (pt·px 로 적은 것만. 다른 단위는 줄이지 않는다) */
+function sizesOf(el) {
+  const st = getComputedStyle(el);
+  const out = { body: parseFloat(st.fontSize) * 0.75 };
+  for (const kind of SHRINK) {
+    const m = kind !== 'body' && /^\s*(\d+(?:\.\d+)?)(pt|px)\s*$/.exec(st.getPropertyValue(`--t-${kind}`));
+    if (m) out[kind] = parseFloat(m[1]) * (m[2] === 'px' ? 0.75 : 1);
+  }
+  return out;
+}
+
+const sizeAt = (size, floor, k) => Math.min(size, Math.max(floor, size * k));   // 바닥 아래로는 줄이지 않고, 처음보다 키우지 않는다
+
+function unshrink(el) {
+  if (!shrunk.has(el)) return;
+  const style = shrunk.get(el);
+  if (style == null) el.removeAttribute('style');
+  else el.setAttribute('style', style);
+  shrunk.delete(el);
+  el.classList.remove('lec-shrunk');
+}
+
+/** el 의 글을 k 배로. 칸이면 글자 크기도 그 칸에 (칸 머리의 크기 낱말이 style 에 있다). 칸 밖의 글은 lec-shrunk 가 --t-body 를 따르게 한다 */
+function shrinkTo(el, base, floor, k, cell) {
+  unshrink(el);
+  if (k >= 0.995) return;
+  shrunk.set(el, el.getAttribute('style'));
+  el.classList.add('lec-shrunk');
+  for (const [kind, size] of Object.entries(base)) {
+    const pt = `${sizeAt(size, floor[kind], k).toFixed(2)}pt`;
+    el.style.setProperty(`--t-${kind}`, pt);
+    if (kind === 'body' && cell) el.style.fontSize = pt;
+  }
+}
+
+/** 줄인 비율(%) — 가장 많이 준 종류의 것 */
+const percentOf = (base, floor, k) => Math.round(Math.min(...Object.entries(base).map(([kind, size]) => sizeAt(size, floor[kind], k) / size)) * 100);
+
+/**
+ * targets 의 글을 넘치지 않는 가장 큰 배율로 줄인다. overOf: 넘친 px (아래·옆 가운데 큰 것). 줄인 배율 (1 이면 그대로).
+ * 바닥 크기에서도 코드가 넓으면 그 코드의 줄을 접는다 (접으면 줄일 까닭이 없어질 수 있다).
+ * 바닥 크기에서도 넘치면 바닥 크기로 둔다 — 다만 줄여도 넘침이 줄지 않으면(칸보다 넓은 그림 등) 줄이지 않는다
+ */
+function fitText(targets, overOf, base, floor, cell) {
+  const start = overOf();
+  if (start <= 1) return 1;
+  const kinds = Object.keys(base).filter((kind) => base[kind] > floor[kind]);
+  if (!kinds.length) return 1;
+  const low = Math.min(...kinds.map((kind) => floor[kind] / base[kind]));
+  const apply = (k) => targets.forEach((el) => shrinkTo(el, base, floor, k, cell));
+  apply(low);
+  let wrapped = false;
+  if (overOf() > 1) {
+    for (const pre of targets.flatMap((el) => (el.matches('pre') ? [el] : $$('pre', el)))) {
+      if (pre.matches('.mermaid, .lec-chart') || pre.closest('.diagram-error') || pre.scrollWidth - pre.clientWidth <= 1) continue;
+      pre.classList.add('lec-wrap');
+      wrapped = true;
     }
-    // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다. 1px 은 반올림이다
-    const overOf = () => {
-      const px = cell.scrollHeight - cell.clientHeight;
-      return px > 1 ? px * (cell.classList.contains('center') ? 2 : 1) : 0;
-    };
-    let over = overOf();
+  }
+  const end = overOf();
+  if (end > 1) {
+    if (wrapped || end < start - 1) return low;
+    apply(1);
+    return 1;
+  }
+  apply(1);
+  if (overOf() <= 1) return 1;   // 코드를 접기만 해도 맞는다
+  let ok = low;
+  let bad = 1;
+  for (let i = 0; i < 8 && bad - ok > 0.005; i++) {
+    const mid = (ok + bad) / 2;
+    apply(mid);
+    if (overOf() > 1) bad = mid;
+    else ok = mid;
+  }
+  const k = Math.max(low, Math.floor(ok * 100) / 100);
+  apply(k);
+  return k;
+}
+
+/** 차트를 그 높이(슬라이드 px)로 다시 그려 달라고 한다 (charts.js) — 다 그리면 장을 다시 맞춘다. 같은 높이를 되풀이하지 않게 세 번까지 */
+function refitChart(pre, want, section) {
+  const h = Math.round(want);
+  const was = Number(pre.dataset.fitHeight) || 0;
+  const tries = refits.get(pre) || 0;
+  if ((was && Math.abs(was - h) < 6) || tries >= 3) return;
+  refits.set(pre, tries + 1);
+  pre.dataset.fitHeight = String(h);
+  pre.addEventListener('lec-chart-drawn', () => {
+    if (section.isConnected) fitSlide(section);
+  }, { once: true });
+  pre.dispatchEvent(new Event('lec-chart-refit'));
+}
+
+/** 그림 하나를 높이 want 로 — 차트는 다시 그려 달라고도 한다 */
+function shrinkFigure(el, want, section) {
+  el.style.maxHeight = `${Math.round(want)}px`;
+  el.classList.add('lec-fit');
+  const chart = el.closest('pre.lec-chart');
+  if (chart) refitChart(chart, want, section);
+}
+
+function unfitFigures(els) {
+  for (const el of els) {
+    el.style.maxHeight = '';
+    el.classList.remove('lec-fit');
+  }
+}
+
+/** 옆으로 넘친 px — 그 요소와, 그 안에서 옆으로 잘리는 코드·표 */
+function sideOf(els) {
+  let px = 0;
+  for (const el of els) {
+    px = Math.max(px, el.scrollWidth - el.clientWidth);
+    for (const inner of $$(CLIPPED, el)) px = Math.max(px, inner.scrollWidth - inner.clientWidth);
+  }
+  return px > 1 ? px : 0;
+}
+
+/**
+ * 칸마다: 그림·다이어그램·차트를 남은 높이에 맞추고, 그래도 넘치면 글을 줄이고, 그래도 넘치면 그 칸에 표시한다.
+ * {overs: 넘친 칸들 [{cell, over(px), height(px), wide(옆으로 px)}], fitted: 글을 줄인 칸들 [{cell, n(%)}], wrapped: 코드 줄을 접은 칸들}
+ */
+function fitCells(section) {
+  const cells = $$('.lec-cell', section);
+  const floor = floorsOf(section);
+  for (const cell of cells) {
+    cell.classList.remove('lec-cell-over');
+    unshrink(cell);
+    for (const pre of $$('pre.lec-wrap', cell)) pre.classList.remove('lec-wrap');
+    unfitFigures($$('.lec-fit', cell));
+  }
+  const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
+  const height = (el) => el.getBoundingClientRect().height / scale;
+  // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다. 1px 은 반올림이다
+  const downOf = (cell) => {
+    const px = cell.scrollHeight - cell.clientHeight;
+    return px > 1 ? px * (cell.classList.contains('center') ? 2 : 1) : 0;
+  };
+  const tops = [];
+  for (const cell of cells) {
+    let over = downOf(cell);
     if (over > 1) {
-      const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
-      const height = (el) => el.getBoundingClientRect().height / scale;
       for (const el of $$(FIGS, cell).sort((x, y) => height(y) - height(x))) {
-        const want = Math.max(48, height(el) - over - 2);
-        el.style.maxHeight = `${Math.round(want)}px`;
-        el.classList.add('lec-fit');
-        over = overOf();
+        const h = height(el);
+        const want = Math.max(el.closest('pre.lec-chart') ? 120 : 48, h - over - 2);   // 차트는 120px 아래면 읽을 수 없다 — 글을 줄인다
+        if (want >= h - 1) continue;
+        shrinkFigure(el, want, section);
+        over = downOf(cell);
         if (over <= 1) break;
       }
     }
+    if (cell.parentElement !== section) continue;   // 칸 안의 칸은 바깥 칸을 따른다
+    const base = sizesOf(cell);
+    tops.push({ cell, base, k: fitText([cell], () => Math.max(downOf(cell), sideOf([cell])), base, floor, true) });
+  }
+  const look = (cell) => [...cell.classList].filter((c) => !CELL_STATE.has(c)).sort().join(' ');
+  for (const it of tops) {
+    const k = Math.min(...tops.filter((o) => look(o.cell) === look(it.cell) && Math.abs(o.cell.offsetTop - it.cell.offsetTop) < 4).map((o) => o.k));
+    if (k >= it.k) continue;
+    shrinkTo(it.cell, it.base, floor, k, true);
+    it.k = k;
+  }
+  const overs = [];
+  for (const cell of cells) {
+    const over = downOf(cell);
     const wide = cell.scrollWidth - cell.clientWidth;
     if (over > 1 || wide > 1) {
       cell.classList.add('lec-cell-over');
       overs.push({ cell, over: over > 1 ? Math.round(over) : 0, height: cell.clientHeight, wide: wide > 1 ? Math.round(wide) : 0 });
     }
   }
-  return overs;
+  const fitted = tops.filter((it) => it.k < 1).map((it) => ({ cell: it.cell, n: percentOf(it.base, floor, it.k) })).filter((it) => it.n < 100);
+  const wrapped = tops.filter((it) => it.cell.querySelector('pre.lec-wrap')).map((it) => it.cell);
+  return { overs, fitted, wrapped };
+}
+
+/** 칸 밖의 것 (장 제목·머리말·배경·칸은 빼고) */
+const flowOf = (section) => [...section.children].filter((el) => !el.matches(':is(h1, h2), .lec-cell, header, footer, .lec-slide-bg, .lec-eyebrow, .lec-links, .lec-tag, .lec-slide-tags, style, script'));
+
+/** 장 전체: 그림·다이어그램·차트를 남은 높이에 맞추고, 칸 없는 장은 그래도 넘치면 칸 밖의 글을 줄인다. {over: 남은 넘침(px), n: 줄인 비율(%), wrapped: 코드 줄을 접었는지} */
+function fitFlow(section) {
+  const flow = flowOf(section);
+  const floor = floorsOf(section);
+  for (const el of flow) {
+    unshrink(el);
+    for (const pre of el.matches('pre') ? [el] : $$('pre.lec-wrap', el)) pre.classList.remove('lec-wrap');
+  }
+  unfitFigures($$(FIGS, section).filter((el) => el.classList.contains('lec-fit') && !el.closest('.lec-cell')));
+  let over = section.scrollHeight - section.clientHeight;
+  if (over > 1) {
+    const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;   // 화면의 줄인 크기 → 슬라이드 크기
+    const height = (el) => el.getBoundingClientRect().height / scale;
+    const figs = $$(FIGS, section).filter((el) => !el.closest('.lec-slide-bg, header, footer') && height(el) > 40)
+      .sort((x, y) => height(y) - height(x));
+    const least = section.clientHeight * 0.3;
+    for (const el of figs) {
+      const h = height(el);
+      const want = Math.max(least, h - over - 6);
+      if (want >= h - 1) continue;
+      shrinkFigure(el, want, section);
+      over = section.scrollHeight - section.clientHeight;
+      if (over <= 1) break;
+    }
+  }
+  let n = 100;
+  if (!section.classList.contains('lec-grid') && flow.length) {
+    const base = sizesOf(section);
+    const k = fitText(flow, () => Math.max(section.scrollHeight - section.clientHeight, sideOf(flow), 0), base, floor, false);
+    if (k < 1) n = percentOf(base, floor, k);
+  }
+  const wrapped = flow.some((el) => el.matches('pre.lec-wrap') || el.querySelector('pre.lec-wrap'));
+  return { over: section.scrollHeight - section.clientHeight, n, wrapped };
 }
 
 const lineOf = (el) => parseInt(el.dataset.lines || '', 10) || 0;
@@ -517,6 +713,7 @@ function checkSlide(section) {
   }
   checkPlaced(section, cells.filter((c) => c.classList.contains('lec-at')), add);
   checkSmall(section, add);
+  checkCharts(section, add);
   checkContrast(section, add);
   checkClipped(section, add);
   checkDiagrams(section, add);
@@ -528,14 +725,30 @@ function checkSlide(section) {
 
 /** 넘치지 않게 글자를 줄이다 읽을 수 없게 되는 것을 알린다. 읽는 자료(맨 앞 설정 reading: true)는 기준이 낮다. HTML 장의 글은 보지 않는다 */
 function checkSmall(section, add) {
-  const min = section.dataset.reading ? { table: 10, body: 12 } : { table: 12, body: 14 };
+  const min = floorsOf(section);
   const smallest = (els) => Math.round(Math.min(Infinity, ...els.map((el) => parseFloat(getComputedStyle(el).fontSize) * 0.75)) * 10) / 10;
   // 주·자료 줄(lec-source)은 표 글 크기로 그린다 — 표의 기준으로 본다
   const table = smallest($$(':scope > .table-wrap table, :scope > .lec-exhibit > .table-wrap table, .lec-cell table, p.lec-source', section));
   const body = smallest($$(':scope > :is(p, ul, ol), :scope > .lec-exhibit > p, .lec-cell :is(p, li)', section)
-    .filter((el) => !el.closest('table, blockquote, pre, svg') && !el.matches('.lec-source') && el.textContent.trim()));   // Mermaid 의 글은 그림이다
+    .filter((el) => !el.closest('table, blockquote, pre, svg, .diagram-error') && !el.matches('.lec-source') && el.textContent.trim()));   // Mermaid 의 글은 그림이다. 그리지 못한 그림의 까닭은 따로 점검에 나온다
   if (table < min.table) add(t('표가 {n}pt 로 작습니다 (기준 {min}pt)', { n: table, min: min.table }));
   if (body < min.body) add(t('본문이 {n}pt 로 작습니다 (기준 {min}pt)', { n: body, min: min.body }));
+}
+
+/** 차트 글자 — 장 위에 보이는 크기로 잰다 (그림을 줄였으면 그만큼 작다. 줄인 그림은 가로세로 가운데 덜 줄어드는 쪽으로 맞춰 그려진다). 표와 같은 기준 */
+function checkCharts(section, add) {
+  const min = floorsOf(section).table;
+  const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
+  for (const svg of $$('pre.lec-chart > svg', section)) {
+    const vb = (svg.getAttribute('viewBox') || '').split(/[\s,]+/).map(Number);
+    const box = svg.getBoundingClientRect();
+    if (!(vb[2] > 0 && vb[3] > 0) || !box.width || svg.closest('.lec-slide-bg')) continue;
+    const k = Math.min(box.width / scale / vb[2], box.height / scale / vb[3]);
+    const sizes = $$('text', svg).filter((el) => el.textContent.trim()).map((el) => parseFloat(getComputedStyle(el).fontSize)).filter((v) => v > 0);
+    if (!sizes.length) continue;
+    const pt = Math.round(Math.min(...sizes) * k * 0.75 * 10) / 10;
+    if (pt < min) add(t('차트 글자가 {n}pt 로 작습니다 (기준 {min}pt)', { n: pt, min }), svg.closest('[data-lines]') || undefined);
+  }
 }
 
 const LINK = /^\s*([\p{L}\p{N}_-]+?)\s*(<>|>|--)\s*([\p{L}\p{N}_-]+)\s*$/u;
@@ -625,38 +838,31 @@ function checkPlaced(section, placed, add) {
   });
 }
 
-/** 넘치면 그림·다이어그램·차트부터 남은 높이에 맞춰 줄인다. 그래도 넘치면 틀에 '넘침' 표시 (글은 Marp 처럼 잘린다) */
+/**
+ * 넘치면 그림·다이어그램부터 남은 높이에 맞춰 줄이고(차트는 그 높이로 다시 그린다), 그래도 넘치면 글을 바닥 크기까지 줄인다 (D188).
+ * 그래도 넘치면 틀에 '넘침' 표시 (글은 잘린다). 글을 줄인 장은 wrap.dataset.fitted 에 — 점검 목록에만 나오고 틀에 표시하지 않는다
+ */
 export function fitSlide(section) {
   const wrap = section.closest('.lec-slide-wrap');
   if (!wrap) return;
-  const cellsOver = fitCells(section);
+  const { overs, fitted, wrapped } = fitCells(section);
+  const flow = fitFlow(section);
   const issues = checkSlide(section);
-  for (const el of $$(':scope > .lec-fit', section)) {
-    el.style.maxHeight = '';
-    el.classList.remove('lec-fit');
-  }
-  let over = section.scrollHeight - section.clientHeight;
-  if (over > 1) {
-    const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;   // 화면의 줄인 크기 → 슬라이드 크기
-    const height = (el) => el.getBoundingClientRect().height / scale;
-    const figs = $$(FIGS, section).filter((el) => !el.closest('.lec-slide-bg, header, footer') && height(el) > 40)
-      .sort((x, y) => height(y) - height(x));
-    const least = section.clientHeight * 0.3;
-    for (const el of figs) {
-      const h = height(el);
-      const want = Math.max(least, h - over - 6);
-      if (want >= h - 1) continue;
-      el.style.maxHeight = `${Math.round(want)}px`;
-      el.classList.add('lec-fit');
-      over = section.scrollHeight - section.clientHeight;
-      if (over <= 1) break;
-    }
-  }
-  for (const c of cellsOver) {
+  for (const c of overs) {
     if (c.over) issues.push({ text: t('칸 {name} 이(가) {over}px 넘칩니다 (칸 높이 {height}px)', { name: c.cell.dataset.cell, over: c.over, height: c.height }), line: lineOf(c.cell) });
     if (c.wide) issues.push({ text: t('칸 {name} 이(가) 옆으로 {over}px 넘칩니다', { name: c.cell.dataset.cell, over: c.wide }), line: lineOf(c.cell) });
   }
+  const over = flow.over;
   if (over > 1) issues.push({ text: t('아래가 {over}px 잘렸습니다', { over: Math.round(over) }), line: lineOf(wrap) });
+  const notes = [];
+  const byPercent = new Map();
+  for (const it of fitted) byPercent.set(it.n, [...(byPercent.get(it.n) || []), it.cell]);
+  for (const [n, cells] of byPercent) notes.push({ text: t('칸 {names} 의 글을 {n}% 로 줄였습니다', { names: cells.map((c) => c.dataset.cell).join('·'), n }), line: lineOf(cells[0]) });
+  if (flow.n < 100) notes.push({ text: t('글을 {n}% 로 줄였습니다', { n: flow.n }), line: lineOf(wrap) });
+  if (wrapped.length) notes.push({ text: t('칸 {names} 의 코드 줄을 접었습니다', { names: wrapped.map((c) => c.dataset.cell).join('·') }), line: lineOf(wrapped[0]) });
+  if (flow.wrapped) notes.push({ text: t('코드 줄을 접었습니다'), line: lineOf(wrap) });
+  if (notes.length) wrap.dataset.fitted = JSON.stringify(notes);
+  else delete wrap.dataset.fitted;
   if (issues.length > 12) issues.splice(12, Infinity, { text: t('이 장에 {n}건이 더 있습니다', { n: issues.length - 12 }), line: lineOf(wrap) });   // 목록과 터미널로 보낼 글이 수백 줄이 되지 않게
   const frame = wrap.querySelector('.lec-slide-frame');
   wrap.classList.toggle('lec-over', issues.length > 0);

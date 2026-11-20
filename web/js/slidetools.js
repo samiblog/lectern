@@ -37,12 +37,17 @@ function toggleStructure() {
   updateButtons();
 }
 
-/** 지금 화면의 고칠 것들 [{page, text, line}]. 글에 문서가 쓴 이름이 섞이므로 한 줄로, 제어 문자 없이 (메뉴·붙여 넣기·복사 뒤 Ctrl+V 모두) */
-function issuesOf(view) {
-  return $$(':scope > .lec-slide-wrap', view).flatMap((wrap, i) => (wrap.dataset.issues
-    ? JSON.parse(wrap.dataset.issues).map((it) => ({ ...it, text: plainText(it.text).replace(/\s+/g, ' '), page: i + 1 }))
+/**
+ * 지금 화면의 고칠 것들 [{page, text, line}]. 글에 문서가 쓴 이름이 섞이므로 한 줄로, 제어 문자 없이 (메뉴·붙여 넣기·복사 뒤 Ctrl+V 모두).
+ * key 가 'fitted' 면 넘쳐서 글을 줄인 곳 (D188 — 고칠 것은 아니고 알림)
+ */
+function issuesOf(view, key = 'issues') {
+  return $$(':scope > .lec-slide-wrap', view).flatMap((wrap, i) => (wrap.dataset[key]
+    ? JSON.parse(wrap.dataset[key]).map((it) => ({ ...it, text: plainText(it.text).replace(/\s+/g, ' '), page: i + 1 }))
     : []));
 }
+
+const pagesOf = (items) => new Set(items.map((it) => it.page)).size;
 
 function updateButtons() {
   const deck = isDeck();
@@ -51,11 +56,11 @@ function updateButtons() {
   toggle.hidden = !deck;
   toggle.classList.toggle('on', structure);
   toggle.setAttribute('aria-pressed', String(structure));
-  const issues = deck ? issuesOf(S.pane.view) : [];
-  const pages = new Set(issues.map((it) => it.page)).size;
+  const pages = deck ? pagesOf(issuesOf(S.pane.view)) : 0;
+  const fitted = deck && !pages ? pagesOf(issuesOf(S.pane.view, 'fitted')) : 0;   // 고칠 것이 없으면 글을 줄인 장 수
   const check = $('#lec-st-check');
-  check.hidden = !pages;
-  check.querySelector('span').textContent = t('점검 {n}장', { n: pages });
+  check.hidden = !pages && !fitted;
+  check.querySelector('span').textContent = pages ? t('점검 {n}장', { n: pages }) : t('줄인 글 {n}장', { n: fitted });
 }
 
 /** 터미널에 넣을 한 줄 — 여러 줄이면 터미널이 줄마다 보낸다 */
@@ -65,19 +70,27 @@ function issuesText(path, issues) {
   return S.slidesGuide ? `${ask} ${t('(작성 안내: {path})', { path: S.slidesGuide })}` : ask;
 }
 
+/** 점검 목록. 글을 줄인 곳은 따로 묶어 보이기만 한다 — 터미널로 보내는 '고쳐 주세요' 에는 넣지 않는다 (바닥 크기 안이라 고칠 것이 아니다) */
 function openCheck() {
   const pane = S.pane;
   const issues = issuesOf(pane.view);
-  if (!issues.length) return;
-  const text = issuesText(pane.current?.path || '', issues);
+  const fitted = issuesOf(pane.view, 'fitted');
+  if (!issues.length && !fitted.length) return;
+  const go = (it) => ({ label: t('{page}장 — {text}', { page: it.page, text: it.text }), action: () => { emit('jump'); followLine(it.line); } });
+  /** @type {MenuItem[]} */
+  const items = issues.length ? [{ header: t('넘치거나 잘못 쓴 곳') }, ...issues.map(go)] : [];
+  if (fitted.length) {
+    if (items.length) items.push('-');
+    items.push({ header: t('넘쳐서 글을 줄인 곳') }, ...fitted.map(go));
+  }
+  if (issues.length) {
+    const text = issuesText(pane.current?.path || '', issues);
+    items.push('-',
+      { label: t('목록을 터미널에 붙여 넣기'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', text) },
+      { label: t('목록 복사'), action: () => copyText(text).then(() => toast(t('복사했습니다'))) });
+  }
   const r = $('#lec-st-check').getBoundingClientRect();
-  showMenu(r.left, r.top, [
-    { header: t('넘치거나 잘못 쓴 곳') },
-    ...issues.map((it) => ({ label: t('{page}장 — {text}', { page: it.page, text: it.text }), action: () => { emit('jump'); followLine(it.line); } })),
-    '-',
-    { label: t('목록을 터미널에 붙여 넣기'), tip: t('터미널에 (Enter 는 누르지 않음)'), action: () => emit('term-paste', text) },
-    { label: t('목록 복사'), action: () => copyText(text).then(() => toast(t('복사했습니다'))) },
-  ]);
+  showMenu(r.left, r.top, items);
 }
 
 export function initSlideTools() {

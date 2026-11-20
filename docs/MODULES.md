@@ -87,7 +87,7 @@
 | slideops.js | 슬라이드의 원문 계산 (D96, DOM 없음): 칸 머리 줄·글자 크기 지시어, 장 더하기·복제·옮기기·지우기 |
 | csssafe.js | 문서가 준 CSS 거르기 (D96): 브라우저 해석기로 읽고 정규화한 규칙만 슬라이드 틀 안에 가둔다 — 바깥 요청·앱을 건드리는 선택자·고정 위치를 뺀다 |
 | slidelint.js | 슬라이드 점검의 앞단 (D96): 닫지 않은 주석·코드, 칸·구분 줄로 읽지 못한 줄, 지시어·칸 머리의 오타, 잘못된 격자, 바탕과 비슷한 글자, 옆으로 잘린 코드, 없는 그림 |
-| slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록) |
+| slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록, 넘쳐서 글을 줄인 곳 — D188) |
 | slidegallery.js | 템플릿 갤러리 (D101) — 새로 만들기·새 장·템플릿 바꾸기가 쓰는 창. 템플릿을 실제 렌더러로 그려 미리 보여 주고 번호로도 고른다. 이벤트 `pick-template`·`ask-template-name` 으로 받는다 (import 순환을 피해서) |
 | pptxdialog.js | pptx 로 전환 (D102) — 상태줄 버튼, pptx 스타일 고르기, `/api/pptx-export` 로 문서 옆에 새 pptx 를 만든다 |
 | impressexport.js | html 로 전환 (D129) — 상태줄 버튼과 창(배치 고르기·배치 지도), 칸이 그린 장을 모아(그림·KaTeX 글꼴은 파일 안에, 앱 표시·스크립트·앱 안 링크는 떼고) impress.js 발표 html 을 짓는다. 파일의 CSP 는 impress.js 와 시작 줄의 해시만. `/api/html-export` 가 문서 옆에 쓴다 |
@@ -97,9 +97,9 @@
 | impresslayout.js | html 로 전환의 장 자리 (D129, DOM 없음 — 규칙 시험) — 맨 앞 설정의 배치 방식(`readMode`), 장 주석의 `impress: x=… y=…`(`readSpot`), 격자·가로 한 줄(`layoutSteps`), 전체 보기(`overviewOf`) |
 | headstyle.js | md 문서 스타일의 계산 (D103) — 머리글을 읽고, 지금 모양을 알아보고, 번호를 뗐다 붙인다. 절 링크도 함께. DOM 없음 |
 | mdstyle.js | md 문서 스타일 창 (D103) — 상태줄 버튼, 미리보기, 서술식과 개조식을 오갈 때 묻기. 저장은 lineedit 의 `md-headings` |
-| slides.js | Lectern 슬라이드 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide`), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |
+| slides.js | Lectern 슬라이드 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide` — 그림을 줄이고 차트는 다시 그려 달라 하고, 그래도 넘치면 글을 바닥 크기까지 줄인다, D188), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |
 | present.js | 발표 모드 (D59) — `#lec-present` 에 슬라이드를 복제해 창 전체에, 넘기기·N 노트·F 전체 화면·Esc (키는 main.js 가 맨 먼저 `presentKey` 로) |
 | tabledata.js | 표 읽기 (D86, DOM 없음) — 구분자 어림(`delimiterOf`)·RFC 4180 읽기(`parseCsv`)·숫자(`numberOf`)·값 없는 칸(`isMissing`)·시점(`parseTime`)·주기(`frequencyOf`)·시간 열(`findTimeColumn`)·단위(`unitInfo`)·표 → 계열(`readTable`)·표 영역(`findRegions`·`reshapeRegion`·`regionOfLines`)·계산 열(`calcValues`) |
 | quickchart.js | 빠른 차트 (D86) — `#lec-chart` 창 (`openChart({title, headers, rows, caption})`, 움직이는 ECharts — 문서 속 차트와 따로), 표 요소 읽기(`domTable`) |
-| charts.js | 차트 (D56) — `pre.lec-chart`(markdown.js 가 ```vega-lite·```vega·```echarts·```plotly·```dot 를 바꾼 자리)를 Vega-Lite·ECharts·Plotly·Graphviz 로 SVG 를 그려 넣음. 라이브러리는 처음 쓸 때 불러옴, 설정은 JSON(따옴표 없는 키 등도 — `parseSpec`, 함수는 안 됨), 색은 `mermaidTheme()`, 문서 폭을 따르는 것은 폭이 바뀌면 다시 그림 |
+| charts.js | 차트 (D56) — `pre.lec-chart`(markdown.js 가 ```vega-lite·```vega·```echarts·```plotly·```dot 를 바꾼 자리)를 Vega-Lite·ECharts·Plotly·Graphviz 로 SVG 를 그려 넣음. 라이브러리는 처음 쓸 때 불러옴, 설정은 JSON(따옴표 없는 키 등도 — `parseSpec`, 함수는 안 됨), 색은 `mermaidTheme()`, 문서 폭을 따르는 것은 폭이 바뀌면 다시 그림, 슬라이드의 넘침 맞춤이 청한 높이(`data-fit-height`)로 다시 그림 (D188) |
 | mermaid.js / ui.js / status.js / util.js / api.js / project.js | 보조 |
