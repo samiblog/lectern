@@ -38,7 +38,7 @@ import { initRaw, closeRaw } from './rawview.js';
 import { initStylePick, closeStylePick } from './stylepick.js';
 import { initPrint, closePrint } from './printdoc.js';
 import {
-  initHelp, toggleManual, closeManual, manualOpen, manualToWindow, toggleShortcuts, closeShortcuts,
+  initHelp, toggleManual, closeManual, manualOpen, manualToWindow, toggleShortcuts, closeShortcuts, toggleManualNav,
 } from './help.js';
 import { initPosition } from './position.js';
 import { initResize } from './resize.js';
@@ -383,7 +383,8 @@ function bindKeys() {
       chooseAndOpen();
     } else if (mod && key === 'b') {
       e.preventDefault();
-      toggleSidebar();
+      if (manualOpen()) toggleManualNav();   // 사용설명서가 덮은 동안은 설명서의 차례 — 가려진 사이드바를 바꾸지 않는다
+      else toggleSidebar();
     } else if (mod && !e.altKey && key === 'w') {   // 문서 탭 닫기, Shift 와 함께면 프로젝트 탭 (D91 — 안쪽 탭이 보편 키를 갖는다)
       e.preventDefault();
       if (e.shiftKey) closeCurrentTab();

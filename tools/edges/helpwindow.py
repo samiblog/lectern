@@ -43,6 +43,27 @@ try:
         check("설명서 머리줄 우클릭 — '새 창에서 열기'·'사용설명서 닫기'", any('새 창에서 열기' in x for x in labels) and any('사용설명서 닫기' in x for x in labels), labels)
         page.keyboard.press('Escape')
 
+        print('[Ctrl+B — 설명서의 차례 (2026-11-20 사용자 요청)]')
+        def side():   # 사이드바 설정 — 화면의 값과 설정 파일의 값
+            saved = json.loads((config / 'config.json').read_text(encoding='utf-8')).get('sidebar_visible', True)
+            return [page.evaluate("import('/static/js/store.js').then((m) => m.S.config.sidebar_visible !== false)"), saved]
+        side0 = side()
+        page.locator('#lec-help-scroll').focus()
+        page.keyboard.press('Control+b')
+        expect(page, '메인 창을 덮은 설명서의 Ctrl+B — 차례를 감추고 왼쪽 위에 다시 보이는 단추', lambda: not page.is_visible('#lec-help .help-nav') and page.is_visible('#lec-help-navon'))
+        check('— 가려진 사이드바(설정)는 그대로', side() == side0, (side0, side()))
+        page.keyboard.press('Control+b')
+        expect(page, '— 다시 Ctrl+B 면 차례가 보이고 단추는 숨는다', lambda: page.is_visible('#lec-help .help-nav') and not page.is_visible('#lec-help-navon'))
+        page.click('#lec-help-navoff')
+        expect(page, '— 머리줄의 차례 감추기 단추', lambda: not page.is_visible('#lec-help .help-nav'))
+        page.click('#lec-help-navon')
+        expect(page, '— 본문 왼쪽 위의 차례 보이기 단추', lambda: page.is_visible('#lec-help .help-nav') and not page.is_visible('#lec-help-navon'))
+        page.locator('#lec-help-find').focus()
+        page.keyboard.press('Control+b')
+        expect(page, '— 찾기 칸에서 감추면 초점은 본문으로', lambda: page.evaluate("document.activeElement?.id") == 'lec-help-scroll', lambda: page.evaluate("document.activeElement?.id"))
+        page.keyboard.press('Control+b')
+        check('— 사이드바 설정은 끝까지 그대로', side() == side0, (side0, side()))
+
         print('[문서 트리 우클릭 — 그 문서에서 새 창]')
         toc = page.locator('#lec-help-toc li.doc a')
         chapter = toc.nth(min(8, toc.count() - 1))
@@ -79,6 +100,12 @@ try:
             check('— 사용설명서 창은 그대로 설명서', win.evaluate(OPEN))
         else:
             check('설명서에 예제 링크가 있다', False, '예제 링크 없음')
+        win.locator('#lec-help-scroll').focus()
+        win.keyboard.press('Control+b')
+        expect(win, '사용설명서 창의 Ctrl+B — 차례를 감춘다', lambda: not win.is_visible('#lec-help .help-nav') and win.is_visible('#lec-help-navon'))
+        win.keyboard.press('Control+b')
+        expect(win, '— 다시 누르면 보인다', lambda: win.is_visible('#lec-help .help-nav'))
+        check('— 메인 창의 사이드바 설정은 그대로', side() == side0, (side0, side()))
         win.locator('#lec-help-scroll').focus()
         try:
             win.keyboard.press('F1')

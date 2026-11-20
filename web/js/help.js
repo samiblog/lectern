@@ -82,7 +82,7 @@ export const SHORTCUTS = [
     ['Esc', t('찾기 닫기')],
   ], 'open'],
   [t('사이드바'), [
-    ['Ctrl+B', t('사이드바 보이기·숨기기')],
+    ['Ctrl+B', t('사이드바 보이기·숨기기 (사용설명서에서는 차례)')],
     ['Ctrl+Shift+E', t('사이드바 \'파일\' 탭의 펼친 묶음으로 — 그 안에서 다시 누르면 다음 묶음 (문서 → 코드 → 자료 → 폴더)')],
     ['Ctrl+Shift+F', t('모든 문서·코드에서 찾기 (사이드바 \'검색\')')],
     ['↑ / ↓', t('위 / 아래 항목 — 문서·코드·자료·폴더 목록')],
@@ -377,6 +377,15 @@ let query = '';       // 찾기 칸 (작은 글자)
 
 export const manualOpen = () => !helpBox().hidden;
 
+/** 사용설명서 왼쪽의 차례 보이기·감추기 (Ctrl+B — 설명서를 연 동안은 앱의 사이드바 대신). 감추는데 초점이 차례에 있었으면 본문으로 */
+export function toggleManualNav(show = helpBox().classList.contains('nav-off')) {
+  const box = helpBox();
+  const inNav = box.querySelector('.help-nav').contains(document.activeElement);
+  box.classList.toggle('nav-off', !show);
+  $('#lec-help-navon').hidden = show;
+  if (!show && inNav) $('#lec-help-scroll').focus({ preventScroll: true });
+}
+
 /** 파일 이름의 번호로 트리의 자리를 정한다 — '4.1-고치는-길-고르기.md' 는 번호 4.1, 깊이 1, 위는 4 */
 function docOf(file, title, text) {
   const num = /^(\d+(?:\.\d+)*)-/.exec(file)?.[1] || '';
@@ -634,6 +643,8 @@ export function initHelp() {
   });
   keysBox().addEventListener('click', (e) => { if (e.target === keysBox()) closeShortcuts(); });   // 바깥을 누르면 닫기
   $('#lec-help-close').addEventListener('click', () => closeManual({ user: true }));
+  $('#lec-help-navoff').addEventListener('click', () => toggleManualNav(false));
+  $('#lec-help-navon').addEventListener('click', () => toggleManualNav(true));
   $('#lec-help .help-title').addEventListener('contextmenu', (e) => helpMenu(e));   // 설명서의 '탭' — 새 창에서 열기 (D181)
   $('#lec-help-toc').addEventListener('contextmenu', (e) => {   // 문서·절을 우클릭하면 그곳에서
     const a = e.target.closest('a[data-doc]');

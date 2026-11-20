@@ -1297,6 +1297,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-help-toc a:hover { background: var(--ui-hover); }
 #lec-help-toc a.active { background: var(--ui-active-bg); color: var(--ui-active-fg); font-weight: 600; }
 .help-nav-foot { flex: none; padding: 10px 12px; border-top: 1px solid var(--ui-border); }
+/* 차례 감추기 (Ctrl+B — 사용설명서를 연 동안): 차례가 없으면 본문 왼쪽 위에 다시 보이는 단추 */
+#lec-help.nav-off .help-nav { display: none; }
+#lec-help-navon { position: absolute; top: 8px; left: 8px; z-index: 2; }
+#lec-help-navon[hidden] { display: none; }
 .help-nav-foot .text-btn, .welcome-acts .text-btn, .keys-box .dialog-foot .text-btn { height: 32px; }
 #lec-help-scroll { flex: 1; min-width: 0; }
 .text-btn kbd { margin-left: 2px; }
