@@ -39,7 +39,7 @@ import {
 import { applyScheme, numberScheme, markLength, bareHeading, sameHeads } from './headstyle.js';
 import {
   setKind, shiftLevels, kindOfLine, moveSection, moveSectionTo, deleteSection, headLevel, insertBlock, blockEnd, nextCaption, makeTable, tableFromRows, rowsFromTsv, addRow, addColumn, removeColumn,
-  toggledKind, boldLines, formatLines, clearMarksIn, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
+  toggledKind, boldLines, formatLines, clearMarksIn, cycleBox, moveColumn, alignColumn, tableAt, tableSpan, boxAt, setBox, unwrapBox, wrapBox, textboxAt, textboxSpan, textboxTitle, makeTextbox, wrapTextbox, unwrapTextbox, boxToTextbox, textboxToBox, addNote, noteAt, noteText, setNote, droppedNotes, removeNotes, addAttachment, nextAppendix, pasteAfter,
 } from './docops.js';
 import { listToTable, tableToList, wrapCode, unwrapCode } from './docops.js';
 import { pick, askText, putItems, changeItems, projectFiles } from './putmenu.js';
@@ -912,6 +912,7 @@ function whyNot(error) {
     case 'last-column': return t('하나뿐인 열은 지우지 않습니다 — 표를 지우세요');
     case 'not-box': return t('강조글 안에서 누르세요');
     case 'not-textbox': return t('박스글 안에서 누르세요');
+    case 'quote-in-textbox': return t('박스글 안에 인용·강조글이 있어 강조글로 바꾸지 않습니다 — 강조글 안의 강조글이 됩니다');
     case 'in-textbox': return t('박스글 안에는 박스글을 넣지 않습니다');
     case 'textbox-heading': return t('제목 줄은 박스글로 묶지 않습니다 — 박스글은 절 안에 둡니다');
     case 'not-cell': return t('칸 안에서 누르세요');
@@ -2386,7 +2387,13 @@ function fitItems(src, a, b) {
       if (now !== 'task') add('list:task', t('이 목록 전체를 할 일로'), 'list task 목록 할 일');   // i18n-ok (찾는 말)
       add('list:table', t('목록을 표로'), 'list table 목록 표');   // i18n-ok (찾는 말)
     }
-    if (boxAt(src, a)) add('box:unwrap', t('강조글 풀기'), 'callout unwrap 강조글');   // i18n-ok (찾는 말)
+    if (boxAt(src, a)) {
+      add('box:unwrap', t('강조글 풀기'), 'callout unwrap 강조글');   // i18n-ok (찾는 말)
+      if (!deckOn(S.pane?.view) && !textboxAt(src, a)) add('callout:textbox', t('박스글로 바꾸기'), 'callout textbox box 강조글 박스글');   // i18n-ok (찾는 말)
+    } else if (textboxAt(src, a)) {
+      add('textbox:callout', t('강조글로 바꾸기'), 'textbox callout 박스글 강조글');   // i18n-ok (찾는 말)
+      add('textbox:unwrap', t('박스글 풀기'), 'textbox unwrap 박스글');   // i18n-ok (찾는 말)
+    }
     add('code:wrap', t('코드로 감싸기'), 'code wrap 코드');   // i18n-ok (찾는 말)
   }
   add('ai:rewrite', t('바꿔 쓰기 요청'), 'ai rewrite 요청 바꿔 쓰기');   // i18n-ok (찾는 말)
@@ -2403,6 +2410,17 @@ function tryChange(src, a, b, id) {
   const check = kindOp(src, a, b, 'quote');   // 코드·표·캡션은 감싸지 않는다
   return check.error ? check : wrapBox(src, a, b, box);
 }
+
+/** 박스글의 제목 줄이면 제목 글 — 자리 글('제목')뿐이면 '' (강조글로 바꿀 때 뺀다), 박스 캡션이 아니면 null */
+const boxTitleOf = (line) => {
+  const c = captionAt(line);
+  if (!c || !/^(?:박스|Box)$/.test(c.word)) return null;   // i18n-ok (원문의 캡션 낱말)
+  return c.title === t('제목') ? '' : c.title;
+};
+
+/** 강조글 → 박스글의 계산 (줄 n 이 든 강조글) — 제목 줄은 다음 박스 번호로 */
+const calloutToTextbox = (n) => (src) => boxToTextbox(src, n, textboxTitle(t('박스'), nextCaption(src, t('박스')), t('제목')),
+  (s) => /^(?:박스|Box)$/.test(captionAt(s)?.word ?? ''));   // i18n-ok (원문의 캡션 낱말)
 
 /** 표 위의 캡션 줄 (빈 줄 건너) — 없으면 0 */
 function captionAbove(src, head) {
@@ -2447,6 +2465,9 @@ async function openChange(a, b, at, picked) {
     const kind = id.slice(5);
     menuOp((x) => (kind === 'table' ? listToTable(x, a, [t('항목'), t('값'), (n) => t('열 {n}', { n })]) : relist(x, a, kind)), done);
   } else if (id === 'box:unwrap') menuOp((x) => unwrapBox(x, a), done);
+  else if (id === 'callout:textbox') menuOp(calloutToTextbox(a), done);
+  else if (id === 'textbox:callout') menuOp((x) => textboxToBox(x, a, 'NOTE', boxTitleOf), done);
+  else if (id === 'textbox:unwrap') menuOp((x) => unwrapTextbox(x, a), done);
   else if (id === 'code:wrap') menuOp((x) => wrapCode(x, a, b), done);
   else if (id === 'code:unwrap') menuOp((x) => unwrapCode(x, a), done);
   else if (picked && !id.startsWith('box:')) turn = turn.then(() => opLitNow((x, p, q) => tryChange(x, p, q, id)));   // 고른 채 — 이어서 키로 (한 글자 키와 같게)
@@ -2488,7 +2509,8 @@ export function lineMenuItems(target) {
   if (!deck) items.push(askTextboxItem(line));
   const src = sourceLines();
   if (!deck && textboxAt(src, line)) {   // 박스글 (D126) — 안의 표·강조글 항목보다 먼저
-    items.push({ label: t('박스글 풀기'), tip: t('여는 줄과 닫는 줄만 뺍니다 — 글은 그대로'), action: () => menuOp((x) => unwrapTextbox(x, line)) },
+    items.push({ label: t('강조글로 바꾸기'), tip: t('여는 줄과 닫는 줄을 떼고 참고 강조글로 — 맨 위의 박스 제목은 굵은 첫 줄로'), action: () => menuOp((x) => textboxToBox(x, line, 'NOTE', boxTitleOf)) },
+      { label: t('박스글 풀기'), tip: t('여는 줄과 닫는 줄만 뺍니다 — 글은 그대로'), action: () => menuOp((x) => unwrapTextbox(x, line)) },
       { label: t('박스글 지우기'), action: () => menuOp((x) => {
         const span = textboxSpan(x, line);
         return span ? { ...deleteLines(x, span[0], span[1]), ask: t('박스글을 지울까요? 안의 글도 지워집니다.') } : { error: 'not-textbox' };
@@ -2521,6 +2543,7 @@ export function lineMenuItems(target) {
     const run = (op) => () => menuOp(op);
     items.push({ label: t('강조글 종류 바꾸기…'), action: () => changeBox(line, target) },
       { label: t('강조글 풀기'), tip: t('보통 문단으로'), action: run((x) => unwrapBox(x, line)) },
+      ...(deck ? [] : [{ label: t('박스글로 바꾸기'), tip: t('종류 줄과 인용 표시를 떼고 박스글로 — 맨 위에 박스 제목 줄'), action: run(calloutToTextbox(line)) }]),
       { label: t('강조글 지우기'), action: run((x) => {
         const box = boxAt(x, line);
         return box ? { ...deleteLines(x, box.a, box.b), ask: t('강조글을 지울까요?') } : { error: 'not-box' };

@@ -839,6 +839,54 @@ export function unwrapTextbox(lines, n) {
   return { lines: out, line: Math.min(Math.max(1, box.a), out.length) };
 }
 
+/**
+ * 강조글을 박스글로 (2026-11-20): 종류 줄과 인용 표시만 떼고 글을 여는 줄·닫는 줄 사이로 — 맨 위에 제목 줄(titleLine).
+ * 박스글 안의 강조글, 제목이 든 강조글은 바꾸지 않는다 (박스글은 겹치지 않고 절을 넘지 않는다 — wrapTextbox)
+ * @param {string[]} lines
+ * @param {number} n
+ * @param {string} titleLine
+ * @param {(line: string) => boolean} [isCaption]
+ */
+export function boxToTextbox(lines, n, titleLine, isCaption) {
+  const box = boxAt(lines, n);
+  if (!box) return { error: 'not-box' };
+  if (box.b === box.a) return { error: 'kind' };   // 종류 줄뿐인 강조글
+  const open = unwrapBox(lines, n).lines;   // 글은 box.a 줄부터 box.b - box.a 줄
+  return wrapTextbox(open, box.a, box.b - 1, titleLine, isCaption);
+}
+
+/**
+ * 박스글을 강조글로 (2026-11-20): 여는 줄·닫는 줄을 떼고 안의 글을 인용 표시로 감싼다 (종류 kind — 기본은 참고).
+ * 맨 위의 '박스 n. 제목' 줄은 번호를 뗀 굵은 첫 줄로 — 제목이 비었으면(자리 글뿐이면) 뺀다. 안에 인용·강조글이 있으면 바꾸지 않는다 (강조글 안의 강조글이 된다)
+ * @param {string[]} lines
+ * @param {number} n
+ * @param {string} [kind]
+ * @param {(line: string) => string | null} [titleOf] 줄이 박스 캡션이면 그 제목 글('' 이면 뺀다), 아니면 null (refs.js 의 captionAt 으로 — 여기서 부르면 import 가 돈다)
+ */
+export function textboxToBox(lines, n, kind = 'NOTE', titleOf = () => null) {
+  const tb = textboxAt(lines, n);
+  if (!tb) return { error: 'not-textbox' };
+  const fences = fencesOf(lines);
+  let a = tb.a + 1;
+  let b = tb.b ? tb.b - 1 : tb.end;
+  while (a <= b && isBlank(lines[a - 1])) a += 1;
+  while (b >= a && isBlank(lines[b - 1])) b -= 1;
+  if (a > b) return { error: 'kind' };
+  for (let k = a; k <= b; k++) if (!fenceAt(fences, k) && depth(lines[k - 1])) return { error: 'quote-in-textbox' };
+  const title = titleOf(lines[a - 1]);
+  let inner = lines.slice(a - 1, b);
+  if (title !== null) {
+    inner = inner.slice(1);
+    while (inner.length && isBlank(inner[0])) inner.shift();
+  }
+  const head = title ? [`**${title.replace(/^\*\*|\*\*$/g, '')}**`, ...(inner.length ? [''] : [])] : [];
+  if (!head.length && !inner.length) return { error: 'kind' };
+  const body = [`> [!${kind}]`, ...[...head, ...inner].map((s) => (isBlank(s) ? '>' : `> ${s}`))];
+  const before = lines.slice(0, tb.a - 1);
+  const out = padded(before, body, lines.slice(tb.b || tb.end));
+  return { lines: out, line: tb.a + (before.length && before.at(-1).trim() ? 1 : 0) + 1 };
+}
+
 /** 박스글의 줄 범위 [a, b] — 지울 때 */
 export function textboxSpan(lines, n) {
   const box = textboxAt(lines, n);

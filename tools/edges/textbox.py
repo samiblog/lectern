@@ -251,6 +251,19 @@ try:
         check('지우기 전에 묻는다', until(lambda: any('박스글을 지울까요' in d for d in dialogs)), dialogs)
         check('안의 글까지 지운다', until(lambda: src() == EDIT + '\n뒤 문단\n'), src())
 
+        print('[강조글 ↔ 박스글 (2026-11-20)]')
+        reset(EDIT + '\n> [!TIP]\n> 팁의 글\n\n뒤 문단\n')
+        until(lambda: page.locator('#lec-view .markdown-alert, #lec-view blockquote').count() == 1)
+        labels = menu(page.locator('#lec-view .markdown-alert p, #lec-view blockquote p').last, '박스글로 바꾸기')
+        check('강조글의 우클릭 — 박스글로 바꾸기', any('박스글로 바꾸기' in x for x in labels), labels)
+        check('— 인용 표시를 떼고 박스글로, 맨 위에 박스 제목', until(lambda: src() == EDIT + f'\n{OPEN}\n**박스 1. 제목**\n\n팁의 글\n{CLOSE}\n\n뒤 문단\n'), src())
+        until(lambda: len(boxes()) == 1)
+        page.wait_for_timeout(250)
+        labels = menu(page.locator('#lec-view aside p').last, '강조글로 바꾸기')
+        check('박스글의 우클릭 — 강조글로 바꾸기', any('강조글로 바꾸기' in x for x in labels), labels)
+        check('— 자리 글뿐인 제목은 빼고 참고 강조글로', until(lambda: src() == EDIT + '\n> [!NOTE]\n> 팁의 글\n\n뒤 문단\n'), src())
+        check('— 강조글로 보인다', until(lambda: not boxes() and page.locator('#lec-view .markdown-alert, #lec-view blockquote').count() == 1))
+
         print('[묶기]')
         reset()
 

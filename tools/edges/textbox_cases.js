@@ -95,4 +95,33 @@ eq(refs.refLink('박스', 3), '[박스 3](#박스-3)', '참조 링크');
   eq(refs.renumberCaptions(old, next).lines, L('표 1. 새\n\n표 2. 가\n\n박스 1. 나'), '표 번호가 바뀌어도 박스 번호는 따로 센다');
 }
 
+// 강조글 ↔ 박스글 (2026-11-20)
+{
+  const { boxToTextbox, textboxToBox } = m;
+  const title = (s) => {   // lineedit.js 의 boxTitleOf 와 같게
+    const c = refs.captionAt(s);
+    if (!c || !/^(?:박스|Box)$/.test(c.word)) return null;
+    return c.title === '제목' ? '' : c.title;
+  };
+  eq(boxToTextbox(L('앞\n\n> [!TIP]\n> 가\n>\n> 나\n\n뒤'), 4, TITLE, cap).lines, L('앞\n\n<!-- box -->\n**박스 1. 제목**\n\n가\n\n나\n<!-- /box -->\n\n뒤'), '강조글 → 박스글: 종류 줄과 인용 표시만 뗀다');
+  eq(boxToTextbox(L('> [!NOTE]\n> - 하나\n> - 둘'), 1, TITLE, cap).lines, L('<!-- box -->\n**박스 1. 제목**\n\n- 하나\n- 둘\n<!-- /box -->'), '— 목록은 목록 그대로, 종류 줄에서 불러도');
+  eq(boxToTextbox(L('> [!NOTE]\n> | a | b |\n> |---|---|\n> | 1 | 2 |'), 3, TITLE, cap).lines, L('<!-- box -->\n**박스 1. 제목**\n\n| a | b |\n|---|---|\n| 1 | 2 |\n<!-- /box -->'), '— 표도');
+  eq(boxToTextbox(L('> [!NOTE]'), 1, TITLE, cap).error, 'kind', '— 글이 없는 강조글은 하지 않는다');
+  eq(boxToTextbox(L('> [!NOTE]\n> ## 제목\n> 글'), 2, TITLE, cap).error, 'textbox-heading', '— 제목이 든 강조글은 하지 않는다');
+  eq(boxToTextbox(L('<!-- box -->\n**박스 1. 가**\n\n> [!NOTE]\n> 글\n<!-- /box -->'), 5, TITLE, cap).error, 'in-textbox', '— 박스글 안의 강조글은 하지 않는다');
+  eq(boxToTextbox(L('> 인용\n> 글'), 1, TITLE, cap).error, 'not-box', '— 인용은 강조글이 아니다');
+
+  eq(textboxToBox(L('앞\n\n<!-- box -->\n**박스 2. 시장 요약**\n\n가\n\n나\n<!-- /box -->\n\n뒤'), 6, 'NOTE', title).lines, L('앞\n\n> [!NOTE]\n> **시장 요약**\n>\n> 가\n>\n> 나\n\n뒤'), '박스글 → 강조글: 제목은 번호를 뗀 굵은 첫 줄로');
+  eq(textboxToBox(L('<!-- box -->\n**박스 1. 제목**\n\n가\n<!-- /box -->'), 1, 'NOTE', title).lines, L('> [!NOTE]\n> 가'), '— 자리 글뿐인 제목은 뺀다');
+  eq(textboxToBox(L('<!-- box -->\n가\n- 하나\n<!-- /box -->'), 4, 'TIP', title).lines, L('> [!TIP]\n> 가\n> - 하나'), '— 제목이 없으면 글만, 닫는 줄에서 불러도, 종류는 고른 대로');
+  eq(textboxToBox(L('<!-- box: 핵심 -->\n박스 1. 숫자\n```\n> 코드 속 꺾쇠\n```\n<!-- /box -->'), 2, 'NOTE', title).lines, L('> [!NOTE]\n> **숫자**\n>\n> ```\n> > 코드 속 꺾쇠\n> ```'), '— 이름 있는 박스글·코드 블록 안의 꺾쇠는 인용이 아니다');
+  eq(textboxToBox(L('<!-- box -->\n**박스 1. 가**\n\n글\n\n## 다음 절'), 4, 'NOTE', title).lines, L('> [!NOTE]\n> **가**\n>\n> 글\n\n## 다음 절'), '— 닫는 줄이 없는 박스글은 다음 제목 앞까지');
+  eq(textboxToBox(L('<!-- box -->\n**박스 1. 가**\n\n> [!TIP]\n> 안\n<!-- /box -->'), 2, 'NOTE', title).error, 'quote-in-textbox', '— 안에 강조글이 있으면 하지 않는다');
+  eq(textboxToBox(L('<!-- box -->\n<!-- /box -->'), 1, 'NOTE', title).error, 'kind', '— 빈 박스글은 하지 않는다');
+  eq(textboxToBox(L('글'), 1, 'NOTE', title).error, 'not-textbox', '— 박스글 밖');
+  const src = L('앞\n\n> [!WARNING]\n> **바뀐 것**\n>\n> 가\n\n뒤');
+  const there = boxToTextbox(src, 3, TITLE, cap).lines;
+  eq(textboxToBox(there, there.indexOf('가') + 1, 'WARNING', title).lines, L('앞\n\n> [!WARNING]\n> **바뀐 것**\n>\n> 가\n\n뒤'), '— 갔다 오면 글이 그대로');
+}
+
 return { n, fails };
