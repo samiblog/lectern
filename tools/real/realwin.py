@@ -29,7 +29,7 @@ args = sys.argv[1:]
 EXE = None
 if '--exe' in args:
     i = args.index('--exe')
-    EXE = args[i + 1]
+    EXE = str(Path(args[i + 1]).resolve())   # 상대 경로·/ 로 적어도 — 앱은 저장소 폴더에서 띄운다
     del args[i:i + 2]
 
 fails: list[str] = []

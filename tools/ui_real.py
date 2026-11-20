@@ -44,7 +44,7 @@ def main() -> int:
     exe = None
     if '--exe' in args:
         i = args.index('--exe')
-        exe = args[i + 1]
+        exe = str(Path(args[i + 1]).resolve())
         del args[i:i + 2]
         if not Path(exe).is_file():
             print(f'실행 파일이 없습니다: {exe}')
