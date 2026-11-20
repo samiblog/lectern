@@ -2195,5 +2195,6 @@ export default {
 "코드 줄을 접었습니다": "Wrapped the code lines",
 "차트 글자가 {n}pt 로 작습니다 (기준 {min}pt)": "The chart text is small at {n}pt (limit {min}pt)",
 "줄인 글 {n}장": "Shrunk text {n}",
-"넘쳐서 글을 줄인 곳": "Text shrunk to fit"
+"넘쳐서 글을 줄인 곳": "Text shrunk to fit",
+"넘쳐서 글을 줄인 곳 — 눌러서 목록 보기": "Text shrunk to fit — click to list them"
 };

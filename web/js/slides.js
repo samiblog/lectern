@@ -462,12 +462,16 @@ const refits = new WeakMap();   // 다시 그려 달라고 한 차트 → 횟수
 
 const floorsOf = (section) => FLOORS[section.dataset.reading ? 'reading' : 'show'];
 
-/** 요소가 물려받은 글자 크기(pt) — 본문은 그 요소의 글자 크기, 나머지는 --t-* (pt·px 로 적은 것만. 다른 단위는 줄이지 않는다) */
-function sizesOf(el) {
+// 글 종류가 그 안에 있는지 — 없는 종류는 줄이지도 세지도 않는다 (칸 머리의 크기 낱말은 표·코드 크기도 정하므로, 세면 없는 표의 바닥까지 줄였다고 알렸다)
+const KIND_OF = { sub: ':is(h3, h4, h5, h6)', box: 'blockquote', table: 'table, p.lec-source', code: 'pre:not(.mermaid, .lec-chart)' };
+
+/** 요소가 물려받은 글자 크기(pt) — 본문은 그 요소의 글자 크기, 나머지는 scope 안에 있는 종류의 --t-* (pt·px 로 적은 것만. 다른 단위는 줄이지 않는다) */
+function sizesOf(el, scope) {
   const st = getComputedStyle(el);
   const out = { body: parseFloat(st.fontSize) * 0.75 };
   for (const kind of SHRINK) {
-    const m = kind !== 'body' && /^\s*(\d+(?:\.\d+)?)(pt|px)\s*$/.exec(st.getPropertyValue(`--t-${kind}`));
+    if (kind === 'body' || !scope.some((x) => x.matches(KIND_OF[kind]) || x.querySelector(KIND_OF[kind]))) continue;
+    const m = /^\s*(\d+(?:\.\d+)?)(pt|px)\s*$/.exec(st.getPropertyValue(`--t-${kind}`));
     if (m) out[kind] = parseFloat(m[1]) * (m[2] === 'px' ? 0.75 : 1);
   }
   return out;
@@ -596,10 +600,10 @@ function fitCells(section) {
   }
   const scale = section.getBoundingClientRect().width / section.offsetWidth || 1;
   const height = (el) => el.getBoundingClientRect().height / scale;
-  // 가운데 칸은 넘친 것이 위아래로 갈려 scrollHeight 에 절반만 잡힌다. 1px 은 반올림이다
+  // 가운데 칸(center·kpi)도 safe center 라 넘친 것은 아래로만 간다 (base.css). 1px 은 반올림이다
   const downOf = (cell) => {
     const px = cell.scrollHeight - cell.clientHeight;
-    return px > 1 ? px * (cell.classList.contains('center') ? 2 : 1) : 0;
+    return px > 1 ? px : 0;
   };
   const tops = [];
   for (const cell of cells) {
@@ -615,7 +619,7 @@ function fitCells(section) {
       }
     }
     if (cell.parentElement !== section) continue;   // 칸 안의 칸은 바깥 칸을 따른다
-    const base = sizesOf(cell);
+    const base = sizesOf(cell, [cell]);
     tops.push({ cell, base, k: fitText([cell], () => Math.max(downOf(cell), sideOf([cell])), base, floor, true) });
   }
   const look = (cell) => [...cell.classList].filter((c) => !CELL_STATE.has(c)).sort().join(' ');
@@ -669,7 +673,7 @@ function fitFlow(section) {
   }
   let n = 100;
   if (!section.classList.contains('lec-grid') && flow.length) {
-    const base = sizesOf(section);
+    const base = sizesOf(section, flow);
     const k = fitText(flow, () => Math.max(section.scrollHeight - section.clientHeight, sideOf(flow), 0), base, floor, false);
     if (k < 1) n = percentOf(base, floor, k);
   }

@@ -534,8 +534,10 @@ async function draw(node, ctx) {
   // 장이 넘쳐 slides.js 가 높이를 청했으면(data-fit-height) 그 높이로 — 그림을 줄이면 글자까지 작아진다 (D188)
   const cell = node.closest('.lec-slide.lec-grid > .lec-cell, .lec-cell.lec-at');
   const px = (st, ...keys) => keys.reduce((sum, k) => sum + (parseFloat(st[k]) || 0), 0);
-  const used = cell ? [...cell.children].filter((el) => el !== node)
-    .reduce((sum, el) => sum + el.offsetHeight + px(getComputedStyle(el), 'marginTop', 'marginBottom'), px(getComputedStyle(cell), 'paddingTop', 'paddingBottom')) : 0;
+  const box = (el) => el.offsetHeight + px(getComputedStyle(el), 'marginTop', 'marginBottom');
+  // 칸의 다른 것이 쓴 높이 = 칸 안 전체에서 차트 자신을 뺀 것. 캡션·자료가 있으면 차트는 칸의 바로 아래가 아니라 전시물(D184) 안에 있다 —
+  // 칸의 자식만 빼면 차트가 든 전시물을 통째로 '다른 것'으로 세어 남은 높이가 0 이 됐다
+  const used = cell ? [...cell.children].reduce((sum, el) => sum + box(el), px(getComputedStyle(cell), 'paddingTop', 'paddingBottom')) - box(node) : 0;
   const asked = slide ? Number(node.dataset.fitHeight) || 0 : 0;
   const fit = asked ? asked / zoom : cell ? Math.max(120, cell.clientHeight - used - 8) / zoom : 0;
   const info = drawn.get(node) || { ctx, seq: 0 };

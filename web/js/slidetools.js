@@ -61,6 +61,7 @@ function updateButtons() {
   const check = $('#lec-st-check');
   check.hidden = !pages && !fitted;
   check.querySelector('span').textContent = pages ? t('점검 {n}장', { n: pages }) : t('줄인 글 {n}장', { n: fitted });
+  check.title = pages ? t('넘치거나 잘못 쓴 곳 — 눌러서 목록 보기') : t('넘쳐서 글을 줄인 곳 — 눌러서 목록 보기');
 }
 
 /** 터미널에 넣을 한 줄 — 여러 줄이면 터미널이 줄마다 보낸다 */

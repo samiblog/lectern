@@ -1,5 +1,6 @@
 """슬라이드의 넘침 맞춤 (D188): 넘친 글은 바닥 크기까지 줄이고, 차트는 그림을 줄이지 않고 그 자리 크기로 다시 그린다.
 같은 줄의 같은 꾸밈 칸은 같은 배율, 바닥에서도 넓은 코드는 줄을 접는다, 줄여도 나아지지 않으면 그대로, 줄인 것은 점검 목록에만 (틀에 표시 없음)"""
+import json
 import tempfile
 import traceback
 from pathlib import Path
@@ -25,7 +26,9 @@ FLUID = (VL % ('"container"', '')).replace(', "height": 360', '')
 DOCS = {
     '두카드': f'<!-- layout: two -->\n\n## 제목\n\n::: a card\n### 성과\n{bul(8)}\n:::\n\n::: b card\n### 과제\n{bul(6)}\n:::\n',
     '많이넘침': f'<!-- layout: two -->\n\n## 제목\n\n::: a card\n{bul(14)}\n:::\n\n::: b card\n짧은 글\n:::\n',
-    '칸없는장': f'## 제목\n\n{bul(12, "보고서의 문장을 그대로 옮겨 와서 한 줄이 길어지고 줄 수도 많아진 경우")}\n',
+    # 가운데 칸이 바닥에서도 넘친다 — 위아래로 갈려 맨 위 소제목이 잘리지 않게 (AI 시나리오에서 찾음)
+    '가운데넘침': f'<!-- layout: quad -->\n\n## 제목\n\n::: a kpi\n**230천 t**\n기준\n:::\n\n::: b card center\n### 상단을 다시 본다\n{bul(9)}\n:::\n\n::: c\n글\n:::\n\n::: d\n글\n:::\n',
+    '칸없는장':f'## 제목\n\n{bul(12, "보고서의 문장을 그대로 옮겨 와서 한 줄이 길어지고 줄 수도 많아진 경우")}\n',
     '긴코드': f'<!-- layout: two -->\n\n## 제목\n\n::: a\n글\n:::\n\n::: b\n{F}python\nresult = model.fit(train_features_with_lagged_variables, train_target_quarterly_growth, epochs=200, verbose=0)\n{F}\n:::\n',
     '넓은상자': '<!-- layout: three -->\n\n## 제목\n\n::: a\n짧은 글\n\n<div style="width:900px;height:20px;background:#ccd"></div>\n:::\n\n::: b\n글\n:::\n\n::: c\n글\n:::\n',
     '크기칸': f'<!-- layout: two -->\n\n## 제목\n\n::: a card 22\n{bul(7)}\n:::\n\n::: b\n글\n:::\n',
@@ -33,6 +36,9 @@ DOCS = {
              '| 매출액 | 12,345,678 | 13,456,789 | 14,567,890 | 15,678,901 | 7.6% |\n:::\n\n::: c\n글\n:::\n'),
     '숫자크기차트': f'<!-- layout: two -->\n\n## 제목\n\n::: a\n{F}vega-lite\n{VL % ("600", "")}\n{F}\n:::\n\n::: b\n- 글\n:::\n',
     '글아래차트': f'## 제목\n\n{bul(5, "설명 글이 위에 있고 차트가 아래에 이어지는 흔한 모양")}\n\n{F}vega-lite\n{VL % ("600", "")}\n{F}\n',
+    # 캡션·자료가 있는 칸의 차트 — 전시물(D184)로 묶여 차트가 칸의 바로 아래가 아니다 (AI 시나리오에서 찾음: 80px 로 그려졌다)
+    # 설정은 Claude 처럼 여러 줄로 — 그리기 전의 원문 블록이 높아야 그 잘못이 드러난다
+    '캡션차트': f'<!-- layout: two-left -->\n\n## 제목\n\n::: a\n**월별 가격 (USD/t)**\n\n{F}vega-lite\n{json.dumps(json.loads(FLUID), ensure_ascii=False, indent=2)}\n{F}\n\n자료: 가상 거래소 (2026)\n:::\n\n::: b card\n글\n:::\n',
     '작은차트글자': f'## 제목\n\n{F}vega-lite\n{TINY}\n{F}\n',
     '좁은칸범례': (f'<!-- grid: t t t / a b c -->\n\n## 제목\n\n::: a\n{F}vega-lite\n{FLUID}\n{F}\n:::\n\n'
                f'::: b\n{F}plotly\n{PLOTLY}\n{F}\n:::\n\n::: c\n글\n:::\n'),
@@ -108,6 +114,14 @@ def run():
         check('두 묶음과 보내는 줄이 함께', '넘치거나 잘못 쓴 곳' in menu and '넘쳐서 글을 줄인 곳' in menu and '터미널에 붙여 넣기' in menu, menu[:240])
         page.keyboard.press('Escape')
 
+        show('가운데넘침')
+        got = info()
+        r = page.evaluate(f"""(() => {{ const c = {SLIDE}.querySelector('.lec-cell[data-cell=b]'); const h = c.querySelector('h3');
+          return [h.getBoundingClientRect().top - c.getBoundingClientRect().top, c.scrollHeight - c.clientHeight]; }})()""")
+        check('가운데 칸이 넘쳐도 맨 위 소제목은 보인다 (아래만 잘린다)', r[0] >= 0, r)
+        said = [x for x in got['issues'] if '칸 b' in x]
+        check('— 알리는 넘침 px 는 실제 넘친 만큼', said and f'{r[1]}px' in said[0], (said, r))
+
         print('[칸 없는 장·읽는 자료]')
         show('칸없는장')
         got = info()
@@ -134,6 +148,9 @@ def run():
         r = page.evaluate(f"(() => {{ const c = {SLIDE}.querySelector('.lec-cell'); return [({PT})(c.querySelector('li')), c.getAttribute('style')]; }})()")
         check('칸 머리의 크기(22pt)에서 줄인다', 14 <= r[0] < 22 and any('칸 a' in x for x in got['fitted']), (r, got))
         check('칸의 자리(grid-area)는 그대로', 'grid-area:a' in r[1].replace(' ', ''), r[1])
+        said = [x for x in got['fitted'] if '칸 a' in x]
+        want = f'{round(r[0] / 22 * 100)}%'
+        check(f'알리는 비율은 칸에 있는 글의 것 ({want} — 없는 표·코드의 바닥이 아니라)', said and want in said[0], (said, r[0]))
         show('표첫열')
         lines = page.evaluate(f"""(() => {{ const td = {SLIDE}.querySelector('tbody td'); const range = document.createRange(); range.selectNodeContents(td);
           return new Set([...range.getClientRects()].map((x) => Math.round(x.top))).size; }})()""")
@@ -147,6 +164,12 @@ def run():
         expect(page, '넘쳐서 낮춘 차트를 그 높이로 다시 그린다', f"() => !!{SLIDE}.querySelector('pre.lec-chart[data-fit-height]') && ({CHART_PT})({SLIDE}.querySelector('pre.lec-chart > svg')) >= 14",
                lambda: page.evaluate(f"[{SLIDE}.querySelector('pre.lec-chart')?.dataset.fitHeight, ({CHART_PT})({SLIDE}.querySelector('pre.lec-chart > svg'))]"), ms=10000)
         expect(page, '다시 그린 뒤 넘침·점검이 남지 않는다', f"() => {{ const w = {WRAP}; return !w.dataset.issues; }}", lambda: info())
+        show('캡션차트')
+        fill = page.evaluate(f"""(() => {{ const cell = {SLIDE}.querySelector('.lec-cell[data-cell=a]'); const svg = cell.querySelector('pre.lec-chart > svg');
+          const s = cell.closest('.lec-slide'); const scale = s.getBoundingClientRect().width / s.offsetWidth || 1;
+          return [Math.round(svg.getBoundingClientRect().height / scale), cell.clientHeight, !!cell.querySelector('.lec-exhibit pre.lec-chart')]; }})()""")
+        check('캡션·자료와 묶인 칸의 차트도 칸의 남은 높이를 채운다', fill[2] and fill[0] > fill[1] * 0.6, fill)
+        check('— 넘치지 않는다', not info()['issues'], info())
         show('작은차트글자')
         expect(page, '차트 글자가 작으면 점검에 나온다', f"() => JSON.parse({WRAP}.dataset.issues || '[]').some((x) => x.text.includes('차트 글자가'))", lambda: info())
         show('좁은칸범례')

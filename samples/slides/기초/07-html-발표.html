@@ -485,9 +485,10 @@
 .lec-deck .lec-cell :is(h3, h4) { margin: 0 0 .3em; border: 0; }
 .lec-deck .lec-cell.card { padding: 12px 16px; border: 1px solid var(--md-border); border-radius: 8px; }
 .lec-deck .lec-cell.accent { padding: 12px 16px; border-radius: 8px; background: color-mix(in srgb, var(--md-link, #2a6fb0) 10%, transparent); }
-.lec-deck .lec-cell.kpi { padding: 10px 14px; border: 1px solid var(--md-border); border-radius: 8px; justify-content: center; text-align: center; }
+.lec-deck .lec-cell.kpi { padding: 10px 14px; border: 1px solid var(--md-border); border-radius: 8px; justify-content: safe center; text-align: center; }
 .lec-deck .lec-cell.kpi strong { display: block; font-size: 1.9em; line-height: 1.15; color: var(--md-link, #2a6fb0); }
-.lec-deck .lec-cell.center { justify-content: center; }
+/* safe: 넘치면 가운데 대신 위에서부터 — 위아래로 갈려 맨 위의 소제목이 잘리지 않게 (장의 section 과 같다, D188) */
+.lec-deck .lec-cell.center { justify-content: safe center; }
 .lec-deck .lec-cell.dark { padding: 12px 16px; border-radius: 8px; background: var(--md-heading); color: var(--md-bg); --md-fg: var(--md-bg); --md-strong: var(--md-bg); }
 .lec-deck .lec-cell.dark :is(h1, h2, h3, h4, strong, a) { color: inherit; }
 .lec-deck .lec-cell.note { padding: 10px 14px; background: #fde68a; color: #3b3216; box-shadow: 0 2px 6px rgba(0, 0, 0, .18); }
