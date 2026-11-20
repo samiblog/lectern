@@ -64,7 +64,7 @@ try:
         R.check('Lectern 슬라이드가 지금 창의 문서 칸에 열린다', R.wait(lambda: view()['path'] == '덱.md' and view()['deck'], 15), view())
         time.sleep(3)
         R.check('— 새 창(슬라이드 창)은 뜨지 않는다', not solo_pages(), [R.href(x) for x in solo_pages()])
-        page.screenshot(path=str(Path(__file__).parent / 'slides-here.png'))
+        page.screenshot(path=str(R.HERE / 'real095.png'))
 
         print('[보고서로 갔다가 돌아오기 — 문서와 같은 길]')
         page.locator('#lec-tree .row.file[data-doc="보고서.md"]').click()

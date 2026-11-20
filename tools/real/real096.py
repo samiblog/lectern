@@ -177,7 +177,7 @@ try:
         page.keyboard.type('"pi" + "d=$PID mark=$mark 한글" + "-1"')
         page.keyboard.press('Enter')
         R.check('— 같은 셸 (PID·변수), 한글 입력', R.wait(lambda: f'pid={pid} mark=7 한글-1' in term_text(0), 10), term_text(0)[-200:])
-        page.screenshot(path=str(Path(__file__).parent / 'real096.png'))
+        page.screenshot(path=str(R.HERE / 'real096.png'))
 
         print('[F1 — 사용설명서는 따로 창이 기본 (D181)]')
         page.locator('#lec-content').focus()
