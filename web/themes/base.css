@@ -377,7 +377,21 @@
 .md-body .diagram-error > p { margin: 0 0 .4em; font-size: .88em; color: var(--md-alert-warning); font-weight: 600; }
 
 /* 각주 */
-.md-body p.lec-source { margin-top: -.5em; font-size: .86em; color: var(--md-muted); }   /* 표·그림 아래의 자료·주 줄 (doc.js) */
+.md-body p.lec-source { margin-top: -.5em; font-size: .86em; color: var(--md-muted); }   /* 표·그림 아래의 자료·주 줄 (doc.js) — 빈 줄 없이 이어 쓴 '주:'·'자료:' 두 줄도 두 줄로 (breakSourceLines) */
+
+/* 전시물 (2026-11-20, doc.js 의 wrapExhibits): 캡션이 있는 표·그림·다이어그램·차트를 캡션·몸체·주·자료째 한 상자로.
+   캡션은 가운데·굵게·본문보다 크게(소제목 h4 와 h3 사이), 주·자료는 왼쪽 — 몸체의 왼쪽 끝. 상자의 폭은 몸체를 따르고(캡션·자료는 폭에 끼지 않고 그 안에서 감긴다),
+   몸체가 아주 좁으면 22em 까지는 넓힌다. 차트는 칸 폭으로 그리고, 다이어그램은 그림의 본래 폭(--lec-ex-w) */
+.md-body .lec-exhibit { width: fit-content; min-width: min(100%, 22em); max-width: 100%; margin: 1.4em auto 1.2em; }
+.md-body .lec-exhibit:is(.lec-ex-diagram, .lec-ex-chart) { width: var(--lec-ex-w, auto); }
+.md-body .lec-exhibit > * { margin-top: 0; margin-bottom: 0; }
+.md-body .lec-exhibit > :is(.lec-caption, .lec-source) { contain: inline-size; }
+.md-body .lec-exhibit > .table-wrap { margin-inline: auto; }
+.md-body .lec-exhibit > p:not(.lec-caption, .lec-source) { text-align: center; }   /* 혼자 든 그림 */
+.md-body .lec-caption { margin: 0 0 .55em; text-align: center; font-size: 1.08em; font-weight: 700; line-height: 1.45; color: var(--md-heading); }
+.md-body .lec-exhibit > .lec-caption:not(:first-child) { margin: .55em 0 0; }   /* 그림 아래에 캡션을 쓴 예전 문서 */
+.md-body .lec-exhibit > .lec-source { margin-top: .45em; text-align: left; }
+.md-body .lec-exhibit > .lec-source + .lec-source { margin-top: .1em; }
 .md-body .footnotes-sep { margin-top: 3em; }
 .md-body .footnotes { font-size: .88em; color: var(--md-muted); }
 .md-body .footnote-ref a, .md-body .footnote-backref { text-decoration: none; }
@@ -488,6 +502,11 @@
 .lec-deck .lec-slide > :not(.lec-slide-bg, header, footer) { position: relative; z-index: 1; }
 .lec-deck .lec-slide :is(h1, h2, h3, h4, h5, h6) { margin: .45em 0 .4em; }
 .lec-deck .lec-slide p, .lec-deck .lec-slide ul, .lec-deck .lec-slide ol { margin-top: 0; margin-bottom: .6em; }
+/* 전시물 (2026-11-20): 슬라이드에서는 칸 폭 그대로 — 캡션은 칸 위 가운데에 본문의 1.1배, 주·자료는 몸체 바로 아래 왼쪽에 표 글 크기 */
+.lec-deck .lec-exhibit { width: auto; min-width: 0; margin: 0 0 .6em; }
+.lec-deck .lec-slide .lec-caption { margin-bottom: .3em; font-size: calc(var(--t-body) * 1.1); }
+.lec-deck .lec-slide p.lec-source { margin-top: .3em; margin-bottom: 0; font-size: var(--t-table); }
+.lec-deck .lec-slide .lec-exhibit > .lec-source + .lec-source { margin-top: .1em; }
 .lec-deck .lec-slide .table-wrap { max-height: none; overflow: visible; }
 .lec-deck .lec-slide .code-tools { display: none; }
 .lec-deck .lec-slide img { max-width: 100%; }

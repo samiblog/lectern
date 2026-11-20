@@ -25,7 +25,7 @@ People read and edit in place this project's documents with **Lectern** (an Inte
 - When the person says 'summarize the conversation into a box right after `@path line 12`': insert exactly one box after that line. Do not transcribe the conversation — keep the conclusions, reasons and open questions, and change no other line.
 - Write code locations as `src/report.py:14` — clicking jumps to that line (not inside code blocks).
 - Link images and other documents with paths relative to the document. Section links are `doc.md#heading-text`.
-- Table captions go above the table as `Table 1. Title`, figure captions below the figure as `Figure 1. Title`. Refer to them in the text with links like `[Table 1](#table-1)` — when people add or move a table, Lectern renumbers the captions and fixes the links.
+- Captions go right above a table, figure or chart as `Table 1. Title` · `Figure 1. Title`, the source right below as `Source: organization (year)`. Refer to them in the text with links like `[Table 1](#table-1)` — when people add or move a table, Lectern renumbers the captions and fixes the links.
 - Diagrams are ```` ```mermaid ```` code blocks; charts are ```` ```vega-lite ````, ```` ```echarts ````, ```` ```plotly ```` or ```` ```dot ```` code blocks.
   - Settings are JSON values only — functions (`formatter: function…`) are not allowed.
   - Put data in the document, or point to a CSV/JSON file in the project with a path relative to the document (Vega-Lite `data.url`). Data and images at internet addresses are not read.

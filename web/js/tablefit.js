@@ -149,7 +149,8 @@ function pairWidths(rows) {
 /** 모든 열 맞추기 (D173)를 할 표인지와 쓸 수 있는 폭 — 합친 칸이 있거나 열이 하나면 null. {table, head, rows, room, em} */
 function prepare(table) {
   const wrap = table.parentElement;
-  const host = wrap.parentElement;
+  const parent = wrap.parentElement;
+  const host = parent?.classList.contains('lec-exhibit') ? parent.parentElement : parent;   // 전시물 상자는 표의 폭을 따르니 그 바깥 폭으로 잰다
   const head = [...(table.rows[0]?.cells || [])];
   const n = head.length;
   if (n < 2 || table.rows.length < 2 || !host) return null;

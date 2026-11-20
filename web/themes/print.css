@@ -96,10 +96,14 @@ html body .md-body:not(.lec-deck) table { break-inside: auto; }
 html body .md-body:not(.lec-deck) table:not(:has(tbody tr:nth-child(13))) { break-inside: avoid; }
 html body .md-body:not(.lec-deck) tr { break-inside: avoid; }
 html body .md-body:not(.lec-deck) thead { display: table-header-group; }
-/* 캡션은 표·그림과 같은 쪽에: '표 1.' 은 표 위(다음과 붙임), '그림 1.' 은 그림·차트·다이어그램 아래(앞과 붙임) */
-html body .md-body:not(.lec-deck) p:has(+ .table-wrap), html body .md-body:not(.lec-deck) p:has(+ table) { break-after: avoid; }
-html body .md-body:not(.lec-deck) :is(p:has(> img), pre.mermaid, pre.lec-chart) + p { break-before: avoid; }
+/* 캡션은 표·그림과 같은 쪽에: 위 캡션은 다음과 붙이고, 주·자료와 예전 문서의 아래 캡션은 앞과 붙인다 (전시물 — doc.js 의 wrapExhibits) */
+html body .md-body:not(.lec-deck) p:has(+ .table-wrap), html body .md-body:not(.lec-deck) p:has(+ table), html body .md-body:not(.lec-deck) .lec-caption:first-child { break-after: avoid; }
+html body .md-body:not(.lec-deck) :is(p:has(> img), pre.mermaid, pre.lec-chart) + p, html body .md-body:not(.lec-deck) .lec-exhibit > .lec-source { break-before: avoid; }
 html body .md-body:not(.lec-deck) p.lec-source { font-size: 8.5pt; color: #444; margin-top: -2mm; }
+html body .md-body:not(.lec-deck) .lec-caption { font-size: 11pt; color: #111; margin-bottom: 2mm; }
+html body .md-body:not(.lec-deck) .lec-exhibit { margin: 5mm auto 4mm; }
+html body .md-body:not(.lec-deck) .lec-exhibit > .lec-source { margin-top: 1.5mm; }
+html body .md-body:not(.lec-deck) .lec-exhibit > .lec-source + .lec-source { margin-top: .3mm; }
 /* 강조글·인용 — 색 없이 */
 html body .md-body:not(.lec-deck) blockquote.alert {
   color: #111; background: #f4f4f4 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;

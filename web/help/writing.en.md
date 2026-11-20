@@ -59,12 +59,12 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
   - **Keep the cells in a row about the same length.** One very long cell makes the whole row tall.
   - Keep the first column (item, category) a short label.
 - **Use alignment marks only when needed.** Without marks (`:---`, `:---:`, `---:`) Lectern aligns the cells — number columns to the right, and if the reader picks 'Report style' in the settings, the header row and short columns to the center. A marked column overrides the reader's choice, so mark only columns that must look that way (for example, centering a column of ○ and × only).
-- **Captions**: a line `Table 1. Title` (or a whole-bold line) directly above a table becomes its name in the contents and in Elements. For pictures put `Figure 1. Title` directly below; for diagrams and charts, directly above. `<Table 3>`, `[Figure 2]` and `Table 3-1.` work too (and the Korean 표·그림 forms).
+- **Captions above, notes and sources below**: a line `Table 1. Title` · `Figure 1. Title` (or a whole-bold line) directly above a table, picture, diagram or chart becomes its name in the contents and in Elements. `<Table 3>`, `[Figure 2]` and `Table 3-1.` work too (and the Korean 표·그림 forms). Directly below go `Note: …` · `Source: organization (year)` lines — each shows on its own line even without blank lines between them. Lectern draws the caption centered, larger and bold, and the notes and sources small on the left below it (in print and Word too).
 
 ### To-dos, sources and document info
 
 - Write to-dos as checklists (`- [ ] task`, `- [x]` when done) — Lectern's Elements collects the open ones across the project.
-- Put a table's or figure's source on the line just below it as `Source: organization (year)` — it shows under Elements → Sources. Footnotes (`[^1]`) are collected there too.
+- Put a table's, figure's or chart's source on the line just below it as `Source: organization (year)`, with any caveat above it as `Note: …` — it shows under Elements → Sources. Footnotes (`[^1]`) are collected there too.
 - Give plan, decision and report documents the same front matter keys, such as `status`, `owner`, `updated` (YYYY-MM-DD) and `tags: [a, b]` — Elements → Doc info groups documents by each key's values.
 - When a person inserts pieces of other documents with Lectern's Clip, each piece is preceded by a `<!-- from: path lines a-b -->` comment (in a Korean interface, `<!-- 담은 곳: … -->`). It records the source — keep it when editing (it is not shown on screen), and leave the same kind of comment when asked to bring pieces over.
 
@@ -298,7 +298,7 @@ This task in one line.
 - Writing before formatting: decide the reader and the purpose first, write to the kind of document (narrative or bullet-point), and reread as the reader when done. No file paths or code formatting in the body; keep sources for facts you bring in.
 - Detailed formatting is in the Lectern writing guide `<full path of this guide>` — read the section when writing tables, charts, boxes, slides or work cards.
 - Write Markdown. One `# Title` first, then a one- or two-sentence summary paragraph. Don't skip heading levels (## → ###).
-- Only values in table cells, units in the header. About six columns and one or two lines per cell (long explanations go outside the table); alignment marks (`:---:`) only when needed. Captions as `Table 1. Title` (above a table) and `Figure 1. Title` (below a figure); refer with `[Table 1](#table-1)`.
+- Only values in table cells, units in the header. About six columns and one or two lines per cell (long explanations go outside the table); alignment marks (`:---:`) only when needed. Captions as `Table 1. Title` · `Figure 1. Title` right above a table, figure or chart, the source right below as `Source: organization (year)`; refer with `[Table 1](#table-1)`.
 - Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
 - Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. HTML reports run no scripts.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.

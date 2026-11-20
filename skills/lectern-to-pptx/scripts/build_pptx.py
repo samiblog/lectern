@@ -26,6 +26,32 @@ import pptx_parts as pp  # noqa: E402
 import text_patch  # noqa: E402
 from pptx_parts import esc  # noqa: E402
 
+# 전시물 (2026-11-20 — Lectern 화면과 같게): 칸 안에서 표·그림·차트·다이어그램 바로 위의 캡션 줄('표 1. …'·'그림 2. …' 또는 통째로 굵게 쓴 짧은 줄)은
+# 가운데·굵게·본문의 1.1배, 바로 아래의 주·자료 줄('자료:'·'출처:'·'주:'·'Source:' …)은 왼쪽·표 글 크기·흐린 색
+EXHIBITS = ('table', 'image', 'chart', 'diagram')
+CAPTION_LINE = re.compile(r'^\s*[<\[〈《(（【]?\s*(?:표|그림|도표|차트|사진|다이어그램|table|tab\.|fig(?:ure)?\.?|chart|diagram)\s*[\dⅠ-Ⅻ]+', re.I)
+SOURCE_LINE = re.compile(r'^[\s※*·•\-]*[(\[]?\s*(?:자료|출처|원자료|원문|주|source|sources|data source|note)\s*[)\]]?\s*[:：]', re.I)
+
+
+def is_caption(block):
+    text = lm.plain(block['runs']).strip()
+    return 0 < len(text) <= 90 and (bool(CAPTION_LINE.match(text)) or all(r.get('b') for r in block['runs'] if r['t'].strip()))
+
+
+def mark_exhibits(segs):
+    """칸의 조각들에서 표·그림·차트·다이어그램 바로 위의 캡션 문단과 바로 아래의 주·자료 문단에 role 을 단다"""
+    for i, s in enumerate(segs):
+        if s['kind'] != 'text':
+            continue
+        blocks = s['blocks']
+        if i + 1 < len(segs) and segs[i + 1]['kind'] in EXHIBITS and blocks and blocks[-1]['kind'] == 'para' and is_caption(blocks[-1]):
+            blocks[-1] = {**blocks[-1], 'role': 'caption'}
+        if i and segs[i - 1]['kind'] in EXHIBITS:
+            for k, b in enumerate(blocks):
+                if b['kind'] != 'para' or not SOURCE_LINE.match(lm.plain(b['runs'])):
+                    break
+                blocks[k] = {**b, 'role': 'source'}
+
 EMU = 9525
 PALETTE = ['4C78A8', 'F58518', 'E45756', '72B7B2', '54A24B', 'EECA3B', 'B279A2', 'FF9DA6']
 DECK = {
@@ -477,6 +503,10 @@ class Writer:
             first = False
             if b['kind'] == 'heading':
                 out.append(self.para(b['runs'], sub, h3 if h3 is not None else color, align, before=before + 2, bold=True))
+            elif b.get('role') == 'caption':
+                out.append(self.para(b['runs'], size * 1.1, h3 if h3 is not None else color, 'ctr', before=before, bold=True))
+            elif b.get('role') == 'source':
+                out.append(self.para(b['runs'], min(size, self.sizes['table']), self.p['muted'], 'l', before=0 if before == 0 else 2))
             elif b['kind'] == 'para':
                 out.append(self.para(b['runs'], size, color, align, before=before))
             elif b['kind'] == 'list':
@@ -807,6 +837,7 @@ class Writer:
         if 'kpi' in words:
             return self.render_kpi(cell, rect, look, size)
         segs = self.segments(blocks)
+        mark_exhibits(segs)
         only_text = len(segs) <= 1 and (not segs or segs[0]['kind'] == 'text')
         if only_text:
             paras = self.text_paras(segs[0]['blocks'], size, look['fg'], align, look['h3']) if segs else ''

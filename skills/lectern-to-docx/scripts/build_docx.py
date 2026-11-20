@@ -50,6 +50,8 @@ EMU = 635                                     # twip 하나의 EMU
 MARK_FILL = {'yellow': 'FFF1A6', 'green': 'CDEFD0', 'pink': 'FAD1E2', 'blue': 'CFE5FA'}
 TEXT_COLOR = {'red': 'C62828', 'blue': '1565C0', 'green': '2E7D32', 'goldenrod': 'B8860B'}
 ALERT = {'NOTE': '2F6FB3', 'TIP': '2E7D4F', 'IMPORTANT': '7149B8', 'WARNING': '9B6304', 'CAUTION': 'C0392B'}
+# 표·그림 아래의 주·자료 줄 — Lectern 화면(web/js/toc.js 의 SOURCE)과 같게: '자료:' '출처:' '주:' '※ 자료:' 'Source:' 'Data source:' …
+SOURCE = re.compile(r'^[\s※*·•\-]*[(\[]?\s*(?:자료|출처|원자료|원문|주|source|sources|data source|note)\s*[)\]]?\s*[:：]', re.I)
 CAPTION = re.compile(r'^\s*(?:\*\*)?[〈<]?(표|그림|박스|Table|Figure|Box)[ \t]*(\d{1,4})(?:\.(?!\d)|:|[〉>]|\*\*)\s*(?:\*\*)?\s*')
 CAP_KEY = {'표': 'tbl', 'table': 'tbl', '그림': 'fig', 'figure': 'fig', '박스': 'box', 'box': 'box'}
 BOX_OPEN = re.compile(r'^ {0,3}<!--[ \t]*box(?:[ \t]*:[ \t]*([^\n]*?))?[ \t]*-->[ \t]*$', re.I)
@@ -222,7 +224,7 @@ THEME = {   # 기본 보고서 양식의 모양 — 양식(tools/make_docx_templ
     'body_size': 21, 'line': 264, 'after': 120, 'jc': 'both', 'indent': 0,
     'head_color': '1B2A3A', 'head_sizes': {1: 30, 2: 26, 3: 23, 4: 22, 5: 21, 6: 21}, 'h1_page': False, 'h1_rule': None, 'h_center': False,
     'title_size': 40, 'title_color': '111111', 'title_jc': 'center', 'subtitle_size': 24, 'subtitle_color': '444444', 'subtitle_jc': 'center',
-    'caption_color': '1B2A3A', 'caption_jc': 'left', 'quote_rule': '999999',
+    'caption_color': '1B2A3A', 'caption_jc': 'center', 'caption_size': None, 'quote_rule': '999999',   # 캡션은 가운데, 본문보다 1pt 크게 (2026-11-20 — Lectern 화면과 같게)
     'th_fill': 'E9EDF2', 'th_color': '111111', 'rule': '333333', 'inner': 'BBBBBB', 'cell_size': 18,
     'header_color': '666666', 'footer_color': '333333', 'link': '1F5F9F',
 }
@@ -234,6 +236,7 @@ def default_styles(lang, theme=None):
     body = _font(th['body_font'] or (f['body'] if lang == 'en' else 'Times New Roman'), th['body_east'] or f['body'])
     head = _font(th['head_font'] or f['head'], th['head_east'])
     mono = _font(f['mono'], th['mono_east'])
+    cap_size = th['caption_size'] or th['body_size'] + 2   # 본문보다 1pt 크게 — 반 포인트 단위
 
     def para(sid, name, ppr='', rpr='', based='Normal', nxt='Normal', extra=''):
         return (f'<w:style w:type="paragraph" w:styleId="{sid}"><w:name w:val="{name}"/>'
@@ -257,7 +260,7 @@ def default_styles(lang, theme=None):
         para('Title', 'Title', f'<w:spacing w:before="240" w:after="120"/><w:ind w:firstLine="0"/><w:jc w:val="{th["title_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["title_color"]}"/><w:sz w:val="{th["title_size"]}"/><w:szCs w:val="{th["title_size"]}"/>'),
         para('Subtitle', 'Subtitle', f'<w:spacing w:after="360"/><w:ind w:firstLine="0"/><w:jc w:val="{th["subtitle_jc"]}"/>', f'{head}<w:color w:val="{th["subtitle_color"]}"/><w:sz w:val="{th["subtitle_size"]}"/><w:szCs w:val="{th["subtitle_size"]}"/>'),
         *heads,
-        para('Caption', 'caption', f'<w:keepNext/><w:spacing w:before="120" w:after="80"/><w:ind w:firstLine="0"/><w:jc w:val="{th["caption_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["caption_color"]}"/><w:sz w:val="19"/><w:szCs w:val="19"/>'),
+        para('Caption', 'caption', f'<w:keepNext/><w:spacing w:before="160" w:after="80"/><w:ind w:firstLine="0"/><w:jc w:val="{th["caption_jc"]}"/>', f'{head}<w:b/><w:color w:val="{th["caption_color"]}"/><w:sz w:val="{cap_size}"/><w:szCs w:val="{cap_size}"/>'),
         para('Source', 'Source', '<w:spacing w:before="40" w:after="200"/><w:ind w:firstLine="0"/><w:jc w:val="left"/>', f'{head}<w:color w:val="555555"/><w:sz w:val="16"/><w:szCs w:val="16"/>'),
         para('Quote', 'Quote', f'<w:pBdr><w:left w:val="single" w:sz="18" w:space="8" w:color="{th["quote_rule"]}"/></w:pBdr><w:ind w:left="340" w:firstLine="0"/>', '<w:color w:val="444444"/>'),
         para('ListParagraph', 'List Paragraph', '<w:spacing w:after="60"/><w:ind w:left="720" w:firstLine="0"/><w:contextualSpacing/>'),
@@ -648,7 +651,7 @@ class Builder:
                 cap = CAPTION.match(LM.plain(b['runs']))
                 if cap and not in_cell:
                     out.append(self.caption(b['runs'], cap))
-                elif re.match(r'^(자료|주|출처|source|note)\s*[:：]', LM.plain(b['runs']), re.I):
+                elif SOURCE.match(LM.plain(b['runs'])):
                     out.append(self.para(self.runs(self.inline_runs(b['runs'])), self.sid['source']))
                 else:
                     out.append(self.para(self.runs(self.inline_runs(b['runs'])), self.sid['cell'] if in_cell else self.sid['normal']))

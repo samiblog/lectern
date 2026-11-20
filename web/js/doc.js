@@ -7,7 +7,7 @@ import { renderMarkdown, splitFrontMatter } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { renderCharts } from './charts.js';
 import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides.js';
-import { setToc, SOURCE } from './toc.js';
+import { setToc, SOURCE, exhibitsIn } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
 import { fitTables } from './tablefit.js';
 import { setDocSource, sameSource } from './docmenu.js';
@@ -424,12 +424,64 @@ function decorateCode(root) {
 /** 강조글·표·코드 블록 꾸미기만 (사용설명서 — help.js. 링크·그림은 부르는 쪽이 다룬다) */
 /** 표·그림 바로 아래의 자료·주 줄은 작게 (D109) — 본문의 글이 아니라 그 표·그림에 딸린 줄이다 */
 function decorateSources(root) {
-  const hosts = [root, ...root.querySelectorAll('aside.lec-textbox')];   // 박스글 안의 표·그림도 (D126)
+  const hosts = [root, ...root.querySelectorAll('aside.lec-textbox, section.lec-slide, .lec-cell')];   // 박스글 안의 표·그림도 (D126), 슬라이드의 장·칸 안도
   for (const p of hosts.flatMap((host) => [...host.children]).filter((el) => el.tagName === 'P')) {   // root 는 문서 조각일 수 있다 (모아 보기) — :scope 가 없다
     const prev = p.previousElementSibling;
     if (!prev || !SOURCE.test(p.textContent)) continue;
     if (prev.matches('.table-wrap, table, figure, pre.lec-chart, pre.mermaid, .lec-source') || prev.querySelector?.(':scope > img')) p.classList.add('lec-source');
     else if (prev.tagName === 'P' && prev.previousElementSibling?.querySelector?.(':scope > img')) p.classList.add('lec-source');   // 그림, 캡션, 자료 차례
+    if (p.classList.contains('lec-source')) breakSourceLines(p);
+  }
+}
+
+/**
+ * 빈 줄 없이 이어 쓴 '주: …' '자료: …' 줄은 새 줄에서 (2026-11-20) — Markdown 은 이어진 줄을 한 줄로 잇지만, 그 줄 자체가 '주:'·'자료:' 로 시작하면 따로 읽는 줄이다.
+ * 긴 자료 글을 원문에서 감아 쓴 것은 그대로 잇는다. 줄바꿈 설정(md_breaks)이 이미 <br> 을 둔 곳은 그대로
+ */
+function breakSourceLines(p) {
+  /** @type {Text[]} */
+  const texts = [];
+  const walk = document.createTreeWalker(p, NodeFilter.SHOW_TEXT);
+  for (let n = walk.nextNode(); n; n = walk.nextNode()) if (n instanceof Text && n.data.includes('\n')) texts.push(n);
+  for (const node of texts) {
+    const parts = node.data.split('\n');
+    /** @type {(string | Node)[]} */
+    const out = [parts[0]];
+    parts.slice(1).forEach((part, i) => {
+      const broken = !i && !parts[0] && node.previousSibling?.nodeName === 'BR';
+      out.push(!broken && SOURCE.test(part) ? document.createElement('br') : '\n', part);
+    });
+    if (out.some((x) => typeof x !== 'string')) node.replaceWith(...out);
+  }
+}
+
+/**
+ * 전시물 (2026-11-20 — 캡션과 주·자료): 캡션이 있는 표·그림·다이어그램·차트를 캡션·몸체·주·자료째 div.lec-exhibit 하나로 묶는다 — 원문은 그대로, 그릴 때만.
+ * 캡션은 가운데·본문보다 크게, 주·자료는 몸체의 왼쪽 끝에서 (base.css). 묶음의 폭은 몸체를 따르고, 차트·다이어그램은 칸 폭으로 그린 뒤 sizeExhibits 가 줄인다.
+ * 묶음에는 줄 범위(data-lines)가 없다 — 줄 단위·줄 번호·접기는 안의 블록을 그대로 본다. 슬라이드는 배경 그림을 옮긴 뒤에 (prepareDeck 다음)
+ */
+export function wrapExhibits(root) {
+  for (const { kind, els, cap } of exhibitsIn(root)) {
+    const box = document.createElement('div');
+    box.className = `lec-exhibit lec-ex-${kind}`;
+    cap.classList.add('lec-caption');
+    els[0].before(box);
+    box.append(...els);
+  }
+}
+
+/**
+ * 다이어그램의 묶음을 그림의 본래 폭으로 (Mermaid 는 max-width, Graphviz 는 width 속성 — pt 면 px 로) — 캡션·주·자료가 그림의 폭 안에 든다.
+ * 차트(vega 등)는 칸 폭으로 그리므로 그대로, 슬라이드도 칸 폭 그대로. 화면 폭으로 잰 값이 아니라 인쇄·html 로 저장에서도 맞다
+ */
+function sizeExhibits(root) {
+  if (root.classList.contains('lec-deck')) return;
+  for (const box of root.querySelectorAll('.lec-exhibit.lec-ex-diagram')) {
+    const svg = box.querySelector(':scope > :is(pre.mermaid, pre.lec-chart) svg:not(svg svg)');
+    if (!svg) continue;
+    const attr = svg.getAttribute('width') || '';
+    const w = parseFloat(svg.style.maxWidth) || (/^[\d.]+(?:px|pt)?$/.test(attr) ? parseFloat(attr) * (attr.endsWith('pt') ? 4 / 3 : 1) : 0);
+    if (w > 0) box.style.setProperty('--lec-ex-w', `${Math.ceil(w)}px`);
   }
 }
 
@@ -598,9 +650,11 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   try {
     enhance(stage, path, Date.now(), tab);
     if (deck) prepareDeck(stage, deck, text);   // 배경 그림·그림 크기·style: CSS·구조 보기 꼬리표
+    wrapExhibits(stage);   // 캡션·몸체·주·자료를 한 상자로 — 배경 그림을 옮긴 뒤에
     for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
     await renderMermaid(stage);
     await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)
+    sizeExhibits(stage);
     await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
     if (deck) fitDeck(stage);   // 넘치는 슬라이드의 그림을 줄인다 (그린 뒤에 잰다)
   } finally {

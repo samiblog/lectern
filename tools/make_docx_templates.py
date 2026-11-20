@@ -364,7 +364,7 @@ def paper_2col():
     s = {'page': A4, 'margins': (mm(20), mm(18), mm(20), mm(18)),
          'theme': {'body_font': 'Times New Roman', 'body_east': '바탕', 'body_size': 19, 'line': 252, 'after': 60, 'head_color': '000000', 'h_center': True,
                    'head_sizes': {1: 21, 2: 20, 3: 19, 4: 19, 5: 19, 6: 19}, 'title_size': 34, 'th_fill': 'FFFFFF', 'rule': '000000', 'cell_size': 16,
-                   'caption_jc': 'center', 'head_font': 'Times New Roman', 'head_east': '바탕', 'indent': 200},
+                   'caption_jc': 'center', 'caption_size': 17, 'head_font': 'Times New Roman', 'head_east': '바탕', 'indent': 200},
          'desc': '학술 논문 2단 — 가운데 제목·저자·소속, 한 단의 초록(박스글 자리 초록)과 주제어, 그 아래 두 단의 10pt 본문, 가운데 맞춘 작은 캡션',
          'desc_en': 'A two-column journal paper — centred title, authors and affiliation, a full-width abstract and keywords, then a two-column 10 pt body'}
     w = text_w(s)
@@ -385,7 +385,7 @@ def paper_2col():
 @spec
 def manuscript():
     s = {'page': LETTER, 'margins': (1440, 1440, 1440, 1440),
-         'theme': {'body_font': 'Times New Roman', 'body_east': '바탕', 'body_size': 24, 'line': 480, 'after': 0, 'jc': 'left', 'indent': 720,
+         'theme': {'caption_jc': 'left', 'body_font': 'Times New Roman', 'body_east': '바탕', 'body_size': 24, 'line': 480, 'after': 0, 'jc': 'left', 'indent': 720,
                    'head_color': '000000', 'head_sizes': {1: 24, 2: 24, 3: 24, 4: 24, 5: 24, 6: 24}, 'h_center': True, 'head_font': 'Times New Roman',
                    'head_east': '바탕', 'title_size': 24, 'th_fill': 'FFFFFF', 'rule': '000000', 'cell_size': 22},
          'desc': '투고 원고 — Letter, 12pt 두 줄 간격, 첫 줄 들여쓰기, 머리에 짧은 제목과 쪽 번호, 제목 쪽(제목·저자·소속), 초록 쪽, 본문',
@@ -427,7 +427,7 @@ def white_paper():
 @spec
 def equity_research():
     s = {'page': A4, 'margins': (mm(15), mm(16), mm(15), mm(16)),
-         'theme': {'body_font': '맑은 고딕', 'body_east': '맑은 고딕', 'body_size': 19, 'line': 276, 'after': 80, 'jc': 'left', 'head_color': 'B71C1C',
+         'theme': {'caption_jc': 'left', 'body_font': '맑은 고딕', 'body_east': '맑은 고딕', 'body_size': 19, 'line': 276, 'after': 80, 'jc': 'left', 'head_color': 'B71C1C',
                    'head_sizes': {1: 22, 2: 21, 3: 20, 4: 19, 5: 19, 6: 19}, 'th_fill': 'B71C1C', 'th_color': 'FFFFFF', 'rule': 'B71C1C', 'cell_size': 17},
          'desc': '증권사 리포트 — 위에 회사·종목코드·업종과 리서치센터, 왼쪽 칸에 투자의견·목표가·현재가·상승여력과 애널리스트, 오른쪽에 제목과 핵심 수치(박스글 자리), 끝에 면책(박스글 자리)',
          'desc_en': 'An equity research note — company, ticker and sector with the research house on top, a left panel of rating, target and current price, upside and analysts, the title and key figures on the right, a disclaimer at the end'}
@@ -454,7 +454,8 @@ def equity_research():
 def consulting():
     s = {'page': A4, 'margins': (mm(22), mm(22), mm(20), mm(22)),
          'theme': {'body_font': 'Calibri', 'body_east': '맑은 고딕', 'body_size': 21, 'line': 288, 'jc': 'left', 'head_color': '1F3864', 'h1_rule': '1F3864',
-                   'head_sizes': {1: 30, 2: 24, 3: 22, 4: 21, 5: 21, 6: 21}, 'th_fill': '1F3864', 'th_color': 'FFFFFF', 'rule': '1F3864'},
+                   'head_sizes': {1: 30, 2: 24, 3: 22, 4: 21, 5: 21, 6: 21}, 'th_fill': '1F3864', 'th_color': 'FFFFFF', 'rule': '1F3864',
+                   'caption_jc': 'left'},   # 전시물의 캡션 띠 — 지면 틀 consulting 처럼 왼쪽 (2026-11-20 의 기본 '가운데'에서 장르대로 뺌)
          'desc': '컨설팅 보고서 — 표지(고객·제목·부제·회사·날짜), 요약 쪽(박스글 자리 요약), 결론 문장으로 쓰는 제목, 쪽 머리에 회사와 제목',
          'desc_en': 'A consulting report — a cover (client, title, subtitle, firm, date), an executive summary page, action titles, the firm and title in the header'}
     w = text_w(s)
@@ -499,7 +500,7 @@ def proposal():
 @spec
 def magazine():
     s = {'page': A4, 'margins': (mm(18), mm(18), mm(18), mm(18)),
-         'theme': {'body_font': 'Georgia', 'body_east': '바탕', 'body_size': 20, 'line': 288, 'after': 100, 'head_color': '111111', 'head_font': 'Georgia', 'head_east': '맑은 고딕',
+         'theme': {'caption_jc': 'left', 'body_font': 'Georgia', 'body_east': '바탕', 'body_size': 20, 'line': 288, 'after': 100, 'head_color': '111111', 'head_font': 'Georgia', 'head_east': '맑은 고딕',
                    'head_sizes': {1: 26, 2: 23, 3: 21, 4: 20, 5: 20, 6: 20}, 'th_fill': 'F1ECE4', 'rule': '8A1C1C', 'caption_color': '8A1C1C', 'quote_rule': '8A1C1C'},
          'desc': '잡지 기사 — 꼬리표(작은 빨간 대문자), 큰 제목과 기울인 부제, 글쓴이·날짜, 굵은 줄 아래 두 단의 본문',
          'desc_en': 'A magazine feature — a small red kicker, a large title and italic standfirst, byline and date, then a two-column body under a heavy rule'}

@@ -48,7 +48,7 @@ Exchange stocks are **192 kt**.
 - Write directives as HTML comments at the top of the slide.
 - Any other HTML comment is a speaker note. It can go anywhere on the slide and does not count as text outside the cells. After the last cell reads well. A colon is fine (`<!-- Source: statistics office -->`); only a directive name (`layout`, `text`, `class` and so on) makes it a directive. Comments in code blocks are code.
 - Write `lead` slides such as covers and section slides without cells. `footer` and `header` from the front matter also show on `lead` slides. To drop one on a slide, write `<!-- _footer: '' -->`.
-- Do not use footnotes. Put sources briefly in a cell or in the notes.
+- Do not use footnotes. Put sources briefly as `Source: …` right below the table or chart in its cell, or in the notes.
 
 ## 2. Cells
 
@@ -204,6 +204,8 @@ A body line is 35px, a subheading line 50px and a table row 40px. At 18pt a line
 ## 6. Charts and images
 
 Write charts as code blocks: `vega-lite`, `echarts`, `plotly`, `dot`, `mermaid`. Charts in a cell fit its width and the height left. A heading or text in the same cell is fine.
+
+- A whole-bold line (`**October sales (KRW 100m)**`) or `Figure 1. …` right above a table, chart or image in a cell is its caption. It is drawn centered at the top of the cell, bold and 1.1 times the body text. `Source: …` · `Note: …` lines right below are drawn on the left in the table text size. Leave out the caption when the slide title already names the chart. Sources can also be gathered in a separate cell (`::: s`).
 
 - `vega-lite`: use `"width": "container"` and leave out `height`. Give values with `data.url` or `data.values` in the document.
 - `echarts`: an ECharts option as JSON. Leave out `height` and `width`.

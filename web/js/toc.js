@@ -185,13 +185,35 @@ function holderKind(node) {
 }
 
 
+/** 캡션 줄로 보이는 단락인지 — '표 1. …'·'[그림 2]' 처럼 번호로 시작하는 짧은 단락, 그 낱말이 그림을 말하는지 */
+const numberedFigureCaption = (p) => p?.tagName === 'P' && !p.classList.contains('lec-textbox-title') && squeeze(p.textContent).length <= 90
+  && CAPTION.test(squeeze(p.textContent)) && wordKind(squeeze(p.textContent)) === 'figure';
+
+/**
+ * 그림의 캡션이 그 문서에서 아래에 붙는지 (2026-11-20 — 캡션은 이제 모두 위가 관례). 문서의 혼자 든 그림마다 바로 위·바로 아래의 번호 캡션을 세어
+ * 아래가 더 많으면 예전 관례(그림은 아래 캡션)로 읽는다 — 같으면 위. el 이 든 맨 바깥(md 본문·화면 밖 조각)에서 센다
+ */
+function figureCaptionsBelow(el) {
+  let top = el;
+  while (top.parentElement && !top.classList?.contains('md-body')) top = top.parentElement;
+  let above = 0;
+  let below = 0;
+  for (const img of top.querySelectorAll('img, .image-off')) {
+    const holder = loneHolder(img);
+    if (!holder) continue;
+    if (numberedFigureCaption(holder.previousElementSibling)) above += 1;
+    if (numberedFigureCaption(holder.nextElementSibling)) below += 1;
+  }
+  return below > above;
+}
+
 /**
  * el(표 상자·그림 단락·다이어그램·코드 상자) 바로 앞(before)이나 뒤(after)의 캡션 단락: {text(쓴 그대로), short(머리 번호를 뗀 것), el} 또는 null.
  * 'any' 면 '표 1. …'처럼 번호로 시작하거나 통째로 굵게·기울여 쓴 짧은 단락('**〈표 Ⅱ-15〉 철재의 HS코드**'), 'numbered' 면 번호로 시작하는 것만.
- * 머리 낱말이 다른 종류를 말하면('그림 1.' 을 표가) 가져가지 않는다. 두 요소 사이의 캡션은 관례대로 — 그림 뒤면 그 그림의 것(그림은 아래 캡션),
- * 표·다이어그램·코드 앞이면 그것의 것(위 캡션)
+ * 머리 낱말이 다른 종류를 말하면('그림 1.' 을 표가) 가져가지 않는다. 두 요소 사이의 캡션은 관례대로 — 표·다이어그램·코드 앞이면 그것의 것(위 캡션),
+ * 두 그림 사이면 그 문서의 관례대로 (below: 그림이 아래 캡션을 쓰는 예전 문서면 앞 그림의 것, 아니면 뒤 그림의 것 — figureCaptionsBelow)
  */
-function captionPara(el, kind, { before = null, after = null, afterFirst = false } = {}) {
+function captionPara(el, kind, { before = null, after = null, afterFirst = false, below = () => false } = {}) {
   const pick = (p, mode, side) => {
     if (!mode || !p || p.tagName !== 'P' || p.classList.contains('lec-textbox-title')) return null;   // 박스글의 제목은 안의 표·그림의 캡션이 아니다
     const text = squeeze(p.textContent);
@@ -200,10 +222,10 @@ function captionPara(el, kind, { before = null, after = null, afterFirst = false
     if (!CAPTION.test(text) && !(mode === 'any' && only)) return null;
     if (!fits(wordKind(text), kind)) return null;
     const word = wordKind(text);
-    if (side === 'before' && holderKind(p.previousElementSibling) === 'figure' && fits(word, 'figure')) return null;   // 앞 그림의 아래 캡션
+    if (side === 'before' && holderKind(p.previousElementSibling) === 'figure' && fits(word, 'figure') && below()) return null;   // 앞 그림의 아래 캡션 (예전 문서)
     if (side === 'after') {
       const next = holderKind(p.nextElementSibling);
-      if (next && next !== 'figure' && fits(word, next)) return null;   // 뒤 표·다이어그램·코드의 위 캡션
+      if (next && fits(word, next) && (next !== 'figure' || !below())) return null;   // 뒤 표·다이어그램·코드·그림의 위 캡션
     }
     return { text, short: text.replace(CAPTION, '') || text, el: p };
   };
@@ -220,17 +242,49 @@ const captionTag = (node) => {   // <caption>·<figcaption>
 /** 혼자 든 단락 (그림의 캡션은 그 단락의 앞뒤에서 찾는다) */
 const loneHolder = (el) => (el.parentElement?.tagName === 'P' && squeeze(el.parentElement.textContent) === '' ? el.parentElement : null);
 
-/** 구성 요소의 캡션 (모아 보기는 이것을 이름으로 — D61). 표는 위, 그림은 아래가 먼저. 강조글·수식은 없다 */
+/**
+ * 구성 요소의 캡션 (모아 보기는 이것을 이름으로 — D61). 모두 위가 먼저 (2026-11-20 — 그림도). 그림 캡션을 아래에 쓴 예전 문서는 아래가 먼저.
+ * 강조글·수식은 없다
+ */
 export function captionOf(kind, el) {
-  if (kind === 'table') return captionTag(el.caption) || captionPara(el.closest('.table-wrap') || el, kind, { before: 'any', after: 'numbered' });
+  let below = null;   // 그 문서의 그림 캡션 관례 — 필요할 때 한 번만 센다
+  const figBelow = () => (below ??= figureCaptionsBelow(el));
+  if (kind === 'table') return captionTag(el.caption) || captionPara(el.closest('.table-wrap') || el, kind, { before: 'any', after: 'numbered', below: figBelow });
   if (kind === 'figure') {
     if (el.tagName === 'FIGURE') return captionTag(el.querySelector('figcaption'));
     const holder = loneHolder(el);
-    return holder ? captionPara(holder, kind, { before: 'numbered', after: 'any', afterFirst: true }) : null;
+    if (!holder) return null;
+    return figBelow() ? captionPara(holder, kind, { before: 'numbered', after: 'any', afterFirst: true, below: figBelow })
+      : captionPara(holder, kind, { before: 'any', after: 'numbered', below: figBelow });
   }
-  if (kind === 'diagram' || kind === 'chart') return captionPara(el, kind, { before: 'any', after: 'numbered' });
-  if (kind === 'code') return captionPara(el.closest('.code-block') || el, kind, { before: 'numbered', after: 'numbered' });
+  if (kind === 'diagram' || kind === 'chart') return captionPara(el, kind, { before: 'any', after: 'numbered', below: figBelow });
+  if (kind === 'code') return captionPara(el.closest('.code-block') || el, kind, { before: 'numbered', after: 'numbered', below: figBelow });
   return null;
+}
+
+// 전시물을 묶어도 되는 부모 — md 본문, 박스글, 슬라이드의 장과 칸 (목록·인용·표 안은 그대로)
+const EXHIBIT_HOSTS = '.md-body, aside.lec-textbox, section.lec-slide, .lec-cell';
+
+/**
+ * 전시물 (2026-11-20 — 캡션과 주·자료): 캡션 단락이 있는 표·그림·다이어그램·차트마다 {kind, els: [캡션·몸체·바로 뒤의 주·자료 단락(lec-source) — 문서 차례로], cap(캡션 단락)}.
+ * doc.js 가 한 상자로 묶는다. 캡션은 captionOf 그대로 — 묶은 뒤에 다시 찾아도 같다 (상자 안의 형제만 본다). 캡션이 <caption>·<figcaption> 인 것은 그 틀이 이미 묶음이라 뺀다
+ */
+export function exhibitsIn(root) {
+  const out = [];
+  const seen = new Set();
+  for (const el of root.querySelectorAll('table, img, .image-off, pre.mermaid, pre.lec-chart, .diagram-error')) {
+    const kind = partKind(el);
+    if (!['table', 'figure', 'diagram', 'chart'].includes(kind)) continue;
+    const box = (kind === 'table' && el.closest('.table-wrap')) || (kind === 'figure' && loneHolder(el)) || el;
+    if (seen.has(box) || box.tagName === 'FIGURE' || !box.parentElement?.matches(EXHIBIT_HOSTS) || box.parentElement.closest('.lec-exhibit')) continue;
+    seen.add(box);
+    const cap = captionOf(kind, el);
+    if (!cap?.el || cap.el.tagName !== 'P' || cap.el.parentElement !== box.parentElement) continue;
+    const els = [cap.el, box].sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+    for (let next = els.at(-1).nextElementSibling; next?.matches('p.lec-source'); next = next.nextElementSibling) els.push(next);
+    out.push({ kind, els, cap: cap.el });
+  }
+  return out;
 }
 
 /**

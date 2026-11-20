@@ -1595,12 +1595,21 @@ const captionOf = (word, n) => `${word} ${n}. ${t('제목')}`;
 /** 캡션 줄에서 '제목' 글자를 골라 둘 자리 */
 const captionPick = (word, n) => `${word} ${n}. `.length;
 
+/**
+ * 전시물의 줄 (2026-11-20 — 캡션과 주·자료): 위에 캡션 'word n. 제목', 아래에 빈 '자료: ' 줄 — 표·그림·차트·다이어그램을 넣을 때.
+ * {lines, line(캡션 줄), body(몸체의 첫 줄)}. 슬라이드에서는 몸체만 넣는다 (칸이 좁고, 장 제목이 캡션을 대신하는 일이 많다)
+ */
+function exhibitBlock(src, at, word, body) {
+  const r = insertBlock(src, at, [captionOf(word, nextCaption(src, word)), '', ...body, '', t('자료: ')]);
+  return { ...r, body: r.line + 2 };
+}
+
 /** 그림 줄과 캡션 */
 const imageBlock = (src, at, ref, alt) => {
   if (deckOn(S.pane.view)) return insertBlock(src, at, [`![w:400 ${alt}](${ref})`]);   // 슬라이드는 칸이 캡션 자리까지 정한다
   const n = nextCaption(src, t('그림'));
-  const r = insertBlock(src, at, [`![${alt}](${ref})`, '', captionOf(t('그림'), n)]);
-  return { lines: r.lines, line: r.line + 2, select: captionPick(t('그림'), n) };
+  const r = exhibitBlock(src, at, t('그림'), [`![${alt}](${ref})`]);
+  return { lines: r.lines, line: r.line, select: captionPick(t('그림'), n) };
 };
 
 async function putTable(s) {
@@ -1620,8 +1629,8 @@ async function putTable(s) {
   await putBlock(s, (src, line) => {
     if (deckOn(s.pane.view)) return insertBlock(src, line, makeTable(+m[1], +m[2]));
     const n = nextCaption(src, t('표'));
-    const r = insertBlock(src, line, [captionOf(t('표'), n), '', ...makeTable(+m[1], +m[2])]);
-    return { ...r, select: captionPick(t('표'), n) };
+    const r = exhibitBlock(src, line, t('표'), makeTable(+m[1], +m[2]));
+    return { lines: r.lines, line: r.line, select: captionPick(t('표'), n) };
   });
 }
 
@@ -1657,10 +1666,14 @@ async function putAttach(s) {
   });
 }
 
-/** 블록을 넣고 펼쳐서 고치게 한다 (수식·다이어그램·차트 — D112) */
-const fencedBlock = (body) => (src, line) => {
-  const r = insertBlock(src, line, body);
-  return { ...r, then: (at) => unfold(at) };
+/** 블록을 넣고 펼쳐서 고치게 한다 (수식·다이어그램·차트 — D112). 다이어그램·차트는 문서에서 위에 그림 캡션, 아래에 '자료: ' 줄 (슬라이드는 블록만) */
+const fencedBlock = (body, exhibit = false) => (src, line) => {
+  if (!exhibit || deckOn(S.pane.view)) {
+    const r = insertBlock(src, line, body);
+    return { ...r, then: (at) => unfold(at) };
+  }
+  const r = exhibitBlock(src, line, t('그림'), body);
+  return { lines: r.lines, line: r.body, then: (at) => unfold(at) };
 };
 
 const SAMPLES = {
@@ -1761,7 +1774,7 @@ async function putItem(s, id) {
   else if (id === 'link') await linkHere();
   else if (id === 'date') await dateHere();
   else if (id === 'chars') await charFromPut(s);
-  else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id]()));
+  else if (SAMPLES[id]) await putBlock(s, fencedBlock(SAMPLES[id](), id === 'chart' || id === 'diagram'));
   else if (id === 'code') await putBlock(s, (src, line) => { const r = insertBlock(src, line, ['```', '', '```']); return { ...r, line: r.line + 1 }; });
   else if (id === 'rule') await putBlock(s, (src, line) => ({ ...insertBlock(src, line, ['---']), then: (at) => beginNew(at, true) }));
   else if (id === 'textbox') await putBlock(s, (src, line) => {   // 박스글 (D126) — 제목 줄에서 고치기 시작한다
@@ -2247,7 +2260,16 @@ function tableToChart(line, table) {
   menuOp((src) => {
     if (made.error) return made;
     const span = tableSpan(src, line);
-    return span ? { lines: [...src.slice(0, span[0] - 1), ...made.lines, ...src.slice(span[1])], line: span[0] } : { error: 'not-table' };
+    if (!span) return { error: 'not-table' };
+    const out = [...src.slice(0, span[0] - 1), ...made.lines, ...src.slice(span[1])];
+    // 표의 캡션은 차트의 캡션으로 — 차트는 '그림' 캡션만 받는다 (번호는 저장할 때 차례대로 맞춘다 — D121)
+    const cap = captionAbove(src, tableAt(src, line)?.head ?? 0);
+    const word = cap ? captionAt(src[cap - 1])?.word : '';
+    if (word === '표' || word === 'Table') {   // i18n-ok (원문의 캡션 낱말)
+      const fig = word === '표' ? '그림' : 'Figure';   // i18n-ok (원문의 캡션 낱말)
+      out[cap - 1] = src[cap - 1].replace(/(표|Table)([ \t]*)\d{1,4}/, `${fig}$2${nextCaption(src, fig)}`);
+    }
+    return { lines: out, line: span[0] };
   });
 }
 

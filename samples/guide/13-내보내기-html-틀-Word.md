@@ -28,9 +28,9 @@
 
 ## 3. 내보내기 창
 
-![내보내기 창 — Word 형식](images/export-window-word.png)
-
 그림 1. 내보내기 창 — 왼쪽은 형식과 옵션, 오른쪽은 미리보기(Word 는 만든 결과)
+
+![내보내기 창 — Word 형식](images/export-window-word.png)
 
 | 자리 | 하는 일 |
 |---|---|

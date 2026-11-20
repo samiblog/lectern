@@ -530,8 +530,10 @@ function checkSlide(section) {
 function checkSmall(section, add) {
   const min = section.dataset.reading ? { table: 10, body: 12 } : { table: 12, body: 14 };
   const smallest = (els) => Math.round(Math.min(Infinity, ...els.map((el) => parseFloat(getComputedStyle(el).fontSize) * 0.75)) * 10) / 10;
-  const table = smallest($$(':scope > .table-wrap table, .lec-cell table', section));
-  const body = smallest($$(':scope > :is(p, ul, ol), .lec-cell :is(p, li)', section).filter((el) => !el.closest('table, blockquote, pre, svg') && el.textContent.trim()));   // Mermaid 의 글은 그림이다
+  // 주·자료 줄(lec-source)은 표 글 크기로 그린다 — 표의 기준으로 본다
+  const table = smallest($$(':scope > .table-wrap table, :scope > .lec-exhibit > .table-wrap table, .lec-cell table, p.lec-source', section));
+  const body = smallest($$(':scope > :is(p, ul, ol), :scope > .lec-exhibit > p, .lec-cell :is(p, li)', section)
+    .filter((el) => !el.closest('table, blockquote, pre, svg') && !el.matches('.lec-source') && el.textContent.trim()));   // Mermaid 의 글은 그림이다
   if (table < min.table) add(t('표가 {n}pt 로 작습니다 (기준 {min}pt)', { n: table, min: min.table }));
   if (body < min.body) add(t('본문이 {n}pt 로 작습니다 (기준 {min}pt)', { n: body, min: min.body }));
 }
