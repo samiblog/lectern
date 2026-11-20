@@ -191,20 +191,25 @@ const numberedFigureCaption = (p) => p?.tagName === 'P' && !p.classList.contains
 
 /**
  * 그림의 캡션이 그 문서에서 아래에 붙는지 (2026-11-20 — 캡션은 이제 모두 위가 관례). 문서의 혼자 든 그림마다 바로 위·바로 아래의 번호 캡션을 세어
- * 아래가 더 많으면 예전 관례(그림은 아래 캡션)로 읽는다 — 같으면 위. el 이 든 맨 바깥(md 본문·화면 밖 조각)에서 센다
+ * 아래가 위보다 적지 않으면 예전 관례(그림은 아래 캡션)로 읽는다. 같을 때는 예전 관례 — 캡션 없는 그림 옆에 캡션 하나가 끼인 예전 문서가 그렇고,
+ * 그림마다 캡션을 위에 쓴 새 문서는 위가 하나 더 많아 같아지지 않는다. 아래 캡션 뒤에 표·다이어그램·코드가 오면 그것의 위 캡션이라 세지 않는다.
+ * el 이 든 맨 바깥(md 본문·화면 밖 조각)에서 센다
  */
 function figureCaptionsBelow(el) {
-  let top = el;
-  while (top.parentElement && !top.classList?.contains('md-body')) top = top.parentElement;
+  /** @type {Node} */
+  let top = el;   // 화면 밖에서 센 모아 보기는 문서 조각(DocumentFragment)이 맨 바깥 — parentElement 로는 거기까지 오르지 못한다
+  while (top.parentNode && !(top instanceof Element && top.classList.contains('md-body'))) top = top.parentNode;
+  if (!(top instanceof Element || top instanceof DocumentFragment || top instanceof Document)) return false;
   let above = 0;
   let below = 0;
   for (const img of top.querySelectorAll('img, .image-off')) {
     const holder = loneHolder(img);
     if (!holder) continue;
     if (numberedFigureCaption(holder.previousElementSibling)) above += 1;
-    if (numberedFigureCaption(holder.nextElementSibling)) below += 1;
+    const next = holder.nextElementSibling;
+    if (numberedFigureCaption(next) && !['table', 'diagram', 'code'].includes(holderKind(next.nextElementSibling))) below += 1;
   }
-  return below > above;
+  return below > 0 && below >= above;
 }
 
 /**

@@ -123,7 +123,7 @@ try:
         check('이름 있는 박스글이 자리로 — 굵은 제목 줄은 빠지고 글만', '분할 매수로 단가를 낮춘다.' in body and body.index('분할 매수로') < body.index('<main') and '<strong>결론</strong>' not in body)
         check('틀이 모르는 박스글(요약)은 본문에 그대로', body.index('요약 상자의 글이다.') > body.index('<main'))
         check('틀이 제목을 쓰면 본문 맨 앞 # 제목은 빠진다', body.count('분기 점검</h1>') == 1)
-        check('캡션에 class caption', re.search(r'<p[^>]*class="caption"[^>]*>표 1\. 값', body) is not None)
+        check('캡션에 class caption', re.search(r'<p[^>]*class="(?:[^"]* )?caption(?: [^"]*)?"[^>]*>표 1\. 값', body) is not None)
         check('맨 앞 설정 표는 없다', 'front-matter' not in body)
         info = page.inner_text('#lec-pp-layout-info')
         check('창에 틀의 설명·쪽·박스글 자리', '경영진 보고용 한 장' in info and '쪽: A4' in info and '<!-- box: 결론 -->' in info, info)
