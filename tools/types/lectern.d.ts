@@ -95,6 +95,9 @@ declare global {
     tocLimit?: any;
     tocOutline?: any;
     used?: any;
+    /** md 문서 점검의 결과 (doccheck.js — D190) */
+    lint?: { path: string; issues: LintIssue[] } | null;
+    lintGen?: number;
   }
 
   /** 프로젝트 탭 (tabs.js 의 makeTab). 뒤쪽은 다른 모듈이 나중에 붙이는 것 */
@@ -187,7 +190,18 @@ declare global {
     term?: string;
     icon?: Markup;
     current?: boolean;
+    /** 항목 오른쪽의 곁단추 (문서 점검의 '고치기' — D190) */
+    side?: { label: string; tip?: string; action: () => any };
   };
+
+  /** md 문서 점검의 한 곳 (doclint.js — D190). 문구는 화면(doccheck.js)이 code 로 옮긴다 */
+  interface LintIssue {
+    line: number;
+    group: 'A' | 'B' | 'C';
+    code: string;
+    args: Record<string, any>;
+    fix?: { kind: string; apply: (lines: string[]) => string[] | null };
+  }
 
   /** 표 영역 (tabledata.js 의 findRegions) */
   interface TableRegion {

@@ -492,6 +492,7 @@ function buildToc(view) {
   active = -1;
   spy();
   updateTocVisibility();
+  emit('toc-built');   // 문서 점검의 표시를 다시 (doccheck.js, D190)
 }
 
 // ---- 목차에서 절 끌기 (D121) ---------------------------------------------------------------

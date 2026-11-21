@@ -3161,6 +3161,19 @@ export function initLineEdit() {
       if (shift != null) toast(t('데이터를 문서 안으로 넣었습니다 — 이제 CSV 파일 없이도 그려집니다'));
     });
   });
+  on('lint-fix', ({ pane, line, fix }) => {   // 문서 점검의 '고치기' (doccheck.js, D190) — 지금 원문에 다시 계산한다. 그사이 그 줄이 바뀌었으면 하지 않는다
+    turn = turn.then(async () => {
+      if (S.pane !== pane || session || !await settled(pane) || S.pane !== pane || blockedReadOnly(pane.tab) || !linesEditable()) return;
+      const src = sourceLines();
+      const next = fix(src.slice());
+      if (!next) {
+        toast(t('그사이 문서가 바뀌어 고치지 않았습니다 — 점검 목록을 다시 여세요'));
+        return;
+      }
+      const shift = await commit(pane, pathIn(pane.view), src, next);
+      if (shift != null && S.pane === pane) followLine(Math.max(1, Math.min(line + shift, sourceLines().length)));
+    });
+  });
   on('pane', showSource);
   $('#lec-st-source').addEventListener('click', () => {
     const { view } = S.pane;

@@ -62,6 +62,7 @@ import { initNotes, toggleNotes, closeNotes } from './notes.js';
 import { initCodeView } from './codeview.js';
 import { initSlides } from './slides.js';
 import { initSlideTools } from './slidetools.js';
+import { initDocCheck } from './doccheck.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveToDoc, focusNextTile } from './gather.js';
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
@@ -569,6 +570,7 @@ async function boot() {
   initMdStyle();
   initSlides();
   initSlideTools();
+  initDocCheck();
   initPresent();
   initGather();
   initQuickChart();

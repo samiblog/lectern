@@ -27,6 +27,7 @@
     { "file": "4.6-numbers-references-contents-styles.en.md", "title": "Numbers, references, contents and styles" },
     { "file": "4.7-full-editor.en.md", "title": "Full editor" },
     { "file": "4.8-creating.en.md", "title": "Creating" },
+    { "file": "4.9-document-check.en.md", "title": "Document check" },
     { "file": "5-lectern-slides.en.md", "title": "Lectern slides" },
     { "file": "5.1-writing-slides.en.md", "title": "Writing slides" },
     { "file": "5.2-presenting-and-checking.en.md", "title": "Presenting and checking" },

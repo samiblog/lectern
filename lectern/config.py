@@ -67,6 +67,8 @@ DEFAULTS: dict[str, Any] = {
     'external_images': True, # 문서 속 http(s) 이미지 표시 (끄면 링크로만)
     'md_breaks': True,       # 문단 안의 줄바꿈을 화면에서도 줄바꿈으로 (D93 — 끄면 표준 Markdown)
     'vi_keys': False,        # vi 키: 읽는 화면의 글자 키(j·k·V·dd·i…) (D122 — 설정 창)
+    'doc_check': True,       # md 문서 점검 — 상태줄의 '점검 N곳' (D190: 깨진 틀·보고서의 틀)
+    'doc_check_style': False,  # 문서 점검의 글버릇 묶음 — 긴 문단·문장·칸, 줄 끝 공백, 탭 (D190 — 기본 끔)
     'editor_keys': 'default',  # 전체 편집 방식: default(Esc 로 닫기) | vim(CodeMirror vim 키맵 — D122, 설정 창)
     'restore_last': True,    # 폴더를 열면 마지막에 보던 문서와 위치로
     'expand_first_level': True,  # 폴더를 열면 트리의 첫 단계 폴더를 펼쳐 둠
@@ -110,7 +112,7 @@ CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'rece
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'doc_check', 'doc_check_style', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
                          'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)

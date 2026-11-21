@@ -272,6 +272,7 @@ async function onChange(e) {
   await saveConfig({ [key]: e.target.checked });
   if (key === 'md_breaks') emit('refresh-view');   // 문서를 새 규칙으로 다시 그린다 (D93)
   if (key === 'vi_keys') emit('vi-keys');   // 상태줄의 vi 표시 (D122 — 읽는 화면만. 전체 편집기는 editor_keys)
+  if (key === 'doc_check' || key === 'doc_check_style') emit('doc-check');   // 문서 점검을 다시 (doccheck.js, D190)
   if (key === 'external_images') location.reload();   // 그림 출처를 막는 CSP(img-src)가 바뀌므로 페이지를 다시 불러온다
   else if (key === 'math') emit('refresh-view');
   else if (key === 'terminal_follow_style') emit('term-colors');

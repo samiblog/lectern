@@ -347,6 +347,7 @@
     <button id="lec-st-html" class="st-edit" title="impress.js 발표 html 파일을 만듭니다 — 브라우저로 엽니다" hidden><svg aria-hidden="true"><use href="#i-html"/></svg>html 로 전환</button>
     <button id="lec-st-structure" class="st-edit" title="칸·배치의 숨은 줄을 꼬리표로 보기 — 꼬리표에서 F2 로 고칩니다" hidden><svg aria-hidden="true"><use href="#i-slide"/></svg><span>구조 보기</span></button>
     <button id="lec-st-check" class="st-edit st-check" title="넘치거나 잘못 쓴 곳 — 눌러서 목록 보기" hidden><svg aria-hidden="true"><use href="#i-box"/></svg><span></span></button>
+    <button id="lec-st-lint" class="st-edit st-check" title="문서의 틀에서 고칠 곳 — 눌러서 목록 보기 (문서 점검)" hidden><svg aria-hidden="true"><use href="#i-task"/></svg><span></span></button>
     <span id="lec-st-info"></span>
     <span id="lec-st-vi" class="st-vi" hidden>vi</span>
     <span id="lec-st-here" class="st-here" hidden></span>
@@ -523,6 +524,8 @@
     </div>
     <label class="opt"><input type="checkbox" data-key="math"><span><b>수식 표시</b><small>$…$, $$…$$ 와 math·latex 코드 블록을 수식으로 그립니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="md_breaks"><span><b>문단 안의 줄바꿈 보이기</b><small>원문에서 Enter 로 바꾼 줄이 화면에서도 바뀝니다 (Word 의 Shift+Enter 처럼). 끄면 표준 Markdown 처럼 이어서 보입니다.</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="doc_check"><span><b>문서 점검</b><small>md 문서의 깨진 틀(닫지 않은 코드 블록, 칸 수가 다른 표, 목록이 되지 않는 번호 등)과 보고서의 틀(제목 수준, 캡션 번호 등)을 상태줄의 '점검 N곳'으로 알립니다. 파일은 고치기를 누를 때만 바꿉니다</small></span></label>
+    <label class="opt"><input type="checkbox" data-key="doc_check_style"><span><b>문서 점검에 글버릇도</b><small>긴 문단·문장·표의 칸, 줄 끝 공백 두 칸, 탭 들여쓰기, 제목 끝의 마침표도 점검합니다</small></span></label>
     <label class="opt"><input type="checkbox" data-key="external_images"><span><b>인터넷 그림 표시</b><small>문서 속 https 그림을 불러옵니다. 끄면 링크로만 보이고 인터넷에 요청하지 않습니다. 바꾸면 화면을 다시 불러옵니다</small></span></label>
     </section>
     <section class="set-sec" data-set="edit" aria-labelledby="lec-set-edit"><h3 id="lec-set-edit">편집</h3>

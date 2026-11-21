@@ -77,6 +77,8 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'math': (N_('$…$ 수식을 그림'), W_VIEW),
     'external_images': (N_('문서 속 인터넷(https) 그림을 불러옴 — 끄면 링크로만, 인터넷에 요청하지 않음'), W_VIEW),
     'md_breaks': (N_('문단 안의 줄바꿈을 화면에서도 줄바꿈으로 — 끄면 표준 Markdown'), W_VIEW),
+    'doc_check': (N_("md 문서 점검 — 깨진 틀·보고서의 틀을 상태줄의 '점검 N곳'으로"), W_VIEW),
+    'doc_check_style': (N_('문서 점검에 글버릇(긴 문단·문장·칸, 줄 끝 공백, 탭)도'), W_VIEW),
     'vi_keys': (N_('읽는 화면의 vi 키 (j·k·dd·i …)'), W_EDIT),
     'editor_keys': (N_('전체 편집기의 키 — default(Esc 로 닫기)·vim'), W_EDIT),
     'restore_last': (N_('폴더를 열면 마지막에 보던 문서와 위치로'), W_GENERAL),

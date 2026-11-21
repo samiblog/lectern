@@ -40,6 +40,12 @@ const notes = await load('web/js/notesdata.js');
   say('줄 지우기 뒤 남은 줄의 모양', r.problems, r.runs);
 }
 {
+  globalThis.LINT_FUZZ_DOCS = process.env.LECTERN_TEST_FUZZ === 'all' ? 3000 : 200;   // D190 — md 문서 점검
+  const r = cases('tools/edges/lint_cases.js', await load('web/js/doclint.js'));
+  say('문서 점검 표 점검', r.fails, r.n);
+  say('문서 점검 고치기 임의의 문서', r.problems, r.runs);
+}
+{
   const r = new Function('m', 'lo', readFileSync(join(root, 'tools/edges/slideops_cases.js'), 'utf-8'))(slideops, lineops);
   say('슬라이드 표 점검', r.fails, r.n);
 }

@@ -271,7 +271,9 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 }
 /* 독립창 (D95): 프로젝트 탭·터미널·메모·설정은 메인 창에 */
 #lec-st-check { color: var(--ui-danger, #b42318); border-color: currentColor; }
+#lec-st-lint { color: var(--ui-warn, #b54708); border-color: currentColor; }   /* 문서 점검 (D190) — 슬라이드 점검보다 옅게 (고치지 않아도 읽을 수는 있다) */
 .toc-slides li.warn > a::after { content: ' ●'; color: var(--ui-danger, #b42318); font-size: .8em; }
+#lec-toc .toc-list li.warn > a::after { content: ' ●'; color: var(--ui-warn, #b54708); font-size: .8em; }   /* 문서 점검할 곳이 든 절 (D190) */
 .lec-solo #lec-tablist, .lec-solo #lec-btn-open, .lec-solo #lec-btn-recent, .lec-solo #lec-btn-notes, .lec-solo #lec-btn-term,
 .lec-solo #lec-btn-gather, .lec-solo #lec-btn-settings, .lec-solo:not(.lec-slide-window) #lec-theme, .lec-solo:not(.lec-slide-window) #lec-theme-prev, .lec-solo:not(.lec-slide-window) #lec-theme-next { display: none; }
 .sidebar-off #lec-sidebar, .sidebar-off #lec-resizer, .toc-off #lec-toc, .toc-off #lec-toc-resizer { display: none; }

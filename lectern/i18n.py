@@ -271,6 +271,8 @@ EN: dict[str, str] = {
     '목차 폭 (px) — null 이면 기본 폭': 'Contents width (px) — null for the default width',
     '목차에서 감춘 구성 요소 종류 — table·figure·box·diagram·code·math': 'Element kinds hidden from the contents — table, figure, box, diagram, code, math',
     '문단 안의 줄바꿈을 화면에서도 줄바꿈으로 — 끄면 표준 Markdown': 'Show line breaks inside paragraphs on screen too — off for standard Markdown',
+    "md 문서 점검 — 깨진 틀·보고서의 틀을 상태줄의 '점검 N곳'으로": "md document check — broken and report structure as 'Check N' in the status bar",
+    '문서 점검에 글버릇(긴 문단·문장·칸, 줄 끝 공백, 탭)도': 'Writing habits (long paragraphs, sentences and cells, trailing spaces, tabs) in the document check too',
     '문서 글자 크기 배율 (0.8~2, 1 이 100%)': 'Document text size (0.8–2; 1 is 100%)',
     '문서 속 인터넷(https) 그림을 불러옴 — 끄면 링크로만, 인터넷에 요청하지 않음': 'Load web (https) images in documents — when off they are links only and nothing is requested from the internet',
     "문서 스타일 — auto(시스템의 밝음·어두움) 또는 스타일 이름. 'user:' 로 시작하면 내 스타일": "Document style — auto (the system's light or dark) or a style name. Names starting with 'user:' are your own styles",

@@ -24,6 +24,9 @@ function menuItemHtml(it, i) {
   if (it.header) return html`<div class="menu-head">${it.header}</div>`;
   const attrs = html`${it.icon ? html` class="with-icon"` : ''}${it.current ? html` aria-current="true"` : ''}`;
   const main = html`<button role="menuitem" data-i="${i}"${attrs}${it.tip ? html` title="${it.tip}"` : ''}>${it.icon || ''}<span>${it.label}</span>${it.hint ? html`<small>${it.hint}</small>` : ''}</button>`;
+  if (it.side) {   // 오른쪽의 곁단추 — 문서 점검의 '고치기' (D190)
+    return html`<div class="menu-row">${main}<button role="menuitem" class="menu-term menu-side" data-side="${i}"${it.side.tip ? html` title="${it.side.tip}"` : ''}>${it.side.label}</button></div>`;
+  }
   if (!it.term) return main;
   // 복사 항목 옆의 터미널 버튼: 같은 글을 터미널에 붙여 넣는다 (D51 — terminal.js 의 pasteToTerminal)
   const tip = t('터미널에 붙여 넣기 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르면 그 번호의 터미널에');
@@ -37,7 +40,8 @@ function menuItemHtml(it, i) {
  * @param {MenuItem[]} items
  * @param {(() => void) | null} [onClose]
  *
- * term: 그 항목 옆에 '터미널에 붙여 넣기' 버튼을 달고 누르면 이 글을 터미널에 넣는다 (복사하는 글과 같은 것 — 경로는 끝에 공백) */
+ * term: 그 항목 옆에 '터미널에 붙여 넣기' 버튼을 달고 누르면 이 글을 터미널에 넣는다 (복사하는 글과 같은 것 — 경로는 끝에 공백).
+ * side: {label, tip?, action} — 그 항목 옆의 곁단추 (문서 점검의 '고치기' — D190) */
 export function showMenu(x, y, items, onClose = null) {
   const menu = $('#lec-menu');
   hideMenu();
@@ -108,6 +112,13 @@ export function initUi() {
       const item = menuItems[+term.dataset.term];
       hideMenu();
       if (item?.term) emit('term-paste', n == null ? item.term : { text: item.term, n });
+      return;
+    }
+    const side = e.target.closest('button[data-side]');
+    if (side) {
+      const item = menuItems[+side.dataset.side];
+      hideMenu();
+      item?.side?.action();
       return;
     }
     const btn = e.target.closest('button[data-i]');

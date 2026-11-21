@@ -91,7 +91,7 @@ flowchart LR
 | `SAFE_DEFAULT_APP_EXT` (이미지·PDF·txt·csv·오피스·hwp·미디어 등) | `os.startfile` (`prefer_editor` — '편집기로 열기' — 면 편집기) | `default` |
 | `REVEAL_ONLY_EXT` (실행·설치 파일, 압축, 데이터베이스, 매크로가 든 오피스 문서, 글꼴 등) | 탐색기에서 파일 선택만 — 기본 앱으로도 편집기로도 열지 않는다 | `reveal` |
 | 그 밖의 파일 (코드·스크립트·md 등) | 편집기 `<editor> -g 경로:줄` | `editor` |
-| 편집기가 없거나 경로에 `&|<>^%!"` 포함 | 탐색기에서 파일 선택 (`explorer /select,`) | `reveal` |
+| 편집기가 없거나 경로에 `&\|<>^%!"` 포함 | 탐색기에서 파일 선택 (`explorer /select,`) | `reveal` |
 
 `how_to_open(name)` 은 위 규칙으로 `default`·`editor`·`reveal` 를 돌려준다. 문서 외 파일 목록이 파일마다 `open` 으로 실어 메뉴에 보인다 (편집기가 없으면 실제로는 `reveal`).
 

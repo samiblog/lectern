@@ -23,6 +23,7 @@ import { toggleTerminal, reattachTerminal } from './terminal.js';
 import { toggleGather } from './gather.js';
 import { toggleEditor } from './editor.js';
 import { printButton } from './printdoc.js';
+import { openDocCheck } from './doccheck.js';
 import { startPresent } from './present.js';
 import { toggleManual, toggleShortcuts, manualToWindow } from './help.js';
 import { openSettings } from './settings.js';
@@ -81,6 +82,7 @@ function list(local) {
       [t('편집 모드 열기·닫기'), 'Ctrl+E', toggleEditor],
       [t('넣기 — 현재 줄 아래에 표·그림·강조글 같은 구성 요소'), '/', or(putKey, t('넣기는 md 문서에서 씁니다 — 문서를 열고 넣을 자리의 줄을 누른 뒤 [넣기]나 / 를 누릅니다'))],
       [t('인쇄·PDF'), '', printButton],
+      [t('문서 점검 — 깨진 틀·보고서의 틀 목록'), '', openDocCheck],   // D190
       [t('발표 — 지금 보는 슬라이드부터'), 'Shift+F5', or(() => (S.pane?.view.classList.contains('lec-deck') ? startPresent() : false), t('발표는 Lectern 슬라이드를 볼 때 씁니다'))],
     ]],
     [t('메모·업무·터미널'), [
