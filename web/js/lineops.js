@@ -141,6 +141,7 @@ function itemEnd(lines, n) {
   for (let i = n + 1; i <= lines.length; i++) {
     const s = lines[i - 1];
     if (isBlank(s)) {
+      if (depthOf(s) < depth) break;   // 인용보다 얕은 빈 줄은 인용을 끝낸다 (D189 — 빈 줄로 나뉜 두 인용의 목록을 한 목록으로 봤다)
       gap = true;
       continue;
     }
@@ -167,6 +168,7 @@ function ownerItem(lines, n) {
   for (let i = n - 1; i >= 1; i--) {
     const s = lines[i - 1];
     if (isBlank(s)) {
+      if (depthOf(s) < depth) return 0;
       gap = true;
       continue;
     }
@@ -184,7 +186,10 @@ function prevSibling(lines, n) {
   const depth = depthOf(lines[n - 1]);
   for (let i = n - 1; i >= 1; i--) {
     const s = lines[i - 1];
-    if (isBlank(s)) continue;
+    if (isBlank(s)) {
+      if (depthOf(s) < depth) return 0;
+      continue;
+    }
     if (depthOf(s) !== depth) return 0;
     const x = itemOf(s);
     if (x) {
@@ -203,7 +208,10 @@ function prevSibling(lines, n) {
 function nextSibling(lines, n) {
   const it = itemOf(lines[n - 1]);
   let i = itemEnd(lines, n) + 1;
-  while (i <= lines.length && isBlank(lines[i - 1])) i += 1;
+  while (i <= lines.length && isBlank(lines[i - 1])) {
+    if (depthOf(lines[i - 1]) < depthOf(lines[n - 1])) return 0;
+    i += 1;
+  }
   if (i > lines.length || depthOf(lines[i - 1]) !== depthOf(lines[n - 1])) return 0;
   const x = itemOf(lines[i - 1]);
   return x && x.width === it.width && sameList(x, it) ? i : 0;
@@ -215,7 +223,10 @@ function parentItem(lines, n) {
   const depth = depthOf(lines[n - 1]);
   for (let i = n - 1; i >= 1; i--) {
     const s = lines[i - 1];
-    if (isBlank(s)) continue;
+    if (isBlank(s)) {
+      if (depthOf(s) < depth) return 0;
+      continue;
+    }
     if (depthOf(s) !== depth) return 0;
     const x = itemOf(s);
     if (x && x.content <= it.width) return i;
@@ -740,8 +751,11 @@ export function moveLines(lines, a, b, dir, { code = false } = {}) {
 
 /**
  * 줄 a~b 를 지운다 {lines, a, b(실제로 지운 범위), line(지운 뒤 현재 줄), ask(묻고 지울지 — 10줄 넘게거나 제목이 들었으면)}.
- * 코드는 그 줄만. md: 표의 머리행·구분 줄만 걸치면 {error: 'table-head'} (표 전체는 표째), 코드 블록의 ``` 줄만 걸치면 {error: 'fence'} (안의 줄 전부면 블록째),
- * 지운 뒤 빈 줄이 겹치면 하나로, 남는 하위 항목은 지운 항목의 자리로 올리고, 번호 목록은 다시 매긴다
+ * 코드는 그 줄만. md: 표의 머리행·구분 줄만 걸치면 {error: 'table-head'} (표 전체는 표째), 코드 블록의 ``` 줄만 걸치면 {error: 'fence'} (안의 줄 전부면 블록째 —
+ * 그 바깥 줄과 함께여도), 지운 뒤 빈 줄이 겹치면 하나로, 번호 목록은 다시 매긴다.
+ * 남은 줄은 보이는 모양(종류·레벨·목록의 간격) 그대로 둔다 (D189 — tools/edges/delete_fuzz.js 가 본다): 지운 항목의 글이 남으면 그 첫 줄이 표시를 넘겨받고,
+ * 하위 항목은 남은 앞 형제 아래로 레벨 그대로 (앞 형제가 없으면 지운 항목의 자리로 올린다), 강조글의 머리 줄은 그 글이 남으면 둔다, 두 인용을 가르던
+ * 빈 줄은 남기고, 빈 줄째 지워 위아래 블록이 붙으면 빈 줄을 하나 두며, 목록 안의 빈 줄이 바깥 목록의 항목 사이로 가지 않게 옮기거나 걷는다
  */
 export function deleteLines(lines, a, b, { code = false } = {}) {
   if (code) {
@@ -753,11 +767,23 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   for (const f of fences) {
     if (f.b < a || f.a > b) continue;
     const inner = a > f.a && b <= innerEnd(f);
-    if (inner && a === f.a + 1 && b === innerEnd(f)) {   // 안의 줄 전부 — 블록째
-      a = f.a;
-      b = f.b;
-    } else if (!inner && !(a <= f.a && b >= f.b)) return { error: 'fence' };
+    // 안의 줄 전부 — 블록째. ``` 줄은 화면의 줄이 아니라 고를 수 없으니, 앞뒤 문단부터 코드의 끝 줄(첫 줄)까지 고른 것도 블록째 (D189 — 전에는 '블록이 깨집니다')
+    if (a <= f.a + 1 && b >= innerEnd(f)) {
+      a = Math.min(a, f.a);
+      b = Math.max(b, f.b);
+    } else if (!inner) return { error: 'fence' };
   }
+  // 강조글의 첫 글 줄은 머리 줄(> [!NOTE])과 한 화면 단위다 — 그 뒤에 글이 남으면 머리 줄은 둔다 (D189 — 남은 글이 일반 인용이 됐다).
+  // 머리 줄이 범위 가운데에 있으면(앞 블록부터 고름) 머리 줄의 앞과 뒤를 따로 지운다
+  const keepsHead = (h) => h < b && !fenceAt(fences, h) && calloutHead(lines[h - 1]) && lines.slice(h - 1, b).every((s) => depthOf(s) >= depthOf(lines[h - 1])) && quoteGoesOn(lines, b, depthOf(lines[h - 1]));
+  for (let h = a + 1; h <= b; h++) {
+    if (!keepsHead(h)) continue;
+    const tail = deleteLines(lines, h, b);
+    if (tail.error) return tail;
+    const head = deleteLines(tail.lines, a, h - 1);
+    return head.error ? head : { ...head, b, ask: head.ask || tail.ask };
+  }
+  if (keepsHead(a)) a += 1;
   const inFence = !!fenceAt(fences, a) && a > fenceAt(fences, a).a;
   const blocks = blocksOf(lines);
   const deck = deckOf(lines);
@@ -789,24 +815,214 @@ export function deleteLines(lines, a, b, { code = false } = {}) {
   })();
   const info = after && itemOf(lines[after - 1]) ? listInfo(lines, after) : null;
   const next = lines.slice();
-  if (!inFence) {   // 지우는 항목의 남는 안쪽 줄은 그 항목의 자리로
-    for (let n = a; n <= b; n++) {
+  let took = 0;   // 항목 표시를 넘겨받은 줄
+  let tookFrom = 0;   // 표시를 넘겨준 (지운) 항목
+  let drop = 0;   // 넘겨받은 줄 앞에서 함께 걷는 빈 줄
+  let gapTo = 0;   // 걷은 빈 줄을 옮길 곳 (다음 형제 항목 — 원문의 줄)
+  let gapLine = '';
+  let lift = null;   // 부모 항목 안에서 첫 항목의 하위 항목을 올렸으면 {n, end, it}
+  if (!inFence) {
+    // 지우는 항목의 남는 줄 (D189): 그 항목의 글(이어 쓴 줄·둘째 문단)이 남으면 그 첫 줄이 항목 표시를 넘겨받아 같은 레벨에 남는다 — 전에는
+    // 모두 지운 항목의 표시 자리로 당겨, 남은 글이 윗 항목의 문단이 되고 아래 번호 항목들이 목록에서 빠져 그 문단의 글이 됐다.
+    // 남는 것이 하위 항목뿐이면 지운 항목의 자리로 올린다. 안쪽 항목부터 — 넘겨받은 줄은 바깥 항목에게는 하위 항목이다
+    for (let n = b; n >= a; n--) {
       const it = itemOf(lines[n - 1]);
       if (!it) continue;
       const end = itemEnd(lines, n);
-      for (let i = b + 1; i <= end; i++) next[i - 1] = shifted(next[i - 1], it.width - it.content);
+      if (end <= b) continue;
+      let f = b + 1;
+      while (f < end && isBlank(next[f - 1])) f += 1;
+      if (!took && takesMarker(next[f - 1])) {
+        next[f - 1] = `${it.quote}${it.lead}${it.marker}${it.gap || ' '}${it.task}${bodyOf(next[f - 1]).trimStart()}`;
+        took = f;
+        tookFrom = n;
+        const prev = keptSibling(lines, n, a);
+        if (!prev) {   // 첫 항목이면 사이의 빈 줄을 걷어 다음 형제 앞으로 — 앞에 형제가 있으면 그 자리에 두어 목록의 간격(느슨함)이 그대로
+          drop = f - b - 1;
+          const ns = drop ? nextSibling(lines, n) : 0;
+          if (ns && !isBlank(lines[ns - 2])) [gapTo, gapLine] = [ns, next[b]];
+        }
+        continue;
+      }
+      // 하위 항목만 남으면: 앞 형제 항목이 있으면 레벨 그대로 그 아래로 (들여쓰기를 앞 형제의 글 자리에 맞춘다), 목록의 첫 항목이면 지운 항목의 자리로
+      // 올린다 — 부모가 없어 레벨을 지킬 수 없다 (D189 — 전에는 늘 올렸다. 줄을 지워도 남은 줄의 레벨은 그대로가 자연스럽다)
+      const prev = keptSibling(lines, n, a);
+      const delta = prev ? itemOf(lines[prev - 1]).content - it.content : it.width - it.content;
+      for (let i = b + 1; i <= end; i++) next[i - 1] = shifted(next[i - 1], delta);
+      if (!prev) lift = { n, end, it, parent: !!parentItem(lines, n) };   // 남은 앞 형제가 없어 올렸다 — 올린 목록 앞뒤의 빈 줄과 번호를 아래에서 본다 (바깥 항목이 나중에 덮어쓴다)
     }
   }
-  next.splice(a - 1, b - a + 1);
+  next.splice(a - 1, b - a + 1 + drop);
+  let here = a;   // 지운 뒤 현재 줄 — 지운 곳 바로 아래 줄
+  // 지운 범위(넘겨받은 줄 앞의 빈 줄까지)와 그 위아래에서 가장 얕은 빈 줄 — 인용보다 얕으면 두 인용을 가르던 것이다 (그 줄을 지우면 아래 인용이 위 인용에 붙는다)
+  const sep = [next[a - 2], next[a - 1], ...lines.slice(a - 1, b + drop)].filter((s) => s != null && isBlank(s)).sort((x, y) => depthOf(x) - depthOf(y))[0];
   if (!inFence) {
     const up = next[a - 2];
     const down = next[a - 1];
-    if (down != null && isBlank(down) && (up == null || isBlank(up)) && next.length > 1) next.splice(a - 1, 1);
-    else if (up != null && isBlank(up) && down == null && a > 2) next.splice(a - 2, 1);
+    // 겹친 빈 줄은 하나로 — 인용의 빈 줄(>)과 진짜 빈 줄이 만나면 인용의 것을 지운다 (D189 — 진짜 빈 줄을 지우면 아래 인용·강조글이 위 인용에 붙었다)
+    if (down != null && isBlank(down) && (up == null || isBlank(up)) && next.length > 1) {
+      next.splice(up != null && depthOf(up) > depthOf(down) ? a - 2 : a - 1, 1);
+      if (a >= 2 && sep != null && depthOf(sep) < depthOf(next[a - 2])) next[a - 2] = sep;
+      // 목록의 마지막 항목의 마지막 문단이었으면, 그 앞의 빈 줄이 목록을 느슨하게 하던 것일 수 있다 — 그 항목 앞(앞 형제와의 사이)에 하나 두어 간격이 그대로 (D189)
+      const host = ownerItem(lines, a);
+      if (host && host < a && itemEnd(lines, host) <= b && !nextSibling(lines, host) && prevSibling(lines, host) && !isBlank(lines[host - 2])) {
+        next.splice(host - 1, 0, up ?? down);
+        here += 1;
+      }
+      // 두 목록 사이의 글을 지워 같은 종류의 목록이 하나로 합쳐지면, 둘 다 붙은 목록이었으면 사이의 빈 줄을 걷는다 — 두면 합친 목록의
+      // 모든 항목이 띄운 목록이 된다 (D189). 하나라도 띄운 목록이면 그대로
+      const p = after && isBlank(next[here - 2] ?? '') && !isBlank(next[here - 3] ?? '') && itemOf(next[here - 1] ?? '') ? prevSibling(next, here) : 0;
+      if (p && itemOf(lines[after - 1]) && !prevSibling(lines, after) && tightList(lines, after) && tightList(next, p, here - 2)) {
+        next.splice(here - 2, 1);
+        here -= 1;
+      }
+    } else if (up != null && isBlank(up) && down == null && a > 2) next.splice(a - 2, 1);
+    else if (up != null && isBlank(up) && itemOf(down ?? '') && b < lines.length && !isBlank(lines[b])) {
+      // 항목의 마지막 문단(또는 목록의 마지막 항목)을 지웠고 바로 아래가 더 얕은 항목이면, 그 앞의 빈 줄은 그 목록 안의 것이다 — 두면
+      // 바깥 목록의 항목 사이가 벌어져 바깥 항목들의 간격(느슨함)이 바뀐다 (D189). 원래 아래 항목 앞에 빈 줄이 있었으면 그대로.
+      // 걷은 빈 줄은 그 항목 앞(앞 형제와의 사이)으로 옮긴다 — 그 목록의 간격도 그대로
+      const host = ownerItem(lines, a);
+      const it = host ? itemOf(lines[host - 1]) : null;
+      if (it && depthOf(lines[host - 1]) === depthOf(down) && itemOf(down).width < it.width) {
+        let u = a - 2;
+        while (u >= 1 && isBlank(next[u - 1])) u -= 1;
+        const gap = next[u];
+        next.splice(u, a - 1 - u);
+        here -= a - 1 - u;
+        const keep = host < a ? host : prevSibling(lines, host);   // 이 항목 앞으로 (지운 것이 항목이면 그 앞 형제 앞으로)
+        if (keep && prevSibling(lines, keep) && !isBlank(lines[keep - 2])) {
+          next.splice(keep - 1, 0, gap);
+          here += 1;
+        }
+      }
+    } else if (up != null && down != null && !isBlank(up) && !isBlank(down) && lines.slice(a - 1, b).some(isBlank)) {
+      // 여러 블록에 걸쳐 빈 줄째 지우면 위아래 줄이 붙어 한 블록이 된다 — 아래 문단이 위 항목·인용의 이어 쓴 줄이 되거나 두 문단이 하나로 (D189).
+      // 빈 줄 하나를 둔다. 아래가 항목이면: 위가 같은 목록의 항목이면 붙은 목록끼리일 때만 붙이고 (원래 한 목록이었으면 그 목록이 붙은 목록일 때),
+      // 위 항목의 하위 목록이 되거나 바깥 항목이면 붙인다 — 빈 줄이 그 목록들의 간격을 바꾼다. 두 인용을 가르던 빈 줄은 늘 둔다
+      let need = true;
+      if (itemOf(down) && depthOf(sep) >= Math.min(depthOf(up), depthOf(down)) && depthOf(up) === depthOf(down) && ownerItem(next, a - 1)) {
+        const p = prevSibling(next, a);
+        let same = false;
+        if (p && itemOf(lines[b] ?? '')) for (let s = prevSibling(lines, b + 1); s && !same; s = prevSibling(lines, s)) same = s === p;
+        need = !!p && !(same ? tightList(lines, p) : tightList(lines, p, a - 1) && !!itemOf(lines[b] ?? '') && tightList(lines, b + 1));
+      }
+      if (need) {
+        next.splice(a - 1, 0, sep);
+        here += 1;
+      }
+    } else if (up != null && !isBlank(up) && down != null && isBlank(down) && !took) {
+      // 중첩 목록의 첫 항목을 지웠고 그 뒤가 빈 줄이면, 빈 줄이 부모 항목의 글과 목록 사이로 간다 — 두면 부모 목록이 느슨해진다 (D189).
+      // 걷고, 그 목록의 다음 형제 앞으로 옮긴다 — 그 목록의 간격도 그대로
+      // 하위 항목을 올렸으면(lift) 올라온 목록 앞의 빈 줄 — 그 목록 안의 것이었으니 걷기만 한다
+      const lifted = !!lift;
+      const it = lifted ? lift.it : itemOf(lines[a - 1]);
+      const parent = it && itemOf(lines[a - 1]) && (itemEnd(lines, a) <= b || lifted) && !prevSibling(lines, a) ? ownerItem(lines, a - 1) : 0;
+      let v = a;
+      while (v <= next.length && isBlank(next[v - 1])) v += 1;
+      const y = itemOf(next[v - 1] ?? '');
+      if (parent && depthOf(lines[parent - 1]) === depthOf(lines[a - 1]) && itemOf(lines[parent - 1]).width < it.width && y && y.width === it.width && (lifted || sameList(y, it))) {
+        const gap = next[a - 1];
+        next.splice(a - 1, v - a);
+        if (lifted) lift.trim = v - a;
+        else {
+          const ns = nextSibling(next, a);
+          if (ns && !isBlank(next[ns - 2])) next.splice(ns - 1, 0, gap);
+        }
+      }
+    }
   }
+  // 두 인용을 가르던 빈 줄을 지웠으면 다시 둔다 — 어느 길로 지웠든 아래 인용이 위 인용(강조글)에 붙지 않게 (D189)
+  if (!inFence && sep != null && here >= 2 && here <= next.length) {
+    let x = here - 1;
+    while (x >= 1 && isBlank(next[x - 1])) x -= 1;
+    const low = depthOf(sep);
+    if (x >= 1 && low < depthOf(next[x - 1]) && low < depthOf(next[here - 1]) && !next.slice(x, here - 1).some((s) => depthOf(s) <= low)) {
+      if (x < here - 1) next[x] = sep;
+      else {
+        next.splice(here - 1, 0, sep);
+        here += 1;
+      }
+    }
+  }
+  const removed = lines.length - next.length;
   if (info) {
-    const removed = lines.length - next.length;
-    if (after - removed >= 1) renumber(next, after - removed, info);
+    const y = after - removed;
+    const joined = y >= 1 && !!itemOf(next[y - 1] ?? '') && prevSibling(next, y) && !prevSibling(lines, after);   // 두 목록이 하나로 — 위 목록의 번호부터 잇는다
+    if (y >= 1) renumber(next, y, joined ? listInfo(next, y) : info);
+  } else if (took && itemOf(next[took - removed - 1] ?? '')?.ordered) {
+    // 번호는 원래 목록의 시작 번호부터 — 남은 첫 항목이 2. 처럼 1 이 아닌 번호로 시작하면 위 문단을 끊지 못해 그 글이 된다
+    renumber(next, took - removed, listInfo(lines, tookFrom));
   }
-  return { lines: next, a, b, line: Math.max(1, Math.min(a, next.length)), ask };
+  let moved = 0;   // 옮겨 넣은 빈 줄
+  if (took && gapTo) {   // 첫 항목이 넘겨준 빈 줄 — 다음 형제 앞으로 옮겨 목록의 간격이 그대로 (D189)
+    const at = gapTo - (lines.length - next.length);
+    if (at >= 2 && !isBlank(next[at - 2])) {
+      next.splice(at - 1, 0, gapLine);
+      moved = 1;
+    }
+  }
+  if (lift) {
+    // 목록의 첫 항목을 지우고 다른 종류의 하위 항목(번호 목록 안의 글머리표 등)을 올렸으면 (D189): 남은 형제들과 다른 목록이 된다 —
+    // 그 사이의 빈 줄은 부모 항목의 두 목록 사이에 끼어 부모 목록을 띄운 목록으로 만드니 걷고, 남은 형제의 번호는 지운 항목의 번호부터
+    const q = here + (lift.end - b) - (lift.trim ?? 0) - drop + moved;   // 올린 줄들 다음 줄 (걷은 빈 줄·옮겨 넣은 빈 줄만큼)
+    let r = q;
+    while (r <= next.length && isBlank(next[r - 1])) r += 1;
+    const first = itemOf(next[here - 1] ?? '');
+    const sib = itemOf(next[r - 1] ?? '');
+    if (first && first.width === lift.it.width && !sameList(first, lift.it) && sib && sib.width === lift.it.width && sameList(sib, lift.it)) {
+      if (r > q && lift.parent) {
+        next.splice(q - 1, r - q);
+        r = q;
+      }
+      if (sib.ordered) renumber(next, r, listInfo(lines, lift.n));
+    }
+  }
+  return { lines: next, a, b, line: Math.max(1, Math.min(here, next.length)), ask };
+}
+
+/** 지우는 항목의 남은 글 줄이 항목 표시를 넘겨받을 수 있는지 — 글 문단만 (코드·제목·표·HTML·수식은 표시 뒤에 오면 뜻이 바뀐다) */
+function takesMarker(s) {
+  const t = bodyOf(s ?? '').trim();
+  return !!t && !itemOf(s) && !FENCE.test(t) && !HEADING.test(t) && !RULE.test(t) && !SETEXT.test(t) && !TABLE_SEP.test(t)
+    && !/^[|<]/.test(t) && !t.startsWith('$$') && !CELL_MARK.test(t);
+}
+
+/**
+ * 항목 n 이 든 목록이 붙은 목록인지 — 첫 형제부터 마지막 형제의 끝(last 가 있으면 그 줄)까지, 그 목록의 항목 사이나 한 항목의 자식 사이에
+ * 빈 줄이 없다. 하위 목록 안(하위 항목 사이·하위 항목의 문단 사이)의 빈 줄은 하위 목록의 것이다
+ */
+function tightList(lines, n, last = 0) {
+  const w = itemOf(lines[n - 1]).width;
+  let first = n;
+  for (let p = prevSibling(lines, first); p; p = prevSibling(lines, first)) first = p;
+  let end = n;
+  for (let s = n; s; s = nextSibling(lines, s)) end = s;
+  const stop = last || itemEnd(lines, end);
+  const ours = (k) => { const o = ownerItem(lines, k); return !!o && itemOf(lines[o - 1]).width === w; };
+  for (let i = first; i <= stop; i++) {
+    if (!isBlank(lines[i - 1])) continue;
+    let j = i + 1;
+    while (j <= stop && isBlank(lines[j - 1])) j += 1;
+    if (j > stop) break;   // 끝의 빈 줄
+    const it = itemOf(lines[j - 1]);
+    if (it ? it.width === w || (!prevSibling(lines, j) && ours(i - 1)) : ours(j)) return false;
+    i = j - 1;
+  }
+  return true;
+}
+
+/** 항목 n 의 앞 형제 가운데 지우지 않는 것(줄 a 앞) — 함께 지우는 형제는 건너뛴다. 없으면 0 */
+function keptSibling(lines, n, a) {
+  let p = prevSibling(lines, n);
+  while (p && p >= a) p = prevSibling(lines, p);
+  return p;
+}
+
+/** 강조글의 머리 줄(> [!NOTE])인지 */
+const calloutHead = (s) => !!depthOf(s) && CALLOUT.test(bodyOf(s).trim());
+
+/** 줄 b 뒤로 같은 인용(깊이 depth 이상)에 글이 더 있는지 */
+function quoteGoesOn(lines, b, depth) {
+  for (let i = b; i < lines.length && depthOf(lines[i]) >= depth; i++) if (!isBlank(lines[i])) return true;
+  return false;
 }

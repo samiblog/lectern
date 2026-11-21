@@ -35,6 +35,11 @@ const notes = await load('web/js/notesdata.js');
   say('줄 구조 임의의 문서', r.problems, r.runs);
 }
 {
+  globalThis.DELETE_FUZZ_DOCS = process.env.LECTERN_TEST_FUZZ === 'all' ? 3000 : 250;   // D189 — 남은 줄의 종류·레벨·간격
+  const r = cases('tools/edges/delete_fuzz.js', lineops);
+  say('줄 지우기 뒤 남은 줄의 모양', r.problems, r.runs);
+}
+{
   const r = new Function('m', 'lo', readFileSync(join(root, 'tools/edges/slideops_cases.js'), 'utf-8'))(slideops, lineops);
   say('슬라이드 표 점검', r.fails, r.n);
 }

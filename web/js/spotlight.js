@@ -945,6 +945,22 @@ export function setLitSpan(a, b) {
   paint();
   setHere(b, { scroll: true });
 }
+/**
+ * 읽는 화면에서 끌어 여러 줄에 걸쳐 고른 글을 고른 줄로 (wordpick.js, D189) — 이어서 처리할 Delete·Ctrl+X·Alt+↑·↓ 가 그 줄들에 한 번에 듣게.
+ * i·j: 줄 단위의 차례 (currentUnits). 한 단위뿐이면 하지 않는다 — 한 줄은 두 번 눌러 바꾼다 (D139). 하이라이트를 켠 동안은 그 줄들이 먼저다
+ */
+export function pickUnits(i, j) {
+  const us = units();
+  if (!linesOn() || lightOn() || i === j || !us[i] || !us[j]) return false;
+  active = true;
+  mode = 'range';
+  dimmed = false;
+  anchor = us[Math.min(i, j)].a;
+  focus = us[Math.max(i, j)].a;
+  paint();
+  setHere(focus);
+  return true;
+}
 /** 한 줄 편집을 시작·끝낼 때 (lineedit.js): 덮개의 회색과 상태줄을 맞춘다 */
 export function showLineEdit() {
   place();
@@ -1333,6 +1349,8 @@ function onMouseDown(e) {
   if (!root?.contains(e.target) || !linesOn() || noPick(e.target)) return;
   if (lightOn() && !e.shiftKey) return;   // 현재 위치도 고른 줄도 그대로 (D118). 흐린 곳의 누르기는 아래 click 이 끈다. Shift+누르기는 넓힌다 (D139)
   if (!e.shiftKey && ranged() && insideLit(e.clientY, e.target)) return;
+  // 고른 줄 밖을 누르면 누르는 때 푼다 — 떼는 때(click)만 풀면 끌어 고르는 동안 옛 고른 줄이 남아, 이어 누른 Delete 가 그 줄을 지웠다 (D189)
+  if (!e.shiftKey && ranged() && !dimmed) clearSpot();
   const us = units();
   const i = unitAt(us, e.clientY - baseOf(root), { x: e.clientX, y: e.clientY });
   if (i < 0) return;

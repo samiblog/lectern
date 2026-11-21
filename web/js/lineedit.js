@@ -425,6 +425,13 @@ function plantLine(slot, plan, below) {
     }
     el.append(span);
     (slot.el.closest('li') ?? slot.el)[side](el);
+    return {
+      span, el, remove: () => {   // 레벨을 바꾸며 만든 하위 목록(nestFresh)이 비면 함께
+        const list = el.parentElement;
+        el.remove();
+        if (list?.dataset.lecFresh != null && !list.children.length) list.remove();
+      },
+    };
   } else {
     el = document.createElement('p');
     el.className = 'lec-new-line';
@@ -518,6 +525,30 @@ function growEnd({ peek = false } = {}) {
   beginNew(line, true, { end: true, after: pane.view.classList.contains('lec-deck'), peek });   // 슬라이드는 그 칸 안에 (문서 끝은 닫는 ::: 뒤다)
 }
 
+/**
+ * 아직 파일에 없는 새 항목(li)을 한 레벨 안(dir 1 — 앞 항목의 하위 목록 끝)·밖(-1 — 부모 항목 뒤)의 목록으로 옮긴다 (D189).
+ * 여백만 밀면 같은 목록에 남아 글머리표 모양·번호가 옛 레벨 그대로였고, 글을 써서 끝내야 바뀌었다. tag: 그 레벨의 목록 (OL·UL)
+ */
+function nestFresh(li, dir, tag) {
+  if (dir > 0) {
+    const prev = li.previousElementSibling;
+    if (prev?.tagName !== 'LI') return;
+    let sub = prev.lastElementChild;
+    if (sub?.tagName !== tag) {
+      sub = document.createElement(tag);
+      sub.dataset.lecFresh = '';   // 새 줄을 위해 만든 목록 — 비면 걷는다
+      prev.append(sub);
+    }
+    sub.append(li);
+    return;
+  }
+  const list = li.parentElement;
+  const parent = list?.parentElement?.closest('li');
+  if (!parent) return;
+  parent.after(li);
+  if (list.dataset.lecFresh != null && !list.children.length) list.remove();
+}
+
 /** 빈 새 줄의 레벨을 바꾸고 화면의 자리를 맞춘다 (D106 — 계산은 lineops.shiftPlan). 바뀌었으면 true */
 function shiftFresh(s, dir) {
   const plan = shiftPlan(s.fresh.lines, s.fresh.plan, dir);
@@ -525,8 +556,9 @@ function shiftFresh(s, dir) {
   const was = s.fresh.plan.kind;
   s.fresh.plan = plan;
   if (plan.kind === 'item') {
-    s.fresh.indent = (s.fresh.indent || 0) + dir;
-    s.el.style.marginInlineStart = `${s.fresh.indent * 1.6}em`;
+    nestFresh(s.el, dir, /^\s*(?:>\s*)*\s*\d/.test(plan.head) ? 'OL' : 'UL');
+    focusPlace(0);
+    hereAtNew();
     return true;
   }
   const span = s.places[0].span;
@@ -537,7 +569,7 @@ function shiftFresh(s, dir) {
   if (was === 'item') while (top.parentElement.closest('ul, ol')) top = top.parentElement.closest('ul, ol');
   else top = s.el.closest('blockquote') ?? s.el;
   (was === 'item' ? top.closest('ul, ol') ?? top : top).after(p);
-  s.el.remove();
+  s.fresh.remove();   // 옛 자리 (새 항목이면 레벨을 바꾸며 만든 빈 하위 목록도)
   s.el = p;
   s.fresh.remove = () => p.remove();
   focusPlace(0);
@@ -804,25 +836,30 @@ function caretOffset(span) {
 
 /**
  * 커서가 칸의 글에서 화면상 맨 윗줄(dir < 0)·맨 아랫줄(dir > 0)인지. 칸(.whole)은 block 이라 상자가 하나뿐이므로 글의 줄 상자로 잰다.
- * Selection.modify 로는 알 수 없다 — 맨 윗줄에서도 글 맨 앞으로 움직인다
+ * Selection.modify 로는 알 수 없다 — 맨 윗줄에서도 글 맨 앞으로 움직인다.
+ * 커서 자리는 커서의 상자가 아니라 그 옆 글자의 상자로 잰다 (D189) — 꺾인 자리(화면 줄의 맨 앞)의 커서는 크롬이 윗줄 끝에 있다고 재어,
+ * 둘째 화면 줄 맨 앞(Home·그 자리를 누름)의 ↑ 가 칸 안에서 오르지 않고 윗줄로 넘어갔다. 꺾인 자리는 어느 화면 줄에 보이는지 알 수 없으니
+ * 칸에 머무는 쪽으로 본다 — ↑ 는 커서 뒤 글자, ↓ 는 앞 글자의 줄. 잘못 보면 한 번 더 누르게 될 뿐 줄을 건너뛰지 않는다
  */
 function caretOnEdge(span, dir) {
-  const sel = getSelection();
-  if (!sel.rangeCount || !span.contains(sel.focusNode)) return true;
-  const caret = sel.getRangeAt(0).cloneRange();
-  caret.collapse(dir < 0);
-  const text = span.firstChild;
-  if (caret.startContainer === span && text) {   // 칸을 막 열면 자리가 글이 아니라 칸을 가리킨다 — 그 자리엔 상자가 없다
-    caret.setStart(text, caret.startOffset ? text.length : 0);
-    caret.collapse(true);
-  }
-  const box = caret.getClientRects()[0];
+  const at = selOffsets(span);
+  if (!at) return true;
   const all = document.createRange();
   all.selectNodeContents(span);
   const lines = [...all.getClientRects()].filter((r) => r.height);
-  if (!box || !lines.length) return true;   // 빈 칸
+  const len = span.textContent.length;
+  if (!lines.length || !len) return true;   // 빈 칸
+  const n = dir < 0 ? at[0] : at[1];   // 글을 골랐으면 ↑ 는 앞 끝, ↓ 는 뒤 끝에서
+  const box = (dir < 0 ? [n, n - 1] : [n - 1, n]).filter((i) => i >= 0 && i < len).map((i) => charBox(span, i)).find(Boolean);
+  if (!box) return true;
   const mid = (box.top + box.bottom) / 2;
   return dir < 0 ? mid < Math.min(...lines.map((r) => r.bottom)) : mid > Math.max(...lines.map((r) => r.top));
+}
+
+/** 칸의 글에서 i 번째 글자의 화면 상자 (없으면 null) */
+function charBox(span, i) {
+  const rects = [...(rangeIn(span, i, i + 1)?.getClientRects() ?? [])].filter((r) => r.height);
+  return rects.find((r) => r.width) ?? rects[0] ?? null;
 }
 
 /** 고칠 수 있는 줄의 차례에서 line 의 앞뒤 줄 — 고칠 수 없는 줄이 됐으면(글을 지운 목록 항목 등) 그 줄의 다음·앞 줄로 */
@@ -888,8 +925,16 @@ async function step(dir, repeat = false, cell = null) {
  */
 let queued = [];
 
-/** 모아 둔 ↑·↓ 를 잇는다: 칸이 열려 있으면 그 칸의 ↑·↓ 하나 (그것이 끝나면 다음 것), 편집이 끝났으면 남은 것을 현재 줄로 */
+/**
+ * 모아 둔 ↑·↓ 를 잇는다: 칸이 열려 있으면 그 칸의 ↑·↓ 하나 (그것이 끝나면 다음 것), 편집이 끝났으면 남은 것을 현재 줄로.
+ * 칸에서 누른 ↑·↓ 와 같이 꺾인 글의 안쪽 줄에서는 칸 안에서 한 화면 줄씩 먼저 움직인다 (D189 — 빠르게 두 번 누른 ↑ 가 긴 줄을 건너뛰었다)
+ */
 function drainSteps(pane) {
+  while (queued.length && session?.pane === pane && S.pane === pane) {
+    const span = session.places[session.cell]?.span;
+    if (!span || caretOnEdge(span, queued[0])) break;
+    getSelection().modify('move', queued.shift() < 0 ? 'backward' : 'forward', 'line');
+  }
   if (!queued.length) return;
   if (session?.pane === pane && S.pane === pane) {
     step(queued.shift());

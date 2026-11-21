@@ -139,6 +139,8 @@ export function foldAllHere(folded) {
 export function unfoldTo(el) {
   const box = el.closest?.('.lec-textbox-folded');
   if (box) toggleTextbox(box, false);   // 접힌 박스글 안으로 갈 때 (D126)
+  const front = el.closest?.('details.front-matter:not([open])');
+  if (front) front.open = true;   // 닫혀 있는 머리 설정 안 — 찾은 곳이 보이게 (D189)
   emit('reveal', el);   // 장 하이라이트(spotlight.js)가 그 장으로 옮긴다 — 목차·찾기·앵커·바뀐 곳이 모두 여기를 거친다
   const root = S.panes.find((p) => p.view.contains(el))?.view;
   if (!root) return;   // html 문서(iframe) 안 — 접기가 없다

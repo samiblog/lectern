@@ -7,11 +7,12 @@
 //   고른 글은 그대로 남아 형광펜·글자색을 거듭 누르면 다음 색이다. 고른 글이 없을 때 한 글자 키는 고른 줄(lineedit.litKey)의 것이고,
 //   아무것도 고르지 않았으면 듣지 않는다 (사용자 결정 — 읽다가 누른 글자로 파일이 바뀌지 않게).
 // - F2: 그 줄의 칸을 열고 같은 글을 골라 둔다 (lineedit.editShown). 우클릭: 서식의 선택 상자 (docmenu.js 가 wordMenu 를 부른다).
+// - 끌어 여러 줄에 걸쳐 고른 글에서 Delete·Ctrl+X·Alt+↑·↓: 그 글이 닿은 줄들을 고른 줄로 바꿔 한 번에 지우고 잘라 내고 옮긴다 (D189 — pickShownLines).
 // 낱말은 띄어쓰기로 나눈다. 표의 행은 칸마다 따로 — 칸을 넘어 고르면 서식은 하지 않는다. md 문서에서만 (코드 화면은 글을 고치는 화면이 아니다).
 
 import { S, emit } from './store.js';
-import { lineSlot, blockOfLine } from './lineunits.js';
-import { sourceLines, pickedMany, followLine } from './spotlight.js';
+import { lineSlot, blockOfLine, baseOf } from './lineunits.js';
+import { sourceLines, pickedMany, followLine, currentUnits, pickUnits } from './spotlight.js';
 import { formatShown, formatPicked, editShown, linesEditable } from './lineedit.js';
 import { visibleOf, visibleOffsets } from './inlinefmt.js';
 import { toast } from './util.js';
@@ -108,6 +109,50 @@ export function shownPick() {
   };
 }
 
+/**
+ * 끌어 고른 글이 닿은 줄 단위의 차례 [처음, 끝] (spotlight 의 currentUnits) — 고른 글이 없거나 문서 밖이면 null.
+ * 고른 글의 화면 상자로 잰다 — 글 줄 말고 코드 블록의 줄·표의 행·그림도 같다. 글자가 없는 상자(다음 블록의 맨 앞에서 멈춘 끌기)는 세지 않는다.
+ * 문서 밖까지 끌었으면 문서 안의 것만. 코드 화면도 (줄 지우기·옮기기는 코드 화면에서도 된다 — 자료 파일은 linesEditable 이 막는다)
+ */
+function shownUnits() {
+  const v = view();
+  if (!(isDoc(v) || v?.classList.contains('code-view')) || S.pane?.lineEdit || S.pane?.editor) return null;
+  const sel = getSelection();
+  if (!sel.rangeCount || sel.isCollapsed) return null;
+  const r = sel.getRangeAt(0).cloneRange();
+  const all = document.createRange();
+  all.selectNodeContents(v);
+  if (r.compareBoundaryPoints(Range.START_TO_START, all) < 0) r.setStart(all.startContainer, all.startOffset);
+  if (r.compareBoundaryPoints(Range.END_TO_END, all) > 0) r.setEnd(all.endContainer, all.endOffset);
+  if (r.collapsed) return null;
+  const base = baseOf(v);
+  const boxes = [...r.getClientRects()].filter((b) => b.width >= 1 && b.height >= 1);
+  const us = currentUnits();
+  const hit = (u) => boxes.some((b) => {
+    const over = Math.min(u.bottom, b.bottom - base) - Math.max(u.top, b.top - base);
+    if (over <= Math.min(4, b.height / 2)) return false;
+    const e = u.el.getBoundingClientRect();   // 슬라이드의 칸은 나란하다 — 같은 높이의 옆 칸은 아니다
+    return Math.min(e.right, b.right) > Math.max(e.left, b.left);
+  });
+  const first = us.findIndex(hit);
+  return first < 0 ? null : [first, us.findLastIndex(hit)];
+}
+
+/** 끌어 고른 글이 있을 때 줄을 바꾸는 키인지 — 줄 지우기(Delete)·잘라 내기(Ctrl+X)·옮기기(Alt+↑·↓) (D189) */
+const lineKey = (e) => (e.key === 'Delete' && !e.ctrlKey && !e.altKey && !e.shiftKey)
+  || (e.ctrlKey && !e.altKey && !e.shiftKey && e.code === 'KeyX')
+  || (e.altKey && !e.ctrlKey && !e.shiftKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown'));
+
+/**
+ * 끌어 여러 줄에 걸쳐 고른 글에서 줄을 바꾸는 키를 누르면 (D189): 그 글이 닿은 줄들을 고른 줄로 바꾼다 — 이어지는 처리기(고른 줄의 키)가
+ * 한 번에 지우고 잘라 내고 옮긴다. 전에는 끌기를 시작한 줄만 잡아, 두 번째 Delete 가 그 한 줄만 지웠다. 한 줄 안이면 그대로 (한 줄은 두 번 — D139)
+ */
+function pickShownLines() {
+  if (!linesEditable() || pickedMany()) return;   // 이미 고른 여러 줄(Shift+↑·↓ 등)이 있으면 그 줄들이 먼저 — 끌어 고른 글이 그 뒤에도 남아 있을 수 있다. 잡아 둔 한 줄은 끌기가 이긴다
+  const ix = shownUnits();
+  if (ix && pickUnits(ix[0], ix[1])) getSelection().removeAllRanges();
+}
+
 /** 고른 끝이 그 줄의 마지막 칸 뒤이고 그 사이가 빈칸뿐이면 그 칸의 끝 {seg, node, offset}, 아니면 null */
 function clampEnd(r, ranges) {
   const i = ranges.length - 1;
@@ -198,7 +243,9 @@ const CROSS = () => t('글은 한 줄 안에서만 골라 서식을 줍니다 �
  * 읽는 화면의 키 (main.js 의 keydown 이 vi 키·고른 줄의 키보다 먼저 부른다). 다뤘으면 true — 부른 쪽이 기본 동작을 막는다
  */
 export function wordKey(e) {
-  if (e.altKey || e.metaKey || e.isComposing) return false;
+  if (e.metaKey || e.isComposing) return false;
+  if (lineKey(e) && !e.repeat) pickShownLines();   // 여러 줄에 걸쳐 끌어 고른 글 — 그 줄들을 고른 줄로 바꿔 아래 처리기에 넘긴다 (D189)
+  if (e.altKey) return false;
   if (!e.ctrlKey && !e.shiftKey && e.code === 'KeyI' && S.config?.vi_keys === true) return false;   // vi 키면 i 는 칸 열기 (D152 — 기울임은 Ctrl+I)
   const kind = formatOf(e);
   if (kind) {

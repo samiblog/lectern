@@ -155,7 +155,7 @@ try:
         scan('문서·목차·문서 탭', '#lec-view', 'data-xss')
         expect(page, '목차의 제목', lambda: 'data-xss' in page.locator('#lec-toc').inner_text(), lambda: page.locator('#lec-toc').inner_text()[:200])
         expect(page, '문서 탭의 이름', lambda: 'a&b' in page.locator('#lec-doctab-list').inner_text(), lambda: page.locator('#lec-doctab-list').inner_text())
-        check('앞머리 값', 'data-xss' in page.locator('#lec-view .lec-frontmatter, #lec-view .front-matter, #lec-view dl, #lec-view table').first.inner_text(), '')
+        check('앞머리 값', 'data-xss' in page.locator('#lec-view .lec-frontmatter, #lec-view .front-matter, #lec-view dl, #lec-view table').first.text_content(), '')   # 머리 설정은 닫혀 있다 (D189) — 보이는 글이 아니라 글 자체
         check('틀린 다이어그램·차트의 알림', page.locator('#lec-view pre code', has_text='틀린 다이어그램').count() + page.locator('#lec-view pre', has_text='틀린 차트').count() >= 2,
               page.locator('#lec-view').inner_text()[-300:])
         menu(page.locator('#lec-view h2').first, '문서 우클릭 메뉴')

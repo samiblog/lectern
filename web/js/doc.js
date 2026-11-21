@@ -518,13 +518,26 @@ function frontMatterHtml(raw) {
     else simple = false;
   }
   if (!simple || !entries.length) {
-    return html`<details class="front-matter" open><summary>${t('메타데이터')}</summary><pre>${raw}</pre></details>`;
+    return html`<details class="front-matter"><summary>${t('메타데이터')}</summary><pre>${raw}</pre></details>`;
   }
   const rows = entries.map(([k, v]) => {
     const value = v.replace(/^[|>]-?\s*\n?/, '').replace(/^(["'])(.*)\1$/s, '$2');
     return html`<tr><th>${k}</th><td>${value}</td></tr>`;
   });
-  return html`<details class="front-matter" open><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
+  return html`<details class="front-matter"><summary>${t('메타데이터')}</summary><table>${rows}</table></details>`;
+}
+
+/** 머리 설정을 연 문서 (탭|경로) — 기본은 닫혀 있고 (D189), 사람이 열면 다시 그려도(자동 새로고침) 그 문서에서는 열린 채 */
+const openFronts = new Set();
+
+function keepFrontOpen(stage, key) {
+  const fm = stage.querySelector(':scope > details.front-matter');
+  if (!fm) return;
+  fm.open = openFronts.has(key);
+  fm.addEventListener('toggle', () => {
+    if (fm.open) openFronts.add(key);
+    else openFronts.delete(key);
+  });
 }
 
 /**
@@ -646,6 +659,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   stage.style.width = `${content.clientWidth}px`;
   if (deck) stage.style.setProperty('--slide-scale', '1');   // 무대에서는 줄이지 않는다 — Mermaid 가 글자 크기를 제대로 잰다
   setHtml(stage, [frontMatter && !deck ? frontMatterHtml(frontMatter) : '', raw(window.DOMPurify.sanitize(markup, PURIFY))]);
+  keepFrontOpen(stage, `${tab?.id ?? ''}|${path}`);
   document.body.append(stage);
   try {
     enhance(stage, path, Date.now(), tab);
