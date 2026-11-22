@@ -27,8 +27,8 @@ const MARKS = ['lec-fold', 'lec-folded', 'lec-fold-hidden', 'lec-textbox-folded'
   'lec-cell-over', 'lec-cell-bad', 'lec-lit', 'lec-armed',
   'lec-fit'];   // 표의 열 폭(D173)은 앱 칸의 폭으로 잰 것 — 받은 쪽에서는 브라우저대로
 
-/** 지울 CSS 변수 — 모든 열 맞추기(D173)의 열 폭·표 폭 (lec-fit 과 같이 앱 칸의 폭으로 잰 것) */
-const DROP_VARS = ['--lec-w', '--lec-tw'];
+/** 지울 CSS 변수 — 모든 열 맞추기(D173)의 열 폭·표 폭 (lec-fit 과 같이 앱 칸의 폭으로 잰 것), 화면 글꼴로 잰 내어쓰기 폭 (D191 — 어림값 --lec-hang 은 남는다) */
+const DROP_VARS = ['--lec-w', '--lec-tw', '--lec-hang-fit'];
 
 /** 화면이 그린 문서를 담을 때 걸러 낼 것 — 지면 틀(layout.js)도 같은 것으로 */
 export const MD_PACK = { drop: DROP, dropAttrs: DROP_ATTRS, marks: MARKS, dropVars: DROP_VARS };

@@ -180,6 +180,11 @@
 .md-body .lec-line-edit.whole { display: block; }
 .md-body .lec-line-edit:empty { display: inline-block; min-width: 2ch; min-height: 1.2em; vertical-align: bottom; }
 .md-body .lec-line-edit.saving { opacity: .6; outline-style: dashed; }
+/* 번호·글머리 글자로 시작하는 제목·문단·목록 항목 (hang.js, D191): 꺾인 줄은 그 글자 뒤에 맞춘다 — 첫 줄과 줄바꿈(<br>) 뒤의 줄은 그대로.
+   폭은 화면에서 잰 --lec-hang-fit, 없으면(내보낸 html·지면 틀·종이 — 글꼴이 다르다) 글자 종류의 평균 폭으로 어림한 --lec-hang.
+   안의 목록·표·코드 같은 블록은 물려받지 않는다 (한 줄 편집의 칸 .whole 은 물려받아 고치는 동안에도 같은 모양) */
+.md-body .lec-hang { text-indent: var(--lec-hang-fit, var(--lec-hang)) hanging each-line; }
+.md-body .lec-hang :is(ul, ol, pre, table, blockquote, div, figure, details, aside) { text-indent: 0; }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }

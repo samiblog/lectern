@@ -46,6 +46,7 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 ### Paragraphs and line breaks
 
 - A line you break with Enter inside a paragraph also breaks on screen (like Shift+Enter in Word). For outline-style writing, just break the line.
+- A heading, paragraph or item that starts with a number or bullet mark (`1.` · `1.2` · `A.` · `(1)` · `①` · `□` · `○` · `-` · `※`) lines up its wrapped lines after the mark on screen. Put one space after a bullet mark (`□ Background` — `□Background` is not read as a bullet; `①` and `※` may be written without the space).
 - So do not wrap one sentence across several lines to fit a width — keep a sentence on one line.
 
 ### Tables

@@ -40,6 +40,7 @@ This is the first screen when you open a folder.
 | Image | `![description](path)` | Click to enlarge |
 | File path | `src/app.py:42` | A link if the file really exists — [Links and opening files](3.4-links-and-opening-files.en.md) |
 | Line breaks inside a paragraph | Enter in the source · two spaces at the end of a line · `<br>` | The line breaks on screen too (like Shift+Enter in Word — outline-style writing shows as written) |
+| Lines starting with a number or bullet mark | Headings, paragraphs and list items starting with `1. Summary` · `1.2` · `A.` · `(1)` · `①` · `□` · `○` · `-` · `※` | When the line wraps on screen, the following lines line up after the mark — lines after a line break start as usual. Paper and exported html use the average width of the mark. The source is not changed |
 
 To join the lines as standard Markdown does, turn off **Show line breaks inside paragraphs** in the 'View' part of Settings.
 

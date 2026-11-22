@@ -23,6 +23,7 @@ import {
 import { t } from './i18n.js';
 import { captionAt, captionId } from './refs.js';
 import { addTableCopy } from './tablecopy.js';
+import { markHangs, fitHangs } from './hang.js';
 
 const PURIFY = {
   SANITIZE_DOM: false,          // 제목 id(예: 'title', 'images')가 지워지지 않도록. document 를 가리는 img 의 name 은 훅에서 지운다 (D15)
@@ -505,6 +506,7 @@ export function decorateBlocks(root) {
   decorateCode(root);
   decorateSources(root);
   decorateTextboxes(root);
+  markHangs(root);
 }
 
 function frontMatterHtml(raw) {
@@ -664,6 +666,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   try {
     enhance(stage, path, Date.now(), tab);
     if (deck) prepareDeck(stage, deck, text);   // 배경 그림·그림 크기·style: CSS·구조 보기 꼬리표
+    else markHangs(stage);   // 번호·글머리 글자로 시작하는 블록의 꺾인 줄을 그 글자 뒤에 (D191 — 슬라이드는 하지 않는다)
     wrapExhibits(stage);   // 캡션·몸체·주·자료를 한 상자로 — 배경 그림을 옮긴 뒤에
     for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
     await renderMermaid(stage);
@@ -687,6 +690,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   view.replaceChildren(...stage.childNodes);
   if (deck) showDeck(pane);   // 슬라이드를 칸 폭에 맞춰 줄인다 (스크롤 위치를 정하기 전에 — 높이가 달라진다)
   else view.style.removeProperty('--slide-scale');
+  fitHangs(view);   // 내어쓰기를 이 칸의 글꼴로 잰 폭으로 (D191 — 접기 전에: 접힌 절은 잴 수 없다)
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   fitTables(view);          // 첫 열이 여러 줄로 감긴 표는 첫 열을 넓힌다 (D68 — 칸에 들어간 뒤의 폭으로 잰다)
   setDocSource(pane, path, text);

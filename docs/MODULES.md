@@ -89,6 +89,7 @@
 | slidelint.js | 슬라이드 점검의 앞단 (D96): 닫지 않은 주석·코드, 칸·구분 줄로 읽지 못한 줄, 지시어·칸 머리의 오타, 잘못된 격자, 바탕과 비슷한 글자, 옆으로 잘린 코드, 없는 그림 |
 | slidetools.js | 슬라이드 도구 (D96): 상태줄의 구조 보기(숨은 줄 꼬리표)와 점검(넘침·잘못 쓴 칸 목록, 넘쳐서 글을 줄인 곳 — D188) |
 | doclint.js | md 문서 점검의 계산 (D190, DOM 없음) — 원문 줄 → `[{line, group(A 깨진 틀·B 보고서의 틀·C 글버릇), code, args, fix?}]` (`lintDoc`). 문구는 code 로만 — 화면이 옮긴다. fix 는 그 줄이 점검할 때와 같을 때만 고친다. Lectern 슬라이드는 보지 않는다. 표 점검·임의 시험은 tools/edges/lint_cases.js |
+| hang.js | 번호·글머리 글자로 시작하는 제목·문단·목록 항목의 내어쓰기 (D191) — 머리 글자 읽기(`hangPrefix`·`blockHang`)와 평균 폭 어림(`hangEm`), 그린 뒤 `lec-hang`·`--lec-hang` 달기(`markHangs`, 슬라이드는 하지 않음), 칸에서 잰 폭 `--lec-hang-fit`(`fitHangs`) |
 | doccheck.js | md 문서 점검의 화면 (D190) — 상태줄의 '점검 N곳'과 목록(고르면 그 줄로, '고치기' 곁단추 → lineedit 의 'lint-fix', 터미널에 붙여 넣기), 목차의 표시, 없는 그림(자기 서버에 HEAD). 설정 `doc_check`·`doc_check_style` |
 | slidegallery.js | 템플릿 갤러리 (D101) — 새로 만들기·새 장·템플릿 바꾸기가 쓰는 창. 템플릿을 실제 렌더러로 그려 미리 보여 주고 번호로도 고른다. 이벤트 `pick-template`·`ask-template-name` 으로 받는다 (import 순환을 피해서) |
 | pptxdialog.js | pptx 로 전환 (D102) — 상태줄 버튼, pptx 스타일 고르기, `/api/pptx-export` 로 문서 옆에 새 pptx 를 만든다 |

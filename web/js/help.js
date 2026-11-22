@@ -8,6 +8,7 @@
 import { S, on, emit } from './store.js';
 import { renderMarkdown } from './markdown.js';
 import { decorateBlocks } from './doc.js';
+import { fitHangs } from './hang.js';
 import { setFindTarget, findText } from './find.js';
 import { renderMermaid } from './mermaid.js';
 import { esc, html, raw, setHtml } from './html.js';
@@ -453,6 +454,7 @@ async function showDoc(d, { anchor = '' } = {}) {
     a.title = t('예제 프로젝트에서 엽니다 (Shift+F1 은 예제의 첫 문서)');
   }
   decorateBlocks(view());
+  fitHangs(view());   // 번호·글머리 글자의 내어쓰기를 잰 폭으로 (D191)
   heads = $$('h2', view());   // 차례에는 지금 문서의 절(h2)만
   drawToc();
   const at = anchor && findAnchor(view(), anchor);

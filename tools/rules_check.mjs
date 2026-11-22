@@ -117,6 +117,10 @@ const notes = await load('web/js/notesdata.js');
   const r = cases('tools/edges/notes_cases.js', notes);
   say('메모 글 표 점검', r.fails, r.n);
 }
+{
+  const r = cases('tools/edges/hang_cases.js', await load('web/js/hang.js'));
+  say('내어쓰기의 머리 글자 (D191)', r.fails, r.n);
+}
 
 // 설명서·예제의 키 표기: 'Ctrl+`' 의 백틱이 코드 표시로 먹혀 'Ctrl+' 만 남지 않는지 (앱과 같은 Markdown 으로 그려 본다)
 {
