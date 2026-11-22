@@ -47,6 +47,7 @@ Go `##` → `###` → `####` without skipping levels. The contents panel, sectio
 
 - A line you break with Enter inside a paragraph also breaks on screen (like Shift+Enter in Word). For outline-style writing, just break the line.
 - A heading, paragraph or item that starts with a number or bullet mark (`1.` · `1.2` · `A.` · `(1)` · `①` · `□` · `○` · `-` · `※`) lines up its wrapped lines after the mark on screen. Put one space after a bullet mark (`□ Background` — `□Background` is not read as a bullet; `①` and `※` may be written without the space).
+- For Korean outline style, start lines with `□` · `○` · `-` · `·` in that order and Lectern shows them as a list with lower levels indented — the level comes from the mark, so leading spaces are not needed. Such a list starts at a line beginning with `□` · `○` · `·` and runs to a blank line or heading (a line starting with `-` is a Markdown list). Other Markdown viewers and Save as Word only show the line breaks — if those matter, use a Markdown list (`-` and indentation).
 - So do not wrap one sentence across several lines to fit a width — keep a sentence on one line.
 
 ### Tables

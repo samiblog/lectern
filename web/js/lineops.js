@@ -757,8 +757,8 @@ export function moveLines(lines, a, b, dir, { code = false } = {}) {
  * 하위 항목은 남은 앞 형제 아래로 레벨 그대로 (앞 형제가 없으면 지운 항목의 자리로 올린다), 강조글의 머리 줄은 그 글이 남으면 둔다, 두 인용을 가르던
  * 빈 줄은 남기고, 빈 줄째 지워 위아래 블록이 붙으면 빈 줄을 하나 두며, 목록 안의 빈 줄이 바깥 목록의 항목 사이로 가지 않게 옮기거나 걷는다
  */
-export function deleteLines(lines, a, b, { code = false } = {}) {
-  if (code) {
+export function deleteLines(lines, a, b, { code = false, plain = false } = {}) {
+  if (code || plain) {   // plain: 글머리 글자 목록(D192)의 항목 — '- '·'2.' 줄도 Markdown 목록이 아니므로 그 줄들만
     const next = lines.slice();
     next.splice(a - 1, b - a + 1);
     return { lines: next, a, b, line: Math.max(1, Math.min(a, next.length)), ask: b - a + 1 > 10 };

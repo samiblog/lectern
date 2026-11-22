@@ -50,6 +50,7 @@ import { ATOMIC, openBlock, openFront, initLineBlock } from './lineblock.js';
 import { writeValues, setChartKind, chartFromTable, inlineUrlData } from './chartops.js';
 import { slugify } from './markdown.js';
 import { slideAtTop } from './slides.js';
+import { markOf, RANKS } from './marklist.js';
 import {
   currentUnits, sourceLines, followLine, showLineEdit, litSpan, setLitSpan, stopSpotlight, copyLitSource, hereAtNew, docKeyTarget, releasePick,
   kindKey, stepHere, litOneLine, manyBlocks, lightOn, pickedMany, lightHere, nextHere,
@@ -124,6 +125,16 @@ function splitText(line) {
     body = body.slice(0, end.index);
   }
   return { head: line.slice(0, i), body, tail };
+}
+
+/**
+ * 글머리 글자 목록(D192)의 줄: '- '·'1. ' 도 화면에 글로 보이므로 칸에 둔다 — 인용 표시와 앞 빈칸만 머리로 (splitText 는 Markdown 목록 표시로 떼어 낸다)
+ * @param {string} line
+ */
+function keepMark(line) {
+  const { tail } = splitText(line);
+  const head = /^(?:[ \t]*>[ \t]?)*[ \t]*/.exec(line)[0];
+  return { head, body: line.slice(head.length, line.length - tail.length), tail };
 }
 
 /** 펼친 머리 설정의 줄: 키를 잠그고 값만 고친다 (D112) */
@@ -313,7 +324,8 @@ async function begin(line, { cell = 0, at = null, offset = null, select: pick_ =
     refreshView(pane);
     return;
   }
-  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? lockKey(splitCode(original, slot.fence), slot.el) : lockNumber(splitText(original), shown);
+  const parts = slot.kind === 'table' ? splitRow(original) : slot.kind === 'code' ? lockKey(splitCode(original, slot.fence), slot.el)
+    : slot.el.closest?.('.lec-mark') ? keepMark(original) : lockNumber(splitText(original), shown);
   const bodies = slot.kind === 'table' ? parts.cells.map((c) => c.body) : [parts.body];
   const n = Math.min(bodies.length, slot.ranges.length);
   if (!n) {
@@ -434,9 +446,9 @@ function plantLine(slot, plan, below) {
     };
   } else {
     el = document.createElement('p');
-    el.className = 'lec-new-line';
+    el.className = plan.kind === 'mark' ? `lec-new-line lec-mark ${plan.level}` : 'lec-new-line';   // 글머리 글자 목록은 그 수준에 (D192)
     el.append(span);
-    slot.el[side](el);
+    (plan.kind === 'mark' ? (below ? plan.place : slot.el.closest('.lec-mark')) ?? slot.el : slot.el)[side](el);
   }
   return { span, el, remove: () => el.remove() };
 }
@@ -455,7 +467,8 @@ async function beginNew(base, below, { end = false, after = false, around = fals
   const at = plan && !around ? plan.at || base : base;
   const slot = !around && (!plan || plan.kind === 'item' || plan.head) && at ? lineSlot(view, at, src) : null;
   const code = isCodeView(view);
-  const next = plan ?? planNew(src, base, below, { code, parts: slot?.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null });
+  const mark = !plan && slot?.el?.closest?.('.lec-mark');
+  const next = plan ?? (mark ? planMark(src, mark, below) : planNew(src, base, below, { code, parts: slot?.kind === 'code' ? splitCode(src[base - 1], slot.fence) : null }));
   if (next.error) {
     toast(whyNot(next.error));
     return;
@@ -478,6 +491,32 @@ async function beginNew(base, below, { end = false, after = false, around = fals
   made.span.scrollIntoView({ block: 'nearest' });
   hereAtNew();
   showLineEdit();
+}
+
+/**
+ * 글머리 글자 목록(D192)의 항목 el 의 아래(below)·위에 새 항목 — 같은 머리 글자를 칸에 미리 넣는다 (fill). 아래면 이어 쓴 줄 뒤에.
+ * 머리 글자만 둔 채 끝내면 넣지 않는다 (finishNew)
+ * @param {string[]} src
+ * @param {Element} el
+ * @param {boolean} below
+ */
+function planMark(src, el, below) {
+  const a = Number(String(/** @type {HTMLElement} */ (el).dataset.lines ?? '').split('-')[0]);
+  const place = below ? subtreeEnd(el) : el;
+  const b = Number(String(/** @type {HTMLElement} */ (place).dataset.lines ?? '').split('-')[1]);
+  const line = src[a - 1] ?? '';
+  const head = /^(?:[ \t]*>[ \t]?)*[ \t]*/.exec(line)[0];
+  const fill = markOf(line.slice(head.length))?.prefix ?? '';
+  const level = [...el.classList].find((c) => /^lec-lv\d$/.test(c)) ?? 'lec-lv0';
+  return { at: below ? b : a - 1, pre: [], post: [], head, fill, base: fill.trim(), kind: 'mark', level, place, list: null };
+}
+
+/** 글머리 글자 목록의 항목 el 과 그 아래 더 깊은 항목들 가운데 마지막 (아래에 넣는 새 항목은 그 뒤 — 하위 항목을 가르지 않는다) */
+function subtreeEnd(el) {
+  const level = (x) => Number(/\blec-lv(\d)\b/.exec(x.className)?.[1] ?? 0);
+  let last = el;
+  for (let x = el.nextElementSibling; x?.matches('.lec-mark:not(.lec-new-line)') && level(x) > level(el); x = x.nextElementSibling) last = x;
+  return last;
 }
 
 /**
@@ -551,6 +590,7 @@ function nestFresh(li, dir, tag) {
 
 /** 빈 새 줄의 레벨을 바꾸고 화면의 자리를 맞춘다 (D106 — 계산은 lineops.shiftPlan). 바뀌었으면 true */
 function shiftFresh(s, dir) {
+  if (s.fresh.plan.kind === 'mark') return shiftMark(s, dir);
   const plan = shiftPlan(s.fresh.lines, s.fresh.plan, dir);
   if (!plan) return false;
   const was = s.fresh.plan.kind;
@@ -572,6 +612,38 @@ function shiftFresh(s, dir) {
   s.fresh.remove();   // 옛 자리 (새 항목이면 레벨을 바꾸며 만든 빈 하위 목록도)
   s.el = p;
   s.fresh.remove = () => p.remove();
+  focusPlace(0);
+  hereAtNew();
+  return true;
+}
+
+/**
+ * 새 글머리 글자 목록 줄(D192)의 Tab·Shift+Tab: 머리 글자를 한 차례 아래·위로 (□ → ○ → - → ·, ㅁ·ㅇ 로 쓴 문서는 ㅁ → ㅇ → - → ·).
+ * 수준은 저장하고 다시 그리면 문서가 쓴 차례로 맞는다 — 그 전에는 한 칸씩
+ */
+/** 차례 rank 의 글머리 글자 — 그 문서가 그 차례에 쓴 글자, 없으면 처음 머리 글자(was)의 꼴로 (ㅁ·ㅇ 로 쓴 문서는 ㅁ·ㅇ) */
+function markFor(rank, view, was) {
+  for (const p of view.querySelectorAll('.lec-mark:not(.lec-new-line)')) {
+    const m = markOf(p.textContent ?? '');
+    if (m?.rank === rank) return m.prefix.trim();
+  }
+  const jamo = /[ㅁㅇ]/.test(was);
+  return [jamo ? 'ㅁ' : '□', jamo ? 'ㅇ' : '○', '-', '·'][rank];
+}
+
+function shiftMark(s, dir) {
+  const span = s.places[0].span;
+  const text = span.textContent ?? '';
+  const mark = markOf(`${text}x`);   // 아직 머리 글자뿐이어도 (markOf 는 뒤에 글이 있어야 머리 글자로 본다)
+  if (!mark || mark.rank < 0) return false;
+  const rank = mark.rank + dir;
+  if (rank < 0 || rank >= RANKS.length) return true;
+  const c = mark.prefix.trim();
+  const to = markFor(rank, s.pane.view, s.fresh.plan.base ?? c);
+  span.textContent = to + text.slice(c.length);
+  s.fresh.plan = { ...s.fresh.plan, fill: to + mark.prefix.slice(c.length) };
+  const level = Number(/lec-lv(\d)/.exec(s.el.className)?.[1] ?? 0);
+  s.el.className = s.el.className.replace(/\blec-lv\d\b/, `lec-lv${Math.max(0, Math.min(5, level + dir))}`);
   focusPlace(0);
   hereAtNew();
   return true;
@@ -671,7 +743,8 @@ function askDroppedNotes(s, next) {
 /** 새 줄을 끝낸다: 글이 있으면 파일에 넣고, 없으면 화면의 자리를 걷는다 (파일은 그대로) */
 async function finishNew(s, save) {
   const text = read(s.places[0]);
-  if (!save || !text.trim()) {
+  const bare = s.fresh.plan.kind === 'mark' && text.trim() === String(s.fresh.plan.fill ?? '').trim();   // 미리 넣은 글머리 글자뿐 (D192)
+  if (!save || !text.trim() || bare) {
     s.fresh.remove();
     showLineEdit();
     if (s.line) followLine(s.line);   // 화살표를 기준 줄로 되돌린다
@@ -1093,7 +1166,7 @@ function levelHere(dir) {
     const r = shiftLevels(lines, s.line, s.line, dir, { tab: true });
     return r.error ? r : { lines: r.lines, line: s.line, note: levelNote(r) };
   };
-  if (s.fresh && !read(s.places[0]).trim()) {   // 아직 없는 줄 — 쓰기 전에 레벨을 정한다 (D106)
+  if (s.fresh && (s.fresh.plan.kind === 'mark' || !read(s.places[0]).trim())) {   // 아직 없는 줄 — 쓰기 전에 레벨을 정한다 (D106). 글머리 글자 목록은 쓰는 중에도 머리 글자를 (D192)
     shiftFresh(s, dir);
     return;
   }
@@ -1253,7 +1326,7 @@ async function deleteHere() {
     return;
   }
   const src = sourceLines();
-  const r = deleteLines(src, s.line, s.line, { code: isCodeView(s.pane.view) });
+  const r = deleteLines(src, s.line, s.line, { code: isCodeView(s.pane.view), plain: marksOnly(s.pane.view, s.line, s.line) });
   if (r.error) {
     toast(deleteWhy(r.error));
     return;
@@ -1296,6 +1369,18 @@ function litOpen() {
   return true;
 }
 
+/**
+ * 줄 a~b 가 모두 한 글머리 글자 목록(D192)의 항목이고 목록에 다른 줄이 남는지 — 그러면 그 줄들만 지운다 (Markdown 목록·문단의 정리를 하지 않는다).
+ * 목록째 지우면 앞뒤 빈 줄을 맞추는 보통 지우기로
+ */
+function marksOnly(view, a, b) {
+  const list = blockOfLine(view, a)?.closest?.('.lec-marklist');
+  const span = String(/** @type {HTMLElement | null} */ (list)?.dataset.lines ?? '').split('-').map(Number);
+  if (!list || !(span[0] < a || span[1] > b)) return false;
+  for (let n = a; n <= b; n++) if (blockOfLine(view, n)?.closest?.('.lec-marklist') !== list) return false;
+  return true;
+}
+
 /** Delete·메뉴 '줄 지우기'·Ctrl+X(cut — 원문을 복사하고 지운다): 하이라이트한 줄을 지운다 */
 async function deleteLit(cut) {
   const pane = S.pane;
@@ -1303,7 +1388,7 @@ async function deleteLit(cut) {
   if (!span || !litOpen() || !await settled(pane) || S.pane !== pane) return;
   const view = pane.view;
   const src = sourceLines();
-  const r = deleteLines(src, span[0], span[1], { code: isCodeView(view) });
+  const r = deleteLines(src, span[0], span[1], { code: isCodeView(view), plain: marksOnly(view, span[0], span[1]) });
   if (r.error) {
     toast(deleteWhy(r.error));
     return;

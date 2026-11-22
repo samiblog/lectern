@@ -148,3 +148,4 @@ html body .md-body:not(.lec-deck) span[style="color:green"] { color: #1b7a3a !im
 html body .md-body:not(.lec-deck) span[style="color:goldenrod"] { color: #9a6b00 !important; }
 /* 번호·글머리 글자로 시작하는 블록의 내어쓰기 (D191) — 화면에서 잰 폭(--lec-hang-fit)은 화면 글꼴의 것이라 종이에는 어림값만 */
 html body .md-body:not(.lec-deck) .lec-hang { text-indent: var(--lec-hang) hanging each-line; }
+html body .md-body:not(.lec-deck) .lec-mark.lec-hang { text-indent: var(--lec-hang) hanging; }   /* 글머리 글자 목록 (D192) — 이어 쓴 줄도 글자 뒤에 */

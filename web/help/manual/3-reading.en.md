@@ -41,6 +41,7 @@ This is the first screen when you open a folder.
 | File path | `src/app.py:42` | A link if the file really exists — [Links and opening files](3.4-links-and-opening-files.en.md) |
 | Line breaks inside a paragraph | Enter in the source · two spaces at the end of a line · `<br>` | The line breaks on screen too (like Shift+Enter in Word — outline-style writing shows as written) |
 | Lines starting with a number or bullet mark | Headings, paragraphs and list items starting with `1. Summary` · `1.2` · `A.` · `(1)` · `①` · `□` · `○` · `-` · `※` | When the line wraps on screen, the following lines line up after the mark — lines after a line break start as usual. Paper and exported html use the average width of the mark. The source is not changed |
+| Bullet-mark lists (Korean outline style) | Lines starting with `□` · `○` · `-` · `·` (and the two Korean keyboard letters used for `□` and `○`) — from a line starting with `□` · `○` · `·` up to a blank line or heading (a line starting with `-` is a Markdown list) | Each line becomes a list item. Lower levels are indented — the level follows the order `□` > `○` > `-` > `·` among the marks the document uses (leading spaces in the source are ignored). `①` · `1.` · `※` lines go one level below the item above; a line without a mark continues the item above. The source is not changed |
 
 To join the lines as standard Markdown does, turn off **Show line breaks inside paragraphs** in the 'View' part of Settings.
 

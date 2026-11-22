@@ -1,5 +1,5 @@
 """0.101.0 — 실제 창(WebView2)에서: 번호·글머리 글자로 시작하는 블록의 내어쓰기(D191) — WebView2 가 `text-indent: … hanging each-line` 을 알고,
-꺾인 줄이 머리 글자 뒤에 맞고, 줄바꿈 뒤의 줄은 들여 쓰지 않고, 한 줄 편집 중에도 같은 모양인지.
+꺾인 줄이 머리 글자 뒤에 맞고, 한 줄 편집 중에도 같은 모양인지. 글머리 글자 목록(D192) — □ 아래 ○ 는 한 수준 들여 쓰고, 새 항목에 같은 머리 글자.
   python tools/real/real101.py [--exe <Lectern.exe>]   (없으면 소스의 app.py)"""
 import json
 import shutil
@@ -77,14 +77,21 @@ try:
         R.check('WebView2 가 text-indent 의 hanging each-line 을 안다', page.evaluate("CSS.supports('text-indent', '1em hanging each-line')"))
         R.check('보고서를 연다', R.open_doc(page, '보고서.md'))
         page.wait_for_timeout(800)
-        R.check('머리 글자로 시작하는 블록 다섯이 내어 쓴다 (제목·□○ 문단·① ② 항목·※)', page.locator('#lec-view .lec-hang').count() == 5, page.locator('#lec-view .lec-hang').count())
+        R.check('머리 글자로 시작하는 블록 여섯이 내어 쓴다 (제목·□ ○ 항목·① ② 항목·※)', page.locator('#lec-view .lec-hang').count() == 6, page.locator('#lec-view .lec-hang').count())
         gaps = [page.evaluate(GAP, h) for h in page.locator('#lec-view .lec-hang').element_handles()]
         R.check('꺾인 줄이 모두 머리 글자 뒤에 (차이 0.05em 아래)', all(g is not None and abs(g) < 0.05 for g in gaps), gaps)
-        starts = page.evaluate("""() => { const el = [...document.querySelectorAll('#lec-view p')].find((x) => x.textContent.startsWith('□'));
-          const r = document.createRange(); const out = []; const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-          for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.data.search(/[□○] /); if (i < 0) continue; r.setStart(n, i); r.setEnd(n, i + 1); out.push(Math.round(r.getClientRects()[0].left)); }
-          return out; }""")
-        R.check('줄바꿈 뒤의 ○ 줄은 □ 줄과 같은 자리에서 시작', len(starts) == 2 and starts[0] == starts[1], starts)
+        print('[글머리 글자 목록 (D192)]')
+        lv = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 1);
+          return [p.textContent[0], p.className.match(/lec-lv(\d)/)[1], r.getClientRects()[0].left / parseFloat(getComputedStyle(p).fontSize)]; })""")
+        R.check('□ 아래의 ○ 는 한 수준(1.25em) 들여 쓴다', len(lv) == 2 and lv[0][:2] == ['□', '0'] and lv[1][:2] == ['○', '1'] and abs(lv[1][2] - lv[0][2] - 1.25) < 0.05, lv)
+        page.locator('#lec-view .lec-mark', has_text='○').click(position={'x': 120, 'y': 8})
+        page.keyboard.press('Shift+Enter')
+        R.wait(lambda: page.locator('#lec-view .lec-new-line .lec-line-edit').count() == 1, 5)
+        fresh = page.evaluate("(() => { const p = document.querySelector('#lec-view .lec-new-line'); return [p.textContent, p.className]; })()")
+        R.check('○ 항목 아래의 새 줄에 ○ 가 미리 들고 같은 수준', fresh[0] == '○ ' and 'lec-lv1' in fresh[1], fresh)
+        page.keyboard.press('Escape')
+        page.wait_for_timeout(300)
+        R.check('— 머리 글자만 두고 그만두면 파일은 그대로', (proj / '보고서.md').read_text(encoding='utf-8') == DOC)
 
         print('[한 줄 편집 중]')
         page.locator('#lec-view p', has_text='※ 참고').click(position={'x': 200, 'y': 8})

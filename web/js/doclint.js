@@ -8,6 +8,7 @@
 // 표 점검·임의 시험은 tools/edges/lint_cases.js (rules_check).
 
 import { fencesOf, fenceAt, frontEnd, deckOf, blocksOf, tableIn, itemOf, itemSpan, quoteOf, isBlank, renumberFrom, siblingsOf } from './lineops.js';
+import { marklistPlugin } from './marklist.js';
 import { captionsIn, captionAt, refTargets, captionId, CAPTION_WORDS } from './refs.js';
 
 /** 강조글의 종류 (doc.js 의 decorateAlerts 와 같게) */
@@ -158,7 +159,7 @@ function numbersOnly(lines, slug) {
  */
 export function lintDoc(lines, { slug = (s) => s.toLowerCase().replace(/\s+/g, '-'), style = false, md = null, emptyOk = false } = {}) {
   if (!lines.length || deckOf(lines)) return [];
-  const parser = md ?? window.markdownit({ html: true });
+  const parser = md ?? window.markdownit({ html: true }).use(marklistPlugin);   // 글머리 글자 목록(D192) 안의 '-'·'2.' 줄은 목록이 아니다
   /** @type {LintIssue[]} */
   const out = [];
   const add = (line, group, code, args = {}, fix = null) => out.push({ line, group, code, args, ...(fix ? { fix } : {}) });
@@ -166,6 +167,8 @@ export function lintDoc(lines, { slug = (s) => s.toLowerCase().replace(/\s+/g, '
   const front = frontEnd(lines);
   const toks = tokensOf(lines, parser);
   const inCode = (n) => !!fenceAt(fences, n);
+  // 글머리 글자 목록(D192)의 줄 — '- '·'2.' 로 시작해도 Markdown 목록 항목이 아니다 (줄로 보는 목록 점검이 건너뛴다)
+  const marked = new Set(toks.filter((tk) => tk.type === 'lec_marklist_open' && tk.map).flatMap((tk) => Array.from({ length: tk.map[1] - tk.map[0] }, (_, i) => tk.map[0] + i + 1)));
   const blocks = blocksOf(lines);
 
   // ---- A. 깨진 틀 -------------------------------------------------------------------------------
@@ -236,7 +239,7 @@ export function lintDoc(lines, { slug = (s) => s.toLowerCase().replace(/\s+/g, '
   // 한 목록에 다른 글머리표·번호 구분 글자 — 목록이 둘로 갈린다
   for (let n = 1; n <= lines.length; n++) {
     const it = itemOf(lines[n - 1]);
-    if (!it || inCode(n)) continue;
+    if (!it || inCode(n) || marked.has(n)) continue;
     let m = 0;
     for (let k = n - 1; k >= 1; k--) {
       const s = lines[k - 1];
@@ -424,7 +427,7 @@ export function lintDoc(lines, { slug = (s) => s.toLowerCase().replace(/\s+/g, '
   // 한 목록 안에서 일부만 빈 줄로 띄움 — 목록 전체가 띄운 목록이 된다
   const listed = new Set();
   for (let n = 1; n <= lines.length; n++) {
-    if (!itemOf(lines[n - 1]) || inCode(n) || listed.has(n)) continue;
+    if (!itemOf(lines[n - 1]) || inCode(n) || listed.has(n) || marked.has(n)) continue;
     const sib = siblingsOf(lines, n);
     sib.forEach((s) => listed.add(s));
     if (sib.length < 3) continue;

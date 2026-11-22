@@ -18,9 +18,9 @@ DOC = f"""# 내어쓰기 보고서
 
 □ {L} {L}
 
-□ 추진 배경
-○ {L} {L}
-· 세부 사항
+① 추진 배경
+※ {L} {L}
+▶ 세부 사항
 
 다음과 같다
 ① {L} {L}
@@ -117,12 +117,12 @@ try:
                            ('강조글 안의 (1)', '(1) 인공지능')]:
             g = page.evaluate(GEOM, page.locator('#lec-view :is(p, li, h2)', has_text=text).last.element_handle())
             check(f'{name} — 꺾인 줄이 글자 뒤에 (차이 0.05em 아래)', bool(g and g['marked'] and g['wrapGap'] is not None and abs(g['wrapGap']) < 0.05), g)
-        g = geo_of('□ 추진 배경')
-        check("'□ 제목 / ○ 내용 / · 세부' 문단 — 가장 긴 ○ 줄이 꺾이면 글자 뒤에", bool(g and g['marked'] and g['prefix'] == '○ ' and abs(g['wrapGap']) < 0.05), g)
+        g = geo_of('① 추진 배경')
+        check("'① 제목 / ※ 내용 / ▶ 세부' 문단 — 가장 긴 ※ 줄이 꺾이면 글자 뒤에", bool(g and g['marked'] and g['prefix'] == '※ ' and abs(g['wrapGap']) < 0.05), g)
         starts = page.evaluate("""(el) => { const r = document.createRange(); const out = [];
-          const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.data.search(/[□○·]/); if (i < 0 || n.data[i + 1] !== ' ') continue;
-            r.setStart(n, i); r.setEnd(n, i + 1); out.push(Math.round(r.getClientRects()[0].left)); } return out; }""", p_with('□ 추진 배경'))
-        check('— 줄바꿈 뒤의 ○·· 줄은 첫 줄과 같은 자리에서 시작 (들여 쓰지 않는다)', len(starts) == 3 and len(set(starts)) == 1, starts)
+          const w = document.createTreeWalker(el, NodeFilter.SHOW_TEXT); for (let n = w.nextNode(); n; n = w.nextNode()) { const i = n.data.search(/[①※▶]/); if (i < 0 || n.data[i + 1] !== ' ') continue;
+            r.setStart(n, i); r.setEnd(n, i + 1); out.push(Math.round(r.getClientRects()[0].left)); } return out; }""", p_with('① 추진 배경'))
+        check('— 줄바꿈 뒤의 ※·▶ 줄은 첫 줄과 같은 자리에서 시작 (들여 쓰지 않는다)', len(starts) == 3 and len(set(starts)) == 1, starts)
         g = geo_of('다음과 같다')
         check("'다음과 같다' 뒤의 ①·② 줄 — ① 이 꺾이면 글자 뒤에", bool(g and g['marked'] and g['prefix'] == '① ' and abs(g['wrapGap']) < 0.05), g)
         nested = page.evaluate("""() => { const items = [...document.querySelectorAll('#lec-view li li')].filter((li) => li.textContent.startsWith('하위 항목'));
@@ -204,7 +204,7 @@ try:
         ms = page.evaluate("""async () => { const { fitHangs } = await import('/static/js/hang.js'); const view = document.querySelector('#lec-view');
           view.querySelectorAll('.lec-hang').forEach((el) => el.style.removeProperty('--lec-hang-fit'));
           const t0 = performance.now(); fitHangs(view); return performance.now() - t0; }""")
-        check(f'제목 500·문단 500 — 모두 내어 쓰고 ({n}곳), 다시 재는 데 {ms:.0f}ms (300ms 아래)', n == 1000 and ms < 300, (n, ms))
+        check(f'제목 500·글머리 글자 목록 500 (항목 1000) — 모두 내어 쓰고 ({n}곳), 다시 재는 데 {ms:.0f}ms (300ms 아래)', n == 1500 and ms < 300, (n, ms))
 
         check('화면 스크립트 오류 없음', not errors, errors[:3])
         b.close()

@@ -185,6 +185,17 @@
    안의 목록·표·코드 같은 블록은 물려받지 않는다 (한 줄 편집의 칸 .whole 은 물려받아 고치는 동안에도 같은 모양) */
 .md-body .lec-hang { text-indent: var(--lec-hang-fit, var(--lec-hang)) hanging each-line; }
 .md-body .lec-hang :is(ul, ol, pre, table, blockquote, div, figure, details, aside) { text-indent: 0; }
+/* 글머리 글자 목록 (marklist.js, D192): □ > ○ > - > · 의 수준마다 한 칸(--lec-mark-step) 들여 쓴다. 항목 사이는 목록처럼 촘촘히, 묶음의 앞뒤는 문단처럼.
+   항목에 이어 쓴 줄(줄바꿈 뒤)도 글머리 글자 뒤에 — each-line 없이 hanging */
+.md-body .lec-marklist { margin: 0 0 1.05em; }
+.md-body .lec-mark { margin: 0; }
+.md-body .lec-mark + .lec-mark { margin-top: .28em; }
+.md-body .lec-lv1 { padding-left: var(--lec-mark-step, 1.25em); }
+.md-body .lec-lv2 { padding-left: calc(2 * var(--lec-mark-step, 1.25em)); }
+.md-body .lec-lv3 { padding-left: calc(3 * var(--lec-mark-step, 1.25em)); }
+.md-body .lec-lv4 { padding-left: calc(4 * var(--lec-mark-step, 1.25em)); }
+.md-body .lec-lv5 { padding-left: calc(5 * var(--lec-mark-step, 1.25em)); }
+.md-body .lec-mark.lec-hang { text-indent: var(--lec-hang-fit, var(--lec-hang)) hanging; }
 
 /* 본문 우클릭 메뉴(docmenu.js)가 고른 블록 */
 .md-body .lec-picked { outline: 2px solid color-mix(in srgb, var(--md-link) 60%, transparent); outline-offset: 3px; border-radius: 2px; }

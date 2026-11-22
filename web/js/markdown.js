@@ -4,6 +4,7 @@
 
 import { S } from './store.js';
 import { slideRule, cellRule } from './slides.js';
+import { marklistPlugin } from './marklist.js';
 import { tocKind, isPageBreak } from './refs.js';
 import { isTextboxOpen, isTextboxClose, textboxName } from './docops.js';
 import { t } from './i18n.js';
@@ -287,6 +288,7 @@ function create(math, breaks) {
     .use(window.markdownitTaskLists, { enabled: false })
     .use(window.markdownItAnchor, { slugify, tabIndex: false });
   if (math) md.use(mathPlugin);
+  md.use(marklistPlugin);   // 글머리 글자 목록 □ > ○ > - > · (D192 — 슬라이드에서는 하지 않는다)
   md.use(sourceLines);
   md.core.ruler.push('lec_doc_marks', docMarks);   // 문서 안 목차 줄 (D121) — source_lines 뒤에 (줄 범위는 스스로 단다)
   md.core.ruler.push('lec_textbox', textboxMarks);   // 박스글 (D126)
