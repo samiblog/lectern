@@ -42,6 +42,9 @@ for (const [text, want, name] of [
   [`  ○ ${T}`, '○ ', '앞의 빈칸은 세지 않는다'],
   [`○  ${T}`, '○  ', '줄 바꿈 없는 빈칸은 그대로'],
   [`1.   ${T}`, '1.   ', '이어진 빈칸'],
+  [`□\u3000${T}`, '□\u3000', '머리 글자 뒤의 전각 빈칸 (한글 문서에서 붙여 넣은 글)'],
+  [`\u3000\u3000○ ${T}`, '○ ', '앞의 전각 빈칸은 머리 글자가 아니다'],
+  [`－ ${T}`, '－ ', '전각 붙임표'],
 ]) eq(hangPrefix(text), want, name);
 
 // ---- 읽지 않는 것 ----
@@ -79,4 +82,6 @@ eq(blockHang(`다음과 같다\n① ${LONG}\n② ${LONG}`), { prefix: '① ', at
 eq(blockHang(`${LONG}\n① 짧은 줄\n${LONG}`), null, '첫 줄에 없고 반 넘게 있지도 않으면 내어 쓰지 않는다');
 eq(blockHang(`  ※ ${LONG}`), { prefix: '※ ', at: 2 }, '앞의 빈칸 뒤의 자리');
 eq(blockHang(LONG), null, '머리 글자가 없는 블록');
+eq(blockHang(`□ 첫 줄\n\u3000\u3000○ ${LONG}`), { prefix: '\u3000\u3000○ ', at: 6 }, '줄 앞의 전각 빈칸(보인다)은 내어쓸 폭에 든다');
+eq(hangEm('\u3000\u3000○ ') > 2.8, true, '— 전각 빈칸은 하나하나 1em');
 return { n, fails };

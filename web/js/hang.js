@@ -8,7 +8,7 @@
 // - 가운데·오른쪽 맞춘 블록(캡션, 책·논문 스타일의 제목)과 표의 칸, 할 일 항목, Lectern 슬라이드는 건너뛴다.
 
 /** 글머리 글자 — 뒤에 빈칸이 있어야 한다 ('○○ 기관'의 ○ 는 글머리가 아니다) */
-const BULLETS = '□■▢▣◇◆◈○●◎◉◦•‣∙·ㆍ▪▫►▶▷▸▹→⇒➔➜➢➤★☆✓✔✗✘❖ㅁㅇ-–—+';
+const BULLETS = '□■▢▣◇◆◈○●◎◉◦•‣∙·ㆍ▪▫►▶▷▸▹→⇒➔➜➢➤★☆✓✔✗✘❖ㅁㅇ-–—－+';
 /** 빈칸 없이 붙여 써도 머리 글자인 것 — ※, 둥근·괄호 번호(①⑴⒈ⓐ❶➀㈀㉠ …) */
 const TIGHT = /^(?:※|[①-⓿❶-➓㈀-㉟㉠-㉿])/u;
 /** 번호 — 뒤에 빈칸이 있어야 한다 */
@@ -43,8 +43,8 @@ function charEm(c) {
 
 /** 머리 글자와 그 뒤의 빈칸 — 없으면 '' */
 export function hangPrefix(text) {
-  const s = text.replace(/^[ \t\n\r]+/, '');
-  const gapAfter = (mark) => /^[ \t ]*/.exec(s.slice(mark.length))[0];
+  const s = text.replace(/^[ \t\n\r\u3000]+/, '');
+  const gapAfter = (mark) => /^[ \t\u00a0\u3000]*/.exec(s.slice(mark.length))[0];   // 전각 빈칸(　)도 — 한글 문서에서 붙여 넣은 글
   /** 머리 글자 다음에 꺾일 글이 있어야 한다 (머리 글자뿐인 줄은 아니다) */
   const done = (mark, gap) => (s.slice(mark.length + gap.length).trim() ? mark + gap : '');
   const tight = TIGHT.exec(s)?.[0];
@@ -83,8 +83,10 @@ export function blockHang(text) {
   const lines = [];
   let at = 0;
   for (const line of text.split('\n')) {
-    const lead = line.length - line.replace(/^[ \t\r]+/, '').length;
-    if (line.trim()) lines.push({ prefix: hangPrefix(line), at: at + lead, len: line.trim().length });
+    const lead = line.length - line.replace(/^[ \t\r]+/, '').length;   // 줄 맨 앞에서 사라지는 빈칸
+    const wide = /^\u3000*/.exec(line.slice(lead))[0];   // 전각 빈칸은 보인다 — 들여 쓴 만큼도 내어 쓴다
+    const prefix = hangPrefix(line);
+    if (line.trim()) lines.push({ prefix: prefix && wide + prefix, at: at + lead, len: line.trim().length });
     at += line.length + 1;
   }
   const marked = lines.filter((x) => x.prefix);

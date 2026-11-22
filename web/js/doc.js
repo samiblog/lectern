@@ -500,6 +500,27 @@ function decorateTextboxes(root) {
   }
 }
 
+const hangWidths = new WeakMap();
+let hangWatch = null;
+
+/**
+ * 칸의 폭이 바뀌면(창·문서 폭·글자 크기·모두 펼치기) 내어쓰기를 다시 잰다 (D191) — 양쪽 맞춤 스타일(보고서)은 첫 줄의 빈칸이 늘어나
+ * 머리 글자 뒤 글의 자리가 폭마다 다르다. 한 프레임에 한 번
+ * @param {HTMLElement} view
+ */
+function watchHangs(view) {
+  hangWatch ||= new ResizeObserver((entries) => {
+    for (const { target, contentRect } of entries) {
+      const width = Math.round(contentRect.width);
+      if (hangWidths.get(target) === width) continue;
+      const first = !hangWidths.has(target);
+      hangWidths.set(target, width);
+      if (!first && target.querySelector('.lec-hang')) requestAnimationFrame(() => fitHangs(target));
+    }
+  });
+  hangWatch.observe(view);
+}
+
 export function decorateBlocks(root) {
   decorateAlerts(root);
   decorateTables(root);
@@ -691,6 +712,7 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
   if (deck) showDeck(pane);   // 슬라이드를 칸 폭에 맞춰 줄인다 (스크롤 위치를 정하기 전에 — 높이가 달라진다)
   else view.style.removeProperty('--slide-scale');
   fitHangs(view);   // 내어쓰기를 이 칸의 글꼴로 잰 폭으로 (D191 — 접기 전에: 접힌 절은 잴 수 없다)
+  watchHangs(view);
   setupFolds(view, path);   // 스크롤 위치를 정하기 전에: 접힌 절이 있으면 문서 높이가 다르다
   fitTables(view);          // 첫 열이 여러 줄로 감긴 표는 첫 열을 넓힌다 (D68 — 칸에 들어간 뒤의 폭으로 잰다)
   setDocSource(pane, path, text);

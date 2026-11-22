@@ -33,6 +33,9 @@ DOC = f"""# 내어쓰기
 ※ 참고: {L}
 """
 (proj / '보고서.md').write_text(DOC, encoding='utf-8', newline='\n')
+W = '\u3000'
+HWP = f'# 붙여 넣은 보고서\n\n□{W}추진 배경\n{W}○{W}{L}\n{W}{W}－{W}제조업: {L}\n{W}{W}{W}·{W}반도체 부문이 가장 먼저 영향을 받는다.\n□{W}정책 과제\n'
+(proj / '붙여넣기.md').write_text(HWP, encoding='utf-8', newline='\n')
 
 # 블록의 첫 줄에서 머리 글자 뒤 글이 시작하는 x 와 꺾인 다음 화면 줄의 x 의 차이 (em)
 GAP = """(el) => import('/static/js/hang.js').then(({ blockHang }) => {
@@ -82,7 +85,7 @@ try:
         R.check('꺾인 줄이 모두 머리 글자 뒤에 (차이 0.05em 아래)', all(g is not None and abs(g) < 0.05 for g in gaps), gaps)
         print('[글머리 글자 목록 (D192)]')
         lv = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 1);
-          return [p.textContent[0], p.className.match(/lec-lv(\d)/)[1], r.getClientRects()[0].left / parseFloat(getComputedStyle(p).fontSize)]; })""")
+          return [p.textContent[0], p.className.match(/lec-lv(\\d)/)[1], r.getClientRects()[0].left / parseFloat(getComputedStyle(p).fontSize)]; })""")
         R.check('□ 아래의 ○ 는 한 수준(1.25em) 들여 쓴다', len(lv) == 2 and lv[0][:2] == ['□', '0'] and lv[1][:2] == ['○', '1'] and abs(lv[1][2] - lv[0][2] - 1.25) < 0.05, lv)
         page.locator('#lec-view .lec-mark', has_text='○').click(position={'x': 120, 'y': 8})
         page.keyboard.press('Shift+Enter')
@@ -92,6 +95,19 @@ try:
         page.keyboard.press('Escape')
         page.wait_for_timeout(300)
         R.check('— 머리 글자만 두고 그만두면 파일은 그대로', (proj / '보고서.md').read_text(encoding='utf-8') == DOC)
+
+        print('[한글 문서에서 붙여 넣은 개조식]')
+        R.check('붙여 넣은 문서를 연다', R.open_doc(page, '붙여넣기.md'))
+        page.wait_for_timeout(800)
+        rows = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const fs = parseFloat(getComputedStyle(p).fontSize);
+          const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 1);
+          return [Number(p.className.match(/lec-lv(\\d)/)[1]), Math.round(r.getClientRects()[0].left / fs * 100) / 100]; })""")
+        R.check('전각 빈칸으로 들여 쓴 □ ○ － · 가 수준 0·1·2·3 — 수준마다 한 칸씩 (전각 빈칸만큼 더 밀리지 않는다)',
+                [x[0] for x in rows] == [0, 1, 2, 3, 0] and all(abs((rows[i + 1][1] - rows[i][1]) - 1.25) < 0.05 for i in range(3)), rows)
+        gaps = [page.evaluate(GAP, h) for h in page.locator('#lec-view .lec-hang').element_handles()]
+        R.check('— 꺾인 줄이 모두 머리 글자 뒤에 (보고서 스타일 — 양쪽 맞춤)', all(g is None or abs(g) < 0.05 for g in gaps) and any(g is not None for g in gaps), gaps)
+        R.check('보고서로 돌아간다', R.open_doc(page, '보고서.md'))
+        page.wait_for_timeout(500)
 
         print('[한 줄 편집 중]')
         page.locator('#lec-view p', has_text='※ 참고').click(position={'x': 200, 'y': 8})

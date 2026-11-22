@@ -11,7 +11,7 @@
 import { hangPrefix } from './hang.js';
 
 /** 차례가 있는 글머리 글자 — 보고서의 □ > ○ > - > · */
-export const RANKS = ['□■ㅁ▢▣', '○●ㅇ◎◦', '-–—', '·ㆍ•∙‧'];
+export const RANKS = ['□■ㅁ▢▣', '○●ㅇ◎◦', '-–—－', '·ㆍ•∙‧'];
 /** 묶음을 여는 글머리 글자 ('-' 는 Markdown 목록이 먼저다) */
 const START = RANKS[0] + RANKS[1] + RANKS[3];
 /** 묶음의 수준은 여섯까지 (그보다 깊으면 여섯째) */
@@ -26,6 +26,20 @@ export function markOf(text) {
   if (!prefix) return null;
   const c = prefix.trim();
   return { prefix, rank: c.length === 1 ? RANKS.findIndex((r) => r.includes(c)) : -1 };
+}
+
+/**
+ * 원문 줄에서 머리 글자를 볼 글 — 앞의 전각 빈칸(한글 문서에서 붙여 넣은 들여쓰기)과 머리 글자를 감싼 굵게·기울임 표시를 뗀다
+ * ('**□ 제목**' 처럼 줄 전체를, '**ㅇ** 내용' 처럼 머리 글자만 감싼 것 모두 — Claude 가 흔히 쓴다)
+ * @param {string} line 앞 빈칸을 뗀 원문 줄
+ */
+export function markText(line) {
+  const s = line.replace(/^\u3000+/, '');
+  const m = /^(\*\*|__|\*|_)(?=\S)/.exec(s);
+  if (!m) return s;
+  const rest = s.slice(m[1].length);
+  const c = [...rest][0] ?? '';
+  return rest.slice(c.length, c.length + m[1].length) === m[1] ? c + rest.slice(c.length + m[1].length) : rest;
 }
 
 /** 이 자리가 Markdown 목록 항목 안인지 — 열린 list_item 이 있는지 토큰을 거슬러 본다 (머리 글자가 있는 줄에서만 부른다) */
@@ -47,7 +61,7 @@ function markRule(state, startLine, endLine, silent) {
   if (state.env.deck || state.parentType === 'list') return false;
   if (state.sCount[startLine] - state.blkIndent >= 4) return false;   // 들여 쓴 코드
   const text = (n) => state.src.slice(state.bMarks[n] + state.tShift[n], state.eMarks[n]);
-  const first = text(startLine);
+  const first = markText(text(startLine));
   if (!START.includes(first[0] ?? '\0') || !markOf(first)) return false;
   const under = startLine + 1 < endLine ? text(startLine + 1) : '';
   if (/^(?:=+|-+)[ \t]*$/.test(under) && state.sCount[startLine + 1] - state.blkIndent < 4) return false;   // 바로 아래가 --- · === 면 제목(setext)이 먼저
@@ -69,7 +83,7 @@ function markRule(state, startLine, endLine, silent) {
   if (silent) return true;
   const items = [];
   for (let n = startLine; n < end; n++) {
-    const mark = markOf(text(n));
+    const mark = markOf(markText(text(n)));
     if (mark || !items.length) items.push({ start: n, end: n + 1, rank: mark?.rank ?? -1 });
     else items.at(-1).end = n + 1;
   }
@@ -81,7 +95,8 @@ function markRule(state, startLine, endLine, silent) {
     p.map = [it.start, it.end];
     p.meta = { rank: it.rank };
     const inline = state.push('inline', '', 0);
-    inline.content = state.getLines(it.start, it.end, state.blkIndent, false).trim();
+    // 줄마다 앞의 빈칸·전각 빈칸을 뗀다 — 수준의 들여쓰기가 대신한다
+    inline.content = state.getLines(it.start, it.end, state.blkIndent, false).split('\n').map((s) => s.replace(/^[ \t\u3000]+/, '')).join('\n').trim();
     inline.map = [it.start, it.end];
     inline.children = [];
     state.push('lec_mark_close', 'p', -1);
