@@ -96,12 +96,17 @@ try:
 
         def until(fn, ms=6000):
             """fn 이 참이 될 때까지 — 값을 돌려준다 (끝내 거짓이면 마지막 값)"""
-            got = fn()
+            def get():
+                try:
+                    return fn()
+                except PermissionError:   # 앱이 파일을 바꿔 끼우는 그 순간에 읽음 (Windows) — 아직으로 치고 다시 본다
+                    return None
+            got = get()
             for _ in range(ms // 50):
                 if got:
                     break
                 page.wait_for_timeout(50)
-                got = fn()
+                got = get()
             return got
 
         def open_doc(name, selector='#lec-view h1'):

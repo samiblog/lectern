@@ -1072,7 +1072,7 @@ function splitMark(lines, n, offset) {
 /**
  * 글머리 글자 목록(D192)의 줄 a~b 를 dir 쪽으로 — 그 항목들과 아래의 더 깊은 항목을 같은 수준의 앞·뒤 항목(과 그 하위) 너머로, 묶음 안에서만.
  * 원문으로는 '- ' 줄 뒤의 'ㅇ' 줄이 그 목록 항목에 이어 쓴 줄이라 보통 옮기기는 그 너머로 간다. 묶음의 줄이 아니면 null (보통 옮기기)
- * @returns {{lines: string[], a: number, b: number} | {error: string} | null}
+ * @returns {{lines?: string[], a?: number, b?: number, error?: string} | null}
  */
 function moveMarks(view, lines, a, b, dir) {
   const list = blockOfLine(view, a)?.closest?.('.lec-marklist');
