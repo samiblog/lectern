@@ -9,7 +9,6 @@
 
 import { fencesOf, fenceAt, frontEnd, deckOf, blocksOf, tableIn, itemOf, itemSpan, quoteOf, isBlank, renumberFrom, siblingsOf } from './lineops.js';
 import { captionsIn, captionAt, refTargets, captionId, CAPTION_WORDS } from './refs.js';
-import { detect, applyScheme } from './headstyle.js';
 
 /** 강조글의 종류 (doc.js 의 decorateAlerts 와 같게) */
 const KINDS = ['NOTE', 'TIP', 'IMPORTANT', 'WARNING', 'CAUTION'];
@@ -99,30 +98,45 @@ function orderCaptions(lines, word) {
   })));
 }
 
+/** 번호를 단 제목 — '## 2. 제목'·'## 3) 제목'·'## 1.2 제목'·'## 1.2. 제목' (한 숫자는 . 이나 ) 가 있어야 — '## 3 가지 이유' 는 번호가 아니다) */
+const NUM_HEAD = /^(\s*#{1,6}\s+)((?:\d{1,3}\.)*\d{1,3})([.)]?)(\s+)/;
+
 /**
- * 제목 번호를 이 문서의 모양(headstyle.detect)대로 다시 매긴 새 배열 — 이미 번호가 있는 제목의 번호만 바꾸고, 번호가 없는 제목(일부러 뺀 절)·
- * 다른 꼴의 번호('1-1.')에는 번호를 붙이지 않는다. 바꾼 제목으로 가는 절 링크도. 바꿀 것이 없으면 null
+ * 제목 번호를 차례대로 다시 매긴 새 배열 — 그 문서가 실제로 단 번호만 센다 (D190 — Lectern 의 머리글 모양이 번호를 달지 않는 '요약'·'부록'에도
+ * 번호를 단 보고서가 있다). 같은 부모 아래에서 1, 2, 3…, '1.2' 꼴은 부모의 번호까지. 번호 없는 제목·다른 꼴의 번호('1-1.')는 세지 않고 붙이지도 않는다.
+ * 바꾼 제목으로 가는 절 링크도. 바꿀 것이 없으면 null
  */
 function numbersOnly(lines, slug) {
-  const scheme = detect(lines);
-  if (scheme === 'plain') return null;
-  const first = applyScheme(lines, scheme, slug);
-  if (!first.changed) return null;
-  const head = (s) => /^\s*#{1,6}\s/.test(s);
-  const text = (x) => x.replace(/^\s*#{1,6}\s+/, '').replace(/\s+#+\s*$/, '').trim();
-  const rest = (s) => text(s).replace(/^\S+\s+/, '');
-  // 번호가 없던 제목(번호를 붙이려 한 것)은 셈에서 뺀다 — 제목이 아닌 줄로 가려 두고 다시 매긴다
-  const masked = lines.map((s, i) => (head(s) && first.lines[i] !== s && rest(first.lines[i]) === text(s) ? `​${s}` : s));
-  const r = applyScheme(masked, scheme, slug);
+  const fences = fencesOf(lines);
+  const front = frontEnd(lines);
+  const last = [];   // 수준마다 앞 형제의 (바른) 번호
+  const path = [];   // 수준마다 그 제목의 (바른) 번호 경로 — 번호 없는 제목이면 null
   const next = lines.slice();
   const moved = new Map();
-  r.lines.forEach((s, i) => {
-    if (s === masked[i] || masked[i] !== lines[i] || !head(lines[i]) || rest(s) !== rest(lines[i])) return;   // 번호 글자만 바뀐 제목
-    next[i] = s;
-    moved.set(slug(text(lines[i])), slug(text(s)));
+  const text = (x) => x.replace(/^\s*#{1,6}\s+/, '').replace(/\s+#+\s*$/, '').trim();
+  lines.forEach((s, i) => {
+    const h = i >= front && !fenceAt(fences, i + 1) ? /^\s{0,3}(#{1,6})\s/.exec(s) : null;
+    if (!h) return;
+    const level = h[1].length;
+    last.length = level + 1;   // 새 부모 — 더 깊은 수준은 다시 센다
+    path.length = level + 1;
+    const m = NUM_HEAD.exec(s);
+    const split = m && (m[2].includes('.') || m[3]) ? m[2].split('.').map(Number) : null;
+    const nums = split && split.length <= 4 && split.every((n) => n >= 1 && n <= 99) ? split : null;   // '0.50.0' 같은 판 번호는 제목 번호가 아니다
+    if (!nums) {
+      path[level] = null;
+      return;
+    }
+    const want = (last[level] ?? 0) + 1;
+    last[level] = want;
+    const parent = path.slice(0, level).filter((x) => x).at(-1) ?? null;
+    const right = nums.length > 1 && parent ? [...parent, want] : nums.length > 1 ? [...nums.slice(0, -1), want] : [want];
+    path[level] = right;
+    if (right.join('.') === nums.join('.')) return;
+    next[i] = `${m[1]}${right.join('.')}${m[3]}${m[4]}${s.slice(m[0].length)}`;
+    moved.set(slug(text(s)), slug(text(next[i])));
   });
   if (!moved.size) return null;
-  const fences = fencesOf(next);
   return next.map((s, i) => (fenceAt(fences, i + 1) || /^\s*#{1,6}\s/.test(s) || !s.includes('](#') ? s
     : s.replace(/\]\(#([^)\s]+)\)/g, (all, id) => {
       let key = id;

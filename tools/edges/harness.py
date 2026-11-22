@@ -61,7 +61,13 @@ def check(name, cond, detail=''):
 def until(page, fn, ms=6000, step=50):
     """fn() 이 참이 될 때까지 기다려 그 값을 돌려준다 (끝내 거짓이면 마지막 값). 고정 시간 대기 대신 쓴다.
     fn 이 글자면 페이지 안에서 돌리는 식이다"""
-    get = (lambda: page.evaluate(fn)) if isinstance(fn, str) else fn
+    raw = (lambda: page.evaluate(fn)) if isinstance(fn, str) else fn
+
+    def get():
+        try:
+            return raw()
+        except PermissionError:   # 앱이 파일을 바꿔 끼우는 그 순간에 읽음 (Windows) — 아직으로 치고 다시 본다
+            return None
     end = time.monotonic() + ms * SLOW / 1000
     got = get()
     while not got and time.monotonic() < end:
