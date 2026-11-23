@@ -2272,7 +2272,7 @@ export default {
 "md 문서 스타일 — 문서 방식과 머리글 모양을 고릅니다": "md document style — choose the document form and heading look",
 "AI 요청 — 이 문서에 쓸 요청 글을 골라 터미널에 넣습니다 (Enter 는 누르지 않음)": "AI requests — pick a request for this document and put it in the terminal (Enter is not pressed)",
 "md 문서 스타일은 md 문서에서 고릅니다 — 왼쪽에서 md 문서를 여세요": "md document styles are chosen in an md document — open one on the left",
-"{ai} 에 요청 — 터미널에 넣습니다 (Enter 는 누르지 않음)": "Ask {ai} — goes into the terminal (Enter is not pressed)",
+"{ai} 에 요청 — 최근에 쓴 터미널에 넣습니다 (Enter 는 누르지 않음)": "Ask {ai} — goes into the terminal you used last (Enter is not pressed)",
 "이 문서 가리키기 ({ref})": "Point to this document ({ref})",
 "문서의 위치를 터미널에 넣습니다 — 이어서 할 말을 적으세요": "Puts the document's location in the terminal — type what you want to say after it",
 "문서 점검 목록…": "Document check list…",

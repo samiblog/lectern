@@ -519,7 +519,7 @@ def run(headed: bool) -> None:
                   and '이 장 하이라이트' not in items_on and off_by_menu,
                   f'본문 우클릭 메뉴로 그 장 하이라이트 / 하이라이트 해제 ({by_menu})')
             # Shift+끌기 (D75 — D74 의 Alt+끌기): 표의 '구리' 행에서 '니켈' 행까지 → 그 행들(원문 11~13행)만 하이라이트, 글은 고르지 않음.
-            # 우클릭은 선택 상자 — 맨 위 'Claude로 보내기'(맨 앞 터미널에 넣기), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
+            # 우클릭은 선택 상자 — 맨 위 'Claude로 보내기'(최근에 쓴 터미널에 넣기 — D194), 위치·원문 복사, 담기, 이 블록의 메뉴, 하이라이트 해제
             row_at = lambda text: page.evaluate(f"""(() => {{ const tr = [...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('{text}'));
               const b = tr.getBoundingClientRect(); return [b.left + 30, b.top + b.height / 2]; }})()""")
             page.evaluate("[...document.querySelectorAll('#lec-view tr')].find(r => r.textContent.includes('알루미늄')).scrollIntoView({ block: 'center' })")
@@ -3453,7 +3453,7 @@ def run(headed: bool) -> None:
             page.wait_for_timeout(300)
             check(term_btns >= 2 and pasted and in_term and told and asked and '줄을 터미널에 붙여 넣습니다' in asked[0],
                   f"우클릭 메뉴의 복사 항목 옆 터미널 버튼: Claude용 위치를 Enter 없이 터미널에('넣었습니다' 알림), 여러 줄이면 먼저 물음 ({term_btns}, {told}, {asked[:1]})")
-            # Shift+→ (D75·D97): 하이라이트한 곳의 위치를 맨 앞 터미널에 Enter 없이 — 초점도 터미널로
+            # Shift+→ (D75·D97): 하이라이트한 곳의 위치를 최근에 쓴 터미널에 Enter 없이 — 초점도 터미널로 (D194)
             page.locator('#lec-view h1').first.click()
             page.keyboard.press('Control+Enter')
             h1_at = page.locator('#lec-view h1').first.get_attribute('data-lines').split('-')[0]
@@ -3474,7 +3474,7 @@ def run(headed: bool) -> None:
             page.keyboard.press('Shift+F6')   # 터미널 → 문서
             hop_doc = wait_until(page, "document.activeElement?.id === 'lec-content'", 3000)
             page.keyboard.press('Escape')   # 하이라이트 끄기
-            check(sent and sent_go, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 맨 앞 터미널에 Enter 없이, 초점도 터미널로 ({sent}, {sent_go})")
+            check(sent and sent_go, f"Shift+→ 는 하이라이트한 곳의 위치(@{doc_path} {h1_at}행)를 터미널에 Enter 없이, 초점도 터미널로 ({sent}, {sent_go})")
             check(to_term and hop_doc and mark_doc[0] == 'none' and mark_doc[1] != 'none' and mark_term[0] != 'none' and mark_term[1] == 'none',
                   f"F6·Shift+F6 은 문서 ↔ 터미널, 초점이 있는 쪽을 강조색으로 보임 ({to_term}, {hop_doc}, {mark_doc}, {mark_term})")
             page.locator('#lec-view h1').first.click()
@@ -3609,7 +3609,7 @@ def run(headed: bool) -> None:
             gone = term_ui()
             check(gone['hidden'] and not gone['on'] and gone['toc'] and not gone['btn'], f'머리줄 오른쪽 ✕ 로 터미널 감추기 ({gone})')
 
-            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 끝내기(하나뿐이어도), 빈 번호부터, 붙여 넣기는 맨 앞 터미널에
+            print('[터미널 여러 개]')   # D69 — 머리줄의 + 로 터미널을 더하고(5개까지) 고르고 × 로 끝내기(하나뿐이어도), 빈 번호부터, 붙여 넣기는 최근에 쓴 터미널에 (D194)
             term_tabs = lambda: page.evaluate("[...document.querySelectorAll('#lec-term-tabs .term-tab')].map(b => (b.classList.contains('on') ? '*' : '') + b.textContent.trim())")
             page.keyboard.press('Control+Backquote')
             term_has('PS ', 20000)
@@ -3638,15 +3638,15 @@ def run(headed: bool) -> None:
             page.wait_for_function("document.querySelectorAll('#lec-term-tabs .term-tab').length === 5", timeout=15000)
             reused = page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n")
             shot('28-terminals')
-            # 우클릭 메뉴의 '터미널에 붙여 넣기'는 2번을 골라 두어도 맨 앞(1번) 터미널에 — 1번으로 바꿔 보인다 (Claude Code 를 돌리는 곳)
+            # 우클릭 메뉴의 '터미널에 붙여 넣기'는 최근에 쓴 터미널에 — 2번을 골라 두었으면 2번에, 1번으로 바꿔 보이지 않는다 (D194 — 전에는 늘 맨 앞)
             page.locator('#lec-term-tabs .term-tab[data-n="1"]').click()
             term_has('둘째 터미널', 5000)
             page.evaluate("import('/static/js/store.js').then(m => m.emit('term-paste', 'Write-Output 붙여넣기확인'))")
             pasted = term_has('Write-Output 붙여넣기확인', 5000)
-            told2 = (wait_until(page, "document.querySelector('#lec-toast').textContent.includes('1번 터미널에 넣었습니다')", 3000)
-                     and page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n") == '0'
-                     and not term_has('둘째 터미널', 300))
-            page.keyboard.press('Control+c')   # 1번 프롬프트에 넣은 글을 지운다 (다음 점검이 1번을 쓴다)
+            told2 = (wait_until(page, "document.querySelector('#lec-toast').textContent.includes('2번 터미널에 넣었습니다')", 3000)
+                     and page.evaluate("document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n") == '1'
+                     and term_has('둘째 터미널', 300))
+            page.keyboard.press('Control+c')   # 2번 프롬프트에 넣은 글을 지운다
             # 서버의 셸 목록도 화면과 같게 (닫은 3번은 끝났다 — 새 3번이 다시 떴다)
             served_terms = lambda: page.evaluate('''async () => { const { S } = await import('/static/js/store.js');
               const secret = document.querySelector('meta[name="lec-term"]').content;
@@ -3665,7 +3665,7 @@ def run(headed: bool) -> None:
             page.click('#lec-term-close')
             check(two == ['1PowerShell', '*2PowerShell'] and in_second and first_clean and full and reused == '2' and pasted and told2
                   and served == [0, 1, 2, 3, 4] and one and quoted == ['docs/a.md ', "'it''s ‘‘q’’ ‚‚r‛‛ $x.md' "],
-                  f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 맨 앞(1번) 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
+                  f"터미널 + 로 2번(고르면 화면이 바뀜), 5개까지(+ 꺼짐), 닫은 3번 자리로 다시, 붙여 넣기는 최근에 쓴(고른 2번) 터미널에, 서버 셸 목록도 같게, × 로 닫기, 경로 따옴표 ({two}, {full}, {reused}, {served}, {quoted})")
             # 하나 남은 터미널도 × 로 끝낸다 (v0.40.2) — 패널이 감춰지고 알림, 서버 셸이 없어짐, 다시 열면 새 셸로 1번
             page.keyboard.press('Control+Backquote')
             term_has('PS ', 20000)

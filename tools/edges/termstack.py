@@ -226,7 +226,8 @@ try:
         page.wait_for_selector('#lec-menu:not([hidden])')
         check('숫자를 떼면 표시가 없다', not page.evaluate("() => document.querySelector('#lec-menu').classList.contains('term-held')"))
         page.locator('#lec-menu .menu-term').first.click()
-        expect(page, '그냥 누르면 1번(맨 앞)', lambda: '셋째 문단입니다.' in text_of(page, 0))
+        expect(page, '숫자 없이 ▣ 를 누르면 최근에 쓴 터미널 — 방금 보낸 5번 (D194, 1번이 아니다)', lambda: '셋째 문단입니다.' in text_of(page, 4) and '셋째 문단입니다.' not in text_of(page, 0),
+               lambda: [('셋째 문단입니다.' in text_of(page, n)) for n in range(5)])
         # 고른 줄의 'Claude로 보내기' (메뉴 항목이 곧바로 보내는 글도 숫자를 따른다)
         doc_focus(page, 2)
         page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 — 우클릭은 선택 상자 (D139)

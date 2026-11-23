@@ -55,7 +55,7 @@ The `## Planning notes` section of a work card is where you jot things down as t
 | Way to tidy up | How | Result |
 |---|---|---|
 | Yourself | Read the notes and move items to the to-do, schedule and decision sections | Delete the notes you moved |
-| With an AI tool | Right-click a WORK.md's margin, **Ask to fold in the planning notes** — the request goes into the first terminal (Enter is not pressed) | Following the writing guide, it moves items to the to-dos, schedule, decisions and current state. It skips lines already there, asks when a date is unclear, and adds one line to the log saying what it folded in. It does not edit or delete the notes — removing them is up to you |
+| With an AI tool | Right-click a WORK.md's margin, **Ask to fold in the planning notes** — the request goes into the terminal you used last (Enter is not pressed) | Following the writing guide, it moves items to the to-dos, schedule, decisions and current state. It skips lines already there, asks when a date is unclear, and adds one line to the log saying what it folded in. It does not edit or delete the notes — removing them is up to you |
 
 ## With AI tools
 

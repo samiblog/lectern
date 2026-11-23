@@ -143,7 +143,7 @@ function aiItems() {
   const path = cur?.type === 'doc' || cur?.type === 'code' ? cur.path : '';
   const ai = aiName();
   /** @type {MenuItem[]} */
-  const items = [{ header: t('{ai} 에 요청 — 터미널에 넣습니다 (Enter 는 누르지 않음)', { ai }) }];
+  const items = [{ header: t('{ai} 에 요청 — 최근에 쓴 터미널에 넣습니다 (Enter 는 누르지 않음)', { ai }) }];
   if (path) {
     const ref = `@${path}`;
     items.push({ label: t('이 문서 가리키기 ({ref})', { ref }), tip: t('문서의 위치를 터미널에 넣습니다 — 이어서 할 말을 적으세요'), action: () => emit('term-paste', `${ref} `) });

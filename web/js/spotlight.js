@@ -705,7 +705,7 @@ const noLit = () => toast(t('고른 줄이 없습니다 — Shift+↑·↓ 로 �
 export function sendLit() {
   const info = litInfo();
   if (!info) noLit();
-  else emit('term-paste', { text: `${info.ref} `, recent: true });
+  else emit('term-paste', `${info.ref} `);
 }
 
 /**
@@ -719,7 +719,7 @@ function sendHere(stay = false, n = null) {
   const i = info ? -1 : hereIndex(us);
   if (!info && i < 0) return false;
   const ref = info ? info.ref : lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '');
-  emit(stay ? 'term-paste-stay' : 'term-paste', n == null ? { text: `${ref} `, recent: true } : { text: `${ref} `, n });
+  emit(stay ? 'term-paste-stay' : 'term-paste', n == null ? `${ref} ` : { text: `${ref} `, n });
   return true;
 }
 

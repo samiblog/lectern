@@ -325,12 +325,6 @@ def test_terminal_relay_is_guarded_like_the_terminal(tmp_path):
         assert c.get('/api/changes').get_json()['inbox'] == [{'term': '@a.md 1행 ', 'p': 'p1', 'stay': True, 'n': 2}]
         for bad in (5, -1, '2', True, 1.0):
             assert c.post('/api/term/relay', json={**body, 'n': bad}, headers=secret).status_code == 400
-        c.post('/api/term/relay', json={**body, 'recent': True}, headers=secret)   # 최근에 초점이 있던 터미널로 (Shift+→ — D194)
-        assert c.get('/api/changes').get_json()['inbox'] == [{'term': '@a.md 1행 ', 'p': 'p1', 'stay': False, 'recent': True}]
-        c.post('/api/term/relay', json={**body, 'recent': True, 'n': 1}, headers=secret)   # 번호가 먼저다
-        assert c.get('/api/changes').get_json()['inbox'] == [{'term': '@a.md 1행 ', 'p': 'p1', 'stay': False, 'n': 1}]
-        for bad in (1, 'yes', None):
-            assert c.post('/api/term/relay', json={**body, 'recent': bad}, headers=secret).status_code == 400
     finally:
         state.close()
 

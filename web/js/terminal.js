@@ -13,8 +13,8 @@
 // - 오른쪽에 두고 터미널이 둘 이상이면 위아래로 쌓는다 (D137 — 1번이 맨 아래, 번호가 클수록 위). 칸마다 머리줄(번호·이름·×),
 //   칸 사이 경계를 끌어 높이를 바꾸고(tab.termWeights — 메모리에만, 더하거나 닫으면 균등), 두 번 누르면 균등. 문서 아래에 두면 탭.
 //   화면은 터미널마다 칸(term.pane > .term-pane-body > term.box)이고, 터미널 모음이 빌려 간 상자는 돌려줄 때 그 칸으로 간다.
-// - 보내기: 맨 앞 터미널(가장 작은 번호)이 기본이고, Shift+숫자·메뉴의 숫자+누르기는 그 번호의 터미널로 (D137 — pasteToTerminal 의 n).
-//   Shift+→·Ctrl+Shift+→ 와 고른 줄의 'Claude로 보내기'는 최근에 초점이 있던 터미널로 (D194 — pasteToTerminal 의 recent, tab.term).
+// - 보내기: 최근에 쓴 터미널(탭의 고른 터미널 tab.term — 누르거나 초점이 간 것, 고른 것, 마지막으로 보낸 것)이 기본이고 (D194 —
+//   Shift+→·▣ 터미널·요청 글 모두), Shift+숫자·메뉴의 숫자+누르기는 그 번호의 터미널로 (D137 — pasteToTerminal 의 n).
 // - 자리는 오른쪽 또는 문서 아래 (D52 — 설정 terminal_position: auto 면 창이 세로로 길 때 아래). 오른쪽이면 목차 자리를 쓰므로
 //   목차를 감춘다 (목차 버튼으로 함께 볼 수 있다 — toc.js). 아래면 #lec-main 이 격자가 되어 문서·목차 아래에 전체 폭으로 놓인다.
 // - 색은 문서 스타일을 따른다 (아래 '색'). 설정 창에서 끄면 늘 어둡게.
@@ -908,8 +908,8 @@ function takeTarget() {
   return n;
 }
 
-/** 'term-paste' 의 값: 글, 또는 {text, n?, recent?} (n: 번호를 정한 보내기 — D137, recent: 최근에 초점이 있던 터미널로 — D194) */
-const pasteArgs = (d, stay) => (d && typeof d === 'object' ? [d.text, { stay, n: Number.isInteger(d.n) ? d.n : null, recent: d.recent === true }] : [d, { stay }]);
+/** 'term-paste' 의 값: 글, 또는 {text, n} (번호를 정한 보내기 — D137) */
+const pasteArgs = (d, stay) => (d && typeof d === 'object' ? [d.text, { stay, n: Number.isInteger(d.n) ? d.n : null }] : [d, { stay }]);
 
 /** 고른 터미널에 글을 넣는다 — 사용자의 Ctrl+V 와 같은 길 (xterm 의 paste → onData → POST /api/term/input). Enter 는 누르지 않는다 */
 async function pasteInto(term, raw) {
@@ -930,26 +930,24 @@ async function pasteInto(term, raw) {
 }
 
 /**
- * 글을 선택된 탭의 맨 앞 터미널에 붙여 넣는다 — 우클릭 메뉴의 '터미널에 붙여 넣기' (D51, 'term-paste' 이벤트).
- * 터미널이 여럿이면 가장 작은 번호(보통 처음 연 1번 — Claude Code 를 돌리는 곳)에 넣고 그 터미널을 골라 보인다.
+ * 글을 선택된 탭의 최근에 쓴 터미널에 붙여 넣는다 — Shift+→, 우클릭 메뉴의 '터미널에 붙여 넣기', 요청 글 (D51, 'term-paste' 이벤트).
+ * 최근에 쓴 터미널은 탭의 고른 터미널(`tab.term`) — 마지막으로 누르거나 초점이 간 것, 터미널 탭·칸 머리줄에서 고른 것, 마지막으로 보낸 것
+ * (D194 — 사용자 결정, D69 의 '늘 가장 작은 번호'를 고침. 설정 창의 ▣ 는 D180 부터 그랬다). 터미널이 하나도 없으면 1번을 열어 넣는다.
  * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
  * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로.
  * n: 받을 터미널의 번호 (0 부터 — Shift+숫자, 메뉴의 숫자+누르기 — D137). 없는 번호면 넣지 않고 알린다 (새로 만들지 않는다 —
  * 셸이 막 뜨는 사이에 글이 들어가면 받을 프로그램이 없다). 1번은 터미널이 하나도 없으면 지금처럼 열어서 넣는다
- * recent: 번호가 없을 때 맨 앞이 아니라 최근에 초점이 있던 터미널(탭의 고른 터미널 `tab.term` — 누르거나 초점이 간 것, 터미널 탭에서 고른 것,
- * 마지막으로 보낸 곳)로 — Shift+→·Ctrl+Shift+→·'Claude로 보내기' (D194 — 사용자 결정, D69 의 '늘 가장 작은 번호'를 이 키에서 고침).
- * 터미널이 하나도 없으면 맨 앞과 같다. 번호(n)가 있으면 번호가 먼저다
  */
-export async function pasteToTerminal(text, { stay = false, n = null, recent = false } = {}) {
+export async function pasteToTerminal(text, { stay = false, n = null } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
   if (n == null) n = takeTarget();
   if (!tab || !text || blockedReadOnly(tab)) return;
   if (solo) {   // 터미널은 메인 창에 있다 — 메인 창이 같은 길로 넣는다 (D95)
     try {
-      await postJSON('/api/term/relay', { p: tab.id, text, stay, ...(n != null ? { n } : recent ? { recent: true } : {}) }, TERM_HEADER);
+      await postJSON('/api/term/relay', { p: tab.id, text, stay, ...(n != null ? { n } : {}) }, TERM_HEADER);
       toast(n != null ? t('메인 창에 맡겼습니다 — {n}번 터미널로, Enter 는 누르지 않습니다 (없는 번호면 메인 창이 알립니다)', { n: n + 1 }) : t('메인 창의 터미널로 보냈습니다 — Enter 는 누르지 않습니다'));
     } catch (e) {
       toast(t('메인 창으로 보내지 못했습니다: {error}', { error: e.message }), 'error');
@@ -966,7 +964,7 @@ export async function pasteToTerminal(text, { stay = false, n = null, recent = f
     await showCurrent();
   }
   if (tab !== S.tab) return;   // 그사이 다른 탭
-  const term = n == null ? (recent && termsOf(tab).includes(tab.term) ? tab.term : termsOf(tab)[0]) : termsOf(tab).find((x) => x.n === n);
+  const term = n == null ? (termsOf(tab).includes(tab.term) ? tab.term : termsOf(tab)[0]) : termsOf(tab).find((x) => x.n === n);   // 최근에 쓴 터미널 (D194)
   if (!term) {
     if (n != null && termsOf(tab).length) missing();
     return;   // 화면 라이브러리를 읽지 못함 (showCurrent 가 알렸다)
