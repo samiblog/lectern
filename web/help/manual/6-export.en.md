@@ -14,7 +14,7 @@ flowchart LR
 
 | Format | From | Where to open it | Result |
 |---|---|---|---|
-| PDF · print | md documents · Lectern slides | **Print** on the tab bar · right-click the body margin → **Save as PDF…** · **Print…** | The A4 report layout or a page layout — slides come out one per page |
+| PDF · print | md documents · Lectern slides | **Export** on the tab bar → **Save as PDF…** · **Print…** · right-click the body margin → **Save as PDF…** · **Print…** | The A4 report layout or a page layout — slides come out one per page |
 | One html file | md documents | Right-click → **Save as html…** | One html file with the images · charts inside |
 | Word | md documents | Right-click → **Save as Word…** | A docx to keep editing — it borrows a Word template |
 | pptx | Lectern slides | **Convert to pptx** on the status bar | A new pptx next to the document |

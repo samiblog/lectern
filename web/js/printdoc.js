@@ -537,7 +537,7 @@ function paper() {
 }
 
 /**
- * 탭 막대의 [인쇄] (D135): 창 모드의 md 문서(Lectern 슬라이드 포함)면 내보내기 창을 인쇄가 기본 단추로 연다.
+ * 명령 찾기의 '인쇄·PDF' (탭 막대의 [인쇄] 는 D193 에서 [내보내기] 메뉴의 '인쇄…' 로 — tabtools.js): 창 모드의 md 문서(Lectern 슬라이드 포함)면 내보내기 창을 인쇄가 기본 단추로 연다.
  * html 문서·브라우저 개발 모드는 인쇄 창, 문서가 아니면(폴더 개요·코드·자료) 까닭을 알린다
  */
 export function printButton() {
@@ -602,7 +602,6 @@ export function initPrint() {
     if (!info) return;
     toast(await copyText(fieldSample(info, fieldsOf(dlg.pane))) ? t('맨 앞 설정 견본을 복사했습니다 — 문서 맨 앞에 붙여 값을 채우세요') : t('복사하지 못했습니다'));
   });
-  $('#lec-btn-print').addEventListener('click', printButton);   // 탭 막대의 [인쇄] (D135)
   // 미리보기(PDF 보기)를 누르면 초점이 그 안으로 들어가 Esc 가 오지 않는다 — 마우스가 나가면 창으로 되돌린다
   $('#lec-print .print-preview').addEventListener('mouseleave', () => {
     if (dlg && document.activeElement === $('#lec-print-frame')) $('#lec-print .print-box').focus();

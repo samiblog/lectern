@@ -177,15 +177,33 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-tabbar > .icon-btn { align-self: center; flex: none; }
 /* 편집·목차·터미널 버튼 (editor.js·toc.js·terminal.js): 탭 막대 오른쪽 끝 — 편집 모드와 오른쪽 패널을 켜고 끈다. 켜지면 강조색과 밑줄 */
 .tabbar-btn {
-  display: flex; align-items: center; gap: 6px; flex: none; margin: 4px 0 0; padding: 0 12px 0 10px;
+  display: flex; align-items: center; gap: 5px; flex: none; margin: 4px 0 0; padding: 0 10px;
   border: 0; border-bottom: 3px solid transparent; border-radius: 7px 7px 0 0; background: transparent;
   color: var(--ui-muted); font: inherit; font-size: 13.5px; font-weight: 600; white-space: nowrap; cursor: pointer;
 }
-.tabbar-btn > svg { width: 17px; height: 17px; }
+.tabbar-btn > svg { width: 18px; height: 18px; }
+.tabbar-btn > span:not(.n) { display: none; }   /* 이름은 적지 않는다 (D193) — 열두 개라, 마우스를 올리면 설명 풍선(#lec-tabtip) */
 .tabbar-btn:not(.tabbar-btn + .tabbar-btn) { margin-left: auto; }   /* 첫 버튼부터 탭 막대 오른쪽 끝으로 */
 .tabbar-btn:hover { background: var(--ui-hover); color: var(--ui-fg); }
 .tabbar-btn[aria-pressed="true"] { color: var(--ui-accent); border-bottom-color: var(--ui-accent); }
 .tabbar-btn:disabled { opacity: .45; cursor: default; background: transparent; }   /* 편집: 문서·코드 화면이 아님 */
+/* 묶음 셋 (D193): 이 프로젝트(개요·바뀜·업무 카드) │ 지금 문서(넣기·편집·목차·스타일·내보내기) │ AI 요청·패널(메모·터미널) — 묶음 앞에 짧은 세로줄 */
+/* 설명 풍선 (tabtools.js): 단추 아래에 이름(굵게)과 설명 — 마우스를 가리지 않게 누르기는 받지 않는다 */
+#lec-tabtip {
+  position: fixed; z-index: 60; max-width: 340px; padding: 7px 11px 8px; border-radius: 7px; pointer-events: none;
+  background: var(--ui-fg); color: var(--ui-bg); box-shadow: 0 4px 14px rgb(0 0 0 / .22); font-size: 12.5px; line-height: 1.45; word-break: keep-all; overflow-wrap: anywhere;
+}
+#lec-tabtip > b { display: block; font-size: 13.5px; font-weight: 700; }
+#lec-tabtip > span { display: block; margin-top: 1px; opacity: .82; }
+#lec-tabtip > span[hidden] { display: none; }
+.tabbar-btn.tb-sep { position: relative; margin-left: 11px; }
+.tabbar-btn.tb-sep::before { content: ""; position: absolute; left: -6px; top: 8px; bottom: 6px; border-left: 1px solid var(--ui-border); }
+.tabbar-btn.none { color: var(--ui-faint); }   /* 바뀐 문서가 없다 · 업무 카드가 아직 없다 — 누를 수는 있다 */
+.tabbar-btn.none:hover { color: var(--ui-fg); }
+.tabbar-btn .n {   /* 바뀜의 수 — 탭 이름 옆의 점과 같은 색 */
+  min-width: 18px; padding: 0 5px; border-radius: 9px; background: var(--ui-fresh); color: #fff;
+  font-size: 11.5px; font-weight: 700; line-height: 18px; text-align: center; font-variant-numeric: tabular-nums;
+}
 /* 터미널 모음(gather.js)을 보는 동안 프로젝트 탭은 고르지 않은 모양 */
 .gather-on .lec-tab.active { background: transparent; color: var(--ui-muted); font-weight: 600; border-bottom-color: transparent; }
 .gather-on .lec-tab.active .ficon { color: var(--ui-faint); }
@@ -275,7 +293,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .toc-slides li.warn > a::after { content: ' ●'; color: var(--ui-danger, #b42318); font-size: .8em; }
 #lec-toc .toc-list li.warn > a::after { content: ' ●'; color: var(--ui-warn, #b54708); font-size: .8em; }   /* 문서 점검할 곳이 든 절 (D190) */
 .lec-solo #lec-tablist, .lec-solo #lec-btn-open, .lec-solo #lec-btn-recent, .lec-solo #lec-btn-notes, .lec-solo #lec-btn-term,
+.lec-solo #lec-btn-overview, .lec-solo #lec-btn-changed, .lec-solo #lec-btn-card,
 .lec-solo #lec-btn-gather, .lec-solo #lec-btn-settings, .lec-solo:not(.lec-slide-window) #lec-theme, .lec-solo:not(.lec-slide-window) #lec-theme-prev, .lec-solo:not(.lec-slide-window) #lec-theme-next { display: none; }
+.lec-solo #lec-btn-put { margin-left: auto; }   /* 앞의 셋이 없다 — 넣기부터 오른쪽 끝으로 */
+.lec-solo #lec-btn-put::before { display: none; }
 .sidebar-off #lec-sidebar, .sidebar-off #lec-resizer, .toc-off #lec-toc, .toc-off #lec-toc-resizer { display: none; }
 /* 사이드바 폭 조절 (resize.js): 경계 위에 겹친 얇은 손잡이 */
 #lec-resizer { flex: none; width: 7px; margin: 0 -4px 0 -3px; position: relative; z-index: 5; cursor: col-resize; }
@@ -303,10 +324,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   .text-size .step:first-child { border-radius: 6px 0 0 6px; }
   .text-size .step:last-child { border-left: 0; }
 }
-/* 아주 좁은 창: 탭 막대의 이름도 빼고 아이콘만 */
+/* 아주 좁은 창: 툴바의 이름도 빼고 아이콘만 (탭 막대의 단추는 늘 아이콘만 — D193) */
 @media (max-width: 860px) {
-  .pick-label, #lec-btn-spot span, .size-label, .icon-btn.labeled .lb, .tabbar-btn span { display: none; }
-  .tabbar-btn { padding: 0 9px; }
+  .pick-label, #lec-btn-spot span, .size-label, .icon-btn.labeled .lb { display: none; }
+  .tabbar-btn { padding: 0 8px; }
   #lec-toolbar { gap: 4px; padding: 0 6px; }   /* 묶음 사이도 좁게 — 720px 에서도 한 줄에 */
   .theme-pick select { max-width: 120px; }
 }

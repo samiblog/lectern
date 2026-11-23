@@ -22,6 +22,7 @@
 | icons.js | 사이드바 목록의 파일 종류 아이콘 (확장자 → 종류, md·html 은 문서) |
 | terminal.js | 오른쪽 터미널 — xterm.js(처음 열 때 불러옴), 탭마다 터미널 여러 개(`tab.terms`·고른 것 `tab.term` — 머리줄의 터미널 탭·+·×, 5개까지, D69 — 오른쪽에 둘 이상이면 위아래로 쌓은 칸 `term.pane`·경계·`tab.termWeights`, D137), 번호로 보내기(`pasteToTerminal` 의 `n` — Shift+숫자·메뉴의 숫자+누르기), 긴 폴링으로 출력·키 입력 보내기, 패널 열기·닫기·폭, 탭을 닫기 전에 묻기 |
 | spread.js | 모두 펼치기 (D73) — 문서 탭 줄 오른쪽 끝 ▦, `html.spread-on` 이면 `#lec-main` 이 격자·`#lec-panes` 는 display: contents 라 선택된 탭의 칸(`.sp-cell`)이 그대로 격자의 칸, 자리는 `layoutOf`(터미널은 오른쪽 아래 한 칸 — 오른쪽 패널 `#lec-term` 그대로), 칸 머리(`.sp-head`), 칸을 누르면 `selectDocTab`, 펼치면서 연 터미널만 끝낼 때 감춤 |
+| tabtools.js | 탭 막대의 단추들 (D193) — 개요(프로젝트 개요)·바뀜 N(안 본 바뀐 문서의 수 `tab.changed`, 누르면 이 문서의 다음 바뀐 곳 → 다음 바뀐 문서)·업무 카드(맨 위 WORK.md, 없으면 만들기 창)·스타일(md 문서 스타일 창)·내보내기(인쇄, PDF·html·Word 로 저장과 슬라이드의 pptx·html 로 전환을 한 메뉴로 — 있던 창을 연다. 따로 있던 [인쇄] 는 걷었다)·AI 요청(요청 글을 'term-paste' 로 터미널에, Enter 없이). 설명 풍선 `#lec-tabtip` — 단추에 이름을 적지 않고 올리면 바로 아래에 (title 을 `data-tip`·`aria-label` 로 옮긴다, 설명을 바꿀 때는 `setTip`). 독립창에는 프로젝트의 셋이 없다 |
 | gather.js | 터미널 모음 — 툴바 버튼, 탭마다 칸 하나의 격자(문서 화면 위를 덮음), 칸으로 각 탭의 고른 터미널 화면을 옮겨 보이고 닫으면 되돌림(터미널이 여럿이면 칸 머리의 번호로 — D69), 칸 크게·이 프로젝트로·다시 시작, '실행 중' 표시 |
 | editor.js | 편집 모드 (D54) — 칸 위를 덮는 CodeMirror 5 (처음 편집할 때 불러옴), 저장·그사이 바뀜 묻기·저장하지 않은 것 묻기 (nav 의 leave guard, 탭 닫기, POST /api/editing), 위치 잇기 (D55 — 아래 화면을 편집기의 지금 보는 곳에 맞춰 둠, 목차·모아 보기·검색에서 고르면 편집기가 그 줄로) |
 | editsync.js | 위치 잇기의 계산 (D55) — 읽는 화면의 원문 줄 자리(md 의 data-lines·코드의 줄·html 의 제목), 줄 ↔ 화면 높이, 편집으로 늘거나 준 줄 옮기기 |

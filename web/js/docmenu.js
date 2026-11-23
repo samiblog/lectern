@@ -224,7 +224,7 @@ function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…
 
 /**
  * 하이라이트한 곳(spotlight.js 의 litAt — 장 하이라이트의 장, 고른 줄) 안에서 우클릭하면 나오는 선택 상자 (D74·D75).
- * 맨 위 'Claude로 보내기' 는 그 범위의 위치(@경로 a~b행)를 맨 앞 터미널(Claude Code)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
+ * 맨 위 'Claude로 보내기' 는 그 범위의 위치(@경로 a~b행)를 최근에 초점이 있던 터미널(D194)에 Enter 없이 넣는다 — 우클릭만으로는 보내지 않는다.
  * 그 밖에 위치·원문 복사, 담기·문서로 보내기(md 만), 그 블록(코드 화면은 그 줄)의 보통 메뉴, 하이라이트 해제. 범위는 원문 줄.
  * 보내기·복사는 키(Shift+→·Shift+←·Ctrl+C)와 같은 함수다. 하이라이트로 할 일이 늘면 이 상자에 더한다.
  * hl: litAt 의 {path, range, ref, text, code}. blockMenu: 우클릭한 블록의 보통 메뉴를 띄우는 함수 (없으면 null)
@@ -253,7 +253,7 @@ function litMenu(hl, selected, blockMenu, own = []) {
   /** @type {MenuItem[]} */
   const danger = !hl.chapter && linesEditable() ? [{ label: t('줄 지우기'), hint: 'Delete', tip: rangeText(range), action: () => emit('line-delete', {}) }] : [];
   return menuGroups([{ header: `${name} · ${rangeText(range)}` }], uniques,
-    [{ label: t('{ai}로 보내기', { ai: aiName() }), hint: 'Shift+→', tip: t('맨 앞 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit },
+    [{ label: t('{ai}로 보내기', { ai: aiName() }), hint: 'Shift+→', tip: t('최근에 쓴 터미널에 (Enter 는 누르지 않음) — 숫자 키를 누른 채 누르거나 Shift+숫자는 그 번호의 터미널에'), action: sendLit },
       ...(!hl.code && isMd(hl.path) ? [reviewItem(ref, t('이 범위 다듬기 점검 요청'))] : [])], copies, takes, edits, views, danger);
 }
 

@@ -18,7 +18,7 @@
 //   (다음 같은 수준 이상의 제목 앞까지, 각주 제외 — fold.js 와 같은 규칙). ↑·↓·PageUp·PageDown·버튼 옆 ∧∨ 로 앞뒤 장, 흐린 곳을 누르면 그 장,
 //   목차·찾기·앵커·전체 검색·바뀐 곳으로 가면 그곳의 장으로 (fold.js 의 unfoldTo 가 보내는 'reveal'). Shift+↑·↓ 를 누르면 그 장의 처음~끝 줄을
 //   줄 하이라이트로 바꿔 넓히고 줄인다.
-// - 키 (main.js 의 keydown 이 spotKey 로): Shift+→ 하이라이트한 곳을 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행' 으로 (Enter 없이 —
+// - 키 (main.js 의 keydown 이 spotKey 로): Shift+→ 하이라이트한 곳을 최근에 초점이 있던 터미널(D194 — 터미널이 하나면 그것)에 '@경로 a~b행' 으로 (Enter 없이 —
 //   D51·D69 와 같은 길, 초점은 문서에), Ctrl+Shift+→ 같은 일을 하고 초점도 터미널로 (D79), Shift+← 그 위치 복사, Ctrl+C 원문 복사 (고른 글이 없을 때),
 //   F2 현재 줄·한 줄 하이라이트를 한 줄 편집 (D76).
 //   상태줄에 하이라이트한 줄 범위 (#lec-st-lit).
@@ -701,15 +701,15 @@ function litInfo() {
 
 const noLit = () => toast(t('고른 줄이 없습니다 — Shift+↑·↓ 로 줄을 고릅니다'));
 
-/** 메뉴 'Claude 로 보내기': 맨 앞 터미널(보통 1번 — Claude Code)에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal), 초점도 터미널로 */
+/** 메뉴 'Claude 로 보내기': 최근에 초점이 있던 터미널에 '@경로 a~b행 ' (Enter 없이, terminal.js 의 pasteToTerminal — Shift+→ 와 같다, D194), 초점도 터미널로 */
 export function sendLit() {
   const info = litInfo();
   if (!info) noLit();
-  else emit('term-paste', `${info.ref} `);
+  else emit('term-paste', { text: `${info.ref} `, recent: true });
 }
 
 /**
- * Shift+→: 하이라이트한 곳(없으면 현재 줄)의 위치를 맨 앞 터미널에 넣고 초점도 그 터미널로 (D97).
+ * Shift+→: 하이라이트한 곳(없으면 현재 줄)의 위치를 최근에 초점이 있던 터미널에 넣고 초점도 그 터미널로 (D97·D194).
  * stay (Ctrl+Shift+→): 초점은 문서에 둔다 — 여러 곳을 이어서 넣게 (D79).
  * n: 받을 터미널의 번호 (0 부터 — Shift+숫자·Ctrl+Shift+숫자, D137)
  */
@@ -719,7 +719,7 @@ function sendHere(stay = false, n = null) {
   const i = info ? -1 : hereIndex(us);
   if (!info && i < 0) return false;
   const ref = info ? info.ref : lineRef(pathOf(), [us[i].a, us[i].b], isCodeView() ? view().dataset.sheet || '' : '');
-  emit(stay ? 'term-paste-stay' : 'term-paste', n == null ? `${ref} ` : { text: `${ref} `, n });
+  emit(stay ? 'term-paste-stay' : 'term-paste', n == null ? { text: `${ref} `, recent: true } : { text: `${ref} `, n });
   return true;
 }
 

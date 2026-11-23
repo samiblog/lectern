@@ -37,7 +37,7 @@ flowchart LR
 | Area | What | More |
 |---|---|---|
 | Toolbar (top) | Sidebar · back, forward · Quick open · text size · document width · line numbers · style · section focus · settings · keyboard shortcuts · work board · All terminals | [Toolbar](2.1-toolbar.en.md) |
-| Tab bar | One tab per open project · at the right end, Insert · Edit · Contents · Print · Notes · Terminal | [Project tabs](2.2-project-tabs.en.md) |
+| Tab bar | One tab per open project · at the right end, eleven icon buttons — Overview · Changed · Work card, Insert · Edit · Contents · Style · Export, AI requests · Notes · Terminal (hover to see the name) | [Project tabs](2.2-project-tabs.en.md) |
 | Document tab row | Just above the text — the documents open in this project | [Document tabs](2.3-document-tabs.en.md) |
 | Sidebar (left) | Files · Recent · Search · Elements · Clip | [Sidebar](2.4-sidebar.en.md) |
 | Main area (center) | Documents · folder overviews · code | [Reading](3-reading.en.md) |

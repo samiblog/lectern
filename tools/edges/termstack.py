@@ -172,10 +172,28 @@ try:
         check('초점은 문서에 남는다', not in_term(page))
         page.keyboard.press('Control+Shift+Digit5')
         expect(page, '이어서 Ctrl+Shift+5 → 5번', lambda: pasted_count(page, 4) == 1)
+
+        print('[Shift+→ 는 최근에 초점이 있던 터미널로 (D194)]')
+        counts = lambda: [pasted_count(page, n) for n in range(5)]  # noqa: E731
         doc_focus(page, 0)
         page.keyboard.press('Shift+ArrowRight')
-        expect(page, 'Shift+→ 는 1번(맨 아래)', lambda: pasted_count(page, 0) == 1)
-        check('지금까지 각 터미널에 하나씩', [pasted_count(page, n) for n in range(5)] == [1, 1, 1, 0, 1], [pasted_count(page, n) for n in range(5)])
+        expect(page, 'Shift+→ 는 방금 보낸 5번으로 — 1번(맨 앞)이 아니다', lambda: pasted_count(page, 4) == 2 and pasted_count(page, 0) == 0, counts)
+        check("알림 '5번 터미널에 넣었습니다'", '5번 터미널에 넣었습니다' in toast(page), toast(page))
+        page.locator('#lec-term-body > .term-pane[data-n="1"] .term-box').click()   # 2번 터미널을 눌러 쓴다
+        expect(page, '2번 터미널에 초점', lambda: in_term(page) and [x['n'] for x in panes(page) if x['on']] == [1])
+        doc_focus(page, 0)
+        page.keyboard.press('Shift+ArrowRight')
+        expect(page, '2번 터미널을 쓴 뒤 Shift+→ 는 2번으로', lambda: pasted_count(page, 1) == 2, counts)
+        check('초점도 그 터미널로', in_term(page))
+        doc_focus(page, 1)
+        page.keyboard.press('Control+Shift+ArrowRight')
+        expect(page, 'Ctrl+Shift+→ 도 2번으로', lambda: pasted_count(page, 1) == 3, counts)
+        check('Ctrl+Shift+→ 는 초점을 문서에 둔다', not in_term(page))
+        page.locator('#lec-term-body > .term-pane[data-n="0"] .term-pane-head').click(position={'x': 60, 'y': 10})   # 칸 머리줄로 1번을 고른다
+        doc_focus(page, 0)
+        page.keyboard.press('Shift+ArrowRight')
+        expect(page, '머리줄로 1번을 고른 뒤 Shift+→ 는 1번으로', lambda: pasted_count(page, 0) == 1, counts)
+        check('지금까지: 1번 1 · 2번 3 · 3번 1 · 4번 0 · 5번 2', counts() == [1, 3, 1, 0, 2], counts())
 
         print('[없는 번호]')
         page.hover('#lec-term-body > .term-pane[data-n="3"] .term-pane-head')   # 고르지 않은 칸의 × 는 마우스를 올릴 때 보인다
@@ -184,14 +202,14 @@ try:
         doc_focus(page, 0)
         page.keyboard.press('Shift+Digit4')
         expect(page, "'4번 터미널이 없습니다' 알림", lambda: '4번 터미널이 없습니다' in toast(page))
-        check('아무 데도 넣지 않는다', [pasted_count(page, n) for n in (0, 1, 2, 4)] == [1, 1, 1, 1])
+        check('아무 데도 넣지 않는다', [pasted_count(page, n) for n in (0, 1, 2, 4)] == [1, 3, 1, 2], [pasted_count(page, n) for n in (0, 1, 2, 4)])
         page.click('#lec-term-close')
         doc_focus(page, 0)
         page.keyboard.press('Shift+Digit4')
         page.wait_for_timeout(500)
         check('패널이 닫혀 있으면 없는 번호로 열지 않는다', page.evaluate("() => document.querySelector('#lec-term').hidden"))
         page.keyboard.press('Shift+Digit2')
-        expect(page, '있는 번호면 패널을 열고 넣는다', lambda: not page.evaluate("() => document.querySelector('#lec-term').hidden") and pasted_count(page, 1) == 2)
+        expect(page, '있는 번호면 패널을 열고 넣는다', lambda: not page.evaluate("() => document.querySelector('#lec-term').hidden") and pasted_count(page, 1) == 4)
 
         print('[메뉴의 숫자+누르기]')
         page.locator('#lec-view p').nth(1).click(button='right')
@@ -221,9 +239,20 @@ try:
         page.keyboard.up('Digit2')
         expect(page, "'Claude로 보내기'도 숫자를 누른 채면 2번으로", lambda: pasted_count(page, 1) == before2 + 1)
         page.keyboard.press('Escape')
+        page.locator('#lec-term-body > .term-pane[data-n="2"] .term-box').click()   # 3번 터미널을 눌러 쓴다
+        before3, before2 = pasted_count(page, 2), pasted_count(page, 1)
         doc_focus(page, 0)
         page.keyboard.press('Shift+ArrowRight')
-        expect(page, '다음 Shift+→ 는 다시 1번 (숫자는 한 번만)', lambda: pasted_count(page, 0) == 2, lambda: [pasted_count(page, n) for n in range(5)])
+        expect(page, '다음 Shift+→ 는 누른 숫자(2번)가 아니라 최근에 쓴 3번으로 (숫자는 한 번만)', lambda: pasted_count(page, 2) == before3 + 1 and pasted_count(page, 1) == before2,
+               lambda: [pasted_count(page, n) for n in range(5)])
+        doc_focus(page, 0)   # 초점이 터미널로 갔다 — 문서로
+        page.keyboard.press('Control+Enter')   # 그 줄의 하이라이트 — 'Claude로 보내기' 도 Shift+→ 와 같은 터미널로
+        box = page.locator('#lec-view p').nth(0).bounding_box()
+        page.mouse.click(box['x'] + 20, box['y'] + box['height'] / 2, button='right')
+        page.wait_for_selector('#lec-menu:not([hidden])')
+        page.locator('#lec-menu button', has_text='Claude로 보내기').first.click()
+        expect(page, "숫자 없이 'Claude로 보내기' 도 최근에 쓴 3번으로", lambda: pasted_count(page, 2) == before3 + 2, lambda: [pasted_count(page, n) for n in range(5)])
+        page.keyboard.press('Escape')
 
         print('[아래에 두면 탭]')
         page.click('#lec-term-place')
@@ -233,7 +262,7 @@ try:
         check('보이는 상자도 하나', page.evaluate("() => document.querySelectorAll('#lec-term .term-box:not([hidden])').length") == 1)
         doc_focus(page, 1)
         page.keyboard.press('Shift+Digit5')
-        expect(page, 'Shift+5 → 5번 탭으로 바꿔 넣는다', lambda: [x['n'] for x in panes(page)] == [4] and text_of(page, 4).count('@docs/') == 2,
+        expect(page, 'Shift+5 → 5번 탭으로 바꿔 넣는다', lambda: [x['n'] for x in panes(page)] == [4] and text_of(page, 4).count('@docs/') == 3,   # 앞에서 둘 (Ctrl+Shift+5, Shift+→ — D194)
                lambda: (panes(page), text_of(page, 4)[-200:]))
         check('탭 줄의 5번이 골라짐', page.evaluate("() => document.querySelector('#lec-term-tabs .term-tab.on')?.dataset.n") == '4')
         page.click('#lec-term-place')

@@ -66,6 +66,7 @@ import { initDocCheck } from './doccheck.js';
 import { initPresent, presenting, presentKey, startPresent } from './present.js';
 import { initGather, gatherOn, toggleGather, leaveGather, leaveToFocused, leaveToDoc, focusNextTile } from './gather.js';
 import { initSpread, spreadOn, leaveSpread } from './spread.js';
+import { initTabTools } from './tabtools.js';
 import { loadTree } from './project.js';
 import { initWork, openBoard, openEventDialog } from './work.js';
 import { initWorkAlert } from './workalert.js';
@@ -577,6 +578,7 @@ async function boot() {
   initTableCopy();   // 표의 [복사] (D136)
   initChartData();   // 차트의 [표]·[복사] (D136)
   initSpread();
+  initTabTools();   // 탭 막대의 개요·바뀜·업무 카드·내보내기 (D193)
   initWork();
   initWorkAlert();
   initCommands({ toggleSidebar, toggleToc, refresh: manualRefresh, focusFiles: filesKey });   // 명령 찾기 (D170)
