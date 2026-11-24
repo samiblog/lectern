@@ -25,7 +25,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel } from './tree.js';
+import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -500,7 +500,7 @@ function menuItems(k, n) {
   /** @type {MenuItem[]} */
   const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
-    opens.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path: n.path, mode: 'files' }) });
+    opens.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), tip: t('모아 보기 탭의 파일 종류'), action: () => emit('parts', { path: n.path, mode: 'files' }) });
   }
   return menuGroups([{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` }], items, copyItems(n), opens);
 }
@@ -569,6 +569,7 @@ function onKey(e) {
   const path = cur.dataset.path;
   const n = v.index.get(path);
   const go = (row) => row && select(k, row.dataset.path);
+  if (sendRowKey(e, path)) return;   // Shift+→ 등: 그 행의 위치를 터미널로 (tree.js — D195. 펼치기·접기는 Shift 없는 → · ←)
   if (e.key === 'ArrowDown') go(all[Math.min(all.length - 1, i + 1)]);
   else if (e.key === 'ArrowUp') go(all[Math.max(0, i - 1)]);
   else if (e.key === 'Home') go(all[0]);

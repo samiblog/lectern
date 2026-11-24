@@ -330,6 +330,22 @@ export function loadImage(img, docPath, tab, { zoom = false } = {}) {
   fixImage(img, new URL(docUrl(tab, docPath), location.origin), Date.now(), tab, zoom);
 }
 
+/**
+ * 모아 보기의 덩어리(root — 문서 docPath 에서 옮겨 온 조각, `.md-body`)를 본문처럼 다듬는다 (D196): 그림을 본문과 같은 규칙으로 불러오고(누르면 크게),
+ * 링크를 잇고, 표에 [복사], 박스글의 접는 단추, 캡션·몸체·주·자료를 한 상자로. 다이어그램·차트는 부르는 쪽이 화면에 붙인 뒤에 그린다
+ */
+export function finishPart(root, docPath, tab) {
+  const baseUrl = new URL(docUrl(tab, docPath), location.origin);
+  for (const img of $$('img[data-src]', root)) fixImage(img, baseUrl, Date.now(), tab);
+  for (const a of $$('a[href], area[href]', root)) bindLink(a, baseUrl, docPath, tab);
+  for (const wrap of $$('.table-wrap', root)) if (!wrap.querySelector(':scope > .table-copy')) addTableCopy(wrap);
+  decorateTextboxes(root);
+  wrapExhibits(root);
+}
+
+/** 모아 보기의 덩어리에 다이어그램·차트를 그린 뒤 — 다이어그램 묶음을 그림의 본래 폭으로 (sizeExhibits) */
+export const settlePart = (root) => sizeExhibits(root);
+
 /** 문서 속 그림 주소가 가리키는 것 (같은 그림을 한 번만 보이려고): 프로젝트 안이면 경로, 인터넷이면 주소 */
 export function imageKey(src, docPath, tab) {
   const r = resolveRef(src, new URL(docUrl(tab, docPath), location.origin), tab);

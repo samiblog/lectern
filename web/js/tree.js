@@ -1,5 +1,5 @@
 // 왼쪽 사이드바: 사이드바 탭 바꾸기, 파일 트리, 필터, 우클릭 메뉴. 선택된 프로젝트 탭의 것을 보인다.
-// 사이드바 탭(파일·최근 변경·검색·모아 보기)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
+// 사이드바 탭(파일·최근 변경·검색·담기)·필터·스크롤 위치는 프로젝트 탭마다 기억했다가 그 탭을 고르면 되살린다 (tab.side).
 // 최근 변경 목록은 recent.js (D50).
 
 import { S, emit, on } from './store.js';
@@ -7,7 +7,7 @@ import { saveConfig, openExternal, revealInExplorer, getJSON } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd } from './util.js';
+import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd, lineRef } from './util.js';
 import { t } from './i18n.js';
 import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
@@ -26,7 +26,7 @@ const KINDS = () => [
   { id: 'tasks', name: t('할 일'), content: true },
 ];
 export const MARK_NAMES = () => ({ '': t('노랑'), green: t('초록'), pink: t('분홍'), blue: t('하늘') });
-let panel = 'files';   // 사이드바 탭: files | recent | search | parts
+let panel = 'files';   // 사이드바 탭: files | recent | search | basket (모아 보기는 문서 탭으로 — D196)
 
 // 목록에는 파일 이름을 보이고 마우스를 올리면 문서 제목 (사용자 요청, v0.7.1). '제목' 버튼(설정 show_titles)을 켜면 반대로
 // 폴더 보기(others.js)의 문서 행도 같은 글을 쓴다
@@ -325,7 +325,7 @@ function revealCurrent() {
   if (panel === 'files') $(`#lec-tree ${sel}`)?.scrollIntoView({ block: 'nearest' });
 }
 
-/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | parts(모아 보기) | basket(담기 — D63). focus: 검색이면 입력칸에 초점 */
+/** 사이드바 탭을 바꾼다: files(파일) | recent(최근 변경) | search(검색) | basket(담기 — D63). focus: 검색이면 입력칸에 초점 */
 export function switchPanel(next, { focus = true } = {}) {
   panel = next;
   for (const b of $$('.side-tabs button')) b.classList.toggle('active', b.dataset.tab === next);
@@ -333,7 +333,6 @@ export function switchPanel(next, { focus = true } = {}) {
   $('#lec-recent-panel').hidden = next !== 'recent';   // 최근 변경 (recent.js)
   $('#lec-filter').closest('.side-filter').hidden = next !== 'files';
   $('#lec-search').hidden = next !== 'search';   // 전체 검색 (search.js)
-  $('#lec-parts').hidden = next !== 'parts';     // 모아 보기 (parts.js)
   $('#lec-basket').hidden = next !== 'basket';   // 담기 (basket.js)
   if (next === 'search' && focus) $('#lec-search-input').focus();
   emit('panel', next);
@@ -346,7 +345,7 @@ function onTab({ tab, prev }) {
   }
   const side = tab?.side || { panel: 'files', filter: '', treeScroll: 0 };
   $('#lec-filter').value = side.filter;
-  switchPanel(side.panel, { focus: false });
+  switchPanel(side.panel === 'parts' ? 'files' : side.panel, { focus: false });
   render();
   $('#lec-tree').scrollTop = side.treeScroll;
 }
@@ -388,6 +387,31 @@ async function copy(text) {
 export const psQuote = (text) => `'${String(text).replace(/['\u2018\u2019\u201a\u201b]/g, (c) => c + c)}'`;
 export const shellWord = (text) => `${/^[\p{L}\p{N}_.\-\\/:@]+$/u.test(text) ? text : psQuote(text)} `;
 
+/** Shift+1~5 의 터미널 번호 (0 부터) — 자판 위쪽 숫자 줄의 자리로 읽는다 (spotlight.js 와 같게, D137) */
+const termDigit = (e) => (/^Digit[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 1 : null);
+
+/**
+ * 사이드바 목록의 행에서 보내는 키 (D195 — 문서의 Shift+→ 와 같은 키): Shift+→ 는 그 행의 위치(ref — '@경로', 형광펜·할 일 줄은 '@경로 N행',
+ * 프로젝트 폴더는 전체 경로)를 최근에 쓴 터미널에 넣고 초점도 터미널로 — 우클릭 메뉴 '@경로 복사' 옆의 ▣ 터미널과 같은 글, 같은 길 (D51·D194, Enter 없이).
+ * Ctrl+Shift+→ 는 초점을 그 행에 둔다 (↓ 로 옮겨 가며 이어 넣게), Shift+1~5·Ctrl+Shift+1~5 는 그 번호의 터미널로 (D137), Shift+← 는 그 글을 복사.
+ * 다뤘으면 true — 부른 쪽은 → · ← 의 펼치기·접기와 글자로 찾기를 하지 않는다
+ */
+export function sendRowKey(e, path, line = 0) {
+  if (!e.shiftKey || e.altKey || e.metaKey || e.isComposing || path == null) return false;
+  const n = termDigit(e);
+  const ref = line ? lineRef(path, [line, line]) : path ? `@${path}` : '';
+  if (e.key === 'ArrowRight' || n != null) {
+    const text = ref ? `${ref} ` : shellWord(fullPath(''));
+    const back = /** @type {HTMLElement} */ (e.target).closest?.('.row') || null;
+    if (!e.repeat) emit(e.ctrlKey ? 'term-paste-stay' : 'term-paste', { text, n, back });   // back: 초점을 둘 곳 (Ctrl 을 더했을 때 — 문서가 아니라 이 행)
+  } else if (e.key === 'ArrowLeft' && !e.ctrlKey) {
+    if (!e.repeat) copy(ref || fullPath(''));
+  } else return false;
+  e.preventDefault();
+  e.stopPropagation();
+  return true;
+}
+
 /** 트리 행과 본문 빈 곳(docmenu.js)의 우클릭 메뉴 항목: 경로 복사(옆에 터미널에 붙여 넣기, D51), 편집기로 열기, 탐색기에서 보기 */
 export function pathMenuItems(path, isDoc) {
   /** @type {MenuItem[]} */
@@ -402,7 +426,7 @@ export function pathMenuItems(path, isDoc) {
   const views = [];
   if (!isDoc && S.dirs.has(path)) {   // 문서가 있는 폴더 — 모아 보기 (parts.js)
     views.push({ label: path ? t('이 폴더의 표·그림 등 모아 보기') : t('프로젝트의 표·그림 등 모아 보기'),
-      tip: t("사이드바 '모아 보기' 탭"), action: () => emit('parts', { path }) });
+      tip: t('문서 탭 하나에 펼쳐 놓습니다'), action: () => emit('parts', { path }) });
   }
   return menuGroups(copies, opens, views);
 }
@@ -505,7 +529,7 @@ function parentRow(box, row) {
 
 /**
  * 문서 트리의 키 (D169 — '코드'·'자료'·'폴더' 목록과 같게): ↑·↓·Home·End 로 옮기고, → 는 폴더 펼치기(펼쳐 있으면 첫 항목), ← 는 접기·위 폴더,
- * 글자는 그 글자로 시작하는 행. Enter 는 누르기와 같고(문서 열기·폴더 개요), F2 는 이름 바꾸기
+ * 글자는 그 글자로 시작하는 행. Enter 는 누르기와 같고(문서 열기·폴더 개요), F2 는 이름 바꾸기, Shift+→ 는 그 행의 위치를 터미널로 (sendRowKey — D195)
  */
 function onTreeKey(e) {
   const box = /** @type {HTMLElement} */ (e.currentTarget);
@@ -522,6 +546,8 @@ function onTreeKey(e) {
     }
     return;
   }
+  // Shift+→ 등: 그 행의 위치를 터미널로 (D195) — 형광펜·할 일 줄은 그 줄
+  if (sendRowKey(e, cur.dataset.itemDoc ?? cur.dataset.doc ?? cur.dataset.dir, cur.dataset.itemDoc != null ? Number(cur.dataset.line) : 0)) return;
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   const rows = $$('.row', box);
   const i = rows.indexOf(cur);

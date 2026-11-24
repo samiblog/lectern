@@ -16,8 +16,8 @@ import { t } from './i18n.js';
 export function newDocGuess(dir = null) {
   let folder = dir;
   if (folder == null) {
-    const view = S.view?.type === 'doc' || S.view?.type === 'code' || S.view?.type === 'overview' ? S.view : null;
-    folder = view ? (view.type === 'overview' ? view.path : dirname(view.path)) : '';
+    const view = ['doc', 'code', 'overview', 'parts'].includes(S.view?.type) ? S.view : null;
+    folder = view ? (view.type === 'overview' || view.type === 'parts' ? view.path : dirname(view.path)) : '';   // 폴더 개요·모아 보기(D196)는 그 폴더
   }
   const name = t('새 문서');
   for (let n = 1; ; n += 1) {

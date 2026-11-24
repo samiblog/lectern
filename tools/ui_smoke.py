@@ -68,6 +68,40 @@ def wait_until(page, js: str, timeout: int = 5000) -> bool:
         return False
 
 
+GATHER_CLOSE = """async () => {
+  const { S } = await import('/static/js/store.js');
+  const d = await import('/static/js/doctabs.js');
+  const nav = await import('/static/js/nav.js');
+  const pane = S.tab.panes.find((p) => p.current?.type === 'parts');
+  if (!pane) return 'none';
+  if (S.tab.panes.length > 1) { d.closeDocTab(pane); return 'closed'; }
+  await nav.navigate({ type: 'overview', path: '' }, { pane });
+  return 'overview';
+}"""
+
+
+def gather_open(page, path: str = '', kind: str | None = None, mode: str | None = None) -> None:
+    """모아 보기를 연다 — 문서 탭 하나에 (D196). 이미 열려 있으면 그 탭으로"""
+    page.evaluate("(d) => import('/static/js/store.js').then((m) => m.emit('parts', d))", {'path': path, **({'kind': kind} if kind else {}), **({'mode': mode} if mode else {})})
+    page.wait_for_selector('#lec-view.parts-view .parts-list', timeout=15000)
+
+
+def gather_show(page) -> None:
+    """열려 있는 모아 보기 탭을 고른다"""
+    page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
+      const pane = S.tab.panes.find((p) => p.current?.type === 'parts'); if (pane) await d.selectDocTab(pane); }""")
+    page.wait_for_selector('#lec-view.parts-view .parts-list', timeout=15000)
+
+
+def gather_close(page) -> None:
+    """모아 보기 탭을 닫는다 — 뒤의 점검이 문서 탭을 그대로 보게 (하나뿐이면 폴더 개요로)"""
+    page.evaluate(GATHER_CLOSE)
+    wait_until(page, "!document.querySelector('#lec-view').classList.contains('parts-view')", 8000)
+
+
+GATHER_FILLED = "[...document.querySelectorAll('#lec-view .pv-spread')].length > 0 && [...document.querySelectorAll('#lec-view .pv-spread')].slice(0, 2).every((g) => g.classList.contains('pv-done'))"
+
+
 def free_port() -> int:
     with socket.socket() as s:
         s.bind(('127.0.0.1', 0))
@@ -338,66 +372,75 @@ def run(headed: bool) -> None:
                   f'수식 블록도 목차에 (TeX 원문으로): {math[:3]}')
 
             print('[모아 보기]')
-            pv = lambda: page.evaluate('''() => ({ kinds: Object.fromEntries([...document.querySelectorAll('#lec-parts-kinds button')]
+            # 모아 보기는 문서 탭 하나의 화면이다 (D196 — 0.102 까지는 사이드바의 이름 목록). 펼친 덩어리(.pv-chunk)의 출처 줄: 절 › 이름 · 설명
+            pv = lambda: page.evaluate('''() => ({ kinds: Object.fromEntries([...document.querySelectorAll('#lec-view .parts-kinds button')]
                 .map(b => [b.dataset.kind, +b.querySelector('.n').textContent])),
-              active: document.querySelector('#lec-parts-kinds button.active')?.dataset.kind,
-              scope: document.querySelector('#lec-parts-scope').textContent, info: document.querySelector('#lec-parts-info').textContent,
-              groups: [...document.querySelectorAll('#lec-parts-list .pt-doc')].map(d => d.querySelector('.label').textContent),
-              items: [...document.querySelectorAll('#lec-parts-list .pt-item')].map(r => [r.closest('#lec-parts-list') && r.dataset.doc,
-                r.querySelector('.pt-name').textContent, r.querySelector('.pt-label')?.textContent || '', r.querySelector('.pt-sec')?.textContent || '']),
-              thumbs: document.querySelectorAll('#lec-parts-list .pt-thumb').length,
-              more: [...document.querySelectorAll('#lec-parts-list .pt-more')].map(m => m.textContent) })''')
-            read_done = lambda: wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && document.querySelector('#lec-parts-info').textContent !== ''", 15000)
-            page.click('.side-tabs button[data-tab="parts"]')
+              active: document.querySelector('#lec-view .parts-kinds button.active')?.dataset.kind,
+              scope: document.querySelector('#lec-view .parts-scope').textContent, info: document.querySelector('#lec-view .parts-info').textContent,
+              groups: [...document.querySelectorAll('#lec-view .parts-list .pt-doc')].map(d => d.querySelector('.label').textContent),
+              items: [...document.querySelectorAll('#lec-view .parts-list .pv-chunk')].map(r => [r.dataset.doc,
+                r.querySelector('.pv-name').textContent, r.querySelector('.pv-detail')?.textContent || '', r.querySelector('.pv-sec')?.textContent || '']),
+              real: document.querySelectorAll('#lec-view .parts-list .pv-chunk .pv-body.md-body table').length,
+              thumbs: document.querySelectorAll('#lec-view .parts-list .pv-grid .pv-chunk').length,
+              more: [...document.querySelectorAll('#lec-view .parts-list .pt-more')].map(m => m.textContent) })''')
+            read_done = lambda: wait_until(page, "!!document.querySelector('#lec-view .parts-info') && !document.querySelector('#lec-view .parts-info').textContent.includes('읽는 중') && document.querySelector('#lec-view .parts-info').textContent !== ''", 15000)
+            gather_open(page)
             read_done()
+            wait_until(page, GATHER_FILLED, 15000)
             p1 = pv()
             mine = [i for i in p1['items'] if i[0] == 'docs/01-기능-점검.md']
-            check(not page.locator('#lec-parts').is_hidden() and p1['active'] == 'table' and p1['scope'] == 'samples 전체'
-                  and ['docs/01-기능-점검.md', '표 1', '품목·1분기·2분기 · 6행 5열', '표'] in mine
+            gather_tabs = page.evaluate("[...document.querySelectorAll('#lec-doctab-list .doc-tab')].map(e => e.querySelector('.name').textContent + (e.classList.contains('active') ? '*' : ''))")
+            check(gather_tabs[-1:] == ['모아 보기*'] and len(gather_tabs) > 1 and page.locator('.side-tabs button[data-tab="parts"]').count() == 0
+                  and p1['active'] == 'table' and p1['scope'] == 'samples 전체' and p1['real'] > 0
+                  and ['docs/01-기능-점검.md', '표 1', '6행 5열', '표'] in mine
                   and p1['kinds']['table'] == len(p1['items']) and all(p1['kinds'][k] > 0 for k in ('figure', 'box', 'diagram', 'code', 'math')),
-                  f"사이드바 '모아 보기' 탭: 프로젝트의 표를 문서별로 (이름·크기·절), 종류마다 개수 ({p1['kinds']}, {mine})")
-            page.click('#lec-parts-kinds button[data-kind="box"]')
+                  f"모아 보기: 보던 문서를 두고 문서 탭 하나에, 프로젝트의 표를 문서별로 실제 모습으로 (출처 줄에 이름·크기·절), 종류마다 개수 — 사이드바 탭은 없다 ({gather_tabs}, {p1['kinds']}, {mine})")
+            page.click('#lec-view .parts-kinds button[data-kind="box"]')
             boxes = [i[1] for i in pv()['items'] if i[0] == 'docs/01-기능-점검.md']
-            page.fill('#lec-parts-filter', '강조글 프로젝트 폴더 밖')
-            wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length === 1")
+            page.fill('#lec-view .parts-filter', '강조글 프로젝트 폴더 밖')
+            wait_until(page, "document.querySelectorAll('#lec-view .parts-list .pv-chunk').length === 1")
             filtered = pv()['items']
-            page.press('#lec-parts-filter', 'Enter')
+            hits = wait_until(page, "document.querySelectorAll('#lec-view .parts-list mark.pv-hit').length > 0", 8000)
+            page.press('#lec-view .parts-filter', 'Enter')   # 첫 덩어리에 초점 — Enter 를 한 번 더 누르면 그 문서로
+            on_chunk = page.evaluate("document.activeElement?.classList.contains('pv-chunk')")
+            page.keyboard.press('Enter')
             went = wait_until(page, "document.querySelector('#lec-view blockquote.alert-warning')?.classList.contains('lec-target')", 5000)
-            check(boxes == ['강조글', '강조글', '강조글', '강조글', '인용'] and len(filtered) == 1 and filtered[0][1] == '강조글' and went,
-                  f'강조글 모아 보기, 거르기, Enter 로 그 문서의 그 자리로 (목차와 같은 번호로 찾아감) ({boxes}, {filtered})')
-            page.fill('#lec-parts-filter', '')
-            page.click('#lec-parts-kinds button[data-kind="figure"]')
-            loaded = wait_until(page, "[...document.querySelectorAll('#lec-parts-list .pt-pic img')].some(i => i.complete && i.naturalWidth > 0)", 8000)
+            check(boxes == ['강조글', '강조글', '강조글', '강조글', '인용'] and len(filtered) == 1 and filtered[0][1] == '강조글' and hits and on_chunk and went,
+                  f'강조글 모아 보기, 내용으로 거르기(맞은 낱말 표시), Enter 로 첫 덩어리·한 번 더 눌러 그 문서의 그 자리로 (목차와 같은 번호로 찾아감) ({boxes}, {filtered}, {hits}, {on_chunk})')
+            gather_show(page)
+            page.fill('#lec-view .parts-filter', '')
+            page.click('#lec-view .parts-kinds button[data-kind="figure"]')
+            loaded = wait_until(page, "[...document.querySelectorAll('#lec-view .parts-list .pv-body img')].some(i => i.complete && i.naturalWidth > 0)", 8000)
             p2 = pv()
             shot('12-parts-figures')
             check(p2['thumbs'] > 0 and loaded and any(m.startswith('+') for m in p2['more']) and p2['kinds']['figure'] > p2['thumbs'],
-                  f"그림은 작은 그림 격자, 같은 그림은 한 번만 ('+N곳') ({p2['thumbs']}개 / {p2['kinds']['figure']}곳, {p2['more']})")
-            page.click('.side-tabs button[data-tab="files"]')
+                  f"그림은 격자에 실제 그림으로, 같은 그림은 한 번만 ('+N곳') ({p2['thumbs']}개 / {p2['kinds']['figure']}곳, {p2['more']})")
             page.locator('#lec-tree .row.dir', has_text='docs').first.click()
             page.wait_for_selector('#lec-view .ov-parts button[data-parts="diagram"]')
             page.click('#lec-view .ov-parts button[data-parts="diagram"]')
             read_done()
             p3 = pv()
-            check(p3['scope'] == 'docs 폴더' and p3['active'] == 'diagram'
+            drawn = wait_until(page, "document.querySelectorAll('#lec-view .parts-list .pv-chunk[data-doc=\"docs/03-다이어그램.md\"] .pv-body svg').length >= 1", 40000)
+            check(p3['scope'] == 'docs 폴더' and p3['active'] == 'diagram' and drawn
                   and [i[1] for i in p3['items'] if i[0] == 'docs/03-다이어그램.md'] == ['다이어그램 1', '다이어그램 2', '다이어그램 3']
                   and any(i[0] == 'docs/06-차트.md' for i in p3['items']) and all(i[0].startswith('docs/') for i in p3['items']),
-                  f"폴더 개요의 '모아 보기' 버튼: 그 폴더(하위 포함)의 그 종류 ({p3['scope']}, {p3['items']})")
-            page.click('.side-tabs button[data-tab="files"]')
+                  f"폴더 개요의 '모아 보기' 버튼: 그 폴더(하위 포함)의 그 종류를 그 자리에 펼친다 — 다이어그램도 그려서 ({p3['scope']}, {drawn}, {p3['items']})")
             page.locator('#lec-tree .row.dir', has_text='plans').first.click(button='right')
             page.locator('#lec-menu button', has_text='이 폴더의 표·그림 등 모아 보기').click()
             read_done()
             p4 = pv()
             check(p4['scope'] == 'plans 폴더' and p4['kinds'][p4['active']] > 0 and p4['kinds']['diagram'] == 0 and all(i[0].startswith('plans/') for i in p4['items']),
                   f"트리 폴더 우클릭 '이 폴더의 표·그림 등 모아 보기' — 그 폴더에 있는 종류로 ({p4['scope']}, {p4['active']}, {p4['kinds']})")
-            page.click('#lec-parts-all')
+            page.click('#lec-view .parts-all')
+            wait_until(page, "document.querySelector('#lec-view .parts-scope')?.textContent === 'samples 전체'", 8000)
             read_done()
             before_n = pv()['kinds']['table']
             (work / 'docs' / '96-새-표.md').write_text('# 새 표\n\n| 가 | 나 |\n|---|---|\n| 1 | 2 |\n', encoding='utf-8')
-            grew = wait_until(page, f"+document.querySelector('#lec-parts-kinds button[data-kind=\"table\"] .n')?.textContent === {before_n + 1}", 10000)
+            grew = wait_until(page, f"+document.querySelector('#lec-view .parts-kinds button[data-kind=\"table\"] .n')?.textContent === {before_n + 1}", 10000)
             (work / 'docs' / '96-새-표.md').unlink()
-            gone_back = wait_until(page, f"+document.querySelector('#lec-parts-kinds button[data-kind=\"table\"] .n')?.textContent === {before_n}", 10000)
+            gone_back = wait_until(page, f"+document.querySelector('#lec-view .parts-kinds button[data-kind=\"table\"] .n')?.textContent === {before_n}", 10000)
             check(pv()['scope'] == 'samples 전체' and grew and gone_back, f"'전체'로 프로젝트 전체, 문서가 생기거나 지워지면 바로 반영 (표 {before_n} → +1 → {before_n})")
-            page.click('.side-tabs button[data-tab="files"]')
+            gather_close(page)
             page.locator('#lec-tree .row.file', has_text='렌더링 기능 점검').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("렌더링 기능 점검")')
 
@@ -1819,33 +1862,32 @@ def run(headed: bool) -> None:
             page.fill('#lec-search-input', '')
             check(names_ok and '이름 1개' in sinfo and body['path'] == 'data/setup.exe' and no_name and saved_off and code_name,
                   f"검색에 '자료' 버튼 — 맨 위에 이름이 맞는 파일(자료는 이름으로만, 코드도), 자료는 두 번 눌러 열기, 끄면 빠짐 ({sinfo})")
-            page.locator('.side-tabs button[data-tab="parts"]').click()
-            page.locator('#lec-parts-mode button[data-mode="files"]').click()
-            page.wait_for_selector('#lec-parts-kinds button[data-ftype="others:csv"]', timeout=8000)
-            chips = page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-parts-kinds .ft-group')].map(g =>
+            gather_open(page, mode='files')
+            page.wait_for_selector('#lec-view .parts-kinds button[data-ftype="others:csv"]', timeout=8000)
+            chips = page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-view .parts-kinds .ft-group')].map(g =>
               [g.querySelector('.ft-label').textContent, [...g.querySelectorAll('button')].map(b => b.dataset.ftype.split(':')[1])]))''')
-            page.locator('#lec-parts-kinds button[data-ftype="others:svg"]').click()
-            thumb = wait_until(page, "document.querySelector('#lec-parts-list .ft-thumb img')?.naturalWidth > 0", 5000)
-            page.locator('#lec-parts-kinds button[data-ftype="others:csv"]').click()
-            wait_until(page, "!!document.querySelector('#lec-parts-list .ft-row[data-file=\"data/표.csv\"]')", 3000)
-            csv_rows = page.evaluate("[...document.querySelectorAll('#lec-parts-list [data-file]')].map(r => r.dataset.file)")
-            pinfo = page.inner_text('#lec-parts-info')
-            body = opens(page.locator('#lec-parts-list .ft-row[data-file="data/표.csv"]').dblclick)
+            page.locator('#lec-view .parts-kinds button[data-ftype="others:svg"]').click()
+            thumb = wait_until(page, "document.querySelector('#lec-view .parts-list .ft-thumb img')?.naturalWidth > 0", 5000)
+            page.locator('#lec-view .parts-kinds button[data-ftype="others:csv"]').click()
+            wait_until(page, "!!document.querySelector('#lec-view .parts-list .ft-row[data-file=\"data/표.csv\"]')", 3000)
+            csv_rows = page.evaluate("[...document.querySelectorAll('#lec-view .parts-list [data-file]')].map(r => r.dataset.file)")
+            pinfo = page.inner_text('#lec-view .parts-info')
+            body = opens(page.locator('#lec-view .parts-list .ft-row[data-file="data/표.csv"]').dblclick)
             page.locator('.side-tabs button[data-tab="files"]').click()
             page.click('#lec-others-head')   # 사이드바는 한 묶음씩 (D143)
             menu(orow('data'))
             page.locator('#lec-menu button', has_text='이 폴더의 파일을 종류별로 모아 보기').click()
-            scoped = wait_until(page, "!document.querySelector('#lec-parts').hidden && document.querySelector('#lec-parts-scope').textContent === 'data 폴더'", 5000)
-            data_chips = page.evaluate("[...document.querySelectorAll('#lec-parts-kinds button[data-ftype]')].map(b => b.dataset.ftype).sort()")
+            scoped = wait_until(page, "document.querySelector('#lec-view.parts-view .parts-scope')?.textContent === 'data 폴더'", 5000)
+            data_chips = page.evaluate("[...document.querySelectorAll('#lec-view .parts-kinds button[data-ftype]')].map(b => b.dataset.ftype).sort()")
             shot('12-parts-files')
-            page.click('#lec-parts-all')
-            page.locator('#lec-parts-mode button[data-mode="parts"]').click()   # 아래 점검은 문서 속 요소로
-            back_parts = wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-kind]')", 5000)
+            page.click('#lec-view .parts-all')
+            page.locator('#lec-view .parts-mode button[data-mode="parts"]').click()   # 아래 점검은 문서 속 요소로
+            back_parts = wait_until(page, "!!document.querySelector('#lec-view .parts-kinds button[data-kind]')", 5000)
             check(chips.get('문서', [])[:1] == ['md'] and 'py' in chips.get('코드', []) and {'csv', 'exe', 'pdf', 'svg'} <= set(chips.get('자료', []))
                   and thumb and csv_rows == ['data/표.csv'] and pinfo == '파일 1개' and body['path'] == 'data/표.csv'
                   and scoped and data_chips == ['others:csv', 'others:exe'] and back_parts,
                   f"모아 보기 '파일 종류' — 문서·코드·자료마다 형식 버튼, 그림 파일은 작은 그림, 자료는 두 번 눌러 열기, '자료' 목록의 폴더 우클릭으로 그 폴더만 ({chips}, {data_chips})")
-            page.locator('.side-tabs button[data-tab="files"]').click()
+            gather_close(page)
             page.click('#lec-docs-head')   # 사이드바는 한 묶음씩 (D143)
             page.unroute('**/api/open-external', fake_open)
 
@@ -2025,7 +2067,7 @@ def run(headed: bool) -> None:
             no_edit = wait_until(page, "document.querySelector('#lec-btn-edit').disabled", 3000)
             page.locator('#lec-tree .row.file', has_text='후속 과제').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("후속 과제")')
-            check(pressed_on and off and no_edit and order == ['lec-btn-overview', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export', 'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term'],
+            check(pressed_on and off and no_edit and order == ['lec-btn-overview', 'lec-btn-parts', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export', 'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term'],
                   f"탭 막대의 [편집] [목차] [내보내기] [메모] [터미널] (D135·D193) — [편집]을 누르면 편집 모드가 켜지고(눌린 모양) 다시 누르면 꺼짐, 폴더 개요에서는 누를 수 없음 ({order})")
             page.click('#lec-st-edit')
             page.wait_for_selector('.lec-editor .CodeMirror')
@@ -2825,43 +2867,43 @@ def run(headed: bool) -> None:
                   f"인쇄·PDF 는 한 장에 한 쪽(1280×720), '문서로 보기'는 보통 문서(바뀐 곳으로 잡지 않음)·다시 슬라이드 ({pages}, {boxes}, {doc_state})")
 
             print('[모아 보기 더]')   # D62 — 차트(작은 그림)·할 일·링크·출처, 문서 정보(frontmatter)
-            page.click('.side-tabs button[data-tab="parts"]')
-            wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && document.querySelector('#lec-parts-info').textContent !== ''", 30000)
-            mk = lambda: page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-parts-kinds button')]
+            gather_open(page)
+            wait_until(page, "!document.querySelector('#lec-view .parts-info').textContent.includes('읽는 중') && document.querySelector('#lec-view .parts-info').textContent !== ''", 30000)
+            mk = lambda: page.evaluate('''() => Object.fromEntries([...document.querySelectorAll('#lec-view .parts-kinds button')]
               .map(b => [b.dataset.kind || b.dataset.mkey, +b.querySelector('.n').textContent]))''')
             more_kinds = mk()
-            page.click('#lec-parts-kinds button[data-kind="chart"]')
-            chart_thumbs = wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-chart .pt-pic svg').length >= 3", 40000)
+            page.click('#lec-view .parts-kinds button[data-kind="chart"]')
+            chart_thumbs = wait_until(page, "document.querySelectorAll('#lec-view .parts-list .pv-grid .pv-chunk[data-kind=\"chart\"] .pv-body svg').length >= 3", 60000)
             shot('23-parts-charts')
-            page.click('#lec-parts-kinds button[data-kind="task"]')
-            task_sub = page.evaluate("[...document.querySelectorAll('#lec-parts-sub button')].map(b => b.dataset.sub + (b.classList.contains('active') ? '*' : ''))")
-            open_tasks = page.locator('#lec-parts-list .pt-item.pt-done').count() == 0 and page.locator('#lec-parts-list .pt-item').count() > 0
-            page.click('#lec-parts-sub button[data-sub="done"]')
-            done_tasks = page.locator('#lec-parts-list .pt-item').count() == page.locator('#lec-parts-list .pt-item.pt-done').count() > 0
-            page.click('#lec-parts-sub button[data-sub="open"]')
-            page.click('#lec-parts-kinds button[data-kind="link"]')
-            links = page.evaluate('''() => ({ n: document.querySelectorAll('#lec-parts-list .pt-item').length,
-              bad: document.querySelectorAll('#lec-parts-list .pt-bad').length,
-              code: [...document.querySelectorAll('#lec-parts-list .pt-label')].some(l => l.textContent.startsWith('코드 · src/report.py')) })''')
-            page.click('#lec-parts-kinds button[data-kind="source"]')
-            notes = page.evaluate("[...document.querySelectorAll('#lec-parts-list .pt-label')].map(l => l.textContent)")
-            page.click('#lec-parts-mode button[data-mode="meta"]')
-            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-mkey]')", 5000)
+            page.click('#lec-view .parts-kinds button[data-kind="task"]')
+            task_sub = page.evaluate("[...document.querySelectorAll('#lec-view .parts-sub button')].map(b => b.dataset.sub + (b.classList.contains('active') ? '*' : ''))")
+            open_tasks = page.locator('#lec-view .parts-list .pt-item.pt-done').count() == 0 and page.locator('#lec-view .parts-list .pt-item').count() > 0
+            page.click('#lec-view .parts-sub button[data-sub="done"]')
+            done_tasks = page.locator('#lec-view .parts-list .pt-item').count() == page.locator('#lec-view .parts-list .pt-item.pt-done').count() > 0
+            page.click('#lec-view .parts-sub button[data-sub="open"]')
+            page.click('#lec-view .parts-kinds button[data-kind="link"]')
+            links = page.evaluate('''() => ({ n: document.querySelectorAll('#lec-view .parts-list .pt-item').length,
+              bad: document.querySelectorAll('#lec-view .parts-list .pt-bad').length,
+              code: [...document.querySelectorAll('#lec-view .parts-list .pt-label')].some(l => l.textContent.startsWith('코드 · src/report.py')) })''')
+            page.click('#lec-view .parts-kinds button[data-kind="source"]')
+            notes = page.evaluate("[...document.querySelectorAll('#lec-view .parts-list .pt-label')].map(l => l.textContent)")
+            page.click('#lec-view .parts-mode button[data-mode="meta"]')
+            wait_until(page, "!!document.querySelector('#lec-view .parts-kinds button[data-mkey]')", 5000)
             meta_keys = list(mk())
-            page.click('#lec-parts-kinds button[data-mkey="status"]')
-            meta_rows = page.evaluate("[...document.querySelectorAll('#lec-parts-list .pt-val .label, #lec-parts-list .pt-mdoc .label')].map(e => e.textContent)")
+            page.click('#lec-view .parts-kinds button[data-mkey="status"]')
+            meta_rows = page.evaluate("[...document.querySelectorAll('#lec-view .parts-list .pt-val .label, #lec-view .parts-list .pt-mdoc .label')].map(e => e.textContent)")
             # '진행' 묶음에 견본 WORK.md (예제의 업무 나무 — D149 의 하위 업무도 '진행'), 그다음 '진행 중' 묶음에 계획 문서
             cut = meta_rows.index('진행 중') if '진행 중' in meta_rows else len(meta_rows)
             meta_ok = meta_rows[:1] == ['진행'] and '구리 시장 리서치 자동화' in meta_rows[1:cut] and meta_rows[cut + 1:cut + 2] == ['리서치 자동화 구현 계획']
             shot('23-parts-meta')
-            page.click('#lec-parts-mode button[data-mode="parts"]')
-            page.click('#lec-parts-kinds button[data-kind="table"]')
-            page.click('.side-tabs button[data-tab="files"]')
+            page.click('#lec-view .parts-mode button[data-mode="parts"]')
+            page.click('#lec-view .parts-kinds button[data-kind="table"]')
+            gather_close(page)
             check(all(more_kinds.get(k, 0) > 0 for k in ('chart', 'task', 'link', 'source')) and more_kinds['diagram'] > 0 and chart_thumbs
                   and task_sub == ['open*', 'done', 'all'] and open_tasks and done_tasks and links['n'] > 10 and links['bad'] == 0 and links['code']
                   and any(n.startswith('각주') for n in notes) and 'status' in meta_keys and 'tags' in meta_keys
                   and meta_ok and '구리 시장 2분기 리뷰' not in meta_rows,
-                  f"모아 보기의 차트(작은 그림)·할 일(안 한 것/한 것)·링크(코드 위치·깨짐 없음)·출처(각주), 문서 정보(frontmatter 키·값) "
+                  f"모아 보기의 차트(격자에 그려서)·할 일(안 한 것/한 것)·링크(코드 위치·깨짐 없음)·출처(각주), 문서 정보(frontmatter 키·값) "
                   f"({more_kinds}, {chart_thumbs}, {task_sub}, {links}, {notes[:2]}, {meta_keys}, {meta_rows[:6]})")
 
             tab_el(1).locator('.tab-close').click()   # 예제 탭을 닫고 점검 프로젝트로
@@ -2993,32 +3035,37 @@ def run(headed: bool) -> None:
                   f"엑셀(xlsx)을 한 번 누르면 표 — 시트 탭·열 글자·자리 쉼표·%·날짜·수식 풍선, 칸 우클릭은 칸 복사·'시트'가 든 Claude용 위치, 다른 시트, 보기만 "
                   f"({x1['head']}, {x1['rows']}, {copied!r}, {x2['rows']}, {told})")
             print('[캡션]')   # D61 — 모아 보기는 캡션을 이름으로, 우클릭은 Claude용 위치·원문 복사와 터미널 버튼
-            page.click('.side-tabs button[data-tab="parts"]')
-            wait_until(page, "!document.querySelector('#lec-parts-info').textContent.includes('읽는 중') && !!document.querySelector('#lec-parts-list .pt-item')", 15000)
-            page.click('#lec-parts-kinds button[data-kind="table"]')
-            cap_rows = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-parts-list :is(.pt-item, .pt-thumb)[data-doc="caps.md"]')]
-              .map(e => [e.querySelector('.pt-name, .pt-cap')?.textContent || '', e.querySelector('.pt-label')?.textContent || ''])''')
+            gather_open(page, kind='table')
+            wait_until(page, "!document.querySelector('#lec-view .parts-info').textContent.includes('읽는 중') && !!document.querySelector('#lec-view .parts-list .pv-chunk')", 15000)
+            # 덩어리마다 [실제로 그린 캡션(없으면 이름표·이름), 출처 줄의 '이름 · 설명'] — 캡션은 요소와 함께 옮겨 온다 (D196)
+            cap_done = lambda: wait_until(page, "(() => { const g = document.querySelector('#lec-view .parts-list .pv-chunk[data-doc=\"caps.md\"]')?.closest('.pv-group'); return !!g && g.classList.contains('pv-done'); })()", 15000)
+            cap_rows = lambda: page.evaluate('''() => [...document.querySelectorAll('#lec-view .parts-list .pv-chunk[data-doc="caps.md"]')]
+              .map(e => [e.querySelector('.pv-body .lec-caption')?.textContent.trim() || (e.dataset.kind === 'figure' && e.querySelector('.pv-detail')?.textContent) || e.querySelector('.pv-name').textContent,
+                [e.querySelector('.pv-name').textContent, e.querySelector('.pv-detail')?.textContent].filter(Boolean).join(' · ')])''')
+            cap_done()
             cap_tables = cap_rows()
-            page.click('#lec-parts-kinds button[data-kind="figure"]')
-            wait_until(page, "!!document.querySelector('#lec-parts-list .pt-thumb')", 5000)
+            page.click('#lec-view .parts-kinds button[data-kind="figure"]')
+            wait_until(page, "!!document.querySelector('#lec-view .parts-list .pv-grid .pv-chunk')", 5000)
+            cap_done()
             cap_figs = [r[0] for r in cap_rows()]
-            page.click('#lec-parts-kinds button[data-kind="table"]')
-            page.locator('#lec-parts-list .pt-item[data-doc="caps.md"]').first.click(button='right')
+            page.click('#lec-view .parts-kinds button[data-kind="table"]')
+            cap_done()
+            page.locator('#lec-view .parts-list .pv-chunk[data-doc="caps.md"] .pv-src').first.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden]) .menu-row')
             cap_menu = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-menu .menu-row')].map(r => r.querySelector('button[data-i] span').textContent),
               ref: [...document.querySelectorAll('#lec-menu .menu-row')].find(r => r.textContent.includes('위치 복사'))?.querySelector('button').title,
               terms: document.querySelectorAll('#lec-menu .menu-term').length })''')
             shot('22-parts-caption')
             page.keyboard.press('Escape')
-            page.click('#lec-parts-kinds button[data-kind="link"]')
-            meta_links = page.evaluate('''() => [...document.querySelectorAll('#lec-parts-list .pt-item[data-doc="meta.md"]')]
+            page.click('#lec-view .parts-kinds button[data-kind="link"]')
+            meta_links = page.evaluate('''() => [...document.querySelectorAll('#lec-view .parts-list .pt-item[data-doc="meta.md"]')]
               .map(e => [e.querySelector('.pt-name').textContent, e.querySelector('.pt-label')?.textContent || ''])''')
-            page.click('#lec-parts-mode button[data-mode="meta"]')
-            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-mkey]')", 5000)
-            nested_keys = page.evaluate("[...document.querySelectorAll('#lec-parts-kinds button[data-mkey]')].map(b => b.dataset.mkey)")
-            page.click('#lec-parts-mode button[data-mode="parts"]')
-            page.click('.side-tabs button[data-tab="files"]')
-            check(cap_tables == [['〈표 Ⅱ-15〉 철재의 HS코드', '표 1 · 1행 2열'], ['표 1. 항만별 물동량', '표 2 · 1행 2열'], ['표 3', 'a·b · 1행 2열']]
+            page.click('#lec-view .parts-mode button[data-mode="meta"]')
+            wait_until(page, "!!document.querySelector('#lec-view .parts-kinds button[data-mkey]')", 5000)
+            nested_keys = page.evaluate("[...document.querySelectorAll('#lec-view .parts-kinds button[data-mkey]')].map(b => b.dataset.mkey)")
+            page.click('#lec-view .parts-mode button[data-mode="parts"]')
+            gather_close(page)
+            check(cap_tables == [['〈표 Ⅱ-15〉 철재의 HS코드', '표 1 · 1행 2열'], ['표 1. 항만별 물동량', '표 2 · 1행 2열'], ['표 3', '표 3 · 1행 2열']]
                   and cap_figs == ['[그림 1] 분기별 가격 범위', '나만']
                   and cap_menu['rows'][:2] == ['원문 복사', '위치 복사'] and cap_menu['ref'] == "@caps.md 3~7행 ('〈표 Ⅱ-15〉 철재의 HS코드')"
                   and cap_menu['terms'] >= 2,
@@ -4011,7 +4058,7 @@ def run_english(headed: bool) -> None:
               sub: document.querySelector('.ov-sub').textContent, when: document.querySelector('.ov-files .when')?.textContent })''')
             shot('en-01-overview')
             scan('개요')
-            check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Elements', 'Clip']
+            check(ui['lang'] == 'en' and ui['open'] == 'Quick open' and ui['tabs'] == ['Files', 'Recent', 'Search', 'Clip']
                   and ui['sub'] == '3 documents, 1 folder' and ui['when'] == 'just now',
                   f'설정 language: en 이면 화면이 영어 — 툴바·사이드바 탭·개수(복수형)·날짜 ({ui})')
             page.locator('#lec-tree .row.file', has_text='README').click(modifiers=['Alt'])
@@ -4053,14 +4100,15 @@ def run_english(headed: bool) -> None:
             wait_until(page, "!!document.querySelector('#lec-search-results .sr-group')", 5000)
             search = page.evaluate("document.querySelector('#lec-search-info').textContent")
             scan('검색')
-            page.locator('.side-tabs button[data-tab="parts"]').click()
-            wait_until(page, "document.querySelectorAll('#lec-parts-list .pt-item').length > 0", 8000)
-            parts = page.evaluate("[document.querySelector('#lec-parts-kinds .active')?.textContent, document.querySelector('#lec-parts-info').textContent]")
+            gather_open(page, kind='table')
+            wait_until(page, GATHER_FILLED, 15000)
+            parts = page.evaluate("[document.querySelector('#lec-view .parts-kinds .active')?.textContent, document.querySelector('#lec-view .parts-info').textContent]")
             scan('모아 보기')
-            page.locator('#lec-parts-mode button[data-mode="files"]').click()
-            wait_until(page, "!!document.querySelector('#lec-parts-kinds button[data-ftype]')", 8000)
+            page.locator('#lec-view .parts-mode button[data-mode="files"]').click()
+            wait_until(page, "!!document.querySelector('#lec-view .parts-kinds button[data-ftype]')", 8000)
             scan('모아 보기 — 파일 종류')
-            page.locator('#lec-parts-mode button[data-mode="parts"]').click()
+            page.locator('#lec-view .parts-mode button[data-mode="parts"]').click()
+            gather_close(page)
             page.locator('.side-tabs button[data-tab="recent"]').click()
             wait_until(page, "!!document.querySelector('#lec-recent .row[data-file$=\".py\"]')", 8000)
             scan('최근 변경')

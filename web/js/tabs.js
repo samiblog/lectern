@@ -57,7 +57,7 @@ function makeTab(p) {
     treeLoaded: false,      // 트리를 받았는지 (project.js)
     loaded: false,          // 첫 화면까지 그렸는지
     loading: null,          // 첫 화면을 그리는 중이면 그 Promise
-    side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·recent.js·search.js·parts.js)
+    side: { panel: 'files', filter: '', treeScroll: 0, recentScroll: 0, search: null },   // 사이드바 상태 (tree.js·recent.js·search.js). parts: 모아 보기에서 마지막에 고른 것 (parts.js — D196)
     // 최근 변경의 코드·자료 (recent.js, D50): 받은 파일(files — 받을 때의 버튼 key), 다시 받을지(stale), 받는 중(loading)
     recent: { files: null, key: '', stale: true, loading: null, again: false, error: null },
     // 사이드바 '코드'·'자료' 목록 (others.js): 받은 문서 외 파일(data), 펼쳐서 읽은 제외 폴더의 안(lazy: 경로 → {nodes…}, 읽는 중 loadingDirs)을
@@ -418,7 +418,7 @@ function tabMenu(tab) {
       { label: t('새 문서 만들기…'), action: there(() => emit('new-doc', { dir: '' })) },
       { label: t('새 폴더 만들기…'), action: there(() => emit('new-folder', { dir: '' })) },
       { label: tab.fileMap.has('WORK.md') ? t('업무 카드 열기') : t('업무 카드 만들기…'), tip: t('이 폴더 맨 위의 WORK.md — 업무 현황과 알림이 읽습니다'), action: there(() => emit('work-card', { tab })) },
-      { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t("사이드바 '모아 보기' 탭"), action: there(() => emit('parts', { path: '' })) }],
+      { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t('문서 탭 하나에 펼쳐 놓습니다'), action: there(() => emit('parts', { path: '' })) }],
     [{ label: t('전체 경로 복사'), action: () => copy(tab.root) }, { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) }],
     closes);
   return items;

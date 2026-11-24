@@ -300,7 +300,7 @@ try:
 
         print('[탭 막대의 [내보내기] → 인쇄… (D135 의 [인쇄] 는 D193 에서 메뉴로)]')
         order = page.evaluate("() => [...document.querySelectorAll('#lec-tabbar .tabbar-btn')].map((b) => b.id)")
-        check('순서: 개요·바뀜·업무 카드 │ 넣기·편집·목차·스타일·내보내기 │ AI 요청·메모·터미널 (D154·D193)', order == ['lec-btn-overview', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export', 'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term'], order)
+        check('순서: 개요·바뀜·업무 카드 │ 넣기·편집·목차·스타일·내보내기 │ AI 요청·메모·터미널 (D154·D193)', order == ['lec-btn-overview', 'lec-btn-parts', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export', 'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term'], order)
         page.evaluate(OPEN, 'docs/보고서.md')
         page.wait_for_selector('#lec-view h1', timeout=20000)
         page.click('#lec-btn-export')

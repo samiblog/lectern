@@ -908,8 +908,8 @@ function takeTarget() {
   return n;
 }
 
-/** 'term-paste' 의 값: 글, 또는 {text, n} (번호를 정한 보내기 — D137) */
-const pasteArgs = (d, stay) => (d && typeof d === 'object' ? [d.text, { stay, n: Number.isInteger(d.n) ? d.n : null }] : [d, { stay }]);
+/** 'term-paste' 의 값: 글, 또는 {text, n, back} (n: 번호를 정한 보내기 — D137, back: stay 일 때 초점을 둘 곳 — 사이드바의 행, D195) */
+const pasteArgs = (d, stay) => (d && typeof d === 'object' ? [d.text, { stay, n: Number.isInteger(d.n) ? d.n : null, back: d.back || null }] : [d, { stay }]);
 
 /** 고른 터미널에 글을 넣는다 — 사용자의 Ctrl+V 와 같은 길 (xterm 의 paste → onData → POST /api/term/input). Enter 는 누르지 않는다 */
 async function pasteInto(term, raw) {
@@ -936,11 +936,11 @@ async function pasteInto(term, raw) {
  * 무엇이 도는지 찾지 않는다 (D69 — 사용자 결정).
  * 끝의 줄바꿈은 떼어 Enter 를 누르지 않는다. 터미널이 닫혀 있으면 열고 셸을 띄운다. 여러 줄이면, 받는 프로그램이 붙여넣기
  * 모드(bracketed paste — Claude Code 등)를 켜 두지 않았을 때 한 번 묻는다 — 셸 프롬프트에서는 줄마다 명령으로 실행될 수 있다.
- * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로.
+ * stay: 초점은 문서에 둔다 (Ctrl+Shift+→ — D79·D97). 아니면 터미널로. back 이 있으면 문서가 아니라 그곳에 (사이드바 목록의 행 — D195).
  * n: 받을 터미널의 번호 (0 부터 — Shift+숫자, 메뉴의 숫자+누르기 — D137). 없는 번호면 넣지 않고 알린다 (새로 만들지 않는다 —
  * 셸이 막 뜨는 사이에 글이 들어가면 받을 프로그램이 없다). 1번은 터미널이 하나도 없으면 지금처럼 열어서 넣는다
  */
-export async function pasteToTerminal(text, { stay = false, n = null } = {}) {
+export async function pasteToTerminal(text, { stay = false, n = null, back = null } = {}) {
   const tab = S.tab;
   text = String(text ?? '').replace(/[\r\n]+$/, '');
   if (n == null) n = takeTarget();
@@ -972,7 +972,7 @@ export async function pasteToTerminal(text, { stay = false, n = null } = {}) {
   if (term !== tab.term) selectTerminal(tab, term);   // 넣는 터미널을 보인다 (셸이 없으면 띄운다)
   if (!(await pasteInto(term, text))) return;
   flash(term);
-  if (stay) S.pane?.scroller.focus({ preventScroll: true });
+  if (stay) (back?.isConnected ? back : S.pane?.scroller)?.focus({ preventScroll: true });
   // 넣었다는 것을 알린다 — 메뉴의 복사(줄)와 헷갈리지 않게, 어느 탭의 몇 번 터미널인지도
   toast(t("'{name}' 탭의 {n}번 터미널에 넣었습니다 — Enter 는 누르지 않았습니다", { name: tab.name, n: term.n + 1 }));
 }

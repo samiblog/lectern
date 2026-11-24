@@ -174,12 +174,12 @@ const pick = { snips: [], step: 'target', items: [], sel: 0, doc: null, heads: [
 const box = () => $('#lec-insert');
 const input = () => $('#lec-insert-input');
 
-/** 조각들을 보낼 곳을 고르는 창을 연다 */
-export function sendSnippets(snips) {
+/** 조각들을 보낼 곳을 고르는 창을 연다. fresh: 새 문서의 경로를 묻는 단계부터 (모아 보기의 '새 문서로' — D196) */
+export function sendSnippets(snips, { fresh = false } = {}) {
   if (!snips.length || !S.tab || blockedReadOnly(S.tab)) return;   // 받는 곳이 모두 이 프로젝트 안 (D71)
-  Object.assign(pick, { snips, step: 'target', doc: null });
+  Object.assign(pick, { snips, step: fresh ? 'new' : 'target', doc: null });
   box().hidden = false;
-  showStep();
+  showStep(fresh ? newDocGuess() : '');
 }
 
 function closePick() {

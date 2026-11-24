@@ -291,16 +291,18 @@ try:
         settle()
         check('절 링크', t1 > t0 + 500 and near(top(), t0), (t0, t1, top()))
         set_top(2500)
-        page.click('.side-tabs button[data-tab="parts"]')
-        wait("!!document.querySelector('#lec-parts-list .pt-item')", 15000)
-        page.click('#lec-parts-kinds button[data-kind="table"]')
+        page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('parts', { path: '', kind: 'table' }))")   # 모아 보기는 문서 탭 하나에 (D196)
+        wait("!!document.querySelector('#lec-view.parts-view .pv-chunk')", 15000)
         settle(300)
-        page.locator('#lec-parts-list .pt-item[data-doc="edge.md"]').first.click(modifiers=['Alt'])
+        page.locator('#lec-view .pv-chunk[data-doc="edge.md"] .pv-go').first.click()   # 다른 탭에 열려 있던 그 문서로 — 읽던 곳은 뒤로 기록에
         settle()
         t1 = top()
         page.keyboard.press('Alt+ArrowLeft')
         settle()
         check('모아 보기 결과', t1 < 1500 and near(top(), 2500), (t1, top()))
+        page.evaluate("""async () => { const { S } = await import('/static/js/store.js'); const d = await import('/static/js/doctabs.js');
+          const pane = S.tab.panes.find((p) => p.current?.type === 'parts'); if (pane) d.closeDocTab(pane); }""")   # 모아 보기 탭은 닫아 둔다 — 아래는 문서 탭 하나로 본다
+        settle(200)
         set_top(2500)
         page.keyboard.press('Control+Shift+f')
         page.keyboard.type('뒤의 글')

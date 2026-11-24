@@ -129,6 +129,12 @@ try:
             page.locator(f'[role=tab][data-tab="{name}"]').click()
             settle()
 
+        def gather():
+            """모아 보기를 연다 — 문서 탭 하나에 (D196)"""
+            page.evaluate("import('/static/js/store.js').then(({ emit }) => emit('parts', { path: '' }))")
+            page.wait_for_selector('#lec-view.parts-view .parts-kinds button', timeout=15000)
+            settle()
+
         def menu(target, name, shown=None):
             target.click(button='right')
             page.wait_for_selector('#lec-menu:not([hidden])', timeout=3000)
@@ -190,28 +196,34 @@ try:
         print('[최근 변경·모아 보기·담기]')
         side('recent')
         scan('최근 변경', '#lec-recent', 'a&b')
-        side('parts')
-        wait("document.querySelectorAll('#lec-parts-kinds button').length > 0")
+        before = page.evaluate("import('/static/js/store.js').then(({ S }) => S.view && [S.view.type, S.view.path])")
+        gather()
+        wait("document.querySelectorAll('#lec-view .parts-kinds button').length > 0")
         settle(800)
-        for i in range(page.locator('#lec-parts-kinds button').count()):
-            button = page.locator('#lec-parts-kinds button').nth(i)
+        for i in range(page.locator('#lec-view .parts-kinds button').count()):
+            button = page.locator('#lec-view .parts-kinds button').nth(i)
             label = button.inner_text().replace('\n', ' ')
             if button.is_disabled():
                 continue
             button.click()
-            settle(500)
+            # 펼치는 종류는 문서의 요소를 실제로 옮겨 온다 (D196) — 옮겨 온 뒤에 살핀다 (다이어그램·차트는 그린 뒤)
+            wait("!document.querySelector('#lec-view .pv-spread') || [...document.querySelectorAll('#lec-view .pv-spread')].every((g) => g.classList.contains('pv-done'))", 20000)
+            settle(300)
             scan(f'모아 보기 {label}')
             if not label.endswith(' 0'):   # 이 프로젝트에 없는 종류는 비어 있다
-                check(f'모아 보기 {label}: 목록이 그려짐', page.locator('#lec-parts-list').inner_text().strip() != '', label)
-        page.locator('[data-mode="meta"]').click()
+                check(f'모아 보기 {label}: 목록이 그려짐', page.locator('#lec-view .parts-list').inner_text().strip() != '', label)
+        check('모아 보기: 문서가 심은 스크립트·이벤트 속성이 돌지 않음', not page.evaluate('() => window.__xss || window.__bad || 0'))
+        page.locator('#lec-view [data-mode="meta"]').click()
         settle(700)
-        for i in range(page.locator('#lec-parts-kinds button').count()):
-            page.locator('#lec-parts-kinds button').nth(i).click()
+        for i in range(page.locator('#lec-view .parts-kinds button').count()):
+            page.locator('#lec-view .parts-kinds button').nth(i).click()
             settle(350)
-            scan('앞머리 ' + page.locator('#lec-parts-kinds button').nth(i).inner_text().replace('\n', ' '))
-        page.locator('[data-mode="files"]').click()
+            scan('앞머리 ' + page.locator('#lec-view .parts-kinds button').nth(i).inner_text().replace('\n', ' '))
+        page.locator('#lec-view [data-mode="files"]').click()
         settle(700)
-        scan('파일 종류', '#lec-parts-list', 'a&b')
+        scan('파일 종류', '#lec-view .parts-list', 'a&b')
+        if before:
+            show(before[0], before[1])   # 보던 화면으로 — 모아 보기는 이제 문서 탭이다
         page.evaluate("""async (name) => {
           const b = await import('/static/js/basket.js');
           b.addSnippets([b.snippetOf({ path: name, lines: ['<i data-xss="1"> & x'] }, [1, 1], { kind: 'block', name: '<i data-xss="1">', label: '<i data-xss="1"> & x' })]);
@@ -317,12 +329,12 @@ try:
         opens('본문 검색의 결과', page.locator('#lec-search-results .sr-hit').first, 'doc', DEEP)
         side('recent')
         opens('최근 변경', page.locator(f'#lec-recent .row[data-file="{CODE}"]'), 'code', CODE)
-        side('parts')
-        page.locator('[data-mode="parts"]').click()
+        gather()
+        page.locator('#lec-view [data-mode="parts"]').click()
         settle(600)
-        page.locator('#lec-parts-kinds [data-kind="table"]').click()
+        page.locator('#lec-view .parts-kinds [data-kind="table"]').click()
         settle(500)
-        opens('모아 보기의 표', page.locator('#lec-parts-list .pt-item').first, 'doc', DOC)
+        opens('모아 보기의 표', page.locator(f'#lec-view .parts-list .pv-chunk[data-doc="{DOC}"] .pv-go').first, 'doc', DOC)
         side('files')
         show('overview', 'sub & dir')
         opens('폴더 개요의 상위 단추', page.locator('#lec-view .crumbs button[data-dir=""]'), 'overview', '')

@@ -12,8 +12,16 @@ import { revealAt } from './spotlight.js';
 import { isHtml, toast } from './util.js';
 import { t } from './i18n.js';
 
-/** 화면 종류·문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js, 코드: codeview.js — D43, 폴더 개요: overview.js) */
+const renderers = {};
+
+/** 화면 종류의 렌더러를 등록한다 (main.js — 모아 보기 'parts' 는 parts.js 가 그린다, D196. nav 가 parts 를 import 하면 순환이 커진다) */
+export function addRenderer(type, show) {
+  renderers[type] = show;
+}
+
+/** 화면 종류·문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js, 코드: codeview.js — D43, 폴더 개요: overview.js, 모아 보기: 등록된 것) */
 function render(pane, target, opts) {
+  if (renderers[target.type]) return renderers[target.type](pane, target.path, opts);
   if (target.type === 'code') return showCode(pane, target.path, opts);
   if (target.type === 'overview') return showOverview(pane, target.path, opts);
   return isHtml(target.path) ? showHtml(pane, target.path, opts) : showDoc(pane, target.path, opts);
@@ -143,7 +151,7 @@ export function seedScroll(pane, pos) {
  */
 export function renamePath(tab, from, targetOf) {
   const showing = [];
-  const same = (v) => v && v.type !== 'overview' && v.path === from;
+  const same = (v) => v && (v.type === 'doc' || v.type === 'code') && v.path === from;
   for (const pane of tab.panes) {
     pane.history = pane.history.map((h) => (same(h) ? { ...h, ...targetOf(h.type) } : h));
     for (const type of ['doc', 'code']) {

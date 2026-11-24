@@ -72,8 +72,9 @@ def shoot(names: set[str]) -> list[str]:
                     save('code')
                 if 'parts' in names:
                     open_doc('reports/3분기-구리-구매-전략.md')
-                    page.click('.side-tabs button[data-tab="parts"]')
-                    page.wait_for_timeout(1500)
+                    page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('parts', { path: '', kind: 'table' }))")   # 문서 탭 하나에 (D196)
+                    page.wait_for_selector('#lec-view.parts-view .pv-done', timeout=20000)
+                    page.wait_for_timeout(800)
                     save('parts')
                 if 'spotlight' in names:
                     page.click('.side-tabs button[data-tab="files"]')

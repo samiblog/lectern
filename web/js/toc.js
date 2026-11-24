@@ -50,7 +50,8 @@ export function clearToc() {
 
 /**
  * 칸(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 칸이면 바로 다시 그린다.
- * outline: 코드 화면의 목차 [{line, level, name, kind}] (codeview.js·outline.js) — 있으면 제목 대신 이것으로 (줄은 root 의 .cv-line)
+ * outline: 코드 화면의 목차 [{line, level, name, kind}] (codeview.js·outline.js) — 있으면 제목 대신 이것으로 (줄은 root 의 .cv-line).
+ * 모아 보기(parts.js — D196)는 {title, items: [{level(0 문서·1 구성 요소), name, label, tip, icon, el}]} — 화면의 그 요소로 간다
  */
 export function setToc(pane, root, outline = null) {
   pane.tocRoot = root;
@@ -60,6 +61,7 @@ export function setToc(pane, root, outline = null) {
 
 const showPaneToc = (pane) => {
   if (!pane.tocRoot) clearToc();
+  else if (pane.tocOutline?.items) buildItems(pane.tocOutline);
   else if (pane.tocOutline) buildOutline(pane.tocRoot, pane.tocOutline);
   else buildToc(pane.tocRoot);
 };
@@ -79,6 +81,25 @@ function buildOutline(view, items) {
   const box = $('#lec-toc');
   setHtml(box, html`<p class="toc-head">${t('목차')}</p><ul class="toc-list code-outline">${rows.map((r, i) => (
     [html`<li class="lv${Math.min(r.level, 3)} ok-${r.kind}"><a href="#" data-i="${i}" title="${`${r.name} — ${t('{a}행', { a: r.line })}`}">`, html`<span class="ok" aria-hidden="true">${OUTLINE_MARK[r.kind] || '·'}</span>${r.name}</a></li>`]
+  ))}</ul>`);
+  links = $$('a[data-i]', box);
+  active = -1;
+  spy();
+  updateTocVisibility();
+}
+
+/** 모아 보기의 차례 (D196): 문서(lv0)와 그 아래 구성 요소 — 읽는 위치도 제목처럼 표시한다 (heads = 화면의 그 요소들) */
+function buildItems({ title, items }) {
+  const rows = items.filter((it) => it.el?.isConnected);
+  if (!rows.length) {
+    clearToc();
+    return;
+  }
+  heads = rows.map((r) => r.el);
+  parts = [];
+  const box = $('#lec-toc');
+  setHtml(box, html`<p class="toc-head">${title}</p><ul class="toc-list toc-items">${rows.map((r, i) => (
+    [html`<li class="${r.level ? 'part' : 'lv0'}"><a href="#" data-i="${i}" title="${r.tip || [r.name, r.label].filter(Boolean).join(' · ')}"${r.level ? html` style="padding-left:${INDENT[0] + 14}px"` : ''}>`, html`${r.icon ? html`<svg class="tp-icon" aria-hidden="true"><use href="#${r.icon}"/></svg>` : ''}`, html`<span class="tp-name">${r.name}</span>${r.label ? html`<span class="tp-label">${r.label}</span>` : ''}</a></li>`]
   ))}</ul>`);
   links = $$('a[data-i]', box);
   active = -1;
@@ -402,6 +423,20 @@ function describe(kind, el, n) {
 const hiddenParts = () => new Set(Array.isArray(S.config.toc_hidden_parts) ? S.config.toc_hidden_parts : []);
 
 // ---- 목차 그리기 ------------------------------------------------------------------
+
+/**
+ * 구성 요소를 다른 화면에 옮겨 그릴 때의 덩어리 (모아 보기의 펼친 화면 — D196): 캡션 단락, 요소의 상자(표 상자·코드 상자·그림만 든 단락),
+ * 바로 뒤의 주·자료 단락들 — 문서 차례로. 캡션이 요소 안(<caption>·<figcaption>)이면 요소 하나다
+ */
+export function partNodes(el) {
+  const kind = partKind(el);
+  const cap = kind && !PARTS[kind].more ? captionOf(kind, el) : null;
+  const box = (kind === 'table' && el.closest('.table-wrap')) || (kind === 'figure' && loneHolder(el)) || (kind === 'code' && el.closest('.code-block')) || el;
+  const capEl = cap?.el && cap.el.tagName === 'P' && !box.contains(cap.el) ? cap.el : null;
+  const els = [capEl, box].filter(Boolean).sort((x, y) => (x.compareDocumentPosition(y) & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1));
+  for (let next = els.at(-1).nextElementSibling; next?.tagName === 'P' && next !== capEl && SOURCE.test(squeeze(next.textContent)); next = next.nextElementSibling) els.push(next);
+  return els;
+}
 
 const INDENT = [10, 22, 34, 44];   // 제목 수준별 왼쪽 여백 (app.css 의 .lv1~3 과 같게)
 

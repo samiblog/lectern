@@ -32,7 +32,7 @@ function render(d, tab) {
   parts.push(html`<header class="ov-head">${crumbs(d.path, tab)}<h1>${d.name}</h1>
     <p class="ov-sub">${d.total ? t('문서 {n}개', { n: d.total }) : t('문서 없음')}${d.dirs.length ? `, ${t('폴더 {n}개', { n: d.dirs.length })}` : ''}</p>
     ${d.total ? html`<p class="ov-parts"><span>${t('모아 보기')}</span>${Object.entries(PARTS).map(([k, p]) => html`<button type="button" data-parts="${k}"
-      title="${t('{scope}의 {kind} 모아 보기 — 사이드바', { scope: d.path ? t('{folder} 폴더(하위 포함)', { folder: d.path }) : t('프로젝트 전체'), kind: p.many })}">${p.many}</button>`)}</p>` : ''}</header>`);
+      title="${t('{scope}의 {kind} 모아 보기 — 문서 탭에 펼칩니다', { scope: d.path ? t('{folder} 폴더(하위 포함)', { folder: d.path }) : t('프로젝트 전체'), kind: p.many })}">${p.many}</button>`)}</p>` : ''}</header>`);
 
   if (recent.length) {
     parts.push(html`<section class="ov-sec"><h2>${t('최근 변경')}</h2><ol class="ov-rail">${recent.map((f) => {

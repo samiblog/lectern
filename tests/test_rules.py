@@ -11,8 +11,8 @@ import pytest
 ROOT = Path(__file__).resolve().parent.parent
 TYPESCRIPT = 'typescript@7.0.2'
 # raw() 를 쓰는 곳 (D89): 이미 안전한 HTML 이라고 약속한 곳이다. DOMPurify 를 거친 것(charts·doc·help·parts),
-# highlight.js 의 결과(codeview), 앱이 만든 단축키 표시(help), 앱이 그린 SVG(parts). 더할 때는 그 값이 정말 안전한지 본다
-RAW_USES = {'slidegallery': 1, 'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 'parts': 3, 'slides': 1}
+# highlight.js 의 결과(codeview), 앱이 만든 단축키 표시(help). 더할 때는 그 값이 정말 안전한지 본다 (parts 는 둘 다 sanitizeHtml 을 거친 것 — D196)
+RAW_USES = {'slidegallery': 1, 'charts': 1, 'codeview': 1, 'doc': 1, 'help': 2, 'parts': 2, 'slides': 1}
 # esc() 를 바로 쓰는 곳: 화면이 아니라 글을 만든다 — highlight.js 가 없을 때의 코드(codeview), 설명서의 Markdown(help),
 # html 로 전환이 파일로 쓰는 발표 html(impressexport — D129)
 ESC_USES = {'codeview', 'help', 'impressexport', 'mdhtml', 'layout'}

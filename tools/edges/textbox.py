@@ -339,12 +339,15 @@ try:
 
         print('[모아 보기]')
         page.keyboard.press('Escape')
-        page.locator('[role=tab][data-tab="parts"]').click()
-        check("모아 보기에 '박스글' 종류", until(lambda: page.locator('#lec-parts-kinds button[data-kind="textbox"]:not(.zero)').count() == 1, 8000),
-              page.locator('#lec-parts-kinds').inner_text() if page.locator('#lec-parts-kinds').count() else '')
-        page.locator('#lec-parts-kinds button[data-kind="textbox"]').click()
-        listed = until(lambda: page.locator('#lec-parts-list').inner_text() if '재고 통계' in page.locator('#lec-parts-list').inner_text() else '')
+        page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('parts', { path: '' }))")   # 문서 탭 하나에 (D196)
+        page.wait_for_selector('#lec-view.parts-view .parts-kinds')
+        check("모아 보기에 '박스글' 종류", until(lambda: page.locator('#lec-view .parts-kinds button[data-kind="textbox"]:not(.zero)').count() == 1, 8000),
+              page.locator('#lec-view .parts-kinds').inner_text() if page.locator('#lec-view .parts-kinds').count() else '')
+        page.locator('#lec-view .parts-kinds button[data-kind="textbox"]').click()
+        listed = until(lambda: page.locator('#lec-view .parts-list').inner_text() if '재고 통계' in page.locator('#lec-view .parts-list').inner_text() else '')
         check('박스글의 제목이 이름', '박스 1. 재고 통계는 왜 다른가' in listed and '닫지 않은 박스글' in listed, listed[:300])
+        check('박스글을 실제 모습으로 펼친다 (D196)', until(lambda: page.locator('#lec-view .pv-chunk .pv-body.md-body aside.lec-textbox').count() >= 1, 8000),
+              page.locator('#lec-view .parts-list').inner_html()[:300])
 
         check('화면 스크립트 오류 없음', not errors, errors[:3])
         browser.close()

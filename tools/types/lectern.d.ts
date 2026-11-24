@@ -94,6 +94,8 @@ declare global {
     opening?: any;
     tocLimit?: any;
     tocOutline?: any;
+    /** 모아 보기 화면의 상태 (parts.js — D196): 모을 것·종류·거르기·범위, 옮겨 온 덩어리의 높이, 보이는 항목 */
+    gather?: any;
     used?: any;
     /** md 문서 점검의 결과 (doccheck.js — D190) */
     lint?: { path: string; issues: LintIssue[] } | null;
@@ -136,6 +138,10 @@ declare global {
     notes?: any;
     closing?: any;
     partsCache?: any;
+    /** 모아 보기가 요소를 옮겨 오려고 화면 밖에 그려 둔 문서 (parts.js — D196) */
+    partsDocs?: Map<string, any>;
+    /** 모아 보기가 지금 문서를 읽는 일 (parts.js) */
+    partsScan?: { scope: string; done: number; total: number } | null;
     restoring?: any;
     term?: any;
     terms?: any[];

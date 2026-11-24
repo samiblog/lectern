@@ -23,7 +23,7 @@ proj.mkdir(parents=True)
 (proj / '보고서.md').write_text('# 보고서\n\n## 요약\n\n첫 문단입니다.\n\n## 본론\n\n둘째 문단입니다.\n', encoding='utf-8', newline='\n')
 (proj / '조사.md').write_text('# 조사\n\n조사한 내용입니다.\n', encoding='utf-8', newline='\n')
 
-ORDER = ['lec-btn-overview', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export',
+ORDER = ['lec-btn-overview', 'lec-btn-parts', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export',
          'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term']
 TIP = "() => { const b = document.querySelector('#lec-tabtip'); return b && !b.hidden ? b.querySelector('b').textContent : ''; }"
 MENU = "() => { const m = document.querySelector('#lec-menu'); return m && !m.hidden ? [...m.querySelectorAll('button[data-i]')].map((e) => e.textContent.trim()) : null; }"

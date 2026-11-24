@@ -81,14 +81,13 @@ try:
                lambda: rows('#lec-doctab-list .doc-tab .name'))
 
         print('[모아 보기 — 파일 종류]')
-        page.click('.side-tabs button[data-tab="parts"]')
-        page.wait_for_selector('#lec-parts:not([hidden])')
         page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('parts', { path: '', mode: 'files' }))")
-        expect(page, '모아 보기의 문서 — 제목, 같은 제목은 파일 이름', lambda: sorted(rows('#lec-parts-list .ft-row .label'))[:2] == [['같은 제목', '노트.md'], ['같은 제목', '메모.md']],
-               lambda: rows('#lec-parts-list .ft-row .label'))
+        page.wait_for_selector('#lec-view.parts-view .parts-list')
+        expect(page, '모아 보기의 문서 — 제목, 같은 제목은 파일 이름', lambda: sorted(rows('#lec-view .parts-list .ft-row .label'))[:2] == [['같은 제목', '노트.md'], ['같은 제목', '메모.md']],
+               lambda: rows('#lec-view .parts-list .ft-row .label'))
         # '제목' 버튼은 '파일' 탭에만 보인다 — 다른 창에서 바꾼 것처럼 (config-follow 가 하는 일: 설정을 바꾸고 'titles')
         page.evaluate("() => import('/static/js/api.js').then((m) => m.saveConfig({ show_titles: false })).then(() => import('/static/js/store.js')).then((m) => m.emit('titles'))")
-        expect(page, "— '제목'을 끄면 바로 파일 이름으로", lambda: ['노트.md', ''] in rows('#lec-parts-list .ft-row .label'), lambda: rows('#lec-parts-list .ft-row .label'))
+        expect(page, "— '제목'을 끄면 바로 파일 이름으로", lambda: ['노트.md', ''] in rows('#lec-view .parts-list .ft-row .label'), lambda: rows('#lec-view .parts-list .ft-row .label'))
 
         check('화면 스크립트 오류 없음', not errors, errors[:3])
         b.close()

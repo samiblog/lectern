@@ -48,9 +48,9 @@ async function apply(tab, d) {
     let affected = false;
     if (v?.type === 'doc') {
       affected = d.reset || d.paths.includes(v.path) || !tab.fileMap.has(v.path);
-    } else if (v?.type === 'overview') {
+    } else if (v?.type === 'overview' || v?.type === 'parts') {   // 모아 보기 (D196)도 그 범위의 문서가 바뀌면 — 바뀐 문서만 다시 읽는다 (parts.js)
       const prefix = v.path ? `${v.path}/` : '';
-      affected = d.structure || d.paths.some((p) => p.startsWith(prefix));
+      affected = d.reset || d.structure || d.paths.some((p) => p.startsWith(prefix));
     }
     if (!affected) continue;
     if (paneShown(pane)) emit(d.reset ? 'refresh-view' : 'refresh-auto', pane);   // 기록이 끊겼으면(reset) 무엇이 바뀌었는지 모른다

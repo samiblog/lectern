@@ -45,6 +45,18 @@ async function openOverview() {
   if (S.view?.type !== 'overview' || S.view.path) emit('open', { type: 'overview', path: '' });
 }
 
+// ---- 모아 보기 (D196) --------------------------------------------------------------
+
+/** 모아 보기 탭으로: 열려 있으면 그 탭을 그대로(범위·거르기·읽던 자리) 고르고, 없으면 프로젝트 전체를 마지막에 고른 종류로 연다 (parts.js — 'parts' 이벤트) */
+async function openPartsTab() {
+  const tab = S.tab;
+  if (!tab) return;
+  await uncover();
+  const open = tab.panes.find((p) => (p.current || p.coming)?.type === 'parts');
+  if (open) emit('open', { type: 'parts', path: (open.current || open.coming).path });   // 그 탭으로만 간다 — 범위를 바꾸지 않는다
+  else emit('parts', { path: '' });
+}
+
 // ---- 바뀜 ------------------------------------------------------------------------
 
 /** 아직 열어 보지 않은 바뀐 문서 — 가장 최근에 바뀐 것부터 */
@@ -262,6 +274,12 @@ function render() {
   over.setAttribute('aria-pressed', String(on1));
   over.disabled = !tab;
 
+  const parts = $('#lec-btn-parts');   // 모아 보기 (D196) — 그 탭을 보는 동안 눌린 모양
+  const on3 = !!tab && view?.type === 'parts';
+  parts.classList.toggle('on', on3);
+  parts.setAttribute('aria-pressed', String(on3));
+  parts.disabled = !tab;
+
   const n = unseen(tab).length;
   const chg = $('#lec-btn-changed');
   const num = $('#lec-btn-changed-n');
@@ -285,6 +303,7 @@ function render() {
 export function initTabTools() {
   bindTips();
   $('#lec-btn-overview').addEventListener('click', openOverview);
+  $('#lec-btn-parts').addEventListener('click', openPartsTab);
   $('#lec-btn-changed').addEventListener('click', nextChanged);
   $('#lec-btn-card').addEventListener('click', openCard);
   $('#lec-btn-style').addEventListener('click', openStyle);

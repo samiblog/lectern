@@ -21,7 +21,7 @@ import { initTableFit } from './tablefit.js';
 import { initDocMenu, useWordMenu } from './docmenu.js';
 import { initChangeMarks, stepChange } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
-import { initParts } from './parts.js';
+import { initParts, showParts, focusPartsFilter } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
@@ -29,7 +29,7 @@ import { initRecent, refreshRecent } from './recent.js';
 import { initOthers, refreshOthers, focusFiles } from './others.js';
 import { initPalette, openPalette, closePalette } from './palette.js';
 import { initPanes, paneShown } from './panes.js';
-import { initNav, back, forward, refreshView } from './nav.js';
+import { initNav, back, forward, refreshView, addRenderer } from './nav.js';
 import {
   initTabs, loadTabs, chooseAndOpen, closeCurrentTab, cycleTab, selectTabAt, ensureLoaded, openSamples,
 } from './tabs.js';
@@ -88,6 +88,8 @@ function updateWindowTitle() {
     title = `${f?.title && f.title !== name ? `${name} [${f.title}]` : name} - ${S.name}`;
   } else if (S.view?.type === 'code') {
     title = `${basename(S.view.path)} - ${S.name}`;
+  } else if (S.view?.type === 'parts') {
+    title = `${t('모아 보기')} - ${S.name}`;
   }
   native.setTitle(`${title} - Lectern`);
 }
@@ -376,7 +378,7 @@ function bindKeys() {
     } else if (mod && key === 'f') {
       e.preventDefault();
       if (manualOpen() || S.view?.type === 'doc' || S.view?.type === 'code') openFind();   // 사용설명서를 연 동안은 설명서 안을
-      else focusFilter();
+      else if (!focusPartsFilter()) focusFilter();   // 모아 보기는 그 화면의 거르기 칸 (D196)
     } else if (mod && e.key === ',') {
       e.preventDefault();
       openSettings();
@@ -538,7 +540,8 @@ async function boot() {
   initPrint();   // 인쇄·PDF 양식 (D131)
   initChangeMarks();
   initSearch();
-  initParts();   // initTree 앞에 — 탭을 바꿀 때 앞 탭의 모아 보기 상태를 먼저 남긴다
+  addRenderer('parts', showParts);   // 모아 보기 화면 (D196 — 문서 탭 하나에)
+  initParts();
   initRecent();  // 같은 까닭 (트리가 사이드바 탭을 바꾸면 숨은 목록의 스크롤 위치를 읽지 못한다)
   initSettings();
   initRaw();   // 설정 원문 보기 (D160)

@@ -31,7 +31,7 @@ config.mkdir()
 server, url, port = serve(proj, config)
 
 OPEN = "(p) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: p }))"
-ORDER = ['lec-btn-overview', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export',
+ORDER = ['lec-btn-overview', 'lec-btn-parts', 'lec-btn-changed', 'lec-btn-card', 'lec-btn-put', 'lec-btn-edit', 'lec-btn-toc', 'lec-btn-style', 'lec-btn-export',
          'lec-btn-ai', 'lec-btn-notes', 'lec-btn-term']
 TIP = "() => { const b = document.querySelector('#lec-tabtip'); return b && !b.hidden ? { name: b.querySelector('b').textContent, more: b.querySelector('span').hidden ? '' : b.querySelector('span').textContent, top: b.getBoundingClientRect().top, left: b.getBoundingClientRect().left, right: b.getBoundingClientRect().right } : null; }"
 PASTED = "() => window.__pasted || []"
@@ -295,7 +295,7 @@ try:
             page.set_viewport_size({'width': w, 'height': 860})
             page.wait_for_timeout(120)
             fit = page.evaluate("() => { const bar = document.querySelector('#lec-tabbar'); const bs = [...bar.querySelectorAll('.tabbar-btn')].map((b) => b.getBoundingClientRect()); return { over: bar.scrollWidth - bar.clientWidth, row: new Set(bs.map((r) => Math.round(r.top))).size, tab: document.querySelector('#lec-tablist .lec-tab').getBoundingClientRect().width }; }")
-            check(f'{w}: 단추 열하나가 한 줄에, 넘치지 않고, 프로젝트 탭은 96px 이상', fit['over'] <= 0 and fit['row'] == 1 and fit['tab'] >= 96, fit)
+            check(f'{w}: 단추 열둘이 한 줄에, 넘치지 않고, 프로젝트 탭은 96px 이상', fit['over'] <= 0 and fit['row'] == 1 and fit['tab'] >= 96, fit)
         check('좁아도 바뀜의 수는 보인다', page.evaluate(SHOWN, '#lec-btn-changed-n') and page.evaluate(COUNT) == 1)
         page.hover('#lec-btn-term')
         until(page, lambda: page.evaluate(TIP) is not None)
