@@ -248,7 +248,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .doc-tab .ficon.doc, .doc-tab.active .ficon { color: var(--ui-accent); }
 .ficon.doc.deck, .side-list .ficon.doc.deck, .doc-tab .ficon.doc.deck, .sp-head .ficon.doc.deck, .parts-kinds .ficon.doc.deck, #lec-palette-list .ficon.doc.deck { color: var(--ui-deck, #d9692f); }
 .doc-tab:focus-visible { outline-offset: -2px; }
-.doc-tab .name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.doc-tab .name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .doc-tab .dirty { flex: none; color: var(--ui-accent); font-size: 10px; line-height: 1; }
 .doc-tab .tab-close { width: 20px; height: 20px; margin-left: 2px; }
 .doc-tab:hover .tab-close, .doc-tab.active .tab-close { visibility: visible; }
@@ -914,32 +914,34 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 #lec-present.pr-idle { cursor: none; }
 #lec-present.pr-idle .pr-bar { opacity: 0; }
 
-/* 담기 (basket.js, D63): 위에 넣기·맡기기·비우기, 담은 것 — 항목 오른쪽에 넣기(편집 중)·위로·아래로·빼기 */
 #lec-basket { flex: 1; min-height: 0; display: flex; flex-direction: column; }
-.basket-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; min-width: 0; padding: 0 6px 6px 10px; }
-.basket-bar .primary { flex: none; height: 26px; padding: 0 10px; font-size: 12px; }
-.basket-bar .text-btn { flex: none; height: 26px; padding: 0 8px; font-size: 12px; }
-/* 담기함 (basket.js — D197): 머리줄을 누르면 지금 담기함이 되어 펼쳐진다 */
-#lec-basket-ask input { width: 100%; }
-.toc-items .tp-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 담기함의 목록 (basket.js — D197·D198): 문서 행과 같은 줄. ● 는 지금 담기함, 다른 줄은 마우스를 올리면 ○ */
+#lec-basket .side-filter { flex: none; }
+#lec-basket-sort { flex: none; width: auto; padding: 0 8px; font-size: 12px; }
 .bk-undo { display: flex; align-items: center; gap: 6px; }
 .bk-undo .text-btn { font-size: 12px; }
-.bk-box { display: flex; align-items: center; gap: 6px; margin: 2px 4px 1px; padding: 4px 4px 4px 6px; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 600; color: var(--ui-muted); }
-.bk-box:hover, .bk-box:focus { background: var(--ui-hover); outline: none; }
-.bk-box:focus-visible { outline: 2px solid color-mix(in srgb, var(--ui-accent) 55%, transparent); outline-offset: -2px; }
-.bk-box.cur { color: var(--ui-fg); background: color-mix(in srgb, var(--ui-accent) 9%, transparent); }
-.bk-box .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bk-box .n { flex: none; color: var(--ui-faint); font-size: 12px; font-variant-numeric: tabular-nums; }
-.bk-box .bk-open { flex: none; width: 22px; height: 22px; opacity: .3; }
-.bk-box:hover .bk-open, .bk-box.cur .bk-open { opacity: 1; }
-.bk-memo { flex-basis: 100%; min-width: 0; color: var(--ui-faint); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bk-memo::before { content: "✎ "; }
-.bk-item { padding-right: 4px; }
-.bk-item .pt-text { flex: 1; }
-.bk-btns { flex: none; display: flex; align-items: center; gap: 1px; margin-top: -2px; opacity: .3; }
-.bk-item:hover .bk-btns, .bk-item:focus-within .bk-btns, .bk-btns:has(.bk-put) { opacity: 1; }
-.bk-btns .icon-btn.small { width: 22px; height: 22px; }
-.bk-btns .bk-put { flex: none; padding: 0 6px; color: var(--ui-accent); font-size: 12px; font-weight: 650; }
+.bk-box .label { font-weight: 600; }
+.bk-box .caret.none { visibility: hidden; }
+.bk-box .ficon, .bk-item .ficon { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round; color: var(--ui-muted); }
+.bk-item .ficon { width: 14px; height: 14px; }
+.bk-box.active .ficon, .bk-box.cur .ficon { color: var(--ui-accent); }
+.bk-box .n { flex: none; min-width: 18px; color: var(--ui-faint); font-size: 12px; text-align: right; font-variant-numeric: tabular-nums; }
+.bk-here { flex: none; display: grid; place-items: center; width: 20px; height: 20px; padding: 0; border: 0; border-radius: 4px; background: none; color: var(--ui-faint); cursor: pointer; visibility: hidden; }
+.bk-here::before { content: ""; width: 8px; height: 8px; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 50%; }
+.bk-here:hover { background: var(--ui-border); color: var(--ui-fg); }
+.bk-box.cur .bk-here { visibility: visible; color: var(--ui-accent); }
+.bk-box.cur .bk-here::before { background: currentColor; }
+.bk-box:hover .bk-here, .bk-box:focus .bk-here { visibility: visible; }
+.bk-item .label { font-size: 12.5px; color: var(--ui-muted); }
+.bk-item:hover .label, .bk-item:focus .label { color: var(--ui-fg); }
+.bk-mark { flex: none; color: var(--ui-faint); font-size: 11.5px; }
+.bk-mark.warn { color: var(--ui-danger); }
+.bk-item .bk-put { flex: none; height: 22px; padding: 0 6px; color: var(--ui-accent); font-size: 12px; font-weight: 650; }
+#lec-basket-list .row:focus { outline: none; background: var(--ui-hover); }
+#lec-basket-list .row:focus-visible { outline: 2px solid color-mix(in srgb, var(--ui-accent) 55%, transparent); outline-offset: -2px; }
+.cb-here[aria-pressed="true"] { color: var(--ui-accent); border-color: color-mix(in srgb, var(--ui-accent) 45%, var(--ui-border)); }
+.toc-list.toc-items .part .tp-name { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.toc-items .tp-mark { flex: none; margin-left: auto; padding-left: 4px; color: var(--ui-faint); font-size: 11px; font-weight: 400; }
 
 /* ---- 편집 모드 (editor.js, D54): 칸 위를 덮는 편집 상자 — CodeMirror 5. 색은 문서 스타일(--md-*)에서 ---- */
 .lec-editor { position: absolute; inset: 0; z-index: 6; display: flex; flex-direction: column; background: var(--md-bg, #fff); }
@@ -1357,6 +1359,12 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 #lec-print .print-box { width: min(1180px, 95vw); height: min(900px, 92vh); margin: 4vh auto 0; display: flex; flex-direction: column; }
 #lec-print .print-main { flex: 1; min-height: 0; display: grid; grid-template-columns: 250px minmax(0, 1fr); gap: 14px; }
 #lec-print .print-opts { overflow: auto; }
+#lec-print .pp-mm { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 12px; padding: 2px 4px 2px 37px; }
+#lec-print .pp-mm label { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0; cursor: default; font-size: 12.5px; color: var(--ui-muted); }
+#lec-print .pp-mm label:hover { background: none; }
+#lec-print .pp-mm input { width: 64px; height: 26px; margin: 0; padding: 0 4px 0 8px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-fg); font: inherit; text-align: right; }
+#lec-print .pp-mm input[aria-invalid] { border-color: var(--ui-danger); }
+#lec-pp-mm-note { padding-left: 33px; }
 #lec-print fieldset { margin: 0; padding: 0; border: 0; min-width: 0; }
 #lec-print fieldset:disabled { opacity: .45; }
 #lec-print .print-note { margin: 8px 4px; color: var(--ui-muted); font-size: 12px; line-height: 1.5; }
@@ -1774,6 +1782,16 @@ button.primary:hover { filter: brightness(1.08); }
 .cp-grid button.sel { outline: 2px solid var(--ui-accent); outline-offset: -2px; background: var(--ui-active-bg); }
 .cp-group.recent .cp-grid button { color: var(--ui-accent); }
 .cp-none { margin: 12px 4px; color: var(--ui-muted); }
+.boxpick { width: min(340px, calc(100vw - 16px)); }
+.boxpick .cp-head { margin-bottom: 6px; }
+.bp-body { display: flex; flex-direction: column; max-height: min(308px, 50vh); overflow-y: auto; }
+.bp-body button { display: flex; align-items: center; gap: 6px; flex: none; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.bp-body button:hover { background: var(--ui-hover); }
+.bp-body button.sel { background: var(--ui-active-bg); color: var(--ui-active-fg); }
+.bp-body .ficon { flex: none; width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 1.4; }
+.bp-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bp-body small { flex: none; color: var(--ui-faint); font-size: 12px; }
+.bp-body button.new { color: var(--ui-accent); }
 .cp-foot { display: flex; align-items: center; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--ui-border); color: var(--ui-muted); font-size: 12px; }
 #lec-chars-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-fg); }
 .cp-keys { flex: none; }

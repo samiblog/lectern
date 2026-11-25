@@ -211,6 +211,24 @@ Markdown with `marp: true` in the front matter shows as **slides** — Lectern's
 - Keep tabular data as CSV — clicked in Lectern it shows as a table (filter, sort and stats per column), and charts can read it with `data.url`. **Make the first row the header** (column names), put only values in cells and units in the header (`price (USD/t)`). Save as UTF-8 (Excel's CP949 can be read and edited too, but UTF-8 is better for sharing with other programs).
 - To point at data from a document, use a link (`[monthly prices](../data/월별-가격.csv)`) or a path such as `data/월별-가격.csv:5` — clicking goes to that row of the table.
 
+## Clip boxes — .lectern/clips/
+
+Pieces a person clips in Lectern pile up in one md file per clip box (`.lectern/clips/name.md`). Read it as is when asked — it holds the box's title and description, and for each clip where it came from, its title and note, and the text as it was when clipped. Add or change clips **only when the person asks**, and leave the others as they are.
+
+To add a clip, append this to the end of the file:
+
+```markdown
+<!-- lectern-clip path=research/stocks.md line=3 end=3 kind=block -->
+## Clip title (leave this line out if none)
+A note on why it was picked (may be empty)
+<!-- lectern-clip-text -->
+Lines 3-3 of that document, exactly as they are
+<!-- /lectern-clip -->
+```
+
+- `path` is relative to the project (write spaces as `%20`), `line` and `end` are the first and last source lines, and `kind` is one of `table`, `image`, `chart`, `section` or `block`. Lectern adds the `id`.
+- Do not reword the clipped text — if it differs from the document, Lectern says 'The source document changed'. Put interpretation in the note.
+
 ## Work card — WORK.md
 
 A folder's `WORK.md` is that folder's **work card** — the one at the top of a project covers the whole task, one in a subfolder covers a piece of work inside it. Lectern gathers the WORK.md of many folders into a work board (status, due date, to-dos, events) and alerts. People write and edit this file without AI — when an AI tool writes it, keep the same format so people can carry on editing it.

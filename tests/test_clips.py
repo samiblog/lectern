@@ -41,7 +41,7 @@ def test_create_names_the_file_after_the_title(tmp_path):
 @pytest.mark.parametrize('title', ['', '   ', '...', '???', 'con', 'NUL', '.숨김', 'a' * 300, '@#'])
 def test_any_title_gets_a_usable_name(tmp_path, title):
     name = clips.create_clips(tmp_path, title, '# x\n')['file']
-    assert clips._good_name(name) and (tmp_path / '.lectern' / 'clips' / name).is_file()
+    assert clips.good_name(name) and (tmp_path / '.lectern' / 'clips' / name).is_file()
 
 
 @pytest.mark.parametrize('name', [None, 3, '', '.md', 'a.txt', '../a.md', 'a/b.md', 'a\\b.md', 'C:a.md', '.hidden.md', 'con.md', 'a .md', ' a.md', 'a..md', 'a\n.md', '..md'])
@@ -134,7 +134,7 @@ def test_delete_only_goes_to_the_recycle_bin(tmp_path, monkeypatch):
 
 def test_api(client, state, project, monkeypatch):
     pid = state.active
-    assert client.get(f'/api/clips?p={pid}').get_json() == {'boxes': []}
+    assert client.get(f'/api/clips?p={pid}').get_json() == {'boxes': [], 'cur': ''}
     made = client.post('/api/clips', json={'p': pid, 'title': '구리', 'text': '# 구리\n'}).get_json()
     assert made['file'] == '구리.md' and (project / '.lectern' / 'clips' / '구리.md').read_text(encoding='utf-8') == '# 구리\n'
     saved = client.post('/api/clips', json={'p': pid, 'file': '구리.md', 'text': '# 구리 2\n', 'hash': made['hash']}).get_json()
@@ -145,10 +145,29 @@ def test_api(client, state, project, monkeypatch):
     assert client.post('/api/clips/delete', json={'p': pid, 'file': '..\\notes.md'}).status_code == 400
     monkeypatch.setattr(trash, 'send', lambda p: p.unlink())
     assert client.post('/api/clips/delete', json={'p': pid, 'file': '구리.md'}).get_json() == {'ok': True}
-    assert client.get(f'/api/clips?p={pid}').get_json() == {'boxes': []}
+    assert client.get(f'/api/clips?p={pid}').get_json() == {'boxes': [], 'cur': ''}
 
 
 def test_clips_do_not_show_in_the_tree(client, state):
     pid = state.active
     client.post('/api/clips', json={'p': pid, 'title': '구리', 'text': '# 찾을낱말\n'})
     assert '.lectern' not in client.get(f'/api/tree?p={pid}').get_data(as_text=True)
+
+
+def test_current_box_is_remembered(client, state, project):
+    """지금 담기함은 설정에 — 문서 위치를 적어도 남고, 이름이 아닌 것은 받지 않는다 (D199)"""
+    pid = client.get('/api/state').get_json()['projects'][0]['id']
+    cur = lambda: client.get(f'/api/clips?p={pid}').get_json()['cur']   # noqa: E731
+    assert cur() == ''
+    assert client.post('/api/clips/current', json={'p': pid, 'file': '질문.md'}).get_json() == {'ok': True}
+    assert cur() == '질문.md' and not (project / '.lectern').exists()
+    assert client.post('/api/position', json={'p': pid, 'path': 'README.md', 'scroll': 3}).status_code == 200
+    assert cur() == '질문.md'
+    assert client.post('/api/position', json={'p': pid, 'path': '', 'docs': []}).status_code == 200
+    assert cur() == '질문.md'
+    bad = ['../x.md', 'a/b.md', r'a\b.md', 'x.txt', '', None, 3, '.숨김.md']
+    assert [client.post('/api/clips/current', json={'p': pid, 'file': f}).status_code for f in bad] == [400] * len(bad)
+    assert client.post('/api/clips/current', json={'file': '질문.md'}).status_code == 404
+    assert cur() == '질문.md' and client.get('/api/state').get_json()['projects'][0]['position']['doc'] is None
+    state.config.data['projects'] = {k: {**v, 'clip': 7} for k, v in state.config.data['projects'].items()}
+    assert state.config.clip_box(str(project)) in ('', '질문.md')

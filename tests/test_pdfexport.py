@@ -186,6 +186,9 @@ def test_preview_route_needs_only_the_token():
 
 def test_print_options_settings():
     assert value_ok('print_margin', 'narrow') and not value_ok('print_margin', '10mm')
+    assert value_ok('print_margin', 'custom') and value_ok('print_margin_mm', [10, 0, 80, 12.5])
+    bad = [[10, 10, 10], [10, 10, 10, 81], [-1, 5, 5, 5], [1, 2, 3, '4'], [1, 2, 3, True], [1, 2, 3, None], '10', [float('inf')] * 4]
+    assert not [v for v in bad if value_ok('print_margin_mm', v)]
     assert value_ok('print_header', False) and not value_ok('print_header', 'no')
     assert value_ok('print_page_numbers', True)
 

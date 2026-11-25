@@ -41,8 +41,16 @@ export const cssString = (s) => `"${String(s).replace(/[\u0000-\u001f\u007f]+/g,
 
 /** 인쇄·PDF 글꼴 (설정 print_font — 설정 창과 내보내기 창) */
 export const printFont = () => (S.config?.print_font === 'sans' ? 'sans' : 'serif');
-/** 여백 (설정 print_margin) */
-export const printMargin = () => (Object.hasOwn(MARGINS, S.config?.print_margin || '') ? S.config.print_margin : 'normal');
+/** 여백 (설정 print_margin) — custom 은 숫자로 적은 것 (print_margin_mm, D200) */
+export const printMargin = () => (S.config?.print_margin === 'custom' || Object.hasOwn(MARGINS, S.config?.print_margin || '') ? S.config.print_margin : 'normal');
+/** 지금 여백의 숫자 [위, 오른쪽, 아래, 왼쪽] mm */
+export const marginMm = () => {
+  const own = S.config?.print_margin_mm;
+  if (printMargin() === 'custom' && Array.isArray(own) && own.length === 4) return own.map((x) => Math.min(80, Math.max(0, Number(x) || 0)));
+  return (MARGINS[printMargin()] || MARGINS.normal).split(' ').map(parseFloat);
+};
+const MARGIN_MAX = 80;
+const HEAD_MIN = 12;   // 쪽 머리·쪽 번호가 들어갈 여백 (mm) — 글과 겹치지 않게
 
 /** 화면의 맨 앞 설정 표에서 한 값 (doc.js 의 frontMatterHtml — 열쇠는 영문) */
 function frontValue(view, key) {
@@ -92,12 +100,13 @@ export function pageCss(view) {
   }
   const { title, date } = pageHead(view, view?.dataset.docPath);
   const font = PAGE_FONT[LANG === 'en' ? 'en' : 'ko'][printFont()];
-  const head = S.config?.print_header !== false;
-  const pages = S.config?.print_page_numbers !== false;
+  const mm = marginMm();
+  const head = S.config?.print_header !== false && mm[0] >= HEAD_MIN;
+  const pages = S.config?.print_page_numbers !== false && mm[2] >= HEAD_MIN;
   // 첫 쪽과 슬라이드 쪽의 '머리 없음'을 뒤에 다시 적는다 — Chrome 은 여백 상자 규칙을 :first·쪽 이름의 무게가 아니라 나중 것으로 고른다
   const none = '@top-left { content: none; } @top-right { content: none; }';
   return [
-    `@page { margin: ${MARGINS[printMargin()]}; @top-left { content: ${head ? cssString(title) : 'none'}; font-family: ${font}; } `
+    `@page { margin: ${mm.map((x) => `${x}mm`).join(' ')}; @top-left { content: ${head ? cssString(title) : 'none'}; font-family: ${font}; } `
     + `@top-right { content: ${head ? cssString(date) : 'none'}; font-family: ${font}; } @bottom-center { ${pages ? '' : 'content: none; '}font-family: ${font}; } }`,
     `@page :first { ${none} }`,
     `@page lec-slide { ${none} @bottom-center { content: none; } }`,
@@ -152,6 +161,7 @@ export function openPrint(kind = 'pdf') {
   dlg = { tab: S.tab, pane: S.pane, path: view.dataset.docPath, deck: view.classList.contains('lec-deck'), format, layout: '', layouts: [], docx: '', docxBuiltin: [], token: '', seq: ++builds, busy: false };
   for (const r of $$('#lec-print input[name="pp_font"]')) r.checked = r.value === printFont();
   for (const r of $$('#lec-print input[name="pp_margin"]')) r.checked = r.value === printMargin();
+  showMargins();
   $('#lec-pp-header').checked = S.config?.print_header !== false;
   $('#lec-pp-pages').checked = S.config?.print_page_numbers !== false;
   $('#lec-print-layout').disabled = dlg.deck;
@@ -428,10 +438,57 @@ async function refreshDocx(seq) {
   }
 }
 
+const marginInputs = () => /** @type {HTMLInputElement[]} */ ($$('#lec-print .pp-mm input'));
+
+/** 여백의 숫자 칸 — 지금 여백의 숫자를 보인다 (보통·좁게·넓게를 고르면 그 숫자). 여백이 좁아 쪽 머리·쪽 번호가 빠지면 알린다 */
+function showMargins() {
+  const mm = marginMm();
+  marginInputs().forEach((el, i) => {
+    if (el !== document.activeElement) el.value = String(mm[i]);
+    el.removeAttribute('aria-invalid');
+  });
+  const cut = [mm[0] < HEAD_MIN && S.config?.print_header !== false && t('쪽 머리'), mm[2] < HEAD_MIN && S.config?.print_page_numbers !== false && t('쪽 번호')].filter(Boolean);
+  $('#lec-pp-mm-note').textContent = cut.length ? t('여백이 {n}mm 보다 좁아 {what} 는 넣지 않습니다', { n: HEAD_MIN, what: cut.join(' · ') }) : '';
+}
+
+/** 숫자를 적었다 — 여백을 '직접' 으로 바꾸고 다시 만든다. 빈칸·숫자가 아닌 것·범위 밖은 그 칸에 표시하고 기다린다 */
+async function onMarginNumber() {
+  if (!dlg) return;
+  const values = marginInputs().map((el) => (el.value.trim() === '' ? NaN : Number(el.value)));
+  const good = values.map((x) => Number.isFinite(x) && x >= 0 && x <= MARGIN_MAX);
+  marginInputs().forEach((el, i) => (good[i] ? el.removeAttribute('aria-invalid') : el.setAttribute('aria-invalid', 'true')));
+  if (!good.every(Boolean)) {
+    $('#lec-pp-mm-note').textContent = t('여백은 0~{n}mm 의 숫자로 적습니다', { n: MARGIN_MAX });
+    return;
+  }
+  if (printMargin() === 'custom' && marginMm().every((x, i) => x === values[i])) return;
+  setBusy(t('미리보기를 만드는 중입니다…'));
+  await saveConfig({ print_margin: 'custom', print_margin_mm: values });
+  if (!dlg) return;
+  for (const r of $$('#lec-print input[name="pp_margin"]')) r.checked = r.value === 'custom';
+  showMargins();
+  remake();
+}
+const typedMargin = debounce(onMarginNumber, 500);
+
 /** 옵션을 바꿨다 — 설정에 남기고 미리보기를 다시 만든다 */
 async function onOption(e) {
   const el = e.target;
   if (!dlg || !(el instanceof HTMLInputElement)) return;
+  if (el.closest('.pp-mm')) {   // 칸을 떠나거나 Enter — 기다리지 않고 바로
+    onMarginNumber();
+    return;
+  }
+  if (el.name === 'pp_margin' && el.value === 'custom') {   // 보이는 숫자에서 시작한다
+    const mm = marginMm();
+    setBusy(t('미리보기를 만드는 중입니다…'));
+    await saveConfig({ print_margin: 'custom', print_margin_mm: mm });
+    showMargins();
+    marginInputs()[0].focus();
+    marginInputs()[0].select();
+    remake();
+    return;
+  }
   if (el.name === 'pp_format') {   // 형식은 설정에 남기지 않는다 — 여는 길(메뉴의 PDF·html)이 정한다
     dlg.format = el.value === 'html' ? 'html' : el.value === 'docx' ? 'docx' : 'pdf';
     showFormat();
@@ -445,6 +502,7 @@ async function onOption(e) {
   setBusy(t('미리보기를 만드는 중입니다…'));
   await saveConfig(patch);
   if (patch.print_font) emit('print-font');
+  showMargins();
   remake();
 }
 
@@ -563,6 +621,12 @@ export function initPrint() {
   on('print-font', applyPrintFont);   // 설정 창·내보내기 창에서 바꿀 때
   addEventListener('beforeprint', () => { if (!dlg) preparePage(); });   // 다른 길로 연 인쇄 창도 같은 머리로 (창에서는 이미 적었다)
   box().addEventListener('change', onOption);
+  box().addEventListener('input', (e) => { if (e.target.closest?.('.pp-mm')) typedMargin(); });
+  box().addEventListener('keydown', (e) => {   // 숫자 칸의 Enter 는 바로 — 창의 다른 단추로 가지 않게
+    if (e.key !== 'Enter' || e.isComposing || !e.target.closest?.('.pp-mm')) return;
+    e.preventDefault();
+    onMarginNumber();
+  });
   box().addEventListener('click', (e) => { if (e.target === box()) closePrint(); });   // 바깥을 누르면 닫기
   $('#lec-print-close').addEventListener('click', closePrint);
   $('#lec-print-settings')?.addEventListener('click', () => {   // 글꼴·틀 설정 — 설정 창의 '인쇄·내보내기' (D154)

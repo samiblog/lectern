@@ -229,8 +229,10 @@ try:
           b.addSnippets([b.snippetOf({ path: name, lines: ['<i data-xss="1"> & x'] }, [1, 1], { kind: 'block', name: '<i data-xss="1">', label: '<i data-xss="1"> & x' })]);
         }""", f'{NAME}.md')
         side('basket')
+        page.locator('#lec-basket-list .bk-box .caret').first.click()
         scan('담기', '#lec-basket-list', 'data-xss')
-        menu(page.locator('#lec-basket-list li, #lec-basket-list .row, #lec-basket-list > *').first, '담은 것의 우클릭 메뉴')
+        menu(page.locator('#lec-basket-list .bk-item').first, '담은 것의 우클릭 메뉴')
+        menu(page.locator('#lec-basket-list .bk-box').first, '담기함의 우클릭 메뉴')
 
         print('[폴더 개요]')
         show('overview', '')

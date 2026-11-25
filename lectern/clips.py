@@ -29,7 +29,7 @@ def _linked(root: Path) -> bool:
     return _is_link(root / NOTES_DIR) or _is_link(clips_dir(root))
 
 
-def _good_name(name: Any) -> bool:
+def good_name(name: Any) -> bool:
     """담기함의 파일 이름으로 쓸 수 있는지 — 폴더 글자·숨김·Windows 가 받지 않는 이름은 아니다"""
     if not isinstance(name, str) or not name.lower().endswith('.md') or len(name) > MAX_STEM + 24:
         return False
@@ -40,7 +40,7 @@ def _good_name(name: Any) -> bool:
 
 def _target(root: Path, name: Any) -> Path:
     """쓸 파일. 이름이 올바르지 않거나 쓸 수 없는 자리면 EditError"""
-    if not _good_name(name):
+    if not good_name(name):
         raise EditError(400, t('파일 경로가 올바르지 않습니다'))
     path = clips_dir(root) / name
     if paths.is_protected(path):
@@ -70,7 +70,7 @@ def read_clips(root: Path) -> dict[str, Any]:
         return {'boxes': boxes}
     for name in names:
         path = clips_dir(root) / name
-        if not _good_name(name) or _is_link(path) or len(boxes) >= MAX_BOXES:
+        if not good_name(name) or _is_link(path) or len(boxes) >= MAX_BOXES:
             continue
         try:
             got = editing.read_source(path)

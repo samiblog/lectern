@@ -3084,12 +3084,18 @@ def run(headed: bool) -> None:
                 page.wait_for_selector('#lec-menu:not([hidden])')
                 page.locator('#lec-menu button[data-i]', has_text='담기').first.click()
 
+            def send_box() -> None:   # 담기함 우클릭 → 문서로 보내기 (D198)
+                page.locator('#lec-basket-list .bk-box').first.click(button='right')
+                page.wait_for_selector('#lec-menu:not([hidden])')
+                page.locator('#lec-menu button[data-i]', has_text='문서로 보내기').click()
+
             take('#lec-view table')
             take('#lec-view img[alt="가"]')
             page.click('.side-tabs button[data-tab="basket"]')
-            bk = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-basket-list .bk-item .pt-name')].map(e => e.textContent),
+            page.locator('#lec-basket-list .bk-box .caret').first.click()
+            bk = page.evaluate('''() => ({ rows: [...document.querySelectorAll('#lec-basket-list .bk-item .label')].map(e => e.textContent),
               count: document.querySelector('#lec-basket-count').textContent })''')
-            page.click('#lec-basket-insert')
+            send_box()
             page.wait_for_selector('#lec-insert:not([hidden]) #lec-insert-list li.ins-new')
             targets = page.evaluate('''() => ({ docs: [...document.querySelectorAll('#lec-insert-list li.ins-doc .p')].map(e => e.textContent),
               note: !!document.querySelector('#lec-insert-list li.note') })''')   # 받는 곳은 열린 문서 탭과 새 문서뿐 (D65)
@@ -3114,7 +3120,7 @@ def run(headed: bool) -> None:
                   and made_first and new_tab == 'data/모음.md' and new_doc.read_text(encoding='utf-8') == new_text and drawn,
                   f"담기: 우클릭 담기(캡션까지) → 담기 탭 → 보낼 곳은 열린 문서 탭과 새 문서뿐 → 새 문서(data/모음.md)는 경로를 정할 때 만들어 새 문서 탭에서 편집, 그림 경로를 맞춰 저장하면 깨지지 않게 그림 ({bk}, {targets}, {made_first}, {new_tab}, {new_text[:60]!r})")
             page.click('.side-tabs button[data-tab="basket"]')
-            page.click('#lec-basket-insert')
+            send_box()
             page.fill('#lec-insert-input', 'README')
             page.wait_for_selector('#lec-insert-list li.empty')
             not_open = page.locator('#lec-insert-list li.ins-doc').count() == 0 and page.locator('#lec-insert-list li.note').count() == 1
@@ -3124,7 +3130,7 @@ def run(headed: bool) -> None:
             page.locator('#lec-tree .row[data-doc="README.md"]').click()   # 문서 탭으로 열어야 받는 곳이 된다
             wait_until(page, "document.querySelector('#lec-doctab-list .doc-tab.active')?.dataset.path === 'README.md'", 10000)
             page.click('.side-tabs button[data-tab="basket"]')
-            page.click('#lec-basket-insert')
+            send_box()
             page.fill('#lec-insert-input', 'README')
             page.wait_for_selector('#lec-insert-list li.ins-doc')
             page.locator('#lec-insert-list li.ins-doc').first.click()

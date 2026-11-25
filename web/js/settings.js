@@ -158,8 +158,6 @@ export function applyAiNames() {
   tip('#lec-voice-prompt', t('내 문체 안내의 위치를 적은 요청 글 — {cli} 에 붙여 넣고 견본을 @경로로 이어서 적습니다', { cli }));
   tip('#lec-mystyles-prompt', t('스타일 설명서의 위치와 저장할 폴더를 적은 요청 글 — {cli} 에 붙여 넣고 원하는 모양을 이어서 적습니다', { cli }));
   // 설정 창 밖의 단추들 (담기·템플릿·md 문서 스타일·pptx·html)
-  text('#lec-basket-claude', t('{ai} 에 맡기기', { ai }));
-  tip('#lec-basket-claude', t('담은 것의 위치로 새 문서를 만들어 달라는 {cli} 요청 글 — 복사·터미널', { cli }));
   text('#lec-gallery-ask', t('{ai} 에게 템플릿 요청', { ai }));
   text('#lec-mdstyle-request', t('{ai} 에게 스타일 요청', { ai }));
   text('#lec-pptx-ask', t('{ai} 에게 스타일 요청', { ai }));

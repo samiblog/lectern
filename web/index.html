@@ -228,13 +228,11 @@
         <p id="lec-search-info" class="side-info"></p>
         <nav id="lec-search-results" class="side-list" aria-label="검색 결과"></nav>
       </div>
-      <!-- 담기 (basket.js, D63·D65·D197): 담기함의 목록(고른 것만 펼쳐 조각을 보인다) — 펼쳐 보기(문서 탭), 문서로 보내기(보낼 곳 고르기 창), AI 도구에 맡기기(이름은 설정 ai_tool — D138), 편집 중이면 항목의 '보내기'가 커서 자리로 -->
+      <!-- 담기 (basket.js, D63·D65·D197·D198): 담기함의 목록 — 문서 목록처럼. 누르면 문서 탭에 펼치고, ● 는 지금 담기함, 화살표로 조각을 펼친다 -->
       <div id="lec-basket" hidden>
-        <div class="basket-bar">
-          <button type="button" id="lec-basket-open" class="primary small" title="지금 담기함을 문서 탭에 펼쳐 보기 — 실제 표·그림과 제목·메모">펼쳐 보기</button>
-          <button type="button" id="lec-basket-insert" class="text-btn" title="담은 것을 차례대로 열린 문서 탭이나 새 문서로 보내기 — 바로 저장하고, Ctrl+Z 한 번으로 되돌립니다">문서로 보내기…</button>
-          <button type="button" id="lec-basket-claude" class="text-btn"></button>
-          <span class="tb-spacer"></span>
+        <div class="side-filter">
+          <input id="lec-basket-filter" type="search" placeholder="담기함·조각 거르기" spellcheck="false" autocomplete="off">
+          <button type="button" id="lec-basket-sort" class="icon-btn small toggle">이름순</button>
           <button type="button" id="lec-basket-new" class="icon-btn small" title="새 담기함 만들기" aria-label="새 담기함 만들기"><svg><use href="#i-plus"/></svg></button>
         </div>
         <div id="lec-basket-ask" class="side-filter" hidden><input id="lec-basket-name" type="text" placeholder="새 담기함의 이름 — Enter" aria-label="새 담기함의 이름 — Enter" spellcheck="false" autocomplete="off"></div>
@@ -450,13 +448,21 @@
             <label><input type="radio" name="pp_margin" value="normal"><span>보통<small>위 25 · 아래 22 · 좌우 22mm</small></span></label>
             <label><input type="radio" name="pp_margin" value="narrow"><span>좁게<small>사방 15mm</small></span></label>
             <label><input type="radio" name="pp_margin" value="wide"><span>넓게<small>위 30 · 아래 25 · 좌우 30mm</small></span></label>
+            <label><input type="radio" name="pp_margin" value="custom"><span>직접<small>아래 칸에 mm 로 적습니다</small></span></label>
+            <div class="pp-mm" role="group" aria-label="여백 (mm)"><!-- 차례: 위·오른쪽·아래·왼쪽 (설정 print_margin_mm — D200) -->
+              <label>위쪽<input type="number" min="0" max="80" step="1" inputmode="decimal"></label>
+              <label>오른쪽<input type="number" min="0" max="80" step="1" inputmode="decimal"></label>
+              <label>아래쪽<input type="number" min="0" max="80" step="1" inputmode="decimal"></label>
+              <label>왼쪽<input type="number" min="0" max="80" step="1" inputmode="decimal"></label>
+            </div>
+            <p id="lec-pp-mm-note" class="print-note" role="status"></p>
           </div>
           <label class="opt"><input type="checkbox" id="lec-pp-header"><span><b>쪽 머리</b><small>2쪽부터 문서 제목과 날짜</small></span></label>
           <label class="opt"><input type="checkbox" id="lec-pp-pages"><span><b>쪽 번호</b><small>바닥 가운데 '- 1 -'</small></span></label>
         </fieldset>
         <p id="lec-print-note" class="print-note"></p>
         <p id="lec-print-html-note" class="print-note"></p>
-        <p id="lec-print-same" class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다.</p>
+        <p id="lec-print-same" class="print-note">옵션은 다음에도 그대로입니다. 미리보기가 저장·인쇄될 그대로입니다 — 브라우저가 붙이는 날짜·주소는 없습니다. 여백은 여기서 정합니다 — 인쇄 창의 여백 숫자는 이미 지은 쪽에는 듣지 않습니다.</p>
       </div>
       <div class="print-preview">
         <iframe id="lec-print-frame" title="미리보기"></iframe>

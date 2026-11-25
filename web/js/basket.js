@@ -3,15 +3,15 @@
 // - 담는 곳: 본문 우클릭 '담기'(docmenu.js)와 Alt+C, 모아 보기 항목 우클릭 '담기'·'보이는 것 모두 담기'(parts.js). 담는 순간의 원문을 남긴다
 //   (그 뒤에 원래 문서가 바뀌어도 담은 것은 그대로). 각주는 그 조각이 쓰는 정의를 함께 담는다. '지금 담기함'에 들어가고, 다른 담기함은 메뉴에서 고른다.
 // - 담기함 (D197): 프로젝트마다 여럿, .lectern/clips/ 의 파일로 남는다 (clipstore.js·clipdata.js). 하나도 없이 담으면 '담기함' 하나가 생긴다.
-// - 사이드바 '담기' 탭: 담기함의 목록 — 고른 것(지금 담기함)만 펼쳐 조각을 차례대로 보인다. 위로·아래로·빼기(되돌리기), 누르면 원래 자리로,
-//   '펼쳐 보기'(clipview.js — 문서 탭), '문서로 보내기…', 'Claude 에 맡기기'(요청 글 복사·터미널). 편집 중인 md 문서가 있으면 항목의 '보내기'가 커서 자리로.
+// - 사이드바 '담기' 탭: 담기함의 목록 — 문서 목록처럼 (D198). 누르면 문서 탭에 펼치고(clipview.js), ● 는 지금 담기함, 화살표로 조각을 한 줄씩 펼친다(처음은 접힘).
+//   조각을 누르면 펼친 화면의 그 카드로. 편집 중인 md 문서가 있으면 조각 줄의 '보내기'가 커서 자리로. 나머지(문서로 보내기·맡기기·비우기·지우기)는 우클릭과 펼친 화면에서.
 // - 바로 보내기: 우클릭 '…보내기…' — 그 조각 하나를.
 // - 보낼 곳 고르기 창(#lec-insert): 받는 곳은 편집 중인 곳(커서)·새 문서·문서 탭에 열린 문서뿐 (D65) → 자리(맨 끝·맨 앞·절 끝).
 //   새 문서는 경로를 적으면 바로 만든다 (newdoc.js — '# 제목' 한 줄). 보내는 것은 editor.js 의 insertIntoDoc — 그 문서를 편집 모드로 열어
 //   넣고, 저장은 사용자가 한다(Ctrl+S). 다듬는 것(경로·각주·제목 수준·담은 곳 주석)은 snippet.js.
 
 import { S, on, emit } from './store.js';
-import { getText } from './api.js';
+import { getText, saveConfig } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { openTarget, openDocs, docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
 import { goToPart, PARTS } from './toc.js';
@@ -19,13 +19,15 @@ import { insertIntoDoc, editingDoc } from './editor.js';
 import { insertLines } from './lineedit.js';
 import { buildBody, headingsOf, levelAt, noteDefs, noteIds, placeLine, placeText } from './snippet.js';
 import {
-  clipsOf, boxOf, curBox, boxName, loadClips, setCur, newBox, ensureBox, addClips, removeClips, undoRemove, moveClip, toBox, deleteBox, flushClips,
+  clipsOf, boxOf, curBox, boxName, loadClips, setCur, newBox, ensureBox, addClips, removeClips, undoRemove, moveClip, toBox, deleteBox, flushClips, checkBox, stateOf,
 } from './clipstore.js';
+import { pickBox } from './boxpick.js';
 import { newDocGuess, cleanPath, createDoc } from './newdoc.js';
 import { html, setHtml } from './html.js';
-import { $, toast, copyText, docUrl, isMd, isHtml, basename, dirname, timeAgo, keepFocus, blockedReadOnly, rangeText } from './util.js';
+import { $, $$, toast, copyText, docUrl, isMd, isHtml, basename, dirname, timeAgo, keepFocus, blockedReadOnly, rangeText, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
-import { aiCli } from './aitool.js';
+import { aiCli, aiName } from './aitool.js';
+import { sendRowKey } from './tree.js';
 
 let seq = 0;
 
@@ -72,26 +74,28 @@ export async function addSnippets(list, note = '', box = null) {
  * '다른 담기함에 담기…' — 담기함들과 '새 담기함…' 의 메뉴를 (x, y)에. 고른 담기함이 지금 담기함이 되지는 않는다 (하나만 다른 곳에 넣는 일이 잦다).
  * 새 담기함은 사이드바에서 이름을 받아 만들고 담는다. make: 조각들을 주는 함수
  */
-export async function boxMenu(x, y, pickBox, { except = null, header = t('담을 곳') } = {}) {
+export async function boxMenu(x, y, pick_, { except = null, header = t('담을 곳') } = {}) {
   const tab = S.tab;
   if (!tab) return;
   await loadClips(tab);
-  const st = clipsOf(tab);
-  showMenu(x, y, [{ header }, ...st.boxes.filter((b) => b !== except && !b.error).map((b) => (
-    { label: clip(boxName(b), 40), hint: b.file === st.cur ? t('지금 담기함') : t('{n}개', { n: b.items.length }), action: () => pickBox(b) })),
-  '-', { label: t('새 담기함…'), action: () => askBox(pickBox) }]);
+  if (tab === S.tab) pickBox(tab, { x, y, header, except, pick: pick_ });
+}
+
+/** 우클릭 메뉴의 '담기' 에 — 담기함이 여럿이면 어디에 담기는지 이름을 붙인다 (하나뿐이면 그대로) */
+export function clipLabel(label) {
+  const st = S.tab ? clipsOf(S.tab) : null;
+  const cur = st && st.boxes.length > 1 ? curBox(S.tab) : null;
+  return cur ? t("{label} — '{box}'", { label, box: clip(boxName(cur), 16) }) : label;
 }
 
 // ---- 사이드바 '담기' 탭 ----------------------------------------------------------
 
-let asking = null;   // 새 담기함의 이름을 묻는 중 — 만든 뒤 할 일 (box) => … (그냥 만들기면 빈 함수)
+let asking = false;   // 새 담기함의 이름을 묻는 중
 
 /** 사이드바에서 새 담기함의 이름을 묻는다 (이름을 적고 Enter — 그때 만든다) */
-function askBox(then = () => {}) {
+function askBox() {
   if (!S.tab) return;
-  asking = then;
-  emit('show-sidebar');
-  emit('show-panel', 'basket');
+  asking = true;
   render();
   const el = /** @type {HTMLInputElement} */ ($('#lec-basket-name'));
   el.value = '';
@@ -99,22 +103,47 @@ function askBox(then = () => {}) {
 }
 
 function stopAsking() {
-  asking = null;
+  asking = false;
   render();
 }
 
-function row(sn, i, n, put) {
-  const where = `${sn.path}${sn.lines ? ` · ${rangeText(sn.lines)}` : ''}`;
-  const tip = [sn.title, sn.label, `${sn.name}`, where, sn.memo].filter(Boolean).join('\n');
+/** 조각 한 줄 — 이름, 메모가 있으면 ✎, 원래 문서가 바뀌었거나 없으면 ⚠. 자세한 것은 마우스를 올리면 */
+function row(box, sn, put) {
+  const { state } = stateOf(S.tab, sn);
   const main = sn.title || sn.label || sn.name || clip(sn.text, 40);
-  return [html`<div class="pt-item bk-item has-cap" tabindex="0" data-id="${sn.id}" title="${tip}">`, html`<svg class="tp-icon" aria-hidden="true"><use href="#${iconOf(sn)}"/></svg>`, html`<span class="pt-text"><span class="pt-name">${main}</span>`, html`<span class="pt-label">${[sn.title && sn.label, sn.name !== main && sn.name, where].filter(Boolean).join(' · ')}</span>${sn.memo ? html`<span class="bk-memo">${clip(sn.memo, 60)}</span>` : ''}</span>`, html`<span class="bk-btns">${put ? html`<button type="button" class="text-btn bk-put" title="${t('편집 중인 문서의 커서 자리로 보내기')}">${t('보내기')}</button>` : ''}`, html`<button type="button" class="icon-btn small bk-up" title="${t('위로 (Alt+↑)')}"${i === 0 ? ' disabled' : ''}><svg><use href="#i-up"/></svg></button>`, html`<button type="button" class="icon-btn small bk-down" title="${t('아래로 (Alt+↓)')}"${i === n - 1 ? ' disabled' : ''}><svg><use href="#i-down"/></svg></button>`, html`<button type="button" class="icon-btn small bk-del" title="${t('빼기 (Delete)')}"><svg><use href="#i-close"/></svg></button></span></div>`];
+  const tip = [main, sn.title && sn.label, sn.name !== main && sn.name, sn.path && `${sn.path}${sn.lines ? ` · ${rangeText(sn.lines)}` : ''}`, sn.at && t('{date} 담음', { date: sn.at }),
+    state && (state === 'gone' ? t('원래 문서가 없습니다') : t('원래 문서가 바뀌었습니다')), sn.memo && `✎ ${sn.memo}`].filter(Boolean).join('\n');
+  return html`<div class="row bk-item" tabindex="-1" data-file="${box.file}" data-id="${sn.id}" style="--d:1" title="${tip}"><span class="caret-space"></span><svg class="ficon" aria-hidden="true"><use href="#${iconOf(sn)}"/></svg><span class="label">${main}</span>${sn.memo ? html`<span class="bk-mark" aria-label="${t('메모')}">✎</span>` : ''}${state ? html`<span class="bk-mark warn">⚠</span>` : ''}${put ? html`<button type="button" class="text-btn bk-put" tabindex="-1" title="${t('편집 중인 문서의 커서 자리로 보내기')}">${t('보내기')}</button>` : ''}</div>`;
 }
 
-/** 담기함의 머리줄 — 누르면 그것이 지금 담기함이 되어 펼쳐진다 */
-function boxRow(box, cur) {
-  return html`<div class="bk-box${cur ? ' cur' : ''}${box.error ? ' bad' : ''}" role="button" tabindex="0" data-file="${box.file}" aria-expanded="${cur}" title="${cur ? t('지금 담기함 — 담는 것이 여기에 들어갑니다') : t('누르면 지금 담기함으로 — 담는 것이 여기에 들어갑니다')}">
-    <span class="caret${cur ? ' open' : ''}" aria-hidden="true"></span><span class="label">${boxName(box)}</span>${box.error ? html`<span class="pt-bad">${t('읽지 못함')}</span>` : html`<span class="n">${box.items.length}</span>`}
-    <button type="button" class="icon-btn small bk-open" tabindex="-1" title="${t('펼쳐 보기 — 담은 것을 문서 탭에 실제 모습으로')}"><svg><use href="#i-gather"/></svg></button></div>`;
+/** 담기함 한 줄 — 문서 행처럼. 화살표는 조각을 펼치고, ● 는 지금 담기함(다른 것은 마우스를 올리면 ○) */
+function boxRow(box, cur, open) {
+  const active = S.view?.type === 'clips' && S.view.path === box.file;
+  const here = cur ? t('지금 담기함 — 담는 것이 여기에 들어갑니다 (Alt+C)') : t('여기에 담기 — 누르면 지금 담기함으로');
+  return html`<div class="row bk-box${cur ? ' cur' : ''}${active ? ' active' : ''}${box.error ? ' bad' : ''}" tabindex="-1" data-file="${box.file}" aria-expanded="${open}" title="${[boxName(box), box.note, box.error].filter(Boolean).join('\n')}"><span class="caret${open ? ' open' : ''}${box.items.length ? '' : ' none'}" data-toggle aria-hidden="true"></span><svg class="ficon" aria-hidden="true"><use href="#i-clip"/></svg><span class="label">${boxName(box)}</span>${box.error ? html`<span class="pt-bad">${t('읽지 못함')}</span>` : html`<button type="button" class="bk-here" tabindex="-1" title="${here}" aria-label="${here}" aria-pressed="${cur}"></button><span class="n">${box.items.length}</span>`}</div>`;
+}
+
+const clipWords = (sn) => [sn.title, sn.label, sn.name, sn.memo, sn.path].join(' ').toLowerCase();
+
+/** 목록에 보일 담기함들 [{box, open(펼쳤는지), items(보일 조각)}] — 차례(이름·최근)와 거르기. 거르는 동안 조각이 맞으면 그 조각만 펼쳐 보인다 */
+function shownBoxes(st) {
+  const words = $('#lec-basket-filter').value.toLowerCase().split(/\s+/).filter(Boolean);
+  const has = (hay) => words.every((w) => hay.includes(w));
+  const boxes = [...st.boxes].sort((a, b) => (S.config.clip_sort === 'time' ? b.mtime - a.mtime : 0) || natCompare(boxName(a), boxName(b)));
+  if (!words.length) return boxes.map((box) => ({ box, open: st.open.has(box.file) && box.items.length > 0, items: box.items }));
+  return boxes.map((box) => {
+    const named = has(`${boxName(box)} ${box.note}`.toLowerCase());
+    const items = box.items.filter((sn) => has(clipWords(sn)));
+    return { box, open: items.length > 0, items, hit: named || items.length > 0 };
+  }).filter((x) => x.hit);
+}
+
+/** Tab 으로 들어올 행 하나 — 초점이 있던 것, 보고 있는 담기함, 지금 담기함, 첫 줄 */
+function rove(row_ = null) {
+  const list = $('#lec-basket-list');
+  for (const r of $$('.row[tabindex="0"]', list)) r.tabIndex = -1;
+  const pick_ = row_ || list.querySelector('.row:focus') || list.querySelector('.bk-box.active') || list.querySelector('.bk-box.cur') || list.querySelector('.row');
+  if (pick_) pick_.tabIndex = 0;
 }
 
 /** 탭의 개수 표시와 (보이면) 목록 */
@@ -128,44 +157,72 @@ function render() {
   const editing = editingDoc();
   const list = $('#lec-basket-list');
   const st = tab ? clipsOf(tab) : null;
+  const shown = st ? shownBoxes(st) : [];
   keepFocus(list, () => {
-    setHtml(list, (st?.boxes || []).map((box) => {
-      const cur = box.file === st.cur;
-      return [boxRow(box, cur), cur && !box.error ? box.items.map((sn, i) => row(sn, i, box.items.length, !!editing)) : ''];
-    }));
+    setHtml(list, shown.map(({ box, open, items: mine }) => [boxRow(box, box.file === st.cur, open), open && !box.error ? mine.map((sn) => row(box, sn, !!editing)) : '']));
   });
+  rove();
+  for (const { box, open } of shown) if (open) checkBox(tab, box);   // 보이는 조각만 원래 문서와 대조 (바뀐 것이 없으면 묻지 않는다)
   $('#lec-basket-ask').hidden = !asking;
   $('#lec-basket-new').disabled = !tab;
+  const sort = $('#lec-basket-sort');
+  sort.textContent = S.config.clip_sort === 'time' ? t('최근 순') : t('이름순');
+  sort.title = S.config.clip_sort === 'time' ? t('누르면 이름순으로') : t('누르면 마지막에 고친 담기함부터');
   const undo = st?.undo && boxOf(tab, st.undo.file);
   $('#lec-basket-undo').hidden = !undo;
   if (undo) $('#lec-basket-undo span').textContent = t('{n}개를 뺐습니다', { n: st.undo.entries.length });
-  for (const id of ['#lec-basket-insert', '#lec-basket-claude', '#lec-basket-open']) $(id).disabled = !items.length;
-  let info;
+  let info = '';
   if (!tab) info = t('먼저 폴더를 여세요');
   else if (st.error) info = t('담기함을 읽지 못했습니다: {error}', { error: st.error });
-  else if (!items.length) info = t("담은 것이 없습니다. 문서의 절·표·그림·차트 등을 우클릭해 '담기'를 고르거나 Alt+C 를 누르세요");
-  else if (editing) info = t("편집 중: {path} — 항목의 '보내기'를 누르면 커서 자리로 보냅니다", { path: editing.path });
-  else info = st.memory ? t('보기만 하는 프로젝트라 담은 것을 저장하지 않습니다 — 앱을 끄면 비워집니다') : t("{n}개 — 담기함은 이 프로젝트에 저장됩니다", { n: items.length });
+  else if (!st.boxes.length) info = t("담은 것이 없습니다. 문서의 절·표·그림·차트 등을 우클릭해 '담기'를 고르거나 Alt+C 를 누르세요");
+  else if (!shown.length) info = t('맞는 담기함이 없습니다');
+  else if (st.memory) info = t('보기만 하는 프로젝트라 담은 것을 저장하지 않습니다 — 앱을 끄면 비워집니다');
+  else if (editing) info = t("편집 중: {path} — 담기함을 펼쳐 조각의 '보내기'를 누르면 커서 자리로", { path: editing.path });
   $('#lec-basket-info').textContent = info;
+  $('#lec-basket-info').hidden = !info;
 }
 
-const byId = (id) => itemsOf().find((sn) => sn.id === id);
-
-function move(sn, step) {
-  if (moveClip(S.tab, curBox(S.tab), sn, step)) $(`#lec-basket-list .bk-item[data-id="${CSS.escape(sn.id)}"]`)?.focus();
+function setOpen(box, open) {
+  const st = clipsOf(S.tab);
+  if (open) st.open.add(box.file);
+  else st.open.delete(box.file);
+  render();
 }
 
-function remove(sn) {
-  const i = itemsOf().indexOf(sn);
-  if (i < 0) return;
-  removeClips(S.tab, curBox(S.tab), new Set([sn.id]));
-  const left = itemsOf();
-  const next = left[Math.min(i, left.length - 1)];
-  if (next) $(`#lec-basket-list .bk-item[data-id="${CSS.escape(next.id)}"]`)?.focus();
+/** 목록의 행이 가리키는 담기함과 조각 (담기함 행이면 조각은 null) */
+function rowOf(el) {
+  const line = el?.closest?.('#lec-basket-list .row');
+  const box = line && boxOf(S.tab, line.dataset.file);
+  if (!box) return null;
+  const sn = line.dataset.id ? box.items.find((c) => c.id === line.dataset.id) : null;
+  return line.dataset.id && !sn ? null : { line, box, sn };
 }
 
-/** 담기함을 문서 탭에 펼친다 (clipview.js). edit: 제목 칸에 초점을 둘지 */
-export const openBox = (box) => emit('open', { type: 'clips', path: box.file });
+const focusRow = (sel) => {
+  const el = /** @type {HTMLElement | null} */ ($(`#lec-basket-list ${sel}`));
+  if (!el) return;
+  rove(el);
+  el.focus({ preventScroll: true });
+  el.scrollIntoView({ block: 'nearest' });
+};
+const focusItem = (sn) => focusRow(`.bk-item[data-id="${CSS.escape(sn.id)}"]`);
+
+function remove(box, sn) {
+  const i = box.items.indexOf(sn);
+  removeClips(S.tab, box, new Set([sn.id]));
+  const next = box.items[Math.min(i, box.items.length - 1)];
+  if (next) focusItem(next);
+  else focusRow(`.bk-box[data-file="${CSS.escape(box.file)}"]`);
+}
+
+/** 담기함을 문서 탭에 펼친다 (clipview.js). how: 열 곳 (util.openHow — 문서 목록과 같다) */
+export const openBox = (box, how = {}) => emit('open', { type: 'clips', path: box.file, ...how });
+
+/** 펼친 담기함의 그 조각으로 (title: 제목 칸에 초점 — 조각이 없으면 담기함의 제목) */
+async function openClip(box, sn = null, title = false) {
+  await openTarget({ type: 'clips', path: box.file });   // 열기가 초점을 본문에 두고 나서
+  emit('clips-goto', { file: box.file, id: sn?.id || '', title });
+}
 
 /** 담기함을 휴지통으로 — 담은 것이 있으면 묻는다 */
 async function dropBox(box) {
@@ -173,12 +230,16 @@ async function dropBox(box) {
   if (await deleteBox(S.tab, box)) toast(t('휴지통으로 보냈습니다: {what}', { what: boxName(box) }));
 }
 
-export function boxActions(box) {
+/** 담기함의 메뉴 — 사이드바의 우클릭과 펼친 화면의 '더 보기'. (x, y): 이어지는 메뉴의 자리 */
+export function boxActions(box, x = 0, y = 0) {
   const tab = S.tab;
   /** @type {MenuItem[]} */
   const acts = [{ label: t('펼쳐 보기'), hint: 'Enter', action: () => openBox(box) }];
-  if (box.file !== clipsOf(tab).cur) acts.push({ label: t('지금 담기함으로'), tip: t('담는 것이 여기에 들어갑니다'), action: () => setCur(tab, box.file) });
-  acts.push({ label: t('제목과 설명 고치기'), action: () => { openBox(box); emit('clips-title', box.file); } });
+  if (box.file !== clipsOf(tab).cur) acts.push({ label: t('여기에 담기'), tip: t('지금 담기함으로 — 담는 것이 여기에 들어갑니다 (Alt+C)'), action: () => setCur(tab, box.file) });
+  acts.push({ label: t('제목과 설명 고치기'), hint: 'F2', action: () => openClip(box, null, true) });
+  /** @type {MenuItem[]} */
+  const sends = box.items.length ? [{ label: t('{ai} 에 맡기기', { ai: aiName() }), tip: t('담은 것의 위치로 새 문서를 만들어 달라는 요청 글 — 복사·터미널'), action: () => claudeMenu(x, y, box) },
+    { label: t('문서로 보내기…'), tip: t('담은 것을 차례대로 열린 문서 탭이나 새 문서로 — 제목과 메모도 함께'), action: () => sendBox(box) }] : [];
   /** @type {MenuItem[]} */
   const copies = clipsOf(tab).memory ? [] : [{ label: t('@{path} 복사', { path: `.lectern/clips/${box.file}` }), tip: t('{cli} 프롬프트에 붙여 넣기', { cli: aiCli() }),
     action: async () => toast(await copyText(`@.lectern/clips/${box.file}`) ? t('복사했습니다: {what}', { what: `@.lectern/clips/${box.file}` }) : t('복사하지 못했습니다')), term: `@.lectern/clips/${box.file} ` }];
@@ -186,7 +247,7 @@ export function boxActions(box) {
   const danger = [];
   if (box.items.length) danger.push({ label: t('비우기'), tip: t('담은 것을 모두 뺍니다 — 되돌릴 수 있습니다 (문서는 그대로)'), action: () => removeClips(tab, box, new Set(box.items.map((c) => c.id))) });
   danger.push({ label: t('담기함 지우기…'), tip: t('휴지통으로 보냅니다'), action: () => dropBox(box) });
-  return menuGroups([{ header: boxName(box) }], box.error ? [] : acts, copies, box.error ? [] : danger);
+  return menuGroups([{ header: boxName(box) }], box.error ? [] : acts, box.error ? [] : sends, copies, box.error ? [] : danger);
 }
 
 /** 원래 문서의 그 자리로 (그 줄이 든 가장 안쪽 블록). 그 문서가 다른 문서 탭에 열려 있으면 그 탭, 지금 칸에서 편집 중이거나
@@ -419,21 +480,20 @@ export function claudeRequest(snips, b = null) {
   return `${ask}${words}${S.writingGuide ? ` ${t('문서는 Lectern 작성 안내({path})를 따라 주세요.', { path: S.writingGuide })}` : ''}`;
 }
 
-export async function claudeMenu(btn, b = curBox(S.tab)) {
+export async function claudeMenu(x, y, b) {
   const snips = b?.items || [];
   if (!snips.length) return;
   await flushClips();   // 요청 글이 담기함 파일을 가리킨다 — 쓰던 메모까지 저장하고
   const known = snips.filter((sn) => sn.path);
   const text = claudeRequest(known.length ? known : [/** @type {any} */ ({ path: `.lectern/clips/${b.file}` })], b);
-  const r = btn.getBoundingClientRect();
-  showMenu(r.left, r.bottom + 4, [{ header: t('{cli} 에 맡기기 — 담은 것 {n}개로 새 문서', { cli: aiCli(), n: snips.length }) },
+  showMenu(x, y, [{ header: t('{cli} 에 맡기기 — 담은 것 {n}개로 새 문서', { cli: aiCli(), n: snips.length }) },
     { label: t('요청 글 복사'), hint: t('{cli} 에 붙여 넣습니다', { cli: aiCli() }), action: async () => toast(await copyText(text) ? t('복사했습니다: {what}', { what: t('요청 글') }) : t('복사하지 못했습니다')), term: text }]);
 }
 
 // ---- 시작 -----------------------------------------------------------------------
 
 /** 조각의 우클릭 메뉴 — 사이드바와 펼쳐 보기(clipview.js)가 함께 쓴다 */
-export function clipMenu(b, sn, el, x, y) {
+export function clipMenu(b, sn, el, x, y, open = null) {
   const tab = S.tab;
   const items = b.items;
   const i = items.indexOf(sn);
@@ -451,61 +511,108 @@ export function clipMenu(b, sn, el, x, y) {
     { label: t('다른 담기함에 복사…'), action: () => boxMenu(x, y, (to) => toBox(tab, b, [sn], to, { copy: true }), { except: b, header: t('복사할 담기함') }) });
   const copyItem = { label: t('원문 복사'), tip: sn.lines ? `${sn.path} ${rangeText(sn.lines)}` : '', term: sn.text,
     action: async () => toast(await copyText(sn.text) ? t('복사했습니다: {what}', { what: clip(sn.label || sn.name, 30) }) : t('복사하지 못했습니다')) };
-  const menu = menuGroups([{ header: `${clip(sn.title || sn.label || sn.name || sn.text, 40)}${sn.path ? ` · ${sn.path}` : ''}` }], sn.path ? [{ label: t('문서에서 보기'), hint: 'Enter', action: () => goToSource(sn) }] : [],
+  const menu = menuGroups([{ header: `${clip(sn.title || sn.label || sn.name || sn.text, 40)}${sn.path ? ` · ${sn.path}` : ''}` }], [...(open ? [{ label: t('펼친 화면에서 보기'), hint: 'Enter', action: open }] : []), ...(sn.path ? [{ label: t('문서에서 보기'), hint: open ? '' : 'Enter', action: () => goToSource(sn) }] : [])],
     [copyItem], sends, moves, [{ label: t('빼기'), hint: 'Delete', action: () => removeClips(tab, b, new Set([sn.id])) }]);
   el.classList.add('lec-picked');
   showMenu(x, y, menu, () => el.classList.remove('lec-picked'));
 }
 
+let typed = '';
+let typedAt = 0;
+
+/** 목록의 키 — 문서 트리와 같게 (D169·D195): ↑·↓·Home·End, → 펼치기·← 접기(조각에서는 그 담기함으로), Enter 열기, F2 제목, Delete 빼기·지우기,
+ * 조각은 Alt+↑·↓ 로 차례, Shift+→ 는 담기함 파일·담은 곳을 터미널로, 글자는 그 글자로 시작하는 줄 */
+function onListKey(e) {
+  const hit = rowOf(e.target);
+  if (!hit || !e.target.matches('.row')) return;
+  const { line, box, sn } = hit;
+  const tab = S.tab;
+  const rows = /** @type {HTMLElement[]} */ ($$('.row', $('#lec-basket-list')));
+  const i = rows.indexOf(line);
+  const go = (el) => {
+    if (!el) return;
+    rove(el);
+    el.focus({ preventScroll: true });
+    el.scrollIntoView({ block: 'nearest' });
+  };
+  const open = line.getAttribute('aria-expanded') === 'true';
+  if (sn ? sendRowKey(e, sn.path || null, stateOf(tab, sn).lines || sn.lines || 0) : !clipsOf(tab).memory && sendRowKey(e, `.lectern/clips/${box.file}`)) return;
+  if (e.altKey && sn && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) {
+    if (moveClip(tab, box, sn, e.key === 'ArrowUp' ? -1 : 1)) focusItem(sn);
+  } else if (e.ctrlKey || e.metaKey || e.altKey) return;
+  else if (e.key === 'ArrowDown') go(rows[Math.min(rows.length - 1, i + 1)]);
+  else if (e.key === 'ArrowUp') go(rows[Math.max(0, i - 1)]);
+  else if (e.key === 'Home') go(rows[0]);
+  else if (e.key === 'End') go(rows[rows.length - 1]);
+  else if (e.key === 'ArrowRight') {
+    if (!sn && !open && box.items.length) setOpen(box, true);
+    else go(rows[i + 1]);
+  } else if (e.key === 'ArrowLeft') {
+    if (sn) focusRow(`.bk-box[data-file="${CSS.escape(box.file)}"]`);
+    else if (open) setOpen(box, false);
+  } else if (e.key === 'Enter') {
+    if (sn) openClip(box, sn);
+    else if (!box.error) openBox(box, openHow(e));
+  } else if (e.key === 'F2') {
+    if (!box.error) openClip(box, sn, true);
+  } else if (e.key === 'Delete') {
+    if (sn) remove(box, sn);
+    else if (!box.error) dropBox(box);
+  } else if (e.key.length === 1 && e.key !== ' ' && !e.isComposing) {
+    const now = Date.now();
+    typed = now - typedAt > 800 ? e.key.toLowerCase() : typed + e.key.toLowerCase();
+    typedAt = now;
+    const from = typed.length === 1 ? i + 1 : i;
+    go([...rows.slice(from), ...rows.slice(0, from)].find((r) => (r.querySelector('.label')?.textContent || '').toLowerCase().startsWith(typed)));
+  } else return;
+  e.preventDefault();
+  e.stopPropagation();   // 현재 줄의 키로 가지 않게
+}
+
 export function initBasket() {
   on('note-send', ({ text, label }) => sendSnippets([snippetOf({ path: '.lectern/notes.md', lines: [] }, null, { kind: 'text', name: t('메모'), label, text, plain: true })]));   // 메모를 문서로 (D92)
   const list = $('#lec-basket-list');
-  const boxAt = (e) => boxOf(S.tab, e.target.closest('.bk-box')?.dataset.file);
   list.addEventListener('click', (e) => {
-    const head = boxAt(e);
-    if (head) {
-      if (e.target.closest('.bk-open')) openBox(head);
-      else if (head.file !== clipsOf(S.tab).cur) setCur(S.tab, head.file);
-      else if (!head.error) openBox(head);   // 지금 담기함을 또 누르면 펼쳐 보기
-      return;
-    }
-    const el = e.target.closest('.bk-item');
-    const sn = el && byId(el.dataset.id);
-    if (!sn) return;
-    if (e.target.closest('.bk-put')) putAtCursor([sn]);
-    else if (e.target.closest('.bk-up')) move(sn, -1);
-    else if (e.target.closest('.bk-down')) move(sn, 1);
-    else if (e.target.closest('.bk-del')) remove(sn);
-    else goToSource(sn, e.ctrlKey || e.metaKey);
+    const hit = rowOf(e.target);
+    if (!hit) return;
+    const { box, sn } = hit;
+    if (sn) {
+      if (e.target.closest('.bk-put')) putAtCursor([sn]);
+      else if (!repeatClick(e)) openClip(box, sn);
+    } else if (e.target.closest('[data-toggle]')) setOpen(box, !clipsOf(S.tab).open.has(box.file));
+    else if (e.target.closest('.bk-here')) setCur(S.tab, box.file);
+    else if (!box.error && !repeatClick(e)) openBox(box, { ...openHow(e), here: e.altKey });
   });
-  list.addEventListener('keydown', (e) => {
-    const line = /** @type {HTMLElement} */ (e.target);
-    if (!line.matches?.('.bk-item, .bk-box')) return;
-    const head = line.matches('.bk-box') ? boxAt(e) : null;
-    const sn = head ? null : byId(line.dataset.id);
-    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
-      if (e.altKey && sn) move(sn, e.key === 'ArrowUp' ? -1 : 1);
-      else if (!e.altKey) (e.key === 'ArrowUp' ? line.previousElementSibling : line.nextElementSibling)?.focus();
-    } else if (e.key === 'Enter' && head) {
-      if (head.file === clipsOf(S.tab).cur) openBox(head);
-      else setCur(S.tab, head.file);
-    } else if (e.key === 'Enter' && sn) goToSource(sn);
-    else if (e.key === 'Delete' && sn) remove(sn);
-    else return;
-    e.preventDefault();
-    e.stopPropagation();   // 현재 줄의 키로 가지 않게
-  });
+  middleClickOpens(list, '.bk-box');
+  list.addEventListener('focusin', (e) => { if (e.target.matches?.('.row')) rove(e.target); });
+  list.addEventListener('keydown', onListKey);
   list.addEventListener('contextmenu', (e) => {
-    const head = boxAt(e);
-    const el = e.target.closest('.bk-item');
-    if (!head && !el) return;
+    const hit = rowOf(e.target);
+    if (!hit) return;
     e.preventDefault();
-    if (head) showMenu(e.clientX, e.clientY, boxActions(head));
-    else if (byId(el.dataset.id)) clipMenu(curBox(S.tab), byId(el.dataset.id), el, e.clientX, e.clientY);
+    if (hit.sn) clipMenu(hit.box, hit.sn, hit.line, e.clientX, e.clientY, () => openClip(hit.box, hit.sn));
+    else showMenu(e.clientX, e.clientY, boxActions(hit.box, e.clientX, e.clientY));
   });
-  $('#lec-basket-open').addEventListener('click', () => { if (curBox(S.tab)) openBox(curBox(S.tab)); });
-  $('#lec-basket-insert').addEventListener('click', () => { if (curBox(S.tab)) sendBox(curBox(S.tab)); });
-  $('#lec-basket-claude').addEventListener('click', (e) => claudeMenu(e.currentTarget));
+  const filter = /** @type {HTMLInputElement} */ ($('#lec-basket-filter'));
+  filter.addEventListener('input', render);
+  filter.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+      e.preventDefault();
+      focusRow('.row');
+    } else if (e.key === 'Escape' && filter.value) {
+      e.stopPropagation();
+      filter.value = '';
+      render();
+    }
+  });
+  $('#lec-basket-sort').addEventListener('click', async () => {
+    await saveConfig({ clip_sort: S.config.clip_sort === 'time' ? 'name' : 'time' });
+    render();
+  });
+  on('config-follow', (keys) => { if (keys.has('clip_sort')) render(); });
+  on('clips-state', (tab) => { if (tab === S.tab) render(); });
+  on('view', () => { if (!$('#lec-basket').hidden) render(); });   // 보고 있는 담기함
+  on('tree', () => { if (!$('#lec-basket').hidden) render(); });   // 원래 문서가 바뀌었는지
   $('#lec-basket-undo button').addEventListener('click', () => undoRemove(S.tab));
   $('#lec-basket-new').addEventListener('click', () => askBox());
   const name = /** @type {HTMLInputElement} */ ($('#lec-basket-name'));
@@ -516,12 +623,9 @@ export function initBasket() {
       stopAsking();
     } else if (e.key === 'Enter' && !e.isComposing) {
       e.preventDefault();
-      const then = asking;
-      if (!then || !name.value.trim()) return;
-      asking = null;   // 두 번 누른 Enter 로 둘을 만들지 않게
-      const made = await newBox(S.tab, name.value);
-      if (made) await then(made);
-      else asking = then;
+      if (!asking || !name.value.trim()) return;
+      asking = false;   // 두 번 누른 Enter 로 둘을 만들지 않게
+      if (!(await newBox(S.tab, name.value))) asking = true;
       render();
     }
   });
@@ -567,7 +671,7 @@ export function initBasket() {
     if (tab) loadClips(tab);
   });
   on('clips', (tab) => { if (tab === S.tab) render(); });
-  addEventListener('focus', () => { if (S.tab?.clips?.loaded && (!$('#lec-basket').hidden || S.tab.panes.some((p) => p.current?.type === 'clips'))) loadClips(S.tab, { force: true }); });
+  addEventListener('focus', () => { if (S.tab?.clips?.loaded && (S.tab.clips.boxes.length || !$('#lec-basket').hidden)) loadClips(S.tab, { force: true }); });
   addEventListener('pagehide', () => { flushClips(); });
   document.addEventListener('visibilitychange', () => { if (document.hidden) flushClips(); });
   on('editor', render);   // 편집을 열고 닫으면 항목의 '보내기'

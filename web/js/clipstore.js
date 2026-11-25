@@ -4,10 +4,10 @@
 // 사용자가 담거나 고칠 때만 파일이 생긴다. 보기만 하는 프로젝트(D71)는 쓰지 않고 이 창에만 둔다 (memory).
 
 import { S, emit } from './store.js';
-import { getJSON, postJSON } from './api.js';
-import { toast } from './util.js';
+import { getJSON, getText, postJSON } from './api.js';
+import { toast, docUrl, isMd } from './util.js';
 import { t } from './i18n.js';
-import { parseBox, writeBox, mergeBox, newClipId } from './clipdata.js';
+import { parseBox, writeBox, mergeBox, newClipId, findPiece } from './clipdata.js';
 
 const SAVE_MS = 500;
 
@@ -15,8 +15,9 @@ const fresh = (file, data, hash, mtime) => ({
   file, title: data.title, note: data.note, items: data.items, hash, mtime, error: '', touched: new Set(), removed: new Set(), head: false, order: false, timer: 0, saving: null, again: false,
 });
 
-/** 탭의 담기함 상태. undo: 마지막에 뺀 조각들 {file, entries: [{clip, at}]}, clock: 이 창이 저장·만들기·지우기를 한 횟수 (읽는 사이에 바뀌었는지), making: 만드는 중인 첫 담기함 */
-export const clipsOf = (tab) => (tab.clips ??= { boxes: [], cur: '', loaded: false, loading: null, error: '', memory: !!tab.readonly, undo: null, clock: 0, making: null });
+/** 탭의 담기함 상태. undo: 마지막에 뺀 조각들 {file, entries: [{clip, at}]}, clock: 이 창이 저장·만들기·지우기를 한 횟수 (읽는 사이에 바뀌었는지), making: 만드는 중인 첫 담기함,
+ * open: 사이드바에서 펼친 담기함의 파일, states: 조각 id → 원래 문서와 대조한 것 {key, state('' | 'changed' | 'gone'), lines(지금 있는 줄)} */
+export const clipsOf = (tab) => (tab.clips ??= { boxes: [], cur: '', saved: '', loaded: false, loading: null, next: null, error: '', memory: !!tab.readonly, undo: null, clock: 0, making: null, open: new Set(), states: new Map() });
 export const boxOf = (tab, file) => clipsOf(tab).boxes.find((b) => b.file === file) || null;
 /** 지금 담기함 (담는 곳) — 하나도 없으면 null */
 export const curBox = (tab) => (tab ? boxOf(tab, clipsOf(tab).cur) : null);
@@ -31,14 +32,21 @@ export async function loadClips(tab, { force = false } = {}) {
     st.loaded = true;
     return;
   }
-  if (st.loading) return st.loading;
+  if (st.loading) {   // 읽는 중에 또 — 읽던 것은 그 뒤에 바뀐 것을 모른다, 이어서 한 번 더 읽는다
+    if (!force) return st.loading;
+    return (st.next ??= st.loading.then(() => {
+      st.next = null;
+      return loadClips(tab, { force: true });
+    }));
+  }
   if (st.loaded && !force) return;
   st.loading = (async () => {
     try {
       let boxes;
+      let cur;
       for (let i = 0, from = -1; i < 4 && from !== st.clock; i += 1) {   // 읽는 사이에 이 창이 저장했으면 받은 것이 옛것이다 — 다시 읽는다
         from = st.clock;
-        ({ boxes } = await getJSON(`/api/clips?p=${encodeURIComponent(tab.id)}`));
+        ({ boxes, cur } = await getJSON(`/api/clips?p=${encodeURIComponent(tab.id)}`));
       }
       const next = [];
       for (const b of boxes) {
@@ -53,7 +61,7 @@ export async function loadClips(tab, { force = false } = {}) {
       st.boxes = next;
       st.error = '';
       st.loaded = true;
-      pickCur(st);
+      pickCur(st, cur);
     } catch (e) {
       st.error = e.message;
     } finally {
@@ -65,13 +73,22 @@ export async function loadClips(tab, { force = false } = {}) {
 }
 
 /** 지금 담기함이 없어졌으면 마지막에 고친 것으로 */
-function pickCur(st) {
+function pickCur(st, saved = '') {
+  if (saved && saved !== st.saved && st.boxes.some((b) => b.file === saved && !b.error)) st.cur = saved;   // 다른 창에서 정한 담는 곳
+  st.saved = saved || st.saved;
   if (st.boxes.some((b) => b.file === st.cur)) return;
-  st.cur = [...st.boxes].filter((b) => !b.error).sort((a, b) => b.mtime - a.mtime)[0]?.file || '';
+  st.cur = st.boxes.some((b) => b.file === saved && !b.error) ? saved : [...st.boxes].filter((b) => !b.error).sort((a, b) => b.mtime - a.mtime)[0]?.file || '';
 }
 
+/** 담는 곳을 정한다 — 다시 켜도 그대로 (D199 — 마지막에 고친 담기함으로 정하면, 다른 담기함에 메모를 쓴 뒤 다시 켰을 때 담는 곳이 바뀐다) */
 export function setCur(tab, file) {
-  clipsOf(tab).cur = file;
+  const st = clipsOf(tab);
+  st.cur = file;
+  if (!st.memory) {
+    st.saved = file;
+    st.clock += 1;   // 적는 사이에 읽은 것은 옛것이다
+    postJSON('/api/clips/current', { p: tab.id, file }).catch(() => {}).finally(() => { st.clock += 1; });
+  }
   changed(tab);
 }
 
@@ -95,8 +112,7 @@ export async function newBox(tab, title) {
     }
   }
   st.boxes = [...st.boxes.filter((b) => b.file !== box.file), box].sort((a, b) => a.file.localeCompare(b.file));
-  st.cur = box.file;
-  changed(tab);
+  setCur(tab, box.file);
   return box;
 }
 
@@ -192,6 +208,12 @@ export async function saveBox(tab, box) {
 /** 저장을 기다리는 것을 모두 바로 (칸을 떠날 때·다른 프로젝트로 갈 때·창을 닫을 때) */
 export const flushClips = (tab = S.tab) => Promise.all((tab?.clips?.boxes || []).filter(pending).map((box) => saveBox(tab, box)));
 
+/** 고친 것을 화면에 — 최근 순의 차례가 저장을 기다리지 않게 시각도 (저장하면 파일의 시각) */
+function edited(tab, box) {
+  box.mtime = Date.now() / 1000;
+  changed(tab);
+}
+
 function later(tab, box) {
   clearTimeout(box.timer);
   box.timer = setTimeout(() => saveBox(tab, box), SAVE_MS);
@@ -212,7 +234,7 @@ export function addClips(tab, box, snips) {
   }));
   box.items.push(...made);
   for (const c of made) box.touched.add(c.id);
-  changed(tab);
+  edited(tab, box);
   saveBox(tab, box);
   return made;
 }
@@ -228,7 +250,7 @@ export function removeClips(tab, box, ids) {
     box.removed.add(clip.id);
   }
   clipsOf(tab).undo = { file: box.file, entries };
-  changed(tab);
+  edited(tab, box);
   saveBox(tab, box);
 }
 
@@ -245,7 +267,7 @@ export function undoRemove(tab) {
   }
   box.order = true;
   st.undo = null;
-  changed(tab);
+  edited(tab, box);
   saveBox(tab, box);
   return true;
 }
@@ -256,7 +278,7 @@ export function moveClip(tab, box, clip, step) {
   if (i < 0 || j < 0 || j >= box.items.length) return false;
   [box.items[i], box.items[j]] = [box.items[j], box.items[i]];
   box.order = true;
-  changed(tab);
+  edited(tab, box);
   saveBox(tab, box);
   return true;
 }
@@ -265,7 +287,7 @@ export function moveClip(tab, box, clip, step) {
 export function editClip(tab, box, clip, fields) {
   Object.assign(clip, fields);
   box.touched.add(clip.id);
-  changed(tab);
+  edited(tab, box);
   later(tab, box);
 }
 
@@ -273,7 +295,7 @@ export function editClip(tab, box, clip, fields) {
 export function editBox(tab, box, fields) {
   Object.assign(box, fields);
   box.head = true;
-  changed(tab);
+  edited(tab, box);
   later(tab, box);
 }
 
@@ -321,4 +343,43 @@ export async function renameSources(tab, from, to) {
     saveBox(tab, box);
   }
   changed(tab);
+}
+
+// ---- 원래 문서와의 대조 -------------------------------------------------------------
+
+/** 조각의 대조한 것 — 아직이면 빈 것 */
+export const stateOf = (tab, clip) => clipsOf(tab).states.get(clip.id) || { state: '', lines: null };
+
+/**
+ * 담은 글이 지금 원래 문서에 그대로 있는지 본다 (md 문서 — 바뀐 문서만 다시 받는다). 바뀐 것이 있으면 'clips-state' 이벤트.
+ * 고른 글(보이는 글)과 문서가 아닌 것은 있는지만. 화면에 보이는 담기함만 부른다 (사이드바에서 펼친 것, 펼친 화면)
+ */
+export async function checkBox(tab, box) {
+  const st = clipsOf(tab);
+  const texts = new Map();
+  let news = false;
+  for (const c of [...(box?.items || [])]) {
+    const f = c.path && isMd(c.path) ? tab.fileMap.get(c.path) : null;
+    const key = `${c.path}|${c.lines || ''}|${f ? f.mtime : ''}`;
+    if (st.states.get(c.id)?.key === key) continue;
+    let state = c.path && isMd(c.path) && !f ? 'gone' : '';
+    let lines = null;
+    if (f && !c.plain && c.lines) {
+      if (!texts.has(c.path)) {
+        try {
+          texts.set(c.path, (await getText(docUrl(tab, c.path))).replace(/^\ufeff/, '').split(/\r\n?|\n/));
+        } catch {
+          texts.set(c.path, null);   // 바뀌는 순간 — 다음에 다시 본다
+        }
+      }
+      const found = texts.get(c.path) && findPiece(texts.get(c.path), c);
+      if (!found) continue;
+      lines = found.lines || null;
+      state = found.state === 'changed' ? 'changed' : '';
+    }
+    const was = st.states.get(c.id);
+    st.states.set(c.id, { key, state, lines });
+    news ||= (was?.state || '') !== state;
+  }
+  if (news) emit('clips-state', tab);
 }

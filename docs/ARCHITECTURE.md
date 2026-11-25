@@ -131,6 +131,7 @@ flowchart LR
 | `toc_width` | `null` | 가능 | 목차 폭(px, 160~560 — 문서 칸은 360px 이상 남김). 문서와 목차 사이 경계를 끌어 바꾸고 두 번 누르면 `null`(기본 232, D47) |
 | `csv_stats` | `true` | 가능 | CSV·엑셀 표 위의 통계 줄 — 모든 열을 한꺼번에 (표 막대의 '통계' 체크 칸, D60·D172) |
 | `table_align` | `"auto"` | 가능 | md 문서 표의 칸 맞춤 — `auto`(글 왼쪽·숫자 오른쪽·위)·`report`(보고서식 — 머리행·짧은 열 가운데, 세로 가운데). doc.js 가 그릴 때 표에 `lec-report`, 열에 `num`·`short` (설정 창 '보기', D174) |
+| `clip_sort` | `"name"` | 가능 | 사이드바 담기 탭의 담기함 차례 — `name`·`time`(마지막에 고친 것부터, D198) |
 | `files_open` | `"docs"` | 가능 | 사이드바 파일 탭에서 펼친 묶음 — `docs`·`code`·`others`·`folder`(폴더 구조 그대로 — D169). 한 번에 하나만 (D143, 프로젝트 탭마다 `tab.side.filesOpen`). 0.92 까지의 `files_view: folder` 는 `folder` 로 옮긴다 |
 | `docs_kind` | `"all"` | 가능 | '문서' 묶음에서 펼친 하위 묶음 — `all`·`md`·`deck`·`html`·`work`·`marks`·`tasks` (D143) |
 | `search_docs` / `search_code` | `true` | 가능 | 전체 검색에서 찾을 곳 — 검색 칸 아래 '문서'·'코드' 버튼 (D44) |
@@ -141,7 +142,8 @@ flowchart LR
 | `terminal_height` | `null` | 가능 | 아래에 둔 터미널 높이(px). 경계를 끌어 바꾸고 두 번 누르면 `null`(40%) |
 | `terminal_follow_style` | `true` | 가능 | 터미널 색을 문서 스타일에 맞춤. 끄면 늘 어두운 색 (설정 창) |
 | `print_font` | `"serif"` | 가능 | 인쇄·PDF 본문 글꼴 `serif`(명조)·`sans`(고딕) (D131 — 설정 창, 'PDF·인쇄' 창) |
-| `print_margin` | `"normal"` | 가능 | 인쇄·PDF 여백 `normal`(위 25·아래 22·좌우 22mm)·`narrow`(사방 15mm)·`wide`(위 30·아래 25·좌우 30mm) (D134) |
+| `print_margin` | `"normal"` | 가능 | 인쇄·PDF 여백 `normal`(위 25·아래 22·좌우 22mm)·`narrow`(사방 15mm)·`wide`(위 30·아래 25·좌우 30mm)·`custom` (D134·D200) |
+| `print_margin_mm` | `[25, 22, 22, 22]` | 가능 | 여백 '직접' 의 숫자 — 위·오른쪽·아래·왼쪽 mm, 0~80 (D200) |
 | `print_header` | `true` | 가능 | 인쇄·PDF 의 쪽 머리 — 2쪽부터 문서 제목과 날짜 (D134) |
 | `print_page_numbers` | `true` | 가능 | 인쇄·PDF 의 바닥 쪽 번호 (D134) |
 | `math` | `true` | 가능 | `$` 수식 렌더링 (설정 창) |
@@ -153,7 +155,7 @@ flowchart LR
 | `editor` | `null` | 불가 | 편집기 실행 파일 경로 |
 | `terminal_shell` | `null` | 불가 | 터미널 셸 실행 파일의 전체 경로 (예: `C:\\Program Files\\PowerShell\\7\\pwsh.exe`). `null`·없는 파일·이름만이면 Windows PowerShell 5.1 (D38) |
 | `html_exclude_dirs` | `[]` | 불가 | 이 이름의 폴더 안 html 은 문서로 보지 않음 (기본 목록 `src`·`public` 등에 더함, D27) |
-| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}, docs:[문서…]}` — 마지막 문서와 문서별 스크롤 위치, 열어 둔 문서 탭들(D64 — 탭 차례, 20개까지(D67), 없던 옛 기록은 doc 하나). 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서. 창을 나누던 때(v0.6)의 `panes`·`active` 는 읽지 않는다 (`doc` 이 그때 선택된 창의 문서라 그대로 쓴다) |
+| `projects` | `{}` | 불가 | 프로젝트(경로 소문자)별 `{doc, scroll:{문서: 위치}, docs:[문서…], clip}` — clip 은 지금 담기함의 파일 이름 (D199), 마지막 문서와 문서별 스크롤 위치, 열어 둔 문서 탭들(D64 — 탭 차례, 20개까지(D67), 없던 옛 기록은 doc 하나). 서버가 `POST /api/position` 으로 기록. 최근 20개 프로젝트, 프로젝트마다 100개 문서. 창을 나누던 때(v0.6)의 `panes`·`active` 는 읽지 않는다 (`doc` 이 그때 선택된 창의 문서라 그대로 쓴다) |
 
 '불가' 키는 `config.json` 을 직접 고쳐야 한다. 웹 페이지가 실행 파일 경로 같은 값을 바꾸지 못하게 하려는 제한이다 (`CLIENT_KEYS`).
 
@@ -193,7 +195,8 @@ flowchart LR
 | `GET /api/new-doc?p=<id>&path=<경로>` | | 그 자리에 새 문서를 만들 수 있는지 (D65 — 경로를 정하면 먼저 묻고, 되면 `POST /api/save` 의 create 로 만든다). 읽기만. `{path}`(폴더는 실제 이름) 또는 `{error, status}` — 물음의 답이라 늘 200 |
 | `GET /api/notes?p=<id>` | | 프로젝트 메모의 글 (D92 — `.lectern/notes.md`, 없으면 빈 글): `{text, hash, exists}` |
 | `POST /api/notes` | `{p, text, hash}` | 프로젝트 메모를 쓴다. 경로는 정해져 있고 처음이면 만든다. 그사이 바뀌었으면 409. `{hash, size}` |
-| `GET /api/clips?p=<id>` | | 담기함들 (D197 — `.lectern/clips/`, 없으면 빈 목록): `{boxes: [{file, text, hash, mtime} 또는 {file, error}]}` |
+| `GET /api/clips?p=<id>` | | 담기함들 (D197 — `.lectern/clips/`, 없으면 빈 목록): `{boxes: [{file, text, hash, mtime} 또는 {file, error}], cur}` — cur 는 지금 담기함으로 적어 둔 파일 (D199) |
+| `POST /api/clips/current` | `{p, file}` | 지금 담기함(담는 곳)을 설정의 `projects` 에 적는다 (D199 — 이름만). `{ok}` |
 | `POST /api/clips` | `{p, file, text, hash}` 또는 `{p, title, text}` | 담기함 하나를 쓴다 (그사이 바뀌었으면 409) / 새 담기함 (파일 이름은 제목에서, 겹치면 번호). `{file, hash, mtime}` |
 | `POST /api/clips/delete` | `{p, file}` | 담기함 하나를 휴지통으로. `{ok}` |
 | `GET /api/work` | | 업무 현황의 재료 (D124) — 공통 폴더(`work_home`)와 기억한 폴더들(`work_folders`)의 WORK.md 글. 탭이 닫혀 있어도 읽고, 열린 탭에 그사이 생긴 WORK.md 는 목록에 더한다. 열린 프로젝트의 하위 폴더 WORK.md 도 찾아 더하고, 그 프로젝트 안에서 사라진 하위 업무는 뺀다 (D149 — `work.discover`, 스캔 캐시를 쓴다). 나무로 잇는 것(부모·하위에서 셈)은 화면이 한다 (`workdata.linkTree`). 폴더마다 따로 읽어 늦는 드라이브는 3초 뒤 `slow`. `{home: {path, name, text, hash, mtime} \| {path, name, error} \| null, folders: [같은 모양…], alerts}` — error 는 `missing-folder`·`missing-card`·`unreadable`·`slow` |
@@ -483,7 +486,7 @@ sequenceDiagram
 
 ### 담기 (basket.js, clipstore.js, clipdata.js, clipview.js, snippet.js — D63·D197)
 - 조각: `{id, path, lines(원문 줄 범위 — 담은 곳), kind, name, label, text(담는 순간의 원문, 공통 들여쓰기를 걷음), notes(조각이 쓰는 각주의 정의 — snippet.js 의 noteDefs), plain, at(담은 날), title, memo, extra(모르는 값)}` — `snippetOf(doc, range, info)` 로 만들어 `clipstore.addClips` 가 담기함에 더한다. 담기함은 `tab.clips`(`clipsOf` — `{boxes: [{file, title, note, items, hash, mtime, error, touched·removed·head·order(저장을 기다리는 것)}], cur(지금 담기함), memory(보기만 하는 프로젝트), undo}`), 글은 `clipdata.js` 의 `parseBox`·`writeBox`, 저장은 `POST /api/clips`(409 면 `mergeBox`). 바뀌면 `clips` 이벤트로 사이드바·펼친 화면·문서 탭 이름이 다시 그린다. 읽는 때: 프로젝트 탭을 고를 때, '담기' 탭·펼친 화면을 열 때, 창으로 돌아올 때.
-- 사이드바 '담기' 탭(`#lec-basket`, 개수는 지금 담기함의 것 `#lec-basket-count`): 담기함 머리줄 `.bk-box[data-file]`(누르면 지금 담기함 — 지금 것을 또 누르거나 `.bk-open` 은 펼쳐 보기, 우클릭 `boxActions` — 제목과 설명 고치기·`@경로` 복사·비우기·지우기), 지금 담기함 아래에 조각 `.pt-item.bk-item[data-id]` — 제목(없으면 캡션·이름표·글), 종류 · 경로 · 줄, 메모. 오른쪽 '보내기'(편집 중일 때 커서 자리로 — `editingDoc`)·위로·아래로·빼기, Alt+↑↓·Delete, 누르면 원래 자리(`goToSource`). 우클릭 `clipMenu`(펼친 화면과 같다) — 문서에서 보기·원문 복사·보내기·새 메모·다른 담기함으로 옮기기/복사(`boxMenu`)·빼기. 새 담기함은 `#lec-basket-new` → 이름 칸 `#lec-basket-name` 에서 Enter. 마지막에 뺀 것은 `#lec-basket-undo`.
+- 사이드바 '담기' 탭(`#lec-basket`, 개수는 지금 담기함의 것 `#lec-basket-count`, D198): 문서 목록처럼 담기함 `.row.bk-box[data-file]` — 누르면 문서 탭에 펼치고(`openBox`, 보고 있는 것은 `.active`), `.bk-here` 는 지금 담기함(`.cur`), 화살표(`aria-expanded`, `tab.clips.open`)는 조각 `.row.bk-item[data-id]` 를 한 줄씩(메모 ✎·원래 문서 ⚠ — `clipstore.checkBox`·`stateOf`, 자세한 것은 title). 조각을 누르면 펼친 화면의 그 카드로(`openClip` → 'clips-goto'). 거르기 `#lec-basket-filter`, 차례 `#lec-basket-sort`(설정 `clip_sort`), 새 담기함 `#lec-basket-new` → 이름 칸 `#lec-basket-name` 에서 Enter, 마지막에 뺀 것은 `#lec-basket-undo`. 우클릭 `boxActions`(펼친 화면의 '더 보기'와 같다)·`clipMenu`(펼친 화면의 카드와 같다). 담기함 고르기는 `boxMenu` → boxpick.js 의 `pickBox` (Alt+Shift+C·다른 담기함에 담기·옮기기·복사 — D199). 키는 `onListKey` — 문서 트리와 같게, Shift+→ 는 `sendRowKey`. 편집 중일 때만 조각에 '보내기'(`editingDoc`).
 - 펼친 담기함(`#lec-view.clips-view`, 화면 종류 `clips`, 경로는 파일 이름 — `nav.addRenderer`): 머리(`.cb-title`·`.cb-note`), 붙어 있는 줄 `.cb-bar`, 카드 `.cb-card[data-id]` — `.cb-name`(제목)·`.cb-src`(`.cb-go`·`.cb-at`·`.cb-state`)·`.pv-body.md-body`(화면에 가까워질 때 `fillBody`)·`.cb-memo`. `draw` 는 있는 카드를 두고 제자리에서 고친다. `checkSources` 가 원래 문서의 줄들에서 담은 글을 찾는다(`clipdata.findPiece` — same·moved 는 말없이 자리만 `clipv.where`, changed·없음은 알린다) — 열 때, 조각이 바뀔 때, `watch.js` 의 `clips-sources`, `tree`. 누르기·키·입력은 `#lec-panes` 에서.
 - 보낼 곳 고르기(`#lec-insert`, `sendSnippets` — D65): 단계 target(편집 중인 곳·새 문서…·이 프로젝트의 문서 탭에 열린 md 문서 — `doctabs.openDocs`, 탭 차례, 거르기. 끝에 '먼저 문서 탭으로 여세요' 안내 줄 `li.note`) → place(맨 끝·맨 앞·절 끝 — 받는 문서의 글은 편집 중이면 편집기의 글, 아니면 `GET /doc/…`, 제목은 `headingsOf`) / new(경로 — `newdoc.createDoc` 이 `GET /api/new-doc` 으로 묻고 `POST /api/save` create 로 `# 제목` 을 만든 뒤 맨 끝으로 보낸다, 안 되면 까닭을 `#lec-insert-msg` 에). Esc 는 앞 단계로, 처음 단계에서는 닫기.
 - 이름 바꾸기 (D66, `rename.js`): 파일 행의 우클릭 '이름 바꾸기…'(`tree.renameItem` — 문서는 `docMenuItems`, 코드·자료는 `others.fileMenuItems`, 제외 폴더 안은 빼고)·F2(트리·'코드'·'자료' 목록·`bindFileRows` 의 행) → `rename` 이벤트 → `askRename(path)`: 저장하지 않은 편집이 있으면 알리고 그만, 아니면 `#lec-rename` 창(지금 이름, 확장자 앞까지 고름, 문서는 '링크는 그대로' 알림). Enter → 확장자가 바뀌면 `confirm` → `POST /api/rename` (안 되면 까닭을 `#lec-rename-msg` 에). 바뀌면 담은 조각의 경로, `nav.renamePath`(칸마다 뒤로 기록·스크롤 위치·`deferred` 를 새 대상으로 — 문서·코드, 읽을 수 없는 종류가 되면 그 폴더 개요)가 돌려준 칸들을 `navigate(…, {push: false})` 로 다시 연다 (편집 중이었으면 편집도). 트리·목록은 감시가 다시 그린다.

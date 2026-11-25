@@ -77,6 +77,11 @@ try:
         def basket(page):
             page.click('.side-tabs button[data-tab="basket"]')
 
+        def expand(page, name='담기함'):
+            row = page.locator('.bk-box', has_text=name).first
+            if row.get_attribute('aria-expanded') != 'true':
+                row.locator('.caret').click()
+
         a, c = window(), window()
         print('[1. 두 창에서 번갈아]')
         doc(a)
@@ -85,6 +90,7 @@ try:
         a.evaluate("() => import('/static/js/docmenu.js').then((m) => { m.clipHere(); m.clipHere(); m.clipHere(); })")
         expect(a, '처음부터 잇따라 세 번 담아도 담기함은 하나', lambda: count() == 3 and len(list(CLIPS.glob('*.md'))) == 1, lambda: [x.name for x in CLIPS.glob('*.md')])
         basket(a)
+        expand(a)
         for _ in range(2):
             a.locator('.bk-item').last.focus()
             a.keyboard.press('Delete')
@@ -101,6 +107,8 @@ try:
         expect(a, '처음 담기', lambda: count() == 1, src)
         c.evaluate("() => window.dispatchEvent(new Event('focus'))")
         basket(c)
+        c.wait_for_selector('.bk-box')
+        expand(c)
         expect(c, '다른 창의 담기 탭에도 보인다', lambda: c.locator('.bk-item').count() == 1, lambda: c.inner_text('#lec-basket-list'))
         for i in range(2, 10):
             clip(a if i % 2 else c, f'문단 {i} 입니다')
@@ -111,7 +119,7 @@ try:
         print('[2. 쓰는 동안 다른 창이 더한다]')
         basket(a)
         a.evaluate("() => window.dispatchEvent(new Event('focus'))")
-        a.click('#lec-basket-open')
+        a.locator('.bk-box', has_text='담기함').first.click()
         a.wait_for_selector('#lec-view.clips-view .cb-card')
         expect(a, '아홉이 펼쳐진다', lambda: len(a.evaluate(IDS)) == 9, lambda: a.evaluate(IDS))
         memo = a.locator('#lec-view .cb-memo').nth(2)
@@ -154,7 +162,7 @@ try:
         a.evaluate("() => import('/static/js/tabs.js').then((m) => m.selectTabAt(1))")
         basket(a)
         a.wait_for_selector('.bk-box')
-        a.click('#lec-basket-open')
+        a.locator('.bk-box', has_text='담기함').first.click()
         a.wait_for_selector('#lec-view.clips-view .cb-card')
         a.route('**/api/clips', lambda r: r.abort() if r.request.method == 'POST' else r.continue_())
         a.locator('#lec-view .cb-memo').nth(3).fill('끊긴 동안')
@@ -171,7 +179,7 @@ try:
         a.evaluate("() => window.dispatchEvent(new Event('focus'))")
         a.wait_for_selector('.bk-box:has-text("많음")')
         t0 = time.monotonic()
-        a.locator('.bk-box', has_text='많음').locator('.bk-open').click()
+        a.locator('.bk-box', has_text='많음').click()
         a.wait_for_function("() => document.querySelectorAll('#lec-view .cb-card').length === 290", timeout=20000)
         check('290개를 3초 안에 펼친다 (보이는 것만 그린다)', time.monotonic() - t0 < 3 and a.locator('#lec-view .cb-filled').count() < 100, (round(time.monotonic() - t0, 1), a.locator('#lec-view .cb-filled').count()))
         for _ in range(90):
@@ -216,6 +224,7 @@ try:
         a.keyboard.press('Control+e')
         a.wait_for_selector('.lec-pane.active .lec-editor .CodeMirror', timeout=20000)
         a.keyboard.press('Control+End')
+        expand(a)
         a.locator('#lec-basket-list .bk-item .bk-put').first.click()
         expect(a, '커서 자리에 조각이 — 단 제목·메모째', lambda: '## 첫 근거' in a.evaluate("() => import('/static/js/store.js').then((m) => m.S.pane.editor.cm.getValue())").replace('### ', '## ') and '> 메모: 지워진 뒤에 또 씀' in a.evaluate("() => import('/static/js/store.js').then((m) => m.S.pane.editor.cm.getValue())"), lambda: a.evaluate("() => import('/static/js/store.js').then((m) => m.S.pane.editor.cm.getValue())"))
         a.evaluate("() => import('/static/js/store.js').then((m) => import('/static/js/editor.js').then((e) => e.closeEditor(m.S.pane, { ask: false, sync: false })))")
@@ -232,7 +241,7 @@ try:
         for i in (11, 12, 13):
             clip(c, f'문단 {i} 입니다')
         expect(c, '셋', lambda: count('둘째-질문.md') == 3, lambda: src('둘째-질문.md'))
-        c.click('#lec-basket-open')
+        c.locator('.bk-box', has_text='둘째 질문').first.click()
         c.wait_for_selector('#lec-view.clips-view .cb-card')
         c.locator('#lec-view .cb-card').nth(1).focus()
         c.keyboard.press('Delete')
@@ -246,8 +255,8 @@ try:
         expect(c, '빼고 하나 더 담은 뒤 되돌려도 제자리로 (11·12·13·14)', lambda: c.evaluate("() => [...document.querySelectorAll('#lec-view .cb-name')].map((e) => e.placeholder.match(/문단 (\\d+)/)?.[1]).join()") == '11,12,13,14', lambda: c.evaluate("() => [...document.querySelectorAll('#lec-view .cb-name')].map((e) => e.placeholder)"))
         c.locator('#lec-view .cb-card').last.locator('.cb-src').click(button='right', position={'x': 420, 'y': 6})
         c.locator('#lec-menu button[data-i]', has_text='다른 담기함으로 옮기기').click()
-        c.wait_for_selector('#lec-menu:not([hidden])')
-        c.locator('#lec-menu button[data-i]', has_text='담기함').first.click()
+        c.wait_for_selector('#lec-boxpick:not([hidden])')
+        c.locator('#lec-boxpick button', has_text='담기함').first.click()
         expect(c, '옮기면 한 곳에만', lambda: '문단 14 입니다' in src() and '문단 14 입니다' not in src('둘째-질문.md') and count('둘째-질문.md') == 3, lambda: (count(), count('둘째-질문.md')), ms=8000)
         check('화면 스크립트 오류 없음', not errors, errors[:3])
         b.close()

@@ -56,6 +56,13 @@ def text(page, sel):
     return page.evaluate(TEXT, sel)
 
 
+def box_ai(page):
+    """담기함 메뉴의 맡기기 항목 이름 (사이드바의 단추는 걷었다 — D198)"""
+    return page.evaluate("""async () => { const b = await import('/static/js/basket.js');
+      const acts = b.boxActions({ file: 'x.md', title: 'x', note: '', items: [{ id: 'a' }], error: '' }).map((a) => a?.label || '');
+      return acts.find((x) => /맡기기|^Ask /.test(x)) || ''; }""")
+
+
 def clip(page):
     return page.evaluate('() => navigator.clipboard.readText()')
 
@@ -133,7 +140,7 @@ try:
         check('스킬 요청: ~/.claude/skills', '없는 것과 다른 것만 ~/.claude/skills 에 복사해' in pr['skills'] and 'Claude Code 스킬 세 개' in pr['skills'], pr['skills'])
         check('글쓰기 요청: 출력 스타일을 이 폴더에서 켜기', '~/.claude/output-styles/' in pr['wstyle'] and '.claude/settings.local.json 에 "outputStyle": "리서치 글쓰기"' in pr['wstyle'], pr['wstyle'][:160])
         page.keyboard.press('Escape')
-        check('담기의 단추', text(page, '#lec-basket-claude') == 'Claude 에 맡기기', text(page, '#lec-basket-claude'))
+        check('담기함 메뉴의 맡기기', box_ai(page) == 'Claude 에 맡기기', box_ai(page))
         items = lit_menu(page)
         check("고른 줄 메뉴: 'Claude로 보내기'", 'Claude로 보내기' in items, items)
 
@@ -149,7 +156,7 @@ try:
         check("글쓰기 요청: AGENTS.md 의 '글쓰기' 절", "AGENTS.md 의 '글쓰기' 절" in pr['wstyle'] and 'output-styles' not in pr['wstyle'], pr['wstyle'][:160])
         check('요청 글은 한 줄 (터미널에 여러 줄로 가지 않게)', all('\n' not in v for v in pr.values()))
         page.keyboard.press('Escape')
-        check('담기의 단추', text(page, '#lec-basket-claude') == 'Codex 에 맡기기')
+        check('담기함 메뉴의 맡기기', box_ai(page) == 'Codex 에 맡기기')
         check("고른 줄 메뉴: 'Codex로 보내기'", 'Codex로 보내기' in lit_menu(page))
         check('창 밖의 단추들', [text(page, x) for x in ('#lec-gallery-ask', '#lec-mdstyle-request', '#lec-pptx-ask', '#lec-html-ask')]
               == ['Codex 에게 템플릿 요청', 'Codex 에게 스타일 요청', 'Codex 에게 스타일 요청', 'Codex 에게 배치 요청'])
@@ -178,7 +185,7 @@ try:
         check('멈춘 프로그램 안내: opencode --continue', 'OpenCode 는 opencode --continue 로 이어 갑니다' in stuck, stuck[-80:])
         page.keyboard.press('Escape')
         check("고른 줄 메뉴: 'OpenCode로 보내기'", 'OpenCode로 보내기' in lit_menu(page))
-        check('담기의 단추', text(page, '#lec-basket-claude') == 'OpenCode 에 맡기기')
+        check('담기함 메뉴의 맡기기', box_ai(page) == 'OpenCode 에 맡기기')
 
         print('[여럿]')
         choose(page, 'any')
@@ -194,7 +201,7 @@ try:
         check('알려 주기 요청 (이 폴더만): 두 파일과 @AGENTS.md', all(x in pr['aiguide'] for x in ('CLAUDE.md', 'AGENTS.md', '@AGENTS.md 한 줄')), pr['aiguide'][-260:])
         page.check('#lec-settings input[name="ai_scope_guide"][value="all"]')
         page.keyboard.press('Escape')
-        check('담기의 단추', text(page, '#lec-basket-claude') == 'AI 에 맡기기')
+        check('담기함 메뉴의 맡기기', box_ai(page) == 'AI 에 맡기기')
         check("고른 줄 메뉴: 'AI로 보내기'", 'AI로 보내기' in lit_menu(page))
         stuck = page.evaluate("() => import('/static/js/terminal.js').then((m) => m.stuckMessage([{ name: 'git.exe', pid: 1 }]))")
         check('멈춘 프로그램 안내: 네 도구', all(x in stuck for x in ('claude --continue', 'codex resume --last', 'agy --continue', 'opencode --continue')), stuck[-200:])
@@ -204,7 +211,7 @@ try:
         page.keyboard.press('Escape')
         page.reload()
         page.wait_for_selector('#lec-tree .row.file', timeout=20000)
-        expect(page, '담기의 단추가 Codex', lambda: text(page, '#lec-basket-claude') == 'Codex 에 맡기기')
+        expect(page, '담기함 메뉴의 맡기기가 Codex', lambda: box_ai(page) == 'Codex 에 맡기기')
         open_settings(page)
         check('고른 것은 Codex', page.is_checked('#lec-settings input[name="ai_tool"][value="codex"]'))
         page.keyboard.press('Escape')
@@ -258,7 +265,7 @@ try:
         page.wait_for_selector('#lec-tree .row.file', timeout=20000)
         page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: 'docs/a.md' }))")
         page.wait_for_selector('#lec-view h1')
-        check('Ask Codex', text(page, '#lec-basket-claude') == 'Ask Codex', text(page, '#lec-basket-claude'))
+        check('Ask Codex', box_ai(page) == 'Ask Codex', box_ai(page))
         check('Send to Codex', 'Send to Codex' in lit_menu(page))
         open_settings(page)
         check('Teach Codex about Lectern', text(page, '#lec-aiguide-title') == 'Teach Codex about Lectern' and text(page, '#lec-skills-prompt') == 'Copy request for Codex',

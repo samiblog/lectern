@@ -18,7 +18,7 @@ import { initChartData } from './chartdata.js';
 import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
-import { clipHere, initDocMenu, useWordMenu } from './docmenu.js';
+import { clipHere, clipHereTo, initDocMenu, useWordMenu } from './docmenu.js';
 import { initChangeMarks, stepChange } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
 import { initParts, showParts, focusPartsFilter, clipChunk } from './parts.js';
@@ -472,9 +472,9 @@ function bindKeys() {
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyW' && !typing(e)) {
       e.preventDefault();   // 업무 현황 (work.js, D124)
       openBoard();
-    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyC' && !typing(e) && docKeyTarget(e) && !manualOpen()) {
+    } else if (e.altKey && !mod && e.code === 'KeyC' && !typing(e) && docKeyTarget(e) && !manualOpen()) {
       e.preventDefault();   // 담기 — 고른 글·고른 줄·현재 줄의 블록, 모아 보기에서는 초점이 있는 덩어리 (D197)
-      if (!clipChunk()) clipHere();
+      if (!e.repeat && !clipChunk(e.shiftKey)) (e.shiftKey ? clipHereTo : clipHere)();   // Shift 면 담기함을 골라 (D199)
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyS' && !typing(e)) {
       e.preventDefault();   // 일정 더하기 (work.js, D124)
       openEventDialog();

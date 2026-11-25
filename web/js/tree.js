@@ -402,7 +402,7 @@ const termDigit = (e) => (/^Digit[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 
 export function sendRowKey(e, path, line = 0) {
   if (!e.shiftKey || e.altKey || e.metaKey || e.isComposing || path == null) return false;
   const n = termDigit(e);
-  const ref = line ? lineRef(path, [line, line]) : path ? `@${path}` : '';
+  const ref = line ? lineRef(path, Array.isArray(line) ? line : [line, line]) : path ? `@${path}` : '';   // line: 줄 하나, 또는 [첫 줄, 끝 줄] (담은 조각 — basket.js)
   if (e.key === 'ArrowRight' || n != null) {
     const text = ref ? `${ref} ` : shellWord(fullPath(''));
     const back = /** @type {HTMLElement} */ (e.target).closest?.('.row') || null;

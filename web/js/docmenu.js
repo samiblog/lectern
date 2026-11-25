@@ -15,7 +15,7 @@ import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere, litSpan, hereLine } from './spotlight.js';
 import { blockOfLine } from './lineunits.js';
 import { partExtent, captionOf } from './toc.js';
-import { snippetOf, addSnippets, sendSnippets, boxMenu } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets, boxMenu, clipLabel } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
 
 /**
@@ -219,8 +219,8 @@ const noteItem = (body, path, range) => ({ label: t('새 메모로 보내기'), 
 function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…')], hint = '') {
   const from = doc;
   const snip = () => snippetOf(from, range, info);
-  return [{ label: labels[0], hint, tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip()]) },
-    { label: t('다른 담기함에 담기…'), tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(menuAt[0], menuAt[1], (to) => addSnippets([snip()], '', to)) },
+  return [{ label: clipLabel(labels[0]), hint, tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip()]) },
+    { label: t('다른 담기함에 담기…'), hint: hint && 'Alt+Shift+C', tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(menuAt[0], menuAt[1], (to) => addSnippets([snip()], '', to)) },
     { label: labels[1], tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) },
     noteItem(info.text ?? sourceOf(range), from.path, range)];
 }
@@ -294,43 +294,54 @@ function blockTake(picked) {
  * Alt+C (D197): 지금 담기함에 담는다 — 고른 글, 고른 줄, 아니면 현재 줄의 블록(표·그림은 캡션과 '자료:' 줄까지, 제목은 그 절 전체 — 우클릭 '담기'와 같게).
  * md 문서에서만. 무엇을 담았는지는 알림에
  */
-export function clipHere() {
+function hereSnippet() {
   const view = $('#lec-view');
+  const at = (where, snip) => ({ snip, rect: where.getBoundingClientRect() });
   const cur = S.pane?.current;
   if (cur?.type !== 'doc' || !isMd(cur.path) || S.pane.editor || S.pane.source?.path !== cur.path) {
     toast(t('md 문서를 읽는 화면에서 담습니다 — 고른 글, 고른 줄, 현재 줄의 블록'));
-    return;
+    return null;
   }
   doc = S.pane.source;
   const sel = getSelection();
   const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
   const picked = selected && selectionRange(sel);
   if (picked) {
-    addSnippets([snippetOf(doc, picked, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true })]);
-    return;
+    return at(sel.getRangeAt(0), snippetOf(doc, picked, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true }));
   }
   const span = /** @type {[number, number] | null} */ (litSpan());
   if (span) {
-    addSnippets([snippetOf(doc, span, { kind: 'block', name: t('고른 줄'), label: describe(sourceOf(span).replace(/\s+/g, ' ').trim()) })]);
-    return;
+    return at(blockOfLine(view, span[1]) || view, snippetOf(doc, span, { kind: 'block', name: t('고른 줄'), label: describe(sourceOf(span).replace(/\s+/g, ' ').trim()) }));
   }
   const line = hereLine();
-  const at = line ? blockOfLine(view, line) : null;
-  let el = at && pickBlock(at, view);
+  let block = line ? blockOfLine(view, line) : null;
+  if (block?.matches('ul, ol, dl')) block = block.querySelector(`[data-lines="${block.dataset.lines}"]`) || block;   // 항목이 하나뿐인 목록 — 줄 범위가 같은 그 항목
+  let el = block && pickBlock(block, view);
   const ex = el?.closest('.lec-exhibit');   // 캡션·자료 줄에 있으면 그 표·그림을
   if (ex) el = /** @type {HTMLElement} */ (ex.querySelector('table, img, pre.mermaid, pre.lec-chart, .diagram-error') || el);
   if (!el || el.matches('.front-matter')) {
     toast(t('담을 줄이 없습니다 — ↑·↓ 로 현재 줄을 옮기거나 글을 고르세요'));
-    return;
+    return null;
   }
   if (HEADING.test(el.tagName)) {
     const section = sectionRange(el);
     const name = el.textContent.trim();
-    if (section) addSnippets([snippetOf(doc, section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name })]);
-    return;
+    return section ? at(el, snippetOf(doc, section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name })) : null;
   }
   const take = blockTake(el);
-  if (take) addSnippets([snippetOf(doc, take.range, take.info)]);
+  return take ? at(el, snippetOf(doc, take.range, take.info)) : null;
+}
+
+/** Alt+C: 지금 담기함에 담는다 (D197) */
+export function clipHere() {
+  const here = hereSnippet();
+  if (here) addSnippets([here.snip]);
+}
+
+/** Alt+Shift+C: 담기함을 골라 담는다 (D199) — 고르는 창은 담을 것의 바로 아래에 */
+export function clipHereTo() {
+  const here = hereSnippet();
+  if (here) boxMenu(here.rect.left, here.rect.bottom + 6, (to) => addSnippets([here.snip], '', to));
 }
 
 /** 앱 안에서 여는 링크의 대상 — 새 창에서 열기 (D95). 앱 밖의 앱으로 여는 경로 표기면 null */

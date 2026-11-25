@@ -51,7 +51,7 @@ export function clearToc() {
 /**
  * 칸(pane)의 목차를 정한다 (root: 제목을 찾을 곳, 없으면 null). 선택된 칸이면 바로 다시 그린다.
  * outline: 코드 화면의 목차 [{line, level, name, kind}] (codeview.js·outline.js) — 있으면 제목 대신 이것으로 (줄은 root 의 .cv-line).
- * 모아 보기(parts.js — D196)는 {title, items: [{level(0 문서·1 구성 요소), name, label, tip, icon, el}]} — 화면의 그 요소로 간다
+ * 모아 보기(parts.js — D196)는 {title, items: [{level(0 문서·1 구성 요소), name, label, tip, icon, mark(끝에 붙는 표시), el}]} — 화면의 그 요소로 간다
  */
 export function setToc(pane, root, outline = null) {
   pane.tocRoot = root;
@@ -99,7 +99,7 @@ function buildItems({ title, items }) {
   parts = [];
   const box = $('#lec-toc');
   setHtml(box, html`<p class="toc-head">${title}</p><ul class="toc-list toc-items">${rows.map((r, i) => (
-    [html`<li class="${r.level ? 'part' : 'lv0'}"><a href="#" data-i="${i}" title="${r.tip || [r.name, r.label].filter(Boolean).join(' · ')}"${r.level ? html` style="padding-left:${INDENT[0] + 14}px"` : ''}>`, html`${r.icon ? html`<svg class="tp-icon" aria-hidden="true"><use href="#${r.icon}"/></svg>` : ''}`, html`<span class="tp-name">${r.name}</span>${r.label ? html`<span class="tp-label">${r.label}</span>` : ''}</a></li>`]
+    [html`<li class="${r.level ? 'part' : 'lv0'}"><a href="#" data-i="${i}" title="${r.tip || [r.name, r.label].filter(Boolean).join(' · ')}"${r.level ? html` style="padding-left:${INDENT[0] + 14}px"` : ''}>`, html`${r.icon ? html`<svg class="tp-icon" aria-hidden="true"><use href="#${r.icon}"/></svg>` : ''}`, html`<span class="tp-name">${r.name}</span>${r.label ? html`<span class="tp-label">${r.label}</span>` : ''}${r.mark ? html`<span class="tp-mark">${r.mark}</span>` : ''}</a></li>`]
   ))}</ul>`);
   links = $$('a[data-i]', box);
   active = -1;

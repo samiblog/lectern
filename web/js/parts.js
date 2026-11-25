@@ -28,7 +28,7 @@ import { labelOf, tipOf, telling, tellHtml, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, partExtent, partNodes, setToc, PARTS } from './toc.js';
-import { snippetOf, addSnippets, sendSnippets, boxMenu } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets, boxMenu, clipLabel } from './basket.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, imageKey, resolveRef, finishPart, settlePart } from './doc.js';
 import { linkPaths } from './pathlink.js';
@@ -836,9 +836,9 @@ async function snippetsOf(tab, entries) {
 const skippedNote = (n) => (n ? t('{n}개는 원문이 없어(html 문서) 담지 않았습니다', { n }) : '');
 
 /** 지금 목록에 보이는 것 모두 담기 — html 문서의 것(원문 줄이 없음)은 빼고 알린다 */
-async function takeAll(tab, entries) {
+async function takeAll(tab, entries, to = null) {
   const { snips, skipped } = await snippetsOf(tab, entries);
-  if (tab === S.tab) addSnippets(snips, skippedNote(skipped));
+  if (tab === S.tab) addSnippets(snips, skippedNote(skipped), to);
 }
 
 /** '새 문서로' (D196): 보이는 것을 문서 차례대로 새 md 하나에 — 경로는 보내기 창에서 사용자가 정한다 (basket.js, D65) */
@@ -891,8 +891,8 @@ async function partMenu(pane, el, x, y) {
   /** @type {MenuItem[]} */
   const takes = [];
   if (snip) {
-    takes.push({ label: t('담기'), hint: el.matches('.pv-chunk, .pt-item') ? 'Alt+C' : '', tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip]) },
-      { label: t('다른 담기함에 담기…'), tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(x, y, (to) => addSnippets([snip], '', to)) },
+    takes.push({ label: clipLabel(t('담기')), hint: el.matches('.pv-chunk, .pt-item') ? 'Alt+C' : '', tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip]) },
+      { label: t('다른 담기함에 담기…'), hint: el.matches('.pv-chunk, .pt-item') ? 'Alt+Shift+C' : '', tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(x, y, (to) => addSnippets([snip], '', to)) },
       { label: t('문서로 보내기…'), tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip]) },
       { label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body: snip.text, path, line: range?.[0] || 0, end: range?.[1] || 0 }) });
   }
@@ -1058,13 +1058,16 @@ function onMenu(e) {
 }
 
 /** Alt+C (D197): 초점이 있는 덩어리·행을 지금 담기함에. 이 화면이 아니면 false */
-export function clipChunk() {
+export function clipChunk(choose = false) {
   const pane = S.pane;
   if (!isParts(pane)) return false;
   const el = /** @type {HTMLElement | null} */ (document.activeElement?.closest?.('.pv-chunk, .pt-item') || null);
   const found = el && pane.view.contains(el) ? itemOf(pane.tab, el) : null;
   const entry = found && pane.gather.listed.find((x) => x.file.path === found.path && x.item === found.item);
-  if (entry) takeAll(pane.tab, [entry]);
+  if (entry && choose) {
+    const r = el.getBoundingClientRect();
+    boxMenu(r.left + 24, Math.max(r.top, pane.scroller.getBoundingClientRect().top) + 36, (to) => takeAll(pane.tab, [entry], to));
+  } else if (entry) takeAll(pane.tab, [entry]);
   else toast(t('담을 것을 누르거나 Tab 으로 고른 뒤 Alt+C 를 누르세요'));
   return true;
 }

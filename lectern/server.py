@@ -799,8 +799,18 @@ def create_app(state: AppState) -> Flask:
 
     @app.get('/api/clips')
     def api_clips() -> Any:
-        """?p= — 프로젝트의 담기함들 (D197 — .lectern/clips/, 없으면 만들지 않고 빈 목록). {boxes: [{file, text, hash, mtime} | {file, error}]}"""
-        return jsonify(clips.read_clips(arg_project().root))
+        """?p= — 프로젝트의 담기함들 (D197 — .lectern/clips/, 없으면 만들지 않고 빈 목록). {boxes: [{file, text, hash, mtime} | {file, error}], cur(지금 담기함으로 적어 둔 파일 — D199)}"""
+        root = arg_project().root
+        return jsonify(clips.read_clips(root) | {'cur': state.config.clip_box(str(root))})
+
+    @app.post('/api/clips/current')
+    def api_clips_current() -> Any:
+        """{p, file} — 지금 담기함(담는 곳)을 설정에 적는다 (D199 — 이름만, 담기함 파일은 건드리지 않는다)"""
+        data = body()
+        if not clips.good_name(data.get('file')):
+            abort(400)
+        state.config.remember_clip(str(project_of(data.get('p')).root), data['file'])
+        return jsonify(ok=True)
 
     @app.post('/api/clips')
     def api_clips_save() -> Any:

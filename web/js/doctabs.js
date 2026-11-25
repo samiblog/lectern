@@ -191,10 +191,10 @@ export async function openTarget(target) {
   if (tab && target.type === 'clips') {   // 담기함 (D197): 담기함마다 탭 하나 — 열려 있으면 그 탭으로
     const open = tab.panes.find((p) => { const v = viewOf(p); return v?.type === 'clips' && v.path === target.path; });
     if (open) {
-      if (open !== S.pane) await selectDocTab(open);
+      if (open !== S.pane && !target.behind) await selectDocTab(open);
       return true;
     }
-    if (holdsDoc(S.pane)) return !!(await openInNewTab(target));
+    if (target.behind || (holdsDoc(S.pane) && !target.here)) return !!(await openInNewTab(target));   // here: Alt+누르기 — 지금 탭에서
   }
   return navigate(target);
 }

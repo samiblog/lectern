@@ -53,6 +53,7 @@ DEFAULTS: dict[str, Any] = {
     'sidebar_width': None,   # 사이드바 폭(px, 200~480). None 이면 기본 폭
     'toc_width': None,       # 목차 폭(px, 160~560). None 이면 기본 폭 — 경계를 끌어 바꾸고 두 번 누르면 기본 (D47)
     'side_sort': 'name',     # 사이드바 목록의 차례: name | time | type (D97 — 폴더가 먼저)
+    'clip_sort': 'name',     # 사이드바 '담기' 탭의 담기함 차례: name | time (마지막에 고친 것부터 — D198)
     'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder (D143 — 한 번에 하나만 펼친다, folder 는 폴더 구조 그대로 — D169)
     'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·work·marks·tasks (D143)
     'toc_visible': True,
@@ -84,12 +85,13 @@ DEFAULTS: dict[str, Any] = {
     'terminal_font_size': 14,  # 터미널 글자 크기(px) 10~24 (D130 — 설정 창. 0.72 까지는 13 고정)
     'csv_stats': True,       # CSV 표 위의 통계 줄 (표 막대의 '통계' 버튼, D60)
     'table_align': 'auto',   # md 문서 표의 칸 맞춤: auto(글 왼쪽·숫자 오른쪽·위) | report(보고서식 — 머리행·짧은 열 가운데, 세로 가운데) (D174 — 설정 창)
-    'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치 (서버가 기록)
+    'projects': {},          # 프로젝트별 마지막 문서와 문서별 스크롤 위치, 지금 담기함(clip — D199) (서버가 기록)
     'work_home': None,       # 업무 관리의 공통 폴더 (D124 — 공통 WORK.md 와 정리 문서. 설정 창·업무 현황에서 고른다, 서버가 기록)
     'work_folders': [],      # WORK.md 가 있는 폴더들 (D124 — 열거나 '폴더 더하기'로 더한다. 경로만, 서버가 기록)
     'work_alerts': True,     # Lectern 안의 업무 알림 (D124 — 시작 요약·일정 10분 전·17:30 기록. 설정 창)
     'print_font': 'serif',   # 인쇄·PDF 의 본문 글꼴: serif(명조) | sans(고딕) (D131 — 설정 창, 보고서 인쇄 양식 web/themes/print.css)
-    'print_margin': 'normal',  # 인쇄·PDF 의 여백: normal(위 25·아래 22·좌우 22mm) | narrow(사방 15mm) | wide(위 30·아래 25·좌우 30mm) (D134 — PDF·인쇄 창)
+    'print_margin': 'normal',  # 인쇄·PDF 의 여백: normal(위 25·아래 22·좌우 22mm) | narrow(사방 15mm) | wide(위 30·아래 25·좌우 30mm) | custom(print_margin_mm) (D134·D200 — PDF·인쇄 창)
+    'print_margin_mm': [25, 22, 22, 22],  # 여백 '직접' 의 숫자 — 위·오른쪽·아래·왼쪽 mm (0~80, D200)
     'print_header': True,    # 인쇄·PDF 의 쪽 머리 — 2쪽부터 문서 제목과 날짜 (D134)
     'print_page_numbers': True,  # 인쇄·PDF 의 바닥 쪽 번호 (D134)
     'ai_tool': 'claude',     # 터미널에서 쓰는 AI 도구: claude(Claude Code) | codex(Codex CLI) | antigravity(Antigravity CLI) | opencode(OpenCode) | any(여럿 — 이름을 정하지 않음)
@@ -109,10 +111,10 @@ DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'files_open', 'docs_kind',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
-                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'doc_check', 'doc_check_style', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_header', 'print_page_numbers', 'ai_tool',
+                         'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'doc_check', 'doc_check_style', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_margin_mm', 'print_header', 'print_page_numbers', 'ai_tool',
                          'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style'})
 
 # null 도 되는 키 (나머지는 기본값과 같은 형식이어야 한다)
@@ -134,6 +136,8 @@ def value_ok(key: str, value: Any) -> bool:
     default = DEFAULTS[key]
     if key in ('sidebar_width', 'toc_width', 'terminal_width', 'terminal_height'):
         return is_number(value)
+    if key == 'clip_sort':
+        return value in ('name', 'time')
     if key == 'files_open':
         return value in FILES_OPEN
     if key == 'docs_kind':
@@ -145,7 +149,9 @@ def value_ok(key: str, value: Any) -> bool:
     if key == 'print_font':
         return value in ('serif', 'sans')
     if key == 'print_margin':
-        return value in ('normal', 'narrow', 'wide')
+        return value in ('normal', 'narrow', 'wide', 'custom')
+    if key == 'print_margin_mm':
+        return isinstance(value, list) and len(value) == 4 and all(is_number(x) and 0 <= x <= 80 for x in value)
     if key == 'ai_tool':
         return value in AI_TOOLS
     if key in ('ai_scope_guide', 'ai_scope_skills'):
@@ -383,7 +389,8 @@ class Config:
             scrolls = entry.get('scroll') if isinstance(entry, dict) and isinstance(entry.get('scroll'), dict) else {}
             scrolls.pop(doc, None)
             scrolls[doc] = max(0, int(scroll))
-            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:]), 'docs': list(docs or [doc])[:MAX_DOC_TABS]}
+            kept = {'clip': entry['clip']} if isinstance(entry, dict) and isinstance(entry.get('clip'), str) else {}
+            projects[key] = {'doc': doc, 'scroll': dict(list(scrolls.items())[-MAX_POSITIONS:]), 'docs': list(docs or [doc])[:MAX_DOC_TABS], **kept}
             data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
         self._update(change)
 
@@ -397,6 +404,23 @@ class Config:
                 entry['doc'] = None
                 entry['docs'] = []
         self._update(change)
+
+    def remember_clip(self, root: str, file: str) -> None:
+        """프로젝트의 지금 담기함(담는 곳)의 파일 이름 — 다시 켜도 정해 둔 곳에 담기게 (D199)"""
+        def change(data: dict[str, Any]) -> None:
+            projects = data.get('projects') if isinstance(data.get('projects'), dict) else {}
+            key = os.path.normcase(root)
+            entry = projects.pop(key, None)
+            projects[key] = {**(entry if isinstance(entry, dict) else {'doc': None, 'scroll': {}, 'docs': []}), 'clip': file}
+            data['projects'] = dict(list(projects.items())[-MAX_PROJECTS:])
+        self._update(change)
+
+    def clip_box(self, root: str) -> str:
+        """remember_clip 이 적은 것 — 없거나 형식이 틀리면 빈 글"""
+        projects = self.get('projects')
+        entry = projects.get(os.path.normcase(root)) if isinstance(projects, dict) else None
+        file = entry.get('clip') if isinstance(entry, dict) else None
+        return file if isinstance(file, str) else ''
 
     def position(self, root: str) -> dict[str, Any]:
         """{doc, scroll:{문서: 위치}, docs:[열어 둔 문서 탭들의 문서]}. 사용자가 고친 값도 있으므로 형식이 틀린 것은 버린다.

@@ -10,13 +10,11 @@
 
 import { html, raw, setHtml } from './html.js';
 import { S, on, emit } from './store.js';
-import { getText } from './api.js';
 import { showMenu } from './ui.js';
 import { paneOf, paneShown } from './panes.js';
 import { setToc, PARTS } from './toc.js';
 import { goToSource, clipMenu, boxActions, sendBox, claudeMenu } from './basket.js';
-import { clipsOf, boxOf, boxName, loadClips, editClip, editBox, moveClip, removeClips, undoRemove, flushClips } from './clipstore.js';
-import { findPiece } from './clipdata.js';
+import { clipsOf, boxOf, boxName, loadClips, setCur, editClip, editBox, moveClip, removeClips, undoRemove, flushClips, checkBox, stateOf } from './clipstore.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, resolveRef, finishPart, settlePart } from './doc.js';
 import { linkPaths } from './pathlink.js';
@@ -27,7 +25,7 @@ import { setStatus } from './status.js';
 import { clearChanges } from './diffmark.js';
 import { setDocSource } from './docmenu.js';
 import { aiCli } from './aitool.js';
-import { $, $$, docUrl, isMd, basename, linkHow, rangeText, middleClickOpens, repeatClick, copyText, toast } from './util.js';
+import { $, $$, linkHow, rangeText, middleClickOpens, repeatClick, copyText, toast } from './util.js';
 import { t } from './i18n.js';
 
 const isClips = (pane) => !!pane?.clipv && !!pane.view?.classList.contains('clips-view');
@@ -36,7 +34,19 @@ const q = (pane, sel) => /** @type {any} */ (pane.view.querySelector(sel));
 const themeNow = () => document.documentElement.dataset.theme || '';
 const boxAt = (pane) => boxOf(pane.tab, pane.clipv.file);
 
-let wantTitle = null;   // 다음에 그릴 때 제목 칸에 초점을 둘 담기함의 파일 ('제목과 설명 고치기')
+const STATE_NAMES = { changed: t('원래 문서가 바뀌었습니다'), gone: t('원래 문서가 없습니다') };
+
+/** 사이드바가 고른 조각으로 — 그 카드를 보이고 초점을 (id 가 없으면 담기함), title 이면 제목 칸에 */
+function goClip({ file, id, title }) {
+  const pane = S.pane;
+  if (!isClips(pane) || pane.clipv.file !== file) return;
+  const card = id ? cardOf(pane, id) : null;
+  if (id && !card) return;
+  card?.scrollIntoView({ block: 'start' });
+  const target = /** @type {HTMLInputElement} */ (title ? (card ? card.querySelector('.cb-name') : q(pane, '.cb-title')) : card);
+  target?.focus({ preventScroll: !!card });
+  if (title) target?.select();
+}
 
 /** 글 칸의 높이를 글에 맞춘다 */
 function grow(area) {
@@ -50,6 +60,7 @@ function skeleton() {
     <input class="cb-title" type="text" placeholder="${t('담기함의 제목')}" aria-label="${t('담기함의 제목')}" spellcheck="false" autocomplete="off">
     <textarea class="cb-note" rows="1" placeholder="${t('질문이나 설명 — 비워 두어도 됩니다')}" aria-label="${t('담기함의 설명')}" spellcheck="false"></textarea>
   </header>`, html`<div class="cb-bar">
+    <button type="button" class="parts-send cb-here" data-act="here" aria-pressed="false"></button>
     <button type="button" class="parts-send" data-act="send" title="${t('담은 것을 차례대로 열린 문서 탭이나 새 문서로 — 제목과 메모도 함께')}">${t('문서로 보내기…')}</button>
     <button type="button" class="parts-send" data-act="ai" title="${t('담은 것의 위치로 새 문서를 만들어 달라는 요청 글 — 복사·터미널')}">${t('{cli} 에', { cli: aiCli() })}</button>
     <button type="button" class="icon-btn small toggle" data-act="menu" title="${t('담기함의 메뉴')}">${t('더 보기')}</button>
@@ -141,20 +152,17 @@ function draw(pane) {
   const undo = q(pane, '.cb-undo');
   undo.hidden = state.undo?.file !== box.file;
   if (!undo.hidden) undo.querySelector('span').textContent = t('{n}개를 뺐습니다', { n: state.undo.entries.length });
-  q(pane, '.cb-info').textContent = `${t('{n}개', { n: box.items.length })}${box.file === state.cur ? ` · ${t('지금 담기함')}` : ''}`;
-  for (const b of $$('.cb-bar .parts-send', pane.view)) b.disabled = !box.items.length;
-  setToc(pane, pane.view, { title: boxName(box), items: box.items.map((c, i) => (
-    { level: 1, name: c.title || nameOf(c), label: c.title ? nameOf(c) : c.path ? basename(c.path) : '', tip: c.path, icon: PARTS[c.kind]?.icon || (c.kind === 'section' ? 'i-toc' : 'i-text'), el: list.children[i] })) });
+  q(pane, '.cb-info').textContent = t('{n}개', { n: box.items.length });
+  for (const b of $$('.cb-bar .parts-send:not(.cb-here)', pane.view)) b.disabled = !box.items.length;
+  const here = q(pane, '.cb-here');
+  const cur = box.file === state.cur;
+  here.textContent = cur ? `● ${t('지금 담기함')}` : t('여기에 담기');
+  here.title = cur ? t('담는 것이 여기에 들어갑니다 (Alt+C)') : t('누르면 지금 담기함으로 — 담는 것이 여기에 들어갑니다 (Alt+C)');
+  here.setAttribute('aria-pressed', String(cur));
+  showStates(pane);
   setStatus({ path: t('담기함 — {name}', { name: boxName(box) }), info: t('{n}개', { n: box.items.length }) }, pane);
   watch(pane);
-  const ids = box.items.map((c) => `${c.id}|${c.path}`).join(' ');   // 글을 쓰는 동안은 원래 문서를 다시 받지 않는다
-  if (st.ids !== ids) checkSources(pane);
-  st.ids = ids;
-  if (wantTitle === box.file) {
-    wantTitle = null;
-    title.focus();
-    title.select();
-  }
+  checkSources(pane);   // 바뀐 것이 없으면 서버에 묻지 않는다
 }
 
 // ---- 내용 그리기 -----------------------------------------------------------------
@@ -213,41 +221,32 @@ function watch(pane) {
   for (const card of $$('.cb-card:not(.cb-filled)', pane.view)) st.io.observe(card);
 }
 
-/** 담은 글이 지금 원래 문서에 그대로 있는지 — 바뀌었거나 없어졌으면 출처 줄에 알린다. 고른 글(보이는 글)과 문서가 아닌 것은 있는지만 본다 */
-async function checkSources(pane) {
-  const st = pane.clipv;
+/** 조각마다 원래 문서가 바뀌었는지(clipstore.js 의 checkBox)를 출처 줄과 목차에 */
+function showStates(pane) {
   const box = boxAt(pane);
-  const gen = (st.gen = (st.gen || 0) + 1);
-  const tab = pane.tab;
-  const texts = new Map();
-  for (const c of [...(box?.items || [])]) {
-    let state = '';
-    if (c.path && isMd(c.path)) {
-      if (!tab.fileMap.has(c.path)) state = 'gone';
-      else if (!c.plain && c.lines) {
-        if (!texts.has(c.path)) {
-          try {
-            texts.set(c.path, (await getText(docUrl(tab, c.path))).replace(/^﻿/, '').split(/\r\n?|\n/));
-          } catch {
-            texts.set(c.path, null);
-          }
-          if (gen !== st.gen || !isClips(pane)) return;
-        }
-        const lines = texts.get(c.path);
-        const found = lines && findPiece(lines, c);
-        if (found?.lines) st.where.set(c.id, found.lines);
-        else st.where.delete(c.id);
-        state = !found ? '' : found.state === 'changed' ? 'changed' : '';
-      }
-    }
-    const card = /** @type {HTMLElement | null} */ (pane.view.querySelector(`.cb-card[data-id="${CSS.escape(c.id)}"]`));
-    const el = /** @type {HTMLElement | null} */ (card?.querySelector('.cb-state'));
+  for (const c of box?.items || []) {
+    const el = /** @type {HTMLElement | null} */ (cardOf(pane, c.id)?.querySelector('.cb-state'));
     if (!el) continue;
+    const { state } = stateOf(pane.tab, c);
     el.hidden = !state;
-    el.textContent = state === 'gone' ? t('원래 문서가 없습니다') : state ? t('원래 문서가 바뀌었습니다') : '';
+    el.textContent = state ? STATE_NAMES[state] : '';
     el.title = state === 'changed' ? t('담은 글이 그 문서에 그대로 있지 않습니다 — 여기 보이는 것은 담은 때의 내용입니다') : '';
   }
+  outline(pane);
 }
+
+/** 목차 패널: 담은 것의 차례 — 메모가 있으면 ✎, 원래 문서가 바뀌었거나 없으면 ⚠ */
+function outline(pane) {
+  const box = boxAt(pane);
+  if (!box || box.error) return;
+  setToc(pane, pane.view, { title: boxName(box), items: box.items.map((c) => {
+    const { state } = stateOf(pane.tab, c);
+    return { level: 1, name: c.title || nameOf(c), tip: [c.title || nameOf(c), c.title && nameOf(c), c.path, c.memo, state && STATE_NAMES[state]].filter(Boolean).join('\n'),
+      mark: `${c.memo ? '✎' : ''}${state ? '⚠' : ''}`, icon: PARTS[c.kind]?.icon || (c.kind === 'section' ? 'i-toc' : 'i-text'), el: cardOf(pane, c.id) };
+  }) });
+}
+
+const checkSources = (pane) => checkBox(pane.tab, boxAt(pane));
 
 // ---- 화면 (nav.js 의 렌더러) -----------------------------------------------------
 
@@ -260,10 +259,9 @@ async function checkSources(pane) {
 export async function showClips(pane, path, { scrollTop } = {}) {
   pane.renderId += 1;   // 이 칸에서 그리던 다른 화면은 버려진다
   const { view, tab } = pane;
-  const st = (pane.clipv ??= { file: path, heights: new Map(), where: new Map(), io: null, drawing: null, gen: 0, ids: null });
+  const st = (pane.clipv ??= { file: path, heights: new Map(), io: null, drawing: null });
   const kept = view.classList.contains('clips-view') && st.file === path && !!view.querySelector(':scope > .cb-list');
   st.file = path;
-  if (!kept) st.ids = null;
   const top = typeof scrollTop === 'function' ? scrollTop() : scrollTop;
   if (!kept) {
     view.className = 'clips-view';
@@ -277,6 +275,7 @@ export async function showClips(pane, path, { scrollTop } = {}) {
   emit('rendered', pane);
   const was = clipsOf(tab).loaded;
   loadClips(tab, { force: true }).then(() => {
+    if (!isClips(pane) || pane.clipv.file !== path) return;   // 읽는 사이에 다른 화면으로
     draw(pane);
     if (!was && !kept && top) pane.scroller.scrollTop = top;
   });
@@ -294,7 +293,7 @@ const clipAt = (pane, el) => boxAt(pane)?.items.find((c) => c.id === el?.closest
 const cardOf = (pane, id) => /** @type {HTMLElement | null} */ (pane.view.querySelector(`.cb-card[data-id="${CSS.escape(id)}"]`));
 
 /** 그 문서의 그 자리로 — 담은 글이 옮겨졌으면 지금 있는 줄로 */
-const go = (pane, c, how = {}) => goToSource({ ...c, lines: pane.clipv.where.get(c.id) || c.lines }, false, how);
+const go = (pane, c, how = {}) => goToSource({ ...c, lines: stateOf(pane.tab, c).lines || c.lines }, false, how);
 
 function remove(pane, c) {
   const box = boxAt(pane);
@@ -326,11 +325,15 @@ function onClick(e) {
   const act = /** @type {HTMLElement | null} */ (at.closest('[data-act]'))?.dataset.act;
   const c = clipAt(pane, at);
   if (act === 'send') sendBox(box);
-  else if (act === 'ai') claudeMenu(at.closest('button'), box);
+  else if (act === 'here') setCur(pane.tab, box.file);
+  else if (act === 'ai') {
+    const r = at.closest('button').getBoundingClientRect();
+    claudeMenu(r.left, r.bottom + 4, box);
+  }
   else if (act === 'undo') undoRemove(pane.tab);
   else if (act === 'menu') {
     const r = at.closest('button').getBoundingClientRect();
-    showMenu(r.left, r.bottom + 4, boxActions(box));
+    showMenu(r.left, r.bottom + 4, boxActions(box, r.left, r.bottom + 4));
   } else if (c && act === 'up') step(pane, c, -1);
   else if (c && act === 'down') step(pane, c, 1);
   else if (c && act === 'del') remove(pane, c);
@@ -426,10 +429,8 @@ export function initClipView() {
   });
   middleClickOpens(panes, '.clips-view .cb-go');
   on('clips', (tab) => { for (const pane of viewsOf(tab)) if (paneShown(pane)) draw(pane); else pane.stale = true; });
-  on('clips-title', (file) => {
-    wantTitle = file;
-    for (const pane of viewsOf(S.tab)) if (pane.clipv.file === file && pane === S.pane) draw(pane);
-  });
+  on('clips-goto', goClip);
+  on('clips-state', (tab) => { for (const pane of viewsOf(tab)) if (paneShown(pane)) showStates(pane); });
   on('clips-sources', (pane) => { if (isClips(pane) && paneShown(pane)) checkSources(pane); });   // 밖에서 문서가 바뀜 (watch.js)
   on('tree', () => { for (const pane of viewsOf(S.tab)) if (paneShown(pane)) checkSources(pane); });   // 원래 문서가 생기거나 지워짐
   on('rendered', (pane) => { if (pane.clipv && !pane.view.classList.contains('clips-view')) pane.clipv.io?.disconnect(); });   // 이 칸이 다른 화면으로

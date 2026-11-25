@@ -202,6 +202,7 @@ try:
         page.locator('#lec-menu button', has_text='보이는 것 모두 담기 (3개)').click()
         expect(page, '보이는 것 모두 담기 — 거른 셋', lambda: page.inner_text('#lec-basket-count') == '4', lambda: page.inner_text('#lec-basket-count'))
         page.click('.side-tabs button[data-tab="basket"]')
+        page.locator('#lec-basket-list .bk-box .caret').first.click()
         expect(page, '담기 탭에 캡션이 이름으로', lambda: page.locator('#lec-basket-list .bk-item').count() == 4 and '가의 표' in page.inner_text('#lec-basket-list'), lambda: page.inner_text('#lec-basket-list')[:200])
         page.click('.side-tabs button[data-tab="files"]')
         filt('')
