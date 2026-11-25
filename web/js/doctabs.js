@@ -156,10 +156,10 @@ export async function openInNewTab(target) {
   return pane;
 }
 
-/** 지금 탭이 문서·코드·모아 보기(D196 — 거르기와 읽던 자리가 있다)를 보여 주는지 — 그때만 새 문서 탭으로 연다 (D91). 폴더 개요·빈 탭에는 지킬 것이 없어 그 자리에서 */
+/** 지금 탭이 문서·코드·모아 보기(D196 — 거르기와 읽던 자리가 있다)·펼친 담기함(D197)을 보여 주는지 — 그때만 새 문서 탭으로 연다 (D91). 폴더 개요·빈 탭에는 지킬 것이 없어 그 자리에서 */
 const holdsDoc = (pane) => {
   const v = pane && viewOf(pane);
-  return v?.type === 'doc' || v?.type === 'code' || v?.type === 'parts';
+  return v?.type === 'doc' || v?.type === 'code' || v?.type === 'parts' || v?.type === 'clips';
 };
 
 /**
@@ -187,6 +187,14 @@ export async function openTarget(target) {
     if (open && open !== S.pane) await selectDocTab(open);
     if (open) return navigate(target, { pane: open });
     if (holdsDoc(S.pane)) return !!(await openInNewTab(target));   // 문서를 보던 탭은 지킨다 — 폴더 개요·빈 탭이면 그 자리에
+  }
+  if (tab && target.type === 'clips') {   // 담기함 (D197): 담기함마다 탭 하나 — 열려 있으면 그 탭으로
+    const open = tab.panes.find((p) => { const v = viewOf(p); return v?.type === 'clips' && v.path === target.path; });
+    if (open) {
+      if (open !== S.pane) await selectDocTab(open);
+      return true;
+    }
+    if (holdsDoc(S.pane)) return !!(await openInNewTab(target));
   }
   return navigate(target);
 }
@@ -281,7 +289,7 @@ let otherWindows = [];   // 서버가 알려 준 다른 창들 [{id, project, ti
 /** 다른 창에 보일 이 창의 이름 — 보고 있는 문서 */
 export function windowName() {
   const v = S.pane && viewOf(S.pane);
-  const name = v?.type === 'parts' ? t('모아 보기') : v?.path ? basename(v.path) : S.tab?.name || '';
+  const name = v?.type === 'parts' ? t('모아 보기') : v?.type === 'clips' ? clipsTitle(S.tab, v.path) : v?.path ? basename(v.path) : S.tab?.name || '';
   const more = (S.tab?.panes.length || 1) - 1;
   return more ? t('{name} 외 {n}개', { name, n: more }) : name;
 }
@@ -456,6 +464,9 @@ export const openDocs = (tab) => tab.panes.map((p) => viewOf(p)).filter((v) => v
 
 // ---- 문서 탭 줄 -------------------------------------------------------------------
 
+/** 담기함의 제목 (탭 이름 — 아직 읽지 않았으면 파일 이름) */
+const clipsTitle = (tab, file) => tab.clips?.boxes?.find((b) => b.file === file)?.title || file.replace(/\.md$/i, '');
+
 /** 문서 탭의 아이콘·이름·설명 (모두 펼치기의 칸 머리도 — spread.js) */
 export function describe(pane) {
   const v = viewOf(pane);
@@ -463,6 +474,10 @@ export function describe(pane) {
   if (!v) return { icon: folderIcon(), name: t('빈 탭'), tip: '' };
   if (v.type === 'overview') return { icon: folderIcon(), name: v.path ? basename(v.path) : tab.name, tip: t('폴더 개요: {path}', { path: v.path || tab.name }) };
   if (v.type === 'parts') return { icon: html`<svg class="ficon parts" aria-hidden="true"><use href="#i-gather"/></svg>`, name: v.path ? t('모아 보기 · {name}', { name: basename(v.path) }) : t('모아 보기'), tip: t('모아 보기: {path}', { path: v.path || tab.name }) };
+  if (v.type === 'clips') {
+    const name = clipsTitle(tab, v.path);
+    return { icon: html`<svg class="ficon parts" aria-hidden="true"><use href="#i-clip"/></svg>`, name, tip: t('담기함: {name}', { name }) };
+  }
   const f = v.type === 'doc' ? tab.fileMap.get(v.path) : null;
   return { icon: fileIcon(basename(v.path), f?.kind, f?.deck), name: f ? labelOf(f) : basename(v.path), tip: f ? tipOf(f) : v.path };
 }
@@ -516,7 +531,7 @@ function listMenu(btn) {
   tab.panes.forEach((p, i) => {
     const v = viewOf(p);
     const { icon, name } = describe(p);
-    const where = v?.type === 'overview' ? t('폴더 개요: {path}', { path: v.path || tab.name }) : v?.type === 'parts' ? t('모아 보기: {path}', { path: v.path || tab.name }) : v?.path || '';
+    const where = v?.type === 'overview' ? t('폴더 개요: {path}', { path: v.path || tab.name }) : v?.type === 'parts' ? t('모아 보기: {path}', { path: v.path || tab.name }) : v?.type === 'clips' ? t('담기함: {name}', { name: clipsTitle(tab, v.path) }) : v?.path || '';
     const key = keyOf(i, n);
     items.push({
       icon, label: p.editor?.dirty ? `${name} ●` : name, hint: key ? `${where} · ${key}` : where, current: p === tab.pane, action: () => selectDocTab(p),
@@ -547,7 +562,7 @@ const paneAt = (el) => S.tab?.panes[Number(el?.closest('.doc-tab')?.dataset.i)] 
 export function tabMenu(pane) {
   const v = viewOf(pane);
   /** @type {MenuItem[]} */
-  const items = [{ header: v?.type === 'parts' ? t('모아 보기: {path}', { path: v.path || pane.tab.name }) : v?.path || pane.tab.name }];
+  const items = [{ header: v?.type === 'parts' ? t('모아 보기: {path}', { path: v.path || pane.tab.name }) : v?.type === 'clips' ? t('담기함: {name}', { name: clipsTitle(pane.tab, v.path) }) : v?.path || pane.tab.name }];
   if (pane.tab.panes.length > 1) {
     items.push({ label: t('문서 탭 닫기'), hint: pane === S.pane ? 'Ctrl+W' : t('가운데 버튼'), action: () => closeDocTab(pane) },
       { label: t('다른 문서 탭 모두 닫기'), action: () => closeOthers(pane) });
@@ -608,6 +623,6 @@ export function initDocTabs() {
   on('open', async (target) => {   // 문서 화면은 navigate 의 line 을 듣지 않는다 — 열고 나서 그 줄로 (사이드바의 형광펜·할 일 줄, D143)
     if (await openTarget(target) && target.line && target.type === 'doc') emit('go-line', { line: target.line });
   });
-  for (const ev of ['tab', 'pane', 'view', 'titles', 'tree', 'editor']) on(ev, render);
+  for (const ev of ['tab', 'pane', 'view', 'titles', 'tree', 'editor', 'clips']) on(ev, render);   // clips: 담기함의 제목 (D197)
   render();
 }

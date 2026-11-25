@@ -726,6 +726,13 @@ function sendHere(stay = false, n = null) {
 /** Shift+1~5 의 터미널 번호 (0 부터) — 자판 위쪽 숫자 줄의 자리로 읽는다 (한글 입력 상태에서도. 숫자 패드는 Shift 를 누르면 다른 키가 된다) */
 const termDigit = (e) => (/^Digit[1-5]$/.test(e.code) ? Number(e.code.at(-1)) - 1 : null);
 
+/** 현재 줄의 원문 줄 번호 — 없으면 0 (docmenu.js 의 담기, D197) */
+export function hereLine() {
+  const us = units();
+  const i = hereIndex(us);
+  return i < 0 ? 0 : us[i].a;
+}
+
 /** 현재 줄의 정보 — 파일을 바꾸지 않는 키는 고른 줄이 없으면 현재 줄에 한다 (D108) */
 function hereInfo() {
   const us = units();

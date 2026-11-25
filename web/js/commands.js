@@ -24,7 +24,10 @@ import { toggleGather } from './gather.js';
 import { toggleEditor } from './editor.js';
 import { printButton } from './printdoc.js';
 import { openDocCheck } from './doccheck.js';
-import { openParts } from './parts.js';
+import { openParts, clipChunk } from './parts.js';
+import { clipHere } from './docmenu.js';
+import { openBox } from './basket.js';
+import { loadClips, curBox } from './clipstore.js';
 import { startPresent } from './present.js';
 import { toggleManual, toggleShortcuts, manualToWindow } from './help.js';
 import { openSettings } from './settings.js';
@@ -85,6 +88,14 @@ function list(local) {
       [t('인쇄·PDF'), '', printButton],
       [t('문서 점검 — 깨진 틀·보고서의 틀 목록'), '', openDocCheck],   // D190
       [t('모아 보기 — 프로젝트의 표·그림 등을 문서 탭에 펼치기'), '', () => openParts({ path: '' })],   // D196
+      [t('담기 — 고른 글·고른 줄·현재 줄의 블록을 지금 담기함에'), 'Alt+C', () => { if (!clipChunk()) clipHere(); }],   // D197
+      [t('담기함 펼쳐 보기 — 지금 담기함을 문서 탭에'), '', async () => {
+        if (!S.tab) return;
+        await loadClips(S.tab);
+        const box = curBox(S.tab);
+        if (box) openBox(box);
+        else toast(t("담은 것이 없습니다. 문서의 절·표·그림·차트 등을 우클릭해 '담기'를 고르거나 Alt+C 를 누르세요"));
+      }],
       [t('발표 — 지금 보는 슬라이드부터'), 'Shift+F5', or(() => (S.pane?.view.classList.contains('lec-deck') ? startPresent() : false), t('발표는 Lectern 슬라이드를 볼 때 씁니다'))],
     ]],
     [t('메모·업무·터미널'), [

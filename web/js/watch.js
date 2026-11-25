@@ -52,6 +52,7 @@ async function apply(tab, d) {
       const prefix = v.path ? `${v.path}/` : '';
       affected = d.reset || d.structure || d.paths.some((p) => p.startsWith(prefix));
     }
+    if (v?.type === 'clips') emit('clips-sources', pane);   // 담은 글의 원래 문서가 바뀌었는지 다시 본다 (clipview.js — D197)
     if (!affected) continue;
     if (paneShown(pane)) emit(d.reset ? 'refresh-view' : 'refresh-auto', pane);   // 기록이 끊겼으면(reset) 무엇이 바뀌었는지 모른다
     else pane.stale = true;

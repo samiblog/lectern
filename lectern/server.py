@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, aistatus, docxexport, rawfiles, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, aistatus, clips, docxexport, rawfiles, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
@@ -796,6 +796,36 @@ def create_app(state: AppState) -> Flask:
             return jsonify(notes.save_notes(project_of(data.get('p')).root, text, data.get('hash')))
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
+
+    @app.get('/api/clips')
+    def api_clips() -> Any:
+        """?p= — 프로젝트의 담기함들 (D197 — .lectern/clips/, 없으면 만들지 않고 빈 목록). {boxes: [{file, text, hash, mtime} | {file, error}]}"""
+        return jsonify(clips.read_clips(arg_project().root))
+
+    @app.post('/api/clips')
+    def api_clips_save() -> Any:
+        """{p, file, text, hash} — 담기함 하나를 쓴다, 그사이 바뀌었으면 409. {p, title, text} — 새 담기함 (file 없이). {file, hash, mtime}"""
+        data = body()
+        text = data.get('text')
+        if not isinstance(text, str):
+            abort(400)
+        root = project_of(data.get('p')).root
+        try:
+            if data.get('file') is None:
+                return jsonify(clips.create_clips(root, str(data.get('title') or ''), text))
+            return jsonify(clips.save_clips(root, data.get('file'), text, data.get('hash')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/clips/delete')
+    def api_clips_delete() -> Any:
+        """{p, file} — 담기함 하나를 휴지통으로 (사용자가 물은 뒤 고를 때만)"""
+        data = body()
+        try:
+            clips.delete_clips(project_of(data.get('p')).root, data.get('file'))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        return jsonify(ok=True)
 
     @app.post('/api/rename')
     def api_rename() -> Any:

@@ -9,6 +9,7 @@ import { navigate, renamePath } from './nav.js';
 import { closeEditor, openEditor } from './editor.js';
 import { isViewable } from './icons.js';
 import { $, toast, basename, dirname, isMd, isHtml, blockedReadOnly } from './util.js';
+import { renameSources } from './clipstore.js';
 import { t } from './i18n.js';
 
 let asked = null;   // {tab, path} — 이름을 묻고 있는 파일
@@ -84,7 +85,7 @@ async function submit() {
 
 /** 바뀐 이름을 화면에 옮긴다 — 그 파일을 보던 칸은 새 이름으로 다시 연다 (편집 중이었으면 편집도) */
 async function moved(tab, from, to, remote = false) {
-  for (const sn of tab.basket || []) if (sn.path === from) sn.path = to;   // 담은 조각 (D63)
+  if (!remote) renameSources(tab, from, to);   // 담은 조각의 담은 곳 (D197 — 담기함 파일에, 이름을 바꾼 창 하나만)
   // 확장자가 같으면 보던 종류 그대로 (앱 소스 폴더의 html 은 코드 화면 — 원칙 4), 바뀌면 새 확장자로. 읽을 수 없는 종류면 그 폴더 개요
   const sameExt = extOf(basename(from)) === extOf(basename(to));
   const kind = isMd(to) || isHtml(to) ? 'doc' : isViewable(basename(to)) ? 'code' : null;

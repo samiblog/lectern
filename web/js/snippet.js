@@ -279,9 +279,13 @@ export const provenance = (snip) => `<!-- ${t('담은 곳: {path}', { path: `${s
 export function buildBody(snippets, to, { top = 0, taken = new Set() } = {}) {
   const used = new Set(taken);
   return snippets.map((sn) => {
-    if (sn.plain) return `${provenance(sn)}\n${sn.text}`;   // 고른 글 — 원문이 아니라 보이는 글 그대로
+    // 담기함에서 단 제목은 조각 위의 제목으로, 메모는 아래의 인용으로 (D197). 제목이 있으면 조각 안의 제목은 그 아래 수준
+    const level = sn.title ? top || 2 : 0;
+    const head = [...(sn.path ? [provenance(sn)] : []), ...(level ? [`${'#'.repeat(level)} ${sn.title}`, ''] : [])];
+    const memo = sn.memo?.trim() ? `\n\n${t('메모: {text}', { text: sn.memo.trim() }).split('\n').map((l) => (l.trim() ? `> ${l}` : '>')).join('\n')}` : '';
+    if (sn.plain) return `${[...head, sn.text].join('\n')}${memo}`;   // 고른 글 — 원문이 아니라 보이는 글 그대로
     const text = rebase(sn.notes ? `${sn.text}\n\n${sn.notes}` : sn.text, sn.path, to);
-    return `${provenance(sn)}\n${shiftHeadings(renameNotes(text, used), top)}`;
+    return `${[...head, shiftHeadings(renameNotes(text, used), level ? Math.min(6, level + 1) : top)].join('\n')}${memo}`;
   }).join('\n\n');
 }
 

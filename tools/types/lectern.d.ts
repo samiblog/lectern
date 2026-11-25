@@ -96,6 +96,8 @@ declare global {
     tocOutline?: any;
     /** 모아 보기 화면의 상태 (parts.js — D196): 모을 것·종류·거르기·범위, 옮겨 온 덩어리의 높이, 보이는 항목 */
     gather?: any;
+    /** 펼친 담기함의 화면 상태 (clipview.js — D197) */
+    clipv?: any;
     used?: any;
     /** md 문서 점검의 결과 (doccheck.js — D190) */
     lint?: { path: string; issues: LintIssue[] } | null;
@@ -131,7 +133,8 @@ declare global {
     pane: Pane;
     panes: Pane[];
 
-    basket?: any;
+    /** 담기함들과 지금 담기함 (clipstore.js — D197) */
+    clips?: any;
     behindLast?: Pane;
     behindOf?: Pane;
     closedDocs?: any[];

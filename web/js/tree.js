@@ -338,6 +338,9 @@ export function switchPanel(next, { focus = true } = {}) {
   emit('panel', next);
 }
 
+/** 다른 모듈이 사이드바 탭을 보이게 (basket.js — 새 담기함의 이름을 물을 때) */
+const showPanel = (name) => { if (panel !== name) switchPanel(name, { focus: false }); };
+
 /** 프로젝트 탭을 바꾸면: 앞 탭의 사이드바 상태를 그 탭에 남기고, 새 탭의 것을 되살린다 */
 function onTab({ tab, prev }) {
   if (prev && S.tabs.includes(prev)) {
@@ -596,6 +599,7 @@ export function focusFilter() {
 }
 
 export function initTree() {
+  on('show-panel', showPanel);
   const tree = $('#lec-tree');
   tree.addEventListener('click', onRowClick);
   middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)

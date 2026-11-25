@@ -27,6 +27,11 @@ const table = await load('web/js/tabledata.js');
 const safe = await load('web/js/html.js');
 const notes = await load('web/js/notesdata.js');
 {
+  const r = cases('tools/edges/clipdata_cases.js', await load('web/js/clipdata.js'));   // 담기함의 글 (D197)
+  say('담기함의 글 표 점검', r.fails, r.n);
+  say('담기함의 글 임의의 글', r.problems, r.runs);
+}
+{
   const r = cases('tools/edges/lineops_cases.js', lineops);
   say('줄 구조 표 점검', r.fails, r.n);
 }

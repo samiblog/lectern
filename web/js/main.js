@@ -18,10 +18,10 @@ import { initChartData } from './chartdata.js';
 import { initTextSize, step as stepText, resetText } from './textsize.js';
 import { initDocWidth } from './docwidth.js';
 import { initTableFit } from './tablefit.js';
-import { initDocMenu, useWordMenu } from './docmenu.js';
+import { clipHere, initDocMenu, useWordMenu } from './docmenu.js';
 import { initChangeMarks, stepChange } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
-import { initParts, showParts, focusPartsFilter } from './parts.js';
+import { initParts, showParts, focusPartsFilter, clipChunk } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
 import { initTree, focusFilter } from './tree.js';
@@ -47,6 +47,7 @@ import { initWatch, startWatch } from './watch.js';
 import { initTerminal, toggleTerminal, terminalOpen, terminalBelow, hopTerminals, focusedTerminal, hopToTerminal } from './terminal.js';
 import { initEditor, toggleEditor, inEditor } from './editor.js';
 import { initBasket, closeInsert } from './basket.js';
+import { initClipView, showClips } from './clipview.js';
 import { initNewDialog, askNewDocument, closeNewDocument } from './newdialog.js';
 import { initRename, closeRename } from './rename.js';
 import { initDeleteDoc, closeDelete } from './deletedoc.js';
@@ -88,6 +89,8 @@ function updateWindowTitle() {
     title = `${f?.title && f.title !== name ? `${name} [${f.title}]` : name} - ${S.name}`;
   } else if (S.view?.type === 'code') {
     title = `${basename(S.view.path)} - ${S.name}`;
+  } else if (S.view?.type === 'clips') {
+    title = `${t('담기함')} - ${S.name}`;
   } else if (S.view?.type === 'parts') {
     title = `${t('모아 보기')} - ${S.name}`;
   }
@@ -469,6 +472,9 @@ function bindKeys() {
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyW' && !typing(e)) {
       e.preventDefault();   // 업무 현황 (work.js, D124)
       openBoard();
+    } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyC' && !typing(e) && docKeyTarget(e) && !manualOpen()) {
+      e.preventDefault();   // 담기 — 고른 글·고른 줄·현재 줄의 블록, 모아 보기에서는 초점이 있는 덩어리 (D197)
+      if (!clipChunk()) clipHere();
     } else if (e.altKey && !mod && !e.shiftKey && e.code === 'KeyS' && !typing(e)) {
       e.preventDefault();   // 일정 더하기 (work.js, D124)
       openEventDialog();
@@ -542,6 +548,8 @@ async function boot() {
   initSearch();
   addRenderer('parts', showParts);   // 모아 보기 화면 (D196 — 문서 탭 하나에)
   initParts();
+  addRenderer('clips', showClips);   // 펼친 담기함 (D197)
+  initClipView();
   initRecent();  // 같은 까닭 (트리가 사이드바 탭을 바꾸면 숨은 목록의 스크롤 위치를 읽지 못한다)
   initSettings();
   initRaw();   // 설정 원문 보기 (D160)

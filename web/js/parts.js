@@ -28,7 +28,7 @@ import { labelOf, tipOf, telling, tellHtml, pathMenuItems } from './tree.js';
 import { loadOthers, otherFiles, bindFileRows, fileTip } from './others.js';
 import { fileIcon, fileType, isCode, PICTURE_EXT } from './icons.js';
 import { readParts, goToPart, partExtent, partNodes, setToc, PARTS } from './toc.js';
-import { snippetOf, addSnippets, sendSnippets } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets, boxMenu } from './basket.js';
 import { renderMarkdown } from './markdown.js';
 import { sanitizeHtml, prepareParts, imageKey, resolveRef, finishPart, settlePart } from './doc.js';
 import { linkPaths } from './pathlink.js';
@@ -891,7 +891,8 @@ async function partMenu(pane, el, x, y) {
   /** @type {MenuItem[]} */
   const takes = [];
   if (snip) {
-    takes.push({ label: t('담기'), tip: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip]) },
+    takes.push({ label: t('담기'), hint: el.matches('.pv-chunk, .pt-item') ? 'Alt+C' : '', tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip]) },
+      { label: t('다른 담기함에 담기…'), tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(x, y, (to) => addSnippets([snip], '', to)) },
       { label: t('문서로 보내기…'), tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip]) },
       { label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body: snip.text, path, line: range?.[0] || 0, end: range?.[1] || 0 }) });
   }
@@ -1054,6 +1055,18 @@ function onMenu(e) {
   e.preventDefault();
   if (el.matches('.pt-doc')) showMenu(e.clientX, e.clientY, [{ header: el.dataset.doc }, ...pathMenuItems(el.dataset.doc, true)]);   // 문서 머리줄·문서 정보의 문서
   else partMenu(pane, el, e.clientX, e.clientY);
+}
+
+/** Alt+C (D197): 초점이 있는 덩어리·행을 지금 담기함에. 이 화면이 아니면 false */
+export function clipChunk() {
+  const pane = S.pane;
+  if (!isParts(pane)) return false;
+  const el = /** @type {HTMLElement | null} */ (document.activeElement?.closest?.('.pv-chunk, .pt-item') || null);
+  const found = el && pane.view.contains(el) ? itemOf(pane.tab, el) : null;
+  const entry = found && pane.gather.listed.find((x) => x.file.path === found.path && x.item === found.item);
+  if (entry) takeAll(pane.tab, [entry]);
+  else toast(t('담을 것을 누르거나 Tab 으로 고른 뒤 Alt+C 를 누르세요'));
+  return true;
 }
 
 /** Ctrl+F: 모아 보기에서는 거르기 칸으로 (main.js) — 이 화면이 아니면 false */

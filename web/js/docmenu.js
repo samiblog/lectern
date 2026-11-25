@@ -12,9 +12,10 @@ import { S, emit } from './store.js';
 import { showMenu, menuGroups } from './ui.js';
 import { pathMenuItems } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
-import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere } from './spotlight.js';
+import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere, litSpan, hereLine } from './spotlight.js';
+import { blockOfLine } from './lineunits.js';
 import { partExtent, captionOf } from './toc.js';
-import { snippetOf, addSnippets, sendSnippets } from './basket.js';
+import { snippetOf, addSnippets, sendSnippets, boxMenu } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
 
 /**
@@ -36,6 +37,7 @@ import { aiName, reviewPrompt, voicePrompt, memoPrompt } from './aitool.js';
 import { printDoc, openPrint, canSavePdf, canExportHtml } from './printdoc.js';
 import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
+let menuAt = [0, 0];   // 메뉴를 띄운 자리 — 이어서 고르는 메뉴(다른 담기함)를 거기에
 let doc = null;   // 메뉴를 띄운 탭의 문서 {path, lines}. 문서를 그리지 못했으면 null
 
 const sourceLines = (text) => text.replace(/^\uFEFF/, '').split(/\r\n?|\n/);
@@ -214,10 +216,11 @@ const sourceEdits = (range) => [
 const noteItem = (body, path, range) => ({ label: t('새 메모로 보내기'), tip: t('이 프로젝트의 메모에 — 어디서 왔는지도 함께'), action: () => emit('new-note', { body, path, line: range?.[0] || 0, end: range?.[1] || 0 }) });
 
 /** 담기·보내기 (D63·D65): 이 문서의 줄 범위(range)를 조각으로. info: {kind, name, label, text?, plain?} — basket.js 의 snippetOf */
-function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…')]) {
+function takeItems(range, info, labels = [t('담기'), t('문서로 보내기…')], hint = '') {
   const from = doc;
   const snip = () => snippetOf(from, range, info);
-  return [{ label: labels[0], tip: t("사이드바 '담기' 탭에 — 모아서 한 번에 보내기"), action: () => addSnippets([snip()]) },
+  return [{ label: labels[0], hint, tip: t('지금 담기함에 — 사이드바 \'담기\' 탭에서 모아 보고 보냅니다'), action: () => addSnippets([snip()]) },
+    { label: t('다른 담기함에 담기…'), tip: t('담기함을 고르거나 새로 만들어 담습니다'), action: () => boxMenu(menuAt[0], menuAt[1], (to) => addSnippets([snip()], '', to)) },
     { label: labels[1], tip: t('열린 문서 탭이나 새 문서로 바로'), action: () => sendSnippets([snip()]) },
     noteItem(info.text ?? sourceOf(range), from.path, range)];
 }
@@ -242,7 +245,7 @@ function litMenu(hl, selected, blockMenu, own = []) {
   if (selected) copies.push({ label: t('고른 글 복사'), tip: describe(selected), action: () => copyPlain(selected) });
   copies.push({ label: t('원문 복사'), hint: 'Ctrl+C', tip: `${hl.code ? '' : 'Markdown '}${rangeText(range)}`, action: copyLitSource },
     { label: t('위치 복사'), hint: 'Shift+←', tip: ref, action: copyLitRef });
-  const takes = hl.code ? [noteItem(text, hl.path, range)] : takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) });
+  const takes = hl.code ? [noteItem(text, hl.path, range)] : takeItems(range, { kind: hl.chapter ? 'section' : 'block', name, label: describe(text.replace(/\s+/g, ' ').trim()) }, undefined, hl.chapter ? '' : 'Alt+C');
   /** @type {MenuItem[]} */
   const edits = !hl.chapter && linesEditable() && litOneLine() ? [{ label: t('여기서 편집'), hint: 'F2', action: () => editHere() }] : [];
   if (!hl.chapter && linesEditable()) edits.push(...pickedItems());
@@ -285,6 +288,49 @@ function blockTake(picked) {
   // 이름: 캡션, 없으면 목차의 이름표(차트 'Vega-Lite · 제목', 표 '머리행 · 3행 2열' 등), 그 밖의 블록은 그 글
   const label = ext.caption || ext.label || describe(el.innerText.replace(/\s+/g, ' ').trim());
   return { range, info: { kind: ext.kind || 'block', name: ext.kind === 'chart' ? t('차트') : kindOf(el), label } };
+}
+
+/**
+ * Alt+C (D197): 지금 담기함에 담는다 — 고른 글, 고른 줄, 아니면 현재 줄의 블록(표·그림은 캡션과 '자료:' 줄까지, 제목은 그 절 전체 — 우클릭 '담기'와 같게).
+ * md 문서에서만. 무엇을 담았는지는 알림에
+ */
+export function clipHere() {
+  const view = $('#lec-view');
+  const cur = S.pane?.current;
+  if (cur?.type !== 'doc' || !isMd(cur.path) || S.pane.editor || S.pane.source?.path !== cur.path) {
+    toast(t('md 문서를 읽는 화면에서 담습니다 — 고른 글, 고른 줄, 현재 줄의 블록'));
+    return;
+  }
+  doc = S.pane.source;
+  const sel = getSelection();
+  const selected = !sel.isCollapsed && view.contains(sel.anchorNode) ? sel.toString().trim() : '';
+  const picked = selected && selectionRange(sel);
+  if (picked) {
+    addSnippets([snippetOf(doc, picked, { kind: 'text', name: t('고른 글'), label: describe(selected.replace(/\s+/g, ' ')), text: selected, plain: true })]);
+    return;
+  }
+  const span = /** @type {[number, number] | null} */ (litSpan());
+  if (span) {
+    addSnippets([snippetOf(doc, span, { kind: 'block', name: t('고른 줄'), label: describe(sourceOf(span).replace(/\s+/g, ' ').trim()) })]);
+    return;
+  }
+  const line = hereLine();
+  const at = line ? blockOfLine(view, line) : null;
+  let el = at && pickBlock(at, view);
+  const ex = el?.closest('.lec-exhibit');   // 캡션·자료 줄에 있으면 그 표·그림을
+  if (ex) el = /** @type {HTMLElement} */ (ex.querySelector('table, img, pre.mermaid, pre.lec-chart, .diagram-error') || el);
+  if (!el || el.matches('.front-matter')) {
+    toast(t('담을 줄이 없습니다 — ↑·↓ 로 현재 줄을 옮기거나 글을 고르세요'));
+    return;
+  }
+  if (HEADING.test(el.tagName)) {
+    const section = sectionRange(el);
+    const name = el.textContent.trim();
+    if (section) addSnippets([snippetOf(doc, section, { kind: 'section', name: t("'{name}' 절", { name: describe(name) }), label: name })]);
+    return;
+  }
+  const take = blockTake(el);
+  if (take) addSnippets([snippetOf(doc, take.range, take.info)]);
 }
 
 /** 앱 안에서 여는 링크의 대상 — 새 창에서 열기 (D95). 앱 밖의 앱으로 여는 경로 표기면 null */
@@ -496,6 +542,7 @@ function codeLineMenu(e, view, x, y) {
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
 function openMenu(e, view, x, y) {
+  menuAt = [x, y];
   if (lightOn() && !litAt(e.clientY, e.target)) {   // 흐린 곳은 끄기만 (D118) — 하이라이트한 줄 안은 고른 줄의 선택 상자 (D139)
     e.preventDefault();
     showMenu(x, y, [releaseItem()]);
@@ -520,7 +567,7 @@ function openMenu(e, view, x, y) {
     const one = selected.replace(/\s+/g, ' ');
     // 고른 글의 메모는 그 글로 다시 찾는다 — 줄이 밀려도 (notes.js 의 relocate)
     const memo = range ? { ...noteItem(selected, doc.path, range), action: () => emit('new-note', { body: selected, path: doc.path, line: range[0], end: range[1], find: one }) } : null;
-    const takes = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(one), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서로 보내기…')]).slice(0, 2) : [];
+    const takes = range ? takeItems(range, { kind: 'text', name: t('고른 글'), label: describe(one), text: selected, plain: true }, [t('고른 글 담기'), t('고른 글을 문서로 보내기…')], 'Alt+C').slice(0, 3) : [];
     showMenu(x, y, menuGroups([{ header: `${t('고른 글')} · ${describe(selected)}` }], [{ label: t('고른 글 복사'), hint: 'Ctrl+C', action: () => copyPlain(selected), term: selected }], words.items,
       [...takes, ...(words.mark ? [words.mark[0]] : memo ? [memo] : [])], words.mark ? [words.mark[1]] : [],
       [{ label: t('이 블록의 메뉴…'), action: () => blockMenu(e, view, el, selected, x, y) }]));
