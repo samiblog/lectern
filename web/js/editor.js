@@ -26,7 +26,7 @@ import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
 import { html, setHtml } from './html.js';
 import { $, toast, formatClock, isHtml, blockedReadOnly, isPdf } from './util.js';
-import { isCode, isDataEditable } from './icons.js';
+import { isCode, isDataEditable, isImage } from './icons.js';
 import { t } from './i18n.js';
 import { pickDate } from './datepick.js';
 import { pickChar } from './charpick.js';
@@ -323,6 +323,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
   }
   if (view.type === 'code' && /\.xls[xm]$/i.test(view.path)) {   // 엑셀 보기 (D77) — 값만 읽은 표라 고칠 원문이 없다
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
+    return;
+  }
+  if (view.type === 'code' && isImage(view.path)) {   // 그림 보기 (D209)
+    toast(t('그림은 보기만 합니다 — 고치려면 기본 앱으로 여세요'));
     return;
   }
   if (view.type === 'code' && !isCode(view.path) && !isDataEditable(view.path)) {   // log (D171 — 프로그램이 덧붙이는 파일)

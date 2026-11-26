@@ -156,8 +156,9 @@ try:
         check('config.json 에도 (HWP 는 파일이 없어 숨었어도 켜진 채)', saved == ['ppt', 'excel', 'hwp'], saved)
         check('사이드바: Word 는 사라진다', until(page, lambda: [x.split(':')[0] for x in kinds()] == ['all', 'ppt', 'excel']), kinds())
         page.keyboard.press('Escape')
+        page.fill('#lec-filter', '')   # 거르기 칸이 비어 있게 — 부하가 클 때 앞 단계의 글이 남았다
         pick_kind('all')
-        page.keyboard.press('Control+Comma')
+        page.click('#lec-btn-settings')
         title_box = page.locator('#lec-settings input[data-key="show_titles"]')
         check("'목록에 문서 제목 보이기' 는 꺼져 있다", not title_box.is_checked())
         title_box.click()

@@ -215,7 +215,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .lec-tab-drop { position: fixed; z-index: 60; width: 3px; border-radius: 2px; background: var(--ui-accent); pointer-events: none; }
 
 /* ---- 본문 영역 ------------------------------------------------------------- */
-#lec-main { display: flex; min-height: 0; position: relative; --doctabs-h: 33px; }
+#lec-main { display: flex; min-height: 0; min-width: 0; position: relative; --doctabs-h: 33px; }   /* min-width 0 — 격자(#lec-app) 안에서 안의 칸 최소 폭만큼 넓어지지 않게 (D208 — 창 밖으로 밀렸다) */
 #lec-sidebar {
   width: var(--side-w); flex: none; display: flex; flex-direction: column; min-height: 0;
   border-right: 1px solid var(--ui-border); background: var(--ui-bg);
@@ -306,7 +306,16 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 #lec-toc-resizer:hover, .resizing-toc #lec-toc-resizer { background: color-mix(in srgb, var(--ui-accent) 35%, transparent); }
 .resizing, .resizing * { cursor: col-resize !important; user-select: none; }
 .resizing iframe { pointer-events: none; }
-@media (max-width: 1080px) { #lec-toc, #lec-toc-resizer { display: none; } }
+@media (max-width: 1080px) {
+  #lec-toc, #lec-toc-resizer { display: none; }
+  /* 좁은 창에서 목차 단추를 누르면 (D208 — toc.js): 문서 칸을 좁히지 않고 오른쪽 위에 겹친다 */
+  :root.toc-narrow-on:not(.toc-off):not(.spread-on) #lec-toc {
+    display: block; position: absolute; top: var(--doctabs-h, 0px); right: 0; bottom: 0; z-index: 30;   /* 문서 탭 줄은 가리지 않는다 */
+    width: min(var(--toc-w, 260px), 70vw); box-shadow: -8px 0 20px rgba(0, 0, 0, .14);
+  }
+  /* 오른쪽 터미널을 연 동안은 겹치지 않고 문서와 터미널 사이의 칸으로 — 터미널을 가리지 않게 (셋이 줄어든다 — 아래 #lec-term 규칙) */
+  :root.term-on:not(.term-bottom).toc-narrow-on:not(.toc-off):not(.spread-on) #lec-toc { position: static; box-shadow: none; width: var(--toc-w); }
+}
 /* 좁은 창: 툴바가 한 줄에 들어가게 문서 열기 칸부터 줄인다 */
 @media (max-width: 1300px) { .search-btn { min-width: 150px; } .search-btn kbd { display: none; } }
 @media (max-width: 1240px) {   /* '스타일' 글자 — 고르기 칸이 스타일 이름을 보인다 */
@@ -340,6 +349,12 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
   flex: 0 0 var(--term-w, 42%); min-width: 280px; max-width: calc(100% - 360px); display: flex; flex-direction: column; container: term / inline-size;
   border-left: 1px solid var(--ui-border); background: var(--term-bg, #1e1f22);
 }
+/* 오른쪽 터미널 (D208): 사이드바·목차·터미널이 창에 다 들어가지 않으면 셋이 비율대로 줄고 문서 칸은 320px 을 지킨다
+   (전에는 터미널 폭의 상한이 사이드바를 셈하지 않아 문서 칸이 0 까지 줄었다 — 목차를 켜면 목차가 문서 자리를 차지했다) */
+.term-on:not(.term-bottom) #lec-panes { min-width: 320px; }
+.term-on:not(.term-bottom) #lec-sidebar { flex: 0 1 var(--side-w); min-width: 200px; }
+.term-on:not(.term-bottom) #lec-toc { flex: 0 1 var(--toc-w); min-width: 160px; }
+.term-on:not(.term-bottom) #lec-term { flex: 0 1 var(--term-w, 42%); }
 .term-head {
   display: flex; align-items: center; gap: 4px; flex: none; height: 32px; padding: 0 4px 0 10px;
   border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); color: var(--ui-fg); font-size: 12.5px; font-weight: 600;
@@ -919,6 +934,12 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 /* 본문 안의 앱 버튼 — 코드 화면 머리줄, 문서가 없을 때의 안내: 본문 글꼴(명조일 수 있다)이 아니라 앱 글꼴로.
    코드 화면의 '편집'은 상태줄의 '편집'과 같은 모양 (연필, 마우스를 올리면 강조색) */
 .code-view .cv-tools .text-btn, .md-body .doc-missing button { font-family: var(--ui-font); }
+/* 그림 보기 (D209 — codeview.js): 칸 폭에 맞춤, 누르면 실제 크기. 투명한 곳은 바둑판 무늬로 */
+.image-view .iv-stage { padding: 12px 0 40px; text-align: center; }
+.image-view .iv-img { max-width: 100%; height: auto; cursor: zoom-in; border: 1px solid var(--ui-border);
+  background: repeating-conic-gradient(color-mix(in srgb, var(--ui-border) 55%, transparent) 0 25%, transparent 0 50%) 50% / 16px 16px; }
+.image-view.actual .iv-stage { text-align: left; overflow: auto; }
+.image-view.actual .iv-img { max-width: none; cursor: zoom-out; }
 .code-view .cv-tools .text-btn { height: 26px; padding: 0 9px; gap: 4px; font-size: 12.5px; }
 .code-view .cv-edit:hover { border-color: var(--ui-accent); color: var(--ui-accent); }
 .code-view .cv-edit svg { width: 13px; height: 13px; stroke-width: 1.5; }

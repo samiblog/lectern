@@ -29,15 +29,20 @@ export function setEditJump(fn) {
 const root = document.documentElement;
 // 오른쪽 터미널은 목차 자리를 쓴다 (목차 버튼으로 함께 볼 수 있다 — toc-with-term). 아래에 둔 터미널(D52)은 목차를 가리지 않는다
 const hiddenByTerminal = () => root.classList.contains('term-on') && !root.classList.contains('term-bottom') && !root.classList.contains('toc-with-term');
+/** 좁은 창(1080px 이하 — app.css)은 목차를 감춘다. 목차 단추를 누르면 그때만 문서 위에 겹쳐 보인다 (toc-narrow-on — D208) */
+export const narrowWindow = matchMedia('(max-width: 1080px)');
+const hiddenByWidth = () => narrowWindow.matches && !root.classList.contains('toc-narrow-on');
 
 export function updateTocVisibility() {
   const has = !!$('#lec-toc').firstChild;
-  const show = S.config.toc_visible !== false && has && !hiddenByTerminal();
+  const show = S.config.toc_visible !== false && has && !hiddenByTerminal() && !hiddenByWidth();
   root.classList.toggle('toc-off', !show);
-  const on = S.config.toc_visible !== false && !hiddenByTerminal();
+  const on = S.config.toc_visible !== false && !hiddenByTerminal() && !hiddenByWidth();   // 단추는 실제로 보이는지를 따른다
   $('#lec-btn-toc').classList.toggle('on', on);
   $('#lec-btn-toc').setAttribute('aria-pressed', String(on));
 }
+
+narrowWindow.addEventListener('change', () => updateTocVisibility());   // 창 폭이 문턱을 넘나들면 (D208)
 
 export function clearToc() {
   heads = [];

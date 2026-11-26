@@ -4,7 +4,7 @@ import { S, on, emit } from './store.js';
 import { saveConfig, native, loadConfig } from './api.js';
 import { initTheme, loadUserStyles } from './theme.js';
 import { initUi, hideMenu, closeLightbox } from './ui.js';
-import { initToc, updateTocVisibility } from './toc.js';
+import { initToc, updateTocVisibility, narrowWindow } from './toc.js';
 import { initFind, openFind, openReplace, closeFind } from './find.js';
 import { initFold, foldHere, foldAllHere } from './fold.js';
 import { wordKey, clearPick, wordMenu } from './wordpick.js';
@@ -130,13 +130,31 @@ async function toggleToc() {
     leaveSpread();
     if (S.config.toc_visible !== false && !terminalOpen()) return;
   }
-  if (terminalOpen() && !terminalBelow()) {   // 오른쪽 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
-    document.documentElement.classList.toggle('toc-with-term');
+  const root = document.documentElement;
+  if (narrowWindow.matches) {   // 좁은 창 (D208): 목차는 감춰 두고, 단추를 누를 때만 문서 위에 겹쳐 보인다 (설정은 그대로 — 넓히면 원래대로)
+    const show = !root.classList.contains('toc-narrow-on');
+    root.classList.toggle('toc-narrow-on', show);
+    if (show && terminalOpen() && !terminalBelow()) root.classList.add('toc-with-term');
+    if (show && S.config.toc_visible === false) await saveConfig({ toc_visible: true });
     applyLayout();
+    if (show) emptyTocNote();
+    return;
+  }
+  if (terminalOpen() && !terminalBelow()) {   // 오른쪽 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
+    root.classList.toggle('toc-with-term');
+    applyLayout();
+    if (root.classList.contains('toc-with-term')) emptyTocNote();
     return;
   }
   await saveConfig({ toc_visible: S.config.toc_visible === false });
   applyLayout();
+  if (S.config.toc_visible !== false) emptyTocNote();
+}
+
+/** 목차를 보이려는데 이 문서에 목차가 없으면 알린다 — 단추가 듣지 않는 것처럼 보이지 않게 (D208) */
+function emptyTocNote() {
+  if ($('#lec-toc').firstChild || !S.view || S.view.type === 'overview') return;
+  toast(t('이 문서에는 목차로 보일 것이 없습니다 — md 문서는 제목(#), PDF 는 책갈피가 있을 때 보입니다'));
 }
 
 /** F5: 선택된 탭의 트리를 새로 훑고 화면을 다시 그린다 (처음 열 때 읽지 못한 탭이면 다시 연다) */

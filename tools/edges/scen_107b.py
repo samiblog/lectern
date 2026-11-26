@@ -74,8 +74,16 @@ def office_files(root):
 def digest(root):
     out = {}
     for p in root.rglob('*'):
-        if p.is_file():
-            out[p.relative_to(root).as_posix()] = hashlib.md5(p.read_bytes()).hexdigest()
+        if not p.is_file():
+            continue
+        for _ in range(40):   # Windows 가 복사하는 그 순간에는 잠겨 있다 — 잠깐 뒤에 다시
+            try:
+                out[p.relative_to(root).as_posix()] = hashlib.md5(p.read_bytes()).hexdigest()
+                break
+            except PermissionError:
+                time.sleep(0.05)
+            except FileNotFoundError:
+                break
     return out
 
 

@@ -17,7 +17,7 @@ import { snapshot, markChanges, clearChanges } from './diffmark.js';
 import { showMissing } from './doc.js';
 import { languageOf, outlineOf } from './outline.js';
 import { isTableFile, renderCsv, renderRows, colName, initCsv } from './csvview.js';
-import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet, isCode } from './icons.js';
+import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet, isCode, isImage } from './icons.js';
 import { paneShown } from './panes.js';
 import { addHtml, esc, html, raw, setHtml } from './html.js';
 import { $, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
@@ -93,6 +93,7 @@ const fileUrl = (tab, path) => (hiddenFile(tab, path) ? `${docUrl(tab, path)}?hi
  */
 export async function showCode(pane, path, { line, scrollTop } = {}) {
   if (isSheet(path)) return showSheet(pane, path, { line, scrollTop });
+  if (isImage(path)) return showImage(pane, path, { scrollTop });
   const id = ++pane.renderId;
   const { view, scroller, tab } = pane;
   let text;
@@ -225,8 +226,61 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
 const editButton = (path) => (isCode(path) ? [html`<button type="button" class="text-btn cv-edit" title="${t('여기서 고치기 — 편집 모드 (Ctrl+E)')}">`, html`<svg aria-hidden="true"><use href="#i-edit"/></svg>${t('편집')}</button>`] : '');
 
 /** 머리줄의 '편집기로 열기' — 자료 파일(csv·txt 등)·엑셀은 기본 앱(엑셀·메모장)으로 */
+/**
+ * 그림 파일을 칸에 보인다 (D209 — 보기만): 칸 폭에 맞춰, 그림을 누르면 실제 크기 ↔ 맞춤. 상태줄에 해상도·크기.
+ * 그림은 <img> 로만 — SVG 안의 스크립트는 돌지 않는다. 숨긴 그림('폴더' 묶음)은 토큰을 붙인 주소로 (fileUrl).
+ * @param {Pane} pane
+ * @param {string} path
+ * @param {ShowOptions} [options]
+ */
+async function showImage(pane, path, { scrollTop } = {}) {
+  const id = ++pane.renderId;
+  const { view, scroller, tab } = pane;
+  let size = 0;
+  let modified = null;
+  try {
+    const head = await fetch(fileUrl(tab, path), { method: 'HEAD', cache: 'no-store' });
+    if (!head.ok) throw Object.assign(new Error(`HTTP ${head.status}`), { status: head.status });
+    size = Number(head.headers.get('Content-Length')) || 0;
+    modified = head.headers.get('Last-Modified');
+  } catch (err) {
+    if (id !== pane.renderId) return false;
+    showMissing(view, path, err);
+    finish(pane, path, null, { path, info: '' });
+    return true;
+  }
+  if (id !== pane.renderId) return false;
+  pane.codeStamp = `${modified}|${size}`;
+  const actual = pane.current?.type === 'code' && pane.current.path === path && view.classList.contains('actual');   // 다시 그려도 실제 크기 그대로
+  const url = `${fileUrl(tab, path)}${fileUrl(tab, path).includes('?') ? '&' : '?'}v=${encodeURIComponent(pane.codeStamp)}`;   // 바뀌면 새로
+  const img = new Image();
+  img.decoding = 'async';
+  img.src = url;
+  const ok = await img.decode().then(() => true, () => false);
+  if (id !== pane.renderId) return false;
+  delete view.dataset.docPath;
+  delete view.dataset.sheet;
+  delete view.dataset.encoding;
+  view.codeText = '';
+  if (!ok) {
+    notice(view, path, t('그림을 그리지 못했습니다 — 손상되었거나 이 화면이 읽지 못하는 형식입니다. 기본 앱으로 여세요.'));
+    finish(pane, path, null, { path, info: formatSize(size) });
+    return true;
+  }
+  view.className = `md-body code-view image-view${actual ? ' actual' : ''}`;
+  view.dataset.codePath = path;
+  const dims = img.naturalWidth && img.naturalHeight ? `${img.naturalWidth}×${img.naturalHeight}` : '';
+  setHtml(view, [html`<header class="cv-head"><div class="cv-title">${basename(path)}</div>`,
+    html`<div class="cv-sub">${dirname(path) ? `${dirname(path)} · ` : ''}${t('그림')}${dims ? ` · ${dims}` : ''}</div>`,
+    html`<div class="cv-tools"><button type="button" class="text-btn iv-fit" title="${t('그림을 눌러도 바뀝니다')}">${actual ? t('창에 맞춤') : t('실제 크기')}</button>${openButton(path)}</div></header>`,
+    html`<div class="iv-stage"><img class="iv-img" alt="${basename(path)}" src="${url}" draggable="false"></div>`]);
+  finish(pane, path, null, { path, info: `${t('그림')}${dims ? ` · ${dims}` : ''} · ${formatSize(size)}${modifiedText(modified)}` });
+  scroller.scrollTop = typeof scrollTop === 'function' ? scrollTop() : scrollTop || 0;
+  return true;
+}
+
 function openButton(path) {
-  return isDataFile(path) || isSheet(path)
+  return isDataFile(path) || isSheet(path) || isImage(path)
     ? html`<button type="button" class="text-btn cv-editor" title="${t('기본 앱으로 열기 (자료 목록에서 두 번 누르기)')}">${t('기본 앱으로 열기')}</button>`
     : html`<button type="button" class="text-btn cv-editor" title="${t('외부 편집기로 열기 (코드 목록에서 두 번 누르기)')}">${t('외부 편집기로 열기')}</button>`;
 }
@@ -306,6 +360,12 @@ export function initCodeView() {
     if (sheetBtn) {   // 엑셀의 시트 탭 (D77)
       const pane = S.panes.find((p) => p.view === view);
       if (pane && sheetBtn.getAttribute('aria-pressed') !== 'true') showSheet(pane, path, { sheet: Number(sheetBtn.dataset.sheet), scrollTop: 0 });
+      return;
+    }
+    if (e.target.closest('.iv-fit, .iv-img')) {   // 그림: 실제 크기 ↔ 창에 맞춤 (D209)
+      const actual = view.classList.toggle('actual');
+      const btn = view.querySelector('.iv-fit');
+      if (btn) btn.textContent = actual ? t('창에 맞춤') : t('실제 크기');
       return;
     }
     if (e.target.closest('.cv-editor')) openExternal(path);
