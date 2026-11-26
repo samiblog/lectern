@@ -141,7 +141,10 @@ async function toggleToc() {
     return;
   }
   if (terminalOpen() && !terminalBelow()) {   // 오른쪽 터미널을 연 동안은 목차를 함께 볼지만 바꾼다 (설정은 그대로 — toc.js)
-    root.classList.toggle('toc-with-term');
+    if (S.config.toc_visible === false) {   // 목차를 꺼 두었으면 켜면서 함께 보인다 (D208 — 전에는 함께 보기만 바뀌어 아무것도 나오지 않았다)
+      await saveConfig({ toc_visible: true });
+      root.classList.add('toc-with-term');
+    } else root.classList.toggle('toc-with-term');
     applyLayout();
     if (root.classList.contains('toc-with-term')) emptyTocNote();
     return;
