@@ -926,6 +926,7 @@ export default {
 "작업": "Tasks",
 "작업 펼치기 — 업무 카드·형광펜·할 일": "Expand Tasks — work cards, highlights, to-dos",
 "처음에는 '문서' 묶음에 md·html 문서만 있고 PDF·오피스 파일은 '자료' 에 있습니다. 켠 종류는 '문서' 묶음 아래 하위 묶음으로 옮겨 가고 '자료' 에서는 빠집니다 (그 파일이 없으면 보이지 않습니다). 하위 묶음의 머리줄을 우클릭해도 고릅니다": "At first 'Documents' holds only md and html documents, and PDFs and Office files are under 'Other files'. Kinds you turn on move under 'Documents' as sub-groups and leave 'Other files' (they appear only when there are such files). You can also choose by right-clicking a sub-group header",
+"기타": "Other",
 "담기함을 고르거나 새로 만들어 담습니다": "Choose a clip box, or make a new one, and clip there",
 "담기함을 만들지 못했습니다: {error}": "Could not create the clip box: {error}",
 "담기함을 읽는 중…": "Reading the clip box…",

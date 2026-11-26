@@ -242,6 +242,7 @@ EN: dict[str, str] = {
     "'문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·word·ppt·excel·hwp·work·marks·tasks": "Sub-group open under 'Documents' — all, md, deck, html, pdf, word, ppt, excel, hwp, work, marks, tasks",
     "'문서' 묶음으로 옮길 종류 — pdf·word·ppt·excel·hwp 가운데 (기본은 없음 — '자료' 에. 설정 창 '일반')": "Kinds moved under 'Documents' — any of pdf, word, ppt, excel, hwp (none by default — they stay in 'Other files'. Settings, General)",
     "'작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks": "Sub-group open under 'Tasks' — work, marks, tasks",
+    "'자료' 묶음에서 펼친 하위 묶음 — all·pdf·word·ppt·excel·hwp·image·etc": "Sub-group open under 'Other files' — all, pdf, word, ppt, excel, hwp, image, etc",
     'API 키를 내주는 명령': 'Command that hands out the API key',
     'CSV 표 위의 통계 줄': 'Statistics line above CSV tables',
     'md 문서 표의 칸 맞춤 — auto(글 왼쪽·숫자 오른쪽)·report(보고서식 — 머리행·짧은 열 가운데)': 'Cell alignment in md document tables — auto (text left, numbers right) or report (Report style — header row and short columns centered)',

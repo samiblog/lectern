@@ -26,7 +26,7 @@
 import { S, emit, on } from './store.js';
 import { getJSON, postJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
 import { loadMarks, docKindOn, docShown, fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
-import { fileIcon, folderIcon, isCode, isViewable, isOffice } from './icons.js';
+import { fileIcon, folderIcon, isCode, isViewable, isOffice, isImage } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens, blockedReadOnly, isMd, isHtml } from './util.js';
@@ -132,6 +132,7 @@ function build(o) {
   o.trees = { files: pick(files, (f) => !code(f) && !inDocs(f), true), code: pick(o.tree, code) };
   o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code), all: indexOf(o.tree) };
   o.counts = { files: [...filesIn(o.trees.files)].length, code: [...filesIn(o.trees.code)].length };   // 나눌 때마다 — PDF·오피스가 오가면 (D206)
+  o.kindTree = null;   // '자료' 의 종류로 거른 트리 (D207)
 }
 
 const byName = (a, b) => natCompare(a.name, b.name);
@@ -212,10 +213,73 @@ function buildAll(o) {
 
 // ---- 그리기 -------------------------------------------------------------------
 
+// '자료' 묶음의 하위 묶음 (D207 — '문서' 묶음과 같은 짜임): 종류로 거른 트리, 폴더는 늘 펼친다. 그 파일이 없는 종류와 '전체' 와 같은 종류는 감춘다.
+// '문서' 로 옮긴 종류(D206)는 '자료' 에 없으니 그 하위 묶음도 없다. 제외 폴더는 '전체' 에만 (안을 읽기 전에는 종류를 모른다). 설정 others_kind, 프로젝트 탭마다 tab.side.othersKind
+const isPdfName = (name) => /\.pdf$/i.test(name);
+const OTHER_KINDS = () => [
+  { id: 'all', name: t('전체') },
+  { id: 'pdf', name: 'PDF', keep: (f) => isPdfName(f.name) },
+  { id: 'word', name: 'Word', keep: (f) => isOffice('word', f.name) },
+  { id: 'ppt', name: 'PowerPoint', keep: (f) => isOffice('ppt', f.name) },
+  { id: 'excel', name: 'Excel·CSV', keep: (f) => isOffice('excel', f.name) },
+  { id: 'hwp', name: t('한글(HWP)'), keep: (f) => isOffice('hwp', f.name) },
+  { id: 'image', name: t('그림', { n: 2 }), keep: (f) => isImage(f.name) },
+  { id: 'etc', name: t('기타'), keep: (f) => !isPdfName(f.name) && !isImage(f.name) && !['word', 'ppt', 'excel', 'hwp'].some((k) => isOffice(k, f.name)) },
+];
+
+/** '자료' 의 보일 하위 묶음과 개수 — 하나뿐이면 [] (머리줄을 감춘다) */
+function otherKinds(o) {
+  if (!o?.trees) return [];
+  const files = [...filesIn(o.trees.files)];
+  const out = OTHER_KINDS().map((k) => ({ ...k, n: k.keep ? files.filter(k.keep).length : files.length }))
+    .filter((k) => k.id === 'all' || (k.n > 0 && k.n < files.length));
+  return out.length > 1 ? out : [];
+}
+
+/** 펼친 '자료' 의 하위 묶음 — 보이지 않는 것을 골라 두었으면 '전체' */
+function otherKind(kinds) {
+  const id = S.tab?.side?.othersKind ?? S.config.others_kind;
+  return kinds.find((k) => k.id === id) ?? kinds[0] ?? OTHER_KINDS()[0];
+}
+
+/** 종류로 거른 '자료' 트리 — 나눌 때마다(build) 버린다 */
+function otherTree(o, kind) {
+  if (!kind.keep) return o.trees.files;
+  if (o.kindTree?.id !== kind.id || o.kindTree.of !== o.trees.files) o.kindTree = { id: kind.id, of: o.trees.files, tree: pick(o.trees.files, kind.keep) };
+  return o.kindTree.tree;
+}
+
+/** 트리의 폴더 경로 모두 — 종류로 거른 '자료' 는 늘 펼쳐 둔다 */
+function dirsOf(nodes, out = new Set()) {
+  for (const n of nodes) if (n.type === 'dir' && n.children) { out.add(n.path); dirsOf(n.children, out); }
+  return out;
+}
+
 /** 목록 k 의 지금 모양: {tree, index(경로 → 노드), open(펼친 폴더), sel(고른 행을 기억하는 이름)} */
 function view(o, k) {
   if (k === 'folder') return { tree: o.all || [], index: o.allIndex || new Map(), open: o.folderOpen || new Set(), sel: 'folder' };
+  if (k === 'files' && o.trees) {   // '자료' 의 하위 묶음 (D207)
+    const kind = otherKind(otherKinds(o));
+    if (kind.keep) {
+      const tree = otherTree(o, kind);
+      return { tree, index: o.index?.files || new Map(), open: dirsOf(tree), sel: k, kind };
+    }
+  }
   return { tree: o.trees?.[k] || [], index: o.index?.[k] || new Map(), open: o.open[k], sel: k };
+}
+
+/** '자료' 의 하위 묶음 머리줄 — 펼친 것까지는 목록 위에, 나머지는 아래에 ('문서' 와 같다) */
+function renderOtherKinds(o) {
+  const kinds = otherKinds(o);
+  const cur = otherKind(kinds);
+  const i = kinds.findIndex((k) => k.id === cur.id);
+  const head = (k) => {
+    const open = k.id === cur.id;
+    return html`<button type="button" class="kind-head${open ? ' open' : ''}" data-kind="${k.id}" aria-expanded="${open}"><span class="caret${open ? ' open' : ''}" aria-hidden="true"></span><span>${k.name}</span><span class="n">${String(k.n)}</span></button>`;
+  };
+  setHtml($('#lec-others-kinds-top'), kinds.slice(0, i + 1).map(head));
+  setHtml($('#lec-others-kinds-bottom'), kinds.slice(i + 1).map(head));
+  $('#lec-others').classList.toggle('kinds', kinds.length > 0);
 }
 
 function rowAttrs(o, v, path, depth, extra = '') {
@@ -320,6 +384,7 @@ function renderList(k) {
     return;
   }
   if (folder) buildAll(o);
+  if (k === 'files') renderOtherKinds(o);   // D207
   const v = view(o, k);
   const query = $('#lec-filter').value.trim().toLowerCase();
   const terms = query ? query.split(/\s+/) : null;
@@ -927,7 +992,18 @@ function bindList(k) {
 
 export function initOthers() {
   for (const k of Object.keys(LISTS)) bindList(k);
-  bindFileRows($('#lec-tree'), (path) => state()?.index?.all?.get(path) ?? null);   // '문서' 묶음의 오피스 하위 묶음 (D202 — tree.js 가 그린다)
+  bindFileRows($('#lec-tree'), (path) => state()?.index?.all?.get(path) ?? null);
+  for (const box of $$('#lec-others .doc-kinds')) {   // '자료' 의 하위 묶음 머리줄 (D207)
+    box.addEventListener('click', (e) => {
+      const id = e.target.closest('.kind-head')?.dataset.kind;
+      const o = state();
+      if (!id || !S.tab || !o || otherKind(otherKinds(o)).id === id) return;
+      S.tab.side.othersKind = id;
+      saveConfig({ others_kind: id });
+      listEl('files').scrollTop = 0;
+      renderList('files');
+    });
+  }   // '문서' 묶음의 오피스 하위 묶음 (D202 — tree.js 가 그린다)
   bindLayout();
   applyLayout();
   $('#lec-filter').addEventListener('input', render);

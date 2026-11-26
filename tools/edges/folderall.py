@@ -178,7 +178,7 @@ try:
         page.click(row('calc.py'))
         page.keyboard.press('Control+v')
         check('잘라낸 것도 복사만 — 원본은 남는다', until(page, lambda: (proj / '잘라낸.txt').exists(), ms=15000) and cut_src.exists(), (cut_src.exists(), (proj / '잘라낸.txt').exists()))
-        check('알림 — 옮기지 않음', '복사만 했습니다' in toast(), toast())
+        check('알림 — 옮기지 않음', until(page, lambda: '복사만 했습니다' in toast()), toast())
 
         print('[우클릭 · 빈 곳]')
         page.click(row('calc.py'), button='right')

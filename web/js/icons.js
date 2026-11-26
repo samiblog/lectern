@@ -30,6 +30,9 @@ export function fileIcon(name, docKind, deck = false) {
 
 export const folderIcon = () => svg('folder');
 
+/** 그림 파일인지 ('자료' 의 하위 묶음 '그림' — D207). 아이콘의 그림 종류와 같다 */
+export const isImage = (name) => name.lastIndexOf('.') > 0 && KIND_OF.get(name.slice(name.lastIndexOf('.') + 1).toLowerCase()) === 'image';
+
 /** 코드 파일인지 (사이드바 '코드' 목록 — others.js): 아이콘의 코드 종류와 같다 — 소스·스크립트·웹(css·소스 폴더의 html)·설정 */
 export function isCode(name) {
   const i = name.lastIndexOf('.');

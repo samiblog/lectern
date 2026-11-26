@@ -69,6 +69,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'docs_kind': (N_("'문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·word·ppt·excel·hwp·work·marks·tasks"), W_SIDEBAR),
     'doc_kinds': (N_("'문서' 묶음으로 옮길 종류 — pdf·word·ppt·excel·hwp 가운데 (기본은 없음 — '자료' 에. 설정 창 '일반')"), W_SIDEBAR),
     'work_kind': (N_("'작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks"), W_SIDEBAR),
+    'others_kind': (N_("'자료' 묶음에서 펼친 하위 묶음 — all·pdf·word·ppt·excel·hwp·image·etc"), W_SIDEBAR),
     'toc_visible': (N_('오른쪽 목차 보이기'), W_TOC),
     'search_docs': (N_('검색에서 문서를 찾음'), W_SIDEBAR),
     'search_code': (N_('검색에서 코드를 찾음'), W_SIDEBAR),

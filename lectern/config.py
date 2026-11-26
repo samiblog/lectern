@@ -58,6 +58,7 @@ DEFAULTS: dict[str, Any] = {
     'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·work·marks·tasks·word·ppt·excel·hwp (D143·D201·D202)
     'doc_kinds': [],         # '문서' 묶음으로 옮길 종류 — pdf·word·ppt·excel·hwp (D206 — 기본은 없음: '문서' 에는 md·html 만, 나머지는 '자료'. D202·D204)
     'work_kind': 'tasks',    # '작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks (D204)
+    'others_kind': 'all',    # '자료' 묶음에서 펼친 하위 묶음 — all·pdf·word·ppt·excel·hwp·image·etc (D207)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
     'search_code': True,     # 전체 검색에서 코드를 찾음 ('코드' 버튼, D44)
@@ -114,7 +115,7 @@ DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks', 'wor
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind', 'doc_kinds', 'work_kind',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind', 'doc_kinds', 'work_kind', 'others_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'doc_check', 'doc_check_style', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_margin_mm', 'print_header', 'print_page_numbers', 'ai_tool',
@@ -147,6 +148,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in DOCS_KINDS
     if key == 'work_kind':
         return value in ('work', 'marks', 'tasks')
+    if key == 'others_kind':
+        return value in ('all', 'pdf', 'word', 'ppt', 'excel', 'hwp', 'image', 'etc')
     if key == 'doc_kinds':
         return isinstance(value, list) and all(x in DOC_KINDS_OPTIONAL for x in value)
     if key == 'terminal_position':
