@@ -59,6 +59,19 @@ def N_(ko: str) -> str:
 
 
 EN: dict[str, str] = {
+    "클립보드를 열지 못했습니다 — 다른 프로그램이 쓰고 있습니다. 잠시 뒤 다시 하세요": "Could not open the clipboard — another program is using it. Try again in a moment",
+    "클립보드에 놓지 못했습니다": "Could not put it on the clipboard",
+    "이 컴퓨터에서는 파일을 클립보드에 놓을 수 없습니다": "Files cannot be put on the clipboard on this computer",
+    "이 컴퓨터에서는 붙여 넣을 수 없습니다": "Cannot paste on this computer",
+    "클립보드에 파일이 없습니다 — 탐색기나 폴더 묶음에서 파일을 복사(Ctrl+C)한 뒤 붙여 넣으세요": "There are no files on the clipboard — copy files (Ctrl+C) in File Explorer or the Folders group, then paste",
+    "폴더를 그 폴더 안으로 붙여 넣을 수 없습니다: {name}": "A folder cannot be pasted into itself: {name}",
+    "붙여 넣을 수 있는 파일이 없습니다 — 바로가기 폴더와 없어진 파일은 붙여 넣지 않습니다": "Nothing can be pasted — linked folders and files that no longer exist are not pasted",
+    "붙여 넣지 못했습니다 ({error})": "Could not paste ({error})",
+    "붙여 넣기를 그만두었습니다 — 그때까지 복사한 것은 남습니다": "Paste was cancelled — what was copied until then stays",
+    "붙여 넣지 못했습니다 (Windows 코드 {code}) — 파일이 열려 있거나 권한이 없을 수 있습니다": "Could not paste (Windows code {code}) — a file may be open or you may not have permission",
+    "복사할 수 있는 파일이 없습니다 — 바로가기 폴더는 복사하지 않습니다": "Nothing can be copied — linked folders are not copied",
+    "Lectern 프로그램 폴더 안에는 붙여 넣지 않습니다 — 그 폴더를 다른 곳에 복사해 여세요": "Lectern does not paste into its program folder — copy that folder elsewhere and open the copy",
+    "붙여 넣을 폴더가 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다": "The folder to paste into is gone — it was deleted or renamed in the meantime",
     '스타일 이름이나 머리글 모양이 올바르지 않습니다': 'The style name or heading shape is not valid',
     '스타일 이름은 {n}자까지입니다 — 점으로 시작하거나 끝나면 안 되고 : * ? " < > | / \\ 를 쓸 수 없습니다': 'A style name is at most {n} characters, cannot start or end with a dot, and cannot use : * ? " < > | / \\',
     '같은 이름의 스타일이 있습니다 — 다른 이름으로 저장하세요': 'A style with this name exists — save under another name',

@@ -123,9 +123,12 @@ const OPEN_RESULT = {
  * 선택된 탭의 프로젝트 안 파일을 OS에 넘겨 연다 (md가 아닌 링크, 트리의 '편집기로 열기', 문서 외 파일).
  * how: 'editor' 면 기본 앱으로 여는 형식(csv 등)도 편집기로. 어떻게 열지는 서버가 정한다 (실행하지 않는다 — osutil.open_path)
  */
+/** '폴더' 묶음의 숨긴 파일인지 (D203 — 보기만, 서버에 hidden 을 함께 보낸다) */
+export const hiddenFile = (tab, path) => !!tab?.others?.hiddenSet?.has(path);
+
 export async function openExternal(path, line, how) {
   try {
-    const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line, how });
+    const r = await postJSON('/api/open-external', { p: S.tab?.id, path, line, how, ...(hiddenFile(S.tab, path) ? { hidden: true } : {}) });
     toast(OPEN_RESULT[r.action] || t('열었습니다'));
   } catch (e) {
     toast(e.status === 404 ? t('파일을 찾을 수 없습니다: {path}', { path }) : t('열지 못했습니다: {error}', { error: e.message }), 'error');
@@ -135,7 +138,7 @@ export async function openExternal(path, line, how) {
 /** 탐색기에서 보기. path 가 '' 면 프로젝트 폴더 (탭 우클릭) */
 export async function revealInExplorer(path, tab = S.tab) {
   try {
-    await postJSON('/api/reveal', { p: tab?.id, path });
+    await postJSON('/api/reveal', { p: tab?.id, path, ...(hiddenFile(tab, path) ? { hidden: true } : {}) });
   } catch (e) {
     toast(t('탐색기에서 열지 못했습니다: {error}', { error: e.message }), 'error');
   }

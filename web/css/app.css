@@ -606,6 +606,10 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .row .label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
 .row.dir .label { font-weight: 600; }
 .row.excluded > .label, .row.excluded > .ficon { opacity: .6; }   /* 제외 폴더와 그 안 ('자료' 목록, D49) */
+.row.hidden > .label, .row.hidden > .ficon, .row.hidden > .link-mark { opacity: .5; }   /* '폴더' 묶음의 숨긴 것 (D203 — 탐색기처럼 흐리게) */
+.row.hidden > .label { font-style: italic; }
+.row.link > .link-mark { display: inline-block; width: 16px; margin-right: 6px; text-align: center; color: var(--ui-muted); }
+.explorer .row.picked { background: var(--ui-active-bg); color: var(--ui-active-fg); }   /* 여럿 고른 행 (D203 — Ctrl·Shift+누르기) */
 .row .sub { color: var(--ui-faint); font-size: 12px; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 /* 같은 글 가르기 (D179 — tree.telling): 같은 이름이면 폴더, 같은 제목이면 파일 이름을 글 뒤에 흐리게 */
 .label > .tell, .doc-tab .name > .tell { margin-left: 6px; color: var(--ui-faint); font-size: .9em; font-weight: 400; }

@@ -17,7 +17,7 @@
 //   저장은 사용자가 한다. 새 문서는 newdoc.js 가 먼저 만든다 (경로를 정하면 바로 — '# 제목' 한 줄).
 
 import { S, on, emit } from './store.js';
-import { getJSON, postJSON } from './api.js';
+import { getJSON, postJSON, hiddenFile } from './api.js';
 import { setLeaveGuard, navigate } from './nav.js';
 import { solo } from './solo.js';
 import { docPaneOf, selectDocTab, openInNewTab } from './doctabs.js';
@@ -317,6 +317,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
     return;
   }
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)
+  if (hiddenFile(pane.tab, view.path)) {   // '폴더' 묶음의 숨긴 파일 (D203)
+    toast(t('숨긴 파일은 보기만 합니다 — 고치려면 외부 편집기로 여세요'));
+    return;
+  }
   if (view.type === 'code' && /\.xls[xm]$/i.test(view.path)) {   // 엑셀 보기 (D77) — 값만 읽은 표라 고칠 원문이 없다
     toast(t('엑셀 보기는 보기만 합니다 — 고치려면 엑셀로 여세요'));
     return;

@@ -285,6 +285,79 @@ def list_dir(root: Path, rel: str, limit: int = MAX_DIR_ENTRIES) -> tuple[list[N
     return dirs + files, False
 
 
+# ---- '폴더' 묶음의 모든 것 (D203) -----------------------------------------------------------
+# 문서 트리·코드·자료 목록은 숨김을 빼지만 '폴더' 묶음은 모두 보인다 — 점으로 시작하는 것, Windows 숨김·시스템 속성, 바로가기 폴더(링크·정션 — 보이기만,
+# 따라가지 않는다), 빈 폴더. 문서·코드·자료 목록(scan·scan_others)에 없는 것만 따로 싣고, 화면이 폴더마다 끼워 넣는다.
+MAX_HIDDEN = 5000
+
+
+def _entry_node(entry: os.DirEntry, path: str, hidden: bool) -> Node | None:
+    """한 항목의 노드 — 링크는 {link: True} 파일처럼, 폴더는 접힌 채(children None), 파일은 크기·시각과 함께"""
+    try:
+        st = entry.stat(follow_symlinks=False)
+    except OSError:
+        return None
+    hidden = hidden or entry.name.startswith('.') or has_hidden_attr(st)
+    if _is_link(entry):
+        return {'type': 'file', 'name': entry.name, 'path': path, 'link': True, 'hidden': hidden, 'size': 0, 'mtime': st.st_mtime, 'open': 'none'}
+    if entry.is_dir(follow_symlinks=False):
+        return {'type': 'dir', 'name': entry.name, 'path': path, 'children': None, 'hidden': hidden}
+    return {'type': 'file', 'name': entry.name, 'path': path, 'mtime': st.st_mtime, 'size': st.st_size, 'open': how_to_open(entry.name), 'hidden': hidden}
+
+
+def scan_hidden(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, limit: int = MAX_HIDDEN) -> tuple[list[Node], bool]:
+    """숨김·링크 항목과 빈 폴더 — 숨기지 않은 폴더(제외 폴더 밖)를 훑으며. 숨긴 폴더·제외 폴더의 안은 펼칠 때 list_all 로.
+    (평평한 노드 목록 — path 로 자리를 정한다, limit 에서 멈췄는지)"""
+    excl = frozenset(x.lower() for x in exclude)
+    out: list[Node] = []
+
+    def walk(rel: str) -> bool:   # 이 폴더에 무엇이든 있는지
+        base = root / rel if rel else root
+        try:
+            with os.scandir(base) as it:
+                entries = list(it)
+        except OSError:
+            return True
+        for entry in entries:
+            if len(out) >= limit:
+                return True
+            path = f'{rel}/{entry.name}' if rel else entry.name
+            try:
+                st = entry.stat(follow_symlinks=False)
+                plain_dir = entry.is_dir(follow_symlinks=False) and not _is_link(entry)
+            except OSError:
+                continue
+            if entry.name.startswith('.') or has_hidden_attr(st) or _is_link(entry):
+                node = _entry_node(entry, path, False)
+                if node:
+                    out.append(node)
+            elif plain_dir and entry.name.lower() not in excl and not walk(path):
+                out.append({'type': 'dir', 'name': entry.name, 'path': path, 'children': [], 'empty': True})
+        return bool(entries)
+
+    walk('')
+    return out, len(out) >= limit
+
+
+def list_all(root: Path, rel: str, limit: int = MAX_DIR_ENTRIES) -> tuple[list[Node], bool]:
+    """폴더 하나의 모든 것 (한 단계) — '폴더' 묶음에서 숨긴 폴더·제외 폴더를 펼칠 때. 숨긴 폴더 안의 것은 모두 hidden.
+    (노드 목록, limit 에서 멈췄는지)"""
+    inside_hidden = is_hidden_path(root, root / rel) if rel else False
+    try:
+        with os.scandir(root / rel) as it:
+            entries = sorted(it, key=lambda e: natural_key(e.name))
+    except OSError:
+        return [], False
+    dirs: list[Node] = []
+    files: list[Node] = []
+    for entry in entries:
+        if len(dirs) + len(files) >= limit:
+            return dirs + files, True
+        node = _entry_node(entry, f'{rel}/{entry.name}' if rel else entry.name, inside_hidden)
+        if node:
+            (dirs if node['type'] == 'dir' else files).append(node)
+    return dirs + files, False
+
 def iter_files(nodes: list[Node]) -> Iterator[Node]:
     """트리의 파일 노드 (아직 읽지 않은 제외 폴더 — children None — 는 건너뛴다)"""
     for node in nodes:
@@ -315,10 +388,11 @@ def is_hidden_path(root: Path, target: Path) -> bool:
     return False
 
 
-def resolve_inside(root: Path, rel: str) -> Path | None:
+def resolve_inside(root: Path, rel: str, hidden_ok: bool = False) -> Path | None:
     """root 기준 상대경로 rel 을 실제 경로로. root 밖이거나 숨김 경로면 None.
 
     root 는 resolve() 된 절대경로여야 한다. 링크를 따라가 root 밖으로 나가는 경우도 막는다.
+    hidden_ok: 숨김 경로도 — '폴더' 묶음에서 숨긴 파일을 보기만 하고 복사할 때만 (D203). 쓰는 길(저장 등)은 쓰지 않는다
     """
     if '\x00' in rel:
         return None
@@ -336,6 +410,6 @@ def resolve_inside(root: Path, rel: str) -> Path | None:
         return target
     if not target.is_relative_to(root):
         return None
-    if is_hidden_path(root, target):
+    if not hidden_ok and is_hidden_path(root, target):
         return None
     return target

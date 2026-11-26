@@ -49,6 +49,27 @@ def _snap(label: str) -> None:
         return
 
 
+_clipboard_lock = None
+
+
+def hold_clipboard() -> None:
+    """이 묶음이 끝날 때까지 Windows 클립보드를 혼자 쓴다 (D203 — 파일 목록을 주고받는 묶음). ui_edges -j 로 동시에 도는 묶음끼리
+    클립보드가 섞이지 않게, 임시 폴더의 잠금 파일을 잡는다 — 프로세스가 끝나면 Windows 가 풀어 준다"""
+    global _clipboard_lock
+    if sys.platform != 'win32' or _clipboard_lock:
+        return
+    import msvcrt
+    import tempfile
+    f = open(Path(tempfile.gettempdir()) / 'lectern-edges-clipboard.lock', 'a+')   # noqa: SIM115 — 묶음이 끝날 때까지 연다
+    while True:
+        try:
+            msvcrt.locking(f.fileno(), msvcrt.LK_NBLCK, 1)
+            break
+        except OSError:
+            time.sleep(0.5)
+    _clipboard_lock = f
+
+
 def check(name, cond, detail=''):
     global _count
     _count += 1

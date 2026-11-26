@@ -150,9 +150,9 @@ try:
         expect(page, '같은 이름 — 덮어쓰지 않고 창이 알린다', lambda: '같은 이름' in msg() and raw('src/load.py') == b'x = 1\n', msg)
         page.keyboard.press('Escape')
 
-        print("[6 '문서'의 만들기 — 폴더 다음 문서]")
-        section('docs')
-        page.click('#lec-docs-new')
+        print("[6 '폴더' 묶음의 만들기 — 폴더 다음 문서 (폴더는 '폴더' 묶음에서만 — D203)]")
+        section('folder')
+        page.click('#lec-folder-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
         page.click('#lec-newdoc-dir')
         page.select_option('#lec-newdoc-folder', '보고')
@@ -166,6 +166,7 @@ try:
         page.keyboard.press('Escape')
 
         print('[7 같은 이름의 README 탭]')
+        section('docs')
         page.locator('#lec-tree .row.file[data-doc="보고/README.md"]').click(modifiers=['Control'])
         page.locator('#lec-tree .row.dir[data-dir="자료"]').click()
         page.locator('#lec-tree .row.file[data-doc="자료/README.md"]').click(modifiers=['Control'])

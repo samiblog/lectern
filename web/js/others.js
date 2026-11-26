@@ -24,12 +24,12 @@
 //   안의 파일은 종류를 나누지 않고 모두 '자료'에 두고, 개수·거르기에는 넣지 않는다.
 
 import { S, emit, on } from './store.js';
-import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
+import { getJSON, postJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
+import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
+import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens, blockedReadOnly, isMd, isHtml } from './util.js';
 import { t } from './i18n.js';
 import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
@@ -137,10 +137,54 @@ function merge(docs = [], others = []) {
   return [...merged.sort(byName), ...files.sort(byName)];
 }
 
-/** '폴더' 묶음의 트리를 지금의 문서 트리와 받은 파일로 다시 합친다 (처음 볼 때는 문서 트리에서 펼쳐 둔 폴더대로) */
+/** 숨김·링크 항목과 빈 폴더(평평한 목록 — /api/others/hidden)를 합친 트리에 끼운다. 그 폴더가 트리에 없으면(숨긴 것만 든 폴더) 만든다 (D203) */
+function addHidden(nodes, hidden) {
+  if (!hidden?.length) return nodes;
+  const top = [...nodes];
+  const dirs = new Map();   // 경로 → 복사한 폴더 노드
+  const childrenOf = (dir) => {
+    if (!dir) return top;
+    let d = dirs.get(dir);
+    if (!d) {
+      const list = childrenOf(dirname(dir));
+      const i = list.findIndex((n) => n.type === 'dir' && n.path === dir);
+      d = i >= 0 ? { ...list[i], children: list[i].children ? [...list[i].children] : [] } : { type: 'dir', name: dir.slice(dir.lastIndexOf('/') + 1), path: dir, children: [] };
+      if (i >= 0) list[i] = d;
+      else list.push(d);
+      dirs.set(dir, d);
+    }
+    return d.children;
+  };
+  for (const h of hidden) {
+    const list = childrenOf(dirname(h.path));
+    if (!list.some((n) => n.path === h.path)) list.push(h);
+  }
+  return top;
+}
+
+/** '폴더' 묶음에서 펼쳐 읽은 폴더(숨긴 폴더·제외 폴더 — o.lazyAll)의 안을 붙인다. 붙인 폴더에는 lazy */
+function withAll(o, nodes) {
+  return nodes.map((n) => {
+    if (n.type !== 'dir') return n;
+    const got = n.children ? null : o.lazyAll.get(n.path);
+    const children = got ? got.nodes : n.children;
+    return children ? { ...n, children: withAll(o, children), lazy: !!got || n.lazy, truncated: got?.truncated, limit: got?.limit, error: got?.error } : n;
+  });
+}
+
+/** 숨긴 파일의 경로 — 코드 화면·열기가 서버에 hidden 을 함께 보낸다 (api.hiddenFile) */
+function noteHidden(o) {
+  o.hiddenSet = new Set();
+  const add = (n) => { if (n.hidden) o.hiddenSet.add(n.path); };
+  for (const n of o.hidden || []) add(n);
+  for (const got of o.lazyAll.values()) for (const n of got.nodes) add(n);
+}
+
+/** '폴더' 묶음의 트리를 지금의 문서 트리와 받은 파일로 다시 합친다 (처음 볼 때는 문서 트리에서 펼쳐 둔 폴더대로).
+ * 숨김·링크·빈 폴더까지 모두 (D203) — 제외 폴더·숨긴 폴더는 펼칠 때 안을 읽는다 */
 function buildAll(o) {
   o.folderOpen ??= new Set(S.open);
-  o.all = merge(S.tree, o.tree);
+  o.all = withAll(o, addHidden(merge(S.tree, o.data?.tree || []), o.hidden));
   o.allIndex = indexOf(o.all);
 }
 
@@ -154,7 +198,8 @@ function view(o, k) {
 
 function rowAttrs(o, v, path, depth, extra = '') {
   const sel = path === o.selected[v.sel];
-  return [html`class="row${extra}${sel ? ' selected' : ''}" role="treeitem" aria-selected="${sel}" data-path="${path}"`, html` style="--d:${depth}" tabindex="${sel ? 0 : -1}"`];
+  const picked = v.sel === 'folder' && o.picked.has(path) ? ' picked' : '';   // 여럿 고른 행 (D203 — Ctrl·Shift+누르기)
+  return [html`class="row${extra}${sel ? ' selected' : ''}${picked}" role="treeitem" aria-selected="${sel || !!picked}" data-path="${path}"`, html` style="--d:${depth}" tabindex="${sel ? 0 : -1}"`];
 }
 
 const subHtml = (sub) => (sub ? html`<span class="sub">${sub}</span>` : '');
@@ -165,7 +210,9 @@ function fileRow(o, v, f, depth, sub = '', tell = '') {
     return [html`<div ${rowAttrs(o, v, f.path, depth, ` file doc${active}`)} title="${tipOf(f)}"><span class="caret-space"></span>`, html`${fileIcon(f.name, f.kind, f.deck)}<span class="label">${labelOf(f)}${tellHtml(tell)}</span>${subHtml(sub)}`, html`${S.changed.has(f.path) ? html`<span class="dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</div>`];
   }
   const cur = S.view?.type === 'code' && S.view.path === f.path ? ' active' : '';   // 지금 보는 코드
-  return [html`<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${f.excluded ? ' excluded' : ''}`)} title="${fileTip(f)}"><span class="caret-space"></span>${fileIcon(f.name)}`, html`<span class="label">${f.name}</span>${subHtml(sub)}</div>`];
+  const marks = `${f.excluded ? ' excluded' : ''}${f.hidden ? ' hidden' : ''}${f.link ? ' link' : ''}`;   // 숨김·링크는 '폴더' 묶음에만 (D203)
+  const tip = f.link ? `${f.path}\n${t('바로가기 폴더 — 따라가지 않습니다')}` : f.hidden ? `${fileTip(f)}\n${t('숨긴 파일 — 보기만')}` : fileTip(f);
+  return [html`<div ${rowAttrs(o, v, f.path, depth, ` file${cur}${marks}`)} title="${tip}"><span class="caret-space"></span>${f.link ? html`<span class="link-mark" aria-hidden="true">↪</span>` : fileIcon(f.name)}`, html`<span class="label">${f.name}</span>${subHtml(sub)}</div>`];
 }
 
 /** 목록 안의 안내 줄 (제외 폴더를 읽는 중 등) — 그 깊이의 행 글자에 맞춰 들인다 */
@@ -183,15 +230,16 @@ function nodesHtml(o, v, nodes, depth, inside = false) {
     const folder = v.sel === 'folder';
     const cur = folder && S.view?.type === 'overview' && S.view.path === n.path ? ' active' : '';
     const dot = folder && !open && hasChangedInside(n.path) ? html`<span class="dot" title="${t('안쪽 문서가 바뀜')}"></span>` : '';
-    const tip = n.excluded && !inside ? `${n.path}/\n${t('제외 폴더 — 펼칠 때 안을 읽습니다. 문서 트리와 검색에는 나오지 않습니다.')}` : `${n.path}/`;
-    markup.push([html`<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}${n.excluded ? ' excluded' : ''}`)} aria-expanded="${open}" title="${tip}">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>${dot}</div>`]);
+    const tip = n.hidden ? `${n.path}/\n${t('숨긴 폴더 — 펼칠 때 안을 읽습니다. 안의 파일은 보기만 합니다.')}`
+      : n.excluded && !inside ? `${n.path}/\n${t('제외 폴더 — 펼칠 때 안을 읽습니다. 문서 트리와 검색에는 나오지 않습니다.')}` : `${n.path}/`;
+    markup.push([html`<div ${rowAttrs(o, v, n.path, depth, ` dir${cur}${n.excluded ? ' excluded' : ''}${n.hidden ? ' hidden' : ''}`)} aria-expanded="${open}" title="${tip}">`, html`<span class="caret${open ? ' open' : ''}" data-toggle aria-hidden="true"></span>${folderIcon()}<span class="label">${n.name}</span>${dot}</div>`]);
     if (!open) continue;
-    if (!n.children) {   // 아직 읽지 않은 제외 폴더
+    if (!n.children) {   // 아직 읽지 않은 제외 폴더 ('폴더' 묶음은 숨긴 폴더도 — 모두 읽는다, D203)
       markup.push(noteHtml(depth + 1, t('읽는 중…')));
       const tab = S.tab;
-      queueMicrotask(() => loadDir(tab, n.path));
+      queueMicrotask(() => loadDir(tab, n.path, v.sel === 'folder'));
     } else if (n.error) markup.push(noteHtml(depth + 1, t('이 폴더를 읽지 못했습니다 ({error})', { error: n.error })));
-    else if (n.excluded && !n.children.length) markup.push(noteHtml(depth + 1, t('빈 폴더')));
+    else if ((n.excluded || v.sel === 'folder') && !n.children.length) markup.push(noteHtml(depth + 1, t('빈 폴더')));
     else {
       markup.push(nodesHtml(o, v, n.children, depth + 1, inside || n.excluded));
       if (n.truncated) markup.push(noteHtml(depth + 1, t('항목이 많아 {n}개까지만 보입니다', { n: n.limit })));
@@ -215,7 +263,7 @@ function kindHtml(o, k, v, terms) {
 function folderHtml(o, v, terms) {
   if (terms) {
     const docs = S.files.filter((f) => terms.every((w) => `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`.includes(w)));
-    const files = [...filesIn(o.tree || [])].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
+    const files = [...filesIn(o.tree || []), ...(o.hidden || []).filter((n) => n.type === 'file')].filter((f) => terms.every((w) => f.path.toLowerCase().includes(w)));
     const hits = [...docs.map((f) => ({ ...f, doc: true })), ...files];
     const shown = hits.slice(0, MAX_FILTER_RESULTS);
     const tell = telling(shown.filter((f) => f.doc), { folders: true });
@@ -290,7 +338,9 @@ function revealCurrent() {
 }
 
 // 코드 화면에서 보는 파일 — 코드와 csv·tsv·txt·log (D60), 엑셀 xlsx·xlsm (D77). 한 번 누르면 Lectern 에서, 두 번 누르면 편집기·기본 앱
-const isViewFile = (n) => n?.type === 'file' && !n.doc && isViewable(n.name);
+// '폴더' 묶음의 숨긴 파일은 글로 된 것이면 글 그대로 본다 (D203 — 보기만): .env·.gitignore 처럼 확장자가 없는 것, md·html 도.
+// 기본 앱으로 여는 형식(그림·오피스 등)과 실행·압축 파일은 두 번 누르기로
+const isViewFile = (n) => n?.type === 'file' && !n.doc && !n.link && (isViewable(n.name) || (!!n.hidden && (n.open === 'editor' || isMd(n.name) || isHtml(n.name))));
 
 // ---- 읽기 ---------------------------------------------------------------------
 
@@ -325,29 +375,49 @@ function load(tab, { fresh = false } = {}) {
   return o.loading;
 }
 
-/** 제외 폴더 하나의 안(한 단계)을 받아 붙인다 — 그 폴더를 펼쳤을 때 (nodesHtml) */
-async function loadDir(tab, path) {
+/** 제외 폴더 하나의 안(한 단계)을 받아 붙인다 — 그 폴더를 펼쳤을 때 (nodesHtml). all: '폴더' 묶음 — 숨긴 폴더도, 숨김·링크까지 (D203) */
+async function loadDir(tab, path, all = false) {
   const o = tab.others;
-  if (o.loadingDirs.has(path) || o.lazy.has(path) || !o.data) return;
-  o.loadingDirs.add(path);
+  const store = all ? o.lazyAll : o.lazy;
+  const key = all ? `all:${path}` : path;
+  if (o.loadingDirs.has(key) || store.has(path) || (!all && !o.data)) return;
+  o.loadingDirs.add(key);
   try {
-    const d = await getJSON(`/api/others/dir?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}`);
-    o.lazy.set(path, { nodes: d.nodes, truncated: d.truncated, limit: d.limit });
+    const d = await getJSON(`/api/others/dir?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}${all ? '&all=1' : ''}`);
+    store.set(path, { nodes: d.nodes, truncated: d.truncated, limit: d.limit });
   } catch (e) {
-    o.lazy.set(path, { nodes: [], error: e.message });   // 접었다 펼치면 다시 읽는다
+    store.set(path, { nodes: [], error: e.message });   // 접었다 펼치면 다시 읽는다
   } finally {
-    o.loadingDirs.delete(path);
+    o.loadingDirs.delete(key);
   }
-  if (!o.data) return;
-  build(o);
+  if (all) noteHidden(o);
+  else if (o.data) build(o);
   if (tab === S.tab) render();
 }
 
-/** 제외 폴더를 접으면 읽어 둔 안(그 아래 폴더들 것까지)을 버린다 — 다시 펼치면 새로 읽는다 */
-function forgetDir(o, path) {
-  const before = o.lazy.size;
-  for (const p of [...o.lazy.keys()]) if (p === path || p.startsWith(`${path}/`)) o.lazy.delete(p);
-  if (o.lazy.size !== before) build(o);
+/** '폴더' 묶음의 숨김·링크 항목과 빈 폴더를 받는다 (D203) — 그 묶음을 펼칠 때·F5·붙여 넣은 뒤. 감시는 숨긴 것의 변화를 알리지 않는다 */
+function loadHidden(tab) {
+  const o = tab.others;
+  if (o.hiddenLoading) return o.hiddenLoading;
+  o.hiddenStale = false;
+  o.hiddenLoading = getJSON(`/api/others/hidden?p=${encodeURIComponent(tab.id)}`)
+    .then((d) => { o.hidden = d.nodes; })
+    .catch(() => { o.hidden ||= []; })
+    .finally(() => {
+      o.hiddenLoading = null;
+      noteHidden(o);
+      if (tab === S.tab && folderShown()) renderList('folder');
+      if (o.hiddenStale) ensure();
+    });
+  return o.hiddenLoading;
+}
+
+/** 제외 폴더를 접으면 읽어 둔 안(그 아래 폴더들 것까지)을 버린다 — 다시 펼치면 새로 읽는다. all: '폴더' 묶음의 것 */
+function forgetDir(o, path, all = false) {
+  const store = all ? o.lazyAll : o.lazy;
+  const before = store.size;
+  for (const p of [...store.keys()]) if (p === path || p.startsWith(`${path}/`)) store.delete(p);
+  if (store.size !== before && !all) build(o);
 }
 
 /** 폴더 모두 펼치기·접기 (D125 — 사이드바 '펼침', 문서 트리는 tree.js). 제외 폴더는 펼치지 않는다 — 펼치면 안을 읽는다 (D49).
@@ -368,7 +438,7 @@ function setAllOpen(mode) {
     if (mode === 'none') continue;
     const walk = (nodes) => {
       for (const n of nodes) {
-        if (n.type !== 'dir' || n.excluded) continue;
+        if (n.type !== 'dir' || n.excluded || n.hidden || !n.children) continue;   // 숨긴 폴더도 펼치지 않는다 — 펼치면 안을 읽는다 (D203)
         v.open.add(n.path);
         if (mode === 'all' && n.children) walk(n.children);
       }
@@ -383,6 +453,7 @@ function setAllOpen(mode) {
 function ensure() {
   const o = state();
   if (o && filesShown() && (o.stale || !o.data) && !o.loading) load(S.tab);
+  if (o && filesShown() && folderShown() && (o.hiddenStale || !o.hidden) && !o.hiddenLoading) loadHidden(S.tab);   // D203
 }
 
 /** 받아 둔 문서 외 파일 노드 (제외 폴더 안은 빼고) — 검색의 이름·모아 보기의 파일 종류 (loadOthers 뒤에) */
@@ -401,6 +472,9 @@ export function refreshOthers() {
   const o = state();
   if (!o) return;
   o.stale = true;
+  o.hiddenStale = true;
+  o.lazyAll.clear();   // '폴더' 묶음에서 펼쳐 읽은 폴더도 새로
+  if (filesShown() && folderShown() && !o.hiddenLoading) loadHidden(S.tab);
   if (filesShown() && !o.loading) load(S.tab, { fresh: true });
 }
 
@@ -433,7 +507,8 @@ function toggle(k, path, open) {
   if (want) v.open.add(path);
   else {
     v.open.delete(path);
-    if (v.index.get(path)?.excluded) forgetDir(o, path);
+    const n = v.index.get(path);
+    if (k === 'folder' ? n?.lazy : n?.excluded) forgetDir(o, path, k === 'folder');
   }
   renderList(k);
   select(k, path);
@@ -444,7 +519,8 @@ function toggle(k, path, open) {
 function activate(k, path, how = {}) {
   const n = view(state(), k).index.get(path);
   if (!n) return;
-  if (n.type === 'dir') toggle(k, path);
+  if (n.link) toast(t('바로가기 폴더는 따라가지 않습니다 — 탐색기에서 여세요'));   // D203
+  else if (n.type === 'dir') toggle(k, path);
   else if (n.doc) emit('open', { type: 'doc', path, ...how });
   else openExternal(path);
 }
@@ -489,21 +565,99 @@ export function fileMenuItems(n) {
   return menuGroups([{ header: `${n.name} · ${formatSize(n.size)} · ${formatDateTime(n.mtime)}` }], views, copyItems(n), opens, n.excluded ? [] : [renameItem(n.path)]);
 }
 
+/** '폴더' 묶음의 복사·붙여 넣기 (D203) — 다른 묶음에는 없다 */
+function clipItems(k, n) {
+  if (k !== 'folder') return [];
+  const n2 = state()?.picked.size > 1 && state().picked.has(n.path) ? state().picked.size : 1;
+  /** @type {MenuItem[]} */
+  const items = [{ label: n2 > 1 ? t('{n}개 복사', { n: n2 }) : t('복사'), hint: 'Ctrl+C', tip: t('탐색기에서도 붙여 넣을 수 있습니다'), action: () => copyFiles(n.path) }];
+  if (S.tab && !S.tab.readonly) items.push({ label: t('붙여 넣기'), hint: 'Ctrl+V', tip: n.type === 'dir' ? t('이 폴더 안에 — 탐색기에서 복사한 것도') : t('이 파일의 폴더에 — 탐색기에서 복사한 것도'), action: () => pasteFiles(n.type === 'dir' ? n.path : dirname(n.path)) });
+  return items;
+}
+
+/** '폴더' 묶음의 새로 만들기 (D203 — 문서·코드·자료·폴더 모두) */
+const newAnyItem = (dir) => ({ label: t('새로 만들기…'), tip: t('문서·코드·자료 파일'), action: () => emit('new-doc', { dir, section: 'folder' }) });
+
 function menuItems(k, n) {
-  if (n.doc) return docMenuItems(n.path);   // 문서 트리와 같은 메뉴
-  if (n.type !== 'dir') return fileMenuItems(n);
+  if (n.doc) return k === 'folder' ? menuGroups(docMenuItems(n.path), clipItems(k, n)) : docMenuItems(n.path);   // 문서 트리와 같은 메뉴
+  if (n.link) return menuGroups([{ header: `${n.path} · ${t('바로가기 폴더 — 따라가지 않습니다')}` }], copyItems(n), [{ label: t('탐색기에서 보기'), action: () => revealInExplorer(dirname(n.path)) }]);
+  if (n.type !== 'dir') return k === 'folder' ? menuGroups(fileMenuItems(n), clipItems(k, n)) : fileMenuItems(n);
   const top = n.excluded && !view(state(), k).index.get(n.parent)?.excluded;   // 제외 폴더 자체 (그 안의 폴더가 아니라)
   /** @type {MenuItem[]} */
   const items = [{ label: view(state(), k).open.has(n.path) ? t('접기') : t('펼치기'), hint: 'Enter', action: () => toggle(k, n.path) }];
   if (k === 'folder' && S.dirs.has(n.path)) items.push({ label: t('폴더 개요 보기'), action: () => emit('open', { type: 'overview', path: n.path }) });
-  if (!n.excluded) items.push(...(k === 'code' ? [newFileItem(n.path, 'code')] : k === 'files' ? [newFileItem(n.path, 'data')] : []),   // 그 목록의 파일 (D177)
-    newDocItem(n.path), newFolderItem(n.path), ...(S.tab && !S.tab.readonly ? [workCardItem(n.path)] : []));   // 업무 카드 (D152 — 문서가 없는 폴더는 문서 트리에 없다)   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
+  // 새로 만들기 (D65·D177) — 그 묶음의 것만, 폴더는 '폴더' 묶음에서만 (D203). 제외 폴더·숨긴 폴더 안은 트리에 보이지 않아 만들지 않는다
+  if (!n.excluded && !n.hidden) items.push(...(k === 'code' ? [newFileItem(n.path, 'code')] : k === 'files' ? [newFileItem(n.path, 'data')]
+    : [newAnyItem(n.path), newFolderItem(n.path), ...(S.tab && !S.tab.readonly ? [workCardItem(n.path)] : [])]));   // 업무 카드 (D152 — 문서가 없는 폴더는 문서 트리에 없다)   // 새로 만들기 (D65 — 제외 폴더 안은 트리에 보이지 않아 만들지 않는다)
   /** @type {MenuItem[]} */
   const opens = [{ label: t('탐색기에서 열기'), action: () => openExternal(n.path) }];
   if (!n.excluded) {   // 제외 폴더 안은 세지 않는다 (D49)
     opens.push({ label: t('이 폴더의 파일을 종류별로 모아 보기'), tip: t('모아 보기 탭의 파일 종류'), action: () => emit('parts', { path: n.path, mode: 'files' }) });
   }
-  return menuGroups([{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : `${n.path}/` }], items, copyItems(n), opens);
+  return menuGroups([{ header: top ? `${n.path}/ · ${t('제외 폴더')}` : n.hidden ? `${n.path}/ · ${t('숨긴 폴더')}` : `${n.path}/` }], items, clipItems(k, n), copyItems(n), opens);
+}
+
+/** 복사할 것 — 여럿 고른 행이 있고 그 안이면 그것들, 아니면 그 행 하나 (D203) */
+function pickedOr(path) {
+  const o = state();
+  return o.picked.size > 1 && o.picked.has(path) ? [...o.picked] : [path];
+}
+
+/** '폴더' 묶음에서 고른 파일·폴더를 Windows 클립보드에 — 탐색기에서 붙여 넣는다 (D203) */
+async function copyFiles(path) {
+  const tab = S.tab;
+  if (!tab || path == null) return;
+  const paths = pickedOr(path).filter(Boolean);
+  if (!paths.length) return;
+  try {
+    const r = await postJSON('/api/files/copy', { p: tab.id, paths });
+    toast(t('{n}개를 복사했습니다 — 탐색기나 폴더 묶음에서 Ctrl+V 로 붙여 넣습니다', { n: r.count }));
+  } catch (e) {
+    toast(e.message, 'error');
+  }
+}
+
+/** Windows 클립보드의 파일·폴더를 dir 에 복사 (D203 — 겹치면 '- 복사본', 덮어쓰지 않는다. 잘라내기도 복사만) */
+async function pasteFiles(dir) {
+  const tab = S.tab;
+  if (!tab || blockedReadOnly(tab)) return;
+  const o = tab.others;
+  try {
+    const r = await postJSON('/api/files/paste', { p: tab.id, dir });
+    let msg = t('{n}개를 붙여 넣었습니다', { n: r.copied });
+    if (r.cut) msg += ` — ${t('옮기기는 하지 않아 복사만 했습니다 (원본은 그대로)')}`;
+    if (r.skipped?.length) msg += ` — ${t('건너뛴 것: {names}', { names: r.skipped.join(', ') })}`;
+    toast(msg, '', 6000);
+  } catch (e) {
+    toast(e.message, 'error');
+    return;
+  }
+  if (dir) o.folderOpen?.add(dir);   // 붙인 곳이 보이게
+  forgetDir(o, dir, true);
+  o.stale = true;
+  o.hiddenStale = true;
+  if (tab === S.tab) ensure();
+}
+
+/** '폴더' 묶음에서 Ctrl·Shift+누르기 — 여럿 고르기 (D203, 탐색기처럼). 그냥 누르면 하나로 돌아간다 */
+function pickRow(path, e) {
+  const o = state();
+  if (e.shiftKey) {
+    const rows = $$('.row', listEl('folder')).map((r) => r.dataset.path);
+    const a = rows.indexOf(o.picked.anchor ?? o.selected.folder ?? path);
+    const b = rows.indexOf(path);
+    o.picked = new Set(rows.slice(Math.min(a, b), Math.max(a, b) + 1).filter((p) => p !== undefined));
+    o.picked.anchor = rows[a] ?? path;
+  } else {
+    const anchor = o.picked.anchor;
+    if (!o.picked.size && o.selected.folder != null) o.picked.add(o.selected.folder);
+    if (o.picked.has(path)) o.picked.delete(path);
+    else o.picked.add(path);
+    o.picked.anchor = anchor ?? path;
+  }
+  o.selected.folder = path;
+  renderList('folder');
+  rowOf('folder', path)?.focus({ preventScroll: true });
 }
 
 
@@ -570,6 +724,13 @@ function onKey(e) {
   const path = cur.dataset.path;
   const n = v.index.get(path);
   const go = (row) => row && select(k, row.dataset.path);
+  if (k === 'folder' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey && (e.code === 'KeyC' || e.code === 'KeyV')) {   // D203
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.code === 'KeyC') copyFiles(path);
+    else pasteFiles(n?.type === 'dir' ? path : dirname(path ?? ''));
+    return;
+  }
   if (sendRowKey(e, path)) return;   // Shift+→ 등: 그 행의 위치를 터미널로 (tree.js — D195. 펼치기·접기는 Shift 없는 → · ←)
   if (e.key === 'ArrowDown') go(all[Math.min(all.length - 1, i + 1)]);
   else if (e.key === 'ArrowUp') go(all[Math.max(0, i - 1)]);
@@ -690,6 +851,14 @@ function bindList(k) {
       toggle(k, path);
       return;
     }
+    if (k === 'folder' && (e.ctrlKey || e.metaKey || e.shiftKey) && !e.altKey) {   // 여럿 고르기 (D203) — 새 탭에 열기는 가운데 버튼으로
+      pickRow(path, e);
+      return;
+    }
+    if (k === 'folder' && state()?.picked.size) {
+      state().picked = new Set();
+      renderList('folder');
+    }
     select(k, path);
     // '폴더' 묶음의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
@@ -707,7 +876,13 @@ function bindList(k) {
   });
   box.addEventListener('contextmenu', (e) => {
     const row = e.target.closest('.row');
-    if (!row) return;
+    if (!row) {
+      if (k === 'folder' && S.tab && !S.tab.readonly) {   // 목록의 빈 곳 — 프로젝트 맨 위에 (D203)
+        e.preventDefault();
+        showMenu(e.clientX, e.clientY, menuGroups([{ label: t('붙여 넣기'), hint: 'Ctrl+V', tip: t('프로젝트 맨 위에 — 탐색기에서 복사한 것도'), action: () => pasteFiles('') }], [newAnyItem(''), newFolderItem('')]));
+      }
+      return;
+    }
     e.preventDefault();
     openMenu(k, row.dataset.path, e.clientX, e.clientY);
   });
@@ -728,7 +903,10 @@ export function initOthers() {
     ensure();
   });
   on('panel', ensure);   // 사이드바 '파일' 탭으로 돌아오면
-  on('others', (tab) => { if (tab === S.tab) ensure(); });
+  on('others', (tab) => {   // 파일이 생기고 지워짐 — '폴더' 묶음의 숨김·빈 폴더도 다시 (D203 — 감시는 빈 폴더·숨긴 것을 놓친다)
+    if (tab?.others) tab.others.hiddenStale = true;
+    if (tab === S.tab) ensure();
+  });
   // 문서 개수, 그리고 '폴더' 묶음은 문서 트리도 그린다: 트리·바뀜 점·지금 보는 문서가 바뀌면 다시
   on('tree', () => { if (folderShown()) render(); else renderHead(); });
   on('changed', () => { if (folderShown()) render(); });

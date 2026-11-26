@@ -22,8 +22,10 @@ import { isCode, DATA_EDIT_EXT } from './icons.js';
 import { askText } from './putmenu.js';
 
 export const KINDS = ['md', 'deck', 'code', 'data', 'folder'];
-/** 사이드바 묶음마다 만드는 것 (D177) */
-export const SECTION_KINDS = { docs: ['md', 'deck', 'folder'], code: ['code', 'folder'], others: ['data', 'folder'], folder: KINDS };
+/** 사이드바 묶음마다 만드는 것 (D177) — 문서는 문서만, 코드는 코드만, 자료는 자료만. 폴더는 '폴더' 묶음에서만 (D203) */
+export const SECTION_KINDS = { docs: ['md', 'deck'], code: ['code'], others: ['data'], folder: KINDS };
+/** 묶음 밖에서 여는 만들기 (Ctrl+N·문서 탭 줄의 +·문서 열기·프로젝트 탭) — 폴더는 빼고 (D203) */
+const GENERAL_KINDS = ['md', 'deck', 'code', 'data'];
 // 서버 editing.NEW_CODE_SKIP — 문서로 보는 html, 빈 파일로는 열리지 않는 ipynb, 도구가 만드는 lock
 const CODE_SKIP = new Set(['html', 'htm', 'ipynb', 'lock']);
 
@@ -99,7 +101,9 @@ async function makeFolder(tab, parent, at) {
   const name = await askText({ title: t('새 폴더 — {where}', { where: parent ? `${parent}/` : t('프로젝트 맨 위') }), at, placeholder: t('폴더 이름') });
   if (!name?.trim()) return null;
   try {
-    return (await postJSON('/api/new-folder', { p: tab.id, parent, name })).path;
+    const made = (await postJSON('/api/new-folder', { p: tab.id, parent, name })).path;
+    emit('others', tab);   // 빈 폴더는 '폴더' 묶음에만 보인다 — 감시를 기다리지 않고 (D203)
+    return made;
   } catch (e) {
     toast(e.message, 'error');
     return null;
@@ -128,7 +132,7 @@ function headOf(kind) {
 function hintOf(kind) {
   if (kind === 'code') return t('확장자로 형식을 정합니다 — .py · .js · .ts · .json · .yaml · .sql · .r 등. 빈 파일을 만들어 편집 모드로 엽니다');
   if (kind === 'data') return t('.csv · .tsv · .txt — 빈 파일을 만들어 편집 모드로 엽니다. CSV 는 한국어 엑셀이 바로 열 수 있게 UTF-8 BOM 을 붙입니다');
-  if (kind === 'folder') return t('빈 폴더는 목록에 나오지 않습니다 — 만든 뒤 그 안에 만들 것을 정합니다');
+  if (kind === 'folder') return t("빈 폴더는 '폴더' 묶음에만 보입니다 — 만든 뒤 그 안에 만들 것을 정합니다");
   return '';
 }
 
@@ -148,7 +152,7 @@ function draw() {
   $('#lec-newdoc-hint').hidden = !hint;
   $('#lec-newdoc-hint').textContent = hint;
   $('#lec-newdoc-header-row').hidden = !(kind === 'data' && ['csv', 'tsv'].includes(extOf(title().value.trim())));
-  $('#lec-newdoc-mkdir').hidden = kind === 'folder';
+  $('#lec-newdoc-mkdir').hidden = kind === 'folder' || !asked.kinds.includes('folder');   // 창 안의 새 폴더도 '폴더' 묶음에서만 (D203)
   $('#lec-newdoc-keys').textContent = kind === 'md' ? t('↑·↓ 스타일 · Enter 만들기 · Esc 그만두기') : t('Enter 만들기 · Esc 그만두기');
   if (kind !== 'md') return;
   const groups = styleGroups(asked.mine, S.config.recent_md_styles || []);
@@ -180,7 +184,7 @@ function pick(i) {
  * 만들기 창을 연다. dir: 만들 폴더 (null 이면 지금 보는 문서·폴더 개요의 폴더).
  * kinds: 고를 수 있는 종류 (사이드바 묶음마다 — SECTION_KINDS), kind: 처음 고른 종류
  */
-export async function askNewDocument(dir = null, { kinds = KINDS, kind = '' } = {}) {
+export async function askNewDocument(dir = null, { kinds = GENERAL_KINDS, kind = '' } = {}) {
   if (!S.tab) {
     toast(t('먼저 폴더를 여세요'));
     return;
@@ -310,6 +314,7 @@ async function submitFolder() {
   let made;
   try {
     made = (await postJSON('/api/new-folder', { p: tab.id, parent, name })).path;
+    emit('others', tab);   // 빈 폴더는 '폴더' 묶음에만 보인다 — 감시를 기다리지 않고 (D203)
   } catch (e) {
     if (asked) setMsg(e.message);
     focusName();
@@ -369,7 +374,7 @@ async function newFolderAt(dir) {
   const made = await makeFolder(tab, dir, { x: Math.max(8, innerWidth / 2 - 150), y: 140 });
   if (!made || S.tab !== tab) return;
   toast(t('폴더를 만들었습니다: {path}', { path: made }));
-  askNewDocument(made);
+  askNewDocument(made, { kinds: SECTION_KINDS.folder });   // '폴더' 묶음에서만 오므로 (D203)
 }
 
 /** 창의 새 폴더: 고른 위치 안에 만들고 그 폴더를 고른다 */
@@ -390,7 +395,7 @@ async function folderInDialog() {
 
 export function initNewDialog() {
   // 우클릭·문서 탭 줄의 +·묶음의 만들기 (tree·others·tabs·palette). section: 사이드바 묶음 이름 — 그 묶음의 종류만
-  on('new-doc', ({ dir = null, section = '', kind = '' } = {}) => askNewDocument(dir, { kinds: SECTION_KINDS[section] || KINDS, kind }));
+  on('new-doc', ({ dir = null, section = '', kind = '' } = {}) => askNewDocument(dir, { kinds: SECTION_KINDS[section] || GENERAL_KINDS, kind }));
   on('new-folder', ({ dir = '' }) => newFolderAt(dir));   // 우클릭 '새 폴더 만들기…' (tree·others·tabs)
   where().addEventListener('change', () => {
     title().value = guessName(asked.kind, where().value);

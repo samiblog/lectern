@@ -19,13 +19,13 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, aistatus, clips, docxexport, rawfiles, editing, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, aistatus, clips, docxexport, rawfiles, editing, fileclip, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
 from .i18n import t
 from .paths import skills_dir, web_dir
-from .scanner import MAX_DIR_ENTRIES, MAX_OTHER_FILES, list_folders, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside
+from .scanner import MAX_DIR_ENTRIES, MAX_HIDDEN, MAX_OTHER_FILES, list_all, list_folders, doc_kind, in_excluded, is_code, iter_files, list_dir, resolve_inside, scan_hidden
 from .search import MAX_QUERY, search
 from .state import AppState, Project, TooManyTabs
 
@@ -114,13 +114,13 @@ def create_app(state: AppState) -> Flask:
             abort(400)
         return data
 
-    def path_from_body() -> Path:
+    def path_from_body(hidden_ok: bool = False) -> Path:
         data = body()
         root = project_of(data.get('p')).root
         rel = data.get('path')
         if not isinstance(rel, str):
             abort(400)
-        target = resolve_inside(root, rel)
+        target = resolve_inside(root, rel, hidden_ok=hidden_ok)
         if target is None or not editing.present(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
         return target
@@ -314,13 +314,28 @@ def create_app(state: AppState) -> Flask:
         files = project.recent_others(request.args.get('code') == '1', request.args.get('others') == '1', RECENT_FILES)
         return jsonify(files=files, limit=RECENT_FILES)
 
+    @app.get('/api/others/hidden')
+    def api_others_hidden() -> Any:
+        """'폴더' 묶음의 나머지 (D203) — 숨김·링크 항목과 빈 폴더 (평평한 목록, path 로 자리). 숨긴 폴더·제외 폴더의 안은 /api/others/dir?all=1"""
+        project = arg_project()
+        nodes, truncated = scan_hidden(project.root, project.exclude)
+        return jsonify(nodes=nodes, truncated=truncated, limit=MAX_HIDDEN)
+
     @app.get('/api/others/dir')
     def api_others_dir() -> Any:
         """제외 폴더(dist·build·node_modules 등) 안의 한 단계 — 자료 목록에서 그 폴더를 펼칠 때 (D49).
-        숨김·밖·없는 경로는 404, 제외 폴더 안이 아니면 400 (그 밖의 폴더는 /api/others 가 이미 싣는다)."""
+        숨김·밖·없는 경로는 404, 제외 폴더 안이 아니면 400 (그 밖의 폴더는 /api/others 가 이미 싣는다).
+        all=1: '폴더' 묶음 (D203) — 숨긴 폴더도, 숨김·링크 항목까지 모두 (list_all)"""
         project = arg_project()
         rel = request.args.get('path', '').strip('/')
-        target = resolve_inside(project.root, rel) if rel else None
+        every = request.args.get('all') == '1'
+        target = resolve_inside(project.root, rel, hidden_ok=every) if rel else None
+        if every:
+            if target is None or target == project.root or not target.is_dir() or (project.root / rel).is_symlink():
+                abort(404)
+            rel = target.relative_to(project.root).as_posix()
+            nodes, truncated = list_all(project.root, rel)
+            return jsonify(path=rel, nodes=nodes, truncated=truncated, limit=MAX_DIR_ENTRIES)
         if target is None or target == project.root or not target.is_dir():
             abort(404)
         rel = target.relative_to(project.root).as_posix()
@@ -668,10 +683,10 @@ def create_app(state: AppState) -> Flask:
     @app.get('/api/sheet')
     def api_sheet() -> Any:
         """?p=&path=&sheet= — 엑셀 보기 (D77): {sheets:[{name, hidden}], index, sheet:{name, rows, first_col, cols, formulas, truncated}}.
-        .xlsx·.xlsm 만, 값만 (보기 전용 — lectern/sheet.py)"""
+        .xlsx·.xlsm 만, 값만 (보기 전용 — lectern/sheet.py). hidden=1: '폴더' 묶음의 숨긴 파일 (D203 — 보기만)"""
         project = arg_project()
         rel = request.args.get('path', '')
-        target = resolve_inside(project.root, rel) if rel else None
+        target = resolve_inside(project.root, rel, hidden_ok=request.args.get('hidden') == '1') if rel else None
         if target is None or not target.is_file():   # 없음·밖·숨김 — 어느 것인지 밝히지 않는다
             return jsonify(error=t('파일이 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
         try:
@@ -874,6 +889,52 @@ def create_app(state: AppState) -> Flask:
             return jsonify(path=editing.make_folder(project.root, parent, name, project.exclude))
         except editing.EditError as exc:
             return jsonify(error=exc.message), exc.status
+
+    @app.post('/api/files/copy')
+    def api_files_copy() -> Any:
+        """{p, paths} — '폴더' 묶음에서 고른 파일·폴더를 Windows 클립보드에 '복사' 로 (D203 — 탐색기에서 붙여 넣는다). 숨긴 것도, 링크는 빼고"""
+        data = body()
+        rels = data.get('paths')
+        if not isinstance(rels, list) or not rels or len(rels) > 1000 or not all(isinstance(r, str) and r for r in rels):
+            abort(400)
+        project = project_of(data.get('p'))
+        targets = []
+        for rel in rels:
+            raw = project.root / rel
+            target = resolve_inside(project.root, rel, hidden_ok=True)
+            if target is None or target == project.root or raw.is_symlink() or fileclip.is_link(raw) or not target.exists():
+                continue
+            targets.append(target)
+        if not targets:
+            return jsonify(error=t('복사할 수 있는 파일이 없습니다 — 바로가기 폴더는 복사하지 않습니다')), 400
+        try:
+            fileclip.put(targets)
+        except fileclip.ClipError as exc:
+            return jsonify(error=exc.message), 500
+        return jsonify(count=len(targets))
+
+    @app.post('/api/files/paste')
+    def api_files_paste() -> Any:
+        """{p, dir} — Windows 클립보드의 파일·폴더를 그 폴더에 복사한다 (D203 — '폴더' 묶음에서만, 덮어쓰지 않고 '- 복사본').
+        {copied, cut(탐색기의 잘라내기 — 원본은 그대로), skipped}"""
+        data = body()
+        rel = data.get('dir', '')
+        if not isinstance(rel, str):
+            abort(400)
+        project = project_of(data.get('p'))
+        if project.readonly:
+            return jsonify(error=t('Lectern 프로그램 폴더 안에는 붙여 넣지 않습니다 — 그 폴더를 다른 곳에 복사해 여세요')), 403
+        target = resolve_inside(project.root, rel, hidden_ok=True) if rel else project.root
+        if target is None or not target.is_dir() or (rel and fileclip.is_link(project.root / rel)):
+            return jsonify(error=t('붙여 넣을 폴더가 없습니다 — 그사이 지워졌거나 이름이 바뀌었습니다')), 404
+        try:
+            editing._protect(target)
+            got = fileclip.paste(target)
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+        except fileclip.ClipError as exc:
+            return jsonify(error=exc.message), 400
+        return jsonify(**got)
 
     @app.post('/api/new-file')
     def api_new_file() -> Any:
@@ -1116,7 +1177,7 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/open-external')
     def api_open_external() -> Any:
-        target = path_from_body()
+        target = path_from_body(hidden_ok=body().get('hidden') is True)   # 숨긴 파일은 '폴더' 묶음에서만 (D203)
         line = body().get('line')
         line = int(line) if isinstance(line, int) or (isinstance(line, str) and line.isdigit()) else None
         prefer_editor = body().get('how') == 'editor'   # '편집기로 열기' — 기본 앱 형식(csv 등)도 편집기로
@@ -1156,7 +1217,7 @@ def create_app(state: AppState) -> Flask:
 
     @app.post('/api/reveal')
     def api_reveal() -> Any:
-        target = path_from_body()
+        target = path_from_body(hidden_ok=body().get('hidden') is True)   # 숨긴 것은 '폴더' 묶음에서만 (D203)
         try:
             osutil.reveal(target)
         except OSError as exc:
@@ -1166,7 +1227,9 @@ def create_app(state: AppState) -> Flask:
     @app.get('/doc/<pid>/<path:rel>')
     def doc(pid: str, rel: str) -> Response:
         root = project_of(pid).root
-        target = resolve_inside(root, rel)
+        # 숨긴 파일은 '폴더' 묶음의 코드 화면만 (D203 — 보기만): 앱의 토큰을 아는 요청만. 문서 속 그림·링크는 토큰을 모른다
+        hidden = request.args.get('hidden')
+        target = resolve_inside(root, rel, hidden_ok=bool(hidden) and hidden == (state.token or '1'))
         if target is None or not editing.present_file(target):   # 저장하며 바꿔 끼우는 순간이면 잠깐 기다린다
             abort(404)
         kind = doc_kind(target.name)

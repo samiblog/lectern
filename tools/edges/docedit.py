@@ -324,6 +324,12 @@ try:
 
         page.keyboard.press('Control+n')
         page.wait_for_selector('#lec-newdoc:not([hidden])', timeout=4000)
+        check("Ctrl+N 의 창에는 '새 폴더…' 단추가 없다 (D203)", not page.locator('#lec-newdoc-mkdir').is_visible())
+        page.keyboard.press('Escape')
+        page.click('#lec-folder-head')   # 폴더는 '폴더' 묶음에서만
+        page.click('#lec-folder-new')
+        page.wait_for_selector('#lec-newdoc:not([hidden])', timeout=4000)
+        page.click('#lec-newdoc-md')
         page.select_option('#lec-newdoc-folder', 'sub')
         page.wait_for_timeout(150)
         page.click('#lec-newdoc-mkdir')
@@ -340,8 +346,9 @@ try:
         page.keyboard.press('Escape')
         page.wait_for_timeout(200)
 
-        page.keyboard.press('Control+n')
+        page.click('#lec-folder-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])', timeout=4000)
+        page.click('#lec-newdoc-md')
         page.click('#lec-newdoc-mkdir')
         page.wait_for_selector('#lec-put:not([hidden])', timeout=3000)
         page.keyboard.press('Escape')
@@ -350,7 +357,7 @@ try:
         page.click('#lec-newdoc-no')
         page.wait_for_timeout(150)
 
-        page.locator('#lec-tree .row[data-dir="sub"]').click(button='right')
+        page.locator('#lec-folder-list .row[data-path="sub"]').click(button='right')
         page.locator('#lec-menu button', has_text='새 폴더 만들기').click()
         page.wait_for_selector('#lec-put:not([hidden])', timeout=3000)
         page.keyboard.type('우클릭 폴더')
@@ -359,6 +366,7 @@ try:
         check('우클릭으로 만들면 그 폴더의 새 문서 창이 열린다', page.input_value('#lec-newdoc-folder') == 'sub/우클릭 폴더' and (proj / 'sub' / '우클릭 폴더').is_dir(), page.input_value('#lec-newdoc-folder'))
         page.keyboard.press('Escape')
         page.wait_for_timeout(150)
+        page.click('#lec-docs-head')   # 다시 문서 트리로
         check('서버가 같은 이름을 막는다', post('/api/new-folder', {'p': tid, 'parent': 'sub', 'name': '우클릭 폴더'}) == 409)
         check('서버가 밖을 막는다', post('/api/new-folder', {'p': tid, 'parent': '..', 'name': 'x'}) == 400 and post('/api/new-folder', {'p': tid, 'parent': '', 'name': '.숨김'}) == 400)
         check('서버가 제외 폴더 이름을 막는다', post('/api/new-folder', {'p': tid, 'parent': '', 'name': 'node_modules'}) == 400)

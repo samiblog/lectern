@@ -21,6 +21,7 @@ import { DATA_VIEW_EXT, WINDOWS_TEXT_EXT, isSheet, isCode } from './icons.js';
 import { paneShown } from './panes.js';
 import { addHtml, esc, html, raw, setHtml } from './html.js';
 import { $, docUrl, basename, dirname, formatSize, formatDateTime, copyText, toast } from './util.js';
+import { hiddenFile } from './api.js';
 import { t } from './i18n.js';
 
 const MAX_BYTES = 4 * 1024 * 1024;        // 이보다 크면 보이지 않고 편집기로
@@ -80,6 +81,9 @@ function notice(view, path, message) {
     <p><button type="button" class="primary cv-editor">${label}</button></p></div>`);
 }
 
+/** 파일 주소 — '폴더' 묶음의 숨긴 파일은 앱의 토큰을 붙여서만 받는다 (D203 — 문서 속 그림·링크는 토큰을 모른다) */
+const fileUrl = (tab, path) => (hiddenFile(tab, path) ? `${docUrl(tab, path)}?hidden=${encodeURIComponent(window.pywebview?.token || '1')}` : docUrl(tab, path));
+
 /**
  * 코드 파일을 칸(pane)에 그린다. 프로젝트는 칸의 탭(pane.tab). line: 그 줄로 가서 잠깐 표시. scrollTop: 이 위치로 (함수면 바꿔 끼우기 직전에 읽는다).
  * 그 칸에서 더 나중에 시작한 렌더링이 있으면 결과를 버린다(false).
@@ -97,7 +101,7 @@ export async function showCode(pane, path, { line, scrollTop } = {}) {
   let modified = null;
   let encoding = '';
   try {
-    const res = await fetch(docUrl(tab, path), { cache: 'no-store' });
+    const res = await fetch(fileUrl(tab, path), { cache: 'no-store' });
     if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { status: res.status });
     size = Number(res.headers.get('Content-Length')) || 0;
     modified = res.headers.get('Last-Modified');
@@ -164,12 +168,12 @@ async function showSheet(pane, path, { line, scrollTop, sheet } = {}) {
   let size = 0;
   let modified = null;
   try {
-    const head = await fetch(docUrl(tab, path), { method: 'HEAD', cache: 'no-store' });
+    const head = await fetch(fileUrl(tab, path), { method: 'HEAD', cache: 'no-store' });
     if (!head.ok) throw Object.assign(new Error(`HTTP ${head.status}`), { status: head.status });
     size = Number(head.headers.get('Content-Length')) || 0;
     modified = head.headers.get('Last-Modified');
     pane.codeStamp = `${modified}|${size}`;
-    data = await getJSON(`/api/sheet?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}&sheet=${sheetChoice.get(key) ?? 0}`);
+    data = await getJSON(`/api/sheet?p=${encodeURIComponent(tab.id)}&path=${encodeURIComponent(path)}&sheet=${sheetChoice.get(key) ?? 0}${hiddenFile(tab, path) ? '&hidden=1' : ''}`);
   } catch (err) {
     if (id !== pane.renderId) return false;
     if (err.status === 404) showMissing(view, path, err);
@@ -286,7 +290,7 @@ async function checkPane(pane) {
   const v = pane.current;
   if (v?.type !== 'code' || pane.pending) return;
   try {
-    const res = await fetch(docUrl(pane.tab, v.path), { method: 'HEAD', cache: 'no-store' });
+    const res = await fetch(fileUrl(pane.tab, v.path), { method: 'HEAD', cache: 'no-store' });
     const stamp = res.ok ? `${res.headers.get('Last-Modified')}|${Number(res.headers.get('Content-Length')) || 0}` : 'gone';
     if (paneShown(pane) && pane.current === v && stamp !== pane.codeStamp) emit('refresh-view', pane);
   } catch { /* 서버가 잠시 답하지 않음 */ }

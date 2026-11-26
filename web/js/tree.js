@@ -502,7 +502,7 @@ export const renameItem = (path) => ({ label: t('이름 바꾸기…'), hint: 'F
 const deleteItem = (path) => ({ label: t('문서 삭제…'), tip: t('휴지통으로 보냅니다'), action: () => emit('delete-doc', { path }) });
 
 /** 우클릭의 새로 만들기 (D65·D105): 이 폴더에 새 문서 — 제목과 스타일을 묻고 만들어 바로 쓴다 */
-export const newDocItem = (dir) => ({ label: t('새 문서 만들기…'), hint: 'Ctrl+N', action: () => emit('new-doc', { dir }) });
+export const newDocItem = (dir) => ({ label: t('새 문서 만들기…'), hint: 'Ctrl+N', action: () => emit('new-doc', { dir, section: 'docs' }) });
 /** 우클릭의 새 폴더 (D114): 이 폴더 안에 — 빈 폴더는 트리에 나오지 않아 만든 뒤 그 폴더의 새 문서 창을 연다 */
 export const newFolderItem = (dir) => ({ label: t('새 폴더 만들기…'), action: () => emit('new-folder', { dir }) });
 /** 우클릭의 새 코드·자료 파일 (D177): 이 폴더에 — 이름을 묻고 빈 파일을 만들어 편집 모드로 연다 ('코드'·'자료' 목록의 폴더) */
@@ -570,7 +570,7 @@ function onContextMenu(e) {
     return;
   }
   if (!row) {   // 목록의 빈 곳
-    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), newFolderItem(''), workCardItem()]);
+    if (S.tab && !S.tab.readonly) showMenu(e.clientX, e.clientY, [newDocItem(''), workCardItem()]);   // 폴더는 '폴더' 묶음에서만 (D203)
     return;
   }
   if (row.dataset.doc != null) {
@@ -578,7 +578,7 @@ function onContextMenu(e) {
     const items = [...docMenuItems(path), ...(currentKind().id === 'marks' ? clearItems(path) : [])];
     showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), ...(isPdf(path) ? [] : [deleteItem(path)])]);   // PDF 는 보기만 (D201)
   }
-  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
+  else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }
 
 // 글자를 치면 그 글자로 시작하는 다음 행으로 (탐색기처럼 — others.js 와 같게). 잠깐 사이에 이어 치면 이어진 글자로

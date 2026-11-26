@@ -66,6 +66,8 @@ function makeTab(p) {
     others: {
       data: null, tree: null, lazy: new Map(), loadingDirs: new Set(), trees: null, index: null, counts: null, error: null, stale: true, loading: null,
       open: { files: new Set(), code: new Set() }, folderOpen: null, all: null, allIndex: null,
+      // '폴더' 묶음의 모든 것 (D203): 숨김·링크·빈 폴더(hidden — /api/others/hidden), 펼쳐 읽은 폴더(lazyAll), 숨긴 파일의 경로(hiddenSet), 여럿 고른 행(picked)
+      hidden: null, hiddenStale: true, hiddenLoading: null, lazyAll: new Map(), hiddenSet: new Set(), picked: new Set(),
       selected: { files: null, code: null, folder: null }, scroll: { files: 0, code: 0, folder: 0 },
     },
   };
@@ -416,7 +418,6 @@ function tabMenu(tab) {
   const items = menuGroups([{ header: tab.root }],
     [{ label: t('프로젝트 개요'), action: there(openOverview) },
       { label: t('새 문서 만들기…'), action: there(() => emit('new-doc', { dir: '' })) },
-      { label: t('새 폴더 만들기…'), action: there(() => emit('new-folder', { dir: '' })) },
       { label: tab.fileMap.has('WORK.md') ? t('업무 카드 열기') : t('업무 카드 만들기…'), tip: t('이 폴더 맨 위의 WORK.md — 업무 현황과 알림이 읽습니다'), action: there(() => emit('work-card', { tab })) },
       { label: t('프로젝트의 표·그림 등 모아 보기'), tip: t('문서 탭 하나에 펼쳐 놓습니다'), action: there(() => emit('parts', { path: '' })) }],
     [{ label: t('전체 경로 복사'), action: () => copy(tab.root) }, { label: t('탐색기에서 보기'), action: () => revealInExplorer('', tab) }],

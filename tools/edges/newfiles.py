@@ -1,5 +1,5 @@
-"""구역별 만들기 (D177): 사이드바 묶음마다 만드는 것이 다르다 — '문서'는 md 문서·슬라이드·폴더, '코드'는 코드 파일·폴더, '자료'는 자료 파일·폴더,
-'폴더'와 Ctrl+N 은 모두. 코드·자료 파일은 빈 파일(CSV 는 BOM·머리행)을 만들어 편집 모드로 열고, 폴더는 만든 뒤 그 안에 만들 것을 정한다.
+"""구역별 만들기 (D177·D203): 사이드바 묶음마다 그 종류만 — '문서'는 md 문서·슬라이드, '코드'는 코드 파일, '자료'는 자료 파일,
+'폴더'는 모두(폴더도), Ctrl+N 은 폴더를 뺀 넷. 코드·자료 파일은 빈 파일(CSV 는 BOM·머리행)을 만들어 편집 모드로 열고, 폴더는 만든 뒤 그 안에 만들 것을 정한다.
 같은 이름은 덮어쓰지 않고, 받지 않는 확장자는 창이 알린다"""
 import json
 import tempfile
@@ -65,7 +65,7 @@ try:
         check("'문서'를 펼치면 그 머리줄에만 만들기", shown('#lec-docs-new') and not shown('#lec-code-new') and not shown('#lec-others-new'))
         page.click('#lec-docs-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
-        check("'문서'의 만들기 — md 문서·슬라이드·폴더, 처음은 md 문서", page.evaluate(KINDS) == ['md', 'deck', 'folder'] and page.evaluate(ON) == 'md',
+        check("'문서'의 만들기 — md 문서·슬라이드 (폴더는 '폴더' 묶음에서만), 처음은 md 문서", page.evaluate(KINDS) == ['md', 'deck'] and page.evaluate(ON) == 'md',
               (page.evaluate(KINDS), page.evaluate(ON)))
         check('— 이름 칸은 제목, 스타일 목록이 보인다', page.inner_text('#lec-newdoc-title-label') == '제목' and shown('#lec-newdoc-styles'))
         page.keyboard.press('Escape')
@@ -75,7 +75,7 @@ try:
         check("'코드'를 펼치면 '코드' 머리줄에 만들기, '문서'의 것은 숨는다", shown('#lec-code-new') and not shown('#lec-docs-new'))
         page.click('#lec-code-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
-        check('코드 파일·폴더만, 처음은 코드 파일', page.evaluate(KINDS) == ['code', 'folder'] and page.evaluate(ON) == 'code', page.evaluate(KINDS))
+        check('코드 파일만, 처음은 코드 파일', page.evaluate(KINDS) == ['code'] and page.evaluate(ON) == 'code', page.evaluate(KINDS))
         check('— 이름의 처음 값은 .js (js 둘·py 하나), 확장자 앞까지 골라 둔다', page.input_value('#lec-newdoc-title') == '새 파일.js'
               and page.evaluate("() => { const el = document.activeElement; return el.id === 'lec-newdoc-title' && el.selectionStart === 0 && el.selectionEnd === 4; }"),
               page.input_value('#lec-newdoc-title'))
@@ -112,7 +112,7 @@ try:
         section('others')
         page.click('#lec-others-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
-        check('자료 파일·폴더만, 처음은 새 자료.csv, 머리행 칸이 보인다', page.evaluate(KINDS) == ['data', 'folder'] and page.input_value('#lec-newdoc-title') == '새 자료.csv'
+        check('자료 파일만, 처음은 새 자료.csv, 머리행 칸이 보인다', page.evaluate(KINDS) == ['data'] and page.input_value('#lec-newdoc-title') == '새 자료.csv'
               and shown('#lec-newdoc-header-row'), (page.evaluate(KINDS), page.input_value('#lec-newdoc-title')))
         page.fill('#lec-newdoc-title', '메모.txt')
         check('— .txt 면 머리행 칸이 숨는다', not shown('#lec-newdoc-header-row'))
@@ -143,17 +143,20 @@ try:
         expect(page, '같은 이름 — 덮어쓰지 않는다', lambda: '같은 이름' in msg() and raw('data/원래.csv') == '원래,내용\r\n'.encode('utf-8'), msg)
         page.keyboard.press('Escape')
 
-        print('[폴더 — 만든 뒤 그 안에 만들 것을 정한다]')
-        page.click('#lec-others-new')
+        print("[폴더 — '폴더' 묶음에서만, 만든 뒤 그 안에 만들 것을 정한다]")
+        section('folder')
+        page.click('#lec-folder-new')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
         page.click('#lec-newdoc-dir')
         check('폴더 종류 — 이름 처음 값 새 폴더, 창 속 새 폴더 단추는 숨는다', page.input_value('#lec-newdoc-title') == '새 폴더' and not shown('#lec-newdoc-mkdir')
               and page.inner_text('#lec-newdoc-head') == '새 폴더 만들기', page.input_value('#lec-newdoc-title'))
         page.fill('#lec-newdoc-title', '2026 자료')
         page.keyboard.press('Enter')
-        expect(page, '폴더를 만들고 창은 남아 — 자료 파일 종류로, 위치는 새 폴더', lambda: (proj / '2026 자료').is_dir() and is_open() and page.evaluate(ON) == 'data'
-               and page.input_value('#lec-newdoc-folder') == '2026 자료' and page.input_value('#lec-newdoc-title') == '새 자료.csv' and '그 안에' in msg(),
+        expect(page, '폴더를 만들고 창은 남아 — md 문서 종류로, 위치는 새 폴더', lambda: (proj / '2026 자료').is_dir() and is_open() and page.evaluate(ON) == 'md'
+               and page.input_value('#lec-newdoc-folder') == '2026 자료' and '그 안에' in msg(),
                lambda: (page.evaluate(ON), page.input_value('#lec-newdoc-folder'), msg()))
+        page.click('#lec-newdoc-data')
+        expect(page, '— 자료 파일로 바꾸면 새 자료.csv', lambda: page.input_value('#lec-newdoc-title') == '새 자료.csv', lambda: page.input_value('#lec-newdoc-title'))
         page.keyboard.press('Enter')
         page.wait_for_selector('.CodeMirror', timeout=15000)
         check('— 이어서 그 폴더에 새 자료.csv (머리행 없으면 BOM 만)', raw('2026 자료/새 자료.csv') == b'\xef\xbb\xbf', raw('2026 자료/새 자료.csv'))
@@ -169,7 +172,7 @@ try:
         page.locator('#lec-view').click()
         page.keyboard.press('Control+n')
         page.wait_for_selector('#lec-newdoc:not([hidden])')
-        check('Ctrl+N — 다섯 종류, 처음은 md 문서', page.evaluate(KINDS) == ['md', 'deck', 'code', 'data', 'folder'] and page.evaluate(ON) == 'md', page.evaluate(KINDS))
+        check('Ctrl+N — 폴더를 뺀 넷, 처음은 md 문서', page.evaluate(KINDS) == ['md', 'deck', 'code', 'data'] and page.evaluate(ON) == 'md', page.evaluate(KINDS))
         page.fill('#lec-newdoc-title', '분석 메모')
         page.click('#lec-newdoc-code')
         check('md 문서 → 코드 파일: 쓴 이름에 확장자만', page.input_value('#lec-newdoc-title') == '분석 메모.js', page.input_value('#lec-newdoc-title'))
