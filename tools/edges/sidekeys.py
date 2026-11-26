@@ -65,8 +65,8 @@ try:
         open_doc('가.md')
 
         print("['폴더' 묶음]")
-        boxes = [page.locator(s).bounding_box() for s in ('#lec-docs', '#lec-code', '#lec-others', '#lec-folder')]
-        check('맨 아래에 넷째 묶음 — 문서·코드·자료·폴더 차례', all(boxes[i]['y'] < boxes[i + 1]['y'] for i in range(3)), [round(x['y']) for x in boxes])
+        boxes = [page.locator(s).bounding_box() for s in ('#lec-docs', '#lec-others', '#lec-code', '#lec-work', '#lec-folder')]
+        check('맨 아래에 폴더 — 문서·자료·코드·작업·폴더 차례 (D205)', all(boxes[i]['y'] < boxes[i + 1]['y'] for i in range(4)), [round(x['y']) for x in boxes])
         check("머리줄 이름은 '폴더', 숫자는 없다", page.inner_text('#lec-folder-head').strip() == '폴더' and page.locator('#lec-folder-head .n').count() == 0, page.inner_text('#lec-folder-head'))
         check("거르기 칸 옆의 '폴더' 버튼은 없어졌다", page.locator('#lec-btn-view').count() == 0)
         page.click('#lec-folder-head')
@@ -91,7 +91,7 @@ try:
             page.keyboard.press('Control+Shift+E')
             page.wait_for_timeout(400)
             seen.append(focus().split(':')[0])
-        check('다시 누르면 다음 묶음 — 코드 → 자료 → 작업 → 폴더 → 문서', seen == ['lec-code', 'lec-others', 'lec-work', 'lec-folder', 'lec-docs'], seen)
+        check('다시 누르면 다음 묶음 — 자료 → 코드 → 작업 → 폴더 → 문서', seen == ['lec-others', 'lec-code', 'lec-work', 'lec-folder', 'lec-docs'], seen)
         check('— 그 묶음이 펼쳐진다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         page.keyboard.press('Control+b')
         expect(page, '사이드바를 감추면', lambda: page.evaluate("document.documentElement.classList.contains('sidebar-off')"))

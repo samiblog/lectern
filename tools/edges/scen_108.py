@@ -65,7 +65,7 @@ try:
 
         print('[Ctrl+Shift+E 로 돌아 작업에 들어간다]')
         page.locator('#lec-tree .row.file').first.focus()
-        for _ in range(3):   # 문서 → 코드 → 자료 → 작업
+        for _ in range(3):   # 문서 → 자료 → 코드 → 작업
             page.keyboard.press('Control+Shift+e')
             page.wait_for_timeout(250)
         check('세 번 더 누르면 작업 묶음에 초점', until(page, lambda: page.evaluate(SECS)[3] == 'open' and page.evaluate(FOCUS) == 'lec-work'), (page.evaluate(SECS), page.evaluate(FOCUS)))

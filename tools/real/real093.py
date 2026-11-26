@@ -128,7 +128,7 @@ try:
             page.keyboard.press('Control+Shift+E')
             page.wait_for_timeout(500)
             seen.append(focus().split(':')[0])
-        R.check('다시 누르면 문서 → 코드 → 자료 → 작업 → 폴더 (D204)', seen == ['lec-docs', 'lec-code', 'lec-others', 'lec-work', 'lec-folder'], seen)
+        R.check('다시 누르면 문서 → 자료 → 코드 → 작업 → 폴더 (D205)', seen == ['lec-docs', 'lec-others', 'lec-code', 'lec-work', 'lec-folder'], seen)
         page.click('#lec-docs-head')
         page.keyboard.press('Control+Shift+E')
         R.wait(lambda: focus().startswith('lec-docs:'), 4)

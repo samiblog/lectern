@@ -1642,16 +1642,16 @@ def run(headed: bool) -> None:
 
             wait_until(page, f"document.querySelectorAll('{olist} .row').length > 0")
             wait_until(page, "document.querySelectorAll('#lec-code-list .row').length > 0")
-            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-docs', '#lec-code', '#lec-others')]
+            boxes = [page.locator(sel).bounding_box() for sel in ('#lec-docs', '#lec-others', '#lec-code')]
             count = page.inner_text('#lec-others-count')
             clabels = lambda: page.locator('#lec-code-list .row .label').all_inner_texts()
             ccount = page.inner_text('#lec-code-count')
-            heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'code', 'others')]
+            heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'others', 'code')]
             docs_n = page.inner_text('#lec-docs-count')
             check(olabels() == ['data', 'empty-folder', 'node_modules', 'research', '첨부.rtf'] and clabels() == ['code', 'src']
-                  and int(count) + int(ccount) == 7 and heads == ['문서', '코드', '자료'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
+                  and int(count) + int(ccount) == 7 and heads == ['문서', '자료', '코드'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
                   and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(2)),
-                  f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것과 제외 폴더, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김은 없음 "
+                  f"위에서부터 '문서'·'자료'·'코드' 세 묶음 — 자료는 문서·코드가 아닌 것과 제외 폴더, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김은 없음 "
                   f"({olabels()}, {clabels()}, 자료 {count}·코드 {ccount}·문서 {docs_n})")
             orow('data').locator('[data-toggle]').click(modifiers=['Alt'])
             page.wait_for_selector(f'{olist} .row[data-path="data/표.csv"]')

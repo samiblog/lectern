@@ -44,8 +44,9 @@ const LISTS = {
   folder: { el: '#lec-folder-list', none: t('문서나 파일이 없습니다'), noHit: t('일치하는 문서나 파일이 없습니다'), section: 'folder' },
 };
 // 묶음 넷 (위에서부터 — index.html 의 순서와 같게). 한 번에 하나만 펼친다 (D143). list: 그 묶음의 목록 (문서는 tree.js 의 #lec-tree)
-const SECTIONS = [{ name: 'docs', el: '#lec-docs', list: '#lec-tree' }, { name: 'code', el: '#lec-code', list: '#lec-code-list' },
-  { name: 'others', el: '#lec-others', list: '#lec-others-list' }, { name: 'work', el: '#lec-work', list: '#lec-work-list' },   // 작업 — 업무 카드·형광펜·할 일 (D204, tree.js)
+// 차례는 문서 → 자료 → 코드 → 작업 → 폴더 (D205 — 사용자 요청)
+const SECTIONS = [{ name: 'docs', el: '#lec-docs', list: '#lec-tree' }, { name: 'others', el: '#lec-others', list: '#lec-others-list' },
+  { name: 'code', el: '#lec-code', list: '#lec-code-list' }, { name: 'work', el: '#lec-work', list: '#lec-work-list' },   // 작업 — 업무 카드·형광펜·할 일 (D204, tree.js)
   { name: 'folder', el: '#lec-folder', list: '#lec-folder-list' }];
 
 const listEl = (k) => $(LISTS[k].el);
@@ -820,7 +821,7 @@ function sectionTarget(s) {
 /**
  * Ctrl+Shift+E (D169): 사이드바 '파일' 탭의 펼친 묶음으로 초점. 초점이 이미 그 묶음의 목록 안에 있으면 다음 묶음을 펼치고 그리로
  * (머리줄을 마우스로 누른 뒤처럼 머리줄에 있으면 그 목록으로 — 시나리오 시험에서 찾음)
- * (문서 → 코드 → 자료 → 폴더 → 문서). 다른 사이드바 탭이면 '파일' 탭으로 (감춘 사이드바는 main.js 가 먼저 보인다)
+ * (문서 → 자료 → 코드 → 작업 → 폴더 → 문서 — D205). 다른 사이드바 탭이면 '파일' 탭으로 (감춘 사이드바는 main.js 가 먼저 보인다)
  */
 export async function focusFiles() {
   if (!S.tab) return;

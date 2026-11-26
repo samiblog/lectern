@@ -29,7 +29,7 @@ const KINDS = () => [
   { id: 'excel', name: 'Excel·CSV', opt: true, file: (f) => isOffice('excel', f.name) },
   { id: 'hwp', name: t('한글(HWP)'), opt: true, file: (f) => isOffice('hwp', f.name) },
 ];
-// '작업' 묶음 (D204 — 문서·코드·자료·작업·폴더): 업무 카드(폴더마다의 WORK.md)와 문서 속을 읽어 거르는 것(content — 형광펜·할 일, GET /api/marks).
+// '작업' 묶음 (D204 — 문서·자료·코드·작업·폴더, D205): 업무 카드(폴더마다의 WORK.md)와 문서 속을 읽어 거르는 것(content — 형광펜·할 일, GET /api/marks).
 // 폴더는 늘 펼쳐 둔다. 설정 work_kind, 프로젝트 탭마다 tab.side.workKind
 const WORK_KINDS = () => [
   { id: 'work', name: t('업무 카드', { n: 2 }), keep: (f) => f.name.toLowerCase() === 'work.md' },
