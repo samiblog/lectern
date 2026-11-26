@@ -124,11 +124,11 @@ try:
         page.keyboard.press('Control+Shift+E')
         R.check('Ctrl+Shift+E — 펼친 묶음(폴더)의 지금 보는 문서', R.wait(lambda: focus() == 'lec-folder:research/구리.md', 4), focus())
         seen = []
-        for _ in range(4):
+        for _ in range(5):
             page.keyboard.press('Control+Shift+E')
-            page.wait_for_timeout(300)
+            page.wait_for_timeout(500)
             seen.append(focus().split(':')[0])
-        R.check('다시 누르면 문서 → 코드 → 자료 → 폴더', seen == ['lec-docs', 'lec-code', 'lec-others', 'lec-folder'], seen)
+        R.check('다시 누르면 문서 → 코드 → 자료 → 작업 → 폴더 (D204)', seen == ['lec-docs', 'lec-code', 'lec-others', 'lec-work', 'lec-folder'], seen)
         page.click('#lec-docs-head')
         page.keyboard.press('Control+Shift+E')
         R.wait(lambda: focus().startswith('lec-docs:'), 4)
