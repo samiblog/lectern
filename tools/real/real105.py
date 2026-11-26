@@ -17,7 +17,7 @@ EDGE_PDFS = Path(__file__).resolve().parents[1] / 'edges' / 'pdfs'
 base = Path(tempfile.mkdtemp(prefix='lec-real105-'))
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'language': 'ko', 'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'language': 'ko', 'work_alerts': False}), encoding='utf-8')
 proj = base / '자료함'
 (proj / '보고서').mkdir(parents=True)
 for n in ('cid', 'script'):

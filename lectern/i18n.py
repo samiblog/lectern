@@ -240,7 +240,7 @@ EN: dict[str, str] = {
     "'pptx 로 전환' 창": "the 'Convert to pptx' window",
     "'pptx 로 전환'의 기본 pptx 스타일 — 설정 폴더 pptx-styles 의 파일 이름": "Default pptx style for 'Convert to pptx' — a file name in the pptx-styles settings folder",
     "'문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·word·ppt·excel·hwp·work·marks·tasks": "Sub-group open under 'Documents' — all, md, deck, html, pdf, word, ppt, excel, hwp, work, marks, tasks",
-    "'문서' 묶음에 보일 오피스 하위 묶음 — word·ppt·excel·hwp 가운데 (설정 창 '일반')": "Office sub-groups shown under 'Documents' — any of word, ppt, excel, hwp (Settings, General)",
+    "'문서' 묶음으로 옮길 종류 — pdf·word·ppt·excel·hwp 가운데 (기본은 없음 — '자료' 에. 설정 창 '일반')": "Kinds moved under 'Documents' — any of pdf, word, ppt, excel, hwp (none by default — they stay in 'Other files'. Settings, General)",
     "'작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks": "Sub-group open under 'Tasks' — work, marks, tasks",
     'API 키를 내주는 명령': 'Command that hands out the API key',
     'CSV 표 위의 통계 줄': 'Statistics line above CSV tables',

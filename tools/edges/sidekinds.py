@@ -94,7 +94,7 @@ try:
         print('[문서의 하위 묶음]')
         until(page, lambda: page.locator('#lec-docs .kind-head').count() > 0)
         kinds = page.evaluate(KINDS)
-        check('하위 묶음: 전체·문서·슬라이드 (HTML 은 없어서 감춤, 표.csv 는 Excel·CSV, 업무·형광펜·할 일은 작업 묶음으로 — D204)', kinds == ['all:4', 'md:3', 'deck:1', 'excel:1'], kinds)
+        check('하위 묶음: 전체·문서·슬라이드 (HTML 은 없어서 감춤, 표.csv 는 Excel·CSV, 업무·형광펜·할 일은 작업 묶음으로 — D204)', kinds == ['all:4', 'md:3', 'deck:1'], kinds)
         check('처음은 전체', page.evaluate(OPEN_KIND) == 'all')
         page.click('#lec-docs .kind-head[data-kind="deck"]')
         check('슬라이드만', until(page, lambda: page.evaluate(TREE_DOCS) == ['slides/발표.md']), page.evaluate(TREE_DOCS))

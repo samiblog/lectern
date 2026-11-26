@@ -39,7 +39,7 @@ make_xlsx(proj / '자료' / '예산' / '예산.xlsx', sheets=[('값', '<row r="1
 (proj / 'node_modules' / 'x' / '숨은.docx').write_bytes(b'PK\x03\x04 x')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['word', 'ppt', 'excel', 'hwp'], 'work_alerts': False}), encoding='utf-8')
 
 KINDS = "() => [...document.querySelectorAll('#lec-docs .kind-head')].map((b) => b.dataset.kind + ':' + b.querySelector('.n').textContent)"
 ROWS = "() => [...document.querySelectorAll('#lec-tree .row')].map((r) => (r.dataset.file ? 'F:' : r.dataset.dir != null ? 'D:' : 'M:') + r.querySelector('.label').textContent)"
@@ -130,13 +130,11 @@ try:
         check('거른 행 곁에 폴더', page.evaluate("() => document.querySelector('#lec-tree .row[data-file=\"자료/예산/표.csv\"] .sub')?.textContent") == '자료/예산')
         page.fill('#lec-filter', '')
 
-        print("['자료' 목록에도 남는다]")
+        print("['자료' 목록에서는 빠진다 — 한 파일은 한 곳에 (D206)]")
         page.click('#lec-others-head')
-        page.click('#lec-others-list .row[data-path="보고"] [data-toggle]')
-        page.click('#lec-others-list .row[data-path="자료"] [data-toggle]')
-        page.click('#lec-others-list .row[data-path="자료/예산"] [data-toggle]')
-        others = until(page, "() => [...document.querySelectorAll('#lec-others-list .row.file')].map((r) => r.dataset.path)")
-        check("'자료' 목록에 계획서.docx·표.csv 도 그대로", others and '보고/계획서.docx' in others and '자료/예산/표.csv' in others, others)
+        page.wait_for_timeout(400)
+        others = page.evaluate("() => import('/static/js/store.js').then(({ S }) => [...S.tab.others.index.files.keys()])")
+        check("'문서' 로 옮긴 오피스는 '자료' 목록에서 빠진다 — 그림은 남는다 (D206)", others is not None and '보고/계획서.docx' not in others and '자료/예산/표.csv' not in others and '자료/그림.png' in others, others)
         page.click('#lec-docs-head')
         page.wait_for_timeout(200)
 
@@ -151,7 +149,7 @@ try:
         page.keyboard.press('Control+Comma')
         page.wait_for_selector('#lec-set-kinds input', timeout=5000)
         boxes = page.evaluate("() => [...document.querySelectorAll('#lec-set-kinds input')].map((i) => i.dataset.kind + (i.checked ? '+' : '-'))")
-        check('설정 창의 칸: Word·PowerPoint·Excel·CSV·한글 넷이 켜짐 (업무·형광펜·할 일은 작업 묶음으로 — D204)', boxes == ['word+', 'ppt+', 'excel+', 'hwp+'], boxes)
+        check('설정 창의 칸: PDF 는 꺼짐, Word·PowerPoint·Excel·CSV·한글 켜짐 (이 점검의 설정)', boxes == ['pdf-', 'word+', 'ppt+', 'excel+', 'hwp+'], boxes)
         page.click('#lec-set-kinds input[data-kind="word"]')
         check('Word 를 끄면 저장된다', until(page, lambda: page.evaluate(CONF)['kinds'] == ['ppt', 'excel', 'hwp']), page.evaluate(CONF))
         saved = json.loads((config / 'config.json').read_text(encoding='utf-8')).get('doc_kinds')

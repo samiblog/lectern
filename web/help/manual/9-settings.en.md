@@ -30,7 +30,7 @@
 | Resume where I left off | Opening a folder returns to the document and position you last viewed |
 | Expand top-level folders | Expands the first level of folders in the tree when a folder opens |
 | Show document titles in lists | Off (default): md documents show their file names, and the title when you point at them. Same as the sidebar 'Titles' button; document tabs, Open document, Recent changes, Search and folder overviews follow it |
-| Subgroups under 'Documents' in the sidebar | Which of Word, PowerPoint, Excel·CSV and Hangul (HWP) to show — all four at first (work cards, highlights and to-dos are in the 'Tasks' group) ([Sidebar](2.4-sidebar.en.md)) |
+| Subgroups under 'Documents' in the sidebar | Which of PDF, Word, PowerPoint, Excel·CSV and Hangul (HWP) to move under 'Documents' — none at first ('Documents' holds only md and html; the rest stay in 'Other files'). Kinds turned on leave 'Other files' ([Sidebar](2.4-sidebar.en.md)) |
 
 ## View
 

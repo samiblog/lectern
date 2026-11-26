@@ -16,14 +16,15 @@ const MAX_FILTER_RESULTS = 300;
 
 // '문서' 묶음의 하위 묶음 (D143): 한 번에 하나만 펼치고 펼친 것 아래에 트리. 종류로 거르는 것(keep)과
 // 문서 외 파일 목록(others.js 가 받은 '자료')에서 거르는 것(file — 오피스, D202)이 있다.
-// 문서가 없는 종류와 '전체'와 같은 종류는 머리줄을 감춘다. opt 는 설정 doc_kinds 에 있을 때만 (D202 — 오피스는 기본 켜짐).
+// 문서가 없는 종류와 '전체'와 같은 종류는 머리줄을 감춘다. opt 는 설정 doc_kinds 에 있을 때만 — 기본은 없음: '문서' 에는 md·html 만,
+// PDF·오피스는 '자료' 에 (D206). 켠 종류는 '문서' 의 하위 묶음이 되고 '자료' 에서는 빠진다 (others.js — 한 파일은 한 곳에).
 // 업무 카드·형광펜·할 일은 따로 '작업' 묶음 (D204 — WORK_KINDS). 설정 docs_kind, 프로젝트 탭마다 tab.side.docKind
 const KINDS = () => [
   { id: 'all', name: t('전체') },
   { id: 'md', name: t('문서'), keep: (f) => f.kind === 'markdown' && !f.deck },
   { id: 'deck', name: t('슬라이드'), keep: (f) => !!f.deck },
   { id: 'html', name: 'HTML', keep: (f) => f.kind === 'html' },
-  { id: 'pdf', name: 'PDF', keep: (f) => f.kind === 'pdf' },   // D201 — 보기만
+  { id: 'pdf', name: 'PDF', opt: true, keep: (f) => f.kind === 'pdf' },   // D201 — 보기만. 켜지 않으면 '자료' 에 (D206)
   { id: 'word', name: 'Word', opt: true, file: (f) => isOffice('word', f.name) },
   { id: 'ppt', name: 'PowerPoint', opt: true, file: (f) => isOffice('ppt', f.name) },
   { id: 'excel', name: 'Excel·CSV', opt: true, file: (f) => isOffice('excel', f.name) },
@@ -47,13 +48,18 @@ const listOf = (el) => (el?.closest?.('#lec-work') ? LISTS.work : LISTS.docs);
 const listOpen = (L) => !$(L.sec)?.classList.contains('closed');
 /** 설정 창과 하위 묶음 머리줄의 우클릭이 고르는 것 — 차례도 이대로 */
 export const OPTIONAL_KINDS = () => KINDS().filter((k) => k.opt).map((k) => ({ id: k.id, name: k.name }));
-const DEFAULT_KINDS = ['word', 'ppt', 'excel', 'hwp'];
+const DEFAULT_KINDS = [];   // D206 — '문서' 에는 md·html 만
 const kindOn = (id) => (Array.isArray(S.config.doc_kinds) ? S.config.doc_kinds : DEFAULT_KINDS).includes(id);
+/** 그 종류가 '문서' 묶음에 있는지 (D206 — pdf·word·ppt·excel·hwp. 아니면 '자료' 목록에) */
+export const docKindOn = kindOn;
+/** '문서' 트리에 보일 문서인지 — PDF 는 켰을 때만 (D206) */
+export const docShown = (f) => f.kind !== 'pdf' || kindOn('pdf');
 /** 하위 묶음 하나를 켜고 끈다 (설정 doc_kinds) */
 export async function setKindOn(id, on) {
   const now = (Array.isArray(S.config.doc_kinds) ? S.config.doc_kinds : DEFAULT_KINDS).filter((x) => x !== id);
   await saveConfig({ doc_kinds: OPTIONAL_KINDS().map((k) => k.id).filter((x) => (x === id ? on : now.includes(x))) });
   render();
+  emit('doc-kinds');   // '자료' 목록도 다시 나눈다 (others.js — D206)
 }
 export const MARK_NAMES = () => ({ '': t('노랑'), green: t('초록'), pink: t('분홍'), blue: t('하늘') });
 let panel = 'files';   // 사이드바 탭: files | recent | search | basket (모아 보기는 문서 탭으로 — D196)
@@ -206,7 +212,7 @@ function kindCounts(tab, L = LISTS.docs) {
     else if (k.file) {
       const nodes = pickFiles(tab, k.file);
       n[k.id] = nodes ? countFiles(nodes) : 0;   // 파일 목록을 받으면 다시 그린다 ('others-read')
-    } else n[k.id] = k.keep ? tab.files.filter(k.keep).length : tab.files.length;
+    } else n[k.id] = k.keep ? tab.files.filter(k.keep).length : tab.files.filter(docShown).length;
   }
   return n;
 }
@@ -302,7 +308,7 @@ function renderTree(L = LISTS.docs) {
   } else if (query) {
     const terms = query.split(/\s+/);
     const hits = S.files.filter((f) => {
-      if (kind.keep && !kind.keep(f)) return false;
+      if (kind.keep ? !kind.keep(f) : !docShown(f)) return false;
       const hay = `${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`;
       return terms.every((w) => hay.includes(w));
     });
@@ -313,7 +319,7 @@ function renderTree(L = LISTS.docs) {
       : html`<p class="side-empty">${t('일치하는 문서가 없습니다')}</p>`);
   } else {
     // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)
-    const nodes = kind.keep ? pickDocs(S.tree, kind.keep) : S.tree;
+    const nodes = kind.keep ? pickDocs(S.tree, kind.keep) : kindOn('pdf') ? S.tree : pickDocs(S.tree, docShown);
     setHtml(box, nodes.length ? nodesHtml(nodes, 0, L === LISTS.work ? { allOpen: true } : null) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
@@ -720,6 +726,7 @@ export function initTree() {
   on('config-follow', (keys) => {   // 다른 창에서 바꾼 제목 보이기·차례 (D159)
     if (!keys.has('show_titles') && !keys.has('side_sort') && !keys.has('doc_kinds')) return;
     render();
+    if (keys.has('doc_kinds')) emit('doc-kinds');
     if (keys.has('show_titles')) emit('titles');
     if (keys.has('side_sort')) emit('side-sort');
   });

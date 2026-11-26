@@ -163,7 +163,7 @@ for old in SHOTS.glob('*.png'):
     old.unlink()
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False, 'language': 'ko'}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'work_alerts': False, 'language': 'ko'}), encoding='utf-8')
 server, url, port = serve(proj, config)
 rows = []
 try:

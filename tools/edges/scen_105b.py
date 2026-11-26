@@ -82,7 +82,7 @@ good = (proj / '들어온 것' / 'UPPER CASE.PDF').read_bytes()
 doc_pdf(proj / '큰 문서.pdf', [A4] * 600, '큰')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'work_alerts': False}), encoding='utf-8')
 server, url, port = serve(proj, config)
 
 try:

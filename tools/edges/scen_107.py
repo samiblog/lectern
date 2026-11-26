@@ -52,7 +52,7 @@ other.mkdir()
 (other / '메모.md').write_text('# 다른 과제\n', encoding='utf-8', newline='\n')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['word', 'ppt', 'excel', 'hwp'], 'work_alerts': False}), encoding='utf-8')
 
 
 def digest(folder):

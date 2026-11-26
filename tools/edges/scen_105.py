@@ -48,7 +48,7 @@ make(proj / '자료' / '광산 동향.pdf', 30, '광산')
 (proj / '보고서' / '초안.md').write_text('# 구리 보고서 초안\n\n## 근거\n\n재고는 [LME 연보 12쪽](../자료/LME%20연보.pdf#page=12)에 있다.\n\n## 결론\n\n끝 문단.\n', encoding='utf-8', newline='\n')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'work_alerts': False}), encoding='utf-8')
 server, url, port = serve(proj, config)
 
 OPEN = "(p) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: p, newTab: true }))"

@@ -25,7 +25,7 @@ MAX_DOC_TABS = 40     # 프로젝트 탭마다 여는 문서 탭 수 (D64·D67·
 MAX_TABS = 10         # 한 번에 여는 프로젝트 탭 수 (최근 폴더 수와 같게)
 MAX_WORK_FOLDERS = 1000   # 업무 폴더 목록에 기억하는 폴더 수 (D124 — WORK.md 가 있는 폴더, D149 — 하위 폴더의 것도 들어 200 → 1000)
 
-CONFIG_VERSION = 3   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
+CONFIG_VERSION = 4   # 설정 형식 판. 올리면 _upgrade 에 옛 판을 바꾸는 코드를 둔다
 TERM_FONT = (10, 24)   # 터미널 글자 크기(px)의 범위 (D130 — 화면 terminal.js 의 TERM_FONT 와 같게)
 
 DEFAULTS: dict[str, Any] = {
@@ -56,7 +56,7 @@ DEFAULTS: dict[str, Any] = {
     'clip_sort': 'name',     # 사이드바 '담기' 탭의 담기함 차례: name | time (마지막에 고친 것부터 — D198)
     'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder (D143 — 한 번에 하나만 펼친다, folder 는 폴더 구조 그대로 — D169)
     'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·work·marks·tasks·word·ppt·excel·hwp (D143·D201·D202)
-    'doc_kinds': ['word', 'ppt', 'excel', 'hwp'],   # '문서' 묶음에 보일 오피스 하위 묶음 (D202 — 기본 넷 모두. 업무·형광펜·할 일은 '작업' 묶음으로 — D204, 옛 값은 무시)
+    'doc_kinds': [],         # '문서' 묶음으로 옮길 종류 — pdf·word·ppt·excel·hwp (D206 — 기본은 없음: '문서' 에는 md·html 만, 나머지는 '자료'. D202·D204)
     'work_kind': 'tasks',    # '작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks (D204)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
@@ -108,7 +108,7 @@ DEFAULTS: dict[str, Any] = {
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
 AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
 FILES_OPEN = ('docs', 'code', 'others', 'work', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
-DOC_KINDS_OPTIONAL = ('work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 doc_kinds — 고를 수 있는 하위 묶음 (D202)
+DOC_KINDS_OPTIONAL = ('pdf', 'word', 'ppt', 'excel', 'hwp', 'work', 'marks', 'tasks')   # 설정 doc_kinds — 고를 수 있는 하위 묶음 (D202)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
@@ -196,6 +196,9 @@ def _upgrade(data: dict[str, Any], loaded: dict[str, Any] | None = None) -> None
     if data['version'] < 3 and (loaded or {}).get('files_view') == 'folder':
         # v0.93.0 (D169): '폴더' 버튼(files_view)은 사이드바의 넷째 묶음 '폴더'가 됐다 — 폴더 보기로 쓰던 사람은 그 묶음을 펼친 채로
         data['files_open'] = 'folder'
+    if data['version'] < 4 and (loaded or {}).get('doc_kinds') == ['word', 'ppt', 'excel', 'hwp']:
+        # v0.109.0 (D206): 오피스 넷은 기본으로 '자료' 에 — 앱은 저장할 때 기본값도 적으므로 옛 기본값 그대로면 새 기본값으로 (고쳐 둔 것은 그대로)
+        data['doc_kinds'] = []
     data['version'] = max(data['version'], CONFIG_VERSION)
 
 

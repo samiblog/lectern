@@ -23,7 +23,7 @@ from test_sheet import make_xlsx  # noqa: E402
 base = Path(tempfile.mkdtemp(prefix='lec-real106-'))
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'language': 'ko', 'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['word', 'ppt', 'excel', 'hwp'], 'language': 'ko', 'work_alerts': False}), encoding='utf-8')
 proj = base / '사업'
 (proj / '보고').mkdir(parents=True)
 (proj / '자료').mkdir()

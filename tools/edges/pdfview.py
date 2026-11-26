@@ -25,7 +25,7 @@ for n in ('cid', 'scan', 'script'):
 CLIPS = proj / '.lectern' / 'clips'
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'work_alerts': False}), encoding='utf-8')
 
 OPEN = "(p) => import('/static/js/store.js').then((m) => m.emit('open', { type: 'doc', path: p }))"
 ST = "() => import('/static/js/store.js').then(({ S }) => S.pane.pdf ? { cur: S.pane.pdf.cur, pages: S.pane.pdf.doc?.numPages || 0, scale: Math.round(S.pane.pdf.scale * 100), fit: S.pane.pdf.fit, drawn: [...S.pane.pdf.drawn.keys()] } : null)"

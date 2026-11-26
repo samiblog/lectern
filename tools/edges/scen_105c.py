@@ -72,7 +72,7 @@ def run(p, seed):
     (proj / '메모.md').write_text('# 메모\n\n[가 7쪽](pdf/가.pdf#page=7)\n', encoding='utf-8')
     config = home / 'config'
     config.mkdir()
-    (config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+    (config / 'config.json').write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf'], 'work_alerts': False}), encoding='utf-8')
     server, url, port = serve(proj, config)
     errors, log = [], []
     try:

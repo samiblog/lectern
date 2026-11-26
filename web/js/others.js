@@ -25,8 +25,8 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, postJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { loadMarks, fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
-import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
+import { loadMarks, docKindOn, docShown, fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
+import { fileIcon, folderIcon, isCode, isViewable, isOffice } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
 import { $, $$, dirname, formatDateTime, formatSize, copyText, toast, keepFocus, natCompare, openHow, repeatClick, middleClickOpens, blockedReadOnly, isMd, isHtml } from './util.js';
@@ -107,11 +107,31 @@ function withLazy(o, nodes) {
 }
 
 /** 받은 트리(o.data)와 읽어 둔 제외 폴더로 목록의 트리·색인을 만든다 */
+/** '문서' 트리에서 '자료' 로 올 문서 — 켜지 않은 PDF (D206). 빈 폴더는 뺀다 */
+function pdfsOut(nodes) {
+  const out = [];
+  for (const n of nodes || []) {
+    if (n.type === 'file') {
+      if (!docShown(n)) out.push(n);
+    } else {
+      const children = pdfsOut(n.children);
+      if (children.length) out.push({ ...n, children });
+    }
+  }
+  return out;
+}
+
+const OFFICE_KINDS = ['word', 'ppt', 'excel', 'hwp'];
+
 function build(o) {
   const code = (f) => isCode(f.name);
+  const inDocs = (f) => OFFICE_KINDS.some((k) => docKindOn(k) && isOffice(k, f.name));   // '문서' 에 켠 오피스는 '자료' 에서 뺀다 (D206)
   o.tree = withLazy(o, o.data.tree);
-  o.trees = { files: pick(o.tree, (f) => !code(f), true), code: pick(o.tree, code) };
-  o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code) };
+  const pdfs = pdfsOut(S.tab?.others === o ? S.tree : null);   // 켜지 않은 PDF 는 '자료' 에 — 문서 노드(doc)로 (누르면 PDF 보기)
+  const files = pdfs.length ? merge(pdfs, o.tree) : o.tree;
+  o.trees = { files: pick(files, (f) => !code(f) && !inDocs(f), true), code: pick(o.tree, code) };
+  o.index = { files: indexOf(o.trees.files), code: indexOf(o.trees.code), all: indexOf(o.tree) };
+  o.counts = { files: [...filesIn(o.trees.files)].length, code: [...filesIn(o.trees.code)].length };   // 나눌 때마다 — PDF·오피스가 오가면 (D206)
 }
 
 const byName = (a, b) => natCompare(a.name, b.name);
@@ -283,7 +303,8 @@ function renderHead() {
   const query = $('#lec-filter').value.trim().toLowerCase();
   const terms = query ? query.split(/\s+/) : null;
   const hit = (hay) => !terms || terms.every((w) => hay.includes(w));
-  $('#lec-docs-count').textContent = S.tab?.treeLoaded ? String(terms ? S.files.filter((f) => hit(`${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`)).length : S.files.length) : '';
+  const docs = S.files.filter(docShown);   // 켜지 않은 PDF 는 '자료' 에서 센다 (D206)
+  $('#lec-docs-count').textContent = S.tab?.treeLoaded ? String(terms ? docs.filter((f) => hit(`${(f.title || '').toLowerCase()} ${f.path.toLowerCase()}`)).length : docs.length) : '';
   for (const [k, id] of [['files', '#lec-others-count'], ['code', '#lec-code-count']]) {
     if (!o?.trees) $(id).textContent = '';
     else $(id).textContent = terms ? String([...filesIn(o.trees[k])].filter((f) => hit(f.path.toLowerCase())).length) : `${o.counts[k]}${more}`;
@@ -362,7 +383,6 @@ function load(tab, { fresh = false } = {}) {
       const d = await getJSON(`/api/others?p=${encodeURIComponent(tab.id)}${fresh ? '&fresh=1' : ''}`);
       o.data = d;
       build(o);
-      o.counts = { files: [...filesIn(o.trees.files)].length, code: [...filesIn(o.trees.code)].length };
       o.error = null;
       for (const k of ['files', 'code']) for (const p of [...o.open[k]]) if (!stillThere(o.index[k], p)) o.open[k].delete(p);
     } catch (e) {
@@ -874,7 +894,7 @@ function bindList(k) {
     // '폴더' 묶음의 문서는 문서 트리처럼 한 번 누르면 연다. 코드는 한 번 누르면 읽기 화면 (두 번 누르면 편집기)
     const n = view(state(), k).index.get(path);
     if (repeatClick(e)) return;
-    if (k === 'folder' && n?.doc) activate(k, path, openHow(e));   // D91
+    if ((k === 'folder' || k === 'files') && n?.doc) activate(k, path, openHow(e));   // D91 — '자료' 의 PDF 도 (D206)
     else if (isViewFile(n)) emit('open', { type: 'code', path, ...openHow(e) });
   });
   middleClickOpens(box, '.row');
@@ -882,6 +902,10 @@ function bindList(k) {
     const row = e.target.closest('.row');
     if (!row || e.target.closest('[data-toggle]')) return;
     const { path } = row.dataset;
+    if (k === 'files' && view(state(), k).index.get(path)?.doc) {   // '자료' 의 PDF — 한 번 누르면 보기, 두 번 누르면 기본 앱 (D201·D206)
+      openExternal(path);
+      return;
+    }
     if (k === 'folder' && view(state(), k).index.get(path)?.doc) return;   // 한 번 누를 때 이미 열었다
     activate(k, path);
   });
@@ -903,7 +927,7 @@ function bindList(k) {
 
 export function initOthers() {
   for (const k of Object.keys(LISTS)) bindList(k);
-  bindFileRows($('#lec-tree'), (path) => state()?.index?.files.get(path) ?? null);   // '문서' 묶음의 오피스 하위 묶음 (D202 — tree.js 가 그린다)
+  bindFileRows($('#lec-tree'), (path) => state()?.index?.all?.get(path) ?? null);   // '문서' 묶음의 오피스 하위 묶음 (D202 — tree.js 가 그린다)
   bindLayout();
   applyLayout();
   $('#lec-filter').addEventListener('input', render);
@@ -919,7 +943,16 @@ export function initOthers() {
     if (tab === S.tab) ensure();
   });
   // 문서 개수, 그리고 '폴더' 묶음은 문서 트리도 그린다: 트리·바뀜 점·지금 보는 문서가 바뀌면 다시
-  on('tree', () => { if (folderShown()) render(); else renderHead(); });
+  on('tree', () => {   // '자료' 의 PDF 는 문서 트리에서 온다 (D206) — 문서가 바뀌면 다시 나눈다
+    const o = state();
+    if (o?.data) build(o);
+    render();
+  });
+  on('doc-kinds', () => {   // '문서' 에 켠 종류가 바뀌면 '자료' 를 다시 나눈다 (D206)
+    const o = state();
+    if (o?.data) build(o);
+    render();
+  });
   on('changed', () => { if (folderShown()) render(); });
   on('titles', () => { if (folderShown()) render(); });
   on('side-sort', render);   // 목록의 차례 (D97)
