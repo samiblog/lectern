@@ -61,6 +61,7 @@ import { t, LANG } from './i18n.js';
 import { aiName, rewritePrompt } from './aitool.js';
 import { applyFormat, clearFormats, paintOf, sourceRange } from './inlinefmt.js';
 import { showMenu } from './ui.js';
+import { labelOf } from './tree.js';
 
 const FMT_PAINT = ['marks', 'bold', 'italic', 'strike', 'code', 'mark', 'mark-green', 'mark-pink', 'mark-blue', 'color-red', 'color-blue', 'color-green', 'color-goldenrod'];
 let paintRaf = 0;
@@ -1859,7 +1860,7 @@ async function putAttach(s) {
   const at = s.places[0].span;
   const keep = keepCaret();
   const files = await projectFiles((f) => f.path !== s.path);
-  const chosen = await pick({ items: files.map((f) => ({ id: f.path, name: f.title || f.name, sub: f.path })), title: t('첨부할 파일 — 프로젝트 안에서'), at });
+  const chosen = await pick({ items: files.map((f) => ({ id: f.path, name: labelOf(f), sub: f.path })), title: t('첨부할 파일 — 프로젝트 안에서'), at });
   if (!chosen) {
     backTo(s, keep);
     return;
@@ -2115,7 +2116,7 @@ async function linkHere() {
   const keep = keepCaret();
   const shown = getSelection().toString();
   const files = await projectFiles();
-  const r = await pick({ items: files.map((f) => ({ id: f.path, name: f.title || f.name, sub: f.path })), title: t('링크'), at: span, free: true, placeholder: t('파일 이름으로 거르거나 주소를 쓰세요') });
+  const r = await pick({ items: files.map((f) => ({ id: f.path, name: labelOf(f), sub: f.path })), title: t('링크'), at: span, free: true, placeholder: t('파일 이름으로 거르거나 주소를 쓰세요') });
   backTo(s, keep);
   if (!r || session !== s) return;
   const target = r.id ? refFrom(s.path, r.id) : r.text;

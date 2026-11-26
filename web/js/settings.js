@@ -13,6 +13,7 @@ import { aiTool, aiInfo, aiName, aiCli, voicePrompt } from './aitool.js';
 import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, writingStylePrompt, chosenStyle } from './aisetup.js';
 import { openStylePick } from './stylepick.js';
 import { openRaw } from './rawview.js';
+import { OPTIONAL_KINDS, setKindOn } from './tree.js';
 
 const box = () => $('#lec-settings');
 const TERM_FONT_BASE = 14;   // 터미널 글자 크기의 기본 (D130 — terminal.js 의 TERM_FONT.base, config.py 의 기본값과 같게. 범위는 입력 칸의 min·max)
@@ -39,6 +40,10 @@ function fillControls() {
   for (const radio of $$('#lec-settings input[name="table_align"]')) radio.checked = radio.value === (S.config.table_align === 'report' ? 'report' : 'auto');
   for (const radio of $$('#lec-settings input[name="ai_tool"]')) radio.checked = radio.value === aiTool();
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
+  // 사이드바 '문서'의 하위 묶음 (D202)
+  const kinds = Array.isArray(S.config.doc_kinds) ? S.config.doc_kinds : [];
+  setHtml($('#lec-set-kinds'), OPTIONAL_KINDS().map((k) => html`<label><input type="checkbox" data-kind="${k.id}"><span>${k.name}</span></label>`));
+  for (const input of $$('#lec-set-kinds input')) input.checked = kinds.includes(input.dataset.kind);
 }
 
 /** 설정 창 (D154 — 왼쪽 분류, 오른쪽 절). section: 그 분류의 절에서 연다 — 없으면 마지막에 고른 분류 */
@@ -261,6 +266,10 @@ async function onChange(e) {
     fillPicker();
     return;
   }
+  if (e.target.dataset.kind) {   // 사이드바 '문서'의 하위 묶음 (D202)
+    await setKindOn(e.target.dataset.kind, e.target.checked);
+    return;
+  }
   const key = e.target.dataset.key;
   if (!key) return;
   if (key === 'external_images' && !confirmReload()) {   // 다시 불러오는 설정 — 저장하지 않은 편집 (D54)
@@ -268,6 +277,7 @@ async function onChange(e) {
     return;
   }
   await saveConfig({ [key]: e.target.checked });
+  if (key === 'show_titles') emit('titles');   // 목록의 문서 이름 — 사이드바 '제목' 단추와 같다
   if (key === 'md_breaks') emit('refresh-view');   // 문서를 새 규칙으로 다시 그린다 (D93)
   if (key === 'vi_keys') emit('vi-keys');   // 상태줄의 vi 표시 (D122 — 읽는 화면만. 전체 편집기는 editor_keys)
   if (key === 'doc_check' || key === 'doc_check_style') emit('doc-check');   // 문서 점검을 다시 (doccheck.js, D190)

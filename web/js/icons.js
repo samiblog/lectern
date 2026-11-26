@@ -45,6 +45,16 @@ export const isDataEditable = (name) => name.lastIndexOf('.') > 0 && DATA_EDIT_E
 // Windows 인코딩(CP949)으로 쓰는 코드 (D85): EViews 프로그램 — 코드 화면이 자료 파일처럼 UTF-8 이 아니어도 읽는다. 서버는 docinfo.WINDOWS_TEXT_EXT
 export const WINDOWS_TEXT_EXT = new Set(['prg']);
 
+// '문서' 묶음의 오피스 하위 묶음 (D202): 확장자 → 묶음. 열기는 '자료' 목록과 같다 (엑셀·csv 는 한 번 누르면 표, 두 번 누르면 그 프로그램)
+export const OFFICE_EXT = {
+  word: new Set(['docx', 'doc', 'docm', 'dotx', 'dot', 'rtf', 'odt']),
+  ppt: new Set(['pptx', 'ppt', 'pptm', 'ppsx', 'pps', 'potx', 'odp']),
+  excel: new Set(['xlsx', 'xls', 'xlsm', 'xlsb', 'xltx', 'csv', 'tsv', 'ods']),
+  hwp: new Set(['hwp', 'hwpx']),
+};
+/** 오피스 하위 묶음 kind 에 드는 파일인지 */
+export const isOffice = (kind, name) => name.lastIndexOf('.') > 0 && !!OFFICE_EXT[kind]?.has(name.slice(name.lastIndexOf('.') + 1).toLowerCase());
+
 // 엑셀 보기 (D77): xlsx·xlsm 은 서버가 값을 읽어(lectern/sheet.py) 코드 화면에 표로 — 옛 형식 xls·xlsb 는 엑셀로
 export const SHEET_VIEW_EXT = new Set(['xlsx', 'xlsm']);
 

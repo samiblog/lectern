@@ -6,7 +6,7 @@ import { setToc, PARTS } from './toc.js';
 import { setStatus } from './status.js';
 import { clearChanges } from './diffmark.js';
 import { paneOf } from './panes.js';
-import { kindBadge } from './tree.js';
+import { kindBadge, labelOf } from './tree.js';
 import { html, setHtml } from './html.js';
 import { $, timeAgo, formatDateTime, openHow } from './util.js';
 import { t } from './i18n.js';
@@ -40,7 +40,7 @@ function render(d, tab) {
       const where = relativeDir(f.path, d.path);
       return html`<li><button type="button" data-doc="${f.path}" title="${f.path}, ${formatDateTime(f.mtime)}">
         <span class="when">${timeAgo(f.mtime)}</span><span class="mark${fresh ? ' fresh' : ''}" aria-hidden="true"></span>
-        <span class="t">${f.title || f.name}${fresh ? html`<span class="sr">${t('(새 변경)')}</span>` : ''}</span>
+        <span class="t">${labelOf(f)}${fresh ? html`<span class="sr">${t('(새 변경)')}</span>` : ''}</span>
         <span class="where">${where}</span></button></li>`;
     })}</ol></section>`);
   }
@@ -56,10 +56,11 @@ function render(d, tab) {
   if (d.files.length) {
     parts.push(html`<section class="ov-sec"><h2>${d.dirs.length ? t('이 폴더의 문서') : t('문서')}</h2><ul class="ov-files">${d.files.map((f) => {
       const fresh = tab.changed.has(f.path);
+      const other = labelOf(f) === f.name ? f.title : f.name;   // 목록에 보이지 않는 쪽 (D202 — 기본은 파일 이름이 위, 제목이 아래)
       return html`<li><button type="button" data-doc="${f.path}">
-        <span class="t">${f.title || f.name}${kindBadge(f)}${fresh ? html`<span class="fresh-dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</span>
+        <span class="t">${labelOf(f)}${kindBadge(f)}${fresh ? html`<span class="fresh-dot" title="${t('열어 보기 전에 바뀜')}"></span>` : ''}</span>
         <span class="when" title="${formatDateTime(f.mtime)}">${timeAgo(f.mtime)}</span>
-        ${f.title ? html`<span class="fname">${f.name}</span>` : ''}
+        ${other && other !== labelOf(f) ? html`<span class="fname">${other}</span>` : ''}
         ${f.summary ? html`<span class="sum">${f.summary}</span>` : ''}
       </button></li>`;
     })}</ul></section>`);

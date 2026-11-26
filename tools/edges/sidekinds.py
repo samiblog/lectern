@@ -26,6 +26,8 @@ MARKED = ('# 시장 점검\n\n구리 가격은 <mark>크게 올랐다</mark> 그
 (proj / 'code' / 'calc.py').write_text('x = 1\n', encoding='utf-8')
 (proj / 'data' / '표.csv').write_text('a,b\n1,2\n', encoding='utf-8')
 doc = proj / 'report' / '점검.md'
+config.mkdir()
+(config / 'config.json').write_text(json.dumps({'doc_kinds': ['work', 'marks', 'tasks']}), encoding='utf-8')   # 업무·형광펜·할 일은 켤 때만 (D202)
 server, url, port = serve(proj, config)
 
 KINDS = "() => [...document.querySelectorAll('#lec-docs .kind-head')].map((b) => b.dataset.kind + ':' + (b.querySelector('.n')?.textContent || ''))"

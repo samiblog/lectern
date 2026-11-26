@@ -86,7 +86,7 @@ export async function saveConfig(patch) {
 // 변경 확인(watch.js)의 대답에 설정의 판 번호가 오고, 이 창이 아는 번호와 다르면 설정을 다시 받는다. 이 창이 마지막으로 받은 서버의 값과
 // 달라진 열쇠만 고른다 — 독립창에서만 바꾼 화면 설정(D95)은 다른 창이 그 열쇠를 바꿀 때까지 그대로 둔다.
 // 사이드바·목차·터미널의 폭과 보임, 검색·최근 변경의 단추, 사이드바의 펼친 묶음처럼 창마다의 화면 상태는 따르지 않는다.
-const FOLLOW = ['language', 'theme', 'slide_theme', 'theme_groups', 'pptx_style', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'side_sort', 'clip_sort',
+const FOLLOW = ['language', 'theme', 'slide_theme', 'theme_groups', 'pptx_style', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'doc_kinds', 'side_sort', 'clip_sort',
   'toc_hidden_parts', 'math', 'md_breaks', 'external_images', 'vi_keys', 'editor_keys', 'restore_last', 'expand_first_level', 'terminal_position',
   'terminal_follow_style', 'terminal_font_size', 'csv_stats', 'table_align', 'work_alerts', 'print_font', 'print_margin', 'print_margin_mm', 'print_header', 'print_page_numbers',
   'ai_tool', 'ai_scope_guide', 'ai_scope_skills', 'ai_style_where', 'ai_style', 'recent_md_styles', 'recent_templates', 'recent_puts', 'recent_chars'];

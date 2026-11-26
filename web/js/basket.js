@@ -27,7 +27,7 @@ import { html, setHtml } from './html.js';
 import { $, $$, toast, copyText, docUrl, isMd, isHtml, basename, dirname, timeAgo, keepFocus, blockedReadOnly, spotText, isPdf, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 import { aiCli, aiName } from './aitool.js';
-import { sendRowKey } from './tree.js';
+import { sendRowKey, labelOf } from './tree.js';
 
 let seq = 0;
 
@@ -385,7 +385,7 @@ function targetItems(query) {
     if (ed) out.push({ type: 'cursor', label: t('편집 중인 곳 — 커서 자리'), sub: ed.path });
     out.push({ type: 'new', label: t('새 문서…'), sub: t('경로를 정하면 바로 만들고 그 문서로 보냅니다') });
   }
-  return out.concat(docs.map((f) => ({ type: 'doc', file: f, label: f.title || f.name, sub: f.path, when: f.mtime ? timeAgo(f.mtime) : '' })));
+  return out.concat(docs.map((f) => ({ type: 'doc', file: f, label: labelOf(f), sub: f.path, when: f.mtime ? timeAgo(f.mtime) : '' })));
 }
 
 function placeItems(query) {

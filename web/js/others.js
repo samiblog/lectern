@@ -25,7 +25,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey } from './tree.js';
+import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newDocItem, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -57,7 +57,7 @@ export function openSection() {
 }
 const filesShown = () => !!S.tab && !$('#lec-files').hidden;
 const folderShown = () => openSection() === 'folder';
-export const fileTip = (f) => `${f.name}\n${formatSize(f.size)} · ${t('수정 {when}', { when: formatDateTime(f.mtime) })}\n${f.path}`;
+export { fileTip };
 
 /** 경로 → 노드 (부모 경로를 parent 로 단다 — ← 로 부모에 갈 때). 아직 읽지 않은 제외 폴더는 children 이 null */
 function indexOf(nodes, parent = null, map = new Map()) {
@@ -319,6 +319,7 @@ function load(tab, { fresh = false } = {}) {
       o.loading = null;
     }
     if (tab === S.tab) render();
+    emit('others-read', tab);   // '문서' 묶음의 오피스 하위 묶음 (tree.js — D202)
     if (o.stale) ensure();   // 읽는 동안 또 바뀌었다
   })();
   return o.loading;
@@ -716,6 +717,7 @@ function bindList(k) {
 
 export function initOthers() {
   for (const k of Object.keys(LISTS)) bindList(k);
+  bindFileRows($('#lec-tree'), (path) => state()?.index?.files.get(path) ?? null);   // '문서' 묶음의 오피스 하위 묶음 (D202 — tree.js 가 그린다)
   bindLayout();
   applyLayout();
   $('#lec-filter').addEventListener('input', render);

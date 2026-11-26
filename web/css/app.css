@@ -1355,6 +1355,8 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 .opt-block { margin: 0 0 6px; padding: 8px 4px 10px; border-bottom: 1px solid var(--ui-border); }
 .opt-block .opt-head { display: flex; flex-direction: column; gap: 1px; }
 .opt-block small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+.opt-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }   /* 설정의 체크 칸 여럿 한 줄에 (D202) */
+.opt-checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .opt-btns { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }
 .opt-btns .icon-btn { margin-left: -8px; }
 .opt-btns:has(.opt-num) { gap: 4px 8px; }

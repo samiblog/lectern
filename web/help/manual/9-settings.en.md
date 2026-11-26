@@ -29,6 +29,8 @@
 | Language (the title reads `언어 · Language` in both languages) | Auto (Windows display language) · 한국어 · English. Changing it reloads the window (open tabs and terminals stay) |
 | Resume where I left off | Opening a folder returns to the document and position you last viewed |
 | Expand top-level folders | Expands the first level of folders in the tree when a folder opens |
+| Show document titles in lists | Off (default): md documents show their file names, and the title when you point at them. Same as the sidebar 'Titles' button; document tabs, Open document, Recent changes, Search and folder overviews follow it |
+| Subgroups under 'Documents' in the sidebar | Which of Word, PowerPoint, Excel·CSV, Hangul (HWP), Work, Highlights and To-dos to show — at first only the four Office ones ([Sidebar](2.4-sidebar.en.md)) |
 
 ## View
 

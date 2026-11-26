@@ -23,7 +23,7 @@ proj = base / 'proj'
 (proj / 'data' / '표.csv').write_text('a,b\n1,2\n', encoding='utf-8')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
+(config / 'config.json').write_text(json.dumps({'work_alerts': False, 'doc_kinds': ['work', 'marks', 'tasks']}), encoding='utf-8')   # 형광펜·할 일 묶음은 켤 때만 (D202)
 server, url, port = serve(proj, config)
 
 SENT = "() => window.__sent || []"
