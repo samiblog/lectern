@@ -55,6 +55,7 @@ def main() -> int:
     for name in names:
         ok, line, took = run(name, exe)
         if not ok:
+            (LOGS / f'{name}.log').replace(LOGS / f'{name}.first.log')   # 처음 실패한 기록은 남긴다 — 다시 돌려 통과해도 까닭을 보게
             again, line2, took2 = run(name, exe)
             if again:
                 shaky.append(name)

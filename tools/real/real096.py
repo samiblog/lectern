@@ -185,7 +185,7 @@ try:
         win = R.new_window(b, None, 30, key='help=1')
         R.check('F1 — 곧바로 사용설명서 창 (실제 독립창)', win is not None)
         if win:
-            R.check('— 그 창이 설명서를 연다', R.wait(lambda: win.evaluate("!document.querySelector('#lec-help').hidden && document.querySelectorAll('#lec-help-toc a').length > 10"), 20))
+            R.check('— 그 창이 설명서를 연다', R.wait(lambda: win.evaluate("!!document.querySelector('#lec-help') && !document.querySelector('#lec-help').hidden && document.querySelectorAll('#lec-help-toc a').length > 10"), 20))
             R.check('— 메인 창은 덮지 않는다', not page.evaluate("!document.querySelector('#lec-help').hidden"))
             R.check('— 창 제목 사용설명서 - Lectern', R.wait(lambda: guide_window(), 10), titles())
             page.locator('#lec-content').focus()
