@@ -225,7 +225,7 @@ try:
         b, page = connect(p, cdp)
         R.check("펼친 묶음이 남는다 (마지막에 고른 '문서')", R.wait(lambda: page.evaluate("document.querySelector('#lec-docs').classList.contains('grow')"), 10))
         saved = json.loads((config / 'config.json').read_text(encoding='utf-8'))
-        R.check("설정 파일 — 판 3, files_view 없음", saved.get('version') == 3 and 'files_view' not in saved and saved.get('files_open') == 'docs', {k: saved.get(k) for k in ('version', 'files_view', 'files_open')})
+        R.check("설정 파일 — 판 3 이상 (지금 4 — D206), files_view 없음", (saved.get('version') or 0) >= 3 and 'files_view' not in saved and saved.get('files_open') == 'docs', {k: saved.get(k) for k in ('version', 'files_view', 'files_open')})
         b.close()
 except Exception:
     traceback.print_exc()
