@@ -24,7 +24,7 @@ import {
 import { pickBox } from './boxpick.js';
 import { newDocGuess, cleanPath, createDoc } from './newdoc.js';
 import { html, setHtml } from './html.js';
-import { $, $$, toast, copyText, docUrl, isMd, isHtml, basename, dirname, timeAgo, keepFocus, blockedReadOnly, rangeText, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
+import { $, $$, toast, copyText, docUrl, isMd, isHtml, basename, dirname, timeAgo, keepFocus, blockedReadOnly, spotText, isPdf, natCompare, openHow, repeatClick, middleClickOpens } from './util.js';
 import { t } from './i18n.js';
 import { aiCli, aiName } from './aitool.js';
 import { sendRowKey } from './tree.js';
@@ -111,7 +111,7 @@ function stopAsking() {
 function row(box, sn, put) {
   const { state } = stateOf(S.tab, sn);
   const main = sn.title || sn.label || sn.name || clip(sn.text, 40);
-  const tip = [main, sn.title && sn.label, sn.name !== main && sn.name, sn.path && `${sn.path}${sn.lines ? ` · ${rangeText(sn.lines)}` : ''}`, sn.at && t('{date} 담음', { date: sn.at }),
+  const tip = [main, sn.title && sn.label, sn.name !== main && sn.name, sn.path && spotText(sn).replace(`${sn.path} `, `${sn.path} · `), sn.at && t('{date} 담음', { date: sn.at }),
     state && (state === 'gone' ? t('원래 문서가 없습니다') : t('원래 문서가 바뀌었습니다')), sn.memo && `✎ ${sn.memo}`].filter(Boolean).join('\n');
   return html`<div class="row bk-item" tabindex="-1" data-file="${box.file}" data-id="${sn.id}" style="--d:1" title="${tip}"><span class="caret-space"></span><svg class="ficon" aria-hidden="true"><use href="#${iconOf(sn)}"/></svg><span class="label">${main}</span>${sn.memo ? html`<span class="bk-mark" aria-label="${t('메모')}">✎</span>` : ''}${state ? html`<span class="bk-mark warn">⚠</span>` : ''}${put ? html`<button type="button" class="text-btn bk-put" tabindex="-1" title="${t('편집 중인 문서의 커서 자리로 보내기')}">${t('보내기')}</button>` : ''}</div>`;
 }
@@ -257,8 +257,9 @@ export async function goToSource(sn, newTab = false, how = {}) {
     toast(t('담은 곳이 적혀 있지 않은 조각입니다'));
     return;
   }
-  const kind = isMd(sn.path) || isHtml(sn.path) ? 'doc' : 'code';
-  if (!(await openTarget({ type: kind, path: sn.path, newTab: newTab || !!S.pane?.editor, deckLine: sn.lines?.[0], ...how })) || how.behind) return;
+  const kind = isMd(sn.path) || isHtml(sn.path) || isPdf(sn.path) ? 'doc' : 'code';
+  const page = isPdf(sn.path) && sn.extra?.page ? `page=${sn.extra.page}` : '';   // PDF 에서 담은 것은 그 쪽으로 (D201)
+  if (!(await openTarget({ type: kind, path: sn.path, newTab: newTab || !!S.pane?.editor, deckLine: sn.lines?.[0], ...(page ? { hash: page } : {}), ...how })) || how.behind) return;
   if (!sn.lines || kind !== 'doc') return;
   let found = null;
   for (const el of S.pane.view.querySelectorAll('[data-lines]')) {
@@ -474,7 +475,7 @@ async function choose(i) {
 
 /** 담은 것들을 Claude Code 가 모아 새 문서로 만들게 하는 요청 글 (한 줄 — 여러 줄이면 터미널이 묻는다) */
 export function claudeRequest(snips, b = null) {
-  const refs = snips.map((sn) => `@${sn.path}${sn.lines ? ` ${rangeText(sn.lines)}` : ''}${sn.title || sn.label || sn.name ? ` ('${clip(sn.title || sn.label || sn.name, 30).replace(/'/g, '’')}')` : ''}`).join(', ');
+  const refs = snips.map((sn) => `@${spotText(sn)}${sn.title || sn.label || sn.name ? ` ('${clip(sn.title || sn.label || sn.name, 30).replace(/'/g, '’')}')` : ''}`).join(', ');
   const ask = t('다음 조각을 이 차례로 모아 새 Markdown 문서를 만들어 주세요. 파일 이름과 폴더는 내용에 맞게 정하고, 그림·링크·데이터의 상대경로는 새 문서 기준으로 고치고, 조각마다 담은 곳을 <!-- 담은 곳: 경로 줄 --> 주석으로 남겨 주세요: {refs}', { refs });
   const words = b && !clipsOf(S.tab).memory && (b.note || snips.some((sn) => sn.title || sn.memo)) ? ` ${t('담기함의 설명과 조각마다 단 제목·메모는 @.lectern/clips/{file} 에 있습니다.', { file: b.file })}` : '';
   return `${ask}${words}${S.writingGuide ? ` ${t('문서는 Lectern 작성 안내({path})를 따라 주세요.', { path: S.writingGuide })}` : ''}`;
@@ -509,7 +510,7 @@ export function clipMenu(b, sn, el, x, y, open = null) {
   if (i < items.length - 1) moves.push({ label: t('아래로'), hint: 'Alt+↓', action: () => moveClip(tab, b, sn, 1) });
   moves.push({ label: t('다른 담기함으로 옮기기…'), action: () => boxMenu(x, y, (to) => toBox(tab, b, [sn], to), { except: b, header: t('옮길 담기함') }) },
     { label: t('다른 담기함에 복사…'), action: () => boxMenu(x, y, (to) => toBox(tab, b, [sn], to, { copy: true }), { except: b, header: t('복사할 담기함') }) });
-  const copyItem = { label: t('원문 복사'), tip: sn.lines ? `${sn.path} ${rangeText(sn.lines)}` : '', term: sn.text,
+  const copyItem = { label: t('원문 복사'), tip: sn.lines || sn.extra?.page ? spotText(sn) : '', term: sn.text,
     action: async () => toast(await copyText(sn.text) ? t('복사했습니다: {what}', { what: clip(sn.label || sn.name, 30) }) : t('복사하지 못했습니다')) };
   const menu = menuGroups([{ header: `${clip(sn.title || sn.label || sn.name || sn.text, 40)}${sn.path ? ` · ${sn.path}` : ''}` }], [...(open ? [{ label: t('펼친 화면에서 보기'), hint: 'Enter', action: open }] : []), ...(sn.path ? [{ label: t('문서에서 보기'), hint: open ? '' : 'Enter', action: () => goToSource(sn) }] : [])],
     [copyItem], sends, moves, [{ label: t('빼기'), hint: 'Delete', action: () => removeClips(tab, b, new Set([sn.id])) }]);

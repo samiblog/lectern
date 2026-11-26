@@ -6,7 +6,7 @@
 // - 제목 수준: 조각의 맨 위 제목을 넣을 자리에 맞춘다 (조각 안의 차이는 그대로, 1~6).
 // - 넣을 자리: 맨 앞(맨 앞 설정·문서 제목 아래), 맨 끝(끝의 각주 정의 앞), 절 끝, 커서가 든 블록 끝 — 앞뒤에 빈 줄을 둔다.
 
-import { rangeText } from './util.js';
+import { spotText } from './util.js';
 import { t } from './i18n.js';
 
 const FENCE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
@@ -270,7 +270,7 @@ export function placeText(lines, at, body) {
 // ---- 조각 모으기 ----------------------------------------------------------------
 
 /** 담은 곳 주석 (D63 — 화면에는 보이지 않고 Claude Code 는 읽는다). 주석을 닫는 글자는 넣지 않는다 */
-export const provenance = (snip) => `<!-- ${t('담은 곳: {path}', { path: `${snip.path}${snip.lines ? ` ${rangeText(snip.lines)}` : ''}` }).replace(/-{2,}>?/g, '-')} -->`;
+export const provenance = (snip) => `<!-- ${t('담은 곳: {path}', { path: spotText(snip) }).replace(/-{2,}>?/g, '-')} -->`;
 
 /**
  * 조각들을 넣을 글 하나로: 조각마다 담은 곳 주석, 경로를 넣을 문서(to) 기준으로, 각주 정의를 함께(이름이 겹치면 바꿔서),

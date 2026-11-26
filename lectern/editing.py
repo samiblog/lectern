@@ -51,8 +51,8 @@ UTF16_BOMS = {'utf-16-le': b'\xff\xfe', 'utf-16-be': b'\xfe\xff'}
 
 
 def can_edit(name: str) -> bool:
-    """편집 모드로 고칠 수 있는 종류 — 문서(md·html)와 코드, 자료 파일 csv·tsv·txt (D171)"""
-    return bool(doc_kind(name)) or is_code(name) or Path(name).suffix.lower() in DATA_EDIT_EXT
+    """편집 모드로 고칠 수 있는 종류 — 문서(md·html — PDF 는 보기만, D201)와 코드, 자료 파일 csv·tsv·txt (D171)"""
+    return doc_kind(name) in ('markdown', 'html') or is_code(name) or Path(name).suffix.lower() in DATA_EDIT_EXT
 
 
 def _protect(path: Path) -> None:
@@ -516,6 +516,8 @@ def delete_doc(root: Path, rel: str, exclude: frozenset[str], html_exclude: froz
     kind = doc_kind(parts[-1])
     if not kind or (kind == 'html' and any(f in html_exclude for f in folders)):
         raise EditError(400, t('문서만 지웁니다 — 코드와 자료는 지우지 않습니다'))
+    if kind == 'pdf':
+        raise EditError(400, t('PDF 는 보기만 합니다 — 지우려면 탐색기에서 지우세요'))
     if any(f in exclude for f in folders):
         raise EditError(400, t('제외 폴더 안의 문서는 지우지 않습니다'))
     source = resolve_inside(root, '/'.join(parts))

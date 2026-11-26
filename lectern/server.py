@@ -42,6 +42,9 @@ FIXED_TYPES = {
     '.css': 'text/css',
     '.svg': 'image/svg+xml',   # <img> 의 SVG 는 이 형식이어야 그려진다 (/doc/* 의 그림)
     '.woff2': 'font/woff2',
+    '.wasm': 'application/wasm',   # pdf.js 의 그림 디코더 (D201)
+    '.bcmap': 'application/octet-stream',
+    '.pfb': 'application/octet-stream',
 }
 
 
@@ -380,7 +383,7 @@ def create_app(state: AppState) -> Flask:
         # docs·code: 찾을 묶음 (없으면 문서만 — 예전 화면과 같게). 코드는 사이드바 '코드' 목록의 파일 (D44)
         want_docs = request.args.get('docs', '1') != '0'
         want_code = request.args.get('code', '0') == '1'
-        docs = list(iter_files(project.scan())) if want_docs else []
+        docs = [f for f in iter_files(project.scan()) if f.get('kind') != 'pdf'] if want_docs else []   # PDF 의 글은 읽지 않는다 (D201 — 이름으로는 '문서 열기')
         code = [f for f in iter_files(project.scan_others()[0]) if is_code(f['name'])] if want_code else []
         return jsonify(search(project.root, docs, code, query, project.texts))
 
@@ -1174,6 +1177,11 @@ def create_app(state: AppState) -> Flask:
             resp = send_file(target, mimetype='text/html', conditional=True, max_age=0)
             resp.headers['Content-Type'] = 'text/html; charset=utf-8'
             resp.headers['Content-Security-Policy'] = html_doc_policy(state.config.get('external_images') is not False)
+            return resp
+        if kind == 'pdf':   # pdf.js 가 받아 그린다 (D201 — web/vendor/pdfjs). 주소로 바로 열어도 아무것도 돌지 않게
+            resp = send_file(target, mimetype='application/pdf', conditional=True, max_age=0)
+            resp.headers['Content-Security-Policy'] = 'sandbox'
+            resp.headers['X-Content-Type-Options'] = 'nosniff'
             return resp
         return send_file(target, conditional=True, max_age=0)
 

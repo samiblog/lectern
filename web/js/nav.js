@@ -9,7 +9,7 @@ import { paneShown } from './panes.js';
 import { unfoldTo } from './fold.js';
 import { blockOfLine } from './lineunits.js';
 import { revealAt } from './spotlight.js';
-import { isHtml, toast } from './util.js';
+import { isHtml, isPdf, toast } from './util.js';
 import { t } from './i18n.js';
 
 const renderers = {};
@@ -21,9 +21,10 @@ export function addRenderer(type, show) {
 
 /** 화면 종류·문서 형식에 맞는 렌더러 (md: doc.js, html: htmldoc.js, 코드: codeview.js — D43, 폴더 개요: overview.js, 모아 보기: 등록된 것) */
 function render(pane, target, opts) {
-  if (renderers[target.type]) return renderers[target.type](pane, target.path, opts);
+  if (target.type !== 'pdf' && renderers[target.type]) return renderers[target.type](pane, target.path, opts);
   if (target.type === 'code') return showCode(pane, target.path, opts);
   if (target.type === 'overview') return showOverview(pane, target.path, opts);
+  if (isPdf(target.path)) return renderers.pdf(pane, target.path, opts);   // PDF (D201 — main.js 가 pdfview 를 등록한다)
   return isHtml(target.path) ? showHtml(pane, target.path, opts) : showDoc(pane, target.path, opts);
 }
 

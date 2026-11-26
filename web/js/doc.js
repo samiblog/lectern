@@ -18,7 +18,7 @@ import { paneOf } from './panes.js';
 import { openLightbox } from './ui.js';
 import { isViewable } from './icons.js';
 import {
-  $, $$, docUrl, isMd, isHtml, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow, linkTargets,
+  $, $$, docUrl, isMd, isHtml, isPdf, toast, copyText, formatDateTime, findAnchor, dirname, newTabWanted, linkHow, linkTargets,
 } from './util.js';
 import { t } from './i18n.js';
 import { captionAt, captionId } from './refs.js';
@@ -200,7 +200,7 @@ export function bindLink(a, baseUrl, docPath, tab, root = null) {
           e.preventDefault();
           emit('open', { type: 'overview', path: r.path });
         });
-      } else if (isMd(r.path) || (isHtml(r.path) && tab.fileMap.has(r.path))) {
+      } else if (isMd(r.path) || ((isHtml(r.path) || isPdf(r.path)) && tab.fileMap.has(r.path))) {   // PDF 는 Lectern 안에서 — '#page=12' 면 그 쪽 (D201)
         // html 은 트리에 보이는 문서일 때만 뷰어로 연다 (src 등 소스 폴더의 html 은 편집기로)
         a.dataset.lecOpen = '';   // 앱 안에서 연다 — 우클릭 '새 문서 탭에서 열기' (docmenu.js, D91)
         linkTargets.set(a, { type: 'doc', path: r.path, hash: r.hash });   // 우클릭 '새 창에서 열기' (D95)

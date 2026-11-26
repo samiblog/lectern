@@ -11,6 +11,7 @@
 | Marking places to come back to · notes · collecting pieces | [Highlights, notes and clip](3.5-highlights-notes-clip.en.md) |
 | Viewing code · CSV · Excel, tables as charts | [Code and data files](3.6-code-and-data-files.en.md) |
 | The project's tables · images · to-dos · links in one place | [Elements](3.7-elements.en.md) |
+| View PDFs page by page, find in them and clip | [Viewing PDFs](3.8-pdf.en.md) |
 
 ## Folder overview
 

@@ -1,0 +1,40 @@
+%PDF-1.7
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R /OpenAction 5 0 R /AcroForm << /Fields [] >> >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 6 0 R >> >> /Annots [7 0 R] >>
+endobj
+4 0 obj
+<< /Length 118 >>
+stream
+BT /F1 18 Tf 72 760 Td (Script and link test) Tj ET BT /F1 14 Tf 72 700 Td (click: http://127.0.0.1:9/leak-link) Tj ET
+endstream
+endobj
+5 0 obj
+<< /S /JavaScript /JS (app.alert('pdf script ran'); this.submitForm('http://127.0.0.1:9/leak-submit'); app.launchURL('http://127.0.0.1:9/leak-launch');) >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+7 0 obj
+<< /Type /Annot /Subtype /Link /Rect [72 690 400 720] /Border [0 0 1] /A << /S /URI /URI (http://127.0.0.1:9/leak-link) >> >>
+endobj
+xref
+0 8
+0000000000 65535 f 
+0000000009 00000 n 
+0000000103 00000 n 
+0000000160 00000 n 
+0000000302 00000 n 
+0000000471 00000 n 
+0000000642 00000 n 
+0000000712 00000 n 
+trailer
+<< /Size 8 /Root 1 0 R >>
+startxref
+853
+%%EOF

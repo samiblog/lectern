@@ -21,7 +21,7 @@ from typing import Any
 from .docinfo import cached_info, doc_info
 from .osutil import how_to_open
 
-DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html'}
+DOC_TYPES = {'.md': 'markdown', '.markdown': 'markdown', '.html': 'html', '.htm': 'html', '.pdf': 'pdf'}   # PDF 는 보기만 (D201)
 DEFAULT_HTML_EXCLUDE_DIRS = frozenset({'src', 'public', 'static', 'templates', 'web', 'www', 'frontend', 'out'})
 DEFAULT_EXCLUDE_DIRS = frozenset({
     'node_modules', '__pycache__', 'venv', 'env', 'dist', 'build', 'target',
@@ -39,7 +39,7 @@ def natural_key(name: str) -> list:
 
 
 def doc_kind(name: str) -> str | None:
-    """'markdown' | 'html' | None (문서가 아님)"""
+    """'markdown' | 'html' | 'pdf' | None (문서가 아님)"""
     return DOC_TYPES.get(os.path.splitext(name)[1].lower())
 
 
@@ -91,7 +91,7 @@ class Titles:
 
 def scan(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS, rel: str = '',
          with_info: bool = True, html_exclude: Iterable[str] = DEFAULT_HTML_EXCLUDE_DIRS, titles: Titles | None = None) -> list[Node]:
-    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로. 파일 노드의 kind 는 markdown | html.
+    """root/rel 아래의 트리. 각 노드의 path는 root 기준 '/' 구분 상대경로. 파일 노드의 kind 는 markdown | html | pdf.
     titles: 제목을 기억에서 얻는다 (D140 — 없으면 문서마다 앞부분을 읽는다)"""
     excl = frozenset(x.lower() for x in exclude)
     html_excl = frozenset(x.lower() for x in html_exclude)
@@ -233,7 +233,7 @@ def scan_others(root: Path, exclude: Iterable[str] = DEFAULT_EXCLUDE_DIRS,
                     dirs.append({'type': 'dir', 'name': name, 'path': path, 'children': children})
                 continue
             kind = doc_kind(name)
-            if kind == 'markdown' or (kind == 'html' and html_ok):
+            if kind in ('markdown', 'pdf') or (kind == 'html' and html_ok):
                 continue   # 문서 트리에 있다
             if count[0] >= limit:
                 count[1] = True

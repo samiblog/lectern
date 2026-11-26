@@ -718,6 +718,31 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 .pv-grid .pv-body.md-body img { max-width: 100%; height: auto; }
 .pv-grid .pv-body.md-body svg { max-width: 100%; height: auto; }
 /* 펼친 담기함 (clipview.js — D197) */
+/* PDF 보기 (pdfview.js — D201): 위에 붙은 막대(쪽·확대·기본 앱), 쪽을 세로로 — 그린 쪽은 캔버스와 글 층(pdf.js 의 textLayer), 링크 */
+.pdf-view { min-height: 100%; background: color-mix(in srgb, var(--ui-fg) 6%, var(--ui-bg)); color: var(--ui-fg); font-family: var(--ui-font); font-size: 13px; }
+.pdf-bar { position: sticky; top: 0; z-index: 3; display: flex; align-items: center; gap: 10px; min-height: 38px; padding: 4px 12px; border-bottom: 1px solid var(--ui-border); background: var(--ui-bg); }
+.pdf-pageno { display: inline-flex; align-items: center; gap: 6px; color: var(--ui-muted); }
+.pdf-page { width: 52px; height: 26px; padding: 0 6px; border: 1px solid var(--ui-border); border-radius: 6px; background: var(--ui-bg); color: var(--ui-fg); font: inherit; text-align: right; }
+.pdf-total { color: var(--ui-muted); font-variant-numeric: tabular-nums; }
+.pdf-zoom { display: inline-flex; align-items: center; gap: 2px; }
+.pdf-fit { min-width: 54px; height: 26px; font-variant-numeric: tabular-nums; }
+.pdf-fit[aria-pressed="true"] { color: var(--ui-accent); }
+.pdf-note { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ui-muted); font-size: 12px; }
+.pdf-pages { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 16px 20px 40vh; }
+.pdf-pg { position: relative; flex: none; background: #fff; box-shadow: 0 1px 3px rgb(0 0 0 / .22); }
+.pdf-pg canvas { display: block; }
+.pdf-link { position: absolute; z-index: 2; border-radius: 2px; }
+.pdf-link:hover { outline: 2px solid color-mix(in srgb, var(--ui-accent) 70%, transparent); }
+.pdf-view .doc-missing { max-width: 720px; margin: 40px auto; padding: 0 24px; }
+.pdf-view .textLayer { position: absolute; inset: 0; overflow: clip; line-height: 1; text-align: initial; transform-origin: 0 0; caret-color: CanvasText; z-index: 0;
+  --min-font-size: 1; --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size)); --min-font-size-inv: calc(1 / var(--min-font-size)); }
+.pdf-view .textLayer :is(span, br) { color: transparent; position: absolute; white-space: pre; cursor: text; transform-origin: 0% 0%; }
+.pdf-view .textLayer > :not(.markedContent), .pdf-view .textLayer .markedContent span:not(.markedContent) { z-index: 1; --font-height: 0; font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1; --rotate: 0deg; transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv)); }
+.pdf-view .textLayer .markedContent { display: contents; }
+.pdf-view .textLayer ::selection { background: rgb(0 100 255 / .25); }
+.pdf-view .textLayer .endOfContent { display: block; position: absolute; inset: 100% 0 0; z-index: 0; cursor: default; user-select: none; }
+.ficon.doc.pdf, .side-list .ficon.doc.pdf, .doc-tab .ficon.doc.pdf { color: var(--ui-pdf, #c43d3d); }
 .clips-view { max-width: 920px; margin: 0 auto; padding: 26px 40px 96px; color: var(--md-fg, var(--ui-fg)); font-family: var(--ui-font); font-size: 13px; }
 .clips-view [hidden] { display: none !important; }
 .cb-kind { margin: 0 0 2px; color: var(--ui-muted); font-size: 12px; font-weight: 600; }

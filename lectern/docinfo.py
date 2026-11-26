@@ -229,6 +229,8 @@ def doc_info(path: Path, st: Any = None) -> dict[str, Any]:
     hit = _CACHE.get(key)
     if hit and hit[0] == sig:
         return hit[1]
+    if path.suffix.lower() == '.pdf':   # PDF (D201) — 글을 읽지 않는다. 트리에는 파일 이름이 나온다
+        return {'title': None, 'summary': ''}
     try:
         if path.suffix.lower() in ('.html', '.htm'):
             info = extract_html_info(read_text(path, HTML_HEAD_BYTES))

@@ -57,6 +57,7 @@
 | tablefitplan.js | 표 열 너비의 계산 (D173, DOM 없음) — 잰 값으로 열 폭 후보를 짓고(`plan`·`planAvg`·`planPair`·`scrollPlan`) 그려 잰 나쁨으로 고른다(`choose`). 규칙 시험 `tools/edges/tablefit_cases.js` 가 node 에서 임의의 표로 본다 |
 | diffmark.js | 자동 새로고침 때 바뀐 블록 강조, 상태줄 '바뀐 곳' 버튼과 F7·Shift+F7 (D170) |
 | search.js | 사이드바 '검색' 탭 — 맨 위에 이름이 맞는 파일(문서·코드·자료), 그 아래 문서·코드 본문 검색 (서버는 lectern/search.py) |
+| pdfview.js | PDF 보기 (D201) — pdf.js(web/vendor/pdfjs)로 문서 칸에. 보이는 쪽만 그림·글 층·링크, 지금 쪽, 확대, 책갈피 목차, 찾기(pane.findProvider), 고른 글 담기(`pdfHere` — 담은 곳은 그 쪽), Shift+→ 로 `@경로 N쪽`. 보기만 |
 | parts.js | 모아 보기 — 문서 탭 하나의 화면 (D196 — 화면 종류 `parts`, `nav.addRenderer` 로 등록한 `showParts`. 0.102 까지는 사이드바 탭). '문서 속 요소' / '문서 정보'(D62) / '파일 종류'(D50). 문서 속 요소는 범위(프로젝트·폴더)의 문서를 화면 밖에서 그려 목차와 같은 규칙(`toc.js` 의 `readParts`)으로 세고, 종류마다 문서별 묶음에 실제 요소(캡션·몸체·주·자료)를 옮겨 와 펼친다 — 묶음이 보일 때 (`fillGroup`). 할 일·링크·출처는 한 줄씩. 내용으로 거르기와 맞은 낱말 표시, '새 문서로'·'AI 에', 출처 줄로 그 문서의 그 자리로, 우클릭은 Claude용 위치·원문 복사·담기 (D61·D63), 목차 패널에 모은 것의 차례 |
 | settings.js / position.js | 설정 창 (톱니, Ctrl+,) / 탭마다 마지막 문서·스크롤 위치 기록 |
 | pathlink.js | 본문 속 경로 표기(`src/app.py:42`) 자동 링크 |

@@ -30,6 +30,7 @@ function clearMarks() {
   }
   ranges = [];
   current = -1;
+  ext?.clear();
   $('#lec-find-count').textContent = '';
 }
 
@@ -69,10 +70,47 @@ function locate(parts, at) {
   return [parts[lo][1], at - parts[lo][0]];
 }
 
+let ext = null;     // 화면이 스스로 찾는 곳 (PDF — pdfview.js 의 pane.findProvider, D201): {search(q) → 수, go(i, scroll) → Range, visible() → Range[], clear()}
+let asked = 0;     // 그 화면에 물은 차례 — 늦게 온 대답은 버린다
+
+async function searchExt(provider, query, keepIndex, prev) {
+  const ask = ++asked;
+  const count = await provider.search(query);
+  if (ask !== asked || ext !== provider) return;
+  win = window;
+  if (!count) {
+    $('#lec-find-count').textContent = query.trim() ? t('없음') : '';
+    return;
+  }
+  ranges = Array.from({ length: count });
+  goExt(keepIndex && prev >= 0 ? Math.min(prev, count - 1) : 0, !keepIndex);
+}
+
+async function goExt(index, scroll = true) {
+  if (!ranges.length || !ext) return;
+  current = (index + ranges.length) % ranges.length;
+  $('#lec-find-count').textContent = `${current + 1}/${ranges.length}`;
+  if (scroll && !jumped) {
+    jumped = true;
+    emit('jump');
+  }
+  const ask = ++asked;
+  const r = await ext.go(current, scroll);
+  if (ask !== asked || !supported(window)) return;
+  const all = ext.visible();
+  if (all.length) window.CSS.highlights.set('lec-find', new window.Highlight(...all));
+  if (r) window.CSS.highlights.set('lec-find-current', new window.Highlight(r));
+}
+
 function search(keepIndex = false) {
   const prev = current;
   clearMarks();
   const query = input().value;
+  ext = !target ? S.pane?.findProvider || null : null;
+  if (ext) {
+    searchExt(ext, query, keepIndex, prev);
+    return;
+  }
   const root = rootOf();
   const doc = root.ownerDocument;
   win = doc.defaultView;
@@ -96,6 +134,10 @@ function search(keepIndex = false) {
 }
 
 function go(index, scroll = true) {
+  if (ext) {
+    goExt(index, scroll);
+    return;
+  }
   if (!ranges.length) return;
   current = (index + ranges.length) % ranges.length;
   win.CSS.highlights.set('lec-find-current', new win.Highlight(ranges[current]));

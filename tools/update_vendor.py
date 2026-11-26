@@ -44,6 +44,7 @@ PACKAGES: dict[str, str] = {
     'echarts': '6.1.0',                 # ```echarts
     '@viz-js/viz': '3.31.0',            # ```dot · ```graphviz — Graphviz 를 WebAssembly 로 (파일 하나에 들어 있다)
     'plotly.js-dist-min': '4.1.2',      # ```plotly — 전체판 (사용자가 고름 — 나눈 판보다 크지만 모든 종류)
+    'pdfjs-dist': '6.5.438',            # PDF 보기 (D201) — 처음 PDF 를 열 때 pdfview.js 가 ES 모듈로 불러온다
 }
 
 # npm 에 없는 판 — GitHub 태그에서 받는다: {패키지: (저장소, 태그)}. --latest 여도 이 태그 그대로다.
@@ -95,6 +96,11 @@ FILES: list[tuple[str, str, str]] = [
     ('@viz-js/viz', 'dist/viz-global.js', 'viz/viz-global.js'),
     ('plotly.js-dist-min', 'plotly.min.js', 'plotly/plotly.min.js'),
     ('impress.js', 'js/impress.js', 'impress/impress.js'),   # 플러그인이 든 묶음 (impressConsole·navigation·progress 등)
+    ('pdfjs-dist', 'build/pdf.min.mjs', 'pdfjs/pdf.min.mjs'),
+    ('pdfjs-dist', 'build/pdf.worker.min.mjs', 'pdfjs/pdf.worker.min.mjs'),
+    ('pdfjs-dist', 'cmaps', 'pdfjs/cmaps'),                    # 글꼴을 넣지 않은 한·중·일 PDF 의 글자표 (*.bcmap)
+    ('pdfjs-dist', 'standard_fonts', 'pdfjs/standard_fonts'),  # Foxit 기본 글꼴만 (*.pfb — GPL 인 Liberation 은 넣지 않는다)
+    *(('pdfjs-dist', f'wasm/{w}', f'pdfjs/wasm/{w}') for w in ('openjpeg.wasm', 'jbig2.wasm', 'qcms_bg.wasm')),
 ]
 
 LICENSE_NAMES = ('LICENSE', 'LICENSE.md', 'LICENSE.txt', 'license', 'UNLICENSE')
@@ -110,11 +116,18 @@ def npm_install(workdir: Path, specs: list[str]) -> None:
     subprocess.run(cmd, cwd=workdir, check=True, shell=(os.name == 'nt'))
 
 
+# 폴더를 복사할 때 고르는 파일 (대상 경로의 마지막 이름 → 패턴). 없으면 woff2 글꼴만
+DIR_PATTERNS = {'cmaps': '*.bcmap', 'standard_fonts': '*.pfb'}
+# 라이선스를 따로 두는 묶음의 파일 (패키지 안 경로 → licenses 의 이름 꼬리)
+EXTRA_PACKAGE_LICENSES = {'pdfjs-dist': ['wasm/LICENSE_OPENJPEG', 'wasm/LICENSE_PDFJS_OPENJPEG', 'wasm/LICENSE_JBIG2', 'wasm/LICENSE_PDFJS_JBIG2',
+                                         'wasm/LICENSE_QCMS', 'wasm/LICENSE_PDFJS_QCMS', 'standard_fonts/LICENSE_FOXIT']}
+
+
 def copy_item(src: Path, dest: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     if src.is_dir():
         dest.mkdir(parents=True, exist_ok=True)
-        for font in src.glob('*.woff2'):
+        for font in src.glob(DIR_PATTERNS.get(dest.name, '*.woff2')):
             shutil.copy2(font, dest / font.name)
     else:
         shutil.copy2(src, dest)
@@ -155,6 +168,9 @@ def main() -> None:
                     if lic.is_file():
                         shutil.copy2(lic, lic_dir / f"{pkg.replace('/', '__')}{suffix}.txt")
                         break
+        for pkg, files in EXTRA_PACKAGE_LICENSES.items():
+            for rel in files:
+                shutil.copy2(modules / pkg / rel, VENDOR / 'licenses' / f"{pkg}.{rel.replace('/', '.')}.txt")
         for lic in EXTRA_LICENSES.glob('*.txt'):
             shutil.copy2(lic, VENDOR / 'licenses' / lic.name)
 

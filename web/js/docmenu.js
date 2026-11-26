@@ -10,11 +10,12 @@
 
 import { S, emit } from './store.js';
 import { showMenu, menuGroups } from './ui.js';
-import { pathMenuItems } from './tree.js';
+import { pathMenuItems, renameItem } from './tree.js';
 import { foldAll, foldLevel, hasFolds } from './fold.js';
 import { spotlightItems, litAt, lightOn, releaseItem, sendLit, copyLitRef, copyLitSource, litOneLine, editHere, litSpan, hereLine } from './spotlight.js';
 import { blockOfLine } from './lineunits.js';
 import { partExtent, captionOf } from './toc.js';
+import { isPdfView, pdfHere, pageOfSelection, pageRef } from './pdfview.js';
 import { snippetOf, addSnippets, sendSnippets, boxMenu, clipLabel } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
 
@@ -33,7 +34,7 @@ import { colName, columnMenu, chartRange, markRange } from './csvview.js';
 import { openChart, domTable } from './quickchart.js';
 import { $, toast, copyText, rangeText, lineRef, isMd, isHtml, basename, linkTargets } from './util.js';
 import { t } from './i18n.js';
-import { aiName, reviewPrompt, voicePrompt, memoPrompt } from './aitool.js';
+import { aiName, aiCli, reviewPrompt, voicePrompt, memoPrompt } from './aitool.js';
 import { printDoc, openPrint, canSavePdf, canExportHtml } from './printdoc.js';
 import { copyParts, copyTable, tableSize } from './tablecopy.js';
 
@@ -295,6 +296,7 @@ function blockTake(picked) {
  * md 문서에서만. 무엇을 담았는지는 알림에
  */
 function hereSnippet() {
+  if (isPdfView()) return pdfHere();   // PDF (D201) — 고른 글, 담은 곳은 그 쪽
   const view = $('#lec-view');
   const at = (where, snip) => ({ snip, rect: where.getBoundingClientRect() });
   const cur = S.pane?.current;
@@ -552,6 +554,30 @@ function codeLineMenu(e, view, x, y) {
 }
 
 /** view: 블록을 고를 범위 (#lec-view, html 문서면 iframe 의 body). x·y: 메뉴를 띄울 화면 좌표 */
+/** PDF 화면의 우클릭 메뉴 (D201 — pdfview.js): 고른 글 복사·담기, 그 쪽의 위치 복사, 기본 앱으로 열기, 경로 항목 */
+function pdfMenu(e, x, y, pane = S.pane) {
+  const st = pane?.pdf;
+  if (!st) return;
+  e.preventDefault();
+  const sel = getSelection();
+  const selected = !sel.isCollapsed && pane.view.contains(sel.anchorNode) ? sel.toString().trim() : '';
+  const n = (selected && pageOfSelection(pane)) || Number(/** @type {Element} */ (e.target).closest?.('.pdf-pg')?.dataset.n) || st.cur;
+  const ref = pageRef(st, n);
+  /** @type {MenuItem[]} */
+  const takes = [];
+  if (selected) {
+    const here = () => pdfHere(pane);
+    takes.push({ label: clipLabel(t('고른 글 담기')), hint: 'Alt+C', action: () => { const h = here(); if (h) addSnippets([h.snip]); } },
+      { label: t('다른 담기함에 담기…'), hint: 'Alt+Shift+C', action: () => { const h = here(); if (h) boxMenu(x, y, (to) => addSnippets([h.snip], '', to)); } });
+  }
+  showMenu(x, y, menuGroups([{ header: `${basename(st.path)} · ${t('{n}쪽', { n })}` }],
+    selected ? [{ label: t('고른 글 복사'), hint: 'Ctrl+C', action: () => copyText(selected).then((ok) => toast(ok ? t('복사했습니다: {what}', { what: t('고른 글') }) : t('복사하지 못했습니다'))), term: selected }] : [],
+    [{ label: t('위치 복사'), hint: 'Shift+←', tip: t('{cli} 프롬프트에 붙여 넣기', { cli: aiCli() }), action: () => copyText(ref).then((ok) => toast(ok ? t('복사했습니다: {what}', { what: ref }) : t('복사하지 못했습니다'))), term: `${ref} ` }],
+    takes,
+    [{ label: t('기본 앱으로 열기'), tip: t('인쇄·주석·양식은 그 앱에서'), action: () => openExternal(st.path) }],
+    pathMenuItems(st.path, false), [renameItem(st.path)]));
+}
+
 function openMenu(e, view, x, y) {
   menuAt = [x, y];
   if (lightOn() && !litAt(e.clientY, e.target)) {   // 흐린 곳은 끄기만 (D118) — 하이라이트한 줄 안은 고른 줄의 선택 상자 (D139)
@@ -561,6 +587,10 @@ function openMenu(e, view, x, y) {
   }
   if (view.classList?.contains('code-view')) {
     codeMenu(e, view, x, y);
+    return;
+  }
+  if (view.classList?.contains('pdf-view')) {   // PDF (D201)
+    pdfMenu(e, x, y);
     return;
   }
   doc = S.pane?.source ?? null;   // 보이는 칸은 선택된 탭의 칸뿐이다 (panes.js)

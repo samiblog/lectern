@@ -194,13 +194,13 @@ def run(headed: bool) -> None:
     report = work / 'docs' / '04-HTML-보고서.html'
     report.write_text(report.read_text(encoding='utf-8').replace(
         '</head>', f'<link rel="stylesheet" href="{remote}leak-html.css"></head>'), encoding='utf-8')
-    # 문서 외 파일: 목록에 나올 것(csv·실행 파일·루트의 pdf, 접힌 제외 폴더)과 나오지 않을 것(숨김)
+    # 문서 외 파일: 목록에 나올 것(csv·실행 파일·루트의 rtf — pdf 는 문서다 D201, 접힌 제외 폴더)과 나오지 않을 것(숨김)
     (work / 'data').mkdir()
     (work / 'data' / '표.csv').write_text('품목,값\n구리,1\n', encoding='utf-8')
     (work / 'data' / 'setup.exe').write_bytes(b'MZ')
     (work / 'data' / '.secret.txt').write_text('숨김', encoding='utf-8')
     (work / 'node_modules' / 'some-lib' / 'index.js').write_text('x', encoding='utf-8')
-    (work / '첨부.pdf').write_bytes(b'%PDF-1.4')
+    (work / '첨부.rtf').write_bytes(b'{\rtf1 x}')
     # 차트 예제의 CSV(docs/data)는 [차트] 점검 동안만 둔다 — '자료' 목록·거르기 점검은 위의 파일만 센다
     shutil.rmtree(work / 'docs' / 'data')
     port = free_port()
@@ -1648,7 +1648,7 @@ def run(headed: bool) -> None:
             ccount = page.inner_text('#lec-code-count')
             heads = [page.inner_text(f'#lec-{h}-head').split()[0] for h in ('docs', 'code', 'others')]
             docs_n = page.inner_text('#lec-docs-count')
-            check(olabels() == ['data', 'empty-folder', 'node_modules', 'research', '첨부.pdf'] and clabels() == ['code', 'src']
+            check(olabels() == ['data', 'empty-folder', 'node_modules', 'research', '첨부.rtf'] and clabels() == ['code', 'src']
                   and int(count) + int(ccount) == 7 and heads == ['문서', '코드', '자료'] and int(docs_n) == page.evaluate('document.querySelectorAll("#lec-tree .row.file").length')
                   and all(boxes[i]['y'] + boxes[i]['height'] <= boxes[i + 1]['y'] + 1 for i in range(2)),
                   f"위에서부터 '문서'·'코드'·'자료' 세 묶음 — 자료는 문서·코드가 아닌 것과 제외 폴더, 코드는 소스·웹·설정, 폴더 먼저·접힌 채로, 숨김은 없음 "
@@ -1661,7 +1661,7 @@ def run(headed: bool) -> None:
             icons = [icon_of(sel) for sel in ('#lec-tree .row[data-doc="docs/01-기능-점검.md"]', '#lec-tree .row[data-doc="docs/04-HTML-보고서.html"]',
                                               '#lec-tree .row.dir[data-dir="docs"]', '#lec-recent .row[data-file="docs/01-기능-점검.md"]',
                                               f'{olist} .row[data-path="data/표.csv"]', f'{olist} .row[data-path="data/setup.exe"]',
-                                              f'{olist} .row[data-path="첨부.pdf"]', f'{olist} .row[data-path="data"]')]
+                                              f'{olist} .row[data-path="첨부.rtf"]', f'{olist} .row[data-path="data"]')]
             head = page.inner_text('#lec-others-head')
             check(icons == ['#i-md', '#i-html', '#i-folder', '#i-md', '#i-table', '#i-app', '#i-text', '#i-folder'] and head.startswith('자료'),
                   f"파일 이름 앞에 종류 아이콘 — 문서(md·html)·폴더·최근 변경·자료 목록, 머리줄은 '자료' ({icons}, {head!r})")
@@ -1827,7 +1827,7 @@ def run(headed: bool) -> None:
             print('[코드·자료의 최근 변경·검색·파일 종류]')
             page.locator('.side-tabs button[data-tab="recent"]').click()
             rrow = lambda path: page.locator(f'#lec-recent .row[data-file="{path}"]')
-            got_files = wait_until(page, "!!document.querySelector('#lec-recent .row[data-file=\"첨부.pdf\"]')"
+            got_files = wait_until(page, "!!document.querySelector('#lec-recent .row[data-file=\"첨부.rtf\"]')"
                                    " && !!document.querySelector('#lec-recent .row[data-file=\"code/example.py\"]')", 8000)
             pressed = page.evaluate("['docs', 'code', 'others'].map(k => document.querySelector('#lec-recent-' + k).getAttribute('aria-pressed'))")
             example = work / 'code' / 'example.py'
@@ -1835,17 +1835,17 @@ def run(headed: bool) -> None:
             touched = wait_until(page, "document.querySelector('#lec-recent .row')?.dataset.file === 'code/example.py'", 8000)
             page.click('#lec-recent-code')
             no_code = wait_until(page, "!document.querySelector('#lec-recent .row[data-file$=\".py\"]')"
-                                 " && !!document.querySelector('#lec-recent .row[data-file=\"첨부.pdf\"]')", 5000)
+                                 " && !!document.querySelector('#lec-recent .row[data-file=\"첨부.rtf\"]')", 5000)
             saved_off = config_is('recent_code', False)
             page.click('#lec-recent-code')
             back = wait_until(page, "document.querySelector('#lec-recent .row')?.dataset.file === 'code/example.py'", 5000)
-            body = opens(rrow('첨부.pdf').dblclick)
+            body = opens(rrow('첨부.rtf').dblclick)
             rrow('code/example.py').click(modifiers=['Alt'])
             to_code = wait_until(page, "document.querySelector('#lec-st-path').textContent === 'code/example.py' && !!document.querySelector('#lec-view .cv-line')", 5000)
-            r_menu = menu(rrow('첨부.pdf'))
+            r_menu = menu(rrow('첨부.rtf'))
             page.keyboard.press('Escape')
-            check(got_files and pressed == ['true'] * 3 and touched and no_code and saved_off and back and body['path'] == '첨부.pdf' and to_code
-                  and '탐색기에서 보기' in r_menu and '@첨부.pdf 복사' in r_menu,
+            check(got_files and pressed == ['true'] * 3 and touched and no_code and saved_off and back and body['path'] == '첨부.rtf' and to_code
+                  and '탐색기에서 보기' in r_menu and '@첨부.rtf 복사' in r_menu,
                   "최근 변경에 코드·자료도 — '문서'·'코드'·'자료' 버튼(설정 저장), 코드를 고치면 맨 위로, 자료는 두 번 눌러 열기, 코드는 한 번 눌러 읽기 화면, 우클릭은 자료 목록과 같은 메뉴")
             page.locator('.side-tabs button[data-tab="search"]').click()
             page.fill('#lec-search-input', 'setup')
@@ -1883,7 +1883,7 @@ def run(headed: bool) -> None:
             page.click('#lec-view .parts-all')
             page.locator('#lec-view .parts-mode button[data-mode="parts"]').click()   # 아래 점검은 문서 속 요소로
             back_parts = wait_until(page, "!!document.querySelector('#lec-view .parts-kinds button[data-kind]')", 5000)
-            check(chips.get('문서', [])[:1] == ['md'] and 'py' in chips.get('코드', []) and {'csv', 'exe', 'pdf', 'svg'} <= set(chips.get('자료', []))
+            check(chips.get('문서', [])[:1] == ['md'] and 'py' in chips.get('코드', []) and {'csv', 'exe', 'rtf', 'svg'} <= set(chips.get('자료', []))
                   and thumb and csv_rows == ['data/표.csv'] and pinfo == '파일 1개' and body['path'] == 'data/표.csv'
                   and scoped and data_chips == ['others:csv', 'others:exe'] and back_parts,
                   f"모아 보기 '파일 종류' — 문서·코드·자료마다 형식 버튼, 그림 파일은 작은 그림, 자료는 두 번 눌러 열기, '자료' 목록의 폴더 우클릭으로 그 폴더만 ({chips}, {data_chips})")

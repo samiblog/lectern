@@ -62,7 +62,7 @@ flowchart LR
 ### 스캔 (scanner.py)
 - `scan(root, exclude, rel='', with_info=True, html_exclude=...)` → 트리 노드 목록. 폴더 먼저, 그다음 파일. 각각 자연 정렬(`2장 < 10장`).
   - 폴더 노드: `{type:'dir', name, path, children}`
-  - 파일 노드: `{type:'file', name, path, kind, mtime, size, title}` (`path` 는 root 기준 `/` 구분 상대경로, `kind` 는 `DOC_TYPES` 의 `markdown`·`html`)
+  - 파일 노드: `{type:'file', name, path, kind, mtime, size, title}` (`path` 는 root 기준 `/` 구분 상대경로, `kind` 는 `DOC_TYPES` 의 `markdown`·`html`·`pdf` — PDF 는 보기만, D201)
   - html 은 `html_exclude`(기본 `DEFAULT_HTML_EXCLUDE_DIRS` + 설정 `html_exclude_dirs`) 이름의 폴더 안에 있으면 뺀다 (앱 소스의 `index.html` 등, D27).
 - 제외 규칙: 모듈 머리 주석 참고. 제외 폴더 기본값은 `DEFAULT_EXCLUDE_DIRS`, 설정 `exclude_dirs` 로 추가(대소문자 무시).
 - `scan_others(root, exclude, html_exclude)` → 문서가 아닌 파일의 트리 ('코드'·'자료' 목록, `/api/others`). 숨김·링크 규칙은 `scan()` 과 같다. 제외 폴더는 안을 훑지 않고 접힌 노드 `{type:'dir', name, path, children: None, excluded: True}` 로만 싣는다 (D49 — 파일 수에 넣지 않음). `list_dir(root, rel)` 은 제외 폴더 안의 한 단계 (`/api/others/dir`). 트리를 도는 코드(`iter_files` 등)는 `children` 이 None 일 수 있음을 본다.
@@ -133,7 +133,7 @@ flowchart LR
 | `table_align` | `"auto"` | 가능 | md 문서 표의 칸 맞춤 — `auto`(글 왼쪽·숫자 오른쪽·위)·`report`(보고서식 — 머리행·짧은 열 가운데, 세로 가운데). doc.js 가 그릴 때 표에 `lec-report`, 열에 `num`·`short` (설정 창 '보기', D174) |
 | `clip_sort` | `"name"` | 가능 | 사이드바 담기 탭의 담기함 차례 — `name`·`time`(마지막에 고친 것부터, D198) |
 | `files_open` | `"docs"` | 가능 | 사이드바 파일 탭에서 펼친 묶음 — `docs`·`code`·`others`·`folder`(폴더 구조 그대로 — D169). 한 번에 하나만 (D143, 프로젝트 탭마다 `tab.side.filesOpen`). 0.92 까지의 `files_view: folder` 는 `folder` 로 옮긴다 |
-| `docs_kind` | `"all"` | 가능 | '문서' 묶음에서 펼친 하위 묶음 — `all`·`md`·`deck`·`html`·`work`·`marks`·`tasks` (D143) |
+| `docs_kind` | `"all"` | 가능 | '문서' 묶음에서 펼친 하위 묶음 — `all`·`md`·`deck`·`html`·`pdf`·`work`·`marks`·`tasks` (D143) |
 | `search_docs` / `search_code` | `true` | 가능 | 전체 검색에서 찾을 곳 — 검색 칸 아래 '문서'·'코드' 버튼 (D44) |
 | `search_others` | `true` | 가능 | 전체 검색에서 자료를 이름으로 찾음 — '자료' 버튼 (D50) |
 | `recent_docs` / `recent_code` / `recent_others` | `true` | 가능 | 최근 변경 탭에 보일 것 — 위의 '문서'·'코드'·'자료' 버튼 (D50) |
@@ -254,7 +254,7 @@ flowchart LR
 | `POST /api/term/resize` | `{t, cols, rows}` | 셸 화면 크기 |
 | `GET /api/term/info?t=<셸 id>` | | `{alive, busy, stuck}` — `busy`: 셸에서 띄운 프로그램이 돎 (탭을 닫기 전에 묻는다), `stuck`: read 와 같음 |
 | `POST /api/term/close` | `{t}` | 셸과 셸에서 띄운 프로그램을 끝낸다 (다시 시작). 없는 셸도 `{ok:true}` |
-| `GET /doc/<id>/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin allow-modals`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20) 와 `Referrer-Policy: no-referrer` (html 문서 속 인터넷 그림이 앱 주소를 보내지 않게). 숨김·밖·없음·폴더·열려 있지 않은 id 는 404 |
+| `GET /doc/<id>/<경로>` | | md는 `text/markdown; charset=utf-8` 원문, html 은 `text/html; charset=utf-8` + 문서용 CSP(`html_doc_policy`: `sandbox allow-same-origin allow-modals`, 스크립트·연결·폼 금지, 그림은 `external_images`, D27), 그 밖은 파일 그대로 + `Content-Security-Policy: sandbox`. 모두 `X-Content-Type-Options: nosniff` (D20) 와 `Referrer-Policy: no-referrer` (html 문서 속 인터넷 그림이 앱 주소를 보내지 않게). 숨김·밖·없음·폴더·열려 있지 않은 id 는 404 | PDF 는 `application/pdf` 에 `Content-Security-Policy: sandbox` (D201 — pdf.js 가 받아 그리고, 범위 요청으로 나눠 받는다).
 
 상태 코드: 400 잘못된 요청(필수 값 없음, JSON 객체가 아님, 폴더가 아님, 탭이 10개) · 403 토큰 불일치 또는 허용되지 않은 Host · 404 없음·숨김·프로젝트 밖·열려 있지 않은 프로젝트 id · 405 잘못된 메서드 · 413 터미널 입력이 너무 김 · 415 `/api/*` POST 의 본문이 JSON(`Content-Type: application/json`)이 아님 · 500 OS가 파일 열기·셸 띄우기에 실패 · 501 터미널을 쓸 수 없는 Windows (1809 미만). 터미널 API 는 비밀값이 틀리면 403, 끝났거나 없는 셸은 404. `/api/*` 의 오류는 모두 `{error}` JSON이다.
 

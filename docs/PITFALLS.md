@@ -120,6 +120,14 @@
 - 글머리 글자 목록(D192, `marklist.js`)은 markdown-it 블록 규칙이라 원문의 '- '·'2.' 줄이 Markdown 목록이 아니게 된다 — 원문 줄로 목록을 읽는 코드(`lineops` 의 itemOf 등)와 다르다. 그래서 화면 쪽은 항목(`p.lec-mark`)을 보고 갈라 준다: 한 줄 편집은 머리 글자까지 칸에 두고(`keepMark` — splitText 는 '- ' 를 머리로 떼어 낸다), 새 줄은 `planMark`(같은 머리 글자·하위 항목 뒤), 지우기는 `deleteLines` 의 `plain`(그 줄만), 나누기·잇기는 `splitMark`·`joinMark`, 옮기기는 `moveMarks`(원문으로는 '- ' 줄 뒤의 'ㅇ' 줄이 그 목록 항목에 이어 쓴 줄이라 보통 옮기기는 그 너머로 간다). 문서 점검(`doclint.js`)은 같은 플러그인으로 읽고 줄로 보는 목록 점검은 묶음의 줄(`marked`)을 건너뛴다 — 줄로 목록을 읽는 새 점검·줄 조작을 더하면 묶음 안의 줄을 본다. 수준은 문서 전체의 차례라 한 줄을 고치면 다른 묶음의 수준도 바뀔 수 있다 (그 문서가 쓴 차례가 바뀌면). 슬라이드와 Markdown 목록 항목 안에서는 하지 않는다 — 목록 항목 안에서 문단을 끊으면 촘촘한 목록의 줄바꿈이 사라진다 (`inListItem`).
 - 문서 맨 앞의 머리 설정은 접힌 `<details class="front-matter">` 다 (D189) — 그 안의 글을 읽는 기능·점검은 보이는 글(`innerText`·playwright 의 `inner_text`)이 아니라 `textContent` 로 읽는다. 문서 속 어느 곳으로 가는 새 길은 `fold.unfoldTo` 를 거쳐야 접힌 머리 설정·절·박스글이 펴진다.
 
+### PDF 보기 (pdfview.js — D201)
+
+- pdf.js 의 `cMapUrl`·`standardFontDataUrl`·`wasmUrl` 은 절대경로(`/static/vendor/pdfjs/…`)로 준다 — 상대경로는 일꾼(worker) 파일 기준으로 풀려 글꼴을 넣지 않은 한글 PDF 의 글자가 빠진다.
+- 다른 PDF 를 열거나 배율을 바꿔 쪽 자리를 다시 놓을 때는 스크롤 자리를 먼저 정한다 — 지켜보기(IntersectionObserver)는 보이는 쪽만 그리므로, 옛 자리가 남으면 첫 쪽이 그려지지 않는다. 지금 쪽은 지켜보기가 알려 주기 전에도 `pageAtTop` 으로 잰다.
+- 폭 맞춤 배율은 칸 폭을 따른다 — 책갈피가 있으면 목차 패널이 열려 폭이 바뀐다. 스크롤 자리를 되살리기 전에 책갈피를 붙이고 배율을 정한다 (아니면 옛 배율의 픽셀 자리로 가서 다른 쪽이 나온다).
+- pdf.js 6 의 문서에는 `destroy` 가 없다 — 불러오기 작업(`doc.loadingTask`)을 놓는다 (`release`). 'rendered' 처리기에서 던지면 뒤의 처리기가 돌지 않는다.
+- pdfview.js 는 basket·tree·docmenu 를 import 하지 않는다 — 화면의 큰 import 순환에 들어간다. 우클릭 메뉴는 docmenu.js 가 짓는다.
+
 ## 스타일·문구·예제
 
 - 새 스타일은 `theme.js` 의 `THEMES` 에 `light(이름, 용도, 분위기, 밝기, Mermaid 색)` 또는 `dark(이름, Mermaid 색)` 로 넣는다. 밝은 스타일은 세 묶는 방식 모두의 묶음을 정해야 목록에 나온다 (D30). 머리행을 짙게 칠하는 스타일은 `--md-th-fg` 로 글자색을 준다 (인쇄 때는 검정으로 덮인다). 터미널 색은 스타일의 `--md-code-bg`·`--md-fg`·`--md-link` 와 밝기로 저절로 정해진다 — 이름이 같은 터미널 색표(Solarized 등)가 있는 스타일만 `terminal.js` 의 `PALETTES` 에 더한다.

@@ -170,7 +170,7 @@ def test_others_layout_settings(tmp_path):
     cfg.update_client({'files_open': 'folder', 'docs_kind': 'marks'})          # 넷째 묶음 '폴더' (D169)
     assert cfg.get('files_open') == 'folder'
     cfg.update_client({'files_open': 'code'})
-    cfg.update_client({'files_open': 'tree', 'docs_kind': 'pdf'})               # 모르는 값은 버린다
+    cfg.update_client({'files_open': 'tree', 'docs_kind': 'xls'})               # 모르는 값은 버린다
     assert cfg.get('files_open') == 'code' and cfg.get('docs_kind') == 'marks'
     cfg.update_client({'others_height': 240})                                    # 없어진 키는 받지 않는다
     assert 'others_height' not in cfg.data

@@ -25,7 +25,7 @@ import { setEditJump, updateTocActive } from './toc.js';
 import { unfoldTo } from './fold.js';
 import { logChange, toEditor, toView, headLines, marksOf, markAt, yOfLine, lineOfY, lineOfElement } from './editsync.js';
 import { html, setHtml } from './html.js';
-import { $, toast, formatClock, isHtml, blockedReadOnly } from './util.js';
+import { $, toast, formatClock, isHtml, blockedReadOnly, isPdf } from './util.js';
 import { isCode, isDataEditable } from './icons.js';
 import { t } from './i18n.js';
 import { pickDate } from './datepick.js';
@@ -298,7 +298,7 @@ function setDirty(ed, dirty) {
 function updateButton() {
   const editing = !!S.pane?.editor;
   // 코드 화면의 자료: csv·tsv·txt 는 원래 인코딩 그대로 고친다 (D171), log·엑셀은 보기만 (D60·D77)
-  const can = S.view?.type === 'doc' || (S.view?.type === 'code' && (isCode(S.view.path) || isDataEditable(S.view.path)));
+  const can = (S.view?.type === 'doc' && !isPdf(S.view.path)) || (S.view?.type === 'code' && (isCode(S.view.path) || isDataEditable(S.view.path)));
   $('#lec-st-edit').hidden = !can || editing || !!S.tab?.readonly;   // 보기만 하는 프로젝트 (D71) — 탭 막대의 [편집]은 눌러서 까닭을 알린다
   const btn = $('#lec-btn-edit');
   btn.setAttribute('aria-pressed', String(editing));
@@ -310,6 +310,10 @@ export async function openEditor(pane = S.pane, { line = 0 } = {}) {
   const view = pane?.current;
   if (!pane?.tab || (view?.type !== 'doc' && view?.type !== 'code')) {
     toast(t('문서나 코드를 열면 편집할 수 있습니다'));
+    return;
+  }
+  if (view.type === 'doc' && isPdf(view.path)) {   // PDF 보기 (D201)
+    toast(t('PDF 는 보기만 합니다 — 고치려면 기본 앱으로 여세요'));
     return;
   }
   if (blockedReadOnly(pane.tab)) return;   // Lectern 프로그램 폴더 안 (D71)

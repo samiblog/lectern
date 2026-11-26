@@ -2,3 +2,7 @@
 *.py text eol=lf
 *.md text eol=lf
 *.iss text eol=crlf
+*.pdf binary
+*.bcmap binary
+*.pfb binary
+*.wasm binary

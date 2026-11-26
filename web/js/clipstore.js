@@ -5,7 +5,7 @@
 
 import { S, emit } from './store.js';
 import { getJSON, getText, postJSON } from './api.js';
-import { toast, docUrl, isMd } from './util.js';
+import { toast, docUrl, isMd, isPdf } from './util.js';
 import { t } from './i18n.js';
 import { parseBox, writeBox, mergeBox, newClipId, findPiece } from './clipdata.js';
 
@@ -359,10 +359,10 @@ export async function checkBox(tab, box) {
   const texts = new Map();
   let news = false;
   for (const c of [...(box?.items || [])]) {
-    const f = c.path && isMd(c.path) ? tab.fileMap.get(c.path) : null;
+    const f = c.path && (isMd(c.path) || isPdf(c.path)) ? tab.fileMap.get(c.path) : null;   // PDF 는 있는지만 (D201)
     const key = `${c.path}|${c.lines || ''}|${f ? f.mtime : ''}`;
     if (st.states.get(c.id)?.key === key) continue;
-    let state = c.path && isMd(c.path) && !f ? 'gone' : '';
+    let state = c.path && (isMd(c.path) || isPdf(c.path)) && !tab.fileMap.has(c.path) ? 'gone' : '';
     let lines = null;
     if (f && !c.plain && c.lines) {
       if (!texts.has(c.path)) {

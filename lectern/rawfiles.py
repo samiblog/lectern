@@ -66,7 +66,7 @@ CONFIG_DOCS: dict[str, tuple[str, str]] = {
     'side_sort': (N_('사이드바 목록의 차례 — name(이름)·time(시간)·type(형식). 폴더가 먼저'), W_SIDEBAR),
     'clip_sort': (N_('담기함의 차례 — name(이름)·time(마지막에 고친 것부터)'), W_SIDEBAR),
     'files_open': (N_("사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder(폴더 구조 그대로)"), W_SIDEBAR),
-    'docs_kind': (N_("'문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·work·marks·tasks"), W_SIDEBAR),
+    'docs_kind': (N_("'문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·work·marks·tasks"), W_SIDEBAR),
     'toc_visible': (N_('오른쪽 목차 보이기'), W_TOC),
     'search_docs': (N_('검색에서 문서를 찾음'), W_SIDEBAR),
     'search_code': (N_('검색에서 코드를 찾음'), W_SIDEBAR),

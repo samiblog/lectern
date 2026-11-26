@@ -98,6 +98,10 @@ declare global {
     gather?: any;
     /** 펼친 담기함의 화면 상태 (clipview.js — D197) */
     clipv?: any;
+    /** PDF 보기의 상태 (pdfview.js — D201) */
+    pdf?: any;
+    /** 찾기(find.js)를 화면이 스스로 할 때 — PDF (D201) */
+    findProvider?: any;
     used?: any;
     /** md 문서 점검의 결과 (doccheck.js — D190) */
     lint?: { path: string; issues: LintIssue[] } | null;

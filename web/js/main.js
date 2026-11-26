@@ -21,6 +21,7 @@ import { initTableFit } from './tablefit.js';
 import { clipHere, clipHereTo, initDocMenu, useWordMenu } from './docmenu.js';
 import { initChangeMarks, stepChange } from './diffmark.js';
 import { initSearch, openSearch } from './search.js';
+import { showPdf, initPdf } from './pdfview.js';
 import { initParts, showParts, focusPartsFilter, clipChunk } from './parts.js';
 import { initStatus } from './status.js';
 import { initOverview } from './overview.js';
@@ -549,6 +550,8 @@ async function boot() {
   addRenderer('parts', showParts);   // 모아 보기 화면 (D196 — 문서 탭 하나에)
   initParts();
   addRenderer('clips', showClips);   // 펼친 담기함 (D197)
+  addRenderer('pdf', showPdf);   // PDF 보기 (D201) — 문서 화면에서 경로가 .pdf 일 때 nav.js 가 부른다
+  initPdf();
   initClipView();
   initRecent();  // 같은 까닭 (트리가 사이드바 탭을 바꾸면 숨은 목록의 스크롤 위치를 읽지 못한다)
   initSettings();

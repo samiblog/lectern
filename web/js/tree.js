@@ -7,7 +7,7 @@ import { saveConfig, openExternal, revealInExplorer, getJSON } from './api.js';
 import { showMenu, menuGroups } from './ui.js';
 import { fileIcon, folderIcon } from './icons.js';
 import { html, setHtml } from './html.js';
-import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd, lineRef } from './util.js';
+import { $, $$, dirname, copyText, toast, keepFocus, openHow, repeatClick, middleClickOpens, clickFromKey, isMd, isPdf, lineRef } from './util.js';
 import { t } from './i18n.js';
 import { aiCli } from './aitool.js';
 import { sideOrder } from './sideorder.js';
@@ -21,6 +21,7 @@ const KINDS = () => [
   { id: 'md', name: t('문서'), keep: (f) => f.kind === 'markdown' && !f.deck },
   { id: 'deck', name: t('슬라이드'), keep: (f) => !!f.deck },
   { id: 'html', name: 'HTML', keep: (f) => f.kind === 'html' },
+  { id: 'pdf', name: 'PDF', keep: (f) => f.kind === 'pdf' },   // D201 — 보기만
   { id: 'work', name: t('업무'), keep: (f) => f.name.toLowerCase() === 'work.md' },
   { id: 'marks', name: t('형광펜'), content: true },
   { id: 'tasks', name: t('할 일'), content: true },
@@ -78,7 +79,7 @@ export function hasChangedInside(dirPath) {
 }
 
 /** html 문서 표시 (md 와 구분) — 폴더 개요에서. 사이드바 목록은 아이콘으로 구분한다 (icons.js) */
-export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" title="${t('HTML 문서')}">HTML</span>` : '');
+export const kindBadge = (f) => (f.kind === 'html' ? html`<span class="kind" title="${t('HTML 문서')}">HTML</span>` : f.kind === 'pdf' ? html`<span class="kind" title="${t('PDF — 보기만')}">PDF</span>` : '');
 
 function fileRow(f, depth, extra = null, tell = '') {
   const cls = ['row', 'file'];
@@ -362,6 +363,7 @@ function onRowClick(e) {
   }
   if (row.dataset.doc != null) {
     if (!repeatClick(e)) emit('open', { type: 'doc', path: row.dataset.doc, ...openHow(e) });   // D91
+    else if (isPdf(row.dataset.doc)) openExternal(row.dataset.doc);   // PDF 를 두 번 누르면 기본 앱으로 (D201)
     return;
   }
   const dir = row.dataset.dir;
@@ -423,7 +425,7 @@ export function pathMenuItems(path, isDoc) {
   copies.push({ label: t('전체 경로 복사'), action: () => copy(fullPath(path)), term: shellWord(fullPath(path)) });
   /** @type {MenuItem[]} */
   const opens = [];
-  if (isDoc) opens.push({ label: t('외부 편집기로 열기'), action: () => openExternal(path) });
+  if (isDoc) opens.push(isPdf(path) ? { label: t('기본 앱으로 열기'), hint: t('두 번 누르기'), action: () => openExternal(path) } : { label: t('외부 편집기로 열기'), action: () => openExternal(path) });
   opens.push({ label: t('탐색기에서 보기'), action: () => revealInExplorer(path) });
   /** @type {MenuItem[]} */
   const views = [];
@@ -514,7 +516,7 @@ function onContextMenu(e) {
   if (row.dataset.doc != null) {
     const path = row.dataset.doc;
     const items = [...docMenuItems(path), ...(currentKind().id === 'marks' ? clearItems(path) : [])];
-    showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), deleteItem(path)]);
+    showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), ...(isPdf(path) ? [] : [deleteItem(path)])]);   // PDF 는 보기만 (D201)
   }
   else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), newFolderItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
 }

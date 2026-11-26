@@ -55,7 +55,7 @@ DEFAULTS: dict[str, Any] = {
     'side_sort': 'name',     # 사이드바 목록의 차례: name | time | type (D97 — 폴더가 먼저)
     'clip_sort': 'name',     # 사이드바 '담기' 탭의 담기함 차례: name | time (마지막에 고친 것부터 — D198)
     'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder (D143 — 한 번에 하나만 펼친다, folder 는 폴더 구조 그대로 — D169)
-    'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·work·marks·tasks (D143)
+    'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·work·marks·tasks (D143·D201)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
     'search_code': True,     # 전체 검색에서 코드를 찾음 ('코드' 버튼, D44)
@@ -106,7 +106,7 @@ DEFAULTS: dict[str, Any] = {
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
 AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
 FILES_OPEN = ('docs', 'code', 'others', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
-DOCS_KINDS = ('all', 'md', 'deck', 'html', 'work', 'marks', 'tasks')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
+DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).

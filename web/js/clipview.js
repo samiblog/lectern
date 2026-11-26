@@ -25,7 +25,7 @@ import { setStatus } from './status.js';
 import { clearChanges } from './diffmark.js';
 import { setDocSource } from './docmenu.js';
 import { aiCli } from './aitool.js';
-import { $, $$, linkHow, rangeText, middleClickOpens, repeatClick, copyText, toast } from './util.js';
+import { $, $$, linkHow, spotText, middleClickOpens, repeatClick, copyText, toast } from './util.js';
 import { t } from './i18n.js';
 
 const isClips = (pane) => !!pane?.clipv && !!pane.view?.classList.contains('clips-view');
@@ -73,7 +73,7 @@ function skeleton() {
 const nameOf = (c) => c.label || c.name || t('조각');
 
 function cardHtml(c) {
-  const where = `${c.path}${c.lines ? ` ${rangeText(c.lines)}` : ''}`;
+  const where = spotText(c);
   return [html`<div class="cb-row"><span class="cb-n"></span><input class="cb-name" type="text" aria-label="${t('조각의 제목')}" spellcheck="false" autocomplete="off">
     <span class="cb-btns"><button type="button" class="icon-btn small" data-act="up" title="${t('위로 (Alt+↑)')}"><svg><use href="#i-up"/></svg></button><button type="button" class="icon-btn small" data-act="down" title="${t('아래로 (Alt+↓)')}"><svg><use href="#i-down"/></svg></button><button type="button" class="icon-btn small" data-act="del" title="${t('빼기 (Delete)')}"><svg><use href="#i-close"/></svg></button></span></div>`,
   html`<div class="cb-src">${c.path ? html`<button type="button" class="cb-go" title="${t('문서에서 보기 — 그 자리로 갑니다 (Alt+← 로 돌아옵니다)')}">${where}</button>` : html`<span>${t('담은 곳 없음')}</span>`}${c.at ? html`<span class="cb-at">${t('{date} 담음', { date: c.at })}</span>` : ''}<span class="cb-state" hidden></span></div>`,

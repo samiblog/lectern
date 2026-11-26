@@ -29,6 +29,7 @@ export const linkTargets = new WeakMap();
 
 export const isMd = (p) => /\.(md|markdown)$/i.test(p);
 export const isHtml = (p) => /\.html?$/i.test(p);
+export const isPdf = (p) => /\.pdf$/i.test(p);   // 보기만 하는 문서 (D201 — pdfview.js)
 
 /** 지금 화면의 문서 내용 뿌리: md 는 #lec-view, html 문서는 iframe 의 body (htmldoc.js) */
 export function docRoot() {
@@ -93,6 +94,9 @@ export function timeAgo(sec) {
  * @type {(range: number[]) => string}
  */
 export const rangeText = ([a, b]) => (a === b ? t('{a}행', { a }) : t('{a}~{b}행', { a, b }));
+
+/** 조각의 담은 곳 '경로 12~20행' — PDF 에서 담은 것은 '경로 3쪽' (D201 — 조각의 page 값) */
+export const spotText = (sn) => `${sn.path}${sn.lines ? ` ${rangeText(sn.lines)}` : sn.extra?.page ? ` ${t('{n}쪽', { n: sn.extra.page })}` : ''}`;
 
 /** Claude용 위치 '@경로 12~20행' — 엑셀 보기는 시트 이름도 ('@표.xlsx '1분기' 시트 3~5행' — D77) */
 export const lineRef = (path, range, sheet = '') => `@${path} ${sheet ? `${t("'{name}' 시트", { name: sheet })} ` : ''}${rangeText(range)}`;
