@@ -25,7 +25,7 @@
 
 import { S, emit, on } from './store.js';
 import { getJSON, postJSON, saveConfig, openExternal, revealInExplorer } from './api.js';
-import { fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
+import { loadMarks, fullPath, labelOf, tipOf, telling, tellHtml, docMenuItems, newFolderItem, newFileItem, renameItem, hasChangedInside, shellWord, workCardItem, switchPanel, sendRowKey, fileTip } from './tree.js';
 import { fileIcon, folderIcon, isCode, isViewable } from './icons.js';
 import { showMenu, menuGroups } from './ui.js';
 import { html, setHtml } from './html.js';
@@ -45,7 +45,8 @@ const LISTS = {
 };
 // 묶음 넷 (위에서부터 — index.html 의 순서와 같게). 한 번에 하나만 펼친다 (D143). list: 그 묶음의 목록 (문서는 tree.js 의 #lec-tree)
 const SECTIONS = [{ name: 'docs', el: '#lec-docs', list: '#lec-tree' }, { name: 'code', el: '#lec-code', list: '#lec-code-list' },
-  { name: 'others', el: '#lec-others', list: '#lec-others-list' }, { name: 'folder', el: '#lec-folder', list: '#lec-folder-list' }];
+  { name: 'others', el: '#lec-others', list: '#lec-others-list' }, { name: 'work', el: '#lec-work', list: '#lec-work-list' },   // 작업 — 업무 카드·형광펜·할 일 (D204, tree.js)
+  { name: 'folder', el: '#lec-folder', list: '#lec-folder-list' }];
 
 const listEl = (k) => $(LISTS[k].el);
 const keyOf = (el) => el?.closest?.('[data-list]')?.dataset.list || 'files';
@@ -826,7 +827,10 @@ export async function focusFiles() {
   const wasShown = filesShown();
   if (!wasShown) switchPanel('files', { focus: false });
   let i = SECTIONS.findIndex((s) => s.name === openSection());
-  if (wasShown && $(SECTIONS[i].list).contains(document.activeElement)) {   // 목록 안일 때만 — 머리줄을 누른 뒤면 그 목록으로 들어간다
+  const here = $(SECTIONS[i].el);
+  const empty = !$(SECTIONS[i].list)?.querySelector('.row');
+  // 목록 안일 때만 — 머리줄을 누른 뒤면 그 목록으로 들어간다. 목록에 행이 없으면(빈 '작업' 등) 머리줄에서도 다음 묶음으로 (D204 — 거기 머물지 않게)
+  if (wasShown && ($(SECTIONS[i].list).contains(document.activeElement) || (empty && here.contains(document.activeElement)))) {
     i = (i + 1) % SECTIONS.length;
     openSectionNamed(SECTIONS[i].name);
   }
@@ -835,6 +839,12 @@ export async function focusFiles() {
     $(s.el).querySelector('.side-head').focus();
     await loadOthers(S.tab);
     if (openSection() !== s.name || !$(s.el).contains(document.activeElement)) return;   // 그사이 다른 곳으로 갔다
+  }
+  if (s.name === 'work' && S.tab) {   // '작업' — 형광펜·할 일을 읽은 뒤에 행으로 (D204)
+    $(s.el).querySelector('.side-head').focus();
+    await loadMarks(S.tab);
+    await new Promise((r) => requestAnimationFrame(r));
+    if (openSection() !== s.name || !$(s.el).contains(document.activeElement)) return;
   }
   const el = sectionTarget(s);
   el?.focus({ preventScroll: true });

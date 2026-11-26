@@ -37,7 +37,7 @@ SEEDS = [int(x) for x in sys.argv[1:]] or [1, 2, 3]
 STEPS = 45
 OFFICE = {'word': {'docx', 'doc', 'docm', 'dotx', 'dot', 'rtf', 'odt'}, 'ppt': {'pptx', 'ppt', 'pptm', 'ppsx', 'pps', 'potx', 'odp'},
           'excel': {'xlsx', 'xls', 'xlsm', 'xlsb', 'xltx', 'csv', 'tsv', 'ods'}, 'hwp': {'hwp', 'hwpx'}}
-OPTIONAL = ['word', 'ppt', 'excel', 'hwp', 'work', 'marks', 'tasks']
+OPTIONAL = ['word', 'ppt', 'excel', 'hwp']   # 업무·형광펜·할 일은 '작업' 묶음 (D204)
 EXCLUDE = {x.lower() for x in DEFAULT_EXCLUDE_DIRS}
 KINDS = "() => [...document.querySelectorAll('#lec-docs .kind-head')].map((b) => [b.dataset.kind, b.querySelector('.n').textContent])"
 FOLDER = "() => [...document.querySelectorAll('#lec-folder-list .row')].map((r) => r.dataset.path)"
@@ -168,7 +168,7 @@ def run(seed):
                     if not page.locator('#lec-docs .kind-head').count():
                         return
                     page.click('#lec-docs .kind-head >> nth=0', button='right')
-                    name = rnd.choice(['Word', 'PowerPoint', 'Excel·CSV', '한글(HWP)', '업무', '형광펜', '할 일'])
+                    name = rnd.choice(['Word', 'PowerPoint', 'Excel·CSV', '한글(HWP)'])
                     page.locator('#lec-menu').get_by_text(name, exact=True).click()
                 elif what == 'settings':
                     page.click('#lec-btn-settings')
@@ -189,7 +189,7 @@ def run(seed):
                 elif what == 'titles':
                     page.click('#lec-btn-titles')
                 elif what == 'section':
-                    section(rnd.choice(['docs', 'code', 'others', 'folder']))
+                    section(rnd.choice(['docs', 'code', 'others', 'work', 'folder']))
                 elif what == 'expand':
                     section('folder')
                     dirs = page.locator('#lec-folder-list .row.dir [data-toggle]')
@@ -221,7 +221,7 @@ def run(seed):
                         should = k in on and want[k] > 0
                         if shown != should or (shown and got[k] != str(want[k])):
                             return False
-                    return not any(k in got for k in ('work', 'marks', 'tasks') if k not in on)
+                    return not any(k in got for k in ('work', 'marks', 'tasks'))   # '문서' 묶음에는 없다 (D204)
                 good = until(page, ok, ms=12000)
                 detail = (dict(page.evaluate(KINDS)), office_counts(proj), on)
                 if not good:   # 어느 파일이 다르게 세어지는지

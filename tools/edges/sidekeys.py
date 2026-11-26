@@ -27,7 +27,7 @@ config.mkdir()
 (config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')
 server, url, port = serve(proj, config)
 
-SECS = "() => ['#lec-docs', '#lec-code', '#lec-others', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
+SECS = "() => ['#lec-docs', '#lec-code', '#lec-others', '#lec-work', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
 FOCUS = """() => { const a = document.activeElement;
   const sec = a?.closest('.side-sec');
   if (sec) return sec.id + ':' + (a.dataset.doc ?? a.dataset.dir ?? a.dataset.path ?? a.id ?? '');
@@ -70,7 +70,7 @@ try:
         check("머리줄 이름은 '폴더', 숫자는 없다", page.inner_text('#lec-folder-head').strip() == '폴더' and page.locator('#lec-folder-head .n').count() == 0, page.inner_text('#lec-folder-head'))
         check("거르기 칸 옆의 '폴더' 버튼은 없어졌다", page.locator('#lec-btn-view').count() == 0)
         page.click('#lec-folder-head')
-        expect(page, '누르면 그것만 펼친다', lambda: page.evaluate(SECS) == ['closed', 'closed', 'closed', 'open'], lambda: page.evaluate(SECS))
+        expect(page, '누르면 그것만 펼친다', lambda: page.evaluate(SECS) == ['closed', 'closed', 'closed', 'closed', 'open'], lambda: page.evaluate(SECS))
         labels = lambda: page.locator('#lec-folder-list .row .label').all_inner_texts()  # noqa: E731
         expect(page, '폴더 구조 그대로 — 폴더 먼저, 문서와 파일이 섞여', lambda: labels()[:3] == ['code', 'data', 'sub'] and '가.md' in labels(), labels)
         check('지금 보는 문서가 강조된다', page.locator('#lec-folder-list .row.active[data-path="가.md"]').count() == 1)
@@ -87,12 +87,12 @@ try:
         page.keyboard.press('Control+Shift+E')
         expect(page, '펼친 묶음(문서)의 지금 보는 문서 행으로', lambda: focus() == 'lec-docs:가.md', focus)
         seen = []
-        for _ in range(4):
+        for _ in range(5):
             page.keyboard.press('Control+Shift+E')
-            page.wait_for_timeout(250)
+            page.wait_for_timeout(400)
             seen.append(focus().split(':')[0])
-        check('다시 누르면 다음 묶음 — 코드 → 자료 → 폴더 → 문서', seen == ['lec-code', 'lec-others', 'lec-folder', 'lec-docs'], seen)
-        check('— 그 묶음이 펼쳐진다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
+        check('다시 누르면 다음 묶음 — 코드 → 자료 → 작업 → 폴더 → 문서', seen == ['lec-code', 'lec-others', 'lec-work', 'lec-folder', 'lec-docs'], seen)
+        check('— 그 묶음이 펼쳐진다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         page.keyboard.press('Control+b')
         expect(page, '사이드바를 감추면', lambda: page.evaluate("document.documentElement.classList.contains('sidebar-off')"))
         to_doc()

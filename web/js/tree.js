@@ -14,10 +14,10 @@ import { sideOrder } from './sideorder.js';
 
 const MAX_FILTER_RESULTS = 300;
 
-// '문서' 묶음의 하위 묶음 (D143): 한 번에 하나만 펼치고 펼친 것 아래에 트리. 종류로 거르는 것(keep)과 문서 속을 읽어 거르는 것(content —
-// 형광펜·할 일, GET /api/marks), 문서 외 파일 목록(others.js 가 받은 '자료')에서 거르는 것(file — 오피스, D202)이 있다.
-// 문서가 없는 종류와 '전체'와 같은 종류는 머리줄을 감춘다. opt 는 설정 doc_kinds 에 있을 때만 (D202 — 업무·형광펜·할 일은 기본 꺼짐, 오피스는 기본 켜짐).
-// 설정 docs_kind, 프로젝트 탭마다 tab.side.docKind
+// '문서' 묶음의 하위 묶음 (D143): 한 번에 하나만 펼치고 펼친 것 아래에 트리. 종류로 거르는 것(keep)과
+// 문서 외 파일 목록(others.js 가 받은 '자료')에서 거르는 것(file — 오피스, D202)이 있다.
+// 문서가 없는 종류와 '전체'와 같은 종류는 머리줄을 감춘다. opt 는 설정 doc_kinds 에 있을 때만 (D202 — 오피스는 기본 켜짐).
+// 업무 카드·형광펜·할 일은 따로 '작업' 묶음 (D204 — WORK_KINDS). 설정 docs_kind, 프로젝트 탭마다 tab.side.docKind
 const KINDS = () => [
   { id: 'all', name: t('전체') },
   { id: 'md', name: t('문서'), keep: (f) => f.kind === 'markdown' && !f.deck },
@@ -28,10 +28,23 @@ const KINDS = () => [
   { id: 'ppt', name: 'PowerPoint', opt: true, file: (f) => isOffice('ppt', f.name) },
   { id: 'excel', name: 'Excel·CSV', opt: true, file: (f) => isOffice('excel', f.name) },
   { id: 'hwp', name: t('한글(HWP)'), opt: true, file: (f) => isOffice('hwp', f.name) },
-  { id: 'work', name: t('업무'), opt: true, keep: (f) => f.name.toLowerCase() === 'work.md' },
-  { id: 'marks', name: t('형광펜'), opt: true, content: true },
-  { id: 'tasks', name: t('할 일'), opt: true, content: true },
 ];
+// '작업' 묶음 (D204 — 문서·코드·자료·작업·폴더): 업무 카드(폴더마다의 WORK.md)와 문서 속을 읽어 거르는 것(content — 형광펜·할 일, GET /api/marks).
+// 폴더는 늘 펼쳐 둔다. 설정 work_kind, 프로젝트 탭마다 tab.side.workKind
+const WORK_KINDS = () => [
+  { id: 'work', name: t('업무 카드', { n: 2 }), keep: (f) => f.name.toLowerCase() === 'work.md' },
+  { id: 'marks', name: t('형광펜'), content: true },
+  { id: 'tasks', name: t('할 일', { n: 2 }), content: true },
+];
+/** 하위 묶음이 있는 목록 둘 — '문서'(#lec-tree)와 '작업'(#lec-work-list). 그리기·누르기·키는 같은 코드가 목록마다 */
+const LISTS = {
+  docs: { box: '#lec-tree', sec: '#lec-docs', top: '#lec-doc-kinds-top', bottom: '#lec-doc-kinds-bottom', side: 'docKind', conf: 'docs_kind', kinds: KINDS },
+  work: { box: '#lec-work-list', sec: '#lec-work', top: '#lec-work-kinds-top', bottom: '#lec-work-kinds-bottom', side: 'workKind', conf: 'work_kind', kinds: WORK_KINDS },
+};
+/** 이벤트가 난 곳의 목록 */
+const listOf = (el) => (el?.closest?.('#lec-work') ? LISTS.work : LISTS.docs);
+/** 묶음이 펼쳐 있는지 — 접힌 '작업' 묶음은 형광펜·할 일을 읽지 않는다 */
+const listOpen = (L) => !$(L.sec)?.classList.contains('closed');
 /** 설정 창과 하위 묶음 머리줄의 우클릭이 고르는 것 — 차례도 이대로 */
 export const OPTIONAL_KINDS = () => KINDS().filter((k) => k.opt).map((k) => ({ id: k.id, name: k.name }));
 const DEFAULT_KINDS = ['word', 'ppt', 'excel', 'hwp'];
@@ -169,9 +182,10 @@ const marksOf = (tab) => tab?.marks?.data ?? null;
 
 /** 형광펜·할 일을 받는다 — 받은 것이 그대로면(stale 이 아니면) 다시 받지 않는다. 서버는 바뀐 문서만 다시 읽는다 */
 export function loadMarks(tab = S.tab) {
-  if (!tab) return;
+  if (!tab) return Promise.resolve();
   const m = (tab.marks ||= { data: null, loading: null, stale: true });
-  if (m.loading || (m.data && !m.stale)) return;
+  if (m.loading) return m.loading;
+  if (m.data && !m.stale) return Promise.resolve();
   m.stale = false;
   m.loading = getJSON(`/api/marks?p=${encodeURIComponent(tab.id)}`)
     .then((r) => { m.data = new Map(r.docs.map((d) => [d.path, d])); m.error = null; })
@@ -180,13 +194,14 @@ export function loadMarks(tab = S.tab) {
       m.loading = null;
       if (tab === S.tab) render();
     });
+  return m.loading;
 }
 
 /** 하위 묶음마다의 개수 — 형광펜·할 일은 받은 뒤에만 (칠한 곳·열린 할 일의 수) */
-function kindCounts(tab) {
+function kindCounts(tab, L = LISTS.docs) {
   const got = marksOf(tab);
   const n = {};
-  for (const k of KINDS()) {
+  for (const k of L.kinds()) {
     if (k.content) n[k.id] = got ? [...got.values()].reduce((sum, d) => sum + d[k.id].length, 0) : null;
     else if (k.file) {
       const nodes = pickFiles(tab, k.file);
@@ -196,34 +211,36 @@ function kindCounts(tab) {
   return n;
 }
 
-/** 보일 하위 묶음 — 문서가 없거나 '전체'와 같은 종류는 뺀다. 형광펜·할 일은 Markdown 문서가 있으면 늘. 고르는 것(opt)은 설정에서 켠 것만 (D202) */
-function shownKinds(tab) {
+/** 보일 하위 묶음 — 문서가 없거나 '전체'와 같은 종류는 뺀다. 고르는 것(opt)은 설정에서 켠 것만 (D202).
+ * '작업' 묶음: 업무 카드는 WORK.md 가 있으면, 형광펜·할 일은 Markdown 문서가 있으면 늘 (D204 — 하나여도 머리줄을 보인다) */
+function shownKinds(tab, L = LISTS.docs) {
   if (!tab?.treeLoaded) return [];
-  const n = kindCounts(tab);
+  const n = kindCounts(tab, L);
   const md = tab.files.some((f) => f.kind === 'markdown');
-  const out = KINDS().filter((k) => k.id === 'all' || ((!k.opt || kindOn(k.id)) && (k.content ? md : k.file ? n[k.id] > 0 : n[k.id] > 0 && n[k.id] < n.all)))
+  if (L === LISTS.work) return L.kinds().filter((k) => (k.content ? md : n[k.id] > 0)).map((k) => ({ ...k, n: n[k.id] }));
+  const out = L.kinds().filter((k) => k.id === 'all' || ((!k.opt || kindOn(k.id)) && (k.file ? n[k.id] > 0 : n[k.id] > 0 && n[k.id] < n.all)))
     .map((k) => ({ ...k, n: n[k.id] }));
   return out.length > 1 ? out : [];
 }
 
-/** 펼친 하위 묶음 — 보이지 않는 것을 골라 두었으면 '전체' */
-function currentKind(kinds = shownKinds(S.tab)) {
-  const id = S.tab?.side?.docKind ?? S.config.docs_kind;
-  return kinds.find((k) => k.id === id) ?? kinds[0] ?? KINDS()[0];
+/** 펼친 하위 묶음 — 보이지 않는 것을 골라 두었으면 첫 것('문서' 는 '전체') */
+function currentKind(L = LISTS.docs, kinds = shownKinds(S.tab, L)) {
+  const id = S.tab?.side?.[L.side] ?? S.config[L.conf];
+  return kinds.find((k) => k.id === id) ?? kinds[0] ?? L.kinds()[0];
 }
 
 /** 하위 묶음의 머리줄 — 펼친 것까지는 트리 위에, 나머지는 트리 아래에 */
-function renderKinds(kinds) {
-  const cur = currentKind(kinds);
+function renderKinds(L, kinds) {
+  const cur = currentKind(L, kinds);
   const i = kinds.findIndex((k) => k.id === cur.id);
   const head = (k) => {
     const open = k.id === cur.id;
     const n = k.content && k.n == null ? '' : String(k.n);
     return html`<button type="button" class="kind-head${open ? ' open' : ''}" data-kind="${k.id}" aria-expanded="${open}"><span class="caret${open ? ' open' : ''}" aria-hidden="true"></span><span>${k.name}</span><span class="n">${n}</span></button>`;
   };
-  setHtml($('#lec-doc-kinds-top'), kinds.slice(0, i + 1).map(head));
-  setHtml($('#lec-doc-kinds-bottom'), kinds.slice(i + 1).map(head));
-  $('#lec-docs').classList.toggle('kinds', kinds.length > 0);
+  setHtml($(L.top), kinds.slice(0, i + 1).map(head));
+  setHtml($(L.bottom), kinds.slice(i + 1).map(head));
+  $(L.sec).classList.toggle('kinds', kinds.length > 0);
 }
 
 /** 형광펜·할 일 줄 — 문서 행 아래 한 단 들여 */
@@ -255,20 +272,22 @@ function contentHtml(kind, got, terms) {
   return nodes.length ? nodesHtml(nodes, 0, { allOpen: true, after: (f, depth) => itemRows(kind, f, itemsOf(f), depth) }) : html`<p class="side-empty">${empty}</p>`;
 }
 
-function renderTree() {
-  const box = $('#lec-tree');
+function renderTree(L = LISTS.docs) {
+  const box = $(L.box);
   const scroll = box.scrollTop;
-  const kinds = shownKinds(S.tab);
-  renderKinds(kinds);
+  const kinds = shownKinds(S.tab, L);
+  renderKinds(L, kinds);
   if (!S.tab?.treeLoaded) {   // 탭이 없거나 아직 트리를 읽는 중
     box.innerHTML = '';
     return;
   }
-  const kind = currentKind(kinds);
+  const kind = currentKind(L, kinds);
   const query = $('#lec-filter').value.trim().toLowerCase();
-  if (kind.content) {   // 형광펜·할 일 (D143)
+  if (L === LISTS.work && !kinds.length) {
+    setHtml(box, html`<p class="side-empty">${t('문서가 없어 업무 카드·형광펜·할 일이 없습니다')}</p>`);
+  } else if (kind.content) {   // 형광펜·할 일 (D143) — '작업' 묶음이 펼쳐 있을 때만 읽는다
     const got = marksOf(S.tab);
-    if (!got || S.tab.marks?.stale) loadMarks(S.tab);
+    if ((!got || S.tab.marks?.stale) && listOpen(L)) loadMarks(S.tab);
     setHtml(box, got ? contentHtml(kind.id, got, query ? query.split(/\s+/) : null) : html`<p class="side-empty">${t('문서를 읽는 중…')}</p>`);
   } else if (kind.file) {   // 오피스 (D202) — '자료' 목록의 그 파일들, 폴더는 늘 펼쳐 둔다
     const nodes = pickFiles(S.tab, kind.file) || [];
@@ -295,15 +314,15 @@ function renderTree() {
   } else {
     // 프로젝트 이름은 탭에 있다 — 프로젝트 개요는 고른 프로젝트 탭을 또 누르거나 탭의 우클릭으로 (tabs.js)
     const nodes = kind.keep ? pickDocs(S.tree, kind.keep) : S.tree;
-    setHtml(box, nodes.length ? nodesHtml(nodes, 0) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
+    setHtml(box, nodes.length ? nodesHtml(nodes, 0, L === LISTS.work ? { allOpen: true } : null) : html`<p class="side-empty">${t('문서(Markdown·HTML)가 없습니다')}</p>`);
   }
   box.scrollTop = scroll;
-  rove();   // Tab 으로 들어올 행 (거르기·화살표 누르기처럼 render 를 거치지 않고 다시 그려도)
+  rove(L);   // Tab 으로 들어올 행 (거르기·화살표 누르기처럼 render 를 거치지 않고 다시 그려도)
 }
 
 /** Tab 으로 트리에 들어올 행 하나 (D169 — 나머지는 ↑·↓ 로): row, 없으면 지금 보는 문서·폴더, 그것도 없으면 첫 행 */
-function rove(row = null) {
-  const box = $('#lec-tree');
+function rove(L = LISTS.docs, row = null) {
+  const box = $(L.box);
   const pick = row || box.querySelector('.row.active') || box.querySelector('.row');
   for (const r of $$('.row[tabindex="0"]', box)) if (r !== pick) r.tabIndex = -1;
   if (pick) pick.tabIndex = 0;
@@ -316,9 +335,11 @@ function renderCount() {
 }
 
 function render() {
-  keepFocus($('#lec-tree'), renderTree);
   const at = document.activeElement;
-  rove(at?.matches?.('#lec-tree .row') ? at : null);   // 다시 그린 뒤에도 초점이 있던 행이 Tab 의 자리
+  for (const L of Object.values(LISTS)) {
+    keepFocus($(L.box), () => renderTree(L));
+    rove(L, at?.matches?.(`${L.box} .row`) ? at : null);   // 다시 그린 뒤에도 초점이 있던 행이 Tab 의 자리
+  }
   renderCount();
   $('#lec-btn-titles').classList.toggle('on', showTitles());
   $('#lec-btn-sort').classList.toggle('on', sortWay() !== 'name');
@@ -415,7 +436,8 @@ function onTab({ tab, prev }) {
 function onRowClick(e) {
   const row = e.target.closest('.row');
   if (!row || row.dataset.file != null) return;   // 오피스 행 (D202) — others.js 의 bindFileRows
-  if (row.dataset.dir != null && currentKind().file) return;   // 오피스 묶음의 폴더는 늘 펼쳐 있다
+  const L = listOf(row);
+  if (row.dataset.dir != null && currentKind(L).file) return;   // 오피스 묶음의 폴더는 늘 펼쳐 있다
   if (row.dataset.itemDoc != null) {   // 형광펜·할 일 줄: 그 문서의 그 줄로 (D143)
     if (!repeatClick(e)) emit('open', { type: 'doc', path: row.dataset.itemDoc, line: Number(row.dataset.line), ...openHow(e) });
     return;
@@ -427,9 +449,10 @@ function onRowClick(e) {
   }
   const dir = row.dataset.dir;
   if (e.target.closest('[data-toggle]')) {       // 화살표: 펼치기/접기만
+    if (L === LISTS.work) return;   // '작업' 묶음의 폴더는 늘 펼쳐 있다 (D204)
     if (S.open.has(dir)) S.open.delete(dir);
     else S.open.add(dir);
-    renderTree();
+    renderTree(L);
     return;
   }
   if (dir) S.open.add(dir);
@@ -575,7 +598,7 @@ function onContextMenu(e) {
   }
   if (row.dataset.doc != null) {
     const path = row.dataset.doc;
-    const items = [...docMenuItems(path), ...(currentKind().id === 'marks' ? clearItems(path) : [])];
+    const items = [...docMenuItems(path), ...(currentKind(listOf(row)).id === 'marks' ? clearItems(path) : [])];
     showMenu(e.clientX, e.clientY, S.tab?.readonly ? items : [...items, '-', newDocItem(dirname(path)), ...(isPdf(path) ? [] : [deleteItem(path)])]);   // PDF 는 보기만 (D201)
   }
   else showMenu(e.clientX, e.clientY, [newDocItem(row.dataset.dir), ...(S.tab && !S.tab.readonly ? [workCardItem(row.dataset.dir)] : []), '-', ...pathMenuItems(row.dataset.dir, false)]);
@@ -619,13 +642,14 @@ function onTreeKey(e) {
   const i = rows.indexOf(cur);
   const go = (row) => {
     if (!row) return;
-    rove(row);
+    rove(listOf(box), row);
     row.focus({ preventScroll: true });
     row.scrollIntoView({ block: 'nearest' });
   };
   const dir = cur.dataset.dir;
   const shut = dir != null && !cur.querySelector('.caret')?.classList.contains('open');
-  const folds = dir != null && !currentKind().content && !currentKind().file;   // 형광펜·할 일·오피스 묶음은 폴더가 늘 펼쳐 있다 — 옮기기만
+  const L = listOf(box);
+  const folds = dir != null && L === LISTS.docs && !currentKind(L).file;   // '작업' 묶음·오피스 묶음은 폴더가 늘 펼쳐 있다 — 옮기기만
   const setOpen = (open) => {
     if (open) S.open.add(dir);
     else S.open.delete(dir);
@@ -668,14 +692,16 @@ export function focusFilter() {
 
 export function initTree() {
   on('show-panel', showPanel);
-  const tree = $('#lec-tree');
-  tree.addEventListener('click', onRowClick);
-  middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
-  tree.addEventListener('contextmenu', onContextMenu);
-  tree.addEventListener('keydown', onTreeKey);
-  tree.addEventListener('focusin', (e) => { if (e.target.matches?.('.row')) rove(e.target); });   // 누른 행이 Tab 의 자리
+  for (const L of Object.values(LISTS)) {   // '문서'·'작업' 묶음 (D204)
+    const tree = $(L.box);
+    tree.addEventListener('click', onRowClick);
+    middleClickOpens(tree, '.row[data-doc]');   // 가운데 버튼: 새 문서 탭 (D64)
+    tree.addEventListener('contextmenu', onContextMenu);
+    tree.addEventListener('keydown', onTreeKey);
+    tree.addEventListener('focusin', (e) => { if (e.target.matches?.('.row')) rove(L, e.target); });   // 누른 행이 Tab 의 자리
+  }
   const filter = $('#lec-filter');
-  filter.addEventListener('input', renderTree);
+  filter.addEventListener('input', render);
   filter.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       $('#lec-tree .row.file')?.click();
@@ -698,20 +724,24 @@ export function initTree() {
     if (keys.has('side_sort')) emit('side-sort');
   });
   $('#lec-btn-expand').addEventListener('click', openExpand);
-  for (const box of $$('#lec-docs .doc-kinds')) {   // 하위 묶음의 머리줄 (D143)
-    box.addEventListener('contextmenu', (e) => {   // 보일 하위 묶음 고르기 (D202 — 설정 창 '일반' 과 같다)
+  for (const box of $$('#lec-docs .doc-kinds')) {   // 보일 하위 묶음 고르기 (D202 — 설정 창 '일반' 과 같다, 오피스 넷)
+    box.addEventListener('contextmenu', (e) => {
       e.preventDefault();
       showMenu(e.clientX, e.clientY, kindsMenu());
     });
+  }
+  for (const box of $$('#lec-docs .doc-kinds, #lec-work .doc-kinds')) {   // 하위 묶음의 머리줄 (D143·D204)
     box.addEventListener('click', (e) => {
+      const L = listOf(box);
       const id = e.target.closest('.kind-head')?.dataset.kind;
-      if (!id || !S.tab || currentKind().id === id) return;
-      S.tab.side.docKind = id;
-      saveConfig({ docs_kind: id });
-      $('#lec-tree').scrollTop = 0;
+      if (!id || !S.tab || currentKind(L).id === id) return;
+      S.tab.side[L.side] = id;
+      saveConfig({ [L.conf]: id });
+      $(L.box).scrollTop = 0;
       render();
     });
   }
+  on('files-open', render);   // 묶음을 펼치면 — '작업' 묶음은 그때 형광펜·할 일을 읽는다 (D204)
   for (const b of $$('.side-tabs button')) b.addEventListener('click', () => switchPanel(b.dataset.tab));
 
   on('tree', () => {   // 문서가 바뀌었으면 형광펜·할 일도 다시 (보고 있을 때만 받는다)

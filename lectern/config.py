@@ -56,7 +56,8 @@ DEFAULTS: dict[str, Any] = {
     'clip_sort': 'name',     # 사이드바 '담기' 탭의 담기함 차례: name | time (마지막에 고친 것부터 — D198)
     'files_open': 'docs',    # 사이드바 '파일' 탭에서 펼친 묶음 — docs·code·others·folder (D143 — 한 번에 하나만 펼친다, folder 는 폴더 구조 그대로 — D169)
     'docs_kind': 'all',      # '문서' 묶음에서 펼친 하위 묶음 — all·md·deck·html·pdf·work·marks·tasks·word·ppt·excel·hwp (D143·D201·D202)
-    'doc_kinds': ['word', 'ppt', 'excel', 'hwp'],   # '문서' 묶음에 보일 고를 수 있는 하위 묶음 (D202 — 업무·형광펜·할 일은 켤 때만, 오피스 넷은 기본으로)
+    'doc_kinds': ['word', 'ppt', 'excel', 'hwp'],   # '문서' 묶음에 보일 오피스 하위 묶음 (D202 — 기본 넷 모두. 업무·형광펜·할 일은 '작업' 묶음으로 — D204, 옛 값은 무시)
+    'work_kind': 'tasks',    # '작업' 묶음에서 펼친 하위 묶음 — work·marks·tasks (D204)
     'toc_visible': True,
     'search_docs': True,     # 전체 검색에서 문서를 찾음 (검색 탭의 '문서' 버튼)
     'search_code': True,     # 전체 검색에서 코드를 찾음 ('코드' 버튼, D44)
@@ -106,14 +107,14 @@ DEFAULTS: dict[str, Any] = {
 
 AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
 AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
-FILES_OPEN = ('docs', 'code', 'others', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
+FILES_OPEN = ('docs', 'code', 'others', 'work', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
 DOC_KINDS_OPTIONAL = ('work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 doc_kinds — 고를 수 있는 하위 묶음 (D202)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
 CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
-                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind', 'doc_kinds',
+                         'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind', 'doc_kinds', 'work_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
                          'recent_docs', 'recent_code', 'recent_others', 'csv_stats', 'table_align', 'md_breaks', 'vi_keys', 'doc_check', 'doc_check_style', 'editor_keys', 'work_alerts', 'print_font', 'print_margin', 'print_margin_mm', 'print_header', 'print_page_numbers', 'ai_tool',
@@ -144,6 +145,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in FILES_OPEN
     if key == 'docs_kind':
         return value in DOCS_KINDS
+    if key == 'work_kind':
+        return value in ('work', 'marks', 'tasks')
     if key == 'doc_kinds':
         return isinstance(value, list) and all(x in DOC_KINDS_OPTIONAL for x in value)
     if key == 'terminal_position':

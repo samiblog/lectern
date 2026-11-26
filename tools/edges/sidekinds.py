@@ -27,14 +27,16 @@ MARKED = ('# 시장 점검\n\n구리 가격은 <mark>크게 올랐다</mark> 그
 (proj / 'data' / '표.csv').write_text('a,b\n1,2\n', encoding='utf-8')
 doc = proj / 'report' / '점검.md'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'doc_kinds': ['work', 'marks', 'tasks']}), encoding='utf-8')   # 업무·형광펜·할 일은 켤 때만 (D202)
+(config / 'config.json').write_text(json.dumps({}), encoding='utf-8')
 server, url, port = serve(proj, config)
 
 KINDS = "() => [...document.querySelectorAll('#lec-docs .kind-head')].map((b) => b.dataset.kind + ':' + (b.querySelector('.n')?.textContent || ''))"
+WKINDS = "() => [...document.querySelectorAll('#lec-work .kind-head')].map((b) => b.dataset.kind + ':' + (b.querySelector('.n')?.textContent || ''))"
 OPEN_KIND = "() => document.querySelector('#lec-docs .kind-head.open')?.dataset.kind ?? null"
 TREE_DOCS = "() => [...document.querySelectorAll('#lec-tree .row.file')].map((r) => r.dataset.doc)"
-ITEMS = "() => [...document.querySelectorAll('#lec-tree .row.item')].map((r) => r.dataset.itemDoc + '#' + r.dataset.line + ':' + r.querySelector('.label').textContent)"
-SECS = "() => ['#lec-docs', '#lec-code', '#lec-others', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
+WORK_DOCS = "() => [...document.querySelectorAll('#lec-work-list .row.file')].map((r) => r.dataset.doc)"
+ITEMS = "() => [...document.querySelectorAll('#lec-work-list .row.item')].map((r) => r.dataset.itemDoc + '#' + r.dataset.line + ':' + r.querySelector('.label').textContent)"
+SECS = "() => ['#lec-docs', '#lec-code', '#lec-others', '#lec-work', '#lec-folder'].map((s) => document.querySelector(s).classList.contains('grow') ? 'open' : 'closed')"
 
 
 def text(path):
@@ -71,29 +73,28 @@ try:
         toast = lambda: page.text_content('#lec-toast') or ''
 
         print('[한 번에 한 묶음]')
-        check('처음은 문서만 펼쳐져 있다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
+        check('처음은 문서만 펼쳐져 있다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         tree_h = page.locator('#lec-tree').bounding_box()['height']
         check('펼친 문서 목록이 남은 높이를 쓴다', tree_h > 400, tree_h)
         check('접힌 머리줄에도 개수', until(page, lambda: page.inner_text('#lec-code-count') == '1' and page.inner_text('#lec-others-count') == '1'),
               [page.inner_text('#lec-code-count'), page.inner_text('#lec-others-count')])
         page.click('#lec-code-head')
-        check('코드를 누르면 코드만 펼친다', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed'], page.evaluate(SECS))
+        check('코드를 누르면 코드만 펼친다', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         check('코드 목록이 보인다', until(page, lambda: page.locator('#lec-code-list .row').count() > 0))
         check('설정에 남는다', until(page, lambda: saved().get('files_open') == 'code'), saved().get('files_open'))
         page.click('#lec-code-head')
-        check('펼친 것을 다시 눌러도 그대로', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed'], page.evaluate(SECS))
+        check('펼친 것을 다시 눌러도 그대로', page.evaluate(SECS) == ['closed', 'open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
         page.fill('#lec-filter', 'calc')
         check('거르는 중이면 접힌 머리줄에 맞는 수', until(page, lambda: page.inner_text('#lec-docs-count') == '0' and page.inner_text('#lec-others-count') == '0' and page.inner_text('#lec-code-count') == '1'),
               [page.inner_text('#lec-docs-count'), page.inner_text('#lec-code-count'), page.inner_text('#lec-others-count')])
         page.fill('#lec-filter', '')
         page.click('#lec-docs-head')
-        check('문서로 돌아온다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed'], page.evaluate(SECS))
+        check('문서로 돌아온다', page.evaluate(SECS) == ['open', 'closed', 'closed', 'closed', 'closed'], page.evaluate(SECS))
 
         print('[문서의 하위 묶음]')
         until(page, lambda: page.locator('#lec-docs .kind-head').count() > 0)
         kinds = page.evaluate(KINDS)
-        check('하위 묶음: 전체·문서·슬라이드·업무·형광펜·할 일 (HTML 은 없어서 감춤)', [k.split(':')[0] for k in kinds] == ['all', 'md', 'deck', 'work', 'marks', 'tasks'], kinds)
-        check('개수 — 형광펜·할 일은 아직 읽지 않아 비어 있다', kinds[:4] == ['all:4', 'md:3', 'deck:1', 'work:1'] and kinds[4:] == ['marks:', 'tasks:'], kinds)
+        check('하위 묶음: 전체·문서·슬라이드 (HTML 은 없어서 감춤, 표.csv 는 Excel·CSV, 업무·형광펜·할 일은 작업 묶음으로 — D204)', kinds == ['all:4', 'md:3', 'deck:1', 'excel:1'], kinds)
         check('처음은 전체', page.evaluate(OPEN_KIND) == 'all')
         page.click('#lec-docs .kind-head[data-kind="deck"]')
         check('슬라이드만', until(page, lambda: page.evaluate(TREE_DOCS) == ['slides/발표.md']), page.evaluate(TREE_DOCS))
@@ -101,21 +102,28 @@ try:
         check('펼친 하위 묶음 바로 아래에 트리, 나머지는 그 아래', order.index('lec-doc-kinds-top') < order.index('lec-tree') < order.index('lec-doc-kinds-bottom')
               and page.evaluate("document.querySelector('#lec-doc-kinds-top').lastElementChild.dataset.kind") == 'deck', order)
         check('설정에 남는다', until(page, lambda: saved().get('docs_kind') == 'deck'), saved().get('docs_kind'))
-        page.click('#lec-docs .kind-head[data-kind="work"]')
-        check('업무: WORK.md', until(page, lambda: page.evaluate(TREE_DOCS) == ['WORK.md']), page.evaluate(TREE_DOCS))
         page.click('#lec-docs .kind-head[data-kind="md"]')
         check('문서: 슬라이드를 뺀 Markdown', until(page, lambda: sorted(page.evaluate(TREE_DOCS)) == ['WORK.md', 'report/메모.md', 'report/점검.md']), page.evaluate(TREE_DOCS))
 
-        print('[형광펜·할 일]')
-        page.click('#lec-docs .kind-head[data-kind="tasks"]')
+        print("['작업' 묶음 — 업무 카드·형광펜·할 일 (D204)]")
+        check('접힌 작업 묶음은 형광펜·할 일을 아직 읽지 않았다', page.evaluate(WKINDS)[1:] == ['marks:', 'tasks:'], page.evaluate(WKINDS))
+        page.click('#lec-work-head')
+        check('작업을 누르면 작업만 펼친다 (폴더 앞)', page.evaluate(SECS) == ['closed', 'closed', 'closed', 'open', 'closed'], page.evaluate(SECS))
+        check('설정에 남는다 — files_open', until(page, lambda: saved().get('files_open') == 'work'), saved().get('files_open'))
+        check('하위 묶음: 업무 카드 1·형광펜·할 일, 처음은 할 일', until(page, lambda: page.evaluate(WKINDS)[0] == 'work:1' and [k.split(':')[0] for k in page.evaluate(WKINDS)] == ['work', 'marks', 'tasks'])
+              and page.evaluate("() => document.querySelector('#lec-work .kind-head.open')?.dataset.kind") == 'tasks', page.evaluate(WKINDS))
+        page.click('#lec-work .kind-head[data-kind="work"]')
+        check('업무 카드: WORK.md', until(page, lambda: page.evaluate(WORK_DOCS) == ['WORK.md']), page.evaluate(WORK_DOCS))
+        check('설정에 남는다 — work_kind', until(page, lambda: saved().get('work_kind') == 'work'), saved().get('work_kind'))
+        page.click('#lec-work .kind-head[data-kind="tasks"]')
         check('할 일: 열린 할 일이 있는 문서와 그 할 일', until(page, lambda: page.evaluate(ITEMS) == ['report/점검.md#5:공급 자료 받기', 'WORK.md#5:보고서 마감']), page.evaluate(ITEMS))
-        page.click('#lec-docs .kind-head[data-kind="marks"]')
+        page.click('#lec-work .kind-head[data-kind="marks"]')
         check('형광펜: 칠한 곳이 문서 아래에', until(page, lambda: page.evaluate(ITEMS) == ['report/점검.md#3:크게 올랐다', 'report/점검.md#8:초록 말', 'report/점검.md#8:노랑 말']), page.evaluate(ITEMS))
-        kinds = page.evaluate(KINDS)
+        kinds = page.evaluate(WKINDS)
         check('읽은 뒤에는 형광펜·할 일에도 개수', 'marks:3' in kinds and 'tasks:2' in kinds, kinds)
-        swatches = page.evaluate("() => [...document.querySelectorAll('#lec-tree .row.item .swatch')].map((s) => s.className)")
+        swatches = page.evaluate("() => [...document.querySelectorAll('#lec-work-list .row.item .swatch')].map((s) => s.className)")
         check('색 표시', swatches == ['swatch mark-yellow', 'swatch mark-green', 'swatch mark-yellow'], swatches)
-        page.locator('#lec-tree .row.item', has_text='초록 말').click()
+        page.locator('#lec-work-list .row.item', has_text='초록 말').click()
         check('누르면 그 문서의 그 줄로', until(page, lambda: page.evaluate("import('/static/js/store.js').then(({ S }) => S.pane?.here?.path === 'report/점검.md' && S.pane.here.line)") == 8),
               page.evaluate("import('/static/js/store.js').then(({ S }) => S.pane?.here)"))
         page.fill('#lec-filter', '노랑')
@@ -123,7 +131,7 @@ try:
         page.fill('#lec-filter', '')
 
         print('[메모 달기]')
-        page.locator('#lec-tree .row.item', has_text='크게 올랐다').click(button='right')
+        page.locator('#lec-work-list .row.item', has_text='크게 올랐다').click(button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')
         labels = page.evaluate("[...document.querySelectorAll('#lec-menu button[data-i] > span')].map((e) => e.textContent)")
         check('칠한 곳의 우클릭: 그 자리로·메모 달기·이것만 지우기·모두 지우기', labels == ['그 자리로 가기', '메모 달기', '이 형광펜 지우기', '이 문서의 형광펜 모두 지우기…'], labels)
@@ -145,7 +153,7 @@ try:
 
         print('[지우기]')
         until(page, lambda: page.evaluate(ITEMS) == ['report/점검.md#3:크게 올랐다', 'report/점검.md#8:초록 말', 'report/점검.md#8:노랑 말'], 10000)
-        page.locator('#lec-tree .row.item', has_text='초록 말').click(button='right')
+        page.locator('#lec-work-list .row.item', has_text='초록 말').click(button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')
         page.locator('#lec-menu button', has_text='이 형광펜 지우기').click()
         check('이 형광펜 지우기: 그것만, 글은 그대로', until(page, lambda: '둘째 문단의 초록 말 과 <mark>노랑 말</mark>.' in read()), read())
@@ -154,17 +162,17 @@ try:
         page.keyboard.press('Control+z')
         check('Ctrl+Z 로 되돌린다', until(page, lambda: read() == MARKED), read())
         until(page, lambda: len(page.evaluate(ITEMS)) == 3, 10000)
-        page.locator('#lec-tree .row.file[data-doc="report/점검.md"]').click(button='right')
+        page.locator('#lec-work-list .row.file[data-doc="report/점검.md"]').click(button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')
         labels = page.evaluate("[...document.querySelectorAll('#lec-menu button[data-i] > span')].map((e) => e.textContent)")
         check('문서 행의 우클릭: 모두·색마다 지우기', '이 문서의 형광펜 모두 지우기…' in labels and '이 문서의 초록 형광펜만 지우기…' in labels and '이 문서의 노랑 형광펜만 지우기…' in labels, labels)
         page.locator('#lec-menu button', has_text='이 문서의 노랑 형광펜만 지우기').click()
         check('색 하나만 — 몇 곳인지 묻고 지운다', until(page, lambda: '<mark' in read() and read().count('<mark') == 1 and 'class="green"' in read()) and any('2곳' in d for d in dialogs), (read(), dialogs))
-        page.locator('#lec-tree .row.file[data-doc="report/점검.md"]').click(button='right')
+        page.locator('#lec-work-list .row.file[data-doc="report/점검.md"]').click(button='right')
         page.wait_for_selector('#lec-menu:not([hidden])')
         page.locator('#lec-menu button', has_text='이 문서의 형광펜 모두 지우기').click()
         check('모두 지우기', until(page, lambda: '<mark' not in read()) and '크게 올랐다' in read(), read())
-        check('칠한 곳이 없으면 그렇게 알린다', until(page, lambda: page.evaluate(ITEMS) == [] and '칠한 곳이 없습니다' in page.inner_text('#lec-tree')), page.inner_text('#lec-tree'))
+        check('칠한 곳이 없으면 그렇게 알린다', until(page, lambda: page.evaluate(ITEMS) == [] and '칠한 곳이 없습니다' in page.inner_text('#lec-work-list')), page.inner_text('#lec-work-list'))
         page.locator('#lec-view h1').click()
         page.keyboard.press('Control+z')
         page.keyboard.press('Control+z')

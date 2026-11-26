@@ -560,7 +560,7 @@ kbd { font: 11px/1 var(--ui-font); padding: 3px 5px; border: 1px solid var(--ui-
 .kind-head:hover { color: var(--ui-fg); }
 .kind-head.open { color: var(--ui-fg); font-weight: 600; }
 .kind-head .n { margin-left: auto; color: var(--ui-faint); font-weight: 400; font-variant-numeric: tabular-nums; }
-#lec-docs.kinds > #lec-tree { border-left: 1px solid var(--ui-border); margin-left: 14px; }
+#lec-docs.kinds > #lec-tree, #lec-work.kinds > #lec-work-list { border-left: 1px solid var(--ui-border); margin-left: 14px; }
 /* 형광펜·할 일 하위 묶음의 줄 — 문서 행 아래에 칠한 글·할 일 */
 .row.item .label { color: var(--ui-muted); }
 .row.item:hover .label { color: var(--ui-fg); }

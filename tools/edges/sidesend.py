@@ -23,7 +23,7 @@ proj = base / 'proj'
 (proj / 'data' / '표.csv').write_text('a,b\n1,2\n', encoding='utf-8')
 config = base / 'config'
 config.mkdir()
-(config / 'config.json').write_text(json.dumps({'work_alerts': False, 'doc_kinds': ['work', 'marks', 'tasks']}), encoding='utf-8')   # 형광펜·할 일 묶음은 켤 때만 (D202)
+(config / 'config.json').write_text(json.dumps({'work_alerts': False}), encoding='utf-8')   # 형광펜·할 일 묶음은 켤 때만 (D202)
 server, url, port = serve(proj, config)
 
 SENT = "() => window.__sent || []"
@@ -124,19 +124,20 @@ try:
         expect(page, '글자로 찾기는 그대로 (s → sub)', lambda: page.evaluate(FOCUS) == 'lec-docs:sub' and len(sent()) == n0, lambda: page.evaluate(FOCUS))
 
         print('[형광펜·할 일 줄]')
-        page.click('#lec-docs .kind-head[data-kind="tasks"]')
-        page.wait_for_selector('#lec-tree .row.item[data-item-doc="가.md"]')
-        focus('#lec-tree .row.item[data-item-doc="가.md"]')
+        page.click('#lec-work-head')   # '작업' 묶음 (D204)
+        page.click('#lec-work .kind-head[data-kind="tasks"]')
+        page.wait_for_selector('#lec-work-list .row.item[data-item-doc="가.md"]')
+        focus('#lec-work-list .row.item[data-item-doc="가.md"]')
         page.keyboard.press('Control+Shift+ArrowRight')
         expect(page, "할 일 줄: '@경로 N행 '", lambda: last() == {'ev': 'stay', 'text': '@가.md 5행 ', 'n': None, 'back': True}, last)
         page.keyboard.press('Shift+ArrowLeft')
         expect(page, '— Shift+← 는 그 위치를 복사', lambda: clip() == '@가.md 5행', clip)
-        page.click('#lec-docs .kind-head[data-kind="marks"]')
-        page.wait_for_selector('#lec-tree .row.item.marks[data-item-doc="가.md"]')
-        focus('#lec-tree .row.item.marks[data-item-doc="가.md"]')
+        page.click('#lec-work .kind-head[data-kind="marks"]')
+        page.wait_for_selector('#lec-work-list .row.item.marks[data-item-doc="가.md"]')
+        focus('#lec-work-list .row.item.marks[data-item-doc="가.md"]')
         page.keyboard.press('Control+Shift+ArrowRight')
         expect(page, "형광펜 줄도 '@경로 N행 '", lambda: last()['text'] == '@가.md 8행 ', last)
-        page.click('#lec-docs .kind-head[data-kind="all"]')
+        page.click('#lec-docs-head')
 
         print('[코드·자료·폴더 목록]')
         page.click('#lec-code-head')
