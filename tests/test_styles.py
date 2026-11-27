@@ -15,12 +15,12 @@ BUILTINS = ['dark', 'default', 'report']
 
 def test_parse_head_reads_name_dark_base():
     head = '/* lectern-style\n   name: 우리 회사 보고서\n   dark: yes\n   base: report\n*/\n:root { --md-bg: #000; }'
-    assert parse_head(head, BUILTINS) == {'name': '우리 회사 보고서', 'dark': True, 'base': 'report', 'head': True}
+    assert parse_head(head, BUILTINS) == {'name': '우리 회사 보고서', 'dark': True, 'base': 'report', 'head': True, 'maker': False}
     # 별표로 줄을 시작해도, @charset 이 앞에 있어도 된다. 없는 바탕 스타일은 밝기에 따라 default / dark
     assert parse_head('@charset "utf-8";\n/* Lectern-Style\n * name: A\n * base: nope\n */', BUILTINS)['base'] == 'default'
     assert parse_head('/* lectern-style\n dark: 예\n*/', BUILTINS)['base'] == 'dark'
     # 머리 주석이 없으면 이름은 비우고(파일 이름을 쓴다) 밝음
-    assert parse_head('/* 그냥 주석 */ :root {}', BUILTINS) == {'name': '', 'dark': False, 'base': 'default', 'head': False}
+    assert parse_head('/* 그냥 주석 */ :root {}', BUILTINS) == {'name': '', 'dark': False, 'base': 'default', 'head': False, 'maker': False}
 
 
 def test_list_styles_only_plain_css_files(tmp_path):

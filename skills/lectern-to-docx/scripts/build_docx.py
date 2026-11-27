@@ -230,6 +230,17 @@ THEME = {   # 기본 보고서 양식의 모양 — 양식(tools/make_docx_templ
 }
 
 
+def body_size_of(styles_xml):
+    """본문 글자 크기 (반 포인트) — 기본 단락 스타일의 것, 없으면 문서 기본값, 그것도 없으면 Word 의 기본 10pt"""
+    normal = re.search(r'<w:style\b[^>]*w:type="paragraph"[^>]*w:default="1"[^>]*>(.*?)</w:style>', styles_xml, re.S) \
+        or re.search(r'<w:style\b[^>]*w:styleId="Normal"[^>]*>(.*?)</w:style>', styles_xml, re.S)
+    for part in (normal[1] if normal else '', (re.search(r'<w:rPrDefault>(.*?)</w:rPrDefault>', styles_xml, re.S) or [None, ''])[1]):
+        sz = re.search(r'<w:sz w:val="(\d+)"', part)
+        if sz:
+            return int(sz[1])
+    return 20
+
+
 def default_styles(lang, theme=None):
     th = {**THEME, **(theme or {})}
     f = FONTS_EN if lang == 'en' else FONTS_KO
@@ -335,6 +346,148 @@ def split_notes(lines):
     return out, notes
 
 
+# ---- 글머리 글자 목록 (앱의 D192 — web/js/marklist.js·hang.js 와 같게. tests/test_docx_lists.py 가 글자 목록이 같은지 본다) -------------
+# □ > ○ > - > · 의 차례로 수준을 정하고(그 문서가 쓴 것만 센다), 항목마다 단락 하나 — 글머리 글자는 글 그대로, 꺾인 줄은 글자 뒤에.
+MARK_BULLETS = '□■▢▣◇◆◈○●◎◉◦•‣∙·ㆍ▪▫►▶▷▸▹→⇒➔➜➢➤★☆✓✔✗✘❖ㅁㅇ-–—－+'   # hang.js BULLETS
+MARK_TIGHT = re.compile(r'^(?:※|[①-⓿❶-➓㈀-㉟㉠-㉿])')                    # hang.js TIGHT
+MARK_NUMBERS = [re.compile(s) for s in (                                   # hang.js NUMBERS
+    r'^\(?\d{1,3}\)', r'^\[\d{1,3}\]', r'^[1-9]\d{0,2}(?:[.-][1-9]\d?){0,3}[.)]', r'^[1-9]\d{0,2}(?:\.[1-9]\d?){1,3}(?=\s)',
+    r'^\(?[가나다라마바사아자차카타파하][.)]', r'^\(?[A-Za-z]\)', r'^[A-Za-z]\.', r'^[Ⅰ-ⅿ]{1,3}[.)]?', r'^(?:I{1,3}|IV|VI{0,3}|IX|X)[.)]',
+    r'^제\s?\d{1,3}\s?[장절조편관항부]')]
+MARK_RANKS = ['□■ㅁ▢▣', '○●ㅇ◎◦', '-–—－', '·ㆍ•∙‧']                   # marklist.js RANKS
+MARK_START = MARK_RANKS[0] + MARK_RANKS[1] + MARK_RANKS[3]
+MARK_NARROW = {' ': 0.28, '\u00a0': 0.28, '.': 0.22, ',': 0.22, '(': 0.32, ')': 0.32, '[': 0.31, ']': 0.31, '-': 0.33, '+': 0.68, '–': 0.5,
+               '•': 0.4, '‣': 0.4, '∙': 0.3, '·': 0.22, '▪': 0.35, '□': 0.6, '●': 0.6, '■': 0.85, '○': 0.85, '✓': 0.68, '→': 0.86, '❶': 1.32,
+               'I': 0.3}                                                     # hang.js NARROW
+
+
+def hang_prefix(text):
+    """머리 글자와 그 뒤의 빈칸 — 없으면 '' (hang.js hangPrefix)"""
+    s = re.sub(r'^[ \t\n\r\u3000]+', '', text)
+
+    def gap_after(mark):
+        return re.match(r'^[ \t\u00a0\u3000]*', s[len(mark):])[0]
+
+    def done(mark, gap):
+        return mark + gap if s[len(mark) + len(gap):].strip() else ''
+    tight = MARK_TIGHT.match(s)
+    if tight:
+        return done(tight[0], gap_after(tight[0]))
+    marks = [s[0] if s and s[0] in MARK_BULLETS else ''] + [(m[0] if (m := r.match(s)) else '') for r in MARK_NUMBERS]
+    for mark in marks:
+        gap = gap_after(mark) if mark else ''
+        if gap:
+            return done(mark, gap)
+    return ''
+
+
+def char_em(c):
+    if c in MARK_NARROW:
+        return MARK_NARROW[c]
+    if c.isdigit():
+        return 0.5
+    if 'A' <= c <= 'Z':
+        return 0.63
+    if 'a' <= c <= 'z':
+        return 0.48
+    if re.match(r'[가-힣ㄱ-ㆎ]', c):
+        return 0.93
+    return 1
+
+
+def hang_em(prefix):
+    """내어쓸 폭 (em) — 이어진 빈칸은 하나로 (hang.js hangEm)"""
+    em, space = 0.0, False
+    for c in prefix:
+        if c in ' \t\n':
+            if not space:
+                em += char_em(' ')
+            space = True
+            continue
+        space = False
+        em += char_em(c)
+    return em
+
+
+def mark_text(line):
+    """머리 글자를 볼 글 — 앞의 전각 빈칸과 머리 글자를 감싼 굵게·기울임 표시를 뗀다 (marklist.js markText)"""
+    s = re.sub(r'^\u3000+', '', line)
+    m = re.match(r'^(\*\*|__|\*|_)(?=\S)', s)
+    if not m:
+        return s
+    rest = s[len(m[1]):]
+    c = rest[:1]
+    return c + rest[1 + len(m[1]):] if rest[1:1 + len(m[1])] == m[1] else rest
+
+
+def mark_of(text):
+    """줄의 머리 글자 — (prefix, rank) 또는 None. rank 는 차례(0~3), 차례에 없는 머리 글자면 -1 (marklist.js markOf)"""
+    prefix = hang_prefix(text)
+    if not prefix:
+        return None
+    c = prefix.strip()
+    return prefix, (next((k for k, r in enumerate(MARK_RANKS) if c in r), -1) if len(c) == 1 else -1)
+
+
+MARK_STOP = re.compile(r'^(#{1,6}\s|`{3,}|~{3,}|>|\||<|\$\$|\\\[|(?:\*\s*){3,}$|(?:-\s*){3,}$|(?:_\s*){3,}$)')
+
+
+def read_marklist(lines, i, store):
+    """lines[i] 에서 시작하는 글머리 글자 묶음 — (블록, 다음 줄 번호). 아니면 (None, i)"""
+    line = lines[i]
+    if len(line) - len(line.lstrip(' ')) >= 4:
+        return None, i
+    first = mark_text(line.strip(' \t'))
+    if not first or first[0] not in MARK_START or not mark_of(first):
+        return None, i
+    if i + 1 < len(lines) and re.match(r'^(?:=+|-+)[ \t]*$', lines[i + 1].strip()) and lines[i + 1].strip():   # 바로 아래가 --- · === 면 제목
+        return None, i
+    end = i + 1
+    while end < len(lines):
+        s = lines[end]
+        if not s.strip():
+            break
+        if len(s) - len(s.lstrip(' ')) < 4 and MARK_STOP.match(s.strip()):
+            break
+        end += 1
+    items = []
+    for row in lines[i:end]:
+        mark = mark_of(mark_text(row.strip(' \t\u3000')))
+        text = protect_math(re.sub(r'^[ \t\u3000]+', '', row), store)
+        if mark or not items:
+            items.append({'rank': mark[1] if mark else -1, 'prefix': mark[0] if mark else '', 'rows': [text]})
+        else:
+            items[-1]['rows'].append(text.strip())
+    for it in items:
+        runs = []
+        for k, row in enumerate(it.pop('rows')):
+            if k:
+                runs.append({'t': '\n'})
+            runs += LM.inline(row)
+        it['runs'] = runs
+    return {'kind': 'marklist', 'items': items}, end
+
+
+def mark_levels(blocks):
+    """수준: 문서 전체에서 쓴 차례만 세어 0, 1, 2… — 차례에 없는 머리 글자는 위 항목의 한 수준 아래 (marklist.js markLevels)"""
+    groups = []
+
+    def walk(bs):
+        for b in bs:
+            if b['kind'] == 'marklist':
+                groups.append(b)
+            elif b['kind'] == 'box':
+                walk(b['blocks'])
+    walk(blocks)
+    used = sorted({it['rank'] for g in groups for it in g['items'] if it['rank'] >= 0})
+    for g in groups:
+        above = 0
+        for it in g['items']:
+            it['level'] = min(5, used.index(it['rank']) if it['rank'] >= 0 else above + 1)
+            if it['rank'] >= 0:
+                above = it['level']
+
+
 def read_body(lines, store):
     """줄 → 블록. lectern_md.read_blocks 에 Lectern 문서의 줄(박스글·쪽 나눔·목차·$$ 수식·주석)을 더한다.
     문장 속 수식은 store 에 모으고 그 자리에 표시를 둔다 (protect_math)"""
@@ -420,6 +573,13 @@ def read_body(lines, store):
                 i += 1
             i += 1
             continue
+        if not (line[:1] in ' \t' and buf and buf[-1].strip()):   # 위 줄에 이어 들여 쓴 줄(목록 항목의 이어 쓴 줄)은 아니다
+            mark, nxt = read_marklist(lines, i, store)
+            if mark:
+                flush()
+                out.append(mark)
+                i = nxt
+                continue
         buf.append(protect_math(line, store))
         i += 1
     flush()
@@ -515,6 +675,7 @@ class Builder:
         self.heads: dict[str, str] = {}                     # 제목 앵커 → 책갈피
         self.drawing_id = 1000
         self.texts: list[str] = []                           # 문장 속 수식 (protect_math 가 모은 것)
+        self.body_hp = 21                                    # 본문 글자 크기 (반 포인트) — 양식의 것 (body_size_of)
 
     # -- 관계
     def rel(self, kind, target, external=False):
@@ -560,6 +721,8 @@ class Builder:
             props.append('<w:strike/>')
         if r.get('color') in TEXT_COLOR:
             props.append(f'<w:color w:val="{TEXT_COLOR[r["color"]]}"/>')
+        if r.get('sz'):
+            props.append(f'<w:sz w:val="{r["sz"]}"/><w:szCs w:val="{r["sz"]}"/>')
         if r.get('u'):
             props.append('<w:u w:val="single"/>')
         if r.get('mark') in MARK_FILL:
@@ -659,6 +822,8 @@ class Builder:
                 out.append(self.heading(b))
             elif k == 'list':
                 out.extend(self.list_block(b))
+            elif k == 'marklist':
+                out.extend(self.marklist(b, in_cell))
             elif k == 'table':
                 out.append(self.table(b))
                 out.append(self.para('', None, '<w:spacing w:after="0" w:line="120" w:lineRule="exact"/>'))   # 표 뒤 숨 — 바로 뒤 표와 붙지 않게
@@ -731,11 +896,28 @@ class Builder:
             out[0]['t'] = out[0]['t'].lstrip()
         return [r for r in out if r['t']]
 
+    def level_runs(self, runs, top, depth):
+        """목록 수준의 글자 (D210 — 앱의 base.css 와 같게): 맨 위(top)는 진하게·1.05배, 셋째 수준은 .96배, 넷째부터 .92배"""
+        scale = 1.05 if top else 0.96 if depth == 2 else 0.92 if depth >= 3 else 1
+        if not top and scale == 1:
+            return runs
+        sz = round(self.body_hp * scale)
+        return [{**r, 'sz': sz, **({'b': True} if top else {})} for r in runs]
+
     def list_block(self, b):
         out = []
         num_ids = {}
+        strong = any(it['lvl'] > 0 for it in b['items']) and not any(it.get('task') for it in b['items'])   # 하위가 있는 목록 (할 일 목록은 아니다)
+        tops = 0
         for it in b['items']:
             lvl = min(it['lvl'], 8)
+            top = strong and lvl == 0
+            gap = ''
+            if top:
+                tops += 1
+                if tops > 1:   # 맨 위 항목 사이를 띄운다 (.6em) — 같은 스타일 단락 사이의 틈을 지우는 contextualSpacing 을 끈다
+                    gap = f'<w:spacing w:before="{round(self.body_hp * 6)}"/><w:contextualSpacing w:val="0"/>'
+            it = {**it, 'runs': self.level_runs(it['runs'], top, lvl)}
             for deeper in [k for k in num_ids if k > lvl]:   # 윗 단계 항목이 나오면 그 아래 번호 목록은 끝 — 다음은 새 목록 (앱과 같다)
                 del num_ids[deeper]
             if it.get('task') and not it['ordered']:   # 할 일: 체크 칸(☐·☑)만 — 글머리는 붙이지 않는다 (앱 화면과 같게, 2026-11-18 양식 18가지 점검). 들여쓰기는 그 단계의 글머리 목록과 같다
@@ -748,7 +930,27 @@ class Builder:
             else:
                 num = 1   # 글머리표 목록
             out.append(self.para(self.runs(self.inline_runs(it['runs'])), self.sid['list'],
-                                 f'<w:numPr><w:ilvl w:val="{lvl}"/><w:numId w:val="{num}"/></w:numPr>'))
+                                 f'<w:numPr><w:ilvl w:val="{lvl}"/><w:numId w:val="{num}"/></w:numPr>{gap}'))
+        return out
+
+    def marklist(self, b, in_cell=False):
+        """글머리 글자 목록 (앱의 D192·D210): 항목마다 단락 — 수준마다 1.25em 들여 쓰고, 꺾인 줄은 글머리 글자 뒤에.
+        ○ 수준이 있는 묶음의 □ 는 진하게·1.05배, 그 사이를 띄운다. 셋째 수준부터 작게"""
+        em = self.body_hp * 10   # 1em (twip)
+        items = b['items']
+        strong = any(it.get('level', 0) == 1 for it in items)
+        out = []
+        for k, it in enumerate(items):
+            level = it.get('level', 0)
+            top = strong and level == 0
+            scale = 1.05 if top else 1
+            hang = round(hang_em(it['prefix']) * em * scale)
+            left = round(level * 1.25 * em) + hang
+            before = round(em * 0.6) if top and k else 0
+            after = '' if k == len(items) - 1 else ' w:after="40"'
+            ppr = f'<w:spacing w:before="{before}"{after}/><w:ind w:left="{left}" w:hanging="{hang}"/>'
+            runs = self.level_runs(it['runs'], top, level)
+            out.append(self.para(self.runs(self.inline_runs(runs)), self.sid['cell'] if in_cell else self.sid['normal'], ppr))
         return out
 
     def new_list(self, lvl=0, start=1):
@@ -1121,6 +1323,7 @@ def build(md_path, out_path, template=None, lang=None):
     lines, notes = split_notes(body.replace('\r\n', '\n').split('\n'))
     math: list[str] = []
     blocks = read_body(lines, math)
+    mark_levels(blocks)
     # 맨 앞 '# 제목' 하나는 문서 제목(Title) — 그 아래 단계를 하나씩 올린다 (## → 제목 1)
     h1 = [b for b in blocks if b['kind'] == 'heading' and b['level'] == 1]
     if len(h1) == 1 and blocks and blocks[0] is h1[0]:
@@ -1181,6 +1384,7 @@ def build(md_path, out_path, template=None, lang=None):
     vals.update({'title': str(title), 'author': author, 'date': fm_text(fm.get('date')) or TF.today()})
     with tempfile.TemporaryDirectory() as tmp:
         bld = Builder(md_path, lang, sid, width, notes, tmp)
+        bld.body_hp = body_size_of(styles)
         bld.texts = math
         bld.name_heads(blocks)
         content = bld.blocks(blocks)

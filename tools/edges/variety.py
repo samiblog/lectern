@@ -76,7 +76,7 @@ try:
         print('[메모 카드의 글자 대비 — 스타일마다]')
         page.keyboard.press('Alt+m')
         settle(400)
-        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v !== 'auto' && v !== '__settings')")
+        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v !== 'auto' && !v.startsWith('__'))")
         worst = [99, '', '']
         for theme in themes:
             page.select_option('#lec-theme', theme)

@@ -32,6 +32,10 @@
 `base` 로 쓸 수 있는 id: `default` 기본, `report` 보고서, `office` 사내 문서, `consulting` 컨설팅, `deck` 발표, `notion` 노션풍, `contrast` 고대비, `paper` 종이(세피아), `book` 책, `academic` 논문, `newsprint` 신문, `magazine` 잡지, `manuscript` 원고(타자기), `github` GitHub, `docsite` 문서 사이트, `solarized-light`, `gruvbox-light`, `dark` 다크, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` 밤 종이, `ink` 먹(완전 검정).
 `dark: yes` 이면 어두운 바탕(`dark`·`nord` 등)을 고르세요.
 
+### '내 스타일 만들기' 가 만든 파일
+
+머리 주석에 `maker: lectern` 이 있는 파일은 Lectern 의 **내 스타일 만들기** 창이 만든 것입니다. 맨 아래 `/* lectern-maker */` 뒤의 `:root { … }` 는 그 창의 칸입니다 — 창을 다시 열면 이 값을 불러오고, 저장하면 이 부분과 머리 주석만 새로 씁니다. 규칙을 더하려면 `/* lectern-maker */` **위에** 적으세요 (그 창으로 다시 저장해도 남습니다). 그 창에 없는 변수를 `:root` 블록에 넣으면 다음 저장에서 빠집니다.
+
 ## 3. 먼저 변수를 바꾸세요
 
 대부분의 모양은 `:root` 의 CSS 변수로 정해집니다. 변수만 바꾸면 본문은 물론 앱 화면(툴바·사이드바·목차·메뉴 색 — 앱이 이 변수에서 색을 만듭니다)과 터미널 바탕·글자, 다이어그램 색까지 함께 따라옵니다. 아래 표에 없는 변수를 새로 만들 필요는 거의 없습니다.
@@ -59,6 +63,7 @@
 | `--md-line` | 줄 간격 (예: `1.7`) |
 | `--md-width` | 본문 최대 폭 (px) |
 | `--md-h1-rule` / `--md-h2-rule` | h1·h2 아래 선 (`1px solid var(--md-border)`, 없애려면 `0`) |
+| `--lec-list-top-weight` / `--lec-list-top-scale` / `--lec-list-top-gap` | 목록의 수준 (D210) — 하위 항목이 있는 목록의 맨 위 항목의 굵기(`650`)·크기 배율(`1.05`, 단위 없이)·그 사이 틈(`.6em`). 끄려면 `normal` · `1` · `.28em` |
 
 ## 4. 더 바꾸고 싶으면 규칙을 적으세요
 

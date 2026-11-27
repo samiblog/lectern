@@ -530,6 +530,7 @@
     <div class="opt-block" aria-labelledby="lec-mystyles-title">
       <span class="opt-head"><b id="lec-mystyles-title">내 스타일</b><small id="lec-mystyles-info">CSS 파일 하나가 스타일 하나입니다. 스타일 폴더에 저장하면 툴바 스타일 목록 맨 아래 '내 스타일'에 나오고, 고치면 바로 반영됩니다</small></span>
       <div class="opt-btns">
+        <button type="button" id="lec-mystyles-make" class="text-btn" title="지금 스타일을 바탕으로 글꼴·크기·색·목록을 골라 저장합니다">화면에서 만들기…</button>
         <button type="button" id="lec-mystyles-folder" class="text-btn">스타일 폴더 열기</button>
         <button type="button" id="lec-mystyles-prompt" class="text-btn"></button>
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
@@ -781,6 +782,19 @@
       <p id="lec-mdstyle-question" class="insert-msg"></p>
       <div class="gallery-foot"><button id="lec-mdstyle-claude" type="button" class="primary" title="터미널에 요청 글을 넣습니다 (Enter 는 누르지 않음)"></button><button id="lec-mdstyle-heads" type="button">머리글만 바꾸기 (본문은 그대로)</button><span class="tb-spacer"></span><button id="lec-mdstyle-no" type="button">취소</button></div>
     </div>
+  </div>
+</div>
+<!-- 내 스타일 만들기 (stylemaker.js, D211) — 문서를 가리지 않게 오른쪽에 뜨는 칸 (고르는 대로 문서에 입혀 본다) -->
+<div id="lec-stylemaker" class="stylemaker" role="dialog" aria-labelledby="lec-stylemaker-title" hidden>
+  <div class="gallery-head"><span id="lec-stylemaker-title">내 스타일 만들기</span><span id="lec-stylemaker-sub" class="gallery-keys"></span><span class="tb-spacer"></span><button id="lec-stylemaker-close" type="button" class="icon-btn small" title="닫기 (Esc)" aria-label="닫기"><svg><use href="#i-close"/></svg></button></div>
+  <div id="lec-stylemaker-form">
+    <div id="lec-stylemaker-fields"></div>
+    <p id="lec-stylemaker-msg" class="insert-msg" role="alert" hidden></p>
+    <div class="gallery-foot"><label class="sm-name">이름 <input id="lec-stylemaker-name" type="text" spellcheck="false" autocomplete="off" maxlength="40" placeholder="예: 우리 보고서"></label><span class="tb-spacer"></span><button id="lec-stylemaker-cancel" type="button">취소</button><button id="lec-stylemaker-save" type="button" class="primary">저장</button></div>
+  </div>
+  <div id="lec-stylemaker-ask" hidden>
+    <p id="lec-stylemaker-question" class="insert-msg"></p>
+    <div class="gallery-foot"><button id="lec-stylemaker-replace" type="button" class="primary">바꾸기</button><button id="lec-stylemaker-new" type="button">새 스타일로 저장</button><span class="tb-spacer"></span><button id="lec-stylemaker-back" type="button">돌아가기</button></div>
   </div>
 </div>
 <!-- pptx 로 전환 (pptxdialog.js, D102) -->

@@ -37,7 +37,7 @@
 | Setting | What you choose |
 |---|---|
 | Group styles | Groups the toolbar style list By use · By mood · By brightness |
-| My styles | **Open style folder** · **Copy request for Claude Code** · ▣ (puts that request into the terminal). One CSS file is one style, and it appears under 'My styles' at the bottom of the style list |
+| My styles | **Make on screen…** ([Make my style](2.1-toolbar.en.md#making-your-own-styles)) · **Open style folder** · **Copy request for Claude Code** · ▣ (puts that request into the terminal). One CSS file is one style, and it appears under 'My styles' at the bottom of the style list |
 | Table cell alignment | Default (text left · numbers right · top of the cell) · Report style (header row and short columns centered, numbers right, long text left, vertically centered). Columns with an alignment mark in the source (`:---:`) follow the mark |
 | Render math | `$…$` · `$$…$$` · math and latex code blocks as equations |
 | Show line breaks inside paragraphs | Lines you break with Enter in the source break on screen too (like Shift+Enter in Word). When off, they run on as in standard Markdown |

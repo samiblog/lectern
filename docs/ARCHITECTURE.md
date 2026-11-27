@@ -212,7 +212,7 @@ flowchart LR
 | `POST /api/delete-doc` | `{p, path}` | 문서 하나를 휴지통으로 (D104 — `editing.delete_doc`, `trash.send`: 트리에 나오는 문서만, 코드와 자료는 400, 휴지통이 없는 드라이브·다른 프로그램이 쓰면 409, 프로그램 폴더 안은 403). `{ok}` |
 | `POST /api/paste-image` | `{p, doc, data(base64)}` | 붙여 넣은 그림 한 장을 문서 옆 `문서이름-그림` 폴더에 새 파일로 (D111 — `editing.save_image`: 사용자가 붙여 넣거나 끌어 넣을 때만, PNG·JPEG·GIF·WebP, 20MB 까지, 덮어쓰지 않음). `{path}` |
 | `POST /api/editing` | `{dirty: [이름…], w?}` | 저장하지 않은 편집이 있는 파일 (창을 닫을 때 묻는 데 — `state.unsaved_by`, `app.py`). w: 독립창의 창 id (D95) |
-| `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
+| `GET /api/styles` | | 내 스타일 (D53) `{styles:[{id:'user:<이름>', file, name, dark, base, head, mtime, size, maker}], dir, guide, builtin}` — `dir` 은 스타일 폴더, `guide` 는 AI 용 설명서(`web/help/styles.md`, 영어면 `styles.en.md`)의 전체 경로 |
 | `POST /api/export/keep` | `{text}` | 내보내기 창의 'html 로 저장' (D144) — 화면(mdhtml.js)이 지은 html 한 파일을 메모리에 두고 `{token, size}` (디스크에 쓰지 않음, 형식마다 최근 4개). `<!doctype html>` 과 `generator` 머리가 없거나 300MB 를 넘으면 400. 저장은 창의 js_api `save_export(tab, path, token, 'html')` — 저장 대화상자에서 고른 경로에 그 바이트 그대로 |
 | `POST /api/export/docx` | `{p, path, style}` | 내보내기 창의 Word (D146) — 스킬 `build_docx.py` 로 md 문서를 docx 로 만들어 메모리에 두고 `{token, size, figures, notes}` (임시 폴더에서 만들어 바로 지운다). `style` 은 Word 양식 보관소의 이름, `lectern:<id>` 면 스킬에 든 Lectern 양식(D147 — 지면 틀과 같은 id), 빈 글자면 Lectern 기본 양식. 없으면 404. md 가 아니면 404. 저장은 창의 js_api `save_export(tab, path, token, 'docx')` |
 | `GET /export-file/<토큰>.docx` | | 브라우저 개발 모드의 'Word로 저장…' — 그 docx 를 내려받기로 (`attachment`, 이름은 화면의 `<a download>`). 토큰이 비밀, 모르는 토큰은 404 |
@@ -225,6 +225,8 @@ flowchart LR
 | `GET /pdf-preview/<토큰>.pdf` | | 'PDF·인쇄' 창의 미리보기 PDF (D134 — 창의 js_api `pdf_preview` 가 메모리에 둔 최근 4개, 디스크에 쓰지 않음). 토큰이 비밀이다 — iframe 은 `X-Token` 을 보낼 수 없어 `/api` 밖. `Cache-Control: no-store`, 모르는 토큰은 404 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
+| `GET /api/styles/made?file=` | | '내 스타일 만들기'(D211)가 만든 스타일의 값 `{file, name, base, dark, values, stamp, copied}` — 그 창이 만든 것(머리 주석 `maker: lectern`)이 아니면 404 |
+| `POST /api/styles/made` | `{name, base, dark, values, file?, stamp?, copy?}` | '내 스타일 만들기'의 저장 (D211) — 서버가 값(`styles.MAKER_VARS` 열하나만, 글꼴 이름·#색·범위 안의 숫자)으로 CSS 를 짓는다. `file` 이 없으면 새 파일 하나(같은 이름이면 409), 있으면 그 창이 만든 그 파일만 `stamp` 가 같을 때 고쳐 쓴다(아니면 409·404). `copy` 는 손으로 쓴 스타일의 규칙을 옮겨 담는다. `{file, id, stamp}` |
 | `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 묶음 (D101) `{groups:[{name, own, templates:[{number, name, text}]}], dir}`. 기본 묶음 다음에 사용자의 것 |
 | `POST /api/slide-templates` | `{name, text}` | '내 템플릿' 묶음에 장 하나를 더한다. `{template:{group, number, name}}`. 같은 이름이면 409 |
 | `POST /api/slide-templates/folder` | `{}` | 템플릿 폴더를 Lectern 탭으로 연다 (없으면 만든다). `/api/state` 와 `opened` |

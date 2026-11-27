@@ -221,6 +221,25 @@
 .md-body li + li { margin-top: .28em; }
 .md-body li > p { margin: .3em 0; }
 .md-body li > ul, .md-body li > ol { margin: .3em 0 0; }
+/* 목록의 수준 (D210): 하위 항목이 있는 목록의 맨 위 항목은 진하게·조금 크게, 묶음 사이를 조금 띄운다 — 외부 보고서처럼. 셋째 수준부터 조금 작게.
+   하위 항목이 없는 목록(단순 나열)·할 일 목록·인용·강조글·표 칸·문서 속 목차·각주·Lectern 슬라이드는 그대로.
+   크기·굵기·틈은 :root 의 변수 — 스타일마다(GitHub 두 가지는 끈다), 내 스타일과 '내 스타일 만들기'(D211)의 '목록' 칸이 바꾼다. 인쇄는 틈만 좁힌다 (print.css) */
+:root { --lec-list-top-scale: 1.05; --lec-list-top-weight: 650; --lec-list-top-gap: .6em; }
+.md-body:not(.lec-deck) :is(ul, ol):not(.contains-task-list, li *, blockquote *, td *, th *, .lec-doctoc *, .footnotes *):has(> li > :is(ul, ol)) > li {
+  font-size: calc(var(--lec-list-top-scale) * 1em); font-weight: var(--lec-list-top-weight);
+}
+.md-body:not(.lec-deck) :is(ul, ol):not(.contains-task-list, li *, blockquote *, td *, th *, .lec-doctoc *, .footnotes *):has(> li > :is(ul, ol)) > li > :is(ul, ol) {
+  font-size: calc(1em / var(--lec-list-top-scale)); font-weight: normal;
+}
+.md-body:not(.lec-deck) :is(ul, ol):not(.contains-task-list, li *, blockquote *, td *, th *, .lec-doctoc *, .footnotes *):has(> li > :is(ul, ol)) > li + li { margin-top: var(--lec-list-top-gap); }
+.md-body:not(.lec-deck) li li li { font-size: .96em; }   /* 셋째 .96, 넷째부터 .92 (곱해진다) */
+.md-body:not(.lec-deck) li li li li li { font-size: 1em; }
+.md-body:not(.lec-deck) .lec-marklist:not(blockquote *, td *, th *):has(> .lec-lv1) > .lec-lv0 { font-size: calc(var(--lec-list-top-scale) * 1em); font-weight: var(--lec-list-top-weight); }
+.md-body:not(.lec-deck) .lec-marklist:not(blockquote *, td *, th *):has(> .lec-lv1) > .lec-lv0:not(:first-child) { margin-top: var(--lec-list-top-gap); }
+.md-body:not(.lec-deck) .lec-mark.lec-lv2 { font-size: .96em; padding-left: calc(2 * var(--lec-mark-step, 1.25em) / .96); }   /* 들여쓰기는 본문 글자 기준 그대로 */
+.md-body:not(.lec-deck) .lec-mark.lec-lv3 { font-size: .92em; padding-left: calc(3 * var(--lec-mark-step, 1.25em) / .92); }
+.md-body:not(.lec-deck) .lec-mark.lec-lv4 { font-size: .92em; padding-left: calc(4 * var(--lec-mark-step, 1.25em) / .92); }
+.md-body:not(.lec-deck) .lec-mark.lec-lv5 { font-size: .92em; padding-left: calc(5 * var(--lec-mark-step, 1.25em) / .92); }
 .md-body .task-list-item { list-style: none; }
 .md-body .task-list-item-checkbox { margin: 0 .55em 0 -1.45em; vertical-align: -.1em; accent-color: var(--md-link); }
 .md-body .task-list-item-checkbox:not(:disabled) { cursor: pointer; }

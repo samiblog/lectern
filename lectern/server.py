@@ -1023,6 +1023,24 @@ def create_app(state: AppState) -> Flask:
         resp.headers['X-Content-Type-Options'] = 'nosniff'
         return resp
 
+    @app.get('/api/styles/made')
+    def api_styles_made() -> Any:
+        """'내 스타일 만들기' 가 만든 스타일의 값 (D211 — 다시 열 때). 그 창이 만든 것이 아니면 404"""
+        got = styles.made_values(request.args.get('file', ''))
+        if got is None:
+            abort(404)
+        return jsonify(got)
+
+    @app.post('/api/styles/made')
+    def api_styles_make() -> Any:
+        """{name, base, dark, values, file?, stamp?, copy?} — '내 스타일 만들기' 의 저장 (D211). 새 파일 하나, 또는 그 창이 만든 그 파일만"""
+        data = body()
+        try:
+            return jsonify(styles.save_made(data.get('name'), data.get('base'), data.get('dark'), data.get('values'),
+                                            data.get('file'), data.get('stamp'), data.get('copy')))
+        except editing.EditError as exc:
+            return jsonify(error=exc.message), exc.status
+
     @app.post('/api/styles/folder')
     def api_styles_folder() -> Any:
         """스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '스타일 폴더 열기'"""

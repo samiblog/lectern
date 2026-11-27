@@ -98,8 +98,10 @@ try:
         lv = {k[:3]: v['lv'] for k, v in it.items()}
         check('ㅁ·ㅇ·-·· 가 수준 0·1·2·3', lv.get('ㅁ 추') == '0' and lv.get('ㅇ 생') == '1' and lv.get('- 제') == '2' and lv.get('· 반') == '3', lv)
         xs = [it[k]['x'] for k in it if k.startswith(('ㅁ 추', 'ㅇ 생', '- 제', '· 반'))]
-        step = (xs[1] - xs[0]) / it['ㅁ 추진 배']['fs'] if len(xs) == 4 else 0
-        check('하위 수준은 상위 수준보다 들여 쓴다 — 한 수준에 1.25em', len(xs) == 4 and xs[0] < xs[1] < xs[2] < xs[3] and abs(step - 1.25) < 0.05, (xs, step))
+        body = next(v['fs'] for k, v in it.items() if k.startswith('ㅇ 생'))   # 본문 글자 (맨 위 □ 는 1.05배 — D210)
+        step = (xs[1] - xs[0]) / body if len(xs) == 4 else 0
+        check('하위 수준은 상위 수준보다 들여 쓴다 — 한 수준에 1.25em (글자를 줄인 수준도 같은 폭)', len(xs) == 4 and xs[0] < xs[1] < xs[2] < xs[3] and abs(step - 1.25) < 0.05
+              and max(xs[k + 1] - xs[k] for k in range(3)) - min(xs[k + 1] - xs[k] for k in range(3)) <= 2, (xs, step))
         check('같은 수준은 같은 자리 (ㅁ 추진 배경 · ㅁ 정책 과제, - 제조업 · - 서비스업)', it['ㅁ 추진 배']['x'] == it['ㅁ 정책 과']['x'] and it['- 제조업 ']['x'] == it['- 서비스업']['x'])
         gaps = {k: v['gap'] for k, v in it.items() if v['gap'] is not None}
         check('꺾인 줄은 머리 글자 뒤에 (항목마다)', len(gaps) >= 3 and all(abs(g) < 0.05 for g in gaps.values()), gaps)

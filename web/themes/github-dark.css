@@ -1,5 +1,6 @@
 /* GitHub 다크: GitHub 의 어두운 화면과 같은 색 (github-markdown-css dark). 저장소 README 모양 그대로 밤에 볼 때 */
 :root {
+  --lec-list-top-scale: 1; --lec-list-top-weight: normal; --lec-list-top-gap: .28em;   /* 목록 수준 강조(D210)는 끈다 — GitHub 화면 그대로 */
   --md-bg: #0d1117;
   --md-fg: #c9d1d9;
   --md-heading: #f0f6fc;

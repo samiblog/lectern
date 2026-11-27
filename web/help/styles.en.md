@@ -32,6 +32,10 @@ The file must begin with this comment, one `key: value` per line.
 Built-in ids for `base`: `default`, `report`, `office`, `consulting`, `deck`, `notion`, `contrast`, `paper` (sepia), `book`, `academic`, `newsprint`, `magazine`, `manuscript` (typewriter), `github`, `docsite`, `solarized-light`, `gruvbox-light`, `dark`, `github-dark`, `nord`, `solarized-dark`, `dracula`, `one-dark`, `night` (night paper), `ink` (pure black).
 With `dark: yes`, pick a dark base (`dark`, `nord` and so on).
 
+### Files made by 'Make my style'
+
+A file whose header comment has `maker: lectern` was made by Lectern's **Make my style** window. The `:root { … }` after `/* lectern-maker */` at the bottom holds that window's fields — opening the window again loads these values, and saving rewrites only this part and the header comment. To add rules, write them **above** `/* lectern-maker */` (they stay when the window saves again). Variables that the window does not have are dropped from the `:root` block on the next save.
+
 ## 3. Change the variables first
 
 Most of the look comes from CSS variables on `:root`. Changing only the variables updates the document and also the app UI (toolbar, sidebar, contents, menu colors — the app derives its colors from them), the terminal background and text, and diagram colors. You rarely need variables beyond this table.
@@ -59,6 +63,7 @@ Most of the look comes from CSS variables on `:root`. Changing only the variable
 | `--md-line` | Line height (for example `1.7`) |
 | `--md-width` | Maximum text width (px) |
 | `--md-h1-rule` / `--md-h2-rule` | Line under h1/h2 (`1px solid var(--md-border)`, or `0` for none) |
+| `--lec-list-top-weight` / `--lec-list-top-scale` / `--lec-list-top-gap` | List levels (D210) — weight (`650`), size factor (`1.05`, no unit) and gap (`.6em`) of the top items in a list with sub-items. To turn it off: `normal` · `1` · `.28em` |
 
 ## 4. Add rules for anything else
 

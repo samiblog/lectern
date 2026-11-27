@@ -82,7 +82,10 @@ export async function loadUserStyles() {
 export const userStyleInfo = () => ({ ...userPlace, count: userStyles.length });
 
 const userStyle = (id) => userStyles.find((s) => s.id === id);
-const themeOf = (id) => THEMES[id] || userStyle(id);
+/** 스타일 하나 — 앱의 것({name, dark, …}) 또는 내 스타일({id, file, name, dark, base, maker}) */
+export const themeOf = (id) => THEMES[id] || userStyle(id);
+/** 내 스타일이면 그 정보 ('내 스타일 만들기' — D211) */
+export const userStyleOf = (id) => userStyle(id);
 
 /** 파일이 생기거나 고쳐졌으면 목록·화면에 반영한다 (보는 중인 내 스타일이면 다시 입히고 다시 그린다 — 다이어그램 색) */
 async function syncUserStyles() {
@@ -177,22 +180,25 @@ export function fillPicker() {
   const mine = userStyles.length
     ? html`<optgroup label="${t('내 스타일')}">${userStyles.map((s) => html`<option value="${s.id}">${s.name}</option>`)}</optgroup>`
     : '';
-  setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}<option value="${SETTINGS}">${t('스타일 설정…')}</option>`);   // 맨 아래 — 설정 창의 '보기' (D154)
+  setHtml($('#lec-theme'), html`<option value="auto">${t('자동 (시스템)')}</option>${groups}${mine}<option value="${MAKE}">${t('내 스타일 만들기…')}</option><option value="${SETTINGS}">${t('스타일 설정…')}</option>`);   // 맨 아래 — 설정 창의 '보기' (D154)
   $('#lec-theme').value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
   updateSteps();
 }
 
 /** 목록 맨 아래의 '스타일 설정…' — 스타일이 아니라 설정 창을 연다 (D154) */
 const SETTINGS = '__settings';
+/** 그 위의 '내 스타일 만들기…' — 지금 스타일을 바탕으로 칸을 골라 저장하는 창 (D211 — stylemaker.js) */
+const MAKE = '__make';
 
-/** 위·아래 버튼: 목록의 맨 처음·맨 끝(설정 줄 앞)이면 누를 수 없다 */
+/** 위·아래 버튼: 목록의 맨 처음·맨 끝(만들기·설정 줄 앞)이면 누를 수 없다 */
 function updateSteps() {
   const sel = $('#lec-theme');
   $('#lec-theme-prev').disabled = sel.selectedIndex <= 0;
-  $('#lec-theme-next').disabled = sel.selectedIndex >= sel.options.length - 2;
+  $('#lec-theme-next').disabled = sel.selectedIndex >= sel.options.length - 3;
 }
 
 function choose(value) {
+  emit('theme-chosen');   // '내 스타일 만들기' 창의 미리보기를 걷는다
   saveConfig({ [themeKey()]: value });   // S.config 는 바로 바뀌고 저장은 뒤에서 — 위·아래를 빠르게 눌러도 화면이 바로 따라온다
   applyTheme();
   redrawAfterLoad();   // mermaid 다이어그램은 테마를 바꾸면 다시 그려야 한다
@@ -202,7 +208,14 @@ function choose(value) {
 function step(dir) {
   const sel = $('#lec-theme');
   const next = sel.options[sel.selectedIndex + dir];
-  if (next && next.value !== SETTINGS) choose(next.value);
+  if (next && next.value !== SETTINGS && next.value !== MAKE) choose(next.value);
+}
+
+/** 그 스타일로 바꾼다 — 방금 저장한 내 스타일이면 목록을 다시 받은 뒤 ('내 스타일 만들기' — D211) */
+export async function useStyle(id) {
+  await loadUserStyles();
+  fillPicker();
+  choose(id);
 }
 
 export function initTheme() {
@@ -216,6 +229,11 @@ export function initTheme() {
     if (e.target.value === SETTINGS) {   // 스타일 설정… — 고른 스타일은 그대로 두고 설정 창의 '보기'로
       e.target.value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
       emit('open-settings', 'view');
+      return;
+    }
+    if (e.target.value === MAKE) {   // 내 스타일 만들기… — 고른 스타일은 그대로 두고 그 창을 (D211)
+      e.target.value = themeOf(S.config[themeKey()]) ? S.config[themeKey()] : 'auto';
+      emit('open-style-maker');
       return;
     }
     choose(e.target.value);

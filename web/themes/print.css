@@ -129,6 +129,7 @@ html body .md-body:not(.lec-deck) img { max-width: 100%; max-height: 225mm; widt
 html body .md-body:not(.lec-deck) :is(pre.mermaid, pre.lec-chart) svg { max-height: 225mm; }
 html body .md-body:not(.lec-deck) :is(ul, ol) { padding-left: 1.4em; text-align: left; }
 html body .md-body:not(.lec-deck) li + li { margin-top: .15em; }
+html body { --lec-list-top-gap: .4em; }   /* 목록 묶음 사이 (D210) — 종이는 조금 좁게 */
 html body .md-body:not(.lec-deck) hr { border: 0; border-top: .5pt solid #999; }
 /* 각주 — 짧은 줄 아래 작은 글자, 되돌아가기 화살표 없이 */
 html body .md-body:not(.lec-deck) .footnotes-sep { width: 30%; margin: 8mm 0 2mm; border: 0; border-top: .5pt solid #000; }

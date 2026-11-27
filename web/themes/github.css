@@ -1,5 +1,6 @@
 /* GitHub: 저장소 README와 같은 모양. 산세리프, 밑줄 있는 큰 제목, 칸이 모두 나뉜 표 (github-markdown-css 색) */
 :root {
+  --lec-list-top-scale: 1; --lec-list-top-weight: normal; --lec-list-top-gap: .28em;   /* 목록 수준 강조(D210)는 끈다 — GitHub 화면 그대로 */
   --md-bg: #ffffff;
   --md-fg: #1f2328;
   --md-heading: #12263f;

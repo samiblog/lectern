@@ -58,6 +58,7 @@ import { initGallery, closeGallery } from './slidegallery.js';
 import { initPptx, closePptx } from './pptxdialog.js';
 import { initHtmlExport, closeHtmlExport } from './impressexport.js';
 import { initMdStyle, closeMdStyle } from './mdstyle.js';
+import { initStyleMaker } from './stylemaker.js';
 import { initDocTabs, docTabAt, closeDocTabKey, cycleDocTab, reopenDocTab, moveToWindow } from './doctabs.js';
 import { solo } from './solo.js';
 import { initNotes, toggleNotes, closeNotes } from './notes.js';
@@ -604,6 +605,7 @@ async function boot() {
   initPptx();
   initHtmlExport();
   initMdStyle();
+  initStyleMaker();
   initSlides();
   initSlideTools();
   initDocCheck();

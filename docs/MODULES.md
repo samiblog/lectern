@@ -106,6 +106,7 @@
 | layout.js | 지면 틀 (D145) — 틀 목록(`/api/layouts`), 문서의 맨 앞 설정(한국어 키 별칭), 틀의 뼈대를 DOMParser 로 채우기({{키}}·{{date:dot}}·{{a\|b}}·{{t:한\|영}}·{{body}}·{{toc}}·{{slot:이름}}, data-if·data-each, CSS 안의 {{css:식}}), 이름 있는 박스글을 자리로 옮기기, 캡션에 class caption. 늘 같은 바탕(base.css 의 종이 규칙을 뺀 것·기본 스타일·밝은 코드 색) 위에 _base.css 와 틀의 CSS 로 html 한 파일을 짓는다 — 내보내기 창이 html 로 저장하고, PDF 는 이 html 을 숨은 창이 찍는다 |
 | impresslayout.js | html 로 전환의 장 자리 (D129, DOM 없음 — 규칙 시험) — 맨 앞 설정의 배치 방식(`readMode`), 장 주석의 `impress: x=… y=…`(`readSpot`), 격자·가로 한 줄(`layoutSteps`), 전체 보기(`overviewOf`) |
 | headstyle.js | md 문서 스타일의 계산 (D103) — 머리글을 읽고, 지금 모양을 알아보고, 번호를 뗐다 붙인다. 절 링크도 함께. DOM 없음 |
+| stylemaker.js | 내 스타일 만들기 창 (D211) — 지금 스타일을 바탕으로 글꼴·크기·색·목록 칸 열하나를 골라 미리 보고(:root 에 얹는 `#lec-stylemaker-preview`), `POST /api/styles/made` 로 저장. 이 창이 만든 스타일은 다시 열면 값을 불러와 물은 뒤 고쳐 쓰고, 손으로 쓴 스타일은 규칙을 옮겨 담아 새 이름으로. 글꼴은 이 PC 에 있는 것만(캔버스로 잼), 대비 4.5:1 알림 |
 | mdstyle.js | md 문서 스타일 창 (D103) — 상태줄 버튼, 미리보기, 서술식과 개조식을 오갈 때 묻기. 저장은 lineedit 의 `md-headings` |
 | slides.js | Lectern 슬라이드 (D59·D96) — 맨 앞 설정 marp: true 읽기(`readDeck`), markdown-it 규칙 `slideRule`(줄마다 `.lec-slide-wrap > .lec-slide-frame > section.lec-slide`, 주석 → Marp 지시어·발표자 노트), 다듬기(배경 그림·그림 크기·style: CSS 범위·▶), 넘침 맞추기(`fitSlide` — 그림을 줄이고 차트는 다시 그려 달라 하고, 그래도 넘치면 글을 바닥 크기까지 줄인다, D188), 칸 폭에 맞춘 배율(`--slide-scale`), 상태줄 '문서로 보기'·'발표' |
 | present.js | 발표 모드 (D59) — `#lec-present` 에 슬라이드를 복제해 창 전체에, 넘기기·N 노트·F 전체 화면·Esc (키는 main.js 가 맨 먼저 `presentKey` 로) |

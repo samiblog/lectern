@@ -1,6 +1,8 @@
 """사용자 스타일 (D53): 설정 폴더의 styles\\*.css — 툴바 스타일 목록의 '내 스타일'.
 
 Lectern 은 이 파일을 읽기만 한다 (쓰는 것은 사용자나 Claude Code 같은 AI — 만드는 법은 web/help/styles.md).
+예외는 '내 스타일 만들기' 창(D211 — save_made): 사용자가 저장을 누를 때 새 파일 하나를 만들고, 그 창이 만든 파일(머리 주석 maker: lectern)만
+물은 뒤 고쳐 쓴다 — 그사이 바뀌었으면 쓰지 않는다. 손이나 AI 로 쓴 파일은 고치지 않는다 (바탕으로 삼아 새 이름으로만).
 파일 맨 앞의 머리 주석에서 이름·밝기·바탕 스타일을 읽는다 (없으면 파일 이름, 밝음, 밝으면 default·어두우면 dark):
 
     /* lectern-style
@@ -15,10 +17,13 @@ CSS 이스케이프로 숨긴 것('\\75 rl(' 등)은 먼저 풀고, 그래도 �
 """
 from __future__ import annotations
 
+import os
 import re
 from pathlib import Path
 from typing import Any
 
+from .editing import BAD_NAME_CHARS, RESERVED_NAMES, EditError
+from .i18n import t
 from .paths import config_dir, web_dir
 from .scanner import has_hidden_attr, natural_key
 
@@ -63,7 +68,7 @@ def parse_head(text: str, builtins: list[str]) -> dict[str, Any]:
     if base not in builtins:
         base = 'dark' if dark else 'default'
     name = fields.get('name', '').strip()[:60]
-    return {'name': name, 'dark': dark, 'base': base, 'head': bool(m)}
+    return {'name': name, 'dark': dark, 'base': base, 'head': bool(m), 'maker': fields.get('maker', '').strip().lower() == 'lectern'}
 
 
 def _style_file(folder: Path, name: str) -> Path | None:
@@ -101,7 +106,7 @@ def list_styles(folder: Path | None = None) -> list[dict[str, Any]]:
             continue
         info = parse_head(head, builtins)
         out.append({'id': f'user:{path.stem}', 'file': name, 'name': info['name'] or path.stem, 'dark': info['dark'],
-                    'base': info['base'], 'head': info['head'], 'mtime': st.st_mtime, 'size': st.st_size})
+                    'base': info['base'], 'head': info['head'], 'mtime': st.st_mtime, 'size': st.st_size, 'maker': info['maker']})
         if len(out) >= MAX_STYLES:
             break
     return out
@@ -140,3 +145,143 @@ def read_style(name: str, folder: Path | None = None) -> str | None:
         return sanitize_css(path.read_bytes().decode('utf-8-sig', errors='replace'))
     except OSError:
         return None
+
+
+# ---- 내 스타일 만들기 (D211) — 창이 고른 값으로 CSS 파일 하나 ----------------------------------------------
+# 값은 각 스타일이 이미 쓰는 :root 의 변수만, 종류마다 거른다 (글꼴 이름·#색·범위 안의 숫자). CSS 글은 서버가 짓는다 — 화면이 보낸 글을 쓰지 않는다.
+MAKER_VARS: dict[str, tuple] = {
+    '--md-font': ('font',), '--md-heading-font': ('font',),
+    '--md-size': ('px', 12, 24), '--md-line': ('num', 1.2, 2.4), '--md-width': ('px', 560, 1400),
+    '--md-fg': ('color',), '--md-heading': ('color',), '--md-link': ('color',), '--md-th-bg': ('color',),
+    '--lec-list-top-weight': ('int', 400, 800), '--lec-list-top-scale': ('num', 1, 1.2),
+}
+MAKER_MARK = '/* lectern-maker */'
+MAX_NAME = 40
+_FONT = re.compile(r'^[^;{}()\\<>@/*:!\n\r]{1,300}$')
+_COLOR = re.compile(r'^#[0-9a-fA-F]{6}$')
+_DECL = re.compile(r'(--[a-z-]+)\s*:\s*([^;]*);')
+
+
+def _stamp(path: Path) -> str:
+    st = path.stat()
+    return f'{st.st_mtime_ns}:{st.st_size}'
+
+
+def _value(key: str, raw: Any) -> str:
+    """거른 값의 CSS 글 — 틀리면 EditError"""
+    spec = MAKER_VARS.get(key)
+    bad = EditError(400, t('스타일 값이 올바르지 않습니다: {key}', key=str(key)[:40]))
+    if spec is None:
+        raise bad
+    kind = spec[0]
+    if kind == 'font':
+        if not isinstance(raw, str) or not _FONT.match(raw.strip()) or 'url' in raw.lower():
+            raise bad
+        return raw.strip()
+    if kind == 'color':
+        if not isinstance(raw, str) or not _COLOR.match(raw):
+            raise bad
+        return raw.lower()
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)) or not spec[1] <= raw <= spec[2]:
+        raise bad
+    if kind == 'int':
+        return str(int(raw))
+    return f'{round(float(raw), 3):g}' + ('px' if kind == 'px' else '')
+
+
+def _clean_name(name: Any) -> str:
+    clean = ' '.join(name.split()) if isinstance(name, str) else ''
+    if (not clean or len(clean) > MAX_NAME or clean[0] == '.' or clean[-1] == '.' or any(c in BAD_NAME_CHARS for c in clean)
+            or clean.lower() in RESERVED_NAMES):
+        raise EditError(400, t('스타일 이름은 {n}자까지입니다 — 점으로 시작하거나 끝나면 안 되고 : * ? " < > | / \\ 를 쓸 수 없습니다', n=MAX_NAME))
+    return clean
+
+
+def _maker_block(values: dict[str, str]) -> str:
+    lines = ''.join(f'  {k}: {v};\n' for k, v in values.items())
+    return f'{MAKER_MARK}\n:root {{\n{lines}}}\n'
+
+
+def made_values(name: str, folder: Path | None = None) -> dict[str, Any] | None:
+    """'내 스타일 만들기' 가 만든 파일의 이름·바탕·값 — 다시 열 때 불러온다. 그 창이 만든 파일이 아니면 None"""
+    path = _style_file(folder or styles_dir(), name)
+    if path is None or path.stat().st_size > MAX_STYLE_BYTES:
+        return None
+    try:
+        text = path.read_bytes().decode('utf-8-sig', errors='replace')
+    except OSError:
+        return None
+    info = parse_head(text[:HEAD_BYTES], builtin_styles())
+    at = text.rfind(MAKER_MARK)
+    if not info['maker'] or at < 0:
+        return None
+    values: dict[str, Any] = {}
+    for key, raw in _DECL.findall(text[at:]):
+        spec = MAKER_VARS.get(key)
+        if spec is None:
+            continue
+        raw = raw.strip()
+        if spec[0] in ('font', 'color'):
+            values[key] = raw
+        else:
+            try:
+                values[key] = float(raw[:-2] if raw.endswith('px') else raw)
+            except ValueError:
+                continue
+    return {'file': path.name, 'name': info['name'] or path.stem, 'base': info['base'], 'dark': info['dark'], 'values': values,
+            'stamp': _stamp(path), 'copied': '/* lectern-base:' in text[:at]}
+
+
+def save_made(name: Any, base: Any, dark: Any, values: Any, file: Any = None, stamp: Any = None, copy: Any = None,
+              folder: Path | None = None) -> dict[str, Any]:
+    """'내 스타일 만들기' 의 저장 (D211). file 이 없으면 새 파일 하나 (같은 이름이 있으면 만들지 않는다).
+    file 이 있으면 그 창이 만든 그 파일을 고쳐 쓴다 — 머리 주석에 maker: lectern 이 있고, 불러온 뒤 바뀌지 않았을 때만 (stamp).
+    copy 는 손이나 AI 로 쓴 내 스타일 — 그 규칙을 새 파일에 옮겨 담고 그 위에 값을 얹는다 (원래 파일은 그대로)"""
+    folder = folder or styles_dir()
+    builtins = builtin_styles()
+    clean = _clean_name(name)
+    if base not in builtins or not isinstance(values, dict) or len(values) > len(MAKER_VARS):
+        raise EditError(400, t('스타일 값이 올바르지 않습니다: {key}', key='base'))
+    decls = {k: _value(k, v) for k, v in values.items()}
+    decls = {k: decls[k] for k in MAKER_VARS if k in decls}   # 늘 같은 차례
+    head = (f'/* lectern-style\n   name: {clean}\n   dark: {"yes" if dark is True else "no"}\n   base: {base}\n   maker: lectern\n*/\n')
+    if file:
+        path = _style_file(folder, file) if isinstance(file, str) else None
+        old = made_values(file, folder) if path else None
+        if old is None:
+            raise EditError(404, t("이 스타일은 '내 스타일 만들기' 가 만든 것이 아니라 고치지 않습니다 — 새 이름으로 저장하세요"))
+        if stamp != old['stamp']:
+            raise EditError(409, t('스타일 파일이 그사이 바뀌었습니다 — 창을 닫고 다시 열면 바뀐 값을 불러옵니다'))
+        text = path.read_bytes().decode('utf-8-sig', errors='replace')
+        m = _HEAD.match(text)
+        middle = text[m.end():text.rfind(MAKER_MARK)] if m else ''
+        tmp = path.with_name(f'.{path.stem}.lectern-tmp')
+        try:
+            tmp.write_text(head + middle.lstrip('\n') + _maker_block(decls), encoding='utf-8', newline='\n')
+            os.replace(tmp, path)
+        except OSError as exc:
+            tmp.unlink(missing_ok=True)
+            raise EditError(500, t('스타일을 저장하지 못했습니다: {why}', why=exc.strerror or exc)) from None
+        return {'file': path.name, 'id': f'user:{path.stem}', 'stamp': _stamp(path)}
+    middle = ''
+    if copy:
+        src = _style_file(folder, copy) if isinstance(copy, str) else None
+        if src is None or src.stat().st_size > MAX_STYLE_BYTES:
+            raise EditError(404, t('바탕으로 삼을 스타일 파일이 없습니다'))
+        text = src.read_bytes().decode('utf-8-sig', errors='replace')
+        m = _HEAD.match(text)
+        body = text[m.end():] if m else text
+        if MAKER_MARK in body:   # 이 창이 만든 파일을 바탕으로 — 그 값 칸은 빼고(새 값 칸이 대신한다), 그 파일이 옮겨 담은 규칙은 그대로
+            body = re.sub(r'\A\s*/\* lectern-base: [^*]*\*/\n?', '', body[:body.rfind(MAKER_MARK)])
+        middle = f'/* lectern-base: {src.name} */\n{body.strip()}\n\n' if body.strip() else ''
+    path = folder / f'{clean}.css'
+    try:
+        folder.mkdir(parents=True, exist_ok=True)
+        with open(path, 'x', encoding='utf-8', newline='\n') as fh:
+            fh.write(head + middle + _maker_block(decls))
+    except FileExistsError:
+        raise EditError(409, t('같은 이름의 스타일이 있습니다 — 다른 이름으로 저장하세요')) from None
+    except OSError as exc:
+        raise EditError(500, t('스타일을 저장하지 못했습니다: {why}', why=exc.strerror or exc)) from None
+    return {'file': path.name, 'id': f'user:{path.stem}', 'stamp': _stamp(path)}
+

@@ -363,6 +363,10 @@ export function initSettings() {
   applyAiNames();   // 고른 AI 도구의 이름으로 (D138)
   initAiSetup();   // 넣을 곳 고르기 (D159)
   $('#lec-mystyles-folder').addEventListener('click', openStylesFolder);
+  $('#lec-mystyles-make').addEventListener('click', () => {   // 내 스타일 만들기 (D211) — 설정 창을 닫고 문서 옆에
+    closeSettings();
+    emit('open-style-maker');
+  });
   $('#lec-layouts-folder').addEventListener('click', openLayoutsFolder);
   $('#lec-layouts-prompt').addEventListener('click', async () => {
     toast(await copyText(await layoutPrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 원하는 양식을 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));

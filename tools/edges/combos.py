@@ -151,7 +151,7 @@ try:
         check('스크롤해도 번호가 글과 함께 움직임', abs(before - after) < 1, (before, after))
 
         print('[모든 스타일]')
-        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && v !== '__settings')")
+        themes = page.evaluate("[...document.querySelectorAll('#lec-theme option')].map((o) => o.value).filter((v) => v && !v.startsWith('__'))")
         low = []
         for th in themes:
             page.select_option('#lec-theme', th)

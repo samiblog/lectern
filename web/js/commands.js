@@ -24,6 +24,7 @@ import { toggleGather } from './gather.js';
 import { toggleEditor } from './editor.js';
 import { printButton } from './printdoc.js';
 import { openDocCheck } from './doccheck.js';
+import { openStyleMaker } from './stylemaker.js';
 import { openParts, clipChunk } from './parts.js';
 import { clipHere, clipHereTo } from './docmenu.js';
 import { openBox } from './basket.js';
@@ -79,6 +80,7 @@ function list(local) {
       [t('문서 글자 키우기'), 'Ctrl+=', () => stepText(1)],
       [t('문서 글자 줄이기'), 'Ctrl+-', () => stepText(-1)],
       [t('문서 글자 100%'), 'Ctrl+0', resetText],
+      [t('내 스타일 만들기 — 지금 스타일을 바탕으로 글꼴·크기·색·목록을 골라 저장'), '', openStyleMaker],   // D211
       [t('다시 불러오기'), 'F5', local.refresh],
     ]],
     [t('쓰기·내보내기'), [
