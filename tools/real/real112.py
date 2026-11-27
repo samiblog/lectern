@@ -59,6 +59,14 @@ BAND = """() => [...document.querySelectorAll('#lec-view pre.mermaid')][1] && [.
   const top = Math.min(...[...r.getClientRects()].filter((x) => x.height).map((x) => x.top));
   return { bottom: band.getBoundingClientRect().bottom, title: Math.max(...[...dt.getClientRects()].map((x) => x.bottom)), content: top }; }).filter(Boolean)"""
 
+def saved_style():
+    """설정 파일의 diagram_style — 앱이 파일을 바꿔 끼우는 순간에는 Windows 가 읽기를 막는다 (그때는 None, 다시 기다린다)"""
+    try:
+        return json.loads((config / 'config.json').read_text(encoding='utf-8')).get('diagram_style')
+    except (OSError, ValueError):
+        return None
+
+
 proc = None
 try:
     with sync_playwright() as p:
@@ -105,10 +113,10 @@ try:
         page.evaluate("() => import('/static/js/store.js').then((m) => m.emit('open-settings', 'view'))")
         page.wait_for_selector('#lec-dstyle-preview pre.mermaid svg', timeout=15000)
         page.select_option('#lec-dstyle', '2')
-        R.wait(lambda: json.loads((config / 'config.json').read_text(encoding='utf-8')).get('diagram_style') == 2, 8)
+        R.wait(lambda: saved_style() == 2, 8)
         page.keyboard.press('Escape')
         R.wait(lambda: page.evaluate(STYLES)[:3] == ['3', '8', '9'], 15)
-        R.check('설정의 기본 번호는 줄 없는 그림만 — 줄 있는 그림은 그대로', page.evaluate(STYLES)[:3] == ['3', '8', '9'] and json.loads((config / 'config.json').read_text(encoding='utf-8')).get('diagram_style') == 2,
+        R.check('설정의 기본 번호는 줄 없는 그림만 — 줄 있는 그림은 그대로', page.evaluate(STYLES)[:3] == ['3', '8', '9'] and saved_style() == 2,
                 page.evaluate(STYLES))
         R.check('화면 스크립트 오류 없음', not errors, errors[:3])
         b.close()

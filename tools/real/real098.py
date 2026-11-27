@@ -78,7 +78,7 @@ BOXES = """() => [...document.querySelectorAll('#lec-view .lec-exhibit')].map((b
   return { cap: cap?.textContent.trim(), capMid: Math.round(r(cap).left + r(cap).width / 2), bodyMid: Math.round(r(body).left + r(body).width / 2),
     bodyLeft: Math.round(r(body).left), srcLeft: src ? Math.round(r(src).left) : null, srcLines: src ? Math.round(r(src).height / parseFloat(getComputedStyle(src).lineHeight)) : 0,
     capPx: parseFloat(getComputedStyle(cap).fontSize), align: [getComputedStyle(cap).textAlign, src && getComputedStyle(src).textAlign] }; })"""
-NAV = "() => [!document.querySelector('#lec-help').hidden, getComputedStyle(document.querySelector('#lec-help .help-nav')).display !== 'none', !document.querySelector('#lec-help-navon').hidden]"
+NAV = "() => { const h = document.querySelector('#lec-help'), n = document.querySelector('#lec-help .help-nav'), on = document.querySelector('#lec-help-navon'); if (!h || !n || !on) return [false, false, false]; return [!h.hidden, getComputedStyle(n).display !== 'none', !on.hidden]; }"   # 새 창은 다 그려지기 전이면 요소가 없다 — 그때는 아직
 
 
 def connect(p, cdp):
