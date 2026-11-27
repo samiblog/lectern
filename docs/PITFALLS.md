@@ -127,6 +127,7 @@
 - Mermaid 의 CSS(`.node path` 의 칠·테두리)와 classDef(`.key span { color … !important }`)가 그린 뒤 넣은 도형·글자를 덮는다 — 띠는 인라인 `style` 에 `!important`, 제목 상자의 강조 표시에는 글자색을 넣지 않는다.
 - 그림 안에 넣은 `<style>` 은 그 그림만이 아니라 문서 전체에 듣는다 — Graphviz 의 규칙은 그 svg 의 id 로 묶는다 (Mermaid 의 themeCSS 는 Mermaid 가 묶는다).
 - 같은 스타일 줄이 여러 그림에 있다 — 줄 하나로 자리를 찾는 저장(`replaceLines` 의 근처 찾기)은 옛 원문일 때 다른 그림의 줄을 고친다. 그림 블록 전체를 before 로 준다.
+- Lectern 슬라이드에서 html 주석은 발표자 노트다 — 노트가 아닌 주석(`<!-- 도해: … -->`)은 slides.js 와 스킬의 lectern_md.py 둘 다에서 뺀다.
 - 차트의 표시 줄(`// 색: 2`)이 있으면 블록은 JSON 이 아니다 — 차트 설정을 읽는 곳은 `JSON.parse` 가 아니라 `parseSpec` 을 쓴다.
 - JS 안의 정규식·글자에 백틱 문자와 `'//'` 를 그대로 적지 않는다 — 시험(test_i18n)의 원문 읽개가 템플릿·주석으로 읽어 그 뒤를 다 잘못 본다. `\x60`, `'/'.repeat(2)`.
 
@@ -153,6 +154,7 @@
 
 ## 서버·설정·설치
 
+- Windows 는 누가 연 파일을 `os.replace` 로 바꿔 끼우지 못한다 (PermissionError) — 설정 저장은 잠깐씩 다시 한다 (`config.save`). 시험이 설정 파일을 자꾸 열어 읽으면 이것을 일으키므로, 화면 점검은 서버(`/api/config`)에 묻는다.
 - 트리의 제목은 설정 폴더의 제목 기억(`titlecache.py`, D140)에서 온다 — 수정 시각(ns)과 크기가 같으면 파일을 열지 않는다. 제목을 뽑는 규칙(`docinfo.extract_info`)을 바꾸면 `titlecache.VERSION` 을 올려야 옛 기억이 버려진다. 트리 노드에 문서 내용에서 뽑은 값을 더하려면 기억에도 넣는다 (`scanner.Titles.of` — 아니면 두 번째 실행부터 그 값이 없다). 요약처럼 본문 글은 기억에 적지 않는다. 화면의 첫 트리는 `quick=1` 이라 제목이 비어 올 수 있다 (`pending`) — 트리를 받자마자 제목에 기대는 코드는 뒤에 오는 'tree' 이벤트에서 다시 맞춘다.
 
 - `/` 의 CSP 는 `script-src 'self' 'unsafe-eval'` 이다 (D38 — 문서에 끼어든 스크립트가 터미널 비밀값을 읽지 못하게). `index.html` 에 인라인 `<script>`·`onclick=` 을 넣으면 돌지 않는다. vendor 를 더할 때 인라인 스크립트를 끼워 넣는 라이브러리인지 본다.

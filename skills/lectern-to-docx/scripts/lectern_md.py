@@ -374,6 +374,8 @@ def read_slide(text, inherited):
                 d = re.match(r'^\s*(_?)([A-Za-z]+)\s*:\s*(.*?)\s*$', comment, flags=re.S)
                 if d and d[2] in DIRECTIVES:
                     (spot if d[1] else local)[d[2]] = clean_value(d[3].strip())
+                elif re.match(r'^\s*(?:도해|diagrams?)\s*[:：]', comment, flags=re.I):
+                    pass   # 문서의 기본 도해 스타일·색 조합 줄 (Lectern D213) — 발표자 노트가 아니다
                 elif comment.strip():
                     notes.append(comment.strip())
             i += 1

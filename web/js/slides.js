@@ -142,6 +142,7 @@ function directivesOf(text) {
 }
 
 const COMMENT = /<!--([\s\S]*?)-->/g;
+const DOC_MARK = /^\s*(?:도해|diagrams?)\s*[:：]/i;   // i18n-ok — '<!-- 도해: 스타일 8 · 색 2 -->' (D213)
 const STYLE_BLOCK = /^\s*<style(\s+scoped)?\s*>([\s\S]*?)<\/style>\s*$/i;
 const BG_FILTERS = { blur: '10px', brightness: '1.5', contrast: '2', grayscale: '1', 'hue-rotate': '180deg', invert: '1', opacity: '.5', saturate: '2', sepia: '1' };
 
@@ -297,6 +298,8 @@ export function slideRule(state) {
           if (dirs) {
             Object.assign(cur.local, dirs.local);
             Object.assign(cur.spot, dirs.spot);
+          } else if (DOC_MARK.test(text)) {
+            // 문서의 기본 도해 스타일·색 조합 (D213 — diagramstyles.js 의 docMarks 가 읽는다). 발표자 노트가 아니다
           } else if (text.trim()) {
             cur.notes.push(text.trim());
             const slip = commentSlip(text);

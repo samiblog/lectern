@@ -281,3 +281,22 @@ def test_old_default_doc_kinds_move_office_to_data(tmp_path):
     path.write_text(json.dumps({'version': 4, 'doc_kinds': ['pdf']}), encoding='utf-8')
     assert Config(path).get('doc_kinds') == ['pdf']
     assert Config(tmp_path / 'new.json').get('doc_kinds') == []
+
+
+def test_save_retries_while_another_program_holds_the_file(tmp_path, monkeypatch):
+    """Windows 는 누가 설정 파일을 열고 있으면 바꿔 끼우지 못한다 — 잠깐 뒤 다시 해서 저장한다 (0.112 시나리오 시험이 찾음: 그냥 넘기면 메모리에만 남았다)"""
+    path = tmp_path / 'config.json'
+    cfg = Config(path)
+    real = os.replace
+    tries = []
+
+    def busy(src, dst):
+        tries.append(dst)
+        if len(tries) < 3:
+            raise PermissionError(13, 'in use')
+        return real(src, dst)
+
+    monkeypatch.setattr(os, 'replace', busy)
+    cfg.update_client({'diagram_colors': 6})
+    assert len(tries) == 3
+    assert json.loads(path.read_text(encoding='utf-8'))['diagram_colors'] == 6

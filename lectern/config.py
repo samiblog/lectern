@@ -11,6 +11,7 @@ import json
 import math
 import os
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -298,7 +299,16 @@ class Config:
                 self.path.parent.mkdir(parents=True, exist_ok=True)
                 tmp = self.path.with_suffix('.tmp')
                 tmp.write_text(json.dumps(self.data, ensure_ascii=False, indent=2), encoding='utf-8')
-                os.replace(tmp, self.path)
+                # Windows 는 누가 그 파일을 열고 있으면(백신 검사·편집기·다른 프로그램이 읽는 순간) 바꿔 끼우지 못한다 — 잠깐씩 다시.
+                # 그냥 넘기면 메모리에만 남고 파일에는 다음 저장까지 빠진다 (0.112 시나리오 시험이 찾음)
+                for wait in (0.02, 0.05, 0.1, 0.2, 0.4, 0):
+                    try:
+                        os.replace(tmp, self.path)
+                        break
+                    except PermissionError:
+                        if not wait:
+                            raise
+                        time.sleep(wait)
                 self._disk = self._signature()
             except OSError:
                 pass  # 설정 저장 실패는 보기 기능에 영향을 주지 않는다

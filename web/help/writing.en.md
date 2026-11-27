@@ -322,6 +322,7 @@ This task in one line.
 - Only values in table cells, units in the header. About six columns and one or two lines per cell (long explanations go outside the table); alignment marks (`:---:`) only when needed. Captions as `Table 1. Title` · `Figure 1. Title` right above a table, figure or chart, the source right below as `Source: organization (year)`; refer with `[Table 1](#table-1)`.
 - Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
 - Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. HTML reports run no scripts.
+- The look and colors of diagrams and charts: only when the person names a number ("style 3", "colors 2") or a name, one line in the block, `%% style: 3 · colors: 2` (Graphviz and charts use `//`; for the whole document `<!-- diagram: style 3 · colors 2 -->`) — the numbers are in `diagrams.en.md` next to the writing guide. Write no colors; with more than four boxes side by side, go vertical.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.
 - Slides are Lectern slides (read `slides.en.md` first); pptx goes through the skills `pptx-to-lectern` and `lectern-to-pptx`, and Word (docx) through the skill `lectern-to-docx` (a company Word template with `--template`). `WORK.md` at the top of a folder is the work card.
 ```
