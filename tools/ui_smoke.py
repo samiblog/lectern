@@ -2798,7 +2798,7 @@ def run(headed: bool) -> None:
             charts_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.lec-chart.chart-ok').length === 11", 30000)
             chart_errs = page.evaluate("[...document.querySelectorAll('#lec-view .diagram-error > p')].map(p => p.textContent)")
             page.locator('#lec-tree .row.file[data-doc="guide/06-다이어그램.md"]').click(modifiers=['Alt'])
-            mermaid_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.mermaid.mermaid-ok').length === 8", 30000) \
+            mermaid_ok = wait_until(page, "document.querySelectorAll('#lec-view pre.mermaid.mermaid-ok').length === 9", 30000) \
                 and page.locator('#lec-view .diagram-error').count() == 0
             page.locator('#lec-tree .row.file[data-doc="guide/04-문서-쓰는-법.md"]').click(modifiers=['Alt'])
             page.wait_for_selector('#lec-view h1:has-text("문서 쓰는 법")')
@@ -2910,7 +2910,7 @@ def run(headed: bool) -> None:
             back = n_tabs(1) and tree_root() == 'samples'
             check(readme and charts_ok and len(chart_errs) == 1 and '함수는 쓸 수 없습니다' in chart_errs[0] and mermaid_ok and img_ok
                   and code_links >= 2 and 'writing.md' in guide_prompt and 'CLAUDE.md' in guide_prompt and back,
-                  f"예제 열기: README 부터, 차트 11개(오류 예시 하나)·다이어그램 8개·그림·코드 위치 링크, 설정 창의 작성 안내 요청 글 "
+                  f"예제 열기: README 부터, 차트 11개(오류 예시 하나)·다이어그램 9개·그림·코드 위치 링크, 설정 창의 작성 안내 요청 글 "
                   f"({readme}, {chart_errs}, {mermaid_ok}, {img_ok}, {code_links}, {guide_prompt[:40]!r}, {back})")
 
             print('[CSV]')   # D60 — 자료 목록의 csv·tsv 는 표(거르기·정렬·통계), txt 는 글자로. UTF-8 이 아니면 CP949·UTF-16

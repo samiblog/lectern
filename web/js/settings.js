@@ -246,6 +246,7 @@ async function openStylesFolder() {
 export function closeSettings() {
   if (box().hidden) return false;
   box().hidden = true;
+  $('#lec-dstyle-preview')?.replaceChildren();   // 도해 미리보기는 열 때마다 새로 그린다 — 닫힌 창에 그때 스타일 색의 그림을 남기지 않는다 (D212)
   return true;
 }
 
