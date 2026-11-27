@@ -47,6 +47,8 @@ DEFAULTS: dict[str, Any] = {
     'doc_width': 1.0,        # md 문서 본문의 폭 배율 (툴바의 문서 폭 버튼, 0.8~2, 10 = 가득 — D68)
     'line_numbers': False,   # md 문서 왼쪽 여백의 원문 줄 번호 (툴바 버튼·Alt+L — D80)
     'theme_groups': 'use',   # 스타일 목록을 묶는 방식: use(용도별) | mood(분위기별) | tone(밝기별) — 설정 창
+    'diagram_style': 1,      # 도해 스타일의 기본 번호 (D212 — 1~DIAGRAM_STYLES, 그림 블록의 '%% 스타일: 3' 줄이 먼저. 화면은 web/js/diagramstyles.js)
+    'diagram_colors': 1,     # 색 조합의 기본 번호 (D213 — 1~DIAGRAM_COLORS, 차트·도해 블록의 '색: 2' 줄과 문서의 '<!-- 도해: 색 2 -->' 가 먼저)
     'ref_windows': 'auto',   # 사용설명서·예제 가이드를 따로 창에서 (D181): auto(앱 창에서는 따로 창, 브라우저 개발 모드는 덮는 보기)·on·off
     'show_titles': False,    # 트리에 파일 이름 대신 문서 제목 표시 (기본은 파일 이름, 마우스를 올리면 제목 — 트리의 '제목' 버튼)
     'sidebar_visible': True,
@@ -110,11 +112,13 @@ AI_TOOLS = ('claude', 'codex', 'antigravity', 'opencode', 'any')
 AI_STYLES = ('research', 'brief', 'academic', 'plain')   # 설정 ai_style (D161 — web/help/writing-styles.json 의 id 와 같게, 시험이 견준다)
 FILES_OPEN = ('docs', 'code', 'others', 'work', 'folder')   # 설정 files_open (D143·D169 — 화면은 others.js)
 DOC_KINDS_OPTIONAL = ('pdf', 'word', 'ppt', 'excel', 'hwp', 'work', 'marks', 'tasks')   # 설정 doc_kinds — 고를 수 있는 하위 묶음 (D202)
+DIAGRAM_STYLES = 10   # 도해 스타일의 수 (D212 — web/js/diagramstyles.js 의 STYLES 와 같게, 시험이 견준다)
+DIAGRAM_COLORS = 8    # 색 조합의 수 (D213 — web/js/diagramstyles.js 의 PALETTES 와 같게, 시험이 견준다)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
 # recent·last_folder·tabs·active_tab·projects 는 서버가 기록한다 (add_recent, set_tabs, remember_position).
-CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
+CLIENT_KEYS = frozenset({'language', 'theme', 'slide_theme', 'pptx_style', 'recent_templates', 'recent_puts', 'recent_chars', 'settings_section', 'recent_md_styles', 'theme_groups', 'diagram_style', 'diagram_colors', 'font_scale', 'doc_width', 'line_numbers', 'show_titles', 'sidebar_visible', 'sidebar_width', 'toc_width', 'toc_visible', 'math',
                          'external_images', 'restore_last', 'expand_first_level', 'side_sort', 'clip_sort', 'files_open', 'docs_kind', 'doc_kinds', 'work_kind', 'others_kind',
                          'terminal_width', 'terminal_height', 'terminal_position',
                          'terminal_follow_style', 'terminal_font_size', 'toc_hidden_parts', 'search_docs', 'search_code', 'search_others',
@@ -174,6 +178,10 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('auto', 'on', 'off')
     if key == 'settings_section':
         return value in ('general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more')
+    if key == 'diagram_style':
+        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= DIAGRAM_STYLES
+    if key == 'diagram_colors':
+        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= DIAGRAM_COLORS
     if key == 'terminal_font_size':
         return isinstance(value, int) and not isinstance(value, bool) and TERM_FONT[0] <= value <= TERM_FONT[1]
     if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):

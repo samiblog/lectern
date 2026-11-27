@@ -14,6 +14,7 @@
 import { html, raw, setHtml } from './html.js';
 import { docUrl } from './util.js';
 import { mermaidTheme } from './theme.js';
+import { styleOf, colorsOf, dotAttributes, decorateDot, chartPalette, defaultColors, palette } from './diagramstyles.js';
 import { openLightbox } from './ui.js';
 import { SLIDE_ZOOM } from './slides.js';
 import { t } from './i18n.js';
@@ -66,7 +67,7 @@ const LIBS = {
 
 /** 빠른 차트(quickchart.js)가 쓴다 — ECharts 와 지금 스타일의 색 */
 export async function chartLib() {
-  return { echarts: await LIBS.echarts(), theme: echartsTheme(colors()) };
+  return { echarts: await LIBS.echarts(), theme: echartsTheme(colors(), chartPalette(defaultColors())) };   // 색 조합은 설정의 기본 (D213)
 }
 
 let viz = null;   // Graphviz (WebAssembly) — 한 번 만들어 둔다
@@ -223,8 +224,9 @@ function colors() {
   return { dark: !!v.darkMode, text: v.textColor, line: v.lineColor, border: v.primaryBorderColor, bg: v.background };
 }
 
-// 글자 크기는 본문에 맞게 라이브러리 기본보다 조금 크게 (Vega 는 10~11px, ECharts 제목은 18px 굵게)
-function vegaConfig(c) {
+// 글자 크기는 본문에 맞게 라이브러리 기본보다 조금 크게 (Vega 는 10~11px, ECharts 제목은 18px 굵게).
+// pal: 색 조합(D213 — chartPalette)의 계열 색 — 없으면 라이브러리의 기본색. 차트가 색을 정했으면 그것이 먼저다
+function vegaConfig(c, pal = null) {
   const axis = {
     labelColor: c.line, titleColor: c.text, domainColor: c.line, tickColor: c.line, gridColor: c.line, gridOpacity: 0.22,
     labelFont: FONT, titleFont: FONT, labelFontSize: 12, titleFontSize: 12, titleFontWeight: 600,
@@ -237,10 +239,11 @@ function vegaConfig(c) {
     header: { labelColor: c.text, titleColor: c.text, labelFont: FONT, titleFont: FONT, labelFontSize: 12, titleFontSize: 13 },
     view: { stroke: c.line, strokeOpacity: 0.3 },
     text: { color: c.text }, rule: { color: c.line },
+    ...(pal ? { range: { category: pal.series, ramp: pal.ramp, heatmap: pal.ramp } } : {}),
   };
 }
 
-function echartsTheme(c) {
+function echartsTheme(c, pal = null) {
   const grid = fade(c.line, 0.25);
   const axis = {
     axisLine: { lineStyle: { color: c.line } }, axisTick: { lineStyle: { color: c.line } }, axisLabel: { color: c.line },
@@ -254,6 +257,7 @@ function echartsTheme(c) {
     legend: { textStyle: { color: c.text } },
     categoryAxis: axis, valueAxis: axis, logAxis: axis, timeAxis: axis,
     radar: { axisName: { color: c.text }, axisLine: { lineStyle: { color: grid } }, splitLine: { lineStyle: { color: grid } } },
+    ...(pal ? { color: pal.series } : {}),
   };
 }
 
@@ -353,9 +357,9 @@ const NARROW = 265;
 /** 슬라이드에서 숫자로 적은 폭·높이는 비율로만 — 폭은 칸에 맞춘다. 높이/폭 (둘 다 숫자가 아니면 0) */
 const ratioOf = (w, h) => (Number.isFinite(w) && Number.isFinite(h) && w > 0 && h > 0 ? h / w : 0);
 
-async function drawVega(kind, src, width, ctx, fit = 0, slide = false) {
+async function drawVega(kind, src, width, ctx, fit = 0, slide = false, pal = null) {
   const spec = parseSpec(src);
-  const config = vegaConfig(colors());
+  const config = vegaConfig(colors(), pal);
   let fluid = false;
   if (spec && typeof spec === 'object') {
     const single = !['facet', 'repeat', 'concat', 'hconcat', 'vconcat'].some((k) => k in spec);
@@ -416,7 +420,7 @@ function dropImages(node, depth = 0) {
   }
 }
 
-async function drawECharts(src, width, fit = 0, slide = false) {
+async function drawECharts(src, width, fit = 0, slide = false, pal = null) {
   const option = parseSpec(src);
   if (!option || typeof option !== 'object' || Array.isArray(option)) throw new SpecError(t('설정을 읽지 못했습니다 — JSON 형식을 확인하세요 (블록 {line}행)', { line: 1 }));
   // 크기: 폭은 문서 폭(설정의 width 가 숫자면 그것), 높이는 설정의 height 아니면 360 — ECharts 에는 없는 키라 여기서만 쓴다.
@@ -433,7 +437,7 @@ async function drawECharts(src, width, fit = 0, slide = false) {
   delete option.width;
   dropImages(option);
   const echarts = await LIBS.echarts();
-  const chart = echarts.init(null, echartsTheme(colors()), { renderer: 'svg', ssr: true, width: Math.max(slide ? SLIDE_MIN_W : MIN_W, w), height: Math.max(120, height) });
+  const chart = echarts.init(null, echartsTheme(colors(), pal), { renderer: 'svg', ssr: true, width: Math.max(slide ? SLIDE_MIN_W : MIN_W, w), height: Math.max(120, height) });
   try {
     chart.setOption({ ...option, animation: false, ...(fit ? { backgroundColor: 'transparent' } : {}) });   // 칸의 바탕이 보이게
     return { svg: chart.renderToSVGString(), fluid };
@@ -445,7 +449,7 @@ async function drawECharts(src, width, fit = 0, slide = false) {
 // 인터넷의 지도 자료(나라 경계·지도 타일)가 있어야 하는 Plotly 종류 — 받지 않으므로 그리지 않는다
 const PLOTLY_MAPS = /^(scattergeo|choropleth|scattermapbox|choroplethmapbox|densitymapbox|scattermap|choroplethmap|densitymap)$/;
 
-async function drawPlotly(src, width, fit = 0, slide = false) {
+async function drawPlotly(src, width, fit = 0, slide = false, pal = null) {
   let fig = parseSpec(src);
   if (Array.isArray(fig)) fig = { data: fig };   // 그래프 목록만 적어도 된다
   if (!fig || typeof fig !== 'object' || !Array.isArray(fig.data)) throw new SpecError(t('Plotly 설정은 data(그래프 목록)와 layout 을 가진 JSON 입니다'));
@@ -456,6 +460,7 @@ async function drawPlotly(src, width, fit = 0, slide = false) {
   if (Array.isArray(layout.images)) layout.images = layout.images.filter((im) => /^data:/i.test(String(im?.source || '')));
   for (const tr of fig.data) if (tr?.type === 'image' && tr.source && !/^data:/i.test(String(tr.source))) delete tr.source;
   if (!layout.template) layout.template = plotlyTemplate(colors());
+  if (pal && !layout.colorway) layout.colorway = pal.series;   // 색 조합 (D213) — 계열 색만, 자기 template 의 글자·바탕은 그대로
   // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400.
   // 슬라이드에서는 폭은 칸에 맞추고 높이는 남은 높이, 없으면 적은 크기의 비율로. 좁은 칸은 범례를 아래로 (설정에 적었으면 그것) (D188)
   let fluid = !Number.isFinite(layout.width);
@@ -485,10 +490,11 @@ async function drawPlotly(src, width, fit = 0, slide = false) {
   return { svg: decodeURIComponent(url.slice(url.indexOf(',') + 1)), fluid };
 }
 
-async function drawDot(src) {
+async function drawDot(src, marks) {
   const v = await graphviz();
   const font = { fontname: DOT_FONT };
-  return { svg: v.renderString(src, { format: 'svg', graphAttributes: font, nodeAttributes: font, edgeAttributes: font }), fluid: false };
+  const a = dotAttributes(styleOf(src, 'dot', marks), colorsOf(src, 'dot', marks));   // 도해 스타일(D212)의 모양 — 원문이 정한 속성이 먼저다
+  return { svg: v.renderString(src, { format: 'svg', graphAttributes: { ...a.graph, ...font }, nodeAttributes: { ...a.node, ...font }, edgeAttributes: { ...a.edge, ...font } }), fluid: false };
 }
 
 function showSource(node, message) {
@@ -526,6 +532,10 @@ function watchWidth(node) {
 async function draw(node, ctx) {
   const kind = node.dataset.chart;
   const src = node.dataset.source;
+  // 색 조합 (D213): 블록의 '// 색: 2' > 문서의 '<!-- 도해: 색 2 -->'(ctx.marks) > 설정
+  const colorsNo = colorsOf(src, kind === 'dot' ? 'dot' : 'chart', ctx.marks);
+  const pal = kind === 'dot' ? null : chartPalette(colorsNo);
+  node.dataset.diagramColors = String(colorsNo);
   const width = node.clientWidth || 640;
   // Lectern 슬라이드의 슬라이드(D59)에서는 좁게 그려 키운다 — 차트 글자가 슬라이드 글자와 어울리게 (slides.js 의 SLIDE_ZOOM)
   const slide = !!node.closest('.lec-slide');
@@ -544,10 +554,10 @@ async function draw(node, ctx) {
   const seq = ++info.seq;
   let out;
   try {
-    if (kind === 'echarts') out = await drawECharts(src, width / zoom, fit, slide);
-    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom, fit, slide);
-    else if (kind === 'dot') out = await drawDot(src);
-    else out = await drawVega(kind, src, width / zoom, ctx, fit, slide);
+    if (kind === 'echarts') out = await drawECharts(src, width / zoom, fit, slide, pal);
+    else if (kind === 'plotly') out = await drawPlotly(src, width / zoom, fit, slide, pal);
+    else if (kind === 'dot') out = await drawDot(src, ctx.marks);
+    else out = await drawVega(kind, src, width / zoom, ctx, fit, slide, pal);
   } catch (e) {
     if (drawn.has(node)) return;
     const why = String(e?.message || e).split('\n')[0];
@@ -580,7 +590,16 @@ async function draw(node, ctx) {
   }
   node.replaceChildren(el);
   addChartTools(node, ctx, parseSpec);   // [표]·[복사] (D136) — 칸의 안을 바꿔 끼웠으니 다시
-  if (kind === 'dot') paintGraph(el, colors());   // 글자 폭을 재지 않으므로 붙인 뒤 어디서든
+  if (kind === 'dot') {
+    paintGraph(el, { ...colors(), border: palette(colorsNo).border });   // 글자 폭을 재지 않으므로 붙인 뒤 어디서든 (테두리는 색 조합의 색 — D213)
+    const style = styleOf(src, 'dot', ctx.marks);
+    node.dataset.diagramStyle = String(style);
+    try {
+      decorateDot(el, style, colorsNo);   // 강조 표시·묶음·단계 색·제목 상자 (D212)
+    } catch (e) {
+      console.warn('diagram style', e);
+    }
+  }
   if (!drawn.has(node)) {
     node.classList.add('chart-ok');
     node.title = t('누르면 크게 봅니다');
@@ -602,7 +621,7 @@ async function draw(node, ctx) {
 
 /**
  * root 안의 pre.lec-chart 를 그림으로 바꾼다. root 는 화면(문서 트리)에 붙어 있어야 폭을 잰다 (doc.js 의 무대).
- * ctx: {tab, path — 문서, sanitize — doc.js 의 sanitizeHtml, resolveRef — doc.js 의 것}
+ * ctx: {tab, path — 문서, sanitize — doc.js 의 sanitizeHtml, resolveRef — doc.js 의 것, marks — 문서의 기본 도해 스타일·색 조합 (D213, 없어도 된다)}
  */
 export async function renderCharts(root, ctx) {
   for (const node of root.querySelectorAll('pre.lec-chart')) {

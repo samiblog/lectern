@@ -14,6 +14,8 @@ import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, 
 import { openStylePick } from './stylepick.js';
 import { openRaw } from './rawview.js';
 import { OPTIONAL_KINDS, setKindOn } from './tree.js';
+import { diagramStyles, defaultStyle, diagramColors, defaultColors } from './diagramstyles.js';
+import { renderMermaid } from './mermaid.js';
 
 const box = () => $('#lec-settings');
 const TERM_FONT_BASE = 14;   // 터미널 글자 크기의 기본 (D130 — terminal.js 의 TERM_FONT.base, config.py 의 기본값과 같게. 범위는 입력 칸의 min·max)
@@ -40,10 +42,37 @@ function fillControls() {
   for (const radio of $$('#lec-settings input[name="table_align"]')) radio.checked = radio.value === (S.config.table_align === 'report' ? 'report' : 'auto');
   for (const radio of $$('#lec-settings input[name="ai_tool"]')) radio.checked = radio.value === aiTool();
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
+  // 도해 스타일 (D212)·색 조합 (D213) — 고르는 칸, 미리보기는 창을 열 때 (dstylePreview)
+  setHtml($('#lec-dstyle'), diagramStyles().map((s) => html`<option value="${s.n}" title="${s.tip}">${s.n}. ${s.name}</option>`));
+  $('#lec-dstyle').value = String(defaultStyle());
+  setHtml($('#lec-dcolors'), diagramColors().map((s) => html`<option value="${s.n}" title="${s.tip}">${s.n}. ${s.name}</option>`));
+  $('#lec-dcolors').value = String(defaultColors());
   // 사이드바 '문서'의 하위 묶음 (D202)
   const kinds = Array.isArray(S.config.doc_kinds) ? S.config.doc_kinds : [];
   setHtml($('#lec-set-kinds'), OPTIONAL_KINDS().map((k) => html`<label><input type="checkbox" data-kind="${k.id}"><span>${k.name}</span></label>`));
   for (const input of $$('#lec-set-kinds input')) input.checked = kinds.includes(input.dataset.kind);
+}
+
+// 도해 스타일·색 조합의 미리보기 — 설정의 기본 번호로 작은 흐름도 하나 (표시 줄이 없으니 설정을 따른다)와 색 조합의 계열 색
+const DSTYLE_SAMPLE = () => `flowchart LR
+  A[${t('자료 수집')}<br>${t('통계·보고서 12건')}] --> B{${t('충분한가')}}
+  B --> C[${t('분석')}<br>${t('수요 모형')}]:::key --> D([${t('보고서')}])
+  B -.-> R[${t('재조사')}]:::warn`;
+let dstyleSeq = 0;
+async function dstylePreview() {
+  const box = $('#lec-dstyle-preview');
+  if (!box || box.closest('[hidden]')) return;
+  const seq = ++dstyleSeq;
+  const chips = diagramColors()[defaultColors() - 1]?.chips || [];
+  setHtml($('#lec-dcolors-chips'), chips.map((c) => html`<i style="background:${c}"></i>`));
+  const pre = document.createElement('pre');
+  pre.className = 'mermaid';
+  pre.textContent = DSTYLE_SAMPLE();
+  const stage = document.createElement('div');
+  stage.append(pre);
+  box.replaceChildren(stage);
+  await renderMermaid(stage);
+  if (seq !== dstyleSeq) stage.remove();   // 그사이 다른 번호를 골랐다 — 나중 것만 남긴다
 }
 
 /** 설정 창 (D154 — 왼쪽 분류, 오른쪽 절). section: 그 분류의 절에서 연다 — 없으면 마지막에 고른 분류 */
@@ -56,6 +85,7 @@ export function openSettings(section) {
   refreshAiSetup();   // AI 도구에 건네는 것의 넣을 곳·바뀌는 파일 (D159 — 지금 상태는 받는 대로 다시 그린다)
   segDescs();
   box().hidden = false;
+  dstylePreview();
   const sec = typeof section === 'string' && SECTIONS.includes(section) ? section : SECTIONS.includes(S.config.settings_section) ? S.config.settings_section : SECTIONS[0];
   goSection(sec, false);
   $(`#lec-settings .set-nav button[data-set="${sec}"]`)?.focus();
@@ -240,6 +270,12 @@ async function onChange(e) {
     refreshAiSetup();   // 도구마다 자리가 다르다 (D159)
     emit('ai-tool');
     await saving;
+    return;
+  }
+  if (e.target.id === 'lec-dstyle' || e.target.id === 'lec-dcolors') {   // 도해 스타일 (D212)·색 조합 (D213 — diagramstyles.js): 표시 줄이 없는 그림 모두 — 문서를 다시 그린다
+    await saveConfig({ [e.target.id === 'lec-dstyle' ? 'diagram_style' : 'diagram_colors']: Number(e.target.value) });
+    dstylePreview();
+    emit('refresh-view');
     return;
   }
   if (e.target.name === 'table_align') {   // 표 칸 맞춤 (D174 — doc.js 가 그릴 때 표에 단다) — 문서를 다시 그린다

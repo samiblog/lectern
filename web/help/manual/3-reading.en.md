@@ -35,7 +35,7 @@ This is the first screen when you open a folder.
 | Callout | A callout such as `> [!NOTE]` | In the kind's color, without a title line |
 | Box | `<!-- box -->` ~ `<!-- /box -->` | A box with a border and a title band — see 'Boxes' below |
 | Math | `$…$` · `$$…$$` · math · latex code blocks | As math. Dollar amounts such as `$105` stay as they are |
-| Diagram | mermaid code block | As a picture |
+| Diagram | mermaid code block | As a picture — pick its look by number, see 'Diagram styles' below |
 | Chart | `vega-lite` · `echarts` · `plotly` · `dot` code block | As a picture — see 'Charts' below |
 | Footnotes · checklists | `[^1]` · `- [ ]` | Footnotes · checkboxes |
 | Image | `![description](path)` | Click to enlarge |
@@ -84,6 +84,52 @@ The `> [!NOTE]` kind that used to be called a box is now a callout.
 | `dot` · `graphviz` | Structure and dependency graphs |
 
 Colors follow the document style. Settings are JSON and functions can't be used. Write the data in the document or point to a CSV or JSON file in the project with a relative path (internet addresses are not read). There is no movement such as showing values on hover, and Plotly map charts are not drawn because they need map data from the internet.
+
+## Diagram styles
+
+Pick the look of Mermaid and Graphviz diagrams by number. Colors follow the document style and the number sets only the shape — so it fits dark styles and print too.
+
+| No. | Name | Look |
+|---:|---|---|
+| 1 | Default | as before (every diagram unless you change the setting) |
+| 2 | Report lines | white boxes · dark borders · right-angle connectors — for black-and-white print |
+| 3 | Card | rounded corners · soft shadow — for screens and presentations |
+| 4 | Solid | dark boxes with light text |
+| 5 | Line only | thin lines without fill — for papers and books |
+| 6 | Sketch | hand-drawn lines — for drafts (Graphviz uses 1) |
+| 7 | Zones | a different pale color for each group (subgraph) |
+| 8 | Title band | a dark title band on top, content below |
+| 9 | Light title band | a pale band with a dark title, content below |
+| 10 | Title rule | bold title, a thin rule, muted content below |
+
+| To do | How | Result |
+|---|---|---|
+| Change one diagram's look | Right-click the diagram, **Diagram style…**, pick a number | One `%% style: 3` line in the diagram block (Graphviz `// style: 3`) — replaced if there is one. **Ctrl+Z** undoes it |
+| Change one diagram's or chart's colors | Right-click, **Color set…**, pick a number (see 'Color sets' below) | `%% colors: 2` (Graphviz and charts `// colors: 2`) — on the same line as a look marker if there is one: `%% style: 3 · colors: 2` |
+| Make it follow the default | **Follow the setting** in the same menu (**Follow the document default** when the document has a default line) | Removes it from the marker line |
+| Horizontal ↔ vertical | Right-click the diagram, **Make it vertical** · **Make it horizontal** | Only the diagram's direction word (`flowchart LR` ↔ `TD`, Graphviz `rankdir`). With more than four boxes, vertical reads better — six boxes side by side shrink the text to about 60% of the body |
+| Every diagram in one document | One line near the top: `<!-- diagram: style 8 · colors 2 -->` | Not shown on screen. Order: the block's marker line → the document line → settings |
+| Every diagram without a marker | **Diagram style · color set** in Settings 'View' | Pick the default numbers while watching the preview |
+| Ask Claude | "Draw it in Mermaid style 3 with colors 2" | It reads `diagrams.en.md` next to the writing guide (`writing.en.md`) and writes the line |
+| Emphasis | Add `:::key` (key) · `:::warn` (caution) · `:::muted` (secondary) to a box — Graphviz `[class="key"]` | Painted in the colors the number sets |
+| Boxes split into title and content (8 · 9 · 10) | Break the box text — Mermaid `<br>`, Graphviz `\n` | The first line is the title, the rest is the content. A one-line box is title only |
+
+### Color sets
+
+A color number picked separately from the look. It changes chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram boxes, the key accent, zone colors and title bands; text, background and lines stay with the document style. Colors a chart sets itself win.
+
+| No. | Name | Colors |
+|---:|---|---|
+| 1 | Document style | as now (every diagram unless you change the setting) |
+| 2 | Report navy | shades of navy + one orange accent |
+| 3 | Gray + accent | only the first series in color, the rest gray |
+| 4 | Vivid | ten colors that tell apart well |
+| 5 | Colorblind safe | the Okabe-Ito palette |
+| 6 | Warm | orange and rust |
+| 7 | Cool | navy, teal and violet |
+| 8 | Pastel | pale colors |
+
+Marker lines are comments, so other places (GitHub and so on) draw the default look and colors (a chart's `//` line is read only by Lectern — remove it before pasting the block into another tool). If the diagram changed elsewhere after you opened the menu, nothing is written and you are told. Flowcharts in this manual always use the defaults. Diagrams exported to Word or pptx still use the default look and colors. Examples: the diagram style and color set samples in `guide/도해-스타일-예제/`.
 
 ## Chart data
 

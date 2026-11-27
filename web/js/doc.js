@@ -6,6 +6,7 @@ import { getText, openExternal } from './api.js';
 import { renderMarkdown, splitFrontMatter } from './markdown.js';
 import { renderMermaid } from './mermaid.js';
 import { renderCharts } from './charts.js';
+import { docMarks } from './diagramstyles.js';
 import { readDeck, slidesWanted, prepareDeck, fitDeck, showDeck } from './slides.js';
 import { setToc, SOURCE, exhibitsIn } from './toc.js';
 import { setupFolds, unfoldTo } from './fold.js';
@@ -706,8 +707,9 @@ export async function showDoc(pane, path, { hash = '', scrollTop } = {}) {
     else markHangs(stage);   // 번호·글머리 글자로 시작하는 블록의 꺾인 줄을 그 글자 뒤에 (D191 — 슬라이드는 하지 않는다)
     wrapExhibits(stage);   // 캡션·몸체·주·자료를 한 상자로 — 배경 그림을 옮긴 뒤에
     for (const box of $$('.task-list-item-checkbox', stage)) box.disabled = false;   // 누르면 [ ] ↔ [x] 를 저장한다 (lineedit.js, D76 — 사용설명서·슬라이드는 표시만)
-    await renderMermaid(stage);
-    await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef });   // ```vega-lite·```echarts·```dot (D56)
+    const marks = docMarks(text);   // 문서의 기본 도해 스타일·색 조합 (D213 — '<!-- 도해: 스타일 8 · 색 2 -->')
+    await renderMermaid(stage, marks);
+    await renderCharts(stage, { tab, path, sanitize: sanitizeHtml, resolveRef, marks });   // ```vega-lite·```echarts·```dot (D56)
     sizeExhibits(stage);
     await linkPaths(stage, path, tab);   // 본문 속 `src/app.py:42` 같은 경로 표기를 링크로 (서버에 있는지 묻는다)
     if (deck) fitDeck(stage);   // 넘치는 슬라이드의 그림을 줄인다 (그린 뒤에 잰다)

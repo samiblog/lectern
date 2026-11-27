@@ -475,7 +475,7 @@ async function showDoc(d, { anchor = '' } = {}) {
   if (at) scrollToHead(at);
   else scroller().scrollTop = 0;
   markCurrent();
-  await renderMermaid(view());   // 흐름도 — 그린 뒤 높이가 바뀌니 절로 다시
+  await renderMermaid(view(), { style: 1, colors: 1 });   // 흐름도 — 그린 뒤 높이가 바뀌니 절로 다시. 설명서는 늘 기본 도해 스타일·색 (D212·D213)
   if (at && cur === d) scrollToHead(at);
 }
 

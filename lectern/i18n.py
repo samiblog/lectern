@@ -327,6 +327,8 @@ EN: dict[str, str] = {
     '스킬의 라이선스': "The skill's licence",
     '스타일 목록에 보이는 설명': 'Description shown in the style list',
     '스타일 목록을 묶는 방식 — use(용도별)·mood(분위기별)·tone(밝기별)': 'How the style list is grouped — use, mood or tone',
+    "도해 스타일의 기본 번호 1~10 — 스타일 줄('%% 스타일: 3')이 없는 Mermaid·Graphviz 그림 (D212)": "Default diagram style number 1–10 — for Mermaid and Graphviz diagrams without a style line ('%% style: 3') (D212)",
+    "색 조합의 기본 번호 1~8 — 색 줄('// 색: 2')이 없는 차트·도해 (D213)": "Default color set number 1–8 — for charts and diagrams without a color line ('// colors: 2') (D213)",
     '스타일 이름 — /output-style 목록과 설정 값 outputStyle 에 쓰인다': 'Style name — used in the /output-style list and as the outputStyle value',
     '슬라이드 갤러리에서 최근 쓴 템플릿 (묶음과 이름)': 'Templates used recently in the slide gallery (set and name)',
     '슬라이드 창의 스타일 (메인 창과 따로)': 'Style of slide windows (separate from the main window)',

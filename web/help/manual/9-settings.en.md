@@ -38,6 +38,7 @@
 |---|---|
 | Group styles | Groups the toolbar style list By use · By mood · By brightness |
 | My styles | **Make on screen…** ([Make my style](2.1-toolbar.en.md#making-your-own-styles)) · **Open style folder** · **Copy request for Claude Code** · ▣ (puts that request into the terminal). One CSS file is one style, and it appears under 'My styles' at the bottom of the style list |
+| Diagram style · color set | The default look of Mermaid and Graphviz diagrams (numbers 1–10) and the default color set of charts and diagrams (1–8), with a preview and color chips. Diagrams with a marker line (`%% style: 3 · colors: 2`) or a document default line (`<!-- diagram: … -->`) follow it ([Diagram styles](3-reading.en.md#diagram-styles)) |
 | Table cell alignment | Default (text left · numbers right · top of the cell) · Report style (header row and short columns centered, numbers right, long text left, vertically centered). Columns with an alignment mark in the source (`:---:`) follow the mark |
 | Render math | `$…$` · `$$…$$` · math and latex code blocks as equations |
 | Show line breaks inside paragraphs | Lines you break with Enter in the source break on screen too (like Shift+Enter in Word). When off, they run on as in standard Markdown |

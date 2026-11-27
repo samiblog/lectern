@@ -120,6 +120,16 @@
 - 글머리 글자 목록(D192, `marklist.js`)은 markdown-it 블록 규칙이라 원문의 '- '·'2.' 줄이 Markdown 목록이 아니게 된다 — 원문 줄로 목록을 읽는 코드(`lineops` 의 itemOf 등)와 다르다. 그래서 화면 쪽은 항목(`p.lec-mark`)을 보고 갈라 준다: 한 줄 편집은 머리 글자까지 칸에 두고(`keepMark` — splitText 는 '- ' 를 머리로 떼어 낸다), 새 줄은 `planMark`(같은 머리 글자·하위 항목 뒤), 지우기는 `deleteLines` 의 `plain`(그 줄만), 나누기·잇기는 `splitMark`·`joinMark`, 옮기기는 `moveMarks`(원문으로는 '- ' 줄 뒤의 'ㅇ' 줄이 그 목록 항목에 이어 쓴 줄이라 보통 옮기기는 그 너머로 간다). 문서 점검(`doclint.js`)은 같은 플러그인으로 읽고 줄로 보는 목록 점검은 묶음의 줄(`marked`)을 건너뛴다 — 줄로 목록을 읽는 새 점검·줄 조작을 더하면 묶음 안의 줄을 본다. 수준은 문서 전체의 차례라 한 줄을 고치면 다른 묶음의 수준도 바뀔 수 있다 (그 문서가 쓴 차례가 바뀌면). 슬라이드와 Markdown 목록 항목 안에서는 하지 않는다 — 목록 항목 안에서 문단을 끊으면 촘촘한 목록의 줄바꿈이 사라진다 (`inListItem`).
 - 문서 맨 앞의 머리 설정은 접힌 `<details class="front-matter">` 다 (D189) — 그 안의 글을 읽는 기능·점검은 보이는 글(`innerText`·playwright 의 `inner_text`)이 아니라 `textContent` 로 읽는다. 문서 속 어느 곳으로 가는 새 길은 `fold.unfoldTo` 를 거쳐야 접힌 머리 설정·절·박스글이 펴진다.
 
+### 도해 스타일 (diagramstyles.js — D212)
+
+- Mermaid 12 는 `look` 을 주지 않으면 neo 모양이다 — 'classic' 이 기본이 아니다. 1 기본은 `look` 을 주지 않아야 예전 그림과 같다.
+- `mermaid.initialize` 는 전역이고 부를 때마다 기본 설정에서 다시 시작한다 — 번호마다 부르므로 `renderMermaid` 는 줄 세워 그린다 (다른 칸·설정 창 미리보기와 섞이지 않게).
+- Mermaid 의 CSS(`.node path` 의 칠·테두리)와 classDef(`.key span { color … !important }`)가 그린 뒤 넣은 도형·글자를 덮는다 — 띠는 인라인 `style` 에 `!important`, 제목 상자의 강조 표시에는 글자색을 넣지 않는다.
+- 그림 안에 넣은 `<style>` 은 그 그림만이 아니라 문서 전체에 듣는다 — Graphviz 의 규칙은 그 svg 의 id 로 묶는다 (Mermaid 의 themeCSS 는 Mermaid 가 묶는다).
+- 같은 스타일 줄이 여러 그림에 있다 — 줄 하나로 자리를 찾는 저장(`replaceLines` 의 근처 찾기)은 옛 원문일 때 다른 그림의 줄을 고친다. 그림 블록 전체를 before 로 준다.
+- 차트의 표시 줄(`// 색: 2`)이 있으면 블록은 JSON 이 아니다 — 차트 설정을 읽는 곳은 `JSON.parse` 가 아니라 `parseSpec` 을 쓴다.
+- JS 안의 정규식·글자에 백틱 문자와 `'//'` 를 그대로 적지 않는다 — 시험(test_i18n)의 원문 읽개가 템플릿·주석으로 읽어 그 뒤를 다 잘못 본다. `\x60`, `'/'.repeat(2)`.
+
 ### PDF 보기 (pdfview.js — D201)
 
 - pdf.js 의 `cMapUrl`·`standardFontDataUrl`·`wasmUrl` 은 절대경로(`/static/vendor/pdfjs/…`)로 준다 — 상대경로는 일꾼(worker) 파일 기준으로 풀려 글꼴을 넣지 않은 한글 PDF 의 글자가 빠진다.

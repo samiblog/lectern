@@ -167,6 +167,7 @@ Rules:
 - **Titles.** Vega-Lite and ECharts `title`, Plotly `layout.title` and the Graphviz graph name (`digraph name {`) label the chart in the contents and Elements tab.
 - **Mermaid**: quote non-ASCII axis labels and text (`x-axis ["Jan", "Feb"]`). Use ASCII aliases for participants: `participant U as 사람`.
 - **Graphviz**: the app fits box widths for non-Latin text. Better not to set `fontname`.
+- **Diagram styles and color sets**: pick the look of Mermaid and Graphviz diagrams (1–10) and the colors of charts and diagrams (color sets 1–8) by number — one line inside the block, `%% style: 3 · colors: 2` (Graphviz and charts use `//`), or one line for the whole document, `<!-- diagram: style 3 · colors 2 -->`. Write them only when the person names a number or name; write no colors, and mark emphasis with `:::key`, `:::warn`, `:::muted`. With more than four boxes side by side, go vertical (`TD`). The numbers, title boxes (8–10) and direction are in `diagrams.en.md` next to this file.
 
 ~~~~md
 ```vega-lite

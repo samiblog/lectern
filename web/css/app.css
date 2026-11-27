@@ -1405,6 +1405,15 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 .opt-block { margin: 0 0 6px; padding: 8px 4px 10px; border-bottom: 1px solid var(--ui-border); }
 .opt-block .opt-head { display: flex; flex-direction: column; gap: 1px; }
 .opt-block small { color: var(--ui-muted); font-size: 12px; line-height: 1.45; }
+/* 도해 스타일 (D212) — 고르는 칸과 미리보기 (문서 바탕색 위에 그 스타일의 색으로) */
+.dstyle-picks { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 14px; margin: 6px 4px 0; }
+.dstyle-picks label { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.dstyle-picks select { padding: 4px 6px; font-size: 13px; color: var(--ui-fg); background: var(--ui-bg); border: 1px solid var(--ui-border); border-radius: 4px; }
+.dcolors-chips { display: inline-flex; gap: 3px; }
+.dcolors-chips i { width: 14px; height: 14px; border-radius: 3px; border: 1px solid color-mix(in srgb, var(--ui-fg) 15%, transparent); }
+.dstyle-preview { margin: 8px 4px 0; padding: 6px 8px; min-height: 60px; background: var(--md-bg, #fff); border: 1px solid var(--ui-border); border-radius: 6px; overflow-x: auto; }
+.dstyle-preview pre.mermaid { margin: 0; padding: 0; background: none; border: 0; text-align: center; }
+.dstyle-preview pre.mermaid svg { max-width: 100%; height: auto; }
 .opt-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }   /* 설정의 체크 칸 여럿 한 줄에 (D202) */
 .opt-checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .opt-btns { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }

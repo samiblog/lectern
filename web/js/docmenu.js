@@ -17,7 +17,8 @@ import { blockOfLine } from './lineunits.js';
 import { partExtent, captionOf } from './toc.js';
 import { isPdfView, pdfHere, pageOfSelection, pageRef } from './pdfview.js';
 import { snippetOf, addSnippets, sendSnippets, boxMenu, clipLabel } from './basket.js';
-import { linesEditable, lineMenuItems, pickedItems } from './lineedit.js';
+import { linesEditable, lineMenuItems, pickedItems, replaceLines } from './lineedit.js';
+import { diagramStyles, diagramColors, defaultStyle, defaultColors, blockMarks, docMarks, setMark, directionOf, flipDirection } from './diagramstyles.js';
 
 /**
  * 읽는 화면에서 고른 글의 서식 항목과, 형광펜이면 [메모 달기, 이 형광펜 지우기] (D142·D143 — wordpick.js. main.js 가 잇는다: 여기서 부르면 import 순환이 생긴다)
@@ -355,6 +356,70 @@ function linkTarget(link) {
   return isViewable(basename(path)) ? { type: 'code', path, line: line ? Number(line) : undefined } : null;
 }
 
+/**
+ * 도해 스타일·색 조합·방향 (D212·D213) — 그림·차트 블록 안의 표시 줄('%% 스타일: 3 · 색: 2', 차트는 '// 색: 2')을 고른 번호로 쓰고 바꾸고 지운다.
+ * 방향은 그 블록의 방향 글자(flowchart LR↔TD, rankdir)만. 계산은 diagramstyles.js (setMark·flipDirection), 저장은 한 줄 편집과 같은 길 (Ctrl+Z).
+ * 바꾸는 단위는 그 블록 전체다 — 같은 표시 줄이 다른 그림에도 있으므로, 줄 하나로 자리를 찾으면 원문이 그사이 바뀌었을 때
+ * 다른 그림의 줄을 고칠 수 있다. 블록이 그대로일 때만 쓴다
+ */
+function diagramItems(el) {
+  const chart = el.dataset.chart;
+  const kind = el.matches('pre.mermaid') ? 'mermaid' : chart === 'dot' ? 'dot' : chart ? 'chart' : '';
+  const range = kind && doc && linesEditable() ? lineRange(el) : null;
+  if (!range) return [];
+  const [a, b] = range;   // 여는 줄(```mermaid) ~ 닫는 줄
+  const block = doc.lines.slice(a - 1, b);
+  const closed = b > a && /^\s*(\x60{3,}|~{3,})\s*$/.test(block.at(-1) || '');   // 닫는 펜스 (\x60 은 백틱 — 글자로 적으면 시험의 원문 읽개가 템플릿으로 본다)
+  const body = block.slice(1, closed ? -1 : undefined);
+  const src = body.join('\n');
+  const own = blockMarks(src, kind);
+  const fromDoc = docMarks(doc.lines.join('\n'));
+  const { path } = doc;
+  const pane = S.pane;
+  const save = async (next, done) => {
+    try {
+      const r = await replaceLines(pane, path, a, block, [block[0], ...next, ...(closed ? [block.at(-1)] : [])]);
+      if (r) toast(done);
+      else toast(t('다른 곳에서 이 그림이 바뀌어 저장하지 않았습니다 — 다시 우클릭해 고르세요'), 'error');
+    } catch (e) {
+      toast(t('저장하지 못했습니다: {error}', { error: e.message }), 'error');
+    }
+  };
+  const menu = $('#lec-menu');
+  const reopen = (items) => showMenu(parseFloat(menu.style.left) || 80, parseFloat(menu.style.top) || 80, items);
+  /** 번호 고르기 — key: 'style' | 'colors' */
+  const picker = (key) => {
+    const isStyle = key === 'style';
+    const list = isStyle ? diagramStyles() : diagramColors();
+    const now = Number(isStyle ? el.dataset.diagramStyle : el.dataset.diagramColors) || own[key] || fromDoc[key] || (isStyle ? defaultStyle() : defaultColors());
+    const base = fromDoc[key] || (isStyle ? defaultStyle() : defaultColors());
+    /** @type {MenuItem[]} */
+    const items = [{ header: isStyle ? t('도해 스타일 — 이 그림') : t('색 조합 — 이 그림') },
+      ...list.map((s) => ({ label: `${s.n}. ${s.name}`, tip: s.tip, current: s.n === now,
+        action: () => save(setMark(body, kind, key, s.n), isStyle ? t('도해 스타일 {n} — {name}. Ctrl+Z 로 되돌립니다', { n: s.n, name: s.name })
+          : t('색 조합 {n} — {name}. Ctrl+Z 로 되돌립니다', { n: s.n, name: s.name })) }))];
+    if (own[key]) {
+      items.push('-', { label: fromDoc[key] ? t('문서의 기본 따르기 (지금 {n})', { n: base }) : t('설정 따르기 (지금 {n})', { n: base }), tip: t('이 그림의 표시 줄에서 지웁니다'),
+        action: () => save(setMark(body, kind, key, null), t('표시를 지웠습니다 — 기본으로 그립니다')) });
+    }
+    items.push('-', { label: isStyle ? t('기본 도해 스타일 바꾸기…') : t('기본 색 조합 바꾸기…'), tip: t('설정 창 — 표시 줄이 없는 그림 모두'), action: () => emit('open-settings', 'view') });
+    reopen(items);
+  };
+  /** @type {MenuItem[]} */
+  const items = [];
+  if (kind !== 'chart') items.push({ label: t('도해 스타일…'), hint: el.dataset.diagramStyle || '', tip: t('이 그림의 모양을 번호로 고릅니다 — 그림 블록에 표시 줄 하나를 씁니다'), action: () => picker('style') });
+  items.push({ label: t('색 조합…'), hint: el.dataset.diagramColors || '', tip: t('차트의 계열 색, 도해의 상자·강조 색을 번호로 고릅니다'), action: () => picker('colors') });
+  const dir = directionOf(body, kind === 'chart' ? '' : kind);
+  if (dir) {
+    items.push({ label: dir.dir === 'LR' ? t('세로로 바꾸기') : t('가로로 바꾸기'), tip: t('그림의 방향 글자만 바꿉니다 (flowchart LR ↔ TD, rankdir) — 상자가 많아 글자가 작으면 세로로'),
+      action: () => {
+        const next = flipDirection(body, kind);
+        if (next) save(next, dir.dir === 'LR' ? t('세로로 바꿨습니다 — Ctrl+Z 로 되돌립니다') : t('가로로 바꿨습니다 — Ctrl+Z 로 되돌립니다'));
+      } });
+  }
+  return items;
+}
+
 /** 블록에서만 하는 일: 표 복사·그림 복사·코드 복사·링크 등 (하이라이트 메뉴에서도 바로 보인다) */
 function uniqueItems(el, target) {
   /** @type {MenuItem[]} */
@@ -385,6 +450,7 @@ function uniqueItems(el, target) {
     items.push({ label: t('코드 복사'), action: () => copyPlain(code), term: code });
   } else if (el.matches('pre.mermaid, pre.lec-chart')) {
     if (el.querySelector('svg')) items.push({ label: t('그림 복사'), tip: t('PNG — 워드·PPT·메일에 붙여 넣기'), action: () => copyDiagram(el) });
+    items.push(...diagramItems(el));   // 도해 스타일·색 조합·방향 (D212·D213)
   } else if (el.matches('.math-block')) {
     items.push(texItem(el));
   }

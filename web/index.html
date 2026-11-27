@@ -536,6 +536,15 @@
         <button type="button" id="lec-mystyles-term" class="icon-btn small" title="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)" aria-label="그 요청 글을 터미널에 붙여 넣기 (Enter 는 누르지 않음)"><svg><use href="#i-term"/></svg></button>
       </div>
     </div>
+    <div class="opt-block dstyle" aria-labelledby="lec-dstyle-title"><!-- 도해 스타일 (D212 — diagramstyles.js) -->
+      <span class="opt-head"><b id="lec-dstyle-title">도해 스타일 · 색 조합</b><small>Mermaid·Graphviz 그림의 기본 모양과, 차트·도해의 기본 색 조합입니다. 글자·바탕·선은 문서 스타일을 따릅니다. 그림 하나만 바꾸려면 그림을 우클릭해 '도해 스타일…'·'색 조합…'을 고르거나 블록에 '%% 스타일: 3 · 색: 2' 줄을 적습니다 (Graphviz·차트는 '//'). 문서 하나의 기본은 '&lt;!-- 도해: 스타일 3 · 색 2 --&gt;' 한 줄</small></span>
+      <div class="dstyle-picks">
+        <label><span>모양</span><select id="lec-dstyle"></select></label>
+        <label><span>색 조합</span><select id="lec-dcolors"></select></label>
+        <span id="lec-dcolors-chips" class="dcolors-chips" aria-hidden="true"></span>
+      </div>
+      <div id="lec-dstyle-preview" class="dstyle-preview"></div>
+    </div>
     <div class="opt-choice" role="radiogroup" aria-labelledby="lec-talign-title"><!-- 표 칸 맞춤 (D174 — doc.js) -->
       <span class="opt-head"><b id="lec-talign-title">표 칸 맞춤</b><small>md 문서의 표에서 칸의 글을 맞추는 방식입니다. 원문에 맞춤 표시(:---:)가 있는 열은 그 표시를 따릅니다 — 표를 우클릭해 열마다 바꿀 수 있습니다</small></span>
       <label><input type="radio" name="table_align" value="auto"><span>기본<small>글은 왼쪽, 숫자는 오른쪽, 칸의 위에 맞춤</small></span></label>

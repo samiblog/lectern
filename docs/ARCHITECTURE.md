@@ -124,6 +124,8 @@ flowchart LR
 | `doc_width` | `1.0` | 가능 | md 문서 본문의 폭 배율 0.8~2, 10 = 가득 (툴바의 문서 폭 — D68) |
 | `line_numbers` | `false` | 가능 | md 문서 왼쪽 여백의 원문 줄 번호 (툴바 버튼·Alt+L — D80) |
 | `theme_groups` | `"use"` | 가능 | 스타일 목록을 묶는 방식: `use`(용도별)·`mood`(분위기별)·`tone`(밝기별) (설정 창, D30) |
+| `diagram_style` | `1` | 가능 | 도해 스타일의 기본 번호 1~10 — 그림 블록의 `%% 스타일: N` 줄이 없는 Mermaid·Graphviz 그림 (설정 창 '보기', D212 — `diagramstyles.js`) |
+| `diagram_colors` | `1` | 가능 | 색 조합의 기본 번호 1~8 — 블록의 `색: N` 줄과 문서의 `<!-- 도해: 색 N -->` 이 없는 차트·도해 (설정 창 '보기', D213) |
 | `show_titles` | `false` | 가능 | 트리·최근 변경에 파일 이름 대신 문서 제목 (트리의 '제목' 버튼). 기본은 파일 이름이고 마우스를 올리면 제목 |
 | `sidebar_visible` / `toc_visible` | `true` | 가능 | 패널 표시 |
 | `toc_hidden_parts` | `[]` | 가능 | 목차에서 감춘 구성 요소 종류 — `table`·`figure`·`box`·`diagram`·`code`·`math` (목차 머리의 종류 버튼, D39) |
