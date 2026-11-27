@@ -131,6 +131,10 @@
 - 차트의 표시 줄(`// 색: 2`)이 있으면 블록은 JSON 이 아니다 — 차트 설정을 읽는 곳은 `JSON.parse` 가 아니라 `parseSpec` 을 쓴다.
 - JS 안의 정규식·글자에 백틱 문자와 `'//'` 를 그대로 적지 않는다 — 시험(test_i18n)의 원문 읽개가 템플릿·주석으로 읽어 그 뒤를 다 잘못 본다. `\x60`, `'/'.repeat(2)`.
 
+- 고르기 창(diagrampick.js — D214)은 docmenu 가 부르지 않는다 — 창이 doc.js(정화·링크)를 부르고 doc.js 가 docmenu 를 부르므로 import 가 돈다. docmenu 는 `diagram-pick` 을 알리기만 한다. 창의 칸은 `pointer-events: none` — 그림의 크게 보기·차트의 [표] 단추가 칸 고르기를 가로채지 않게.
+- 번호표는 이어지지 않는다 — 내 도해 스타일(D215)은 11~99 가운데 파일이 적은 번호다. 번호로 찾을 때 `STYLES[n - 1]` 이 아니라 `findStyle`·`paletteAt`(STYLE_LIST·PALETTE_LIST) 를 쓴다. 내 것의 값은 CSS 에 들어가므로 서버(mydiagrams.py)가 거른 뒤에도 화면에서 숫자·`#rrggbb` 만 다시 받는다.
+- 우클릭으로 쓴 표시 줄에는 이름이 붙는다(`%% 스타일: 3 카드`) — 줄을 글자로 견주는 시험은 이름까지 적는다. 이름은 화면 언어를 따르므로 영어 화면에서는 `style: 3 Card`.
+
 ### PDF 보기 (pdfview.js — D201)
 
 - pdf.js 의 `cMapUrl`·`standardFontDataUrl`·`wasmUrl` 은 절대경로(`/static/vendor/pdfjs/…`)로 준다 — 상대경로는 일꾼(worker) 파일 기준으로 풀려 글꼴을 넣지 않은 한글 PDF 의 글자가 빠진다.

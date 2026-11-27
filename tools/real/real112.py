@@ -103,9 +103,10 @@ try:
         page.locator('#lec-view pre.mermaid').nth(0).click(button='right', position={'x': 5, 'y': 5})
         page.wait_for_selector('#lec-menu:not([hidden])', timeout=8000)
         page.locator('#lec-menu button', has_text='도해 스타일…').click()
-        page.locator('#lec-menu button', has_text='3. 카드').first.click()
-        R.wait(lambda: '```mermaid\nflowchart LR\n  %% 스타일: 3\n  A[시작]' in src(), 10)
-        R.check("'도해 스타일…' 이 그 블록의 첫 줄 아래에 한 줄을 쓴다", '```mermaid\nflowchart LR\n  %% 스타일: 3\n  A[시작]' in src(), src()[:120])
+        page.wait_for_selector('#lec-dpick:not([hidden]) .dpick-card', timeout=8000)   # 고르기 창 (D214)
+        page.locator('#lec-dpick .dpick-card[data-n="3"]').click()
+        R.wait(lambda: '```mermaid\nflowchart LR\n  %% 스타일: 3 카드\n  A[시작]' in src(), 10)
+        R.check("'도해 스타일…' 이 그 블록의 첫 줄 아래에 한 줄을 쓴다", '```mermaid\nflowchart LR\n  %% 스타일: 3 카드\n  A[시작]' in src(), src()[:120])
         R.wait(lambda: page.evaluate(STYLES)[:1] == ['3'], 15)
         R.check('다시 그리면 3 카드', page.evaluate(STYLES)[:1] == ['3'], page.evaluate(STYLES))
 

@@ -37,26 +37,28 @@ Picked separately from the look. They change chart series colors (Vega-Lite, ECh
 - Colors a chart sets itself (`"color": {"value": …}`, `"scale": {"range": …}`, ECharts `color`, Plotly `marker.color`) win. To use a color set, write no colors.
 - In dark styles, dark colors are lightened.
 
+**Your own**: looks from 11 and colors from 9 are the person's own diagram styles and color sets (`diagram-styles` in Lectern's settings folder — made when the person asks with 'Make my diagram style from this look…'; how to make one is in `diagram-styles.en.md` in the same folder). Write them only when the person names that number or name — on a PC without the file, the default is drawn.
+
 ## 3. The marker line
 
-One line inside the block. A number, a name, or both (`3 card`). Look and colors can share one line joined with `·`. `style` and `스타일`, `colors` and `색` mean the same.
+One line inside the block. Write the name after the number — `3 Card`. Lectern reads only the leading number; the name lets a person reading the source tell what the number is (a right-click pick writes it this way too). A name alone also works. Look and colors can share one line joined with `·`. `style` and `스타일`, `colors` and `색` mean the same.
 
 ````md
 ```mermaid
 flowchart LR
-  %% style: 8 · colors: 2
+  %% style: 8 Title band · colors: 2 Report navy
   A[Question] --> B[Analysis]
 ```
 
 ```dot
 digraph flow {
-  // style: 3 · colors: 7
+  // style: 3 Card · colors: 7 Cool
   A -> B
 }
 ```
 
 ```vega-lite
-// colors: 3
+// colors: 3 Gray + accent
 { "mark": "bar", … }
 ```
 ````
@@ -149,7 +151,7 @@ flowchart TD
 
 ## 8. Choosing
 
-- If the person names a number or a name, use it. Suggest look 2 and colors 2 for "for a report", look 3 for "for a presentation", look 8 for "steps with descriptions", colors 3 for "make just this stand out".
+- If the person names a number or a name, write the number and the name ("number 3" → `3 Card`). Suggest look 2 and colors 2 for "for a report", look 3 for "for a presentation", look 8 for "steps with descriptions", colors 3 for "make just this stand out".
 - Use the same numbers for all diagrams in a document — use the document default line (section 4). Use another number for one diagram only with a clear reason (for example 6 for an idea-stage sketch).
 - 7 Zones only means something with two or more groups (subgraph, cluster).
 - You can add the line to other Mermaid diagrams (sequence, state, mind map), but the shape changes mostly in flowcharts and architecture diagrams.
@@ -158,4 +160,4 @@ flowchart TD
 
 - Don't describe the style or colors in the body text outside the block — people see them in the diagram.
 - Don't write the marker line twice (only the first is read).
-- Don't write a number that does not exist (look 11 or more, colors 9 or more) — the default is used.
+- Don't make up numbers — unknown ones draw the default. Looks 11+ and colors 9+ are the person's own, used only when the person names them.

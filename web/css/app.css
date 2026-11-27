@@ -1414,6 +1414,31 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 .dstyle-preview { margin: 8px 4px 0; padding: 6px 8px; min-height: 60px; background: var(--md-bg, #fff); border: 1px solid var(--ui-border); border-radius: 6px; overflow-x: auto; }
 .dstyle-preview pre.mermaid { margin: 0; padding: 0; background: none; border: 0; text-align: center; }
 .dstyle-preview pre.mermaid svg { max-width: 100%; height: auto; }
+.dstyle-samples { display: inline-flex; gap: 6px; margin-left: auto; }
+.dstyle-samples .text-btn { height: 26px; padding: 0 9px; font-size: 12px; }
+/* 도해 고르기 창 (diagrampick.js, D214) — 우클릭한 그림을 번호마다 작게. 칸의 바탕은 문서 바탕 (그림의 색이 문서에서와 같게) */
+#lec-dpick .dialog-box.dpick-box { width: min(1180px, calc(100vw - 32px)); max-height: calc(100vh - 6vh - 24px); margin-top: 3vh; display: flex; flex-direction: column; overflow: hidden; }
+.dpick-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; min-height: 0; overflow: auto; padding: 2px; outline: none; }
+.dpick-card { display: flex; flex-direction: column; border: 1px solid var(--ui-border); border-radius: 8px; background: var(--md-bg, #fff); cursor: pointer; overflow: hidden; outline: none; }
+.dpick-card:hover { border-color: var(--ui-faint); }
+.dpick-card:focus-visible, .dpick-card:focus { border-color: var(--ui-accent); box-shadow: 0 0 0 2px color-mix(in srgb, var(--ui-accent) 35%, transparent); }
+.dpick-card.on { border-color: var(--ui-accent); border-width: 2px; }
+.dpick-stage { height: var(--dpick-h, 150px); padding: 8px; display: flex; align-items: center; justify-content: center; overflow: hidden; pointer-events: none; }   /* 누르면 그 칸을 고른다 — 그림의 크게 보기·차트 단추는 듣지 않게 */
+.dpick-stage > pre { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; margin: 0; padding: 0; background: none; border: 0; overflow: hidden; }
+.dpick-stage .lec-chart-tools, .dpick-stage .lec-chart-data { display: none; }
+.dpick-stage .diagram-error { max-height: 100%; overflow: hidden; font-size: 11px; }
+.dpick-stage > pre:not(:has(svg)) { color: transparent; font-size: 0; }   /* 그리는 중 — 원문 대신 '…' */
+.dpick-stage > pre:not(:has(svg))::after { content: '…'; color: var(--ui-faint); font-size: 18px; }
+.dpick-name { padding: 5px 10px 6px; border-top: 1px solid var(--ui-border); background: var(--ui-panel, var(--ui-bg)); color: var(--ui-fg); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dpick-name b { margin-right: 3px; }
+.dpick-name i { margin-left: 6px; color: var(--ui-accent); font-style: normal; font-size: 11.5px; font-weight: 600; }
+.dpick-name em { margin-left: 6px; padding: 0 5px; border: 1px solid var(--ui-border); border-radius: 4px; color: var(--ui-muted); font-style: normal; font-size: 11px; }   /* 내 도해 스타일 (D215) */
+.mydiag { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 8px 4px 0; font-size: 12.5px; color: var(--ui-muted); }
+.mydiag .text-btn { height: 26px; padding: 0 9px; font-size: 12px; }
+.mydiag-problems { flex-basis: 100%; margin: 0; padding-left: 18px; color: var(--ui-danger); font-size: 12px; line-height: 1.5; }
+.dpick-tip { min-height: 1.4em; margin: 8px 2px 0; color: var(--ui-muted); font-size: 12.5px; }
+.dpick-acts { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+.dpick-acts .text-btn { height: 30px; }
 .opt-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }   /* 설정의 체크 칸 여럿 한 줄에 (D202) */
 .opt-checks label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 .opt-btns { display: flex; align-items: center; gap: 4px 14px; flex-wrap: wrap; margin-top: 6px; }

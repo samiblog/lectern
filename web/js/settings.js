@@ -14,7 +14,7 @@ import { initAiSetup, refreshAiSetup, redrawAiSetup, guidePrompt, skillsPrompt, 
 import { openStylePick } from './stylepick.js';
 import { openRaw } from './rawview.js';
 import { OPTIONAL_KINDS, setKindOn } from './tree.js';
-import { diagramStyles, defaultStyle, diagramColors, defaultColors } from './diagramstyles.js';
+import { diagramStyles, defaultStyle, diagramColors, defaultColors, myDiagrams, DIAGRAM_SAMPLES } from './diagramstyles.js';
 import { renderMermaid } from './mermaid.js';
 
 const box = () => $('#lec-settings');
@@ -43,14 +43,44 @@ function fillControls() {
   for (const radio of $$('#lec-settings input[name="ai_tool"]')) radio.checked = radio.value === aiTool();
   $('#lec-termfont').value = String(S.config.terminal_font_size || TERM_FONT_BASE);
   // 도해 스타일 (D212)·색 조합 (D213) — 고르는 칸, 미리보기는 창을 열 때 (dstylePreview)
-  setHtml($('#lec-dstyle'), diagramStyles().map((s) => html`<option value="${s.n}" title="${s.tip}">${s.n}. ${s.name}</option>`));
+  setHtml($('#lec-dstyle'), numberOptions(diagramStyles()));
   $('#lec-dstyle').value = String(defaultStyle());
-  setHtml($('#lec-dcolors'), diagramColors().map((s) => html`<option value="${s.n}" title="${s.tip}">${s.n}. ${s.name}</option>`));
+  setHtml($('#lec-dcolors'), numberOptions(diagramColors()));
   $('#lec-dcolors').value = String(defaultColors());
+  renderMyDiagrams();
   // 사이드바 '문서'의 하위 묶음 (D202)
   const kinds = Array.isArray(S.config.doc_kinds) ? S.config.doc_kinds : [];
   setHtml($('#lec-set-kinds'), OPTIONAL_KINDS().map((k) => html`<label><input type="checkbox" data-kind="${k.id}"><span>${k.name}</span></label>`));
   for (const input of $$('#lec-set-kinds input')) input.checked = kinds.includes(input.dataset.kind);
+}
+
+/** 도해 스타일·색 조합의 고르는 칸 — 기본 번호, 그 아래 '내 것' 묶음 (D215) */
+function numberOptions(list) {
+  const opt = (x) => html`<option value="${x.n}" title="${x.tip}">${x.n}. ${x.name}</option>`;
+  const mine = list.filter((x) => x.mine);
+  return [...list.filter((x) => !x.mine).map(opt), mine.length ? html`<optgroup label="${t('내 것')}">${mine.map(opt)}</optgroup>` : ''];
+}
+
+/** 내 도해 스타일·내 색 조합 (D215 — 설정 폴더 diagram-styles): 수, 폴더 열기, 고칠 것 (틀린 값·겹친 번호 — 파일마다 까닭) */
+function renderMyDiagrams() {
+  const box = $('#lec-mydiag');
+  if (!box) return;
+  const m = myDiagrams();
+  setHtml(box, [
+    html`<span>${m.styles.length || m.colors.length ? t('내 도해 스타일 {s}개 · 내 색 조합 {c}개', { s: m.styles.length, c: m.colors.length })
+      : t("내 것은 아직 없습니다 — 그림을 우클릭해 '이 모양으로 내 도해 스타일 만들기…'")}</span>`,
+    html`<button type="button" class="text-btn" id="lec-mydiag-folder" title="${t('설정 폴더의 diagram-styles — 파일 하나가 스타일 하나')}">${t('내 도해 스타일 폴더 열기')}</button>`,
+    m.problems.length ? html`<ul class="mydiag-problems">${m.problems.slice(0, 8).map((x) => html`<li>${x.file ? html`<b>${x.file}</b> ` : ''}${x.why}</li>`)}</ul>` : '',
+  ]);
+}
+
+async function openMyDiagramsFolder() {
+  try {
+    const r = await postJSON('/api/diagram-styles/folder', {});
+    toast(t('내 도해 스타일 폴더를 열었습니다: {path}', { path: r.path }));
+  } catch (e) {
+    toast(t('내 도해 스타일 폴더를 열지 못했습니다: {error}', { error: e.message }), 'error');
+  }
 }
 
 // 도해 스타일·색 조합의 미리보기 — 설정의 기본 번호로 작은 흐름도 하나 (표시 줄이 없으니 설정을 따른다)와 색 조합의 계열 색
@@ -432,6 +462,14 @@ export function initSettings() {
     toast(await copyText(voicePrompt()) ? t('요청 글을 복사했습니다 — {cli} 에 붙여 넣고 견본을 @경로로 이어서 적으세요', { cli: aiCli() }) : t('복사하지 못했습니다'));
   });
   termButton('#lec-voice-term', voicePrompt);   // 견본은 사람이 이어서 적는다
+  $('#lec-dstyle-samples').addEventListener('click', () => emit('open-sample', DIAGRAM_SAMPLES.style));   // 번호마다 그린 견본 (D214 — 예제 가이드 창)
+  $('#lec-mydiag').addEventListener('click', (e) => { if (/** @type {HTMLElement} */ (e.target).closest('#lec-mydiag-folder')) openMyDiagramsFolder(); });
+  on('my-diagrams', () => {   // 내 도해 스타일 파일이 바뀜 (diagrampick.js 가 3초마다 본다 — D215)
+    if (box().hidden) return;
+    fillControls();
+    dstylePreview();
+  });
+  $('#lec-dcolors-samples').addEventListener('click', () => emit('open-sample', DIAGRAM_SAMPLES.colors));
   $('#lec-aiguide-samples').addEventListener('click', () => {
     closeSettings();
     openSamples();

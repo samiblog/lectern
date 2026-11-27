@@ -41,9 +41,9 @@ def test_setting_values():
     for key, top in (('diagram_style', config.DIAGRAM_STYLES), ('diagram_colors', config.DIAGRAM_COLORS)):
         assert config.DEFAULTS[key] == 1
         assert key in config.CLIENT_KEYS
-        for ok in (1, top):
+        for ok in (1, top, top + 1, config.DIAGRAM_NUMBER_MAX):   # 기본 번호 뒤로 내 도해 스타일·내 색 조합 (D215 — 파일이 없으면 화면이 1 로)
             assert config.value_ok(key, ok)
-        for bad in (0, top + 1, True, '3', 2.5, None):
+        for bad in (0, config.DIAGRAM_NUMBER_MAX + 1, True, '3', 2.5, None):
             assert not config.value_ok(key, bad), (key, bad)
 
 

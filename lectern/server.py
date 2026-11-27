@@ -19,7 +19,7 @@ from typing import Any
 
 from flask import Flask, Response, abort, jsonify, request, send_file
 
-from . import __version__, aistatus, clips, docxexport, rawfiles, editing, fileclip, htmlexport, i18n, layouts, mdstyles, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
+from . import __version__, aistatus, clips, docxexport, rawfiles, editing, fileclip, htmlexport, i18n, layouts, mdstyles, mydiagrams, notes, osutil, pptxexport, sheet, slidetemplates, styles, terminal, work
 from .config import MAX_DOC_TABS, is_number
 from .docinfo import doc_info, read_text
 from .marks import MARKS_READ, marks_of
@@ -1045,6 +1045,19 @@ def create_app(state: AppState) -> Flask:
     def api_styles_folder() -> Any:
         """스타일 폴더를 탐색기로 연다 (없으면 만든다 — 빈 폴더 하나). 설정 창의 '스타일 폴더 열기'"""
         return open_folder(styles.styles_dir())
+
+    # ---- 내 도해 스타일·내 색 조합 (D215): 설정 폴더의 diagram-styles\*.json ----------------------------------
+
+    @app.get('/api/diagram-styles')
+    def api_diagram_styles() -> Any:
+        """내 도해 스타일·내 색 조합 (정해진 값만 거른 것)·고칠 것, 폴더와 만드는 법(안내) 경로 — 그림 그리기·고르기 창·설정 창이 쓴다 (읽기만)"""
+        guide = web_dir() / 'help' / ('diagram-styles.en.md' if i18n.language() == 'en' else 'diagram-styles.md')
+        return jsonify(**mydiagrams.load(), dir=str(mydiagrams.styles_dir()), guide=str(guide))
+
+    @app.post('/api/diagram-styles/folder')
+    def api_diagram_styles_folder() -> Any:
+        """내 도해 스타일 폴더를 탐색기로 연다 (없으면 빈 폴더 하나를 만든다)"""
+        return open_folder(mydiagrams.styles_dir())
 
     # ---- 지면 틀 (D145): web/layouts 와 설정 폴더의 layouts ------------------------------------------
 

@@ -542,8 +542,10 @@
         <label><span>모양</span><select id="lec-dstyle"></select></label>
         <label><span>색 조합</span><select id="lec-dcolors"></select></label>
         <span id="lec-dcolors-chips" class="dcolors-chips" aria-hidden="true"></span>
+        <span class="dstyle-samples"><button type="button" id="lec-dstyle-samples" class="text-btn" title="예제 가이드 창에서 번호마다 그린 견본을 엽니다">모양 견본</button><button type="button" id="lec-dcolors-samples" class="text-btn" title="예제 가이드 창에서 번호마다 그린 견본을 엽니다">색 조합 견본</button></span>
       </div>
       <div id="lec-dstyle-preview" class="dstyle-preview"></div>
+      <div id="lec-mydiag" class="mydiag"></div><!-- 내 도해 스타일·내 색 조합 (D215 — 설정 폴더 diagram-styles) -->
     </div>
     <div class="opt-choice" role="radiogroup" aria-labelledby="lec-talign-title"><!-- 표 칸 맞춤 (D174 — doc.js) -->
       <span class="opt-head"><b id="lec-talign-title">표 칸 맞춤</b><small>md 문서의 표에서 칸의 글을 맞추는 방식입니다. 원문에 맞춤 표시(:---:)가 있는 열은 그 표시를 따릅니다 — 표를 우클릭해 열마다 바꿀 수 있습니다</small></span>
@@ -698,6 +700,18 @@
     <div class="dialog-foot">
       <span></span>
       <button type="button" id="lec-stylepick-close" class="primary">닫기</button>
+    </div>
+  </div>
+</div>
+<div id="lec-dpick" class="overlay" hidden>
+  <!-- 도해 고르기 (D214 — diagrampick.js): 우클릭한 그림을 번호마다 작게 그려 나란히. 고르면 그 블록에 표시 줄 하나 -->
+  <div class="dialog-box dpick-box" role="dialog" aria-labelledby="lec-dpick-title">
+    <div class="raw-head"><h2 id="lec-dpick-title">도해 고르기</h2><small>그림을 번호마다 그렸습니다. 누르거나 Enter 로 고르면 그림 블록에 표시 줄 하나를 씁니다 — Ctrl+Z 로 되돌립니다</small></div>
+    <div id="lec-dpick-grid" class="dpick-grid" role="listbox" aria-labelledby="lec-dpick-title"></div>
+    <p id="lec-dpick-tip" class="dpick-tip"></p>
+    <div class="dialog-foot">
+      <span class="dpick-acts"><button type="button" id="lec-dpick-follow" class="text-btn" hidden></button><button type="button" id="lec-dpick-samples" class="text-btn"></button><button type="button" id="lec-dpick-default" class="text-btn"></button><button type="button" id="lec-dpick-make" class="text-btn" hidden></button></span>
+      <button type="button" id="lec-dpick-close" class="text-btn">취소</button>
     </div>
   </div>
 </div>

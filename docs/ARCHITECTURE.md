@@ -227,6 +227,8 @@ flowchart LR
 | `GET /pdf-preview/<토큰>.pdf` | | 'PDF·인쇄' 창의 미리보기 PDF (D134 — 창의 js_api `pdf_preview` 가 메모리에 둔 최근 4개, 디스크에 쓰지 않음). 토큰이 비밀이다 — iframe 은 `X-Token` 을 보낼 수 없어 `/api` 밖. `Cache-Control: no-store`, 모르는 토큰은 404 |
 | `GET /userstyle/<파일>` | | 내 스타일 파일 (`text/css`, 토큰 없이 — `<link>` 가 부른다). `@import`·`data:` 가 아닌 `url()`·`image-set()` 을 지운 것. 폴더 바로 안의 `.css` 만, 1MB 까지, 아니면 404 |
 | `POST /api/styles/folder` | `{}` | 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
+| `GET /api/diagram-styles` | — | 내 도해 스타일·내 색 조합 (D215 — 설정 폴더 `diagram-styles\*.json`, 정해진 열쇠·범위만 거른 값). `{styles: [{n, name, tip, file, base?, corner?, …}], colors: [{n, name, tip, file, series, strong, accent, zones?}], problems: [{file, why}], next: {style, colors}, dir, guide}` |
+| `POST /api/diagram-styles/folder` | `{}` | 내 도해 스타일 폴더를 탐색기로 연다 (없으면 만든다). `{path}` |
 | `GET /api/styles/made?file=` | | '내 스타일 만들기'(D211)가 만든 스타일의 값 `{file, name, base, dark, values, stamp, copied}` — 그 창이 만든 것(머리 주석 `maker: lectern`)이 아니면 404 |
 | `POST /api/styles/made` | `{name, base, dark, values, file?, stamp?, copy?}` | '내 스타일 만들기'의 저장 (D211) — 서버가 값(`styles.MAKER_VARS` 열하나만, 글꼴 이름·#색·범위 안의 숫자)으로 CSS 를 짓는다. `file` 이 없으면 새 파일 하나(같은 이름이면 409), 있으면 그 창이 만든 그 파일만 `stamp` 가 같을 때 고쳐 쓴다(아니면 409·404). `copy` 는 손으로 쓴 스타일의 규칙을 옮겨 담는다. `{file, id, stamp}` |
 | `GET /api/slide-templates` | | Lectern 슬라이드 템플릿 묶음 (D101) `{groups:[{name, own, templates:[{number, name, text}]}], dir}`. 기본 묶음 다음에 사용자의 것 |

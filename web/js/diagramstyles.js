@@ -14,7 +14,7 @@
 
 import { S } from './store.js';
 import { mermaidTheme } from './theme.js';
-import { t } from './i18n.js';
+import { t, LANG } from './i18n.js';
 
 // ---- 색 -------------------------------------------------------------------------
 
@@ -80,16 +80,21 @@ const PALETTES = [
     series: ['#8fb8de', '#f5b994', '#a8d5a2', '#e4a5c4', '#c3b1e1', '#f3d98b'], strong: '#5b7fa6', accent: '#e07a3f', zones: ['#8fb8de', '#a8d5a2', '#f5b994'] },
 ];
 
-/** 색 조합 목록 — 설정 창·우클릭 메뉴가 쓴다 [{n, key, name, tip, chips}] (chips: 지금 스타일에서 보이는 계열 색) */
+/** @type {any[]} 색 조합 전부 — 기본 여덟(1~8)과 내 색 조합(9~ — D215, setMyDiagrams). n: 번호 */
+let PALETTE_LIST = PALETTES.map((x, i) => ({ ...x, n: i + 1 }));
+/** 그 번호의 색 조합 (없으면 undefined — 내 색 조합 파일이 없는 PC) */
+const paletteAt = (c) => PALETTE_LIST.find((x) => x.n === c);
+
+/** 색 조합 목록 — 설정 창·고르기 창이 쓴다 [{n, key, name, tip, chips, mine}] (chips: 지금 스타일에서 보이는 계열 색) */
 export const diagramColors = () => {
   const dark = !!mermaidTheme().themeVariables.darkMode;
-  return PALETTES.map((x, i) => ({ n: i + 1, key: x.key, name: x.name, tip: x.tip, chips: (x.series || ZONES.light).slice(0, 6).map((c) => (dark ? onDark(c) : c)) }));
+  return PALETTE_LIST.map((x) => ({ n: x.n, key: x.key, name: x.name, tip: x.tip, mine: !!x.mine, chips: (x.series || ZONES.light).slice(0, 6).map((c) => (dark ? onDark(c) : c)) }));
 };
 
-/** 설정의 기본 색 조합 (1부터) */
+/** 설정의 기본 색 조합 (1부터 — 내 색 조합 파일이 없어졌으면 1) */
 export function defaultColors() {
   const n = Number(S.config.diagram_colors);
-  return Number.isInteger(n) && n >= 1 && n <= PALETTES.length ? n : 1;
+  return Number.isInteger(n) && paletteAt(n) ? n : 1;
 }
 
 /** 문서 스타일의 색표(Mermaid themeVariables) → 도해 스타일이 쓰는 이름. c: 색 조합 (1 이면 문서 스타일 그대로) */
@@ -105,7 +110,7 @@ function paletteOf(v, c = 1) {
     accent: dark ? '#f0883e' : '#c2410c', warn: dark ? '#e3b341' : '#b45309', danger: dark ? '#f47067' : '#b42318',
     zones: dark ? ZONES.dark : ZONES.light, series: /** @type {string[] | null} */ (null),
   };
-  const set = PALETTES[c - 1];
+  const set = paletteAt(c);
   if (!set?.series) return p;
   const adapt = (x) => (dark ? onDark(x) : x);
   const strong = adapt(set.strong);
@@ -214,13 +219,138 @@ const STYLES = [
     title: 'rule', roles: titleRoles },
 ];
 
-/** 도해 스타일 목록 — 설정 창·우클릭 메뉴가 쓴다 [{n, key, name, tip}] */
-export const diagramStyles = () => STYLES.map((s, i) => ({ n: i + 1, key: s.key, name: s.name, tip: s.tip }));
+/** 예제 가이드의 견본 문서 — 번호마다 그린 것 (고르기 창·설정 창의 견본 단추 — D214) */
+export const DIAGRAM_SAMPLES = { style: 'guide/도해-스타일-예제/도해-스타일-견본.md', colors: 'guide/도해-스타일-예제/색-조합-견본.md' };   // i18n-ok (파일 이름)
 
-/** 설정의 기본 번호 (1부터) */
+/** @type {any[]} 도해 스타일 전부 — 기본 열(1~10)과 내 도해 스타일(11~ — D215, setMyDiagrams). n: 번호 */
+let STYLE_LIST = STYLES.map((x, i) => ({ ...x, n: i + 1 }));
+/** 그 번호의 스타일 (없으면 undefined) */
+const findStyle = (n) => STYLE_LIST.find((x) => x.n === n);
+
+/** 도해 스타일 목록 — 설정 창·고르기 창이 쓴다 [{n, key, name, tip, mine}] */
+export const diagramStyles = () => STYLE_LIST.map((x) => ({ n: x.n, key: x.key, name: x.name, tip: x.tip, mine: !!x.mine }));
+
+/** 설정의 기본 번호 (1부터 — 내 도해 스타일 파일이 없어졌으면 1) */
 export function defaultStyle() {
   const n = Number(S.config.diagram_style);
-  return Number.isInteger(n) && n >= 1 && n <= STYLES.length ? n : 1;
+  return Number.isInteger(n) && findStyle(n) ? n : 1;
+}
+
+// ---- 내 도해 스타일·내 색 조합 (D215) --------------------------------------------------
+// 설정 폴더 diagram-styles 의 json — 서버(lectern/mydiagrams.py)가 정해진 열쇠·범위만 거른 값. 여기서도 숫자·색을 다시 본다 (CSS 에 넣으므로).
+// 모양은 바탕 번호(base) 위에 고친 값만 — Mermaid 는 classic 모양 위에 (손그림이면 handDrawn), CSS 는 바탕의 것 뒤에 붙여 이긴다.
+
+/** @type {{styles: any[], colors: any[], problems: {file: string, why: string}[], next: {style: number, colors: number}, dir: string, guide: string}} */
+let MINE = { styles: [], colors: [], problems: [], next: { style: 11, colors: 9 }, dir: '', guide: '' };
+const CURVE = { curve: 'basis', step: 'stepAfter', straight: 'linear' };
+const SPLINES = { curve: 'spline', step: 'ortho', straight: 'line' };
+const SPACING = { tight: [30, 32, 0.3, 0.3], normal: [40, 44, 0.45, 0.45], wide: [56, 60, 0.65, 0.65] };   // Mermaid nodeSpacing·rankSpacing, Graphviz nodesep·ranksep
+const HEX = /^#[0-9a-f]{6}$/i;
+/** 범위 안의 숫자 (아니면 undefined) — CSS 에 넣는 값은 숫자로만 */
+const num = (v, lo, hi) => (typeof v === 'number' && Number.isFinite(v) && v >= lo && v <= hi ? Math.round(v * 100) / 100 : undefined);
+const flag = (v) => (typeof v === 'boolean' ? v : undefined);
+const pick = (v, table) => (typeof v === 'string' && Object.hasOwn(table, v) ? v : undefined);
+const squash = (name) => String(name).toLowerCase().replace(/[\s_-]+/g, '');
+/** Graphviz style 글자에 rounded·filled 를 넣거나 뺀다 */
+function dotStyleWord(style, word, on) {
+  const set = new Set(String(style || '').split(',').map((x) => x.trim()).filter(Boolean));
+  if (on) set.add(word);
+  else set.delete(word);
+  return [...set].join(',');
+}
+
+/** 서버의 값 하나 → 스타일 (STYLES 의 것과 같은 모양) */
+function makeStyle(u) {
+  const base = STYLES[(num(u.base, 1, STYLES.length) || 1) - 1];
+  const v = {
+    corner: num(u.corner, 0, 24), border: num(u.border, 0, 4), line: pick(u.line, CURVE), lineWidth: num(u.line_width, 0.5, 4), dash: flag(u.dash),
+    shadow: flag(u.shadow), fill: pick(u.fill, { none: 1, light: 1, solid: 1 }), spacing: pick(u.spacing, SPACING), bold: flag(u.bold),
+    title: pick(u.title, { none: 1, band: 1, tint: 1, rule: 1 }), zones: flag(u.zones), sketch: flag(u.sketch),
+  };
+  const title = v.title === 'none' ? undefined : v.title || base.title;
+  const fillVars = (p) => (v.fill === 'none' ? { primaryColor: p.bg } : v.fill === 'light' ? { primaryColor: mix(p.border, p.bg, 0.1) }
+    : v.fill === 'solid' ? { primaryColor: p.border, primaryTextColor: ink(p.border, p), primaryBorderColor: p.border } : {});
+  return {
+    n: u.n, key: `mine${u.n}`, name: u.name, words: [squash(u.name)], tip: u.tip || t('내 도해 스타일 — {file}', { file: u.file }), mine: true,
+    mermaid: (p) => {
+      const b = base.mermaid(p);
+      let css = b.css || '';
+      const flow = { ...(b.flowchart || {}) };
+      if (!title && base.title) {   // 제목 상자를 끈다
+        css = css.replace(TITLE_CSS, '');
+        delete flow.wrappingWidth;
+        delete flow.padding;
+      } else if (title && !base.title) {
+        css = `${TITLE_CSS} ${css}`;
+        Object.assign(flow, { wrappingWidth: TITLE_WRAP, padding: 7 });
+      }
+      const add = [];
+      if (v.corner !== undefined) add.push(`.node rect { rx: ${v.corner}px; ry: ${v.corner}px; } .cluster rect { rx: ${v.corner + 4}px; ry: ${v.corner + 4}px; }`);
+      if (v.border !== undefined) add.push(`.node rect, .node polygon, .node path { stroke-width: ${v.border}px; }`);
+      if (v.line) flow.curve = CURVE[v.line];
+      if (v.lineWidth !== undefined) add.push(`.flowchart-link { stroke-width: ${v.lineWidth}px; }`);
+      if (v.dash) add.push('.flowchart-link { stroke-dasharray: 5 3; }');
+      if (v.shadow !== undefined) add.push(`.node rect, .node polygon, .node path { filter: ${v.shadow ? `drop-shadow(0 2px 3px ${shadow(p)})` : 'none'}; }`);
+      if (v.spacing) Object.assign(flow, { nodeSpacing: SPACING[v.spacing][0], rankSpacing: SPACING[v.spacing][1] });
+      if (v.bold !== undefined) add.push(`.nodeLabel { font-weight: ${v.bold ? 600 : 400}; }`);
+      return { look: v.sketch ? 'handDrawn' : 'classic', vars: { ...(b.vars || {}), ...fillVars(p) }, flowchart: flow, css: [css, ...add].filter(Boolean).join(' ') };
+    },
+    dot: (p) => {
+      const b = dotOf(base)(p);
+      const graph = { ...(b.graph || {}) };
+      const node = { ...(b.node || {}) };
+      const edge = { ...(b.edge || {}) };
+      if (v.corner !== undefined) {   // Graphviz 는 둥글기 정도가 없다 — 둥근 네모인지만
+        node.style = dotStyleWord(node.style, 'rounded', v.corner > 0);
+        node.shape ||= 'box';
+      }
+      if (v.border !== undefined) node.penwidth = v.border;
+      if (v.line) graph.splines = SPLINES[v.line];
+      if (v.lineWidth !== undefined) edge.penwidth = v.lineWidth;
+      if (v.dash) edge.style = 'dashed';
+      if (v.fill) {
+        node.style = dotStyleWord(node.style, 'filled', true);
+        if (v.fill === 'solid') Object.assign(node, { fillcolor: p.border, color: p.border, fontcolor: ink(p.border, p) });
+        else Object.assign(node, { fillcolor: v.fill === 'none' ? p.bg : mix(p.border, p.bg, 0.1) });
+      }
+      if (v.spacing) Object.assign(graph, { nodesep: SPACING[v.spacing][2], ranksep: SPACING[v.spacing][3] });
+      return { graph, node, edge, cluster: b.cluster, shadow: v.shadow ?? b.shadow };
+    },
+    roles: v.fill === 'solid' ? STYLES[3].roles : title ? titleRoles : base.roles,
+    title, zones: v.zones ?? base.zones,
+  };
+}
+
+/** 서버의 값 하나 → 색 조합 (PALETTES 의 것과 같은 모양). 색이 틀리면 null */
+function makePalette(u) {
+  const series = Array.isArray(u.series) ? u.series.filter((c) => HEX.test(c)) : [];
+  if (series.length < 2) return null;
+  const color = (c, fallback) => (HEX.test(c) ? c : fallback);
+  const zoneList = Array.isArray(u.zones) ? u.zones.filter((c) => HEX.test(c)) : [];
+  return { n: u.n, key: `mine${u.n}`, name: u.name, words: [squash(u.name)], tip: u.tip || t('내 색 조합 — {file}', { file: u.file }), mine: true,
+    series, strong: color(u.strong, series[0]), accent: color(u.accent, series[1]), ...(zoneList.length ? { zones: zoneList } : {}) };
+}
+
+/** 내 도해 스타일·내 색 조합을 받는다 (/api/diagram-styles). 그린 그림은 부르는 쪽이 다시 그린다 */
+export function setMyDiagrams(d) {
+  MINE = { styles: d?.styles || [], colors: d?.colors || [], problems: d?.problems || [], next: d?.next || { style: 11, colors: 9 }, dir: d?.dir || '', guide: d?.guide || '' };
+  const okNumber = (u, lo) => Number.isInteger(u?.n) && u.n >= lo && u.n <= 99 && typeof u.name === 'string' && u.name;
+  STYLE_LIST = [...STYLES.map((x, i) => ({ ...x, n: i + 1 })), ...MINE.styles.filter((u) => okNumber(u, 11)).map(makeStyle)];
+  PALETTE_LIST = [...PALETTES.map((x, i) => ({ ...x, n: i + 1 })), ...MINE.colors.filter((u) => okNumber(u, 9)).map(makePalette).filter(Boolean)];
+}
+
+/** 받은 것 그대로 — 설정 창(폴더·고칠 것)·고르기 창(다음 번호·안내 경로) */
+export const myDiagrams = () => MINE;
+
+/**
+ * 내 도해 스타일·내 색 조합을 만들어 달라는 요청 글 (D215) — 그 그림의 자리(ref '@경로 3~9행'), 안내, 폴더, 다음 번호.
+ * 저장하기 전에 보이고 묻게 한다 (안내 web/help/diagram-styles.md). 터미널에 Enter 없이 (D51) — 우클릭 메뉴·고르기 창
+ */
+export function makePrompt(key, ref) {
+  const m = MINE;
+  return key === 'colors'
+    ? t('Lectern 의 내 도해 스타일 안내({guide})를 읽고, {ref} 의 색으로 내 색 조합을 하나 만들어 줘. 번호는 {n}, 저장할 폴더는 {dir}. 저장하기 전에 이름과 색을 먼저 보여 줘.', { guide: m.guide, ref, n: m.next.colors, dir: m.dir })
+    : t('Lectern 의 내 도해 스타일 안내({guide})를 읽고, {ref} 그림의 모양으로 내 도해 스타일을 하나 만들어 줘. 번호는 {n}, 저장할 폴더는 {dir}. 저장하기 전에 이름과 값을 먼저 보여 줘.', { guide: m.guide, ref, n: m.next.style, dir: m.dir });
 }
 
 // ---- 그림이 고른 번호 -------------------------------------------------------------
@@ -254,18 +384,18 @@ function marksIn(src, kind) {
 /** 값 → 번호 (모르면 0). 번호·'3 카드'·이름('카드'·'card')·key */
 function numberIn(list, value) {
   const v = String(value ?? '').trim();
-  const num = /^(\d+)/.exec(v);
-  if (num) {
-    const n = Number(num[1]);
-    return n >= 1 && n <= list.length ? n : 0;
+  const lead = /^(\d+)/.exec(v);
+  if (lead) {
+    const n = Number(lead[1]);
+    return list.some((s) => s.n === n) ? n : 0;   // 없는 번호(내 것의 파일이 없는 PC 등)는 0 — 문서의 줄·설정을 따른다
   }
   const word = v.toLowerCase().replace(/[\s_-]+/g, '');
-  return list.findIndex((s) => s.words.includes(word) || s.key === word || s.name.toLowerCase().replace(/\s+/g, '') === word) + 1;
+  return list.find((s) => s.words?.includes(word) || s.key === word || s.name.toLowerCase().replace(/\s+/g, '') === word)?.n || 0;   // 기본 것이 먼저
 }
 /** 스타일 줄의 값 → 번호 (모르면 0) */
-export const styleNumber = (value) => numberIn(STYLES, value);
+export const styleNumber = (value) => numberIn(STYLE_LIST, value);
 /** 색 줄의 값 → 번호 (모르면 0) */
-export const colorsNumber = (value) => numberIn(PALETTES, value);
+export const colorsNumber = (value) => numberIn(PALETTE_LIST, value);
 
 /** 문서의 기본 줄 '<!-- 도해: 스타일 8 · 색 2 -->' → {style, colors} (번호, 없으면 0). 처음 나온 줄 */
 export function docMarks(text) {
@@ -307,14 +437,17 @@ export function blockMarks(src, kind) {
 }
 
 /**
- * 블록 안(body — 여는 줄·닫는 줄 뺀 줄들)의 표시를 고친 새 줄들. key: 'style' | 'colors', n: 번호 (null 이면 지운다).
+ * 블록 안(body — 여는 줄·닫는 줄 뺀 줄들)의 표시를 고친 새 줄들. key: 'style' | 'colors', n: 번호 (null 이면 지운다). 값은 '3 카드' 처럼 번호와 이름.
  * 있는 표시 줄을 고친다 (다른 표시는 그대로, 아무것도 안 남으면 줄을 지운다). 없으면 — 차트는 맨 앞에, 그림은 첫 줄(flowchart LR·digraph 이름 {)
  * 아래에 다음 줄의 들여쓰기로 (Mermaid 의 머리 설정 '---' 은 맨 앞이어야 하므로 그 다음의 첫 줄 아래에)
  */
 export function setMark(body, kind, key, n) {
   const lines = [...body];
   const lead = kind === 'mermaid' ? '%%' : '/'.repeat(2);
-  const fallback = key === 'style' ? t('스타일') : t('색');
+  // 줄의 말은 화면 언어로 — 영어는 안내(diagrams.en.md)처럼 소문자 'style'·'colors' (읽을 때는 둘 다, 크고 작은 글자도 가리지 않는다)
+  const fallback = LANG === 'en' ? (key === 'style' ? 'style' : 'colors') : (key === 'style' ? '스타일' : '색');   // i18n-ok (표시 줄의 말)
+  // 번호 뒤에 이름 — 원문만 보고도 무엇인지 안다 ('3 카드'. 읽을 때는 앞의 번호만 본다 — numberIn. D214)
+  const named = n == null ? '' : `${n} ${(key === 'style' ? findStyle(n) : paletteAt(n))?.name || ''}`.trim();
   const fmt = (x) => (x.key ? `${x.word}: ${x.value}` : x.raw);
   let at = -1;
   let first = -1;
@@ -328,19 +461,21 @@ export function setMark(body, kind, key, n) {
     const i = at >= 0 ? at : first;
     const m = markLine(lines[i], kind);
     let parts = m.parts;
-    if (at >= 0) parts = n == null ? parts.filter((x) => x.key !== key) : parts.map((x) => (x.key === key ? { ...x, value: String(n) } : x));
-    else parts = [...parts, { key, word: fallback, value: String(n), raw: '' }];
+    if (at >= 0) parts = n == null ? parts.filter((x) => x.key !== key) : parts.map((x) => (x.key === key ? { ...x, value: named } : x));
+    else parts = [...parts, { key, word: fallback, value: named, raw: '' }];
     if (parts.length) lines[i] = `${m.indent}${lead} ${parts.map(fmt).join(' · ')}`;
     else lines.splice(i, 1);
     return lines;
   }
   if (n == null) return lines;
-  const text = `${lead} ${fallback}: ${n}`;
+  const text = `${lead} ${fallback}: ${named}`;
   if (kind === 'chart') return [text, ...lines];
   let skip = 0;
   if (kind === 'mermaid' && lines[0]?.trim() === '---') skip = lines.findIndex((l, i) => i > 0 && l.trim() === '---') + 1;
+  // 그림의 첫 줄(flowchart LR·digraph 이름 {) — 빈 줄과 주석·지시 줄('%%{init: …}%%'·'// …')은 건너뛴다 (그 사이에 넣으면 지시와 첫 줄이 갈린다)
+  const note = kind === 'mermaid' ? /^\s*%%/ : /^\s*(\/\/|#|\/\*)/;
   let head = skip;
-  while (head < lines.length && !lines[head].trim()) head += 1;
+  while (head < lines.length && (!lines[head].trim() || note.test(lines[head]))) head += 1;
   const pos = head < lines.length ? head + 1 : skip;
   const next = lines[pos];
   const pad = next != null && next.trim() ? /^\s*/.exec(next)[0] : '';
@@ -394,7 +529,7 @@ export function flipDirection(body, kind) {
   return lines;
 }
 
-const styleAt = (n) => STYLES[n - 1] || STYLES[0];
+const styleAt = (n) => findStyle(n) || STYLE_LIST[0];
 
 // ---- Mermaid ---------------------------------------------------------------------
 

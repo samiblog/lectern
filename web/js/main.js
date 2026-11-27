@@ -37,6 +37,7 @@ import {
 import { initSettings, openSettings, closeSettings } from './settings.js';
 import { initRaw, closeRaw } from './rawview.js';
 import { initStylePick, closeStylePick } from './stylepick.js';
+import { initDiagramPick, closeDiagramPick, loadMyDiagrams } from './diagrampick.js';
 import { initPrint, closePrint } from './printdoc.js';
 import {
   initHelp, toggleManual, closeManual, manualOpen, manualToWindow, toggleShortcuts, closeShortcuts, toggleManualNav,
@@ -510,7 +511,7 @@ function bindKeys() {
     } else if (e.key === 'Tab' && !mod && !e.altKey && (!typing(e) || paneField(e)) && !overlayOpen() && trapTab(e)) {   // 문서 칸 밖으로 나가지 않게 — 폴더 개요·html 문서·찾기 막대 (D167)
       e.preventDefault();
     } else if (e.key === 'Escape') {
-      if (closeChart() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual({ user: true })
+      if (closeChart() || closeDiagramPick() || closePalette() || closeGallery() || closePptx() || closeHtmlExport() || closePrint() || closeMdStyle() || closePut() || closeBlock(S.pane) || closeInsert() || closeNewDocument() || closeRename() || closeDelete() || closeRaw() || closeStylePick() || closeSettings() || closeShortcuts() || hideMenu() || closeNotes() || closeLightbox() || closeFind() || closeManual({ user: true })
         || clearPick() || escSpotlight()) e.preventDefault();
     }
   });
@@ -552,6 +553,7 @@ async function boot() {
     S.config.sidebar_visible = !!solo.guide;   // 예제 가이드 창(D181)은 예제를 둘러보게 트리를 보인다
   }
   await loadUserStyles();   // 내 스타일 (D53) — 고른 스타일이 내 것이면 목록이 있어야 입힐 수 있다
+  await loadMyDiagrams();   // 내 도해 스타일·내 색 조합 (D215) — 문서의 '스타일: 11' 을 처음부터 그 모양으로
   initTheme();
   initUi();
   initToc();
@@ -579,6 +581,7 @@ async function boot() {
   initSettings();
   initRaw();   // 설정 원문 보기 (D160)
   initStylePick();   // 글쓰기 스타일 고르기 (D161)
+  initDiagramPick();   // 도해 고르기 창 (D214)
   initHelp();
   initPosition();
   initResize();

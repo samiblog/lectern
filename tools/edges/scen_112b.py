@@ -233,9 +233,9 @@ def run(seed):
                     page.keyboard.press('Escape')
                     return False
                 btn.first.click()
-                if pick:
-                    page.wait_for_selector('#lec-menu .menu-head', timeout=5000)
-                    target = page.locator('#lec-menu button', has_text=pick)
+                if pick:   # 고르기 창 (D214) — 번호 칸
+                    page.wait_for_selector('#lec-dpick:not([hidden]) .dpick-card', timeout=5000)
+                    target = page.locator(f'#lec-dpick .dpick-card[data-n="{pick}"]')
                     if not target.count():
                         page.keyboard.press('Escape')
                         return False
@@ -258,7 +258,7 @@ def run(seed):
                         i = rnd.choice(cand)
                         n = rnd.randint(1, 10 if op == 'style' else 8)
                         did = f'{op} #{i} → {n}'
-                        if menu(i, '도해 스타일…' if op == 'style' else '색 조합…', f'{n}. '):
+                        if menu(i, '도해 스타일…' if op == 'style' else '색 조합…', str(n)):
                             wait_file(before)
                     elif op == 'follow':
                         i = rnd.randrange(len(kinds))
@@ -267,8 +267,8 @@ def run(seed):
                         page.locator(ALL).nth(i).click(button='right', position={'x': 5, 'y': 5})
                         page.wait_for_selector('#lec-menu:not([hidden])', timeout=5000)
                         page.locator('#lec-menu button', has_text=key).first.click()
-                        page.wait_for_selector('#lec-menu .menu-head', timeout=5000)
-                        follow = page.locator('#lec-menu button', has_text='따르기')
+                        page.wait_for_selector('#lec-dpick:not([hidden]) .dpick-card', timeout=5000)
+                        follow = page.locator('#lec-dpick-follow:visible')
                         if follow.count():
                             follow.first.click()
                             wait_file(before)

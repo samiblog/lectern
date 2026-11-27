@@ -115,6 +115,7 @@ FILES_OPEN = ('docs', 'code', 'others', 'work', 'folder')   # 설정 files_open 
 DOC_KINDS_OPTIONAL = ('pdf', 'word', 'ppt', 'excel', 'hwp', 'work', 'marks', 'tasks')   # 설정 doc_kinds — 고를 수 있는 하위 묶음 (D202)
 DIAGRAM_STYLES = 10   # 도해 스타일의 수 (D212 — web/js/diagramstyles.js 의 STYLES 와 같게, 시험이 견준다)
 DIAGRAM_COLORS = 8    # 색 조합의 수 (D213 — web/js/diagramstyles.js 의 PALETTES 와 같게, 시험이 견준다)
+DIAGRAM_NUMBER_MAX = 99   # 내 도해 스타일·내 색 조합의 번호 끝 (D215 — mydiagrams.LAST_NUMBER)
 DOCS_KINDS = ('all', 'md', 'deck', 'html', 'pdf', 'work', 'marks', 'tasks', 'word', 'ppt', 'excel', 'hwp')   # 설정 docs_kind (D143 — 화면은 tree.js 의 KINDS)   # 설정 ai_tool (D138 — 화면의 표는 web/js/aitool.js)
 
 # 프런트엔드(POST /api/config)에서 바꿀 수 있는 키. 나머지는 config.json 직접 편집.
@@ -179,10 +180,8 @@ def value_ok(key: str, value: Any) -> bool:
         return value in ('auto', 'on', 'off')
     if key == 'settings_section':
         return value in ('general', 'view', 'edit', 'print', 'term', 'ai', 'work', 'more')
-    if key == 'diagram_style':
-        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= DIAGRAM_STYLES
-    if key == 'diagram_colors':
-        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= DIAGRAM_COLORS
+    if key in ('diagram_style', 'diagram_colors'):   # 기본 번호, 내 도해 스타일·내 색 조합(D215 — 모양 11~·색 9~)까지. 그 파일이 없으면 화면이 1 로 그린다
+        return isinstance(value, int) and not isinstance(value, bool) and 1 <= value <= DIAGRAM_NUMBER_MAX
     if key == 'terminal_font_size':
         return isinstance(value, int) and not isinstance(value, bool) and TERM_FONT[0] <= value <= TERM_FONT[1]
     if key in ('last_folder', 'editor', 'terminal_shell', 'work_home'):

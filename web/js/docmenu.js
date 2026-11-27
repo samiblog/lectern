@@ -18,7 +18,7 @@ import { partExtent, captionOf } from './toc.js';
 import { isPdfView, pdfHere, pageOfSelection, pageRef } from './pdfview.js';
 import { snippetOf, addSnippets, sendSnippets, boxMenu, clipLabel } from './basket.js';
 import { linesEditable, lineMenuItems, pickedItems, replaceLines } from './lineedit.js';
-import { diagramStyles, diagramColors, defaultStyle, defaultColors, blockMarks, docMarks, setMark, directionOf, flipDirection } from './diagramstyles.js';
+import { diagramStyles, diagramColors, defaultStyle, defaultColors, blockMarks, docMarks, directionOf, flipDirection, makePrompt } from './diagramstyles.js';
 
 /**
  * 읽는 화면에서 고른 글의 서식 항목과, 형광펜이면 [메모 달기, 이 형광펜 지우기] (D142·D143 — wordpick.js. main.js 가 잇는다: 여기서 부르면 import 순환이 생긴다)
@@ -385,30 +385,25 @@ function diagramItems(el) {
       toast(t('저장하지 못했습니다: {error}', { error: e.message }), 'error');
     }
   };
-  const menu = $('#lec-menu');
-  const reopen = (items) => showMenu(parseFloat(menu.style.left) || 80, parseFloat(menu.style.top) || 80, items);
-  /** 번호 고르기 — key: 'style' | 'colors' */
-  const picker = (key) => {
-    const isStyle = key === 'style';
-    const list = isStyle ? diagramStyles() : diagramColors();
-    const now = Number(isStyle ? el.dataset.diagramStyle : el.dataset.diagramColors) || own[key] || fromDoc[key] || (isStyle ? defaultStyle() : defaultColors());
-    const base = fromDoc[key] || (isStyle ? defaultStyle() : defaultColors());
-    /** @type {MenuItem[]} */
-    const items = [{ header: isStyle ? t('도해 스타일 — 이 그림') : t('색 조합 — 이 그림') },
-      ...list.map((s) => ({ label: `${s.n}. ${s.name}`, tip: s.tip, current: s.n === now,
-        action: () => save(setMark(body, kind, key, s.n), isStyle ? t('도해 스타일 {n} — {name}. Ctrl+Z 로 되돌립니다', { n: s.n, name: s.name })
-          : t('색 조합 {n} — {name}. Ctrl+Z 로 되돌립니다', { n: s.n, name: s.name })) }))];
-    if (own[key]) {
-      items.push('-', { label: fromDoc[key] ? t('문서의 기본 따르기 (지금 {n})', { n: base }) : t('설정 따르기 (지금 {n})', { n: base }), tip: t('이 그림의 표시 줄에서 지웁니다'),
-        action: () => save(setMark(body, kind, key, null), t('표시를 지웠습니다 — 기본으로 그립니다')) });
-    }
-    items.push('-', { label: isStyle ? t('기본 도해 스타일 바꾸기…') : t('기본 색 조합 바꾸기…'), tip: t('설정 창 — 표시 줄이 없는 그림 모두'), action: () => emit('open-settings', 'view') });
-    reopen(items);
+  /** 지금 그린 번호 — key: 'style' | 'colors' */
+  const nowOf = (key) => Number(key === 'style' ? el.dataset.diagramStyle : el.dataset.diagramColors) || own[key] || fromDoc[key] || (key === 'style' ? defaultStyle() : defaultColors());
+  /** '3 카드' — 메뉴의 오른쪽 글 (번호만으로는 무엇인지 모른다 — D214) */
+  const named = (key) => {
+    const n = nowOf(key);
+    const s = (key === 'style' ? diagramStyles() : diagramColors()).find((x) => x.n === n);
+    return s ? `${n} ${s.name}` : '';
   };
+  /** 고르기 창 (D214 — diagrampick.js): 그 그림을 번호마다 그려 보인다. 쓰는 것은 여기의 save — 블록이 그대로일 때만 */
+  const picker = (key) => emit('diagram-pick', { key, kind, chart, body, now: nowOf(key), own: own[key] || 0,
+    base: fromDoc[key] || (key === 'style' ? defaultStyle() : defaultColors()), fromDoc, save, tab: pane?.tab || S.tab, path, lines: [a, b], ai: aiName() });
   /** @type {MenuItem[]} */
   const items = [];
-  if (kind !== 'chart') items.push({ label: t('도해 스타일…'), hint: el.dataset.diagramStyle || '', tip: t('이 그림의 모양을 번호로 고릅니다 — 그림 블록에 표시 줄 하나를 씁니다'), action: () => picker('style') });
-  items.push({ label: t('색 조합…'), hint: el.dataset.diagramColors || '', tip: t('차트의 계열 색, 도해의 상자·강조 색을 번호로 고릅니다'), action: () => picker('colors') });
+  if (kind !== 'chart') items.push({ label: t('도해 스타일…'), hint: named('style'), tip: t('이 그림을 번호마다 그려 보이는 창을 엽니다 — 고르면 그림 블록에 표시 줄 하나를 씁니다'), action: () => picker('style') });
+  items.push({ label: t('색 조합…'), hint: named('colors'), tip: t('차트의 계열 색, 도해의 상자·강조 색 — 이 그림을 번호마다 그려 보입니다'), action: () => picker('colors') });
+  // 내 도해 스타일·내 색 조합 만들기 (D215) — 그 그림의 자리를 담은 요청 글을 터미널에 (Enter 없이 — D51). 만든 파일은 고르기 창에 나온다
+  items.push({ label: kind === 'chart' ? t('이 색으로 내 색 조합 만들기…') : t('이 모양으로 내 도해 스타일 만들기…'),
+    tip: t('{ai} 에게 이 그림으로 내 것을 만들어 달라는 요청 — 터미널에 (Enter 는 누르지 않음)', { ai: aiName() }),
+    action: () => emit('term-paste', makePrompt(kind === 'chart' ? 'colors' : 'style', lineRef(path, [a, b]))) });
   const dir = directionOf(body, kind === 'chart' ? '' : kind);
   if (dir) {
     items.push({ label: dir.dir === 'LR' ? t('세로로 바꾸기') : t('가로로 바꾸기'), tip: t('그림의 방향 글자만 바꿉니다 (flowchart LR ↔ TD, rankdir) — 상자가 많아 글자가 작으면 세로로'),

@@ -211,26 +211,30 @@ try:
             until(page, lambda: len(styles_now()) == 11 and styles_now()[i] == want, ms=12000)
 
         def open_styles(i):
+            """우클릭 '도해 스타일…' — 고르기 창 (D214 — 그 그림을 번호마다 그린 칸 열)"""
             page.locator('#lec-view pre.mermaid, #lec-view pre.lec-chart').nth(i).click(button='right', position={'x': 5, 'y': 5})
             page.wait_for_selector('#lec-menu:not([hidden])', timeout=5000)
             page.locator('#lec-menu button', has_text='도해 스타일…').click()
-            page.wait_for_selector('#lec-menu .menu-head:has-text("도해 스타일")', timeout=5000)
+            page.wait_for_selector('#lec-dpick:not([hidden]) .dpick-card', timeout=5000)
+
+        def choose(label):
+            page.locator(f'#lec-dpick .dpick-card[data-n="{label.split(".")[0]}"]').click()
 
         def pick_style(i, label):
             open_styles(i)
-            page.locator('#lec-menu button', has_text=label).first.click()
+            choose(label)
 
         pick_style(0, '8. 제목 띠')
-        until(page, lambda: '```mermaid\nflowchart LR\n  %% 스타일: 8\n  A[시작]' in src(), ms=8000)
-        check('줄이 없던 그림: 그림의 첫 줄(flowchart LR) 아래에, 다음 줄의 들여쓰기로 한 줄', '```mermaid\nflowchart LR\n  %% 스타일: 8\n  A[시작]' in src(), src()[:200])
+        until(page, lambda: '```mermaid\nflowchart LR\n  %% 스타일: 8 제목 띠\n  A[시작]' in src(), ms=8000)
+        check('줄이 없던 그림: 그림의 첫 줄(flowchart LR) 아래에, 다음 줄의 들여쓰기로 한 줄 (번호와 이름 — D214)', '```mermaid\nflowchart LR\n  %% 스타일: 8 제목 띠\n  A[시작]' in src(), src()[:200])
         settle(0, '8')
         check('다시 그리면 그 번호', styles_now()[0] == '8', styles_now())
         pick_style(0, '2. 보고서 선')
-        until(page, lambda: '%% 스타일: 2' in src(), ms=8000)
+        until(page, lambda: '%% 스타일: 2 보고서 선' in src(), ms=8000)
         check('있던 줄은 바꾼다 (줄은 하나), 다른 그림의 같은 줄(8)은 그대로', src().count('%% 스타일: 2') == 1 and src().count('%% 스타일: 8') == 1)
         settle(0, '2')
         open_styles(0)
-        page.locator('#lec-menu button', has_text='설정 따르기').click()
+        page.locator('#lec-dpick-follow', has_text='설정 따르기').click()
         until(page, lambda: '%% 스타일: 2' not in src(), ms=8000)
         check("'설정 따르기' 는 그 줄만 지운다", '```mermaid\nflowchart LR\n  A[시작]' in src() and src().count('%% 스타일: 8') == 1)
         settle(0, '1')
@@ -240,7 +244,7 @@ try:
         before = src()
         time.sleep(1.05)
         doc.write_text(before.replace('통계청·업계 보고서 12건', '통계청 보고서 12건'), encoding='utf-8', newline='\n')
-        page.locator('#lec-menu button', has_text='3. 카드').first.click()
+        choose('3. 카드')
         until(page, lambda: page.locator('#lec-toast', has_text='저장하지 않았습니다').count() > 0, ms=8000)
         check('그 그림이 그사이 바뀌었으면 저장하지 않고 알린다 (다른 그림의 같은 줄도 건드리지 않는다)',
               page.locator('#lec-toast', has_text='저장하지 않았습니다').count() > 0 and src() == before.replace('통계청·업계 보고서 12건', '통계청 보고서 12건'), src()[:120])
@@ -248,13 +252,13 @@ try:
         settle(4, '8')
 
         pick_style(7, '3. 카드')
-        until(page, lambda: '---\ntitle: 머리\n---\nflowchart LR\n  %% 스타일: 3\n  A[가]' in src(), ms=8000)
-        check("Mermaid 머리 설정('---')이 있으면 그 다음 첫 줄 아래에", '---\ntitle: 머리\n---\nflowchart LR\n  %% 스타일: 3\n  A[가]' in src(), src()[src().find('머리'):][:80])
+        until(page, lambda: '---\ntitle: 머리\n---\nflowchart LR\n  %% 스타일: 3 카드\n  A[가]' in src(), ms=8000)
+        check("Mermaid 머리 설정('---')이 있으면 그 다음 첫 줄 아래에", '---\ntitle: 머리\n---\nflowchart LR\n  %% 스타일: 3 카드\n  A[가]' in src(), src()[src().find('머리'):][:80])
         settle(7, '3')
         check('머리 설정과 함께 그려진다 (오류 없이 3)', styles_now()[7] == '3', styles_now())
         pick_style(10, '5. 선만')
-        until(page, lambda: 'digraph 다 {\n  // 스타일: 5\n  A [class' in src(), ms=8000)
-        check("Graphviz 는 '//' 줄", 'digraph 다 {\n  // 스타일: 5\n  A [class' in src(), src()[-80:])
+        until(page, lambda: 'digraph 다 {\n  // 스타일: 5 선만\n  A [class' in src(), ms=8000)
+        check("Graphviz 는 '//' 줄", 'digraph 다 {\n  // 스타일: 5 선만\n  A [class' in src(), src()[-80:])
         settle(10, '5')
         page.keyboard.press('Escape')
         page.locator('#lec-view h1').click()

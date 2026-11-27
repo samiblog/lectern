@@ -104,12 +104,13 @@ Pick the look of Mermaid and Graphviz diagrams by number. Colors follow the docu
 
 | To do | How | Result |
 |---|---|---|
-| Change one diagram's look | Right-click the diagram, **Diagram style…**, pick a number | One `%% style: 3` line in the diagram block (Graphviz `// style: 3`) — replaced if there is one. **Ctrl+Z** undoes it |
-| Change one diagram's or chart's colors | Right-click, **Color set…**, pick a number (see 'Color sets' below) | `%% colors: 2` (Graphviz and charts `// colors: 2`) — on the same line as a look marker if there is one: `%% style: 3 · colors: 2` |
-| Make it follow the default | **Follow the setting** in the same menu (**Follow the document default** when the document has a default line) | Removes it from the marker line |
+| Change one diagram's look | Right-click the diagram, **Diagram style…** — a window draws that diagram in every number; click one, or use the arrow keys and **Enter** | One `%% style: 3 Card` line in the diagram block (Graphviz `// style: 3 Card`) — replaced if there is one. **Ctrl+Z** undoes it |
+| Change one diagram's or chart's colors | Right-click, **Color set…** — a window draws it in all eight color sets (see 'Color sets' below) | `%% colors: 2 Report navy` (Graphviz and charts `// colors: 2 Report navy`) — on the same line as a look marker if there is one: `%% style: 3 Card · colors: 2 Report navy` |
+| Make it follow the default | **Follow the setting** in the same window (**Follow the document default** when the document has a default line) — only when the block has a marker | Removes it from the marker line |
+| See what a number looks like | The text on the right of the right-click menu (`3 Card`), **See all look samples** in the picker, **Look samples** · **Color set samples** in Settings | The name after the number in a marker line is for people — Lectern reads only the number |
 | Horizontal ↔ vertical | Right-click the diagram, **Make it vertical** · **Make it horizontal** | Only the diagram's direction word (`flowchart LR` ↔ `TD`, Graphviz `rankdir`). With more than four boxes, vertical reads better — six boxes side by side shrink the text to about 60% of the body |
 | Every diagram in one document | One line near the top: `<!-- diagram: style 8 · colors 2 -->` | Not shown on screen. Order: the block's marker line → the document line → settings |
-| Every diagram without a marker | **Diagram style · color set** in Settings 'View' | Pick the default numbers while watching the preview |
+| Every diagram without a marker | **Diagram style · color set** in Settings 'View' (also **Change the default diagram style…** in the picker) | Pick the default numbers while watching the preview |
 | Ask Claude | "Draw it in Mermaid style 3 with colors 2" | It reads `diagrams.en.md` next to the writing guide (`writing.en.md`) and writes the line |
 | Emphasis | Add `:::key` (key) · `:::warn` (caution) · `:::muted` (secondary) to a box — Graphviz `[class="key"]` | Painted in the colors the number sets |
 | Boxes split into title and content (8 · 9 · 10) | Break the box text — Mermaid `<br>`, Graphviz `\n` | The first line is the title, the rest is the content. A one-line box is title only |
@@ -129,7 +130,23 @@ A color number picked separately from the look. It changes chart series colors (
 | 7 | Cool | navy, teal and violet |
 | 8 | Pastel | pale colors |
 
-Marker lines are comments, so other places (GitHub and so on) draw the default look and colors (a chart's `//` line is read only by Lectern — remove it before pasting the block into another tool). If the diagram changed elsewhere after you opened the menu, nothing is written and you are told. Flowcharts in this manual always use the defaults. Diagrams exported to Word or pptx still use the default look and colors. Examples: the diagram style and color set samples in `guide/도해-스타일-예제/`.
+Marker lines are comments, so other places (GitHub and so on) draw the default look and colors (a chart's `//` line is read only by Lectern — remove it before pasting the block into another tool). The picker changes no file until you pick — **Esc** or a click outside closes it as is. If the diagram changed elsewhere after you opened the picker, nothing is written and you are told. Flowcharts in this manual always use the defaults. Diagrams exported to Word or pptx still use the default look and colors. Examples: the diagram style and color set samples in `guide/도해-스타일-예제/`.
+
+### My diagram styles · my color sets
+
+Keep a look or colors you like as a number and use them on other diagrams. Looks start at 11, colors at 9.
+
+| What you want to do | How | Result |
+|---|---|---|
+| Make this diagram's look your own style | Right-click the diagram, **Make my diagram style from this look…** (also at the bottom of the picker) | A request with the diagram's place, the next number and the folder to save in goes into the terminal (Enter is not pressed). Claude shows the name and values, asks, then writes one file |
+| Make this chart's colors your own color set | Right-click the chart, **Make my color set from these colors…** | The same way — colors from 9 |
+| Use it | The 'mine' cards in the picker, or `%% style: 11 Our company` · `%% colors: 9 Company colors` | When a file is made or changed, diagrams follow within seconds (no reload) |
+| Make it the default | 'mine' under **Diagram style · color set** in Settings 'View' | Every diagram without a marker line |
+| See the files · what to fix | **Open my diagram styles folder** in the same place, and the red lines below it | `diagram-styles` in the settings folder — one file per style. Wrong values, duplicate numbers and unknown keys are left out, with the reason for each file |
+
+- Files take only set values (base number, corner, border, line shape, line width, dashes, shadow, fill, spacing, bold text, title boxes, zones, hand-drawn; color sets take series colors). No CSS. Lectern only reads this folder.
+- On a PC without the file (a colleague who got the document), the default look and colors are drawn — the name stays in the marker line. A default number in Settings also falls back to 1 when its file is gone.
+- The guide Claude reads: `web/help/diagram-styles.en.md` in the install folder.
 
 ## Chart data
 
