@@ -63,10 +63,11 @@ export const SHEET_VIEW_EXT = new Set(['xlsx', 'xlsm']);
 
 export const isSheet = (name) => SHEET_VIEW_EXT.has(name.slice(name.lastIndexOf('.') + 1).toLowerCase()) && name.lastIndexOf('.') > 0;
 
-/** Lectern 의 코드 화면에서 보는 파일 — 코드 + csv·tsv·txt·log + 엑셀(xlsx·xlsm) + 그림 (D209 — 보기만) */
+/** Lectern 의 코드 화면에서 보는 파일 — 코드 + csv·tsv·txt·log + 엑셀(xlsx·xlsm) + 화면이 그릴 수 있는 그림 (D209 — 보기만. tif·heic 는 기본 앱으로) */
 export function isViewable(name) {
   const i = name.lastIndexOf('.');
-  return isCode(name) || isImage(name) || (i > 0 && (DATA_VIEW_EXT.has(name.slice(i + 1).toLowerCase()) || SHEET_VIEW_EXT.has(name.slice(i + 1).toLowerCase())));
+  const ext = i > 0 ? name.slice(i + 1).toLowerCase() : '';
+  return isCode(name) || PICTURE_EXT.has(ext) || DATA_VIEW_EXT.has(ext) || SHEET_VIEW_EXT.has(ext);
 }
 
 // 모아 보기의 '파일 종류' (D50): 확장자 → 형식 이름. 같은 프로그램이 여는 형식은 한 이름으로 (엑셀·파워포인트·워드·한글 등), 나머지는 확장자를 대문자로

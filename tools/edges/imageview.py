@@ -24,6 +24,7 @@ proj = base / '과제'
 (proj / '그림' / '빨강.png').write_bytes(RED)
 (proj / '그림' / '도표.svg').write_text(SVG, encoding='utf-8')
 (proj / '그림' / '깨짐.png').write_bytes(b'not a png at all')
+(proj / '그림' / '스캔.tif').write_bytes(bytes([73, 73, 42, 0]) + bytes(60))   # 화면이 그리지 못하는 그림 (TIFF) — 기본 앱으로
 (proj / '메모.txt').write_text('그림이 아닌 자료\n', encoding='utf-8')   # '그림' 하위 묶음이 '전체' 와 같지 않게
 (proj / '.숨김').mkdir()
 (proj / '.숨김' / '몰래.png').write_bytes(BLUE)
@@ -68,6 +69,12 @@ try:
         page.keyboard.press('Control+e')
         check('편집 키는 막는다', until(page, lambda: '그림은 보기만' in page.evaluate(TOAST)), page.evaluate(TOAST))
 
+        before = page.evaluate(VIEW)
+        page.click('#lec-others-list .row[data-path="그림/스캔.tif"]')
+        page.wait_for_timeout(500)
+        check('tif 는 한 번 눌러도 Lectern 에서 그리지 않는다 (화면이 못 그리는 형식)', page.evaluate(VIEW) == before, page.evaluate(VIEW))
+        page.dblclick('#lec-others-list .row[data-path="그림/스캔.tif"]')
+        check('— 두 번 누르면 기본 앱으로', until(page, lambda: '그림/스캔.tif' in opened), opened)
         print('[SVG · 깨진 그림]')
         page.evaluate("() => { window.__svgRan = 0; }")
         page.click('#lec-others-list .row[data-path="그림/도표.svg"]')

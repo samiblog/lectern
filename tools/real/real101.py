@@ -85,7 +85,7 @@ try:
         R.check('꺾인 줄이 모두 머리 글자 뒤에 (차이 0.05em 아래)', all(g is not None and abs(g) < 0.05 for g in gaps), gaps)
         print('[글머리 글자 목록 (D192)]')
         lv = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 1);
-          return [p.textContent[0], p.className.match(/lec-lv(\\d)/)[1], r.getClientRects()[0].left / parseFloat(getComputedStyle(p).fontSize)]; })""")
+          return [p.textContent[0], p.className.match(/lec-lv(\\d)/)[1], r.getClientRects()[0].left / parseFloat(getComputedStyle(document.querySelector('#lec-view')).fontSize)]; })   // 본문 글자 기준 (수준마다 글자 크기가 다르다 — D210)""")
         R.check('□ 아래의 ○ 는 한 수준(1.25em) 들여 쓴다', len(lv) == 2 and lv[0][:2] == ['□', '0'] and lv[1][:2] == ['○', '1'] and abs(lv[1][2] - lv[0][2] - 1.25) < 0.05, lv)
         page.locator('#lec-view .lec-mark', has_text='○').click(position={'x': 120, 'y': 8})
         page.keyboard.press('Shift+Enter')
@@ -99,7 +99,7 @@ try:
         print('[한글 문서에서 붙여 넣은 개조식]')
         R.check('붙여 넣은 문서를 연다', R.open_doc(page, '붙여넣기.md'))
         page.wait_for_timeout(800)
-        rows = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const fs = parseFloat(getComputedStyle(p).fontSize);
+        rows = page.evaluate("""() => [...document.querySelectorAll('#lec-view .lec-mark')].map((p) => { const fs = parseFloat(getComputedStyle(document.querySelector('#lec-view')).fontSize);   // 본문 글자 기준 (D210)
           const r = document.createRange(); r.setStart(p.firstChild, 0); r.setEnd(p.firstChild, 1);
           return [Number(p.className.match(/lec-lv(\\d)/)[1]), Math.round(r.getClientRects()[0].left / fs * 100) / 100]; })""")
         R.check('전각 빈칸으로 들여 쓴 □ ○ － · 가 수준 0·1·2·3 — 수준마다 한 칸씩 (전각 빈칸만큼 더 밀리지 않는다)',
