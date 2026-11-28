@@ -134,6 +134,8 @@
 - 고르기 창(diagrampick.js — D214)은 docmenu 가 부르지 않는다 — 창이 doc.js(정화·링크)를 부르고 doc.js 가 docmenu 를 부르므로 import 가 돈다. docmenu 는 `diagram-pick` 을 알리기만 한다. 창의 칸은 `pointer-events: none` — 그림의 크게 보기·차트의 [표] 단추가 칸 고르기를 가로채지 않게.
 - 번호표는 이어지지 않는다 — 내 도해 스타일(D215)은 11~99 가운데 파일이 적은 번호다. 번호로 찾을 때 `STYLES[n - 1]` 이 아니라 `findStyle`·`paletteAt`(STYLE_LIST·PALETTE_LIST) 를 쓴다. 내 것의 값은 CSS 에 들어가므로 서버(mydiagrams.py)가 거른 뒤에도 화면에서 숫자·`#rrggbb` 만 다시 받는다.
 - 우클릭으로 쓴 표시 줄에는 이름이 붙는다(`%% 스타일: 3 카드`) — 줄을 글자로 견주는 시험은 이름까지 적는다. 이름은 화면 언어를 따르므로 영어 화면에서는 `style: 3 Card`.
+- 색 조합은 계열 색 목록만으로는 다 바뀌지 않는다 (D216) — Vega-Lite 는 색으로 나누지 않은 차트를 `mark.color` 로, 열지도는 연속 색(ECharts `visualMap`·Plotly `colorscale`)으로 칠한다. 새 차트 종류를 다루면 `chartcolors` 처럼 고르기 창의 칸이 갈리는지 잰다. 칸이 모두 같으면 고르기 창이 까닭을 보이는데, 차트는 칸 폭에 맞춰 그려 크기가 1px 씩 달라 크기는 견주지 않는다.
+- 정화 훅의 `url()` 검사(doc.js `URL_REF`)에서 따옴표를 '있어도 되는 것' 으로 앞에 두면 `url('#id')` 가 바깥 주소로 읽혀 지워진다 (Plotly 의 색 막대가 검게 — D216). 그림 안 참조인지는 따옴표·빈칸을 건너뛴 뒤 `#` 인지로 본다.
 
 ### PDF 보기 (pdfview.js — D201)
 

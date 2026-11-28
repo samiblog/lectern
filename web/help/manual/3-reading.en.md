@@ -117,7 +117,7 @@ Pick the look of Mermaid and Graphviz diagrams by number. Colors follow the docu
 
 ### Color sets
 
-A color number picked separately from the look. It changes chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram boxes, the key accent, zone colors and title bands; text, background and lines stay with the document style. Colors a chart sets itself win.
+A color number picked separately from the look. It changes chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram boxes, the key accent, zone colors and title bands; text, background and lines stay with the document style. A single-series bar or line takes the set's first color, a heatmap takes shades of it. Colors a chart sets itself win, and the up/down colors of candlestick and waterfall charts do not change either. For such charts every tile in the picker looks the same and the window says why (remove the colors from the source and the chart follows).
 
 | No. | Name | Colors |
 |---:|---|---|

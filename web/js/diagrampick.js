@@ -68,6 +68,7 @@ async function openPick(p) {
   }
   if (my !== seq) return;
   const isStyle = p.key === 'style';
+  $('#lec-dpick-same').hidden = true;
   $('#lec-dpick-title').textContent = isStyle ? t('도해 스타일 — 이 그림') : t('색 조합 — 이 그림');
   const follow = $('#lec-dpick-follow');
   follow.hidden = !p.own;
@@ -106,9 +107,55 @@ async function openPick(p) {
     else await renderCharts(grid(), { tab: p.tab, path: p.path, sanitize: sanitizeHtml, resolveRef, marks: p.fromDoc });
   } catch { /* 그리지 못한 칸은 각자 까닭을 보인다 */ }
   if (my !== seq) return;
+  sameNote(p);
   for (const svg of /** @type {SVGSVGElement[]} */ ($$('.dpick-stage svg:not(svg svg)', grid()))) fit(svg);
   layout();
   grid().classList.add('dpick-done');
+}
+
+// 원문이 색을 적었는지 — '#2f5d8a'·rgb()·"color": "red" (Mermaid 의 classDef·style 줄도 색 글자를 쓴다)
+const OWN_COLORS = /#[\da-f]{3,8}\b|\b(rgba?|hsla?)\s*\(|"(color|fill|stroke)"\s*:\s*"[a-z]+"/i;
+
+/**
+ * 칸에 그린 모양 — 색·선·모서리·그림자, 도해는 크기(간격)도. 칸마다 같으면 이 그림은 그 번호들을 따르지 않는다.
+ * 차트는 칸 폭에 맞춰 그려 칸마다 1px 씩 다를 수 있어 크기를 보지 않는다
+ */
+function lookOf(card, kind) {
+  const svg = card.querySelector('.dpick-stage svg');
+  if (!svg) return null;
+  const parts = [kind === 'chart' ? '' : svg.getAttribute('viewBox') || ''];
+  let k = 0;
+  for (const el of svg.querySelectorAll('path, rect, circle, ellipse, polygon, polyline, line, image, stop')) {
+    if (++k > 1500) break;
+    if (el.tagName === 'image') {   // Plotly 의 열지도는 PNG 로 들어온다
+      parts.push(el.getAttribute('href') || el.getAttribute('xlink:href') || '');
+      continue;
+    }
+    const st = getComputedStyle(el);
+    if (el.tagName === 'stop') {   // 그러데이션(색 막대·범례)의 색
+      parts.push(st.stopColor);
+      continue;
+    }
+    // url(#칸마다-다른-id) 는 이름만 — 가리키는 그러데이션의 색은 stop 이 본다
+    parts.push([st.fill, st.stroke, st.strokeWidth, st.strokeDasharray, st.filter, st.getPropertyValue('rx')].join(',').replace(/url\([^)]*\)/g, 'url'));
+  }
+  return parts.join(';');
+}
+
+/**
+ * 칸이 모두 같게 그려졌으면 까닭을 창 위에 — 원문이 색을 정한 차트, 오름·내림 색이 정해진 차트(캔들·폭포) 등.
+ * 고를 수는 있다 (표시 줄은 남고, 원문의 색을 지우면 그 번호를 따른다). 0.113.1 — 말없이 여덟 칸이 같아 '바뀌지 않는다'로 보였다
+ */
+function sameNote(p) {
+  const note = $('#lec-dpick-same');
+  const looks = /** @type {HTMLElement[]} */ ($$('.dpick-card', grid())).map((card) => lookOf(card, p.kind));
+  const same = looks.length > 1 && looks.every((x) => x != null && x === looks[0]);
+  note.hidden = !same;
+  if (!same) return;
+  const own = OWN_COLORS.test(p.body.join('\n'));
+  note.textContent = p.key === 'style' ? t('칸이 모두 같습니다 — 이 종류의 그림은 도해 스타일을 따르지 않습니다')
+    : own ? t('칸이 모두 같습니다 — 원문이 색을 정해 두어(#2f5d8a 같은 색 글자) 색 조합을 따르지 않습니다. 원문에서 그 색을 지우면 따릅니다')
+      : t('칸이 모두 같습니다 — 이 종류의 차트는 정해진 색을 써서(캔들·폭포의 오름·내림 색 등) 색 조합을 따르지 않습니다');
 }
 
 /**
@@ -167,6 +214,7 @@ export function closeDiagramPick() {
   if (!box() || box().hidden) return false;
   box().hidden = true;
   seq += 1;
+  $('#lec-dpick-same').hidden = true;
   grid().replaceChildren();   // 닫힌 창에 그때 스타일의 그림을 남기지 않는다
   grid().classList.remove('dpick-done');
   grid().style.gridTemplateColumns = '';

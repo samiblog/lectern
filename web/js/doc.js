@@ -37,8 +37,9 @@ const PURIFY = {
 const MEDIA_TAGS = /^(IMG|SOURCE|VIDEO|AUDIO|TRACK|EMBED|INPUT)$/;
 const SVG_NS = 'http://www.w3.org/2000/svg';
 const SVG_IMAGE_TAGS = /^(image|feImage)$/;
-// url(#id) 같은 문서 안 참조는 두고, 그 밖의 url()·image-set() 은 외부 요청이 될 수 있다
-const URL_REF = /url\s*\(\s*['"]?\s*(?!#)|image-set\s*\(/i;
+// url(#id) 같은 문서 안 참조는 두고, 그 밖의 url()·image-set() 은 외부 요청이 될 수 있다.
+// 따옴표를 붙인 url('#id') 도 문서 안 참조다 (Plotly 의 색 막대) — 따옴표를 '있어도 되는 것'으로 앞에 두면 따옴표 자리에서 '# 가 아님'이 되어 지웠다 (0.113.1)
+const URL_REF = /url\s*\((?!\s*['"]?\s*#)|image-set\s*\(/i;
 let purifyHookInstalled = false;
 
 /**

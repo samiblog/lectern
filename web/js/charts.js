@@ -225,7 +225,8 @@ function colors() {
 }
 
 // 글자 크기는 본문에 맞게 라이브러리 기본보다 조금 크게 (Vega 는 10~11px, ECharts 제목은 18px 굵게).
-// pal: 색 조합(D213 — chartPalette)의 계열 색 — 없으면 라이브러리의 기본색. 차트가 색을 정했으면 그것이 먼저다
+// pal: 색 조합(D213 — chartPalette)의 계열 색 — 없으면 라이브러리의 기본색. 차트가 색을 정했으면 그것이 먼저다.
+// 색으로 나누지 않은 차트(막대 하나·선 하나)는 계열 색 목록이 아니라 mark.color 를 쓴다 — 그 색도 색 조합의 첫 색으로 (0.113.1 — 없으면 어느 번호든 같았다)
 function vegaConfig(c, pal = null) {
   const axis = {
     labelColor: c.line, titleColor: c.text, domainColor: c.line, tickColor: c.line, gridColor: c.line, gridOpacity: 0.22,
@@ -239,7 +240,7 @@ function vegaConfig(c, pal = null) {
     header: { labelColor: c.text, titleColor: c.text, labelFont: FONT, titleFont: FONT, labelFontSize: 12, titleFontSize: 13 },
     view: { stroke: c.line, strokeOpacity: 0.3 },
     text: { color: c.text }, rule: { color: c.line },
-    ...(pal ? { range: { category: pal.series, ramp: pal.ramp, heatmap: pal.ramp } } : {}),
+    ...(pal ? { range: { category: pal.series, ramp: pal.ramp, heatmap: pal.ramp }, mark: { color: pal.series[0] } } : {}),
   };
 }
 
@@ -257,7 +258,8 @@ function echartsTheme(c, pal = null) {
     legend: { textStyle: { color: c.text } },
     categoryAxis: axis, valueAxis: axis, logAxis: axis, timeAxis: axis,
     radar: { axisName: { color: c.text }, axisLine: { lineStyle: { color: grid } }, splitLine: { lineStyle: { color: grid } } },
-    ...(pal ? { color: pal.series } : {}),
+    // 열지도 등 연속 값의 색(visualMap)도 색 조합의 두 끝으로 — 설정에 inRange 를 적었으면 그것 (0.113.1)
+    ...(pal ? { color: pal.series, visualMap: { inRange: { color: pal.ramp } } } : {}),
   };
 }
 
@@ -448,6 +450,8 @@ async function drawECharts(src, width, fit = 0, slide = false, pal = null) {
 
 // 인터넷의 지도 자료(나라 경계·지도 타일)가 있어야 하는 Plotly 종류 — 받지 않으므로 그리지 않는다
 const PLOTLY_MAPS = /^(scattergeo|choropleth|scattermapbox|choroplethmapbox|densitymapbox|scattermap|choroplethmap|densitymap)$/;
+// 연속 값을 색으로 칠하는 Plotly 종류 — colorscale 을 쓴다
+const PLOTLY_RAMP = /^(heatmap|contour|histogram2d|histogram2dcontour)$/;
 
 async function drawPlotly(src, width, fit = 0, slide = false, pal = null) {
   let fig = parseSpec(src);
@@ -461,6 +465,13 @@ async function drawPlotly(src, width, fit = 0, slide = false, pal = null) {
   for (const tr of fig.data) if (tr?.type === 'image' && tr.source && !/^data:/i.test(String(tr.source))) delete tr.source;
   if (!layout.template) layout.template = plotlyTemplate(colors());
   if (pal && !layout.colorway) layout.colorway = pal.series;   // 색 조합 (D213) — 계열 색만, 자기 template 의 글자·바탕은 그대로
+  if (pal) {
+    // 연속 값의 색(열지도·등고선)은 colorway 를 쓰지 않는다 — 색을 적지 않은 그래프만 색 조합의 두 끝으로 (0.113.1). 그리는 동안만, 원문은 그대로
+    for (const tr of fig.data) {
+      if (!tr || !PLOTLY_RAMP.test(String(tr.type)) || tr.colorscale != null || layout.template?.data?.[tr.type]?.[0]?.colorscale != null) continue;
+      tr.colorscale = [[0, pal.ramp[0]], [1, pal.ramp[1]]];
+    }
+  }
   // 크기: 폭은 문서 폭(layout.width 가 숫자면 그것), 높이는 layout.height 아니면 400.
   // 슬라이드에서는 폭은 칸에 맞추고 높이는 남은 높이, 없으면 적은 크기의 비율로. 좁은 칸은 범례를 아래로 (설정에 적었으면 그것) (D188)
   let fluid = !Number.isFinite(layout.width);

@@ -21,7 +21,7 @@ Numbers never change. Text, background and lines follow the document style the p
 
 ## 2. Color set numbers
 
-Picked separately from the look. They change chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram box colors, the key (`key`) accent, zone colors (7) and title bands (8, 9).
+Picked separately from the look. They change chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts — a single-series bar or line takes the set's first color, a heatmap takes shades of it) and diagram box colors, the key (`key`) accent, zone colors (7) and title bands (8, 9).
 
 | No. | Name | Colors | Use it for |
 |---:|---|---|---|
@@ -34,7 +34,7 @@ Picked separately from the look. They change chart series colors (Vega-Lite, ECh
 | 7 | Cool | navy, teal and violet | technology, supply, infrastructure |
 | 8 | Pastel | pale colors | presentation screens, big boxes |
 
-- Colors a chart sets itself (`"color": {"value": …}`, `"scale": {"range": …}`, ECharts `color`, Plotly `marker.color`) win. To use a color set, write no colors.
+- Colors a chart sets itself (`"color": {"value": …}`, `"mark": {"color": …}`, `"scale": {"range": …}`, ECharts `color` and `itemStyle.color`, Plotly `marker.color`) win. To use a color set, write no colors. The up/down colors of candlestick and waterfall charts are fixed by the library, so color sets do not change them — for such charts every tile in the 'Color set…' window looks the same and the window says why.
 - In dark styles, dark colors are lightened.
 
 **Your own**: looks from 11 and colors from 9 are the person's own diagram styles and color sets (`diagram-styles` in Lectern's settings folder — made when the person asks with 'Make my diagram style from this look…'; how to make one is in `diagram-styles.en.md` in the same folder). Write them only when the person names that number or name — on a PC without the file, the default is drawn.
