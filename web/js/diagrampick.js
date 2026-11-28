@@ -10,6 +10,7 @@ import { renderCharts } from './charts.js';
 import { sanitizeHtml, resolveRef } from './doc.js';
 import { diagramStyles, diagramColors, setMark, setMyDiagrams, myDiagrams, makePrompt, DIAGRAM_SAMPLES } from './diagramstyles.js';
 import { $, $$, lineRef } from './util.js';
+import { uncolorPrompt } from './aitool.js';
 import { html, setHtml } from './html.js';
 import { t } from './i18n.js';
 
@@ -69,6 +70,7 @@ async function openPick(p) {
   if (my !== seq) return;
   const isStyle = p.key === 'style';
   $('#lec-dpick-same').hidden = true;
+  $('#lec-dpick-uncolor').hidden = true;
   $('#lec-dpick-title').textContent = isStyle ? t('도해 스타일 — 이 그림') : t('색 조합 — 이 그림');
   const follow = $('#lec-dpick-follow');
   follow.hidden = !p.own;
@@ -113,8 +115,59 @@ async function openPick(p) {
   grid().classList.add('dpick-done');
 }
 
-// 원문이 색을 적었는지 — '#2f5d8a'·rgb()·"color": "red" (Mermaid 의 classDef·style 줄도 색 글자를 쓴다)
-const OWN_COLORS = /#[\da-f]{3,8}\b|\b(rgba?|hsla?)\s*\(|"(color|fill|stroke)"\s*:\s*"[a-z]+"/i;
+// ---- 원문이 정한 색·모양 — 고른 번호보다 먼저라 그대로 남는다 (0.113.2: 몇째 줄의 무엇인지 알리고, AI 에 빼 달라는 요청을 넣는다) ----
+const HEX = /#(?:[\da-f]{3}|[\da-f]{6}|[\da-f]{8})\b/i;   // '#2024년' 같은 네 자리는 색이 아니다
+const FUNC = /\b(?:rgba?|hsla?)\s*\(/i;
+const SCHEME = /["']?(?:scheme|colorscale|colorway)["']?\s*:\s*["']?[a-z]/i;   // 이름 붙은 색표 (Vega 의 scheme, Plotly 의 colorscale)
+const NAMED = /["']?([a-z_-]*(?:colou?r|fill|stroke)|value)["']?\s*[:=]\s*["']?([a-z]+)\b/gi;   // "color": "red", fillcolor=red, fill:red
+const NOT_COLOR = /^(transparent|currentcolor|inherit|initial|unset|none|auto)$/i;
+const MERMAID_THEME = /%%\{.*\b(?:theme|themeVariables)\b/;   // init 의 sequence·flowchart 같은 배치 설정은 색이 아니다
+const MERMAID_LOOK = /^\s*(?:classDef|style|linkStyle)\s|%%\{.*\b(?:theme|themeVariables|themeCSS|look)\b|^\s*(?:theme|look|themeVariables)\s*:/;
+const DOT_LOOK = /\b(?:node|edge)\s*\[[^\]]*\b(?:style|penwidth|fontname)\s*=/;   // node [shape=box] 는 도해 스타일과 같은 모양이다
+
+/** 색 이름인지 — 'toself'(Plotly 의 채우기 방법) 같은 것은 아니다 */
+const isColorWord = (w) => !NOT_COLOR.test(w) && typeof CSS !== 'undefined' && CSS.supports('color', w);
+
+/** 그 줄에서 원문이 색을 정한 자리 — 없으면 -1 */
+function colorAt(line, kind) {
+  const at = [];
+  for (const re of [HEX, FUNC, ...(kind === 'chart' ? [SCHEME] : []), ...(kind === 'mermaid' ? [MERMAID_THEME] : [])]) {
+    const m = re.exec(line);
+    if (m) at.push(m.index);
+  }
+  for (const m of line.matchAll(NAMED)) {
+    if (m[1].toLowerCase() === 'value' && kind !== 'chart') continue;
+    if (isColorWord(m[2])) {
+      at.push(m.index);
+      break;
+    }
+  }
+  return at.length ? Math.min(...at) : -1;
+}
+
+const CLIP = 64;
+
+/** 알림에 보일 그 줄 — 길면 그 자리(at)를 가운데에 두고 자른다 */
+function clipAt(line, at) {
+  const s = line.trim();
+  if (s.length <= CLIP) return s;
+  const i = Math.max(0, Math.min(at - (line.length - line.trimStart().length) - 24, s.length - CLIP));
+  return `${i > 0 ? '…' : ''}${s.slice(i, i + CLIP)}${i + CLIP < s.length ? '…' : ''}`;
+}
+
+/**
+ * 원문이 정한 것 — 처음 찾은 줄 {i: body 의 몇째(0부터), text}. key 가 'style' 이면 모양을 정한 줄(classDef·style·init 의 theme·look, Graphviz 의 node [style=…])도.
+ * 표시 줄(// 색: 2 …)은 색 글자를 쓰지 않는다
+ */
+function ownLook(body, kind, key) {
+  for (let i = 0; i < body.length; i++) {
+    const line = body[i];
+    const at = colorAt(line, kind);
+    const look = key === 'style' && ((kind === 'mermaid' && MERMAID_LOOK.exec(line)) || (kind === 'dot' && DOT_LOOK.exec(line)));
+    if (at >= 0 || look) return { i, text: clipAt(line, at >= 0 ? at : look.index) };
+  }
+  return null;
+}
 
 /**
  * 칸에 그린 모양 — 색·선·모서리·그림자, 도해는 크기(간격)도. 칸마다 같으면 이 그림은 그 번호들을 따르지 않는다.
@@ -148,14 +201,26 @@ function lookOf(card, kind) {
  */
 function sameNote(p) {
   const note = $('#lec-dpick-same');
+  const ask = $('#lec-dpick-uncolor');
   const looks = /** @type {HTMLElement[]} */ ($$('.dpick-card', grid())).map((card) => lookOf(card, p.kind));
   const same = looks.length > 1 && looks.every((x) => x != null && x === looks[0]);
-  note.hidden = !same;
-  if (!same) return;
-  const own = OWN_COLORS.test(p.body.join('\n'));
-  note.textContent = p.key === 'style' ? t('칸이 모두 같습니다 — 이 종류의 그림은 도해 스타일을 따르지 않습니다')
-    : own ? t('칸이 모두 같습니다 — 원문이 색을 정해 두어(#2f5d8a 같은 색 글자) 색 조합을 따르지 않습니다. 원문에서 그 색을 지우면 따릅니다')
-      : t('칸이 모두 같습니다 — 이 종류의 차트는 정해진 색을 써서(캔들·폭포의 오름·내림 색 등) 색 조합을 따르지 않습니다');
+  const own = ownLook(p.body, p.kind, p.key);
+  note.hidden = !same && !own;
+  ask.hidden = !own || !p.lines;
+  if (note.hidden) return;
+  const style = p.key === 'style';
+  note.classList.toggle('soft', !same);   // 칸은 갈리지만 원문이 정한 것은 남는다
+  const where = own ? { line: p.lines ? p.lines[0] + 1 + own.i : own.i + 1, text: own.text } : null;
+  $('#lec-dpick-same-text').textContent = !same
+    ? (style ? t('원문이 정한 모양·색은 그대로 남습니다 — {line}째 줄 {text}', where) : t('원문이 정한 색은 그대로 남습니다 — {line}째 줄 {text}', where))
+    : where
+      ? (style ? t('칸이 모두 같습니다 — 원문이 모양·색을 정해 두어({line}째 줄 {text}) 도해 스타일을 따르지 않습니다', where)
+        : t('칸이 모두 같습니다 — 원문이 색을 정해 두어({line}째 줄 {text}) 색 조합을 따르지 않습니다', where))
+      : style ? t('칸이 모두 같습니다 — 이 종류의 그림은 도해 스타일을 따르지 않습니다')
+        : p.kind !== 'chart' ? t('칸이 모두 같습니다 — 이 종류의 그림은 색 조합을 따르지 않습니다')
+          : t('칸이 모두 같습니다 — 이 종류의 차트는 정해진 색을 써서(캔들·폭포의 오름·내림 색 등) 색 조합을 따르지 않습니다');
+  ask.textContent = style ? t('{ai} 에 모양·색 지정 빼기 요청', { ai: p.ai || 'Claude' }) : t('{ai} 에 색 지정 빼기 요청', { ai: p.ai || 'Claude' });
+  ask.title = t('원문이 정한 것을 빼 달라는 요청 — 터미널에 (Enter 는 누르지 않음). 빼면 고른 번호를 따릅니다');
 }
 
 /**
@@ -215,6 +280,7 @@ export function closeDiagramPick() {
   box().hidden = true;
   seq += 1;
   $('#lec-dpick-same').hidden = true;
+  $('#lec-dpick-uncolor').hidden = true;
   grid().replaceChildren();   // 닫힌 창에 그때 스타일의 그림을 남기지 않는다
   grid().classList.remove('dpick-done');
   grid().style.gridTemplateColumns = '';
@@ -281,6 +347,12 @@ export function initDiagramPick() {
     if (!p?.lines) return;
     closeDiagramPick();
     emit('term-paste', makePrompt(p.key, lineRef(p.path, p.lines)));   // 터미널에 붙여 넣기 (D51 — Enter 없이)
+  });
+  $('#lec-dpick-uncolor').addEventListener('click', () => {
+    const p = cur;
+    if (!p?.lines) return;
+    closeDiagramPick();
+    emit('term-paste', uncolorPrompt(lineRef(p.path, p.lines), p.key));   // 터미널에 붙여 넣기 (D51 — Enter 없이)
   });
   $('#lec-dpick-default').addEventListener('click', () => {
     closeDiagramPick();

@@ -9,7 +9,7 @@
 - **모든 폴더(개인 폴더)**: 맨 끝의 **요약**을 사람의 개인 규칙에 넣는다 — Claude Code 는 `~/.claude/rules/lectern.md` 한 파일(사람이 쓴 `~/.claude/CLAUDE.md` 는 고치지 않는다), Codex 는 `~/.codex/AGENTS.md`, Antigravity 는 `~/.gemini/AGENTS.md`, OpenCode 는 `~/.config/opencode/AGENTS.md` 의 한 절. 이 안내의 전체 경로를 함께 적어 표·차트·슬라이드를 쓸 때 다시 읽게 한다. 프로젝트마다 다른 것(읽는 사람·목적·말투)은 넣지 않는다.
 - **한 폴더**: 그 프로젝트의 지시 파일(Claude Code 는 `CLAUDE.md`, Codex·Antigravity·OpenCode 는 `AGENTS.md` — 둘 다 쓰는 프로젝트면 `AGENTS.md` 에 넣고 `CLAUDE.md` 에는 `@AGENTS.md` 한 줄만 둔다)에 그 프로젝트의 읽는 사람·목적·말투를 적는다. 개인 규칙에 Lectern 요약이 이미 있으면 형식 규칙은 넣지 않고, 없으면 요약도 그 프로젝트에 맞게 줄여 함께 넣는다. 프로젝트의 지시 파일이 형식 규칙집이 되지 않게, 읽는 사람·목적·말투를 형식 규칙보다 앞에 둔다.
 
-어느 쪽이든 쓰기 전에 그 파일이 지금 있는지와 Lectern 요약이 이미 들어 있는지 알리고, 넣을 글을 보인 뒤 묻는다. 예제는 Lectern 설치 폴더의 `samples` (Lectern 에서 '예제 열기') — 특히 `samples/CLAUDE.md` 와 `samples/guide/04-문서-쓰는-법.md`.
+어느 쪽이든 쓰기 전에 그 파일이 지금 있는지와 Lectern 요약이 이미 들어 있는지 알리고, 넣을 글을 보인 뒤 묻는다. 요약 맨 위의 `<!-- lectern-summary: 2 -->` 줄은 그대로 넣는다 — Lectern 설정 창이 이 줄로 요약의 판을 안다 (프로젝트에 맞게 줄일 때도). 이 줄이 없거나 숫자가 작은 예전 요약이 있으면 새 요약으로 바꾼다 — 예전 요약에는 그림·차트에 색을 적지 않는다는 규칙 등이 없다. 예제는 Lectern 설치 폴더의 `samples` (Lectern 에서 '예제 열기') — 특히 `samples/CLAUDE.md` 와 `samples/guide/04-문서-쓰는-법.md`.
 
 ## 1. Lectern 이 보는 것
 
@@ -147,7 +147,7 @@ Lectern 은 강조글에 제목 줄('참고'·'팁' 같은 종류 이름)을 붙
 
 ## 4. 다이어그램과 차트
 
-코드 블록의 언어로 정한다. 모두 움직이지 않는 그림(SVG)이 되고, 색은 사람이 고른 문서 스타일을 따른다. 그리지 못하면 그 자리에 원문과 까닭이 보인다.
+코드 블록의 언어로 정한다. 모두 움직이지 않는 그림(SVG)이 되고, 색은 사람이 고른 문서 스타일을 따른다. 사람은 그림·차트를 우클릭해 모양(도해 스타일)과 색(색 조합)을 고른다 — 원문에 색을 적지 않아야 그것이 듣는다 (아래 '색'). 그리지 못하면 그 자리에 원문과 까닭이 보인다. 그림 파일(PNG)·글자로 그린 그림(```` ```text ````)·HTML 이나 SVG 로 그린 그림은 모양도 색도 바꿀 수 없으니 그림은 이 코드 블록으로 그린다.
 
 | 언어 | 라이브러리 | 쓸 때 |
 |---|---|---|
@@ -163,11 +163,31 @@ Lectern 은 강조글에 제목 줄('참고'·'팁' 같은 종류 이름)을 붙
 - **데이터는 차트 안에.** 데이터는 `"data": {"values": [...]}` 로 차트 안에 적는 것이 기본이다 — 문서만 보내도 다른 PC 에서 차트가 그려지고, 사람은 차트의 [표] 단추로 그 값을 표로 보고 엑셀로 복사한다. 프로젝트의 CSV 를 가리키는 것(`"data": {"url": "../data/x.csv"}`, 문서 기준 상대경로)은 행이 수백 개를 넘거나 다른 프로그램이 갱신하는 작업용 자료일 때만 쓴다 — CSV 는 문서와 함께 가지 않을 수 있다.
 - **인터넷에 닿지 않는다.** 인터넷 주소의 데이터, 차트 속 인터넷 그림, Plotly 의 지도 종류(scattergeo·choropleth·mapbox)는 쓰지 않는다. 차트 속 링크는 풀린다.
 - **크기.** 문서 폭에 맞추려면 Vega-Lite 는 `"width": "container"` 와 `"height"`, ECharts 는 `"height"`(Lectern 만 읽는 키, 기본 360)만, Plotly 는 `layout.height`(기본 400)만 적는다. 폭을 숫자로 적으면 그 크기로 그린다.
-- **색.** 정하지 않으면 스타일 색이 쓰인다 (밝은·어두운 스타일 모두 읽히게). 색을 정하면 그대로 쓰인다. Plotly 는 `layout.template` 이 있으면 그것을 따른다.
+- **색은 적지 않는다.** Lectern 이 문서 스타일과 사람이 고른 색 조합으로 칠한다 (밝은·어두운 스타일 모두 읽히게). 원문에 적은 색은 그보다 먼저라, 적으면 사람이 우클릭 '색 조합…'·'도해 스타일…'로 바꿔도 그대로 남고 어두운 스타일에서 읽히지 않을 수 있다. 색으로 나누고 싶은 것은 아래 '색 없이 나누는 법'대로 쓴다. 색 자체에 뜻이 있을 때(증가는 빨강·감소는 파랑 같은 약속)만 적고, 그 차트는 색 조합으로 바뀌지 않는다고 사람에게 말한다.
 - **제목.** Vega-Lite·ECharts 는 `title`, Plotly 는 `layout.title`, Graphviz 는 그래프 이름(`digraph 이름 {`)이 목차·모아 보기의 이름표가 된다.
 - **Mermaid** 의 한글 축 이름·글자는 따옴표로 감싼다 (`x-axis ["1월", "2월"]`). 참여자 이름은 `participant U as 사람` 처럼 영문 별칭을 쓴다.
 - **Graphviz** 는 한글 상자 폭을 앱이 맞춘다. 글꼴(`fontname`)은 정하지 않는 편이 낫다.
-- **도해 스타일·색 조합.** Mermaid·Graphviz 그림의 모양(1~10)과 차트·그림의 색(색 조합 1~8)은 번호로 고른다 — 블록 안에 `%% 스타일: 3 카드 · 색: 2 보고서 남색` 한 줄 (번호 뒤에 이름, Graphviz·차트는 `//`), 문서 전체는 `<!-- 도해: 스타일 3 · 색 2 -->` 한 줄. 사람이 번호·이름을 말할 때만 적고, 색은 적지 않고 강조는 `:::key`·`:::warn`·`:::muted` 로 붙인다. 가로로 상자 넷이 넘으면 세로(`TD`)로. 번호표·제목 상자(8~10)·방향은 이 파일 옆의 `diagrams.md` 에 있다.
+- **도해 스타일·색 조합.** Mermaid·Graphviz 그림의 모양(1~10)과 차트·그림의 색(색 조합 1~8)은 번호로 고른다 — 블록 안에 `%% 스타일: 3 카드 · 색: 2 보고서 남색` 한 줄 (번호 뒤에 이름, Graphviz·차트는 `//`), 문서 전체는 `<!-- 도해: 스타일 3 · 색 2 -->` 한 줄. 사람이 번호·이름을 말할 때만 적고, 강조는 `:::key`·`:::warn`·`:::muted` 로 붙인다. 가로로 상자 넷이 넘으면 세로(`TD`)로. 번호표·제목 상자(8~10)·방향은 이 파일 옆의 `diagrams.md` 에 있다.
+
+색 없이 나누는 법 — 이렇게 쓰면 나뉜 것은 그대로이고 색은 색 조합이 칠한다:
+
+| 하려는 것 | 이렇게 | 쓰지 않는 것 |
+|---|---|---|
+| 계열 여럿 | 계열을 데이터의 열로 — Vega-Lite `"color": {"field": "구분", "type": "nominal"}`, ECharts 는 `series` 를, Plotly 는 trace 를 계열마다 하나씩 | 계열마다 `"color": "#…"` |
+| 막대와 선을 겹친 차트 | Vega-Lite 는 층마다 `"color": {"datum": "가격"}`·`"color": {"datum": "재고"}` (색이 갈리고 범례가 생긴다), ECharts·Plotly 는 계열 둘 | 선에만 `"color": "#e45756"` |
+| 하나만 눈에 띄게 | 나머지를 흐리게 — Vega-Lite `"opacity": {"condition": {"test": "datum.국가 == '한국'", "value": 1}, "value": 0.35}`, ECharts 는 데이터 항목의 `itemStyle.opacity`, Plotly 는 `marker.opacity` 에 목록. 사람에게 색 조합 3(회색 + 강조)을 권할 때는 그 계열을 데이터의 맨 앞에 | 그 막대만 빨강 |
+| 실적과 전망 | 선은 점선 — Vega-Lite `"strokeDash": {"field": "구분"}`, ECharts `"lineStyle": {"type": "dashed"}`, Plotly `"line": {"dash": "dash"}`. 막대는 전망을 흐리게 — `opacity` 조건, ECharts `"itemStyle": {"opacity": 0.45}`, Plotly `marker.opacity` (테두리 점선만으로는 잘 보이지 않는다) | 전망만 회색 |
+| 목표·평균선 | Vega-Lite `rule` 에 `"strokeDash": [6, 4]` (선 색은 Lectern 이), 이름은 `text` 로. ECharts `markLine` | `"color": "red"` |
+| 값 이름표 | 막대 밖에 — Vega-Lite `text` 에 `"dy": -8`, ECharts `"label": {"show": true, "position": "top"}`, Plotly `"textposition": "outside"` (글자색은 Lectern 이) | 막대 안의 흰 글자 |
+| 도해의 강조 | Mermaid `:::key`·`:::warn`·`:::muted`, Graphviz `class="key"` | `classDef`·`style`·`fillcolor` |
+
+쓰지 않는 열쇠 (색·바탕·글꼴을 정해 사람이 고른 번호를 막는 것):
+
+- Vega-Lite·Vega: `"color"`·`"fill"`·`"stroke"` 에 적은 색(`#…`·`rgb()`·색 이름, `{"value": …}`), `scale` 의 `range`·`scheme`, 색·글꼴을 정한 `config`, `background`.
+- ECharts: 맨 위의 `color`, `itemStyle`·`lineStyle`·`areaStyle`·`label` 의 `color`(그러데이션도), `visualMap.inRange.color`, `backgroundColor`, `textStyle` 의 `color`·`fontFamily`.
+- Plotly: `marker.color`·`line.color`·`fillcolor`·`colorscale`, `layout` 의 `colorway`·`paper_bgcolor`·`plot_bgcolor`·`font`·`template`. Python 의 `fig.to_json()` 결과에는 이것들이 들어 있다 (plotly express 는 계열마다 `marker.color` 를 박아 넣는다) — 넣기 전에 뺀다.
+- Mermaid: `classDef`·`style`·`linkStyle`, `%%{init: …}%%`, 머리 설정의 `theme`·`themeVariables`·`look`.
+- Graphviz: `color`·`fillcolor`·`fontcolor`·`bgcolor`·`fontname`, 모든 상자에 걸리는 `node [style=… penwidth=…]` (채우기·둥근 모서리·선 굵기는 도해 스타일이 정한다 — `node [shape=box]` 는 된다).
 
 ~~~~md
 ```vega-lite
@@ -306,6 +326,7 @@ due: 2026-12-15
 
 - HTML 보고서에 JS 차트를 넣지 않는다 (보이지 않는다).
 - 차트 설정에 함수·인터넷 주소를 넣지 않는다.
+- 그림·차트에 색·바탕색·글꼴을 적지 않는다 (사람이 색 조합·도해 스타일로 바꾸지 못한다).
 - 문서를 `node_modules`·`dist`·`build`·`.` 폴더에 두지 않는다 (보이지 않는다).
 - 사람이 읽을 HTML 을 `src`·`web` 같은 앱 소스 폴더에 두지 않는다.
 - 한 문서에 `#` 제목을 여럿 두거나 제목 단계를 건너뛰지 않는다.
@@ -316,13 +337,15 @@ due: 2026-12-15
 
 ```markdown
 ## 문서 (Lectern 으로 읽음)
+<!-- lectern-summary: 2 -->
 - 형식보다 글이 먼저: 읽는 사람과 목적을 먼저 정하고, 글 종류(서술식·개조식)에 맞게 쓰고, 다 쓴 뒤 읽는 사람이 되어 다시 읽는다. 본문에 파일 경로·코드 표기를 쓰지 않고, 가져온 사실에는 출처.
 - 자세한 형식은 Lectern 작성 안내 `<이 안내의 전체 경로>` — 표·차트·박스글·슬라이드·업무 카드를 쓸 때 그 장을 읽는다.
 - 문서는 Markdown. 첫 줄은 `# 제목` 하나, 첫 문단은 한두 문장 요약. 제목 단계(## → ###)를 건너뛰지 않는다.
 - 표의 칸에는 값만, 단위는 머리행에. 표는 열 6개 안팎·칸은 한두 줄로 (긴 설명은 표 밖으로), 맞춤 표시(`:---:`)는 꼭 필요할 때만. 캡션은 표·그림·차트 바로 위에 `표 1. 제목`·`그림 1. 제목`, 출처는 바로 아래에 `자료: 기관 (연도)`, 가리킬 때는 `[표 1](#표-1)`.
 - 강조글은 `> [!NOTE]` 등, 박스글은 `<!-- box -->`~`<!-- /box -->` 사이(첫 줄 `**박스 1. 제목**`).
-- 차트는 ```vega-lite·```echarts·```plotly·```dot (JSON 값만, 인터넷 주소 안 됨, 데이터는 차트 안의 values 로 — CSV 는 큰 작업용 자료만), 다이어그램은 ```mermaid. HTML 보고서는 스크립트가 돌지 않는다.
-- 그림·차트의 모양·색은 사람이 번호("3번 스타일"·"색 2번")나 이름을 말할 때만 블록 안 `%% 스타일: 3 카드 · 색: 2 보고서 남색` 한 줄 (번호 뒤에 이름, Graphviz·차트는 `//`, 문서 전체는 `<!-- 도해: 스타일 3 · 색 2 -->`) — 번호표는 작성 안내 옆 `diagrams.md`. 색은 적지 않고, 가로로 상자 넷이 넘으면 세로로.
+- 차트는 ```vega-lite·```echarts·```plotly·```dot (JSON 값만, 인터넷 주소 안 됨, 데이터는 차트 안의 values 로 — CSV 는 큰 작업용 자료만), 다이어그램은 ```mermaid. 그림 파일·글자 그림·HTML 로 그리지 않는다. HTML 보고서는 스크립트가 돌지 않는다.
+- 그림·차트에 색·바탕색·글꼴을 적지 않는다 — 사람이 Lectern 에서 우클릭으로 모양(도해 스타일)과 색(색 조합)을 고르는데, 원문에 적은 색이 먼저라 바뀌지 않는다. 색 대신: 계열은 데이터의 열로(`"color": {"field": "구분"}`), 막대와 선을 겹치면 층마다 `"color": {"datum": "이름"}`, 하나만 눈에 띄게는 나머지를 흐리게(opacity), 실적·전망은 점선, 도해의 강조는 `:::key`·`:::warn`·`:::muted`. `classDef`·`style`·`%%{init}%%`·`fillcolor`·`itemStyle.color`·`marker.color`·`layout.template`·`scale.scheme` 도 쓰지 않는다. 색에 뜻이 있을 때만(증가 빨강·감소 파랑) 적고 사람에게 말한다 — 자세한 표는 작성 안내 4장.
+- 모양·색의 번호는 사람이 번호("3번 스타일"·"색 2번")나 이름을 말할 때만 블록 안 `%% 스타일: 3 카드 · 색: 2 보고서 남색` 한 줄 (번호 뒤에 이름, Graphviz·차트는 `//`, 문서 전체는 `<!-- 도해: 스타일 3 · 색 2 -->`) — 번호표는 작성 안내 옆 `diagrams.md`. 가로로 상자 넷이 넘으면 세로로.
 - 사람이 건네는 `@경로 12~17행` 은 그 파일의 그 줄들이다. 그 줄 뒤에 박스글로 정리하라고 하면 그 자리에 박스글 하나만 넣는다.
 - 발표 자료는 Lectern 슬라이드(쓰기 전에 `slides.md`), pptx 는 스킬 `pptx-to-lectern`·`lectern-to-pptx`, Word(docx) 는 스킬 `lectern-to-docx` (회사 Word 양식은 `--template`). 폴더 맨 위의 `WORK.md` 는 업무 카드다.
 ```

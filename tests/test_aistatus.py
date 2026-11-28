@@ -40,7 +40,8 @@ def test_empty_home_reports_nothing_installed(home, tmp_path):
     st = aistatus.status(home, 'claude', skills_dir(), STYLES, proj)
     assert st['tool'] == 'claude'
     assert st['skills']['items'] == {n: 'missing' for n in aistatus.LECTERN_SKILLS}
-    assert st['rules'] == {'path': str(home / '.claude' / 'rules' / 'lectern.md'), 'exists': False, 'lectern': False}
+    assert st['rules'] == {'path': str(home / '.claude' / 'rules' / 'lectern.md'), 'exists': False, 'lectern': False, 'summary': 0}
+    assert st['summary_now'] == aistatus.SUMMARY_NOW
     c = st['claude']
     assert c['voice'] is None and c['voice_path'].endswith('내-문체.md')
     assert c['styles']['research']['state'] == 'missing' and c['styles']['research']['name'] == '리서치 글쓰기'
@@ -48,7 +49,7 @@ def test_empty_home_reports_nothing_installed(home, tmp_path):
     assert c['settings']['user'] == {'path': str(home / '.claude' / 'settings.json'), 'value': None, 'ok': True}
     p = st['project']
     assert p['root'] == str(proj) and p['name'] == 'proj'
-    assert p['rules'] == [{'path': str(proj / 'CLAUDE.md'), 'exists': False, 'lectern': False}]
+    assert p['rules'] == [{'path': str(proj / 'CLAUDE.md'), 'exists': False, 'lectern': False, 'summary': 0}]
     assert p['skills']['dir'] == str(proj / '.claude' / 'skills')
     assert p['settings']['local']['value'] is None and p['settings']['shared']['value'] is None
 
@@ -76,10 +77,24 @@ def test_installed_things_are_seen(home, tmp_path):
     assert c['other_styles'] == [{'file': 'terse.md', 'path': str(home / '.claude' / 'output-styles' / 'terse.md'), 'name': '짧게', 'description': '짧은 답'}]
     assert c['settings']['user']['value'] == 'Explanatory'
     assert st['project']['settings']['local']['value'] == '리서치 글쓰기'
-    assert st['project']['rules'][0] == {'path': str(proj / 'CLAUDE.md'), 'exists': True, 'lectern': True}
+    assert st['project']['rules'][0] == {'path': str(proj / 'CLAUDE.md'), 'exists': True, 'lectern': True, 'summary': 0}
     # 설정 파일의 다른 값(권한·환경 변수)은 어디에도 나오지 않는다
     text = json.dumps(st, ensure_ascii=False)
     assert 'SECRET_TOKEN' not in text and 'permissions' not in text and 'Bash(rm' not in text
+
+
+def test_summary_version_mark(home, tmp_path):
+    """요약의 판 (0.113.2): 작성 안내의 요약 맨 위 줄 — 예전 요약(표시 없음)은 0, 설정 창이 새 요약으로 바꾸라고 알린다"""
+    for name in ('writing.md', 'writing.en.md'):
+        text = (web_dir() / 'help' / name).read_text(encoding='utf-8')
+        summary = text.rsplit('```markdown', 1)[1]
+        assert f'<!-- lectern-summary: {aistatus.SUMMARY_NOW} -->' in summary.splitlines()[2], name   # 요약 제목 바로 아래
+    proj = tmp_path / 'proj'
+    write(proj / 'CLAUDE.md', '# 지침\n\n## 문서 (Lectern 으로 읽음)\n<!--lectern-summary: 2-->\n- 형식보다 글\n')
+    write(home / '.claude' / 'rules' / 'lectern.md', '## 문서 (Lectern 으로 읽음)\n- 예전 요약\n')
+    st = aistatus.status(home, 'claude', skills_dir(), STYLES, proj)
+    assert st['rules']['lectern'] and st['rules']['summary'] == 0
+    assert st['project']['rules'][0]['summary'] == 2
 
 
 def test_old_voice_section_in_style_still_counts_as_same(home):
@@ -107,8 +122,8 @@ def test_other_tools(home, tmp_path):
     st = aistatus.status(home, 'codex', skills_dir(), STYLES, proj)
     assert 'claude' not in st
     assert st['skills']['dir'] == str(home / '.agents' / 'skills')
-    assert st['rules'] == {'path': str(home / '.codex' / 'AGENTS.md'), 'exists': True, 'lectern': True, 'override': str(home / '.codex' / 'AGENTS.override.md')}
-    assert st['project']['rules'] == [{'path': str(proj / 'AGENTS.md'), 'exists': True, 'lectern': False}]
+    assert st['rules'] == {'path': str(home / '.codex' / 'AGENTS.md'), 'exists': True, 'lectern': True, 'summary': 0, 'override': str(home / '.codex' / 'AGENTS.override.md')}
+    assert st['project']['rules'] == [{'path': str(proj / 'AGENTS.md'), 'exists': True, 'lectern': False, 'summary': 0}]
     assert st['project']['skills']['dir'] == str(proj / '.agents' / 'skills')
     many = aistatus.status(home, 'any', skills_dir(), STYLES, proj)
     assert [Path(r['path']).name for r in many['project']['rules']] == ['CLAUDE.md', 'AGENTS.md']

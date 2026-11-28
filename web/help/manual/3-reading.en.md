@@ -117,7 +117,14 @@ Pick the look of Mermaid and Graphviz diagrams by number. Colors follow the docu
 
 ### Color sets
 
-A color number picked separately from the look. It changes chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram boxes, the key accent, zone colors and title bands; text, background and lines stay with the document style. A single-series bar or line takes the set's first color, a heatmap takes shades of it. Colors a chart sets itself win, and the up/down colors of candlestick and waterfall charts do not change either. For such charts every tile in the picker looks the same and the window says why (remove the colors from the source and the chart follows).
+A color number picked separately from the look. It changes chart series colors (Vega-Lite, ECharts, Plotly, Mermaid pie and xy charts) and diagram boxes, the key accent, zone colors and title bands; text, background and lines stay with the document style. A single-series bar or line takes the set's first color, a heatmap takes shades of it. Colors a chart sets itself win, and the up/down colors of candlestick and waterfall charts do not change either. For such charts every tile in the picker looks the same and the window says why. Diagrams whose tiles differ but keep some colors from the source (bars change, only the line Claude colored stays) get a softer note too.
+
+| A diagram whose source sets colors | What to do |
+|---|---|
+| Which line | The note above the picker shows the line and what it says (`line 52: "lineStyle": {"color": "red"…`) |
+| Remove that diagram's colors | **Ask Claude to remove the set colors** next to the note — puts a request with the block's place and the writing guide into the terminal (Enter is not pressed). In the diagram style picker, **Ask … to remove the set look and colors** |
+| Every diagram and chart in the document | **AI requests** on the tab bar → **Ask to remove colors set in diagrams and charts** |
+| Diagrams written from now on | The writing guide tells the AI not to write colors (series as a data column, emphasis by opacity, forecasts dashed). If the Lectern summary under Settings 'AI tool' is an older one, its row says **An older summary** — paste the request again to replace it with the new summary |
 
 | No. | Name | Colors |
 |---:|---|---|

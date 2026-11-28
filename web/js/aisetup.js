@@ -76,19 +76,24 @@ const skillRow = (state) => ({ missing: ['new', ''], same: ['keep', t('Lectern �
 /** 도구가 여럿이면 도구마다의 자리를 그대로 보인다 (Lectern 이 어느 도구인지 모른다) */
 const perTool = (pick) => Object.values(AI_TOOLS).map((x) => ({ act: 'tool', path: pick(x), note: x.cli }));
 
+/** 예전 판의 요약 (0.113.2 — 요약 맨 위의 판 표시가 없거나 작다): 그림·차트에 색을 적지 않는다는 규칙 등이 없다 */
+const oldSummary = (r) => !!(r?.exists && r.lectern && now?.summary_now && (r.summary || 0) < now.summary_now);
+const OLD = () => t('예전 판의 요약 — 그림·차트의 색 규칙 등이 없습니다. 요청 글로 새 요약으로 바꿉니다');
+
 function guideRows() {
   const one = aiInfo();
   if (scope('guide') === 'all') {
     if (!one) return perTool((x) => x.rules);
     const r = now?.rules;
     if (!r) return [{ act: pending(), path: one.rules }];
-    if (claude()) return [{ act: r.exists ? 'change' : 'new', path: r.path, note: r.exists ? t('지금 것을 새 요약으로') : t('모든 폴더에서 읽힙니다') }];
-    const row = { act: !r.exists ? 'new' : r.lectern ? 'change' : 'add', path: r.path, note: r.lectern ? t('Lectern 절을 새 요약으로') : t('Lectern 절 하나만') };
+    if (claude()) return [{ act: r.exists ? 'change' : 'new', path: r.path, note: oldSummary(r) ? OLD() : r.exists ? t('지금 것을 새 요약으로') : t('모든 폴더에서 읽힙니다') }];
+    const row = { act: !r.exists ? 'new' : r.lectern ? 'change' : 'add', path: r.path, note: oldSummary(r) ? OLD() : r.lectern ? t('Lectern 절을 새 요약으로') : t('Lectern 절 하나만') };
     return r.override ? [row, { act: 'keep', path: r.override, note: t('이 파일이 있어 위 파일은 읽히지 않습니다') }] : [row];
   }
   const files = now?.project?.rules || (one ? [one.file] : ['CLAUDE.md', 'AGENTS.md']).map((f) => ({ path: inFolder(f) }));
   const formats = now?.rules?.lectern === false ? t(' — 형식 규칙도 (개인 폴더에 없어서)') : '';
-  return files.map((f) => ({ act: f.exists === undefined ? pending() : !f.exists ? 'new' : f.lectern ? 'change' : 'add', path: f.path, note: t('이 폴더의 읽는 사람·목적{formats}', { formats }) }));
+  return files.map((f) => ({ act: f.exists === undefined ? pending() : !f.exists ? 'new' : f.lectern ? 'change' : 'add', path: f.path,
+    note: oldSummary(f) ? OLD() : t('이 폴더의 읽는 사람·목적{formats}', { formats }) }));
 }
 
 function skillRows() {
@@ -251,14 +256,16 @@ export function guidePrompt() {
       : claude()
         ? t('내 개인 규칙 파일 {file} (모든 프로젝트에서 읽힌다 — 이 파일 하나에만 쓰고 ~/.claude/CLAUDE.md 는 고치지 마)', { file: one.rules })
         : t('내 개인 지시 파일 {file} 의 Lectern 절 하나 (모든 프로젝트에서 읽힌다 — 그 절 밖은 고치지 마)', { file: one.rules });
-    return t("내 문서는 사람이 {lectern}으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 요약을 {target} 에 넣어 줘. 쓰기 전에 그 파일이 지금 있는지와 Lectern 요약이 이미 들어 있는지 알려 주고, 넣을 글을 보여 준 뒤 물어봐. 프로젝트마다 다른 것(읽는 사람·목적·말투)은 여기에 넣지 마 — 그것은 프로젝트마다 따로 정해.",
+    return t("내 문서는 사람이 {lectern}으로 읽고 그 자리에서 고쳐. 먼저 작성 안내 {guide} 를 읽고, 안내 끝의 요약을 {target} 에 넣어 줘. 쓰기 전에 그 파일이 지금 있는지와 Lectern 요약이 이미 들어 있는지 알려 주고, 넣을 글을 보여 준 뒤 물어봐. 요약 맨 위의 lectern-summary 줄은 그대로 넣고, 그 줄이 없거나 숫자가 작은 예전 요약이 있으면 새 요약으로 바꿔. 프로젝트마다 다른 것(읽는 사람·목적·말투)은 여기에 넣지 마 — 그것은 프로젝트마다 따로 정해.",
       { lectern: LECTERN(), guide, target });
   }
   const where = one
     ? t('이 프로젝트의 {file}', { file: one.file })
     : t('이 프로젝트의 지시 파일 (Claude Code 는 CLAUDE.md, Codex·Antigravity·OpenCode 는 AGENTS.md — 둘 다 쓰는 프로젝트면 AGENTS.md 에 넣고 CLAUDE.md 에는 @AGENTS.md 한 줄만 둬)');
   const rules = now?.rules?.lectern === true
-    ? t('형식 규칙은 내 개인 폴더({file})에 이미 있으니 넣지 마.', { file: now.rules.path })
+    ? (oldSummary(now.rules)
+      ? t('형식 규칙은 내 개인 폴더({file})에 있으니 넣지 마 — 다만 그 요약은 예전 판이라(맨 위에 lectern-summary 줄이 없거나 숫자가 작다) 그림·차트의 색 규칙 등이 없다. 그 파일의 요약도 안내 끝의 새 요약으로 바꿔도 되는지 물어봐.', { file: now.rules.path })
+      : t('형식 규칙은 내 개인 폴더({file})에 이미 있으니 넣지 마.', { file: now.rules.path }))
     : now?.rules?.lectern === false
       ? t('안내 끝의 요약도 이 프로젝트에 맞게 다듬어 함께 넣어.')
       : t('내 개인 폴더의 Lectern 요약({file})이 이미 있으면 형식 규칙은 넣지 말고, 없으면 안내 끝의 요약도 이 프로젝트에 맞게 다듬어 함께 넣어.', { file: one?.rules ?? '~/.claude/rules/lectern.md' });

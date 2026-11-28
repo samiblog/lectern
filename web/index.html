@@ -707,7 +707,7 @@
   <!-- 도해 고르기 (D214 — diagrampick.js): 우클릭한 그림을 번호마다 작게 그려 나란히. 고르면 그 블록에 표시 줄 하나 -->
   <div class="dialog-box dpick-box" role="dialog" aria-labelledby="lec-dpick-title">
     <div class="raw-head"><h2 id="lec-dpick-title">도해 고르기</h2><small>그림을 번호마다 그렸습니다. 누르거나 Enter 로 고르면 그림 블록에 표시 줄 하나를 씁니다 — Ctrl+Z 로 되돌립니다</small></div>
-    <p id="lec-dpick-same" class="dpick-same" role="status" hidden></p>
+    <div id="lec-dpick-same" class="dpick-same" role="status" hidden><span id="lec-dpick-same-text"></span><button type="button" id="lec-dpick-uncolor" class="text-btn" hidden></button></div>
     <div id="lec-dpick-grid" class="dpick-grid" role="listbox" aria-labelledby="lec-dpick-title"></div>
     <p id="lec-dpick-tip" class="dpick-tip"></p>
     <div class="dialog-foot">

@@ -4,7 +4,7 @@ Lectern 이 AI 도구에 건네는 것(작성 안내 요약·스킬·글쓰기 �
 Lectern 은 쓰지 않고, 아래 TOOLS 표의 정해진 파일만 읽는다 — 사용자의 개인 폴더(홈)와 열린 프로젝트의 것.
 경로는 이 표에 고정되고 화면의 요청이 고르지 못한다 (CLAUDE.md 원칙 3 의 예외 — 업무 현황 D124 와 같은 꼴).
 설정 파일(settings.json)은 outputStyle 값 하나만 꺼내고 나머지(권한·환경 변수 등)는 읽은 자리에서 버린다.
-지시 파일은 'Lectern' 이 들어 있는지만 본다. 스킬은 Lectern 에 든 것과 같은지만 본다.
+지시 파일은 'Lectern' 이 들어 있는지와 요약의 판 표시(<!-- lectern-summary: N -->)만 본다. 스킬은 Lectern 에 든 것과 같은지만 본다.
 """
 from __future__ import annotations
 
@@ -34,6 +34,10 @@ STYLES_DIR = ('.claude', 'output-styles')
 USER_SETTINGS = ('.claude', 'settings.json')
 PROJECT_SETTINGS = (('local', ('.claude', 'settings.local.json')), ('shared', ('.claude', 'settings.json')))
 VOICE_HEADS = ('## 내 문체', '## My style')   # i18n-ok (파일 속 제목) — 예전 판: 글쓰기 스타일 파일 끝의 내 문체 절 (D148)
+# 작성 안내 요약의 판 (web/help/writing.md 의 요약 맨 위 줄 — 시험이 견준다). 요약을 크게 고치면 올린다:
+#   2 — 0.113.2: 그림·차트에 색을 적지 않는다 (사람이 고른 색 조합·도해 스타일이 듣게). 표시가 없는 것은 그 전의 판
+SUMMARY_NOW = 2
+SUMMARY_MARK = re.compile(r'<!--\s*lectern-summary:\s*(\d+)\s*-->')
 MAX_READ = 1_000_000   # 지시·설정 파일을 읽는 크기 (넘으면 읽지 않는다)
 SKIP_DIRS = {'__pycache__'}
 
@@ -128,6 +132,17 @@ def _mentions(path: Path, word: str = 'Lectern') -> bool | None:
     return None if text is None else word in text
 
 
+def summary_of(path: Path) -> int:
+    """지시 파일에 든 Lectern 요약의 판 — 판 표시가 없으면 0 (그 전의 판이거나 요약이 없다). 여럿이면 큰 것"""
+    text = _read(path) or ''
+    return max((int(m.group(1)) for m in SUMMARY_MARK.finditer(text)), default=0)
+
+
+def _rules(path: Path) -> dict[str, Any]:
+    """지시 파일 하나: 있는지, Lectern 이 들었는지, 요약의 판"""
+    return {'path': str(path), 'exists': path.is_file(), 'lectern': bool(_mentions(path)), 'summary': summary_of(path)}
+
+
 def home_dir() -> Path:
     """사용자의 개인 폴더(홈). 시험은 LECTERN_HOME 으로 바꾼다 — 화면 점검이 이 PC 의 실제 ~/.claude 를 읽지 않게"""
     override = os.environ.get('LECTERN_HOME')
@@ -166,7 +181,8 @@ def status(home: Path, tool: str, skills_dir: Path, styles: list[dict[str, Any]]
         'home': str(home),
         'tool': key,
         'skills': {'dir': str(skills), 'items': {n: skill_state(skills_dir / n, skills / n) for n in LECTERN_SKILLS}},
-        'rules': {'path': str(at(*info['rules'])), 'exists': at(*info['rules']).is_file(), 'lectern': bool(_mentions(at(*info['rules'])))},
+        'rules': _rules(at(*info['rules'])),
+        'summary_now': SUMMARY_NOW,
         'project': None,
     }
     if 'override' in info:   # Codex: 이 파일이 있으면 개인 AGENTS.md 는 읽히지 않는다
@@ -208,7 +224,7 @@ def status(home: Path, tool: str, skills_dir: Path, styles: list[dict[str, Any]]
         proj: dict[str, Any] = {
             'root': str(project),
             'name': project.name or str(project),
-            'rules': [{'path': str(project / f), 'exists': (project / f).is_file(), 'lectern': bool(_mentions(project / f))} for f in files],
+            'rules': [_rules(project / f) for f in files],
         }
         pskills = project.joinpath(*info['project_skills'])
         proj['skills'] = {'dir': str(pskills), 'items': {n: skill_state(skills_dir / n, pskills / n) for n in LECTERN_SKILLS}}

@@ -49,6 +49,14 @@ export const voicePrompt = (refs = '') => (refs
  * 기획 메모 반영 요청 (D150): ref 는 WORK.md 의 '@경로'. 옮길 곳·겹치는 줄·날짜·메모를 건드리지 않음·기록 한 줄은
  * 작성 안내(web/help/writing.md 의 '업무 카드' 절)가 정한다. 문서 우클릭(docmenu.js)이 터미널에 Enter 없이 넣는다 (D51)
  */
+/**
+ * 원문의 색 빼기 요청 (0.113.2): 원문이 정한 색·모양은 사람이 고른 색 조합·도해 스타일(D212·D213)보다 먼저라 그대로 남는다.
+ * ref 는 '@경로 12~20행'(그림 하나 — 고르기 창) 이나 '@경로'(문서 전체 — AI 요청 메뉴). 나누는 법은 작성 안내 4장의 '색 없이 나누는 법'
+ */
+export const uncolorPrompt = (ref, key = 'colors') => (key === 'style'
+  ? t("Lectern 작성 안내({guide}) 4장을 읽고, {ref} 그림에 원문이 정한 모양·색(classDef·style·%%{init}%%·fillcolor 같은 것)을 빼 줘 — 내가 Lectern 에서 도해 스타일을 골라도 그것이 남는다. 강조는 :::key·:::warn·:::muted(Graphviz 는 class=\"key\")로 바꾸고, 블록 안의 표시 줄(스타일·색 번호)과 글은 그대로 둬. 고친 뒤 무엇을 바꿨는지 한두 줄로 알려 줘.", { guide: S.writingGuide, ref })
+  : t("Lectern 작성 안내({guide}) 4장의 '색 없이 나누는 법'을 읽고, {ref} 의 그림·차트에 원문이 정한 색을 빼 줘 — 내가 Lectern 에서 색 조합을 골라도 그 색이 남는다. 색으로 나누던 것은 그 표대로(계열은 데이터의 열이나 층마다 datum, 강조는 투명도, 전망은 점선, 도해의 강조는 :::key·:::warn·:::muted) 바꾸고, 블록 안의 표시 줄(스타일·색 번호)과 데이터는 그대로 둬. 색 자체에 뜻이 있는 것(증가 빨강·감소 파랑 같은)은 빼기 전에 물어봐. 고친 뒤 무엇을 바꿨는지 한두 줄로 알려 줘.", { guide: S.writingGuide, ref }));
+
 export const memoPrompt = (ref) => t("Lectern 작성 안내({guide})의 '업무 카드' 절을 읽고, {ref} 의 '기획 메모' 절을 이 업무 카드의 할 일·일정·결정·현재 상태에 반영해 줘. 메모 글은 그대로 두고, 날짜가 분명하지 않으면 묻고, 반영한 것은 기록 절에 한 줄 남겨 줘.", { guide: S.writingGuide, ref });
 
 /**

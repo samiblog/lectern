@@ -194,7 +194,7 @@ try:
 
         print('[4. 가격과 재고 — 막대만 바뀌고 Claude 가 적은 빨간 선은 그대로]')
         looks, note = picker(2)
-        check('막대가 바뀌니 여덟 칸이 다르다 (알림 없음)', len(set(looks)) == 8 and not note, (len(set(looks)), note))
+        check('막대가 바뀌니 여덟 칸이 다르다 — Claude 가 적은 선의 색은 남는다고 옅게 알린다 (0.113.2)', len(set(looks)) == 8 and note.startswith('원문이 정한 색은 그대로 남습니다 — ') and '째 줄' in note, (len(set(looks)), note))
         check('모든 칸에 빨간 선 (#e45756)', all('#e45756' in x for x in looks), [x[:80] for x in looks[:2]])
         page.locator('#lec-dpick .dpick-card[data-n="3"]').click()
         settle(['2', '5', '3'] + ['1'] * 4)
@@ -215,7 +215,8 @@ try:
         print('[6. 항만별 처리량 — 원문이 색을 정했다]')
         looks, note = picker(3)
         check('여덟 칸이 같다 (원문의 #2f5d8a)', len(set(looks)) == 1 and '#2f5d8a' in looks[0], looks[0][:80])
-        check("창 위에 '원문이 색을 정해 두어 … 지우면 따릅니다'", note.startswith('칸이 모두 같습니다 — 원문이 색을 정해 두어') and '지우면 따릅니다' in note, note)
+        check("창 위에 '원문이 색을 정해 두어(N째 줄 …)' 와 빼기 요청 단추", note.startswith('칸이 모두 같습니다 — 원문이 색을 정해 두어(') and '째 줄' in note and '#2f5d8a' in note
+              and page.locator('#lec-dpick-uncolor').is_visible(), note)
         before = src()
         page.keyboard.press('Escape')
         check('Esc — 파일은 그대로', src() == before and page.locator('#lec-dpick').is_hidden())

@@ -9,7 +9,7 @@ If the task is to put these rules somewhere, it is one of two things, depending 
 - **All folders (personal folder)**: put the **Summary** at the end into the person's personal rules — for Claude Code the one file `~/.claude/rules/lectern.md` (do not change the person's own `~/.claude/CLAUDE.md`), for Codex a section of `~/.codex/AGENTS.md`, for Antigravity of `~/.gemini/AGENTS.md`, for OpenCode of `~/.config/opencode/AGENTS.md`. Write down this guide's full path with it so it is read again when writing tables, charts or slides. Leave out what differs by project (readers, purpose, tone).
 - **One folder**: in that project's instruction file (`CLAUDE.md` for Claude Code and `AGENTS.md` for Codex, Antigravity and OpenCode — if the project uses both, put it in `AGENTS.md` and leave just the line `@AGENTS.md` in `CLAUDE.md`), write that project's readers, purpose and tone. If the personal rules already have the Lectern summary, leave out the formatting rules; if not, trim the summary to fit the project and add it too. Keep the project's instruction file from becoming a formatting rulebook: put readers, purpose and tone before the formatting rules.
 
-Either way, before writing, say whether the file exists now and whether it already has the Lectern summary, show the text you will add, and ask. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
+Either way, before writing, say whether the file exists now and whether it already has the Lectern summary, show the text you will add, and ask. Keep the `<!-- lectern-summary: 2 -->` line at the top of the summary — Lectern's settings window tells the summary's version by it (also when you trim it for a project). If there is an older summary without that line or with a smaller number, replace it with the new one — older summaries lack rules such as not writing colors in diagrams and charts. For examples, see `samples` in Lectern's install folder ('Open samples' in Lectern) — especially `samples/CLAUDE.en.md` and `samples/guide/04-문서-쓰는-법.md`.
 
 ## 1. What Lectern shows
 
@@ -147,7 +147,7 @@ Source: LME
 
 ## 4. Diagrams and charts
 
-The code block language decides. All become static pictures (SVG) whose colors follow the document style people picked. If one cannot be drawn, its source and the reason appear in its place.
+The code block language decides. All become static pictures (SVG) whose colors follow the document style people picked. People right-click a diagram or chart to pick its look (diagram style) and colors (color set) — that only works when the source writes no colors (see 'Colors' below). If one cannot be drawn, its source and the reason appear in its place. Image files (PNG), pictures drawn with characters (```` ```text ````) and diagrams drawn in HTML or SVG cannot change look or colors, so draw diagrams with these code blocks.
 
 | Language | Library | Use for |
 |---|---|---|
@@ -163,11 +163,31 @@ Rules:
 - **Data goes inside the chart.** Write the data in the chart as `"data": {"values": [...]}` by default — the document alone then draws the chart on other PCs, and people see the values as a table and copy them to Excel with the chart's [Table] button. Point to a CSV in the project (`"data": {"url": "../data/x.csv"}`, relative to the document) only for working data with hundreds of rows or more, or data another program updates — a CSV may not travel with the document.
 - **Nothing goes to the internet.** Do not use data at internet addresses, internet images inside charts, or Plotly map types (scattergeo, choropleth, mapbox). Links inside charts are removed.
 - **Size.** To fit the document width, give Vega-Lite `"width": "container"` and a `"height"`, ECharts only `"height"` (a key only Lectern reads, default 360), and Plotly only `layout.height` (default 400). A numeric width draws at that size.
-- **Colors.** Without colors, the style's colors are used (readable in light and dark styles). Colors you set are kept. Plotly follows `layout.template` when there is one.
+- **Write no colors.** Lectern paints with the document style and the color set the person picked (readable in light and dark styles). Colors written in the source come first, so if you write them they stay when the person picks 'Color set…' or 'Diagram style…' with a right-click, and they may be unreadable in dark styles. Tell things apart as 'Telling things apart without colors' below says. Write colors only when the color itself carries meaning (a convention such as red for increase and blue for decrease), and tell the person that chart does not change with color sets.
 - **Titles.** Vega-Lite and ECharts `title`, Plotly `layout.title` and the Graphviz graph name (`digraph name {`) label the chart in the contents and Elements tab.
 - **Mermaid**: quote non-ASCII axis labels and text (`x-axis ["Jan", "Feb"]`). Use ASCII aliases for participants: `participant U as 사람`.
 - **Graphviz**: the app fits box widths for non-Latin text. Better not to set `fontname`.
-- **Diagram styles and color sets**: pick the look of Mermaid and Graphviz diagrams (1–10) and the colors of charts and diagrams (color sets 1–8) by number — one line inside the block, `%% style: 3 Card · colors: 2 Report navy` (the name after the number; Graphviz and charts use `//`), or one line for the whole document, `<!-- diagram: style 3 · colors 2 -->`. Write them only when the person names a number or name; write no colors, and mark emphasis with `:::key`, `:::warn`, `:::muted`. With more than four boxes side by side, go vertical (`TD`). The numbers, title boxes (8–10) and direction are in `diagrams.en.md` next to this file.
+- **Diagram styles and color sets**: pick the look of Mermaid and Graphviz diagrams (1–10) and the colors of charts and diagrams (color sets 1–8) by number — one line inside the block, `%% style: 3 Card · colors: 2 Report navy` (the name after the number; Graphviz and charts use `//`), or one line for the whole document, `<!-- diagram: style 3 · colors 2 -->`. Write them only when the person names a number or name, and mark emphasis with `:::key`, `:::warn`, `:::muted`. With more than four boxes side by side, go vertical (`TD`). The numbers, title boxes (8–10) and direction are in `diagrams.en.md` next to this file.
+
+Telling things apart without colors — written this way, what is told apart stays and the color set paints the colors:
+
+| To do | Write | Not |
+|---|---|---|
+| Several series | Series as a data column — Vega-Lite `"color": {"field": "group", "type": "nominal"}`; in ECharts one `series` and in Plotly one trace per series | `"color": "#…"` per series |
+| Bars and a line in one chart | In Vega-Lite a datum per layer, `"color": {"datum": "Price"}` and `"color": {"datum": "Stock"}` (the colors differ and a legend appears); in ECharts and Plotly two series | `"color": "#e45756"` on the line only |
+| One thing stands out | Fade the rest — Vega-Lite `"opacity": {"condition": {"test": "datum.country == 'Korea'", "value": 1}, "value": 0.35}`, ECharts `itemStyle.opacity` on data items, Plotly a list in `marker.opacity`. When suggesting color set 3 (gray + accent), put that series first in the data | only that bar in red |
+| Actual vs forecast | Dashed lines — Vega-Lite `"strokeDash": {"field": "kind"}`, ECharts `"lineStyle": {"type": "dashed"}`, Plotly `"line": {"dash": "dash"}`. For bars, fade the forecast — an `opacity` condition, ECharts `"itemStyle": {"opacity": 0.45}`, Plotly `marker.opacity` (a dashed border alone is hard to see) | forecast in gray |
+| Target or average line | Vega-Lite `rule` with `"strokeDash": [6, 4]` (Lectern colors the line), the name as `text`; ECharts `markLine` | `"color": "red"` |
+| Value labels | Outside the bars — Vega-Lite `text` with `"dy": -8`, ECharts `"label": {"show": true, "position": "top"}`, Plotly `"textposition": "outside"` (Lectern colors the text) | white text inside bars |
+| Emphasis in diagrams | Mermaid `:::key`, `:::warn`, `:::muted`; Graphviz `class="key"` | `classDef`, `style`, `fillcolor` |
+
+Keys not to write (they set colors, backgrounds or fonts and block the number the person picks):
+
+- Vega-Lite and Vega: colors in `"color"`, `"fill"`, `"stroke"` (`#…`, `rgb()`, color names, `{"value": …}`), `range` and `scheme` in `scale`, a `config` that sets colors or fonts, `background`.
+- ECharts: top-level `color`, `color` in `itemStyle`, `lineStyle`, `areaStyle`, `label` (gradients too), `visualMap.inRange.color`, `backgroundColor`, `color` and `fontFamily` in `textStyle`.
+- Plotly: `marker.color`, `line.color`, `fillcolor`, `colorscale`; in `layout`, `colorway`, `paper_bgcolor`, `plot_bgcolor`, `font`, `template`. Python's `fig.to_json()` output contains these (plotly express writes a `marker.color` into every series) — remove them before putting it in.
+- Mermaid: `classDef`, `style`, `linkStyle`, `%%{init: …}%%`, `theme`, `themeVariables` and `look` in the front matter.
+- Graphviz: `color`, `fillcolor`, `fontcolor`, `bgcolor`, `fontname`, and a `node [style=… penwidth=…]` that applies to every box (the diagram style sets fills, rounded corners and line widths — `node [shape=box]` is fine).
 
 ~~~~md
 ```vega-lite
@@ -306,6 +326,7 @@ This task in one line.
 
 - Don't put JavaScript charts in HTML reports (they do not show).
 - Don't put functions or internet addresses in chart settings.
+- Don't write colors, background colors or fonts in diagrams and charts (people could not change them with color sets and diagram styles).
 - Don't put documents in `node_modules`, `dist`, `build` or `.` folders (they are hidden).
 - Don't put HTML for people in app source folders such as `src` or `web`.
 - Don't use several `#` headings in one document or skip heading levels.
@@ -316,13 +337,15 @@ This task in one line.
 
 ```markdown
 ## Documents (read with Lectern)
+<!-- lectern-summary: 2 -->
 - Writing before formatting: decide the reader and the purpose first, write to the kind of document (narrative or bullet-point), and reread as the reader when done. No file paths or code formatting in the body; keep sources for facts you bring in.
 - Detailed formatting is in the Lectern writing guide `<full path of this guide>` — read the section when writing tables, charts, boxes, slides or work cards.
 - Write Markdown. One `# Title` first, then a one- or two-sentence summary paragraph. Don't skip heading levels (## → ###).
 - Only values in table cells, units in the header. About six columns and one or two lines per cell (long explanations go outside the table); alignment marks (`:---:`) only when needed. Captions as `Table 1. Title` · `Figure 1. Title` right above a table, figure or chart, the source right below as `Source: organization (year)`; refer with `[Table 1](#table-1)`.
 - Callouts as `> [!NOTE]` and so on; boxes between `<!-- box -->` and `<!-- /box -->` (first line `**Box 1. Title**`).
-- Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. HTML reports run no scripts.
-- The look and colors of diagrams and charts: only when the person names a number ("style 3", "colors 2") or a name, one line in the block, `%% style: 3 Card · colors: 2 Report navy` (the name after the number; Graphviz and charts use `//`; for the whole document `<!-- diagram: style 3 · colors 2 -->`) — the numbers are in `diagrams.en.md` next to the writing guide. Write no colors; with more than four boxes side by side, go vertical.
+- Charts in ```vega-lite, ```echarts, ```plotly, ```dot (JSON values only, no internet addresses, data inside the chart as values — CSV only for large working data); diagrams in ```mermaid. Not as image files, character drawings or HTML. HTML reports run no scripts.
+- Write no colors, background colors or fonts in diagrams and charts — people pick the look (diagram style) and colors (color set) with a right-click in Lectern, and colors written in the source come first, so nothing changes. Instead: series as a data column (`"color": {"field": "group"}`), a datum per layer for bars and a line (`"color": {"datum": "name"}`), fade the rest (opacity) to make one stand out, dashed lines for forecasts, `:::key`, `:::warn`, `:::muted` for emphasis in diagrams. Also no `classDef`, `style`, `%%{init}%%`, `fillcolor`, `itemStyle.color`, `marker.color`, `layout.template`, `scale.scheme`. Write colors only when they carry meaning (red for increase, blue for decrease) and tell the person — the full table is in section 4 of the writing guide.
+- Look and color numbers: only when the person names a number ("style 3", "colors 2") or a name, one line in the block, `%% style: 3 Card · colors: 2 Report navy` (the name after the number; Graphviz and charts use `//`; for the whole document `<!-- diagram: style 3 · colors 2 -->`) — the numbers are in `diagrams.en.md` next to the writing guide. With more than four boxes side by side, go vertical.
 - `@path lines 12-17` (Korean UI: `@path 12~17행`) from people means those lines of that file. Asked to summarize into a box after that line, insert exactly one box there.
 - Slides are Lectern slides (read `slides.en.md` first); pptx goes through the skills `pptx-to-lectern` and `lectern-to-pptx`, and Word (docx) through the skill `lectern-to-docx` (a company Word template with `--template`). `WORK.md` at the top of a folder is the work card.
 ```

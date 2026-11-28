@@ -22,7 +22,7 @@ home = base / 'home'
 (proj / '.claude' / 'settings.local.json').write_text(json.dumps({'outputStyle': '리서치 글쓰기', 'permissions': {'allow': ['Bash(SECRET_RULE:*)']}}), encoding='utf-8')
 c = home / '.claude'
 (c / 'rules').mkdir(parents=True)
-(c / 'rules' / 'lectern.md').write_text('## 문서 (Lectern 으로 읽음)\n', encoding='utf-8')
+(c / 'rules' / 'lectern.md').write_text('## 문서 (Lectern 으로 읽음)\n', encoding='utf-8')   # 판 표시(lectern-summary)가 없는 예전 요약 (0.113.2)
 (c / 'settings.json').write_text(json.dumps({'outputStyle': 'Explanatory', 'env': {'SECRET_TOKEN': 'abc'}}, indent=2), encoding='utf-8')   # Claude Code 처럼 줄을 나눠
 (c / 'output-styles').mkdir()
 style = (ROOT / 'web' / 'help' / 'research-writing.md').read_text(encoding='utf-8')
@@ -98,7 +98,7 @@ try:
         check('고른 것의 설명이 아래에', '이 PC 의 모든 폴더에서 읽힙니다' in page.inner_text('#lec-settings .ai-where >> nth=0 >> xpath=..'))
 
         print('[바뀌는 파일 — 지금 상태]')
-        check('알려 주기: 개인 규칙 파일 — 있으니 바꿈', rows(page, 'aiguide') == [['바꿈', P(home, '.claude', 'rules', 'lectern.md'), '지금 것을 새 요약으로']], rows(page, 'aiguide'))
+        check('알려 주기: 개인 규칙 파일 — 있으니 바꿈, 판 표시가 없는 예전 요약이라고 알린다', rows(page, 'aiguide') == [['바꿈', P(home, '.claude', 'rules', 'lectern.md'), '예전 판의 요약 — 그림·차트의 색 규칙 등이 없습니다. 요청 글로 새 요약으로 바꿉니다']], rows(page, 'aiguide'))
         sk = rows(page, 'skills')
         check('스킬: 같음·다름·없음', [r[0] for r in sk] == ['그대로', '바꿈', '새로 만듦'] and sk[1][1] == P(home, '.claude', 'skills', 'lectern-to-pptx') and sk[1][2] == 'Lectern 의 것과 다름', sk)
         ws = rows(page, 'wstyle')
@@ -116,12 +116,13 @@ try:
         print('[요청 글 — 고른 곳을 말한다]')
         g = prompt(page, 'aiguide')
         check('알려 주기 (모든 폴더): 개인 규칙 파일 하나, 내 CLAUDE.md 는 고치지 않게', '~/.claude/rules/lectern.md' in g and '~/.claude/CLAUDE.md 는 고치지 마' in g and '알려 주고' in g, g[:200])
+        check('요청: 판 표시 줄은 그대로, 예전 요약은 새 요약으로', 'lectern-summary 줄은 그대로' in g and '예전 요약이 있으면 새 요약으로 바꿔' in g, g)
         page.check('#lec-settings input[name="ai_scope_guide"][value="folder"]')
         until(page, lambda: saved().get('ai_scope_guide') == 'folder')
         check('이 폴더만: 그 폴더의 CLAUDE.md 를 새로 — 형식 규칙은 개인 폴더에 있어 빼고',
               rows(page, 'aiguide') == [['새로 만듦', P(proj, 'CLAUDE.md'), '이 폴더의 읽는 사람·목적']], rows(page, 'aiguide'))
         g = prompt(page, 'aiguide')
-        check('요청: 이 프로젝트의 CLAUDE.md, 형식 규칙은 넣지 않게', '이 프로젝트의 CLAUDE.md' in g and '형식 규칙은 내 개인 폴더' in g and '넣지 마' in g, g[-260:])
+        check('요청: 이 프로젝트의 CLAUDE.md, 형식 규칙은 넣지 않게 — 개인 요약이 예전 판이니 바꿔도 되는지 묻게', '이 프로젝트의 CLAUDE.md' in g and '형식 규칙은 내 개인 폴더' in g and '넣지 마' in g and '예전 판' in g and '바꿔도 되는지 물어봐' in g, g[-400:])
         page.check('#lec-settings input[name="ai_scope_skills"][value="folder"]')
         sk = rows(page, 'skills')
         check('스킬 이 폴더만: 그 폴더의 .claude/skills — 개인 스킬이 먼저 쓰인다고 알림',

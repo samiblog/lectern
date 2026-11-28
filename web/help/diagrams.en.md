@@ -34,7 +34,8 @@ Picked separately from the look. They change chart series colors (Vega-Lite, ECh
 | 7 | Cool | navy, teal and violet | technology, supply, infrastructure |
 | 8 | Pastel | pale colors | presentation screens, big boxes |
 
-- Colors a chart sets itself (`"color": {"value": …}`, `"mark": {"color": …}`, `"scale": {"range": …}`, ECharts `color` and `itemStyle.color`, Plotly `marker.color`) win. To use a color set, write no colors. The up/down colors of candlestick and waterfall charts are fixed by the library, so color sets do not change them — for such charts every tile in the 'Color set…' window looks the same and the window says why.
+- **Write no colors in diagrams or charts.** Colors written in the source (`"color": "#…"` and `{"value": …}`, `"mark": {"color": …}`, `"scale": {"range": …}` and `{"scheme": …}`, ECharts `color` and `itemStyle.color`, Plotly `marker.color` and `layout.template`, Mermaid `classDef`, `style` and `%%{init}%%`, Graphviz `fillcolor` and `color`) come before color sets, so they stay even when the person picks a number. Tell apart what colors used to tell apart (bars and a line, emphasis, actual vs forecast) as 'Telling things apart without colors' in section 4 of the writing guide (`writing.en.md`) says — series as a data column, a datum per layer for bars and a line, emphasis by opacity, forecasts dashed, diagrams with the emphasis marks in 5 below. Write colors only when the color itself carries meaning (red for increase, blue for decrease), and tell the person.
+- The up/down colors of candlestick and waterfall charts are fixed by the library, so color sets do not change them. For such charts, and for charts that set their own colors, every tile in the 'Color set…' window looks the same and the window says why.
 - In dark styles, dark colors are lightened.
 
 **Your own**: looks from 11 and colors from 9 are the person's own diagram styles and color sets (`diagram-styles` in Lectern's settings folder — made when the person asks with 'Make my diagram style from this look…'; how to make one is in `diagram-styles.en.md` in the same folder). Write them only when the person names that number or name — on a PC without the file, the default is drawn.
@@ -159,5 +160,6 @@ flowchart TD
 ## 9. Don't
 
 - Don't describe the style or colors in the body text outside the block — people see them in the diagram.
+- Don't write colors, background colors or fonts in diagrams and charts (2 above — the number the person picks would not apply).
 - Don't write the marker line twice (only the first is read).
 - Don't make up numbers — unknown ones draw the default. Looks 11+ and colors 9+ are the person's own, used only when the person names them.

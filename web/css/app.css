@@ -1437,7 +1437,10 @@ mark.pv-hit { padding: 0 1px; border-radius: 2px; background: color-mix(in srgb,
 .mydiag .text-btn { height: 26px; padding: 0 9px; font-size: 12px; }
 .mydiag-problems { flex-basis: 100%; margin: 0; padding-left: 18px; color: var(--ui-danger); font-size: 12px; line-height: 1.5; }
 .dpick-tip { min-height: 1.4em; margin: 8px 2px 0; color: var(--ui-muted); font-size: 12.5px; }
-.dpick-same { margin: 0 2px 8px; padding: 6px 10px; border-left: 3px solid var(--ui-warn, #b54708); border-radius: 4px; background: color-mix(in srgb, var(--ui-warn, #b54708) 9%, transparent); color: var(--ui-fg); font-size: 12.5px; }   /* 칸이 모두 같게 그려졌을 때의 까닭 (0.113.1) */
+.dpick-same { margin: 0 2px 8px; padding: 6px 10px; border-left: 3px solid var(--ui-warn, #b54708); border-radius: 4px; background: color-mix(in srgb, var(--ui-warn, #b54708) 9%, transparent); color: var(--ui-fg); font-size: 12.5px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 12px; }   /* 칸이 모두 같게 그려졌을 때의 까닭 (0.113.1) */
+.dpick-same[hidden] { display: none; }
+.dpick-same.soft { border-left-color: var(--ui-muted); background: color-mix(in srgb, var(--ui-fg) 5%, transparent); }   /* 칸은 갈리지만 원문이 정한 색은 남는다 (0.113.2) */
+.dpick-same .text-btn { padding: 0 2px; font-size: 12.5px; }
 .dpick-acts { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .dpick-acts .text-btn { height: 30px; }
 .opt-checks { display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 6px; }   /* 설정의 체크 칸 여럿 한 줄에 (D202) */

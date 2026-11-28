@@ -20,7 +20,7 @@ import { t } from './i18n.js';
 import { stepChange } from './diffmark.js';
 import { gatherOn, leaveGather } from './gather.js';
 import { openPrint, printDoc, canSavePdf, canExportHtml } from './printdoc.js';
-import { aiName, reviewPrompt, voicePrompt, memoPrompt } from './aitool.js';
+import { aiName, reviewPrompt, voicePrompt, memoPrompt, uncolorPrompt } from './aitool.js';
 import { solo } from './solo.js';
 
 const CARD = 'WORK.md';
@@ -166,6 +166,11 @@ function aiItems() {
       if (!deck) {
         items.push({ label: t('내 문체 견본으로 보내기'), tip: t('내가 직접 쓴 글이면 — 내 문체 노트를 만들거나 보태 달라는 요청을 터미널에 (Enter 는 누르지 않음)'),
           action: () => emit('term-paste', voicePrompt(ref)) });
+      }
+      // 원문이 색을 정한 그림·차트 (0.113.2 — 예전에 쓴 문서: 색 조합·도해 스타일을 골라도 그 색이 남는다)
+      if (S.pane.view.querySelector('pre.lec-chart, pre.mermaid')) {
+        items.push({ label: t('그림·차트의 색 지정 빼기 요청'), tip: t('{ai} 에게 이 문서의 그림·차트에 원문이 정한 색을 빼 달라는 요청 — 빼면 색 조합·도해 스타일을 따릅니다. 터미널에 (Enter 는 누르지 않음)', { ai }),
+          action: () => emit('term-paste', uncolorPrompt(ref)) });
       }
       if (/(^|\/)work\.md$/i.test(path)) {
         items.push({ label: t('기획 메모 반영 요청'), tip: t('{ai} 에게 이 업무 카드의 기획 메모를 할 일·일정·결정에 옮겨 달라는 요청 — 터미널에 (Enter 는 누르지 않음)', { ai }),
