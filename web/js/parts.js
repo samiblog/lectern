@@ -34,6 +34,7 @@ import { sanitizeHtml, prepareParts, imageKey, resolveRef, finishPart, settlePar
 import { linkPaths } from './pathlink.js';
 import { renderCharts } from './charts.js';
 import { renderMermaid } from './mermaid.js';
+import { docMarks } from './diagramstyles.js';
 import { fitTables } from './tablefit.js';
 import { readYaml } from './slides.js';
 import { setStatus } from './status.js';
@@ -133,12 +134,13 @@ async function parseDoc(tab, path, { links = false } = {}) {
   const text = await getText(docUrl(tab, path));
   if (isHtml(path)) return { root: new DOMParser().parseFromString(text, 'text/html').body, meta: null, foreign: true };   // 스크립트는 돌지 않고 그림도 부르지 않는다
   const { html: markup, frontMatter } = renderMarkdown(text, { math: S.config.math !== false });
+  const marks = docMarks(text);   // 문서의 기본 도해 스타일·색 조합 — 다이어그램·차트를 문서에서처럼 그리게 (D213·D216)
   const tpl = document.createElement('template');   // template 안은 그림을 부르지 않는다 (정화가 src 도 data-src 로 뗀다)
   setHtml(tpl, raw(sanitizeHtml(markup)));
   const root = tpl.content;
   prepareParts(root);
   if (links) await linkPaths(root, path, tab);
-  return { root, meta: frontMatter ? readYaml(frontMatter) : null, foreign: false };
+  return { root, meta: frontMatter ? readYaml(frontMatter) : null, foreign: false, marks };
 }
 
 /** 거르기가 볼 그 요소의 글 (D196 — 표의 칸·캡션·주·자료·코드). 그림·차트·다이어그램은 몸체를 빼고 (차트의 원문은 설정 글이라 낱말이 엉뚱하게 맞는다) */
@@ -210,8 +212,8 @@ async function prepared(tab, path) {
   const mtime = tab.fileMap.get(path)?.mtime;
   const had = docs.get(path);
   if (had && had.mtime === mtime) return had;
-  const { root, foreign } = await parseDoc(tab, path);
-  const doc = { mtime, foreign, rows: readParts(root, { more: true }).rows.filter((r) => r.kind) };
+  const { root, foreign, marks } = await parseDoc(tab, path);
+  const doc = { mtime, foreign, marks, rows: readParts(root, { more: true }).rows.filter((r) => r.kind) };
   docs.delete(path);
   docs.set(path, doc);
   for (const old of [...docs.keys()].slice(0, Math.max(0, docs.size - KEPT_DOCS))) docs.delete(old);
@@ -529,19 +531,19 @@ async function fillGroup(pane, group) {
   const box = group.querySelector('.pv-chunks');
   if (box.querySelector('pre.mermaid, pre.lec-chart')) {   // 다이어그램·차트는 따로 줄을 서서 — 라이브러리를 불러오는 동안 다른 묶음이 기다리지 않게
     const st = pane.gather;
-    st.drawing = (st.drawing || Promise.resolve()).then(() => drawGraphics(pane, group, path)).catch(() => {});
+    st.drawing = (st.drawing || Promise.resolve()).then(() => drawGraphics(pane, group, path, doc?.marks)).catch(() => {});
     return;
   }
   settle(pane, group);
 }
 
 /** 묶음의 다이어그램·차트를 화면에서 그린다 (붙어 있어야 크기를 잰다 — 본문은 화면 밖 무대에서 그린 뒤 바꿔 끼우지만 여기는 덩어리마다 따로다) */
-async function drawGraphics(pane, group, path) {
+async function drawGraphics(pane, group, path, marks) {
   if (!group.isConnected) return;
   const box = group.querySelector('.pv-chunks');
   try {
-    await renderMermaid(box);
-    await renderCharts(box, { tab: pane.tab, path, sanitize: sanitizeHtml, resolveRef });
+    await renderMermaid(box, marks);   // 문서의 기본 줄('<!-- 도해: 색 2 -->')도 — 없으면 문서에서와 다른 색으로 그렸다 (0.113.1, 시나리오가 찾음)
+    await renderCharts(box, { tab: pane.tab, path, sanitize: sanitizeHtml, resolveRef, marks });
   } catch { /* 그리지 못한 것은 각자 까닭을 보인다 */ }
   for (const body of /** @type {HTMLElement[]} */ ($$('.pv-body.md-body', group))) settlePart(body);
   settle(pane, group);
